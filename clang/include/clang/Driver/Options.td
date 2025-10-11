@@ -4915,9 +4915,6 @@ def isysroot : JoinedOrSeparate<["-"], "isysroot">, Group<clang_i_Group>,
 def isystem : JoinedOrSeparate<["-"], "isystem">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to SYSTEM include search path">, MetaVarName<"<directory>">;
-def isystem_after : JoinedOrSeparate<["-"], "isystem-after">,
-  Group<clang_i_Group>, Flags<[NoXarchOption]>, MetaVarName<"<directory>">,
-  HelpText<"Add directory to end of the SYSTEM include search path">;
 def iwithprefixbefore : JoinedOrSeparate<["-"], "iwithprefixbefore">, Group<clang_i_Group>,
   HelpText<"Set directory to include search path with prefix">, MetaVarName<"<dir>">,
   Visibility<[ClangOption, CC1Option]>;

@@ -72,16 +72,16 @@
 // CHECK-SANITIZE-TSAN: error: unsupported argument 'tsan' to option '-fsanitize='
 // CHECK-SANITIZE-TSAN-NOT: "-fsanitize={{.*}}"
 
-// RUN: %clang -### -target armv7-windows-itanium -isystem-after "Windows Kits/10/Include/10.0.10586.0/ucrt" -isystem-after "Windows Kits/10/Include/10.0.10586.0/um" -isystem-after "Windows Kits/10/Include/10.0.10586.0/shared" -c %s -o /dev/null 2>&1 \
+// RUN: %clang -### --target=armv7-windows-itanium -idirafter "Windows Kits/10/Include/10.0.10586.0/ucrt" -idirafter "Windows Kits/10/Include/10.0.10586.0/um" -idirafter "Windows Kits/10/Include/10.0.10586.0/shared" -c %s -o /dev/null 2>&1 \
 // RUN:     | FileCheck %s --check-prefix CHECK-ISYSTEM-AFTER
 // CHECK-ISYSTEM-AFTER: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-ISYSTEM-AFTER: "-idirafter" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}ucrt"
+// CHECK-ISYSTEM-AFTER: "-idirafter" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}um"
+// CHECK-ISYSTEM-AFTER: "-idirafter" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}shared"
 // CHECK-ISYSTEM-AFTER: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
-// CHECK-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}ucrt"
-// CHECK-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}um"
-// CHECK-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}shared"
 
-// RUN: %clang -### -target armv7-windows-itanium -nostdinc -isystem-after "Windows Kits/10/Include/10.0.10586.0/ucrt" -c %s -o /dev/null 2>&1 \
+// RUN: %clang -### -target armv7-windows-itanium -nostdinc -idirafter "Windows Kits/10/Include/10.0.10586.0/ucrt" -c %s -o /dev/null 2>&1 \
 // RUN:     | FileCheck %s --check-prefix CHECK-NOSTDINC-ISYSTEM-AFTER
 // CHECK-NOSTDINC-ISYSTEM-AFTER: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-NOSTDINC-ISYSTEM-AFTER: "-idirafter" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}ucrt"
 // CHECK-NOSTDINC-ISYSTEM-AFTER-NOT: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
-// CHECK-NOSTDINC-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}ucrt"
