@@ -217,22 +217,6 @@ public:
   /// range of operands/results.
   LLVM_ABI ConstantFPRange getWithoutInf() const;
 
-  /// Calculate absolute value range.
-  LLVM_ABI ConstantFPRange abs() const;
-
-  /// Calculate range of negated values.
-  LLVM_ABI ConstantFPRange negate() const;
-
-  /// Get the range without NaNs. It is useful when we apply nnan flag to range
-  /// of operands/results.
-  ConstantFPRange getWithoutNaN() const {
-    return ConstantFPRange(Lower, Upper, false, false);
-  }
-
-  /// Get the range without infinities. It is useful when we apply ninf flag to
-  /// range of operands/results.
-  LLVM_ABI ConstantFPRange getWithoutInf() const;
-
   /// Return a new range in the specified format with the specified rounding
   /// mode.
   LLVM_ABI ConstantFPRange
