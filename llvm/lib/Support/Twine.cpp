@@ -88,19 +88,19 @@ void Twine::printOneChild(raw_ostream &OS, Child Ptr, NodeKind Kind) const {
     OS << Ptr.decI;
     break;
   case Twine::DecULKind:
-    OS << *Ptr.decUL;
+    OS << Ptr.decUL;
     break;
   case Twine::DecLKind:
-    OS << *Ptr.decL;
+    OS << Ptr.decL;
     break;
   case Twine::DecULLKind:
-    OS << *Ptr.decULL;
+    OS << Ptr.decULL;
     break;
   case Twine::DecLLKind:
-    OS << *Ptr.decLL;
+    OS << Ptr.decLL;
     break;
   case Twine::UHexKind:
-    OS.write_hex(*Ptr.uHex);
+    OS.write_hex(Ptr.uHex);
     break;
   }
 }
@@ -144,16 +144,16 @@ void Twine::printOneChildRepr(raw_ostream &OS, Child Ptr, NodeKind Kind) const {
     OS << "decI:\"" << Ptr.decI << "\"";
     break;
   case Twine::DecULKind:
-    OS << "decUL:\"" << *Ptr.decUL << "\"";
+    OS << "decUL:\"" << Ptr.decUL << "\"";
     break;
   case Twine::DecLKind:
-    OS << "decL:\"" << *Ptr.decL << "\"";
+    OS << "decL:\"" << Ptr.decL << "\"";
     break;
   case Twine::DecULLKind:
-    OS << "decULL:\"" << *Ptr.decULL << "\"";
+    OS << "decULL:\"" << Ptr.decULL << "\"";
     break;
   case Twine::DecLLKind:
-    OS << "decLL:\"" << *Ptr.decLL << "\"";
+    OS << "decLL:\"" << Ptr.decLL << "\"";
     break;
   case Twine::UHexKind:
     OS << "uhex:\"" << Ptr.uHex << "\"";

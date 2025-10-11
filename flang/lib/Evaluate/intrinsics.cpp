@@ -462,6 +462,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"vector_b", AnyNumeric, Rank::vector}},
         ResultNumeric, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"dprod", {{"x", DefaultReal}, {"y", DefaultReal}}, DoublePrecision},
+    {"dsecnds",
+        {{"refTime", TypePattern{RealType, KindCode::exactKind, 8},
+            Rank::scalar}},
+        TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar},
     {"dshiftl",
         {{"i", SameIntOrUnsigned},
             {"j", SameIntOrUnsigned, Rank::elementalOrBOZ}, {"shift", AnyInt}},
@@ -1670,7 +1674,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
-        {}, Rank::elemental, IntrinsicClass::elementalSubroutine}, // elemental
+        {}, Rank::elemental, IntrinsicClass::elementalSubroutine},
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -2511,7 +2515,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(kindDummyArg);
       CHECK(result.categorySet == CategorySet{*category});
       if (kindArg) {
-        if (auto *expr{kindArg->UnwrapExpr()}) {
+        auto *expr{kindArg->UnwrapExpr()};
+        if (expr) {
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
@@ -2525,8 +2530,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        messages.Say(
-            "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
+        if (context.analyzingPDTComponentKindSelector() && expr &&
+            IsConstantExpr(*expr)) {
+          // Don't emit an error about a KIND= actual argument value when
+          // processing a kind selector in a PDT component declaration before
+          // it is instantianted, so long as it's a constant expression.
+          // It will be renanalyzed later during instantiation.
+        } else {
+          messages.Say(
+              "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
+        }
         // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
@@ -2899,7 +2912,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
-      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"s}, {"rename"}, {"second"},
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"}, {"rename"}, {"second"},
       {"system"}, {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
@@ -3761,6 +3774,9 @@ bool IntrinsicProcTable::IsIntrinsicFunction(const std::string &name) const {
 }
 bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
   return DEREF(impl_.get()).IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsDualIntrinsic(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(

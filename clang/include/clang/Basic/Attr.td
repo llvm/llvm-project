@@ -779,6 +779,16 @@ class DeclOrStmtAttr : InheritableAttr;
 /// An attribute class for HLSL Annotations.
 class HLSLAnnotationAttr : InheritableAttr;
 
+class HLSLSemanticAttr<bit Indexable> : HLSLAnnotationAttr {
+  bit SemanticIndexable = Indexable;
+  int SemanticIndex = 0;
+  bit SemanticExplicitIndex = 0;
+
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
+}
+
 /// A target-specific attribute.  This class is meant to be used as a mixin
 /// with InheritableAttr or Attr depending on the attribute's needs.
 class TargetSpecificAttr<TargetSpec target> {
@@ -1460,7 +1470,7 @@ def Constructor : InheritableAttr {
   let TemplateDependent = 1;
   let Documentation = [CtorDtorDocs];
   let AdditionalMembers = [{
-    static constexpr unsigned DefaultPriority = 65535; 
+    static constexpr unsigned DefaultPriority = 65535;
   }];
 }
 
@@ -1805,7 +1815,7 @@ def Destructor : InheritableAttr {
   let TemplateDependent = 1;
   let Documentation = [CtorDtorDocs];
   let AdditionalMembers = [{
-    static constexpr unsigned int DefaultPriority = 65535; 
+    static constexpr unsigned int DefaultPriority = 65535;
   }];
 }
 
@@ -3911,16 +3921,31 @@ def NoSanitize : InheritableAttr {
   }];
 }
 
-// Attributes to disable a specific sanitizer. No new sanitizers should be added
+// Attribute to disable AddressSanitizer. No new spellings should be added
 // to this list; the no_sanitize attribute should be extended instead.
-def NoSanitizeSpecific : InheritableAttr {
+def NoSanitizeAddress : InheritableAttr {
   let Spellings = [GCC<"no_address_safety_analysis">,
-                   GCC<"no_sanitize_address">,
-                   GCC<"no_sanitize_thread">,
-                   Clang<"no_sanitize_memory">];
+                   GCC<"no_sanitize_address">];
   let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
-  let Documentation = [NoSanitizeAddressDocs, NoSanitizeThreadDocs,
-                       NoSanitizeMemoryDocs];
+  let Documentation = [NoSanitizeAddressDocs];
+  let ASTNode = 0;
+}
+
+// Attribute to disable ThreadSanitizer. No new spellings should be added
+// to this list; the no_sanitize attribute should be extended instead.
+def NoSanitizeThread : InheritableAttr {
+  let Spellings = [GCC<"no_sanitize_thread">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [NoSanitizeThreadDocs];
+  let ASTNode = 0;
+}
+
+// Attribute to disable MemorySanitizer. No new spellings should be added
+// to this list; the no_sanitize attribute should be extended instead.
+def NoSanitizeMemory : InheritableAttr {
+  let Spellings = [Clang<"no_sanitize_memory">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [NoSanitizeMemoryDocs];
   let ASTNode = 0;
 }
 
@@ -4575,6 +4600,12 @@ def OMPThreadPrivateDecl : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
+def OMPGroupPrivateDecl : InheritableAttr {
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def OMPCaptureNoInit : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -4890,27 +4921,6 @@ def HLSLNumThreads: InheritableAttr {
   let Documentation = [NumThreadsDocs];
 }
 
-def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_groupthreadid">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupThreadIDDocs];
-}
-
-def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_groupid">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupIDDocs];
-}
-
-def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_groupindex">];
-  let Subjects = SubjectList<[ParmVar, GlobalVar]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupIndexDocs];
-}
-
 def HLSLVkBinding : InheritableAttr {
   let Spellings = [CXX11<"vk", "binding">];
   let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;
@@ -4934,6 +4944,7 @@ def HLSLResourceBinding: InheritableAttr {
       std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
       std::optional<unsigned> ImplicitBindingOrderID;
+      std::optional<unsigned> ImplicitCounterBindingOrderID;
 
   public:
       void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
@@ -4966,14 +4977,47 @@ def HLSLResourceBinding: InheritableAttr {
         assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
         return ImplicitBindingOrderID.value();
       }
+      void setImplicitCounterBindingOrderID(uint32_t Value) {
+        assert(!hasImplicitCounterBindingOrderID() && "attribute already has implicit counter binding order id");
+        ImplicitCounterBindingOrderID = Value;
+      }
+      bool hasImplicitCounterBindingOrderID() const {
+        return ImplicitCounterBindingOrderID.has_value();
+      }
+      uint32_t getImplicitCounterBindingOrderID() const {
+        assert(hasImplicitCounterBindingOrderID() && "attribute does not have implicit counter binding order id");
+        return ImplicitCounterBindingOrderID.value();
+      }
   }];
 }
 
-def HLSLSV_Position : HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_position">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
+def HLSLUnparsedSemantic : HLSLAnnotationAttr {
+  let Spellings = [];
+  let Args = [DefaultIntArgument<"Index", 0>,
+              DefaultBoolArgument<"ExplicitIndex", 0>];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLSV_Position : HLSLSemanticAttr</* Indexable= */ 1> {
   let Documentation = [HLSLSV_PositionDocs];
+}
+
+def HLSLSV_GroupThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_GroupThreadIDDocs];
+}
+
+def HLSLSV_GroupID : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_GroupIDDocs];
+}
+
+def HLSLSV_GroupIndex : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_GroupIndexDocs];
+}
+
+def HLSLSV_DispatchThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_DispatchThreadIDDocs];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {
@@ -4986,13 +5030,6 @@ def HLSLPackOffset: HLSLAnnotationAttr {
     return subcomponent * 16 + component * 4;
   }
   }];
-}
-
-def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_dispatchthreadid">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_DispatchThreadIDDocs];
 }
 
 def HLSLShader : InheritableAttr {
@@ -5045,6 +5082,12 @@ def HLSLContainedType : TypeAttr {
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLIsCounter : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_counter">];
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }

@@ -51,6 +51,7 @@ class raw_ostream;
 
 namespace bolt {
 class BinaryBasicBlock;
+class BinaryContext;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -68,6 +69,20 @@ enum class IndirectBranchType : char {
 class MCPlusBuilder {
 public:
   using AllocatorIdTy = uint16_t;
+
+  std::optional<int64_t> getAnnotationAtOpIndex(const MCInst &Inst,
+                                                unsigned OpIndex) const {
+    std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp)
+      return std::nullopt;
+
+    if (*FirstAnnotationOp > OpIndex || Inst.getNumOperands() < OpIndex)
+      return std::nullopt;
+
+    const auto *Op = Inst.begin() + OpIndex;
+    const int64_t ImmValue = Op->getImm();
+    return extractAnnotationIndex(ImmValue);
+  }
 
 private:
   /// A struct that represents a single annotation allocator
@@ -530,10 +545,15 @@ public:
     return 0;
   }
 
+  /// Create a helper function to increment counter for Instrumentation
+  virtual void createInstrCounterIncrFunc(BinaryContext &BC) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx, bool IsLeaf,
+                                                   unsigned CodePointerSize) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -595,6 +615,21 @@ public:
   virtual std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
+  }
+
+  virtual bool isPSignOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthAndRet(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   /// Returns the register used as a return address. Returns std::nullopt if
@@ -1307,6 +1342,39 @@ public:
 
   /// Return true if the instruction is a tail call.
   bool isTailCall(const MCInst &Inst) const;
+
+  /// Stores NegateRAState annotation on \p Inst.
+  void setNegateRAState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has NegateRAState annotation.
+  bool hasNegateRAState(const MCInst &Inst) const;
+
+  /// Sets RememberState annotation on \p Inst.
+  void setRememberState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RememberState annotation.
+  bool hasRememberState(const MCInst &Inst) const;
+
+  /// Stores RestoreState annotation on \p Inst.
+  void setRestoreState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RestoreState annotation.
+  bool hasRestoreState(const MCInst &Inst) const;
+
+  /// Stores RA Signed annotation on \p Inst.
+  void setRASigned(MCInst &Inst) const;
+
+  /// Return true if \p Inst has Signed RA annotation.
+  bool isRASigned(const MCInst &Inst) const;
+
+  /// Stores RA Unsigned annotation on \p Inst.
+  void setRAUnsigned(MCInst &Inst) const;
+
+  /// Return true if \p Inst has Unsigned RA annotation.
+  bool isRAUnsigned(const MCInst &Inst) const;
+
+  /// Return true if \p Inst doesn't have any annotation related to RA state.
+  bool isRAStateUnknown(const MCInst &Inst) const;
 
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {
@@ -2216,7 +2284,8 @@ public:
   }
 
   /// Print each annotation attached to \p Inst.
-  void printAnnotations(const MCInst &Inst, raw_ostream &OS) const;
+  void printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                        bool PrintMemData = false) const;
 
   /// Remove annotation with a given \p Index.
   ///

@@ -328,7 +328,8 @@ struct SGPRSpillBuilder {
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour(),
                             ST.getAMDGPUDwarfFlavour(),
-                            /*PC=*/0, ST.getHwMode()),
+                            /*PC=*/0,
+                            ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
@@ -1108,8 +1109,8 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                 SIInstrFlags::FlatScratch);
 }
 
-const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
-  const MachineFunction &MF, unsigned Kind) const {
+const TargetRegisterClass *
+SIRegisterInfo::getPointerRegClass(unsigned Kind) const {
   // This is inaccurate. It depends on the instruction and address space. The
   // only place where we should hit this is for dealing with frame indexes /
   // private accesses, so this is correct in that case.
@@ -1118,12 +1119,7 @@ const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
 
 const TargetRegisterClass *
 SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
-  if (isAGPRClass(RC) && !ST.hasGFX90AInsts())
-    return getEquivalentVGPRClass(RC);
-  if (RC == &AMDGPU::SCC_CLASSRegClass)
-    return getWaveMaskRegClass();
-
-  return RC;
+  return RC == &AMDGPU::SCC_CLASSRegClass ? &AMDGPU::SReg_32RegClass : RC;
 }
 
 static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
@@ -2222,8 +2218,6 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
     // Don't need to write VGPR out.
   }
 
-  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-
   // Restore clobbered registers in the specified restore block.
   MI = RestoreMBB.end();
   SB.setMI(&RestoreMBB, MI);
@@ -2238,7 +2232,8 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
-      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
+
+      assert(SubReg.isPhysical());
       bool LastSubReg = (i + 1 == e);
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
@@ -3059,8 +3054,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (IsSALU && LiveSCC) {
           Register NewDest;
           if (IsCopy) {
-            MF->getRegInfo().constrainRegClass(ResultReg,
-                                               &AMDGPU::SReg_32_XM0RegClass);
+            assert(ResultReg.isPhysical());
             NewDest = ResultReg;
           } else {
             NewDest = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
@@ -3190,8 +3184,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
             Register NewDest;
             if (IsCopy) {
-              MF->getRegInfo().constrainRegClass(ResultReg,
-                                                 &AMDGPU::SReg_32_XM0RegClass);
               NewDest = ResultReg;
             } else {
               NewDest = RS->scavengeRegisterBackwards(

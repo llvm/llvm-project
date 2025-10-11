@@ -1885,6 +1885,12 @@ LLVM_ABI SDValue peekThroughOneUseBitcasts(SDValue V);
 /// If \p V is not an extracted subvector, it is returned as-is.
 LLVM_ABI SDValue peekThroughExtractSubvectors(SDValue V);
 
+/// Recursively peek through INSERT_VECTOR_ELT nodes, returning the source
+/// vector operand of \p V, as long as \p V is an INSERT_VECTOR_ELT operation
+/// that do not insert into any of the demanded vector elts.
+LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
+                                            const APInt &DemandedElts);
+
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);

@@ -235,10 +235,8 @@ inline bool IsCUDADevice(const Symbol &sym) {
 
 inline bool IsCUDAShared(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
-      return true;
-    }
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared;
   }
   return false;
 }
@@ -771,6 +769,8 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
+
+bool AreSameModuleSymbol(const Symbol &, const Symbol &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

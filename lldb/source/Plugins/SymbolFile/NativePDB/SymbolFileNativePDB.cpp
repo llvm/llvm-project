@@ -501,7 +501,11 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     return nullptr;
 
   PdbTypeSymId sig_id(proc.FunctionType, false);
-  Mangled mangled(proc.Name);
+
+  std::optional<llvm::StringRef> mangled_opt = FindMangledSymbol(
+      SegmentOffset(proc.Segment, proc.CodeOffset), proc.FunctionType);
+  Mangled mangled(mangled_opt.value_or(proc.Name));
+
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
       func_type.get(), func_addr,
@@ -549,10 +553,18 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
   TpiStream &stream = m_index->tpi();
 
   std::string name;
+
+  if ((mr.Modifiers & ModifierOptions::Const) != ModifierOptions::None)
+    name += "const ";
+  if ((mr.Modifiers & ModifierOptions::Volatile) != ModifierOptions::None)
+    name += "volatile ";
+  if ((mr.Modifiers & ModifierOptions::Unaligned) != ModifierOptions::None)
+    name += "__unaligned ";
+
   if (mr.ModifiedType.isSimple())
-    name = std::string(GetSimpleTypeName(mr.ModifiedType.getSimpleKind()));
+    name += GetSimpleTypeName(mr.ModifiedType.getSimpleKind());
   else
-    name = computeTypeName(stream.typeCollection(), mr.ModifiedType);
+    name += computeTypeName(stream.typeCollection(), mr.ModifiedType);
   Declaration decl;
   lldb::TypeSP modified_type = GetOrCreateType(mr.ModifiedType);
 
@@ -1054,7 +1066,44 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
   return TranslateLanguage(item->m_compile_opts->getLanguage());
 }
 
-void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {}
+void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
+  auto *section_list = m_objfile_sp->GetSectionList();
+  if (!section_list)
+    return;
+
+  for (auto pid : m_index->publics().getPublicsTable()) {
+    PdbGlobalSymId global{pid, true};
+    CVSymbol sym = m_index->ReadSymbolRecord(global);
+    auto kind = sym.kind();
+    if (kind != S_PUB32)
+      continue;
+    PublicSym32 pub =
+        llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+
+    auto section_sp = section_list->FindSectionByID(pub.Segment);
+    if (!section_sp)
+      continue;
+
+    lldb::SymbolType type = eSymbolTypeData;
+    if ((pub.Flags & PublicSymFlags::Function) != PublicSymFlags::None ||
+        (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
+      type = eSymbolTypeCode;
+
+    symtab.AddSymbol(Symbol(/*symID=*/pid,
+                            /*name=*/pub.Name,
+                            /*type=*/type,
+                            /*external=*/true,
+                            /*is_debug=*/true,
+                            /*is_trampoline=*/false,
+                            /*is_artificial=*/false,
+                            /*section_sp=*/section_sp,
+                            /*value=*/pub.Offset,
+                            /*size=*/0,
+                            /*size_is_valid=*/false,
+                            /*contains_linker_annotations=*/false,
+                            /*flags=*/0));
+  }
+}
 
 size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1646,7 +1695,8 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
   return count;
 }
 
-void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                       bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -1654,7 +1704,7 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->GetNativePDBParser()->Dump(s, filter);
+  clang->GetNativePDBParser()->Dump(s, filter, show_color);
 }
 
 void SymbolFileNativePDB::CacheGlobalBaseNames() {
@@ -2614,6 +2664,83 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
     break;
   }
   return ctx;
+}
+
+std::optional<llvm::StringRef>
+SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
+  const CompilandIndexItem *cci =
+      m_index->compilands().GetCompiland(func_id.modi);
+  if (!cci)
+    return std::nullopt;
+
+  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(func_id.offset);
+  if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
+    return std::nullopt;
+
+  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
+  cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc));
+
+  return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset),
+                           proc.FunctionType);
+}
+
+std::optional<llvm::StringRef>
+SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so,
+                                       TypeIndex function_type) {
+  auto symbol = m_index->publics().findByAddress(m_index->symrecords(),
+                                                 so.segment, so.offset);
+  if (!symbol)
+    return std::nullopt;
+
+  llvm::StringRef name = symbol->first.Name;
+  // For functions, we might need to strip the mangled name. See
+  // StripMangledFunctionName for more info.
+  if (!function_type.isNoneType() &&
+      (symbol->first.Flags & PublicSymFlags::Function) != PublicSymFlags::None)
+    name = StripMangledFunctionName(name, function_type);
+
+  return name;
+}
+
+llvm::StringRef
+SymbolFileNativePDB::StripMangledFunctionName(const llvm::StringRef mangled,
+                                              PdbTypeSymId func_ty) {
+  // "In non-64 bit environments" (on x86 in pactice), __cdecl functions get
+  // prefixed with an underscore. For compilers using LLVM, this happens in LLVM
+  // (as opposed to the compiler frontend). Because of this, DWARF doesn't
+  // contain the "full" mangled name in DW_AT_linkage_name for these functions.
+  // We strip the mangling here for compatibility with DWARF. See
+  // llvm.org/pr161676 and
+  // https://learn.microsoft.com/en-us/cpp/build/reference/decorated-names#FormatC
+
+  if (!mangled.starts_with('_') ||
+      m_index->dbi().getMachineType() != PDB_Machine::x86)
+    return mangled;
+
+  CVType cvt = m_index->tpi().getType(func_ty.index);
+  PDB_CallingConv cc = PDB_CallingConv::NearC;
+  if (cvt.kind() == LF_PROCEDURE) {
+    ProcedureRecord proc;
+    if (llvm::Error error =
+            TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, proc))
+      llvm::consumeError(std::move(error));
+    cc = proc.CallConv;
+  } else if (cvt.kind() == LF_MFUNCTION) {
+    MemberFunctionRecord mfunc;
+    if (llvm::Error error =
+            TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfunc))
+      llvm::consumeError(std::move(error));
+    cc = mfunc.CallConv;
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::Symbols), "Unexpected function type, got {0}",
+             cvt.kind());
+    return mangled;
+  }
+
+  if (cc == PDB_CallingConv::NearC || cc == PDB_CallingConv::FarC)
+    return mangled.drop_front();
+
+  return mangled;
 }
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {

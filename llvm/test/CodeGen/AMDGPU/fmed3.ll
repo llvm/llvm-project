@@ -7464,18 +7464,15 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %o
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_ushort v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v4, 2.0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-GISEL-NEXT:    v_add_f32_e32 v2, v2, v3
+; SI-GISEL-NEXT:    v_add_f32_e32 v2, 1.0, v2
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v4
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v2
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, 4.0
-; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
+; SI-GISEL-NEXT:    v_min_f32_e32 v2, 4.0, v2
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_short v2, v[0:1], s[0:3], 0 addr64
@@ -7639,27 +7636,24 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s10, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s11, 0xf000
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, 2.0
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_ushort v4, v[0:1], s[8:11], 0 addr64 glc
+; SI-GISEL-NEXT:    buffer_load_ushort v2, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v5, 4.0
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; SI-GISEL-NEXT:    buffer_load_ushort v6, v[0:1], s[8:11], 0 addr64 glc
+; SI-GISEL-NEXT:    buffer_load_ushort v3, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
-; SI-GISEL-NEXT:    buffer_load_ushort v7, v[0:1], s[8:11], 0 addr64 glc
+; SI-GISEL-NEXT:    buffer_load_ushort v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SI-GISEL-NEXT:    v_add_f32_e32 v2, v4, v2
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v4, v6
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SI-GISEL-NEXT:    v_add_f32_e32 v2, 1.0, v2
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-GISEL-NEXT:    v_add_f32_e32 v3, v4, v3
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v4, v7
+; SI-GISEL-NEXT:    v_add_f32_e32 v3, 2.0, v3
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-GISEL-NEXT:    v_add_f32_e32 v4, v4, v5
+; SI-GISEL-NEXT:    v_add_f32_e32 v4, 4.0, v4
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, v3
@@ -8712,12 +8706,10 @@ define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) #1 {
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, 2.0
-; SI-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; SI-GISEL-NEXT:    v_max_f32_e32 v0, 2.0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, 4.0
-; SI-GISEL-NEXT:    v_min_f32_e32 v0, v0, v1
+; SI-GISEL-NEXT:    v_min_f32_e32 v0, 4.0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8796,17 +8788,15 @@ define <2 x half> @v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum(<2 x half> %a)
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, 2.0
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, 4.0
-; SI-GISEL-NEXT:    v_max_f32_e32 v0, v0, v2
-; SI-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; SI-GISEL-NEXT:    v_max_f32_e32 v0, 2.0, v0
+; SI-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v1
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-GISEL-NEXT:    v_min_f32_e32 v0, v0, v3
-; SI-GISEL-NEXT:    v_min_f32_e32 v1, v1, v3
+; SI-GISEL-NEXT:    v_min_f32_e32 v0, 4.0, v0
+; SI-GISEL-NEXT:    v_min_f32_e32 v1, 4.0, v1
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]

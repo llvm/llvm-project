@@ -227,7 +227,8 @@ bool isLinearizableVector(VectorType type);
 ///
 /// Note: all read offsets are set to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> inputVectorSizes, Value padValue,
+                             ArrayRef<int64_t> inputVectorSizes,
+                             std::optional<Value> padValue = std::nullopt,
                              bool useInBoundsInsteadOfMasking = false,
                              ArrayRef<bool> inputScalableVecDims = {});
 
@@ -254,6 +255,12 @@ using UnrollVectorOpFn =
 
 LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
                              UnrollVectorOpFn unrollFn);
+
+/// Generic utility for unrolling values of type vector<NxAxBx...>
+/// to N values of type vector<AxBx...> using vector.extract. If the input
+/// is rank-1 or has leading scalable dimension, failure is returned.
+FailureOr<SmallVector<Value>> unrollVectorValue(TypedValue<VectorType>,
+                                                RewriterBase &);
 
 } // namespace vector
 

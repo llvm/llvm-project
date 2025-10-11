@@ -848,13 +848,12 @@ bool MemProfUsePass::annotateGlobalVariables(
     // So we just print out the static data section prefix in LLVM_DEBUG.
     if (Record && Record->AccessCount > 0) {
       ++NumOfMemProfHotGlobalVars;
-      GVar.setSectionPrefix("hot");
-      Changed = true;
+      Changed |= GVar.setSectionPrefix("hot");
       LLVM_DEBUG(dbgs() << "Global variable " << Name
                         << " is annotated as hot\n");
     } else if (DataAccessProf->isKnownColdSymbol(Name)) {
       ++NumOfMemProfColdGlobalVars;
-      GVar.setSectionPrefix("unlikely");
+      Changed |= GVar.setSectionPrefix("unlikely");
       Changed = true;
       LLVM_DEBUG(dbgs() << "Global variable " << Name
                         << " is annotated as unlikely\n");

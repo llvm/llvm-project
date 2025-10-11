@@ -272,7 +272,7 @@ public:
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     // get external opaque struct pointer type
     auto commStructT =
         LLVM::LLVMStructType::getOpaque("ompi_communicator_t", context);
@@ -324,7 +324,7 @@ public:
     else
       assert(false && "unsupported type");
 
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     // get external opaque struct pointer type
     auto typeStructT =
         LLVM::LLVMStructType::getOpaque("ompi_predefined_datatype_t", context);
@@ -383,7 +383,7 @@ public:
       op = "ompi_mpi_replace";
       break;
     }
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     // get external opaque struct pointer type
     auto opStructT =
         LLVM::LLVMStructType::getOpaque("ompi_predefined_op_t", context);

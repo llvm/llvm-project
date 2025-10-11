@@ -663,6 +663,7 @@ CanQualType ClassTemplateDecl::getCanonicalInjectedSpecializationType(
     Ctx.canonicalizeTemplateArguments(CanonicalArgs);
     CommonPtr->CanonInjectedTST =
         CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
+            ElaboratedTypeKeyword::None,
             TemplateName(const_cast<ClassTemplateDecl *>(getCanonicalDecl())),
             CanonicalArgs));
   }
@@ -1209,6 +1210,7 @@ ClassTemplatePartialSpecializationDecl::getCanonicalInjectedSpecializationType(
   if (CanonInjectedTST.isNull()) {
     CanonInjectedTST =
         CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
+            ElaboratedTypeKeyword::None,
             TemplateName(getSpecializedTemplate()->getCanonicalDecl()),
             getTemplateArgs().asArray()));
   }
@@ -1651,58 +1653,138 @@ void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS,
   getValue().printPretty(OS, Policy, getType(), &getASTContext());
 }
 
-TemplateParameterList *clang::getReplacedTemplateParameterList(const Decl *D) {
+std::tuple<NamedDecl *, TemplateArgument>
+clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
   switch (D->getKind()) {
-  case Decl::Kind::CXXRecord:
-    return cast<CXXRecordDecl>(D)
-        ->getDescribedTemplate()
-        ->getTemplateParameters();
+  case Decl::Kind::BuiltinTemplate:
   case Decl::Kind::ClassTemplate:
-    return cast<ClassTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::Concept:
+  case Decl::Kind::FunctionTemplate:
+  case Decl::Kind::TemplateTemplateParm:
+  case Decl::Kind::TypeAliasTemplate:
+  case Decl::Kind::VarTemplate:
+    return {cast<TemplateDecl>(D)->getTemplateParameters()->getParam(Index),
+            {}};
   case Decl::Kind::ClassTemplateSpecialization: {
     const auto *CTSD = cast<ClassTemplateSpecializationDecl>(D);
     auto P = CTSD->getSpecializedTemplateOrPartial();
+    TemplateParameterList *TPL;
     if (const auto *CTPSD =
-            dyn_cast<ClassTemplatePartialSpecializationDecl *>(P))
-      return CTPSD->getTemplateParameters();
-    return cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(P)) {
+      TPL = CTPSD->getTemplateParameters();
+      // FIXME: Obtain Args deduced for the partial specialization.
+      return {TPL->getParam(Index), {}};
+    }
+    TPL = cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+    return {TPL->getParam(Index), CTSD->getTemplateArgs()[Index]};
+  }
+  case Decl::Kind::VarTemplateSpecialization: {
+    const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
+    auto P = VTSD->getSpecializedTemplateOrPartial();
+    TemplateParameterList *TPL;
+    if (const auto *VTPSD =
+            dyn_cast<VarTemplatePartialSpecializationDecl *>(P)) {
+      TPL = VTPSD->getTemplateParameters();
+      // FIXME: Obtain Args deduced for the partial specialization.
+      return {TPL->getParam(Index), {}};
+    }
+    TPL = cast<VarTemplateDecl *>(P)->getTemplateParameters();
+    return {TPL->getParam(Index), VTSD->getTemplateArgs()[Index]};
   }
   case Decl::Kind::ClassTemplatePartialSpecialization:
-    return cast<ClassTemplatePartialSpecializationDecl>(D)
-        ->getTemplateParameters();
-  case Decl::Kind::TypeAliasTemplate:
-    return cast<TypeAliasTemplateDecl>(D)->getTemplateParameters();
-  case Decl::Kind::BuiltinTemplate:
-    return cast<BuiltinTemplateDecl>(D)->getTemplateParameters();
+    return {cast<ClassTemplatePartialSpecializationDecl>(D)
+                ->getTemplateParameters()
+                ->getParam(Index),
+            {}};
+  case Decl::Kind::VarTemplatePartialSpecialization:
+    return {cast<VarTemplatePartialSpecializationDecl>(D)
+                ->getTemplateParameters()
+                ->getParam(Index),
+            {}};
+  // This is used as the AssociatedDecl for placeholder type deduction.
+  case Decl::TemplateTypeParm:
+    return {cast<NamedDecl>(D), {}};
+  // FIXME: Always use the template decl as the AssociatedDecl.
+  case Decl::Kind::CXXRecord:
+    return getReplacedTemplateParameter(
+        cast<CXXRecordDecl>(D)->getDescribedClassTemplate(), Index);
   case Decl::Kind::CXXDeductionGuide:
   case Decl::Kind::CXXConversion:
   case Decl::Kind::CXXConstructor:
   case Decl::Kind::CXXDestructor:
   case Decl::Kind::CXXMethod:
   case Decl::Kind::Function:
-    return cast<FunctionDecl>(D)
-        ->getTemplateSpecializationInfo()
-        ->getTemplate()
-        ->getTemplateParameters();
-  case Decl::Kind::FunctionTemplate:
-    return cast<FunctionTemplateDecl>(D)->getTemplateParameters();
-  case Decl::Kind::VarTemplate:
-    return cast<VarTemplateDecl>(D)->getTemplateParameters();
-  case Decl::Kind::VarTemplateSpecialization: {
-    const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
-    auto P = VTSD->getSpecializedTemplateOrPartial();
-    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl *>(P))
-      return VTPSD->getTemplateParameters();
-    return cast<VarTemplateDecl *>(P)->getTemplateParameters();
-  }
-  case Decl::Kind::VarTemplatePartialSpecialization:
-    return cast<VarTemplatePartialSpecializationDecl>(D)
-        ->getTemplateParameters();
-  case Decl::Kind::TemplateTemplateParm:
-    return cast<TemplateTemplateParmDecl>(D)->getTemplateParameters();
-  case Decl::Kind::Concept:
-    return cast<ConceptDecl>(D)->getTemplateParameters();
+    return getReplacedTemplateParameter(
+        cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
+        Index);
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }
+}
+
+const Decl &clang::adjustDeclToTemplate(const Decl &D) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(&D)) {
+    // Is this function declaration part of a function template?
+    if (const FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate())
+      return *FTD;
+
+    // Nothing to do if function is not an implicit instantiation.
+    if (FD->getTemplateSpecializationKind() != TSK_ImplicitInstantiation)
+      return D;
+
+    // Function is an implicit instantiation of a function template?
+    if (const FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
+      return *FTD;
+
+    // Function is instantiated from a member definition of a class template?
+    if (const FunctionDecl *MemberDecl =
+            FD->getInstantiatedFromMemberFunction())
+      return *MemberDecl;
+
+    return D;
+  }
+  if (const auto *VD = dyn_cast<VarDecl>(&D)) {
+    // Static data member is instantiated from a member definition of a class
+    // template?
+    if (VD->isStaticDataMember())
+      if (const VarDecl *MemberDecl = VD->getInstantiatedFromStaticDataMember())
+        return *MemberDecl;
+
+    return D;
+  }
+  if (const auto *CRD = dyn_cast<CXXRecordDecl>(&D)) {
+    // Is this class declaration part of a class template?
+    if (const ClassTemplateDecl *CTD = CRD->getDescribedClassTemplate())
+      return *CTD;
+
+    // Class is an implicit instantiation of a class template or partial
+    // specialization?
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CRD)) {
+      if (CTSD->getSpecializationKind() != TSK_ImplicitInstantiation)
+        return D;
+      llvm::PointerUnion<ClassTemplateDecl *,
+                         ClassTemplatePartialSpecializationDecl *>
+          PU = CTSD->getSpecializedTemplateOrPartial();
+      return isa<ClassTemplateDecl *>(PU)
+                 ? *static_cast<const Decl *>(cast<ClassTemplateDecl *>(PU))
+                 : *static_cast<const Decl *>(
+                       cast<ClassTemplatePartialSpecializationDecl *>(PU));
+    }
+
+    // Class is instantiated from a member definition of a class template?
+    if (const MemberSpecializationInfo *Info =
+            CRD->getMemberSpecializationInfo())
+      return *Info->getInstantiatedFrom();
+
+    return D;
+  }
+  if (const auto *ED = dyn_cast<EnumDecl>(&D)) {
+    // Enum is instantiated from a member definition of a class template?
+    if (const EnumDecl *MemberDecl = ED->getInstantiatedFromMemberEnum())
+      return *MemberDecl;
+
+    return D;
+  }
+  // FIXME: Adjust alias templates?
+  return D;
 }

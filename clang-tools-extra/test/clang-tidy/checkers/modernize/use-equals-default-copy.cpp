@@ -147,7 +147,7 @@ struct BF {
   BF(const BF &Other) : Field1(Other.Field1), Field2(Other.Field2), Field3(Other.Field3),
                         Field4(Other.Field4) {};
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use '= default'
-  // CHECK-FIXES: BF(const BF &Other) {{$}}
+  // CHECK-FIXES: BF(const BF &Other)
   // CHECK-FIXES:                     = default;
   BF &operator=(const BF &);
 

@@ -1267,9 +1267,10 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
-void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                           bool show_color) {
   ForEachSymbolFile("Dumping clang AST", [&](SymbolFileDWARF &oso_dwarf) {
-    oso_dwarf.DumpClangAST(s, filter);
+    oso_dwarf.DumpClangAST(s, filter, show_color);
     // The underlying assumption is that DumpClangAST(...) will obtain the
     // AST from the underlying TypeSystem and therefore we only need to do
     // this once and can stop after the first iteration hence we return true.

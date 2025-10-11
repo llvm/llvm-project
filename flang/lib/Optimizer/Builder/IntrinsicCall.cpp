@@ -346,6 +346,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
+    {"barrier_init",
+     &I::genBarrierInit,
+     {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -455,6 +459,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
     {"dprod", &I::genDprod},
+    {"dsecnds",
+     &I::genDsecnds,
+     {{{"refTime", asAddr}}},
+     /*isElemental=*/false},
     {"dshiftl", &I::genDshiftl},
     {"dshiftr", &I::genDshiftr},
     {"eoshift",
@@ -1319,26 +1327,6 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   return result;
 }
 
-mlir::Value genComplexPow(fir::FirOpBuilder &builder, mlir::Location loc,
-                          const MathOperation &mathOp,
-                          mlir::FunctionType mathLibFuncType,
-                          llvm::ArrayRef<mlir::Value> args) {
-  bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
-  if (!isAMDGPU)
-    return genLibCall(builder, loc, mathOp, mathLibFuncType, args);
-
-  auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
-  auto realTy = complexTy.getElementType();
-  mlir::Value realExp = builder.createConvert(loc, realTy, args[1]);
-  mlir::Value zero = builder.createRealConstant(loc, realTy, 0);
-  mlir::Value complexExp =
-      builder.create<mlir::complex::CreateOp>(loc, complexTy, realExp, zero);
-  mlir::Value result =
-      builder.create<mlir::complex::PowOp>(loc, args[0], complexExp);
-  result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
-  return result;
-}
-
 /// Mapping between mathematical intrinsic operations and MLIR operations
 /// of some appropriate dialect (math, complex, etc.) or libm calls.
 /// TODO: support remaining Fortran math intrinsics.
@@ -1664,11 +1652,11 @@ static constexpr MathOperation mathOperations[] = {
     {"pow", RTNAME_STRING(PowF128), FuncTypeReal16Real16Real16, genLibF128Call},
     {"pow", "cpowf",
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Complex<4>>,
-     genComplexMathOp<mlir::complex::PowOp>},
+     genMathOp<mlir::complex::PowOp>},
     {"pow", "cpow", genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Complex<8>>,
-     genComplexMathOp<mlir::complex::PowOp>},
+     genMathOp<mlir::complex::PowOp>},
     {"pow", RTNAME_STRING(CPowF128), FuncTypeComplex16Complex16Complex16,
-     genLibF128Call},
+     genMathOp<mlir::complex::PowOp>},
     {"pow", RTNAME_STRING(FPow4i),
      genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Integer<4>>,
      genMathOp<mlir::math::FPowIOp>},
@@ -1689,20 +1677,20 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::FPowIOp>},
     {"pow", RTNAME_STRING(cpowi),
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<4>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(zpowi),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<4>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(cqpowi), FuncTypeComplex16Complex16Integer4,
-     genLibF128Call},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(cpowk),
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<8>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(zpowk),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<8>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(cqpowk), FuncTypeComplex16Complex16Integer8,
-     genLibF128Call},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow-unsigned", RTNAME_STRING(UPow1),
      genFuncType<Ty::Integer<1>, Ty::Integer<1>, Ty::Integer<1>>, genLibCall},
     {"pow-unsigned", RTNAME_STRING(UPow2),
@@ -3192,6 +3180,22 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
+// BARRIER_INIT (CUDA)
+void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto llvmPtr = fir::ConvertOp::create(
+      builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
+      fir::getBase(args[0]));
+  auto addrCast = mlir::LLVM::AddrSpaceCastOp::create(
+      builder, loc,
+      mlir::LLVM::LLVMPointerType::get(
+          builder.getContext(),
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared)),
+      llvmPtr);
+  mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, addrCast,
+                                           fir::getBase(args[1]), {});
+}
+
 // BESSEL_JN
 fir::ExtendedValue
 IntrinsicLibrary::genBesselJn(mlir::Type resultType,
@@ -3716,7 +3720,7 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
 
 // CO_BROADCAST
 void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value sourceImage = fir::getBase(args[1]);
   mlir::Value status =
@@ -3735,7 +3739,7 @@ void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_MAX
 void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
       fir::AbsentOp::create(builder, loc,
@@ -3755,7 +3759,7 @@ void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_MIN
 void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
       fir::AbsentOp::create(builder, loc,
@@ -3775,7 +3779,7 @@ void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_SUM
 void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value absentInt =
       fir::AbsentOp::create(builder, loc,
@@ -4046,6 +4050,23 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   mlir::Value a = builder.createConvert(loc, resultType, args[0]);
   mlir::Value b = builder.createConvert(loc, resultType, args[1]);
   return mlir::arith::MulFOp::create(builder, loc, a, b);
+}
+
+// DSECNDS
+// Double precision variant of SECNDS (PGI extension)
+fir::ExtendedValue
+IntrinsicLibrary::genDsecnds(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "DSECNDS expects one argument");
+
+  mlir::Value refTime = fir::getBase(args[0]);
+
+  if (!refTime)
+    fir::emitFatalError(loc, "expected REFERENCE TIME parameter");
+
+  mlir::Value result = fir::runtime::genDsecnds(builder, loc, refTime);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 // DSHIFTL
@@ -6988,8 +7009,33 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
 }
 
 // MOD
+static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value a, mlir::Value p) {
+  auto fastmathFlags = mlir::arith::FastMathFlags::contract;
+  auto fastmathAttr =
+      mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
+  mlir::Value divResult =
+      mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
+  mlir::Type intType = builder.getIntegerType(
+      a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
+  mlir::Value intResult = builder.createConvert(loc, intType, divResult);
+  mlir::Value cnvResult = builder.createConvert(loc, a.getType(), intResult);
+  mlir::Value mulResult =
+      mlir::arith::MulFOp::create(builder, loc, cnvResult, p, fastmathAttr);
+  mlir::Value subResult =
+      mlir::arith::SubFOp::create(builder, loc, a, mulResult, fastmathAttr);
+  return subResult;
+}
+
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
+  auto mod = builder.getModule();
+  bool dontUseFastRealMod = false;
+  bool canUseApprox = mlir::arith::bitEnumContainsAny(
+      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
+    dontUseFastRealMod = attr.getValue();
+
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
     mlir::Type signlessType = mlir::IntegerType::get(
@@ -7001,9 +7047,16 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  // Use runtime.
-  return builder.createConvert(
-      loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
+  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+    // Treat MOD as an approximate function and code-gen inline code
+    // instead of calling into the Fortran runtime library.
+    return builder.createConvert(loc, resultType,
+                                 genFastMod(builder, loc, args[0], args[1]));
+  } else {
+    // Use runtime.
+    return builder.createConvert(
+        loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
+  }
 }
 
 // MODULO
@@ -7438,7 +7491,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
 fir::ExtendedValue
 IntrinsicLibrary::genNumImages(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
@@ -8519,7 +8572,7 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genThisImage(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
   mlir::Value team =

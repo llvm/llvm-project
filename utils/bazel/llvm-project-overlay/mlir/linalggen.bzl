@@ -33,6 +33,7 @@ def genlinalg(name, linalggen, src, linalg_outs):
             srcs = [src],
             outs = [out],
             tools = [linalggen],
+            output_to_bindir = 1,
             cmd = (" ".join(base_args)),
         )
 

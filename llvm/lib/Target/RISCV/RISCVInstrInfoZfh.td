@@ -69,16 +69,16 @@ def ZhinxminExt         : ExtInfo<"_INX", "Zfinx",
                                   f16, FPR16INX, FPR32INX, ?, FPR16INX>;
 def ZhinxZdinxExt       : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV64],
-                                  ?, ?, FPR32INX, FPR64INX, FPR16INX>;
+                                  ?, ?, FPR32INX, FPR64INX, FPR16INX, i64>;
 def ZhinxminZdinxExt    : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64],
-                                  ?, ?, FPR32INX, FPR64INX, FPR16INX>;
+                                  ?, ?, FPR32INX, FPR64INX, FPR16INX, i64>;
 def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV32],
-                                  ?, ?, FPR32INX, FPR64IN32X, FPR16INX>;
+                                  ?, ?, FPR32INX, FPR64IN32X, FPR16INX, i32>;
 def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV32],
-                                  ?, ?, FPR32INX, FPR64IN32X, FPR16INX>;
+                                  ?, ?, FPR32INX, FPR64IN32X, FPR16INX, i32>;
 
 defvar ZfhExts = [ZfhExt, ZhinxExt];
 defvar ZfhminExts = [ZfhminExt, ZhinxminExt];
@@ -380,6 +380,7 @@ foreach Ext = ZfhExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_H, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_H, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_H, Ext>;
+  let Predicates = Ext.Predicates in
   def : Pat<(f16 (fcanonicalize FPR16:$rs1)), (FMIN_H $rs1, $rs1)>;
 }
 

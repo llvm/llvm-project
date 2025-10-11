@@ -18,6 +18,7 @@ unittest("ClangReplInterpreterTests") {
     "IncrementalProcessingTest.cpp",
     "InterpreterExtensionsTest.cpp",
     "InterpreterTest.cpp",
+    "OutOfProcessInterpreterTests.cpp",
   ]
 
   # Support plugins.
