@@ -958,7 +958,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
           ? Constraint.getPackSubstitutionIndex()
           : PackSubstitutionIndex;
 
-  Sema::InstantiatingTemplate _(
+  Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
       ConceptId->getNamedConcept(),
@@ -970,6 +970,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
       MLTAL.getNumSubstitutedLevels() ? MLTAL.getInnermost()
                                       : ArrayRef<TemplateArgument>{},
       Constraint.getSourceRange());
+  if (InstTemplate.isInvalid())
+    return ExprError();
 
   unsigned Size = Satisfaction.Details.size();
 
