@@ -377,6 +377,13 @@ struct Read : public Effect::Base<Read> {};
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
 struct Write : public Effect::Base<Write> {};
+
+// The following effect indicates that the operation initializes some
+// memory resource to a known value i.e., an idempotent MemWrite.
+// An 'init' effect implies only mutating a resource in a way that's
+// identical across calls if inputs are the same, and not any visible
+// dereference or read.
+struct Init : public Effect::Base<Init> {};
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
@@ -459,6 +466,15 @@ bool isOpTriviallyDead(Operation *op);
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
+/// Returns true if the given operation is movable under memory effects.
+///
+/// An operation is movable if any of the following are true:
+/// (1) isMemoryEffectFree(op) --> true
+/// (2) isMemoryInitMovable(op) --> true
+///
+/// If the operation meets either criteria, then it is movable
+bool isMemoryEffectMovable(Operation *op);
+
 /// Returns true if the given operation is free of memory effects.
 ///
 /// An operation is free of memory effects if its implementation of
@@ -470,6 +486,33 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// If the operation has both, then it is free of memory effects if both
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
+
+/// Returns true if the given operation has a collision-free 'Init' memory
+/// effect.
+///
+/// An operation is movable if:
+/// (1) it has memory effects AND all of its memory effects are of type 'Init'
+/// (2) there are no other ops with memory effects on any ofthose same resources
+/// within the operation's region(s)
+///
+/// If the operation meets both criteria, then it is movable
+bool isMemoryInitMovable(Operation *op);
+
+/// Returns true if op and all operations within its nested regions
+/// have >1 Memory Effects on ANY of the input resources.
+///
+/// The first call to this function is by an op with >=1 MemInit effect on
+/// >=1 unique resources. To check that none of these resources are in conflict
+/// with other Memory Effects, we scan the entire parent region and maintain
+/// a count of Memory Effects that apply to the resources of the original op.
+/// If any resource has more than 1 Memory Effect in that region, the resource
+/// is in conflict and the op can't be moved by LICM.
+///
+/// Function mutates resources map
+///
+/// If no resources are in conflict, the op is movable.
+bool hasMemoryEffectInitConflict(
+    Operation *op, DenseMap<TypeID, int> &resourceCounts);
 
 /// Returns the side effects of an operation. If the operation has
 /// RecursiveMemoryEffects, include all side effects of child operations.
