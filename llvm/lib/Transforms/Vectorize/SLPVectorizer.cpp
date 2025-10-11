@@ -25002,6 +25002,10 @@ private:
         case RecurKind::FMinNum:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
+        case RecurKind::UMaxMultiUse:
+        case RecurKind::UMinMultiUse:
+        case RecurKind::SMinMultiUse:
+        case RecurKind::SMaxMultiUse:
         case RecurKind::None:
           llvm_unreachable("Unexpected reduction kind for repeated scalar.");
         }
@@ -25143,6 +25147,10 @@ private:
     case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
+    case RecurKind::UMaxMultiUse:
+    case RecurKind::UMinMultiUse:
+    case RecurKind::SMinMultiUse:
+    case RecurKind::SMaxMultiUse:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for repeated scalar.");
     }
@@ -25249,6 +25257,10 @@ private:
     case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
+    case RecurKind::UMaxMultiUse:
+    case RecurKind::UMinMultiUse:
+    case RecurKind::SMinMultiUse:
+    case RecurKind::SMaxMultiUse:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for reused scalars.");
     }
