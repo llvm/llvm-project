@@ -71,6 +71,13 @@ private:
   typedef std::vector<OperandInfoTy> OperandInfoListTy;
   typedef std::map<OperandInfoTy, unsigned> OperandInfoMapTy;
 
+  DenseMap<const CodeGenInstruction *, const CodeGenInstruction *>
+      TargetSpecializedPseudoInsts;
+
+  /// Compute mapping of opcodes which should have their definitions overridden
+  /// by a target version.
+  void buildTargetSpecializedPseudoInstsMap();
+
   /// Generate member functions in the target-specific GenInstrInfo class.
   ///
   /// This method is used to custom expand TIIPredicate definitions.
@@ -215,6 +222,10 @@ InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
   const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+    auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+    if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+      Inst = OverrideEntry->second;
+
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
     if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
       OperandInfoList.push_back(OperandInfo);
@@ -882,6 +893,25 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
   }
 }
 
+void InstrInfoEmitter::buildTargetSpecializedPseudoInstsMap() {
+  ArrayRef<const Record *> SpecializedInsts = Records.getAllDerivedDefinitions(
+      "TargetSpecializedStandardPseudoInstruction");
+  const CodeGenTarget &Target = CDP.getTargetInfo();
+
+  for (const Record *SpecializedRec : SpecializedInsts) {
+    const CodeGenInstruction &SpecializedInst =
+        Target.getInstruction(SpecializedRec);
+    const Record *BaseInstRec = SpecializedRec->getValueAsDef("Instruction");
+
+    const CodeGenInstruction &BaseInst = Target.getInstruction(BaseInstRec);
+
+    if (!TargetSpecializedPseudoInsts.insert({&BaseInst, &SpecializedInst})
+             .second)
+      PrintFatalError(SpecializedRec, "multiple overrides of '" +
+                                          BaseInst.getName() + "' defined");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Main Output.
 //===----------------------------------------------------------------------===//
@@ -904,6 +934,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   // Collect all of the operand info records.
   Timer.startTimer("Collect operand info");
+  buildTargetSpecializedPseudoInstsMap();
+
   OperandInfoListTy OperandInfoList;
   OperandInfoMapTy OperandInfoMap;
   unsigned OperandInfoSize =
@@ -970,6 +1002,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
     // Keep a list of the instruction names.
     InstrNames.add(Inst->getName());
+
+    auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+    if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+      Inst = OverrideEntry->second;
+
     // Emit the record into the table.
     emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
   }
