@@ -16,9 +16,11 @@ add_llvm_component_library(LLVMOrcTargetProcess
   ExecutorSharedMemoryMapperService.cpp
   DefaultHostBootstrapValues.cpp
   ExecutorResolver.cpp
+  LibraryResolver.cpp
   JITLoaderGDB.cpp
   JITLoaderPerf.cpp
   JITLoaderVTune.cpp
+  LibraryScanner.cpp
   OrcRTBootstrap.cpp
   RegisterEHFrames.cpp
   SimpleExecutorDylibManager.cpp
