@@ -58,8 +58,15 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 
   O << ' ';
 
+  uint64_t Imm = MI->getOperand(StartIndex).getImm();
+
+  // Handle 64 bit literals.
+  if (NumVarOps == 2) {
+    Imm |= (MI->getOperand(StartIndex + 1).getImm() << 32);
+  }
+
   // Handle arbitrary number of 32-bit words for integer literals
-  if (Opcode == SPIRV::OpConstantI) {
+  if (Opcode == SPIRV::OpConstantI && NumVarOps > 2) {
     const unsigned TotalBits = NumVarOps * 32;
     APInt Val(TotalBits, 0);
     for (unsigned i = 0; i < NumVarOps; ++i) {
@@ -70,41 +77,35 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     return;
   }
 
-  // Handle float constants (OpConstantF)
-  uint64_t Imm = MI->getOperand(StartIndex).getImm();
-  if (NumVarOps == 2) {
-    Imm |= (MI->getOperand(StartIndex + 1).getImm()) << 32;
-  }
+  // Format and print float values.
+  if (MI->getOpcode() == SPIRV::OpConstantF && IsBitwidth16 == 0) {
+    APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
+                                : APFloat(APInt(64, Imm).bitsToDouble());
 
-  // For 16-bit floats, print as integer
-  if (IsBitwidth16) {
-    O << Imm;
+    // Print infinity and NaN as hex floats.
+    // TODO: Make sure subnormal numbers are handled correctly as they may also
+    // require hex float notation.
+    if (FP.isInfinity()) {
+      if (FP.isNegative())
+        O << '-';
+      O << "0x1p+128";
+      return;
+    }
+    if (FP.isNaN()) {
+      O << "0x1.8p+128";
+      return;
+    }
+
+    // Format val as a decimal floating point or scientific notation (whichever
+    // is shorter), with enough digits of precision to produce the exact value.
+    O << format("%.*g", std::numeric_limits<double>::max_digits10,
+                FP.convertToDouble());
+
     return;
   }
 
-  // Format and print float values
-  APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
-                              : APFloat(APInt(64, Imm).bitsToDouble());
-
-  // Print infinity and NaN as hex floats.
-  // TODO: Make sure subnormal numbers are handled correctly as they may also
-  // require hex float notation.
-  if (FP.isInfinity()) {
-    if (FP.isNegative())
-      O << '-';
-    O << "0x1p+128";
-    return;
-  }
-  
-  if (FP.isNaN()) {
-    O << "0x1.8p+128";
-    return;
-  }
-
-  // Format val as a decimal floating point or scientific notation (whichever
-  // is shorter), with enough digits of precision to produce the exact value.
-  O << format("%.*g", std::numeric_limits<double>::max_digits10,
-              FP.convertToDouble());
+  // Print integer values directly.
+  O << Imm;
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
