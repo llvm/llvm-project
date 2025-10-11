@@ -279,6 +279,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::riscv_nxv32i8x2, &RISCV::VRN2M4RegClass);
   }
 
+  // fixed vector is stored in GPRs for P extension packed operations
+  if (Subtarget.hasStdExtP()) {
+    addRegisterClass(MVT::v2i16, &RISCV::GPRRegClass);
+    addRegisterClass(MVT::v4i8, &RISCV::GPRRegClass);
+    if (Subtarget.is64Bit()) {
+      addRegisterClass(MVT::v2i32, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v4i16, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v8i8, &RISCV::GPRRegClass);
+    }
+  }
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
 
@@ -478,6 +489,24 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
+
+  if (Subtarget.hasStdExtP()) {
+    // load/store are already handled by pattern matching
+    SmallVector<MVT, 2> VTs = {MVT::v2i16, MVT::v4i8};
+    if (Subtarget.is64Bit())
+      VTs.append({MVT::v2i32, MVT::v4i16, MVT::v8i8});
+    for (auto VT : VTs) {
+      setOperationAction(ISD::UADDSAT, VT, Legal);
+      setOperationAction(ISD::SADDSAT, VT, Legal);
+      setOperationAction(ISD::USUBSAT, VT, Legal);
+      setOperationAction(ISD::SSUBSAT, VT, Legal);
+      setOperationAction(ISD::SSHLSAT, VT, Legal);
+      setOperationAction(ISD::USHLSAT, VT, Legal);
+      setOperationAction(ISD::BITCAST, VT, Custom);
+      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VT, Legal);
+      setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+    }
+  }
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
