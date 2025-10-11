@@ -274,6 +274,7 @@ struct IntrinsicLibrary {
                                       llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genFenceProxyAsync(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
