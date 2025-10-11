@@ -4363,10 +4363,16 @@ def CIR_TryOp : CIR_Op<"try",[
     ```
   }];
 
-  let arguments = (ins UnitAttr:$synthetic, UnitAttr:$cleanup,
-                       OptionalAttr<ArrayAttr>:$catch_types);
-  let regions = (region AnyRegion:$try_region,
-                        VariadicRegion<AnyRegion>:$catch_regions);
+  let arguments = (ins
+    UnitAttr:$synthetic,
+    UnitAttr:$cleanup,
+    CIR_GlobalViewOrCatchAllOrUnwindArrayAttr:$catch_types
+  );
+
+  let regions = (region
+    AnyRegion:$try_region,
+    VariadicRegion<MinSizedRegion<1>>:$catch_regions
+  );
 
   let assemblyFormat = [{
     (`synthetic` $synthetic^)?
@@ -4376,7 +4382,6 @@ def CIR_TryOp : CIR_Op<"try",[
     attr-dict
   }];
 
-  // Everything already covered elsewhere.
   let builders = [
     OpBuilder<(ins
       "llvm::function_ref<void(mlir::OpBuilder &, "
@@ -4390,7 +4395,7 @@ def CIR_TryOp : CIR_Op<"try",[
       OpBuilder::InsertionGuard guard($_builder);
 
       // Try body region
-      Region *tryBodyRegion = $_state.addRegion();
+      mlir::Region *tryBodyRegion = $_state.addRegion();
 
       // Create try body region and set insertion point
       $_builder.createBlock(tryBodyRegion);

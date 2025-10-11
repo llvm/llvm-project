@@ -2919,113 +2919,117 @@ LogicalResult cir::TypeInfoAttr::verify(
 //===----------------------------------------------------------------------===//
 
 void cir::TryOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  // The `try` and the `catchers` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
+    regions.push_back(mlir::RegionSuccessor());
     return;
   }
 
-  // If the condition isn't constant, both regions may be executed.
-  regions.push_back(RegionSuccessor(&getTryRegion()));
+  regions.push_back(mlir::RegionSuccessor(&getTryRegion()));
 
-  // FIXME: optimize, ideas include:
-  // - If we know a target function never throws a specific type, we can
-  //   remove the catch handler.
-  for (mlir::Region &r : this->getCatchRegions())
-    regions.push_back(RegionSuccessor(&r));
+  // TODO(CIR): If we know a target function never throws a specific type, we
+  // can remove the catch handler.
+  for (mlir::Region &region : this->getCatchRegions())
+    regions.push_back(mlir::RegionSuccessor(&region));
 }
 
-static void printCatchRegions(OpAsmPrinter &printer, cir::TryOp op,
-                              mlir::MutableArrayRef<::mlir::Region> regions,
+static void printCatchRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
+                              mlir::MutableArrayRef<mlir::Region> regions,
                               mlir::ArrayAttr catchersAttr) {
   if (!catchersAttr)
     return;
 
-  int currCatchIdx = 0;
-  printer << "catch [";
-  llvm::interleaveComma(catchersAttr, printer, [&](const Attribute &a) {
-    if (mlir::isa<cir::CatchUnwindAttr>(a)) {
-      printer.printAttribute(a);
+  for (const auto [catcherIdx, catcherAttr] : llvm::enumerate(catchersAttr)) {
+    if (catcherIdx)
       printer << " ";
-    } else if (!a) {
-      printer << "all";
-    } else {
-      printer << "type ";
-      printer.printAttribute(a);
-      printer << " ";
-    }
-    printer.printRegion(regions[currCatchIdx], /*printEntryBLockArgs=*/false,
-                        /*printBlockTerminators=*/true);
-    currCatchIdx++;
-  });
 
-  printer << "]";
+    if (mlir::isa<cir::CatchAllAttr>(catcherAttr)) {
+      printer << "catch all ";
+    } else if (mlir::isa<cir::UnwindAttr>(catcherAttr)) {
+      printer << "unwind ";
+    } else {
+      printer << "catch [type ";
+      printer.printAttribute(catcherAttr);
+      printer << "] ";
+    }
+
+    printer.printRegion(regions[catcherIdx], /*printEntryBLockArgs=*/false,
+                        /*printBlockTerminators=*/true);
+  }
 }
 
-static ParseResult parseCatchRegions(
-    OpAsmParser &parser,
-    llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regions,
-    ::mlir::ArrayAttr &catchersAttr) {
-  if (parser.parseKeyword("catch").failed())
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected 'catch' keyword here");
+static mlir::ParseResult
+parseCatchRegions(mlir::OpAsmParser &parser,
+                  llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &regions,
+                  mlir::ArrayAttr &catchersAttr) {
 
-  auto parseAndCheckRegion = [&]() -> ParseResult {
-    // Parse region attached to catch
-    regions.emplace_back(new Region);
-    Region &currRegion = *regions.back();
-    SMLoc parserLoc = parser.getCurrentLocation();
+  auto parseCheckedCatcherRegion = [&]() -> mlir::ParseResult {
+    regions.emplace_back(new mlir::Region);
+
+    mlir::Region &currRegion = *regions.back();
+    mlir::SMLoc regionLoc = parser.getCurrentLocation();
     if (parser.parseRegion(currRegion)) {
       regions.clear();
       return failure();
     }
 
-    if (currRegion.empty()) {
-      return parser.emitError(parser.getCurrentLocation(),
-                              "catch region shall not be empty");
-    }
-
-    if (!(currRegion.back().mightHaveTerminator() &&
-          currRegion.back().getTerminator()))
+    if (!currRegion.empty() && !(currRegion.back().mightHaveTerminator() &&
+                                 currRegion.back().getTerminator()))
       return parser.emitError(
-          parserLoc, "blocks are expected to be explicitly terminated");
+          regionLoc, "blocks are expected to be explicitly terminated");
 
     return success();
   };
 
-  llvm::SmallVector<mlir::Attribute, 4> catchList;
-  auto parseCatchEntry = [&]() -> ParseResult {
-    mlir::Attribute exceptionTypeInfo;
+  bool hasCatchAll = false;
+  llvm::SmallVector<mlir::Attribute, 4> catcherAttrs;
+  while (parser.parseOptionalKeyword("catch").succeeded()) {
+    bool hasLSquare = parser.parseOptionalLSquare().succeeded();
 
-    if (parser.parseOptionalAttribute(exceptionTypeInfo).has_value()) {
-      catchList.push_back(exceptionTypeInfo);
-    } else {
-      ::llvm::StringRef attrStr;
-      if (parser.parseOptionalKeyword(&attrStr, {"all"}).succeeded()) {
-        // "all" keyword found, exceptionTypeInfo remains null
-      } else if (parser.parseOptionalKeyword("type").succeeded()) {
-        if (parser.parseAttribute(exceptionTypeInfo).failed())
-          return parser.emitError(parser.getCurrentLocation(),
-                                  "expected valid RTTI info attribute");
-      } else {
+    llvm::StringRef attrStr;
+    if (parser.parseOptionalKeyword(&attrStr, {"all", "type"}).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected 'all' or 'type' keyword");
+
+    bool isCatchAll = attrStr == "all";
+    if (isCatchAll) {
+      if (hasCatchAll)
         return parser.emitError(parser.getCurrentLocation(),
-                                "expected attribute, 'all', or 'type' keyword");
-      }
-      catchList.push_back(exceptionTypeInfo);
+                                "can't have more than one catch all");
+      hasCatchAll = true;
     }
-    return parseAndCheckRegion();
-  };
 
-  if (parser
-          .parseCommaSeparatedList(OpAsmParser::Delimiter::Square,
-                                   parseCatchEntry, " in catch list")
-          .failed())
-    return failure();
+    mlir::Attribute exceptionRTTIAttr;
+    if (!isCatchAll && parser.parseAttribute(exceptionRTTIAttr).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected valid RTTI info attribute");
 
-  catchersAttr = parser.getBuilder().getArrayAttr(catchList);
-  return ::mlir::success();
+    catcherAttrs.push_back(isCatchAll
+                               ? cir::CatchAllAttr::get(parser.getContext())
+                               : exceptionRTTIAttr);
+
+    if (hasLSquare && isCatchAll)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "catch all dosen't need RTTI info attribute");
+
+    if (hasLSquare && parser.parseRSquare().failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected `]` after RTTI info attribute");
+
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  if (parser.parseOptionalKeyword("unwind").succeeded()) {
+    catcherAttrs.push_back(cir::UnwindAttr::get(parser.getContext()));
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  catchersAttr = parser.getBuilder().getArrayAttr(catcherAttrs);
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
