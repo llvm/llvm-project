@@ -1777,6 +1777,9 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   if (VF.isScalar())
     return 0;
 
+  assert(!VF.isScalable() &&
+         "Scalarization overhead not supported for scalable vectors");
+
   InstructionCost ScalarizationCost = 0;
   // Compute the cost of scalarizing the result if needed.
   if (!ResultTy->isVoidTy()) {
