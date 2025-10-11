@@ -54,18 +54,10 @@ public:
 
   struct FinalizeRequest {
     struct Segment {
-      enum class ContentType : uint8_t { Uninitialized, ZeroFill, Regular };
-
-      Segment() = default;
-      Segment(void *Address, size_t Size, AllocGroup G, ContentType C)
-          : Address(Address), Size(Size), G(G), C(C) {}
-
-      void *Address = nullptr;
+      AllocGroup AG;
+      char *Address = nullptr;
       size_t Size = 0;
-      AllocGroup G;
-      ContentType C = ContentType::Uninitialized;
-      char *data() { return reinterpret_cast<char *>(Address); }
-      size_t size() const { return Size; }
+      span<const char> Content;
     };
 
     std::vector<Segment> Segments;
