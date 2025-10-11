@@ -2080,6 +2080,8 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
     return TargetOpcode::G_STRICT_FSQRT;
   case Intrinsic::experimental_constrained_ldexp:
     return TargetOpcode::G_STRICT_FLDEXP;
+  case Intrinsic::experimental_constrained_fmuladd:
+    return TargetOpcode::G_STRICT_FMULADD;
   default:
     return 0;
   }
