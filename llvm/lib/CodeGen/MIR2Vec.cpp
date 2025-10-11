@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MIR2Vec.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Module.h"
@@ -41,11 +42,18 @@ static cl::opt<std::string>
 cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
                          cl::desc("Weight for machine opcode embeddings"),
                          cl::cat(MIR2VecCategory));
+cl::opt<MIR2VecKind> MIR2VecEmbeddingKind(
+    "mir2vec-kind", cl::Optional,
+    cl::values(clEnumValN(MIR2VecKind::Symbolic, "symbolic",
+                          "Generate symbolic embeddings for MIR")),
+    cl::init(MIR2VecKind::Symbolic), cl::desc("MIR2Vec embedding kind"),
+    cl::cat(MIR2VecCategory));
+
 } // namespace mir2vec
 } // namespace llvm
 
 //===----------------------------------------------------------------------===//
-// Vocabulary Implementation
+// Vocabulary
 //===----------------------------------------------------------------------===//
 
 MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeEntries,
@@ -191,6 +199,30 @@ void MIRVocabulary::buildCanonicalOpcodeMapping() {
                     << " unique base opcodes\n");
 }
 
+Expected<MIRVocabulary>
+MIRVocabulary::createDummyVocabForTest(const TargetInstrInfo &TII,
+                                       unsigned Dim) {
+  assert(Dim > 0 && "Dimension must be greater than zero");
+
+  float DummyVal = 0.1f;
+
+  // Create a temporary vocabulary instance to build canonical mapping
+  MIRVocabulary TempVocab({}, TII);
+  TempVocab.buildCanonicalOpcodeMapping();
+
+  // Create dummy embeddings for all canonical opcode names
+  VocabMap DummyVocabMap;
+  for (const auto &COpcodeName : TempVocab.UniqueBaseOpcodeNames) {
+    // Create dummy embedding filled with DummyVal
+    Embedding DummyEmbedding(Dim, DummyVal);
+    DummyVocabMap[COpcodeName] = DummyEmbedding;
+    DummyVal += 0.1f;
+  }
+
+  // Create and return vocabulary with dummy embeddings
+  return MIRVocabulary::create(std::move(DummyVocabMap), TII);
+}
+
 //===----------------------------------------------------------------------===//
 // MIR2VecVocabLegacyAnalysis Implementation
 //===----------------------------------------------------------------------===//
@@ -261,7 +293,73 @@ MIR2VecVocabLegacyAnalysis::getMIR2VecVocabulary(const Module &M) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printer Passes Implementation
+// MIREmbedder and its subclasses
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<MIREmbedder> MIREmbedder::create(MIR2VecKind Mode,
+                                                 const MachineFunction &MF,
+                                                 const MIRVocabulary &Vocab) {
+  switch (Mode) {
+  case MIR2VecKind::Symbolic:
+    return std::make_unique<SymbolicMIREmbedder>(MF, Vocab);
+  }
+  return nullptr;
+}
+
+Embedding MIREmbedder::computeEmbeddings(const MachineBasicBlock &MBB) const {
+  Embedding MBBVector(Dimension, 0);
+
+  // Get instruction info for opcode name resolution
+  const auto &Subtarget = MF.getSubtarget();
+  const auto *TII = Subtarget.getInstrInfo();
+  if (!TII) {
+    MF.getFunction().getContext().emitError(
+        "MIR2Vec: No TargetInstrInfo available; cannot compute embeddings");
+    return MBBVector;
+  }
+
+  // Process each machine instruction in the basic block
+  for (const auto &MI : MBB) {
+    // Skip debug instructions and other metadata
+    if (MI.isDebugInstr())
+      continue;
+    MBBVector += computeEmbeddings(MI);
+  }
+
+  return MBBVector;
+}
+
+Embedding MIREmbedder::computeEmbeddings() const {
+  Embedding MFuncVector(Dimension, 0);
+
+  // Consider all reachable machine basic blocks in the function
+  for (const auto *MBB : depth_first(&MF))
+    MFuncVector += computeEmbeddings(*MBB);
+  return MFuncVector;
+}
+
+SymbolicMIREmbedder::SymbolicMIREmbedder(const MachineFunction &MF,
+                                         const MIRVocabulary &Vocab)
+    : MIREmbedder(MF, Vocab) {}
+
+std::unique_ptr<SymbolicMIREmbedder>
+SymbolicMIREmbedder::create(const MachineFunction &MF,
+                            const MIRVocabulary &Vocab) {
+  return std::make_unique<SymbolicMIREmbedder>(MF, Vocab);
+}
+
+Embedding SymbolicMIREmbedder::computeEmbeddings(const MachineInstr &MI) const {
+  // Skip debug instructions and other metadata
+  if (MI.isDebugInstr())
+    return Embedding(Dimension, 0);
+
+  // Todo: Add operand/argument contributions
+
+  return Vocab[MI.getOpcode()];
+}
+
+//===----------------------------------------------------------------------===//
+// Printer Passes
 //===----------------------------------------------------------------------===//
 
 char MIR2VecVocabPrinterLegacyPass::ID = 0;
@@ -299,4 +397,57 @@ bool MIR2VecVocabPrinterLegacyPass::doFinalization(Module &M) {
 MachineFunctionPass *
 llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
   return new MIR2VecVocabPrinterLegacyPass(OS);
+}
+
+char MIR2VecPrinterLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(MIR2VecPrinterLegacyPass, "print-mir2vec",
+                      "MIR2Vec Embedder Printer Pass", false, true)
+INITIALIZE_PASS_DEPENDENCY(MIR2VecVocabLegacyAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
+INITIALIZE_PASS_END(MIR2VecPrinterLegacyPass, "print-mir2vec",
+                    "MIR2Vec Embedder Printer Pass", false, true)
+
+bool MIR2VecPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
+  auto &Analysis = getAnalysis<MIR2VecVocabLegacyAnalysis>();
+  auto VocabOrErr =
+      Analysis.getMIR2VecVocabulary(*MF.getFunction().getParent());
+  assert(VocabOrErr && "Failed to get MIR2Vec vocabulary");
+  auto &MIRVocab = *VocabOrErr;
+
+  auto Emb = mir2vec::MIREmbedder::create(MIR2VecEmbeddingKind, MF, MIRVocab);
+  if (!Emb) {
+    OS << "Error creating MIR2Vec embeddings for function " << MF.getName()
+       << "\n";
+    return false;
+  }
+
+  OS << "MIR2Vec embeddings for machine function " << MF.getName() << ":\n";
+  OS << "Machine Function vector: ";
+  Emb->getMFunctionVector().print(OS);
+
+  OS << "Machine basic block vectors:\n";
+  for (const MachineBasicBlock &MBB : MF) {
+    OS << "Machine basic block: " << MBB.getFullName() << ":\n";
+    Emb->getMBBVector(MBB).print(OS);
+  }
+
+  OS << "Machine instruction vectors:\n";
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      // Skip debug instructions as they are not
+      // embedded
+      if (MI.isDebugInstr())
+        continue;
+
+      OS << "Machine instruction: ";
+      MI.print(OS);
+      Emb->getMInstVector(MI).print(OS);
+    }
+  }
+
+  return false;
+}
+
+MachineFunctionPass *llvm::createMIR2VecPrinterLegacyPass(raw_ostream &OS) {
+  return new MIR2VecPrinterLegacyPass(OS);
 }
