@@ -116,24 +116,23 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    mr 31, 1
 ; CHECK-NEXT:    .cfi_def_cfa_register r31
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    li 5, 2
+; CHECK-NEXT:    li 6, 3
+; CHECK-NEXT:    li 7, 4
+; CHECK-NEXT:    lis 8, x@ha
 ; CHECK-NEXT:    stw 3, 24(31)
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    li 4, 2
-; CHECK-NEXT:    li 5, 3
-; CHECK-NEXT:    li 6, 4
-; CHECK-NEXT:    lis 7, x@ha
-; CHECK-NEXT:    stw 3, 20(31)
-; CHECK-NEXT:    stw 4, 16(31)
-; CHECK-NEXT:    stw 5, 12(31)
-; CHECK-NEXT:    stw 6, 8(31)
-; CHECK-NEXT:    stw 3, x@l(7)
+; CHECK-NEXT:    stw 4, 20(31)
+; CHECK-NEXT:    stw 5, 16(31)
+; CHECK-NEXT:    stw 6, 12(31)
+; CHECK-NEXT:    stw 7, 8(31)
+; CHECK-NEXT:    stw 4, x@l(8)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    stw 3, 20(31)
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    stw 4, 16(31)
-; CHECK-NEXT:    stw 5, 12(31)
-; CHECK-NEXT:    stw 6, 8(31)
+; CHECK-NEXT:    stw 4, 20(31)
+; CHECK-NEXT:    stw 5, 16(31)
+; CHECK-NEXT:    stw 6, 12(31)
+; CHECK-NEXT:    stw 7, 8(31)
 ; CHECK-NEXT:    lwz 31, 28(1)
 ; CHECK-NEXT:    addi 1, 1, 32
 ; CHECK-NEXT:    blr
@@ -145,23 +144,22 @@ define dso_local i32 @main() #0 {
 ; AIX-NEXT:    lwz 4, L..C0(2) # @x
 ; AIX-NEXT:    mr 31, 1
 ; AIX-NEXT:    li 3, 0
+; AIX-NEXT:    li 5, 1
+; AIX-NEXT:    li 6, 2
+; AIX-NEXT:    li 7, 3
+; AIX-NEXT:    li 8, 4
 ; AIX-NEXT:    stw 3, 40(31)
-; AIX-NEXT:    li 3, 1
-; AIX-NEXT:    li 5, 2
-; AIX-NEXT:    li 6, 3
-; AIX-NEXT:    li 7, 4
-; AIX-NEXT:    stw 3, 36(31)
-; AIX-NEXT:    stw 5, 32(31)
-; AIX-NEXT:    stw 6, 28(31)
-; AIX-NEXT:    stw 7, 24(31)
-; AIX-NEXT:    stw 3, 0(4)
+; AIX-NEXT:    stw 5, 36(31)
+; AIX-NEXT:    stw 6, 32(31)
+; AIX-NEXT:    stw 7, 28(31)
+; AIX-NEXT:    stw 8, 24(31)
+; AIX-NEXT:    stw 5, 0(4)
 ; AIX-NEXT:    #APP
 ; AIX-NEXT:    #NO_APP
-; AIX-NEXT:    stw 3, 36(31)
-; AIX-NEXT:    li 3, 0
-; AIX-NEXT:    stw 5, 32(31)
-; AIX-NEXT:    stw 6, 28(31)
-; AIX-NEXT:    stw 7, 24(31)
+; AIX-NEXT:    stw 5, 36(31)
+; AIX-NEXT:    stw 6, 32(31)
+; AIX-NEXT:    stw 7, 28(31)
+; AIX-NEXT:    stw 8, 24(31)
 ; AIX-NEXT:    addi 1, 1, 48
 ; AIX-NEXT:    lwz 31, -4(1)
 ; AIX-NEXT:    blr

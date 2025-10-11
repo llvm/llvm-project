@@ -74,10 +74,10 @@ define dso_local nonnull ptr @foo3() local_unnamed_addr #0 {
 ; CHECK-LABEL: foo3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    endbr64
-; CHECK-NEXT:    movl $217112837, %eax # imm = 0xCF0E105
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl %eax, czx(%rip)
 ; CHECK-NEXT:    movl $czx, %eax
+; CHECK-NEXT:    movl $217112837, %ecx # imm = 0xCF0E105
+; CHECK-NEXT:    notl %ecx
+; CHECK-NEXT:    andl %ecx, czx(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, ptr @czx, align 4

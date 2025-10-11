@@ -1677,8 +1677,8 @@ define <2 x i64> @max_gt_v2i64c() {
 define <4 x i64> @max_gt_v4i64c() {
 ; SSE-LABEL: max_gt_v4i64c:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [7,7]
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [7,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: max_gt_v4i64c:
@@ -1839,8 +1839,8 @@ define <2 x i64> @max_ge_v2i64c() {
 define <4 x i64> @max_ge_v4i64c() {
 ; SSE-LABEL: max_ge_v4i64c:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [7,7]
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [7,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: max_ge_v4i64c:

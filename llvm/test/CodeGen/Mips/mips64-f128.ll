@@ -2938,8 +2938,8 @@ define fp128 @call_structure_without_fp128() nounwind {
 ; C_CC_FMT-NEXT:  .Ltmp51:
 ; C_CC_FMT-NEXT:    jalr $25
 ; C_CC_FMT-NEXT:    nop
-; C_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; C_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; C_CC_FMT-NEXT:    move $2, $4
 ; C_CC_FMT-NEXT:    ld $gp, 32($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    daddiu $sp, $sp, 48
@@ -2959,8 +2959,8 @@ define fp128 @call_structure_without_fp128() nounwind {
 ; CMP_CC_FMT-NEXT:    .reloc .Ltmp51, R_MIPS_JALR, bar_structure_without_fp128
 ; CMP_CC_FMT-NEXT:  .Ltmp51:
 ; CMP_CC_FMT-NEXT:    jalrc $25
-; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; CMP_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; CMP_CC_FMT-NEXT:    move $2, $4
 ; CMP_CC_FMT-NEXT:    ld $gp, 32($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    daddiu $sp, $sp, 48
@@ -2973,15 +2973,15 @@ entry:
 define { fp128 } @bar_structure_fp128() nounwind {
 ; C_CC_FMT-LABEL: bar_structure_fp128:
 ; C_CC_FMT:       # %bb.0: # %entry
-; C_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; C_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; C_CC_FMT-NEXT:    move $2, $4
 ; C_CC_FMT-NEXT:    jr $ra
 ; C_CC_FMT-NEXT:    nop
 ;
 ; CMP_CC_FMT-LABEL: bar_structure_fp128:
 ; CMP_CC_FMT:       # %bb.0: # %entry
-; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; CMP_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; CMP_CC_FMT-NEXT:    move $2, $4
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   ret { fp128 } zeroinitializer
@@ -3001,8 +3001,8 @@ define fp128 @tail_call_structure_fp128() nounwind {
 ; C_CC_FMT-NEXT:  .Ltmp52:
 ; C_CC_FMT-NEXT:    jalr $25
 ; C_CC_FMT-NEXT:    nop
-; C_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; C_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; C_CC_FMT-NEXT:    move $2, $4
 ; C_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    daddiu $sp, $sp, 16
@@ -3021,8 +3021,8 @@ define fp128 @tail_call_structure_fp128() nounwind {
 ; CMP_CC_FMT-NEXT:    .reloc .Ltmp52, R_MIPS_JALR, bar_structure_fp128
 ; CMP_CC_FMT-NEXT:  .Ltmp52:
 ; CMP_CC_FMT-NEXT:    jalrc $25
-; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; CMP_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; CMP_CC_FMT-NEXT:    move $2, $4
 ; CMP_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    daddiu $sp, $sp, 16
@@ -3035,15 +3035,15 @@ entry:
 define fp128 @bar_fp128() nounwind {
 ; C_CC_FMT-LABEL: bar_fp128:
 ; C_CC_FMT:       # %bb.0: # %entry
-; C_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; C_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; C_CC_FMT-NEXT:    move $2, $4
 ; C_CC_FMT-NEXT:    jr $ra
 ; C_CC_FMT-NEXT:    nop
 ;
 ; CMP_CC_FMT-LABEL: bar_fp128:
 ; CMP_CC_FMT:       # %bb.0: # %entry
-; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; CMP_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; CMP_CC_FMT-NEXT:    move $2, $4
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   ret fp128 zeroinitializer
@@ -3063,8 +3063,8 @@ define fp128 @call_fp128() nounwind {
 ; C_CC_FMT-NEXT:  .Ltmp53:
 ; C_CC_FMT-NEXT:    jalr $25
 ; C_CC_FMT-NEXT:    nop
-; C_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; C_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; C_CC_FMT-NEXT:    move $2, $4
 ; C_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    daddiu $sp, $sp, 16
@@ -3083,8 +3083,8 @@ define fp128 @call_fp128() nounwind {
 ; CMP_CC_FMT-NEXT:    .reloc .Ltmp53, R_MIPS_JALR, bar_fp128
 ; CMP_CC_FMT-NEXT:  .Ltmp53:
 ; CMP_CC_FMT-NEXT:    jalrc $25
-; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; CMP_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; CMP_CC_FMT-NEXT:    move $2, $4
 ; CMP_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    daddiu $sp, $sp, 16
@@ -3108,8 +3108,8 @@ define fp128 @call_structure_fp128() nounwind {
 ; C_CC_FMT-NEXT:  .Ltmp54:
 ; C_CC_FMT-NEXT:    jalr $25
 ; C_CC_FMT-NEXT:    nop
-; C_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; C_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; C_CC_FMT-NEXT:    move $2, $4
 ; C_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; C_CC_FMT-NEXT:    daddiu $sp, $sp, 16
@@ -3128,8 +3128,8 @@ define fp128 @call_structure_fp128() nounwind {
 ; CMP_CC_FMT-NEXT:    .reloc .Ltmp54, R_MIPS_JALR, bar_structure_fp128
 ; CMP_CC_FMT-NEXT:  .Ltmp54:
 ; CMP_CC_FMT-NEXT:    jalrc $25
-; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 0
 ; CMP_CC_FMT-NEXT:    daddiu $4, $zero, 0
+; CMP_CC_FMT-NEXT:    move $2, $4
 ; CMP_CC_FMT-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; CMP_CC_FMT-NEXT:    daddiu $sp, $sp, 16

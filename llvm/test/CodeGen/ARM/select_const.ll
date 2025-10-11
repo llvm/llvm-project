@@ -766,7 +766,7 @@ define i64 @func(i64 %arg) {
 ; ARM-NEXT:    adds r0, r0, #1
 ; ARM-NEXT:    mov r2, #0
 ; ARM-NEXT:    adcs r0, r1, #0
-; ARM-NEXT:    mov r1, #0
+; ARM-NEXT:    mov r1, r2
 ; ARM-NEXT:    adcs r0, r2, #0
 ; ARM-NEXT:    movne r0, #8
 ; ARM-NEXT:    mov pc, lr
@@ -776,7 +776,7 @@ define i64 @func(i64 %arg) {
 ; THUMB2-NEXT:    adds r0, #1
 ; THUMB2-NEXT:    mov.w r2, #0
 ; THUMB2-NEXT:    adcs r0, r1, #0
-; THUMB2-NEXT:    mov.w r1, #0
+; THUMB2-NEXT:    mov r1, r2
 ; THUMB2-NEXT:    adcs r0, r2, #0
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #8

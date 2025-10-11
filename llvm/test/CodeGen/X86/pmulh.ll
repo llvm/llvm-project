@@ -2857,7 +2857,7 @@ define <16 x i16> @and_mulhuw_v16i16_shift31(<16 x i32> %a, <16 x i32> %b) {
 ; SSE-LABEL: and_mulhuw_v16i16_shift31:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: and_mulhuw_v16i16_shift31:

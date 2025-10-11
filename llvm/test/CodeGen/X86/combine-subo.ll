@@ -202,13 +202,13 @@ define { <4 x i8>, <4 x i1> } @always_usub_const_vector() nounwind {
 ; SSE-LABEL: always_usub_const_vector:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: always_usub_const_vector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 0, i8 0, i8 0, i8 0>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
   ret { <4 x i8>, <4 x i1> } %x

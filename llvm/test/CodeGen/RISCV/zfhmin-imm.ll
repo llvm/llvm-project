@@ -75,11 +75,13 @@ define half @f16_negative_zero(ptr %pf) nounwind {
 ; RV32IZHINXMIN-LABEL: f16_negative_zero:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    lui a0, 1048568
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: f16_negative_zero:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    lui a0, 1048568
+; RV32IZDINXZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: f16_negative_zero:
@@ -97,11 +99,13 @@ define half @f16_negative_zero(ptr %pf) nounwind {
 ; RV64IZHINXMIN-LABEL: f16_negative_zero:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    lui a0, 1048568
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: f16_negative_zero:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    lui a0, 1048568
+; RV64IZDINXZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   ret half -0.0
 }

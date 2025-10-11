@@ -2482,6 +2482,7 @@ define <2 x i32> @fcmal2xfloat(<2 x float> %A, <2 x float> %B) {
 ; CHECK-SD-LABEL: fcmal2xfloat:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fcmal2xfloat:
@@ -2535,6 +2536,7 @@ define <2 x i32> @fcmnv2xfloat(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: fcmnv2xfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp3 = fcmp false <2 x float> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>

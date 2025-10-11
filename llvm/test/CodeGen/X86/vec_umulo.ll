@@ -2857,8 +2857,8 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    pslld $31, %xmm0
 ; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    movb %al, (%rdi)
 ; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    movb %al, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: umulo_v4i1:
@@ -2866,8 +2866,8 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    movb %al, (%rdi)
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    movb %al, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: umulo_v4i1:
@@ -2875,9 +2875,9 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movb %al, (%rdi)
-; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: umulo_v4i1:
@@ -2885,9 +2885,9 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movb %al, (%rdi)
-; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
   %t = call {<4 x i1>, <4 x i1>} @llvm.umul.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)
   %val = extractvalue {<4 x i1>, <4 x i1>} %t, 0

@@ -285,7 +285,7 @@ define <8 x i32> @combine_vec_shl_ext_shl1(<8 x i16> %x) {
 ; SSE-LABEL: combine_vec_shl_ext_shl1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_shl_ext_shl1:

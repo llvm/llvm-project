@@ -9,6 +9,7 @@ define float @select_fp_const() {
 ; GISEL-LABEL: select_fp_const:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    movi v0.2s, #79, lsl #24
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; GISEL-NEXT:    ret
 ;
 ; FISEL-LABEL: select_fp_const:

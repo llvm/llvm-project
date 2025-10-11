@@ -7,6 +7,8 @@ define dso_local { float, double } @test1() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1280
 ; CHECK-NEXT:    vldi $vr1, -1024
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.0000000000, double 2.0000000000 }
@@ -17,6 +19,8 @@ define dso_local { float, double } @test2() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1279
 ; CHECK-NEXT:    vldi $vr1, -1023
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.1250000000, double 2.1250000000 }
@@ -27,6 +31,8 @@ define dso_local { float, double } @test3() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1278
 ; CHECK-NEXT:    vldi $vr1, -1022
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.2500000000, double 2.2500000000 }
@@ -37,6 +43,8 @@ define dso_local { float, double } @test4() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1277
 ; CHECK-NEXT:    vldi $vr1, -1021
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.3750000000, double 2.3750000000 }
@@ -47,6 +55,8 @@ define dso_local { float, double } @test5() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1276
 ; CHECK-NEXT:    vldi $vr1, -1020
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.5000000000, double 2.5000000000 }
@@ -57,6 +67,8 @@ define dso_local { float, double } @test6() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1275
 ; CHECK-NEXT:    vldi $vr1, -1019
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.6250000000, double 2.6250000000 }
@@ -67,6 +79,8 @@ define dso_local { float, double } @test7() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1274
 ; CHECK-NEXT:    vldi $vr1, -1018
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.7500000000, double 2.7500000000 }
@@ -77,6 +91,8 @@ define dso_local { float, double } @test8() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1273
 ; CHECK-NEXT:    vldi $vr1, -1017
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 2.8750000000, double 2.8750000000 }
@@ -87,6 +103,8 @@ define dso_local { float, double } @test9() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1272
 ; CHECK-NEXT:    vldi $vr1, -1016
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.0000000000, double 3.0000000000 }
@@ -97,6 +115,8 @@ define dso_local { float, double } @test10() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1271
 ; CHECK-NEXT:    vldi $vr1, -1015
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.1250000000, double 3.1250000000 }
@@ -107,6 +127,8 @@ define dso_local { float, double } @test11() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1270
 ; CHECK-NEXT:    vldi $vr1, -1014
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.2500000000, double 3.2500000000 }
@@ -117,6 +139,8 @@ define dso_local { float, double } @test12() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1269
 ; CHECK-NEXT:    vldi $vr1, -1013
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.3750000000, double 3.3750000000 }
@@ -127,6 +151,8 @@ define dso_local { float, double } @test13() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1268
 ; CHECK-NEXT:    vldi $vr1, -1012
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.5000000000, double 3.5000000000 }
@@ -137,6 +163,8 @@ define dso_local { float, double } @test14() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1267
 ; CHECK-NEXT:    vldi $vr1, -1011
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.6250000000, double 3.6250000000 }
@@ -147,6 +175,8 @@ define dso_local { float, double } @test15() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1266
 ; CHECK-NEXT:    vldi $vr1, -1010
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.7500000000, double 3.7500000000 }
@@ -157,6 +187,8 @@ define dso_local { float, double } @test16() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1265
 ; CHECK-NEXT:    vldi $vr1, -1009
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 3.8750000000, double 3.8750000000 }
@@ -167,6 +199,8 @@ define dso_local { float, double } @test17() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1264
 ; CHECK-NEXT:    vldi $vr1, -1008
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 4.0000000000, double 4.0000000000 }
@@ -177,6 +211,8 @@ define dso_local { float, double } @test18() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1263
 ; CHECK-NEXT:    vldi $vr1, -1007
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 4.2500000000, double 4.2500000000 }
@@ -187,6 +223,8 @@ define dso_local { float, double } @test19() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1262
 ; CHECK-NEXT:    vldi $vr1, -1006
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 4.5000000000, double 4.5000000000 }
@@ -197,6 +235,8 @@ define dso_local { float, double } @test20() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1261
 ; CHECK-NEXT:    vldi $vr1, -1005
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 4.7500000000, double 4.7500000000 }
@@ -207,6 +247,8 @@ define dso_local { float, double } @test21() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1260
 ; CHECK-NEXT:    vldi $vr1, -1004
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 5.0000000000, double 5.0000000000 }
@@ -217,6 +259,8 @@ define dso_local { float, double } @test22() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1259
 ; CHECK-NEXT:    vldi $vr1, -1003
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 5.2500000000, double 5.2500000000 }
@@ -227,6 +271,8 @@ define dso_local { float, double } @test23() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1258
 ; CHECK-NEXT:    vldi $vr1, -1002
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 5.5000000000, double 5.5000000000 }
@@ -237,6 +283,8 @@ define dso_local { float, double } @test24() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1257
 ; CHECK-NEXT:    vldi $vr1, -1001
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 5.7500000000, double 5.7500000000 }
@@ -247,6 +295,8 @@ define dso_local { float, double } @test25() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1256
 ; CHECK-NEXT:    vldi $vr1, -1000
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 6.0000000000, double 6.0000000000 }
@@ -257,6 +307,8 @@ define dso_local { float, double } @test26() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1255
 ; CHECK-NEXT:    vldi $vr1, -999
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 6.2500000000, double 6.2500000000 }
@@ -267,6 +319,8 @@ define dso_local { float, double } @test27() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1254
 ; CHECK-NEXT:    vldi $vr1, -998
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 6.5000000000, double 6.5000000000 }
@@ -277,6 +331,8 @@ define dso_local { float, double } @test28() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1253
 ; CHECK-NEXT:    vldi $vr1, -997
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 6.7500000000, double 6.7500000000 }
@@ -287,6 +343,8 @@ define dso_local { float, double } @test29() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1252
 ; CHECK-NEXT:    vldi $vr1, -996
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 7.0000000000, double 7.0000000000 }
@@ -297,6 +355,8 @@ define dso_local { float, double } @test30() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1251
 ; CHECK-NEXT:    vldi $vr1, -995
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 7.2500000000, double 7.2500000000 }
@@ -307,6 +367,8 @@ define dso_local { float, double } @test31() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1250
 ; CHECK-NEXT:    vldi $vr1, -994
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 7.5000000000, double 7.5000000000 }
@@ -317,6 +379,8 @@ define dso_local { float, double } @test32() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1249
 ; CHECK-NEXT:    vldi $vr1, -993
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 7.7500000000, double 7.7500000000 }
@@ -327,6 +391,8 @@ define dso_local { float, double } @test33() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1248
 ; CHECK-NEXT:    vldi $vr1, -992
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 8.0000000000, double 8.0000000000 }
@@ -337,6 +403,8 @@ define dso_local { float, double } @test34() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1247
 ; CHECK-NEXT:    vldi $vr1, -991
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 8.5000000000, double 8.5000000000 }
@@ -347,6 +415,8 @@ define dso_local { float, double } @test35() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1246
 ; CHECK-NEXT:    vldi $vr1, -990
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 9.0000000000, double 9.0000000000 }
@@ -357,6 +427,8 @@ define dso_local { float, double } @test36() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1245
 ; CHECK-NEXT:    vldi $vr1, -989
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 9.5000000000, double 9.5000000000 }
@@ -367,6 +439,8 @@ define dso_local { float, double } @test37() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1244
 ; CHECK-NEXT:    vldi $vr1, -988
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 10.0000000000, double 10.0000000000 }
@@ -377,6 +451,8 @@ define dso_local { float, double } @test38() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1243
 ; CHECK-NEXT:    vldi $vr1, -987
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 10.5000000000, double 10.5000000000 }
@@ -387,6 +463,8 @@ define dso_local { float, double } @test39() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1242
 ; CHECK-NEXT:    vldi $vr1, -986
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 11.0000000000, double 11.0000000000 }
@@ -397,6 +475,8 @@ define dso_local { float, double } @test40() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1241
 ; CHECK-NEXT:    vldi $vr1, -985
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 11.5000000000, double 11.5000000000 }
@@ -407,6 +487,8 @@ define dso_local { float, double } @test41() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1240
 ; CHECK-NEXT:    vldi $vr1, -984
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 12.0000000000, double 12.0000000000 }
@@ -417,6 +499,8 @@ define dso_local { float, double } @test42() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1239
 ; CHECK-NEXT:    vldi $vr1, -983
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 12.5000000000, double 12.5000000000 }
@@ -427,6 +511,8 @@ define dso_local { float, double } @test43() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1238
 ; CHECK-NEXT:    vldi $vr1, -982
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 13.0000000000, double 13.0000000000 }
@@ -437,6 +523,8 @@ define dso_local { float, double } @test44() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1237
 ; CHECK-NEXT:    vldi $vr1, -981
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 13.5000000000, double 13.5000000000 }
@@ -447,6 +535,8 @@ define dso_local { float, double } @test45() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1236
 ; CHECK-NEXT:    vldi $vr1, -980
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 14.0000000000, double 14.0000000000 }
@@ -457,6 +547,8 @@ define dso_local { float, double } @test46() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1235
 ; CHECK-NEXT:    vldi $vr1, -979
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 14.5000000000, double 14.5000000000 }
@@ -467,6 +559,8 @@ define dso_local { float, double } @test47() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1234
 ; CHECK-NEXT:    vldi $vr1, -978
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 15.0000000000, double 15.0000000000 }
@@ -477,6 +571,8 @@ define dso_local { float, double } @test48() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1233
 ; CHECK-NEXT:    vldi $vr1, -977
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 15.5000000000, double 15.5000000000 }
@@ -487,6 +583,8 @@ define dso_local { float, double } @test49() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1232
 ; CHECK-NEXT:    vldi $vr1, -976
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 16.0000000000, double 16.0000000000 }
@@ -497,6 +595,8 @@ define dso_local { float, double } @test50() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1231
 ; CHECK-NEXT:    vldi $vr1, -975
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 17.0000000000, double 17.0000000000 }
@@ -507,6 +607,8 @@ define dso_local { float, double } @test51() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1230
 ; CHECK-NEXT:    vldi $vr1, -974
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 18.0000000000, double 18.0000000000 }
@@ -517,6 +619,8 @@ define dso_local { float, double } @test52() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1229
 ; CHECK-NEXT:    vldi $vr1, -973
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 19.0000000000, double 19.0000000000 }
@@ -527,6 +631,8 @@ define dso_local { float, double } @test53() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1228
 ; CHECK-NEXT:    vldi $vr1, -972
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 20.0000000000, double 20.0000000000 }
@@ -537,6 +643,8 @@ define dso_local { float, double } @test54() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1227
 ; CHECK-NEXT:    vldi $vr1, -971
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 21.0000000000, double 21.0000000000 }
@@ -547,6 +655,8 @@ define dso_local { float, double } @test55() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1226
 ; CHECK-NEXT:    vldi $vr1, -970
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 22.0000000000, double 22.0000000000 }
@@ -557,6 +667,8 @@ define dso_local { float, double } @test56() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1225
 ; CHECK-NEXT:    vldi $vr1, -969
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 23.0000000000, double 23.0000000000 }
@@ -567,6 +679,8 @@ define dso_local { float, double } @test57() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1224
 ; CHECK-NEXT:    vldi $vr1, -968
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 24.0000000000, double 24.0000000000 }
@@ -577,6 +691,8 @@ define dso_local { float, double } @test58() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1223
 ; CHECK-NEXT:    vldi $vr1, -967
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 25.0000000000, double 25.0000000000 }
@@ -587,6 +703,8 @@ define dso_local { float, double } @test59() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1222
 ; CHECK-NEXT:    vldi $vr1, -966
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 26.0000000000, double 26.0000000000 }
@@ -597,6 +715,8 @@ define dso_local { float, double } @test60() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1221
 ; CHECK-NEXT:    vldi $vr1, -965
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 27.0000000000, double 27.0000000000 }
@@ -607,6 +727,8 @@ define dso_local { float, double } @test61() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1220
 ; CHECK-NEXT:    vldi $vr1, -964
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 28.0000000000, double 28.0000000000 }
@@ -617,6 +739,8 @@ define dso_local { float, double } @test62() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1219
 ; CHECK-NEXT:    vldi $vr1, -963
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 29.0000000000, double 29.0000000000 }
@@ -627,6 +751,8 @@ define dso_local { float, double } @test63() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1218
 ; CHECK-NEXT:    vldi $vr1, -962
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 30.0000000000, double 30.0000000000 }
@@ -637,6 +763,8 @@ define dso_local { float, double } @test64() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1217
 ; CHECK-NEXT:    vldi $vr1, -961
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 31.0000000000, double 31.0000000000 }
@@ -647,6 +775,8 @@ define dso_local { float, double } @test65() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1216
 ; CHECK-NEXT:    vldi $vr1, -960
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1250000000, double 0.1250000000 }
@@ -657,6 +787,8 @@ define dso_local { float, double } @test66() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1215
 ; CHECK-NEXT:    vldi $vr1, -959
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1328125000, double 0.1328125000 }
@@ -667,6 +799,8 @@ define dso_local { float, double } @test67() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1214
 ; CHECK-NEXT:    vldi $vr1, -958
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1406250000, double 0.1406250000 }
@@ -677,6 +811,8 @@ define dso_local { float, double } @test68() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1213
 ; CHECK-NEXT:    vldi $vr1, -957
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1484375000, double 0.1484375000 }
@@ -687,6 +823,8 @@ define dso_local { float, double } @test69() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1212
 ; CHECK-NEXT:    vldi $vr1, -956
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1562500000, double 0.1562500000 }
@@ -697,6 +835,8 @@ define dso_local { float, double } @test70() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1211
 ; CHECK-NEXT:    vldi $vr1, -955
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1640625000, double 0.1640625000 }
@@ -707,6 +847,8 @@ define dso_local { float, double } @test71() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1210
 ; CHECK-NEXT:    vldi $vr1, -954
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1718750000, double 0.1718750000 }
@@ -717,6 +859,8 @@ define dso_local { float, double } @test72() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1209
 ; CHECK-NEXT:    vldi $vr1, -953
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1796875000, double 0.1796875000 }
@@ -727,6 +871,8 @@ define dso_local { float, double } @test73() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1208
 ; CHECK-NEXT:    vldi $vr1, -952
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1875000000, double 0.1875000000 }
@@ -737,6 +883,8 @@ define dso_local { float, double } @test74() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1207
 ; CHECK-NEXT:    vldi $vr1, -951
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.1953125000, double 0.1953125000 }
@@ -747,6 +895,8 @@ define dso_local { float, double } @test75() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1206
 ; CHECK-NEXT:    vldi $vr1, -950
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2031250000, double 0.2031250000 }
@@ -757,6 +907,8 @@ define dso_local { float, double } @test76() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1205
 ; CHECK-NEXT:    vldi $vr1, -949
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2109375000, double 0.2109375000 }
@@ -767,6 +919,8 @@ define dso_local { float, double } @test77() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1204
 ; CHECK-NEXT:    vldi $vr1, -948
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2187500000, double 0.2187500000 }
@@ -777,6 +931,8 @@ define dso_local { float, double } @test78() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1203
 ; CHECK-NEXT:    vldi $vr1, -947
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2265625000, double 0.2265625000 }
@@ -787,6 +943,8 @@ define dso_local { float, double } @test79() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1202
 ; CHECK-NEXT:    vldi $vr1, -946
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2343750000, double 0.2343750000 }
@@ -797,6 +955,8 @@ define dso_local { float, double } @test80() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1201
 ; CHECK-NEXT:    vldi $vr1, -945
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2421875000, double 0.2421875000 }
@@ -807,6 +967,8 @@ define dso_local { float, double } @test81() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1200
 ; CHECK-NEXT:    vldi $vr1, -944
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2500000000, double 0.2500000000 }
@@ -817,6 +979,8 @@ define dso_local { float, double } @test82() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1199
 ; CHECK-NEXT:    vldi $vr1, -943
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2656250000, double 0.2656250000 }
@@ -827,6 +991,8 @@ define dso_local { float, double } @test83() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1198
 ; CHECK-NEXT:    vldi $vr1, -942
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2812500000, double 0.2812500000 }
@@ -837,6 +1003,8 @@ define dso_local { float, double } @test84() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1197
 ; CHECK-NEXT:    vldi $vr1, -941
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.2968750000, double 0.2968750000 }
@@ -847,6 +1015,8 @@ define dso_local { float, double } @test85() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1196
 ; CHECK-NEXT:    vldi $vr1, -940
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.3125000000, double 0.3125000000 }
@@ -857,6 +1027,8 @@ define dso_local { float, double } @test86() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1195
 ; CHECK-NEXT:    vldi $vr1, -939
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.3281250000, double 0.3281250000 }
@@ -867,6 +1039,8 @@ define dso_local { float, double } @test87() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1194
 ; CHECK-NEXT:    vldi $vr1, -938
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.3437500000, double 0.3437500000 }
@@ -877,6 +1051,8 @@ define dso_local { float, double } @test88() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1193
 ; CHECK-NEXT:    vldi $vr1, -937
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.3593750000, double 0.3593750000 }
@@ -887,6 +1063,8 @@ define dso_local { float, double } @test89() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1192
 ; CHECK-NEXT:    vldi $vr1, -936
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.3750000000, double 0.3750000000 }
@@ -897,6 +1075,8 @@ define dso_local { float, double } @test90() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1191
 ; CHECK-NEXT:    vldi $vr1, -935
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.3906250000, double 0.3906250000 }
@@ -907,6 +1087,8 @@ define dso_local { float, double } @test91() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1190
 ; CHECK-NEXT:    vldi $vr1, -934
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.4062500000, double 0.4062500000 }
@@ -917,6 +1099,8 @@ define dso_local { float, double } @test92() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1189
 ; CHECK-NEXT:    vldi $vr1, -933
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.4218750000, double 0.4218750000 }
@@ -927,6 +1111,8 @@ define dso_local { float, double } @test93() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1188
 ; CHECK-NEXT:    vldi $vr1, -932
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.4375000000, double 0.4375000000 }
@@ -937,6 +1123,8 @@ define dso_local { float, double } @test94() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1187
 ; CHECK-NEXT:    vldi $vr1, -931
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.4531250000, double 0.4531250000 }
@@ -947,6 +1135,8 @@ define dso_local { float, double } @test95() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1186
 ; CHECK-NEXT:    vldi $vr1, -930
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.4687500000, double 0.4687500000 }
@@ -957,6 +1147,8 @@ define dso_local { float, double } @test96() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1185
 ; CHECK-NEXT:    vldi $vr1, -929
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.4843750000, double 0.4843750000 }
@@ -967,6 +1159,8 @@ define dso_local { float, double } @test97() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1184
 ; CHECK-NEXT:    vldi $vr1, -928
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.5000000000, double 0.5000000000 }
@@ -977,6 +1171,8 @@ define dso_local { float, double } @test98() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1183
 ; CHECK-NEXT:    vldi $vr1, -927
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.5312500000, double 0.5312500000 }
@@ -987,6 +1183,8 @@ define dso_local { float, double } @test99() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1182
 ; CHECK-NEXT:    vldi $vr1, -926
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.5625000000, double 0.5625000000 }
@@ -997,6 +1195,8 @@ define dso_local { float, double } @test100() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1181
 ; CHECK-NEXT:    vldi $vr1, -925
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.5937500000, double 0.5937500000 }
@@ -1007,6 +1207,8 @@ define dso_local { float, double } @test101() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1180
 ; CHECK-NEXT:    vldi $vr1, -924
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.6250000000, double 0.6250000000 }
@@ -1017,6 +1219,8 @@ define dso_local { float, double } @test102() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1179
 ; CHECK-NEXT:    vldi $vr1, -923
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.6562500000, double 0.6562500000 }
@@ -1027,6 +1231,8 @@ define dso_local { float, double } @test103() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1178
 ; CHECK-NEXT:    vldi $vr1, -922
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.6875000000, double 0.6875000000 }
@@ -1037,6 +1243,8 @@ define dso_local { float, double } @test104() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1177
 ; CHECK-NEXT:    vldi $vr1, -921
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.7187500000, double 0.7187500000 }
@@ -1047,6 +1255,8 @@ define dso_local { float, double } @test105() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1176
 ; CHECK-NEXT:    vldi $vr1, -920
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.7500000000, double 0.7500000000 }
@@ -1057,6 +1267,8 @@ define dso_local { float, double } @test106() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1175
 ; CHECK-NEXT:    vldi $vr1, -919
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.7812500000, double 0.7812500000 }
@@ -1067,6 +1279,8 @@ define dso_local { float, double } @test107() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1174
 ; CHECK-NEXT:    vldi $vr1, -918
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.8125000000, double 0.8125000000 }
@@ -1077,6 +1291,8 @@ define dso_local { float, double } @test108() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1173
 ; CHECK-NEXT:    vldi $vr1, -917
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.8437500000, double 0.8437500000 }
@@ -1087,6 +1303,8 @@ define dso_local { float, double } @test109() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1172
 ; CHECK-NEXT:    vldi $vr1, -916
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.8750000000, double 0.8750000000 }
@@ -1097,6 +1315,8 @@ define dso_local { float, double } @test110() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1171
 ; CHECK-NEXT:    vldi $vr1, -915
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.9062500000, double 0.9062500000 }
@@ -1107,6 +1327,8 @@ define dso_local { float, double } @test111() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1170
 ; CHECK-NEXT:    vldi $vr1, -914
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.9375000000, double 0.9375000000 }
@@ -1117,6 +1339,8 @@ define dso_local { float, double } @test112() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1169
 ; CHECK-NEXT:    vldi $vr1, -913
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 0.9687500000, double 0.9687500000 }
@@ -1127,6 +1351,8 @@ define dso_local { float, double } @test113() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1168
 ; CHECK-NEXT:    vldi $vr1, -912
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.0000000000, double 1.0000000000 }
@@ -1137,6 +1363,8 @@ define dso_local { float, double } @test114() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1167
 ; CHECK-NEXT:    vldi $vr1, -911
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.0625000000, double 1.0625000000 }
@@ -1147,6 +1375,8 @@ define dso_local { float, double } @test115() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1166
 ; CHECK-NEXT:    vldi $vr1, -910
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.1250000000, double 1.1250000000 }
@@ -1157,6 +1387,8 @@ define dso_local { float, double } @test116() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1165
 ; CHECK-NEXT:    vldi $vr1, -909
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.1875000000, double 1.1875000000 }
@@ -1167,6 +1399,8 @@ define dso_local { float, double } @test117() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1164
 ; CHECK-NEXT:    vldi $vr1, -908
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.2500000000, double 1.2500000000 }
@@ -1177,6 +1411,8 @@ define dso_local { float, double } @test118() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1163
 ; CHECK-NEXT:    vldi $vr1, -907
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.3125000000, double 1.3125000000 }
@@ -1187,6 +1423,8 @@ define dso_local { float, double } @test119() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1162
 ; CHECK-NEXT:    vldi $vr1, -906
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.3750000000, double 1.3750000000 }
@@ -1197,6 +1435,8 @@ define dso_local { float, double } @test120() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1161
 ; CHECK-NEXT:    vldi $vr1, -905
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.4375000000, double 1.4375000000 }
@@ -1207,6 +1447,8 @@ define dso_local { float, double } @test121() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1160
 ; CHECK-NEXT:    vldi $vr1, -904
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.5000000000, double 1.5000000000 }
@@ -1217,6 +1459,8 @@ define dso_local { float, double } @test122() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1159
 ; CHECK-NEXT:    vldi $vr1, -903
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.5625000000, double 1.5625000000 }
@@ -1227,6 +1471,8 @@ define dso_local { float, double } @test123() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1158
 ; CHECK-NEXT:    vldi $vr1, -902
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.6250000000, double 1.6250000000 }
@@ -1237,6 +1483,8 @@ define dso_local { float, double } @test124() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1157
 ; CHECK-NEXT:    vldi $vr1, -901
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.6875000000, double 1.6875000000 }
@@ -1247,6 +1495,8 @@ define dso_local { float, double } @test125() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1156
 ; CHECK-NEXT:    vldi $vr1, -900
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.7500000000, double 1.7500000000 }
@@ -1257,6 +1507,8 @@ define dso_local { float, double } @test126() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1155
 ; CHECK-NEXT:    vldi $vr1, -899
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.8125000000, double 1.8125000000 }
@@ -1267,6 +1519,8 @@ define dso_local { float, double } @test127() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1154
 ; CHECK-NEXT:    vldi $vr1, -898
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.8750000000, double 1.8750000000 }
@@ -1277,6 +1531,8 @@ define dso_local { float, double } @test128() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1153
 ; CHECK-NEXT:    vldi $vr1, -897
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float 1.9375000000, double 1.9375000000 }
@@ -1287,6 +1543,8 @@ define dso_local { float, double } @test129() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1152
 ; CHECK-NEXT:    vldi $vr1, -896
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.0000000000, double -2.0000000000 }
@@ -1297,6 +1555,8 @@ define dso_local { float, double } @test130() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1151
 ; CHECK-NEXT:    vldi $vr1, -895
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.1250000000, double -2.1250000000 }
@@ -1307,6 +1567,8 @@ define dso_local { float, double } @test131() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1150
 ; CHECK-NEXT:    vldi $vr1, -894
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.2500000000, double -2.2500000000 }
@@ -1317,6 +1579,8 @@ define dso_local { float, double } @test132() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1149
 ; CHECK-NEXT:    vldi $vr1, -893
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.3750000000, double -2.3750000000 }
@@ -1327,6 +1591,8 @@ define dso_local { float, double } @test133() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1148
 ; CHECK-NEXT:    vldi $vr1, -892
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.5000000000, double -2.5000000000 }
@@ -1337,6 +1603,8 @@ define dso_local { float, double } @test134() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1147
 ; CHECK-NEXT:    vldi $vr1, -891
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.6250000000, double -2.6250000000 }
@@ -1347,6 +1615,8 @@ define dso_local { float, double } @test135() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1146
 ; CHECK-NEXT:    vldi $vr1, -890
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.7500000000, double -2.7500000000 }
@@ -1357,6 +1627,8 @@ define dso_local { float, double } @test136() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1145
 ; CHECK-NEXT:    vldi $vr1, -889
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -2.8750000000, double -2.8750000000 }
@@ -1367,6 +1639,8 @@ define dso_local { float, double } @test137() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1144
 ; CHECK-NEXT:    vldi $vr1, -888
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.0000000000, double -3.0000000000 }
@@ -1377,6 +1651,8 @@ define dso_local { float, double } @test138() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1143
 ; CHECK-NEXT:    vldi $vr1, -887
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.1250000000, double -3.1250000000 }
@@ -1387,6 +1663,8 @@ define dso_local { float, double } @test139() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1142
 ; CHECK-NEXT:    vldi $vr1, -886
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.2500000000, double -3.2500000000 }
@@ -1397,6 +1675,8 @@ define dso_local { float, double } @test140() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1141
 ; CHECK-NEXT:    vldi $vr1, -885
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.3750000000, double -3.3750000000 }
@@ -1407,6 +1687,8 @@ define dso_local { float, double } @test141() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1140
 ; CHECK-NEXT:    vldi $vr1, -884
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.5000000000, double -3.5000000000 }
@@ -1417,6 +1699,8 @@ define dso_local { float, double } @test142() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1139
 ; CHECK-NEXT:    vldi $vr1, -883
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.6250000000, double -3.6250000000 }
@@ -1427,6 +1711,8 @@ define dso_local { float, double } @test143() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1138
 ; CHECK-NEXT:    vldi $vr1, -882
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.7500000000, double -3.7500000000 }
@@ -1437,6 +1723,8 @@ define dso_local { float, double } @test144() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1137
 ; CHECK-NEXT:    vldi $vr1, -881
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -3.8750000000, double -3.8750000000 }
@@ -1447,6 +1735,8 @@ define dso_local { float, double } @test145() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1136
 ; CHECK-NEXT:    vldi $vr1, -880
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -4.0000000000, double -4.0000000000 }
@@ -1457,6 +1747,8 @@ define dso_local { float, double } @test146() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1135
 ; CHECK-NEXT:    vldi $vr1, -879
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -4.2500000000, double -4.2500000000 }
@@ -1467,6 +1759,8 @@ define dso_local { float, double } @test147() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1134
 ; CHECK-NEXT:    vldi $vr1, -878
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -4.5000000000, double -4.5000000000 }
@@ -1477,6 +1771,8 @@ define dso_local { float, double } @test148() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1133
 ; CHECK-NEXT:    vldi $vr1, -877
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -4.7500000000, double -4.7500000000 }
@@ -1487,6 +1783,8 @@ define dso_local { float, double } @test149() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1132
 ; CHECK-NEXT:    vldi $vr1, -876
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -5.0000000000, double -5.0000000000 }
@@ -1497,6 +1795,8 @@ define dso_local { float, double } @test150() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1131
 ; CHECK-NEXT:    vldi $vr1, -875
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -5.2500000000, double -5.2500000000 }
@@ -1507,6 +1807,8 @@ define dso_local { float, double } @test151() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1130
 ; CHECK-NEXT:    vldi $vr1, -874
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -5.5000000000, double -5.5000000000 }
@@ -1517,6 +1819,8 @@ define dso_local { float, double } @test152() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1129
 ; CHECK-NEXT:    vldi $vr1, -873
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -5.7500000000, double -5.7500000000 }
@@ -1527,6 +1831,8 @@ define dso_local { float, double } @test153() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1128
 ; CHECK-NEXT:    vldi $vr1, -872
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -6.0000000000, double -6.0000000000 }
@@ -1537,6 +1843,8 @@ define dso_local { float, double } @test154() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1127
 ; CHECK-NEXT:    vldi $vr1, -871
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -6.2500000000, double -6.2500000000 }
@@ -1547,6 +1855,8 @@ define dso_local { float, double } @test155() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1126
 ; CHECK-NEXT:    vldi $vr1, -870
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -6.5000000000, double -6.5000000000 }
@@ -1557,6 +1867,8 @@ define dso_local { float, double } @test156() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1125
 ; CHECK-NEXT:    vldi $vr1, -869
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -6.7500000000, double -6.7500000000 }
@@ -1567,6 +1879,8 @@ define dso_local { float, double } @test157() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1124
 ; CHECK-NEXT:    vldi $vr1, -868
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -7.0000000000, double -7.0000000000 }
@@ -1577,6 +1891,8 @@ define dso_local { float, double } @test158() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1123
 ; CHECK-NEXT:    vldi $vr1, -867
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -7.2500000000, double -7.2500000000 }
@@ -1587,6 +1903,8 @@ define dso_local { float, double } @test159() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1122
 ; CHECK-NEXT:    vldi $vr1, -866
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -7.5000000000, double -7.5000000000 }
@@ -1597,6 +1915,8 @@ define dso_local { float, double } @test160() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1121
 ; CHECK-NEXT:    vldi $vr1, -865
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -7.7500000000, double -7.7500000000 }
@@ -1607,6 +1927,8 @@ define dso_local { float, double } @test161() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1120
 ; CHECK-NEXT:    vldi $vr1, -864
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -8.0000000000, double -8.0000000000 }
@@ -1617,6 +1939,8 @@ define dso_local { float, double } @test162() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1119
 ; CHECK-NEXT:    vldi $vr1, -863
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -8.5000000000, double -8.5000000000 }
@@ -1627,6 +1951,8 @@ define dso_local { float, double } @test163() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1118
 ; CHECK-NEXT:    vldi $vr1, -862
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -9.0000000000, double -9.0000000000 }
@@ -1637,6 +1963,8 @@ define dso_local { float, double } @test164() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1117
 ; CHECK-NEXT:    vldi $vr1, -861
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -9.5000000000, double -9.5000000000 }
@@ -1647,6 +1975,8 @@ define dso_local { float, double } @test165() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1116
 ; CHECK-NEXT:    vldi $vr1, -860
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -10.0000000000, double -10.0000000000 }
@@ -1657,6 +1987,8 @@ define dso_local { float, double } @test166() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1115
 ; CHECK-NEXT:    vldi $vr1, -859
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -10.5000000000, double -10.5000000000 }
@@ -1667,6 +1999,8 @@ define dso_local { float, double } @test167() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1114
 ; CHECK-NEXT:    vldi $vr1, -858
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -11.0000000000, double -11.0000000000 }
@@ -1677,6 +2011,8 @@ define dso_local { float, double } @test168() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1113
 ; CHECK-NEXT:    vldi $vr1, -857
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -11.5000000000, double -11.5000000000 }
@@ -1687,6 +2023,8 @@ define dso_local { float, double } @test169() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1112
 ; CHECK-NEXT:    vldi $vr1, -856
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -12.0000000000, double -12.0000000000 }
@@ -1697,6 +2035,8 @@ define dso_local { float, double } @test170() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1111
 ; CHECK-NEXT:    vldi $vr1, -855
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -12.5000000000, double -12.5000000000 }
@@ -1707,6 +2047,8 @@ define dso_local { float, double } @test171() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1110
 ; CHECK-NEXT:    vldi $vr1, -854
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -13.0000000000, double -13.0000000000 }
@@ -1717,6 +2059,8 @@ define dso_local { float, double } @test172() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1109
 ; CHECK-NEXT:    vldi $vr1, -853
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -13.5000000000, double -13.5000000000 }
@@ -1727,6 +2071,8 @@ define dso_local { float, double } @test173() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1108
 ; CHECK-NEXT:    vldi $vr1, -852
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -14.0000000000, double -14.0000000000 }
@@ -1737,6 +2083,8 @@ define dso_local { float, double } @test174() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1107
 ; CHECK-NEXT:    vldi $vr1, -851
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -14.5000000000, double -14.5000000000 }
@@ -1747,6 +2095,8 @@ define dso_local { float, double } @test175() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1106
 ; CHECK-NEXT:    vldi $vr1, -850
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -15.0000000000, double -15.0000000000 }
@@ -1757,6 +2107,8 @@ define dso_local { float, double } @test176() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1105
 ; CHECK-NEXT:    vldi $vr1, -849
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -15.5000000000, double -15.5000000000 }
@@ -1767,6 +2119,8 @@ define dso_local { float, double } @test177() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1104
 ; CHECK-NEXT:    vldi $vr1, -848
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -16.0000000000, double -16.0000000000 }
@@ -1777,6 +2131,8 @@ define dso_local { float, double } @test178() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1103
 ; CHECK-NEXT:    vldi $vr1, -847
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -17.0000000000, double -17.0000000000 }
@@ -1787,6 +2143,8 @@ define dso_local { float, double } @test179() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1102
 ; CHECK-NEXT:    vldi $vr1, -846
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -18.0000000000, double -18.0000000000 }
@@ -1797,6 +2155,8 @@ define dso_local { float, double } @test180() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1101
 ; CHECK-NEXT:    vldi $vr1, -845
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -19.0000000000, double -19.0000000000 }
@@ -1807,6 +2167,8 @@ define dso_local { float, double } @test181() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1100
 ; CHECK-NEXT:    vldi $vr1, -844
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -20.0000000000, double -20.0000000000 }
@@ -1817,6 +2179,8 @@ define dso_local { float, double } @test182() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1099
 ; CHECK-NEXT:    vldi $vr1, -843
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -21.0000000000, double -21.0000000000 }
@@ -1827,6 +2191,8 @@ define dso_local { float, double } @test183() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1098
 ; CHECK-NEXT:    vldi $vr1, -842
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -22.0000000000, double -22.0000000000 }
@@ -1837,6 +2203,8 @@ define dso_local { float, double } @test184() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1097
 ; CHECK-NEXT:    vldi $vr1, -841
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -23.0000000000, double -23.0000000000 }
@@ -1847,6 +2215,8 @@ define dso_local { float, double } @test185() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1096
 ; CHECK-NEXT:    vldi $vr1, -840
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -24.0000000000, double -24.0000000000 }
@@ -1857,6 +2227,8 @@ define dso_local { float, double } @test186() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1095
 ; CHECK-NEXT:    vldi $vr1, -839
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -25.0000000000, double -25.0000000000 }
@@ -1867,6 +2239,8 @@ define dso_local { float, double } @test187() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1094
 ; CHECK-NEXT:    vldi $vr1, -838
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -26.0000000000, double -26.0000000000 }
@@ -1877,6 +2251,8 @@ define dso_local { float, double } @test188() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1093
 ; CHECK-NEXT:    vldi $vr1, -837
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -27.0000000000, double -27.0000000000 }
@@ -1887,6 +2263,8 @@ define dso_local { float, double } @test189() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1092
 ; CHECK-NEXT:    vldi $vr1, -836
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -28.0000000000, double -28.0000000000 }
@@ -1897,6 +2275,8 @@ define dso_local { float, double } @test190() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1091
 ; CHECK-NEXT:    vldi $vr1, -835
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -29.0000000000, double -29.0000000000 }
@@ -1907,6 +2287,8 @@ define dso_local { float, double } @test191() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1090
 ; CHECK-NEXT:    vldi $vr1, -834
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -30.0000000000, double -30.0000000000 }
@@ -1917,6 +2299,8 @@ define dso_local { float, double } @test192() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1089
 ; CHECK-NEXT:    vldi $vr1, -833
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -31.0000000000, double -31.0000000000 }
@@ -1927,6 +2311,8 @@ define dso_local { float, double } @test193() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1088
 ; CHECK-NEXT:    vldi $vr1, -832
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1250000000, double -0.1250000000 }
@@ -1937,6 +2323,8 @@ define dso_local { float, double } @test194() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1087
 ; CHECK-NEXT:    vldi $vr1, -831
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1328125000, double -0.1328125000 }
@@ -1947,6 +2335,8 @@ define dso_local { float, double } @test195() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1086
 ; CHECK-NEXT:    vldi $vr1, -830
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1406250000, double -0.1406250000 }
@@ -1957,6 +2347,8 @@ define dso_local { float, double } @test196() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1085
 ; CHECK-NEXT:    vldi $vr1, -829
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1484375000, double -0.1484375000 }
@@ -1967,6 +2359,8 @@ define dso_local { float, double } @test197() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1084
 ; CHECK-NEXT:    vldi $vr1, -828
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1562500000, double -0.1562500000 }
@@ -1977,6 +2371,8 @@ define dso_local { float, double } @test198() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1083
 ; CHECK-NEXT:    vldi $vr1, -827
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1640625000, double -0.1640625000 }
@@ -1987,6 +2383,8 @@ define dso_local { float, double } @test199() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1082
 ; CHECK-NEXT:    vldi $vr1, -826
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1718750000, double -0.1718750000 }
@@ -1997,6 +2395,8 @@ define dso_local { float, double } @test200() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1081
 ; CHECK-NEXT:    vldi $vr1, -825
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1796875000, double -0.1796875000 }
@@ -2007,6 +2407,8 @@ define dso_local { float, double } @test201() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1080
 ; CHECK-NEXT:    vldi $vr1, -824
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1875000000, double -0.1875000000 }
@@ -2017,6 +2419,8 @@ define dso_local { float, double } @test202() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1079
 ; CHECK-NEXT:    vldi $vr1, -823
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.1953125000, double -0.1953125000 }
@@ -2027,6 +2431,8 @@ define dso_local { float, double } @test203() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1078
 ; CHECK-NEXT:    vldi $vr1, -822
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2031250000, double -0.2031250000 }
@@ -2037,6 +2443,8 @@ define dso_local { float, double } @test204() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1077
 ; CHECK-NEXT:    vldi $vr1, -821
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2109375000, double -0.2109375000 }
@@ -2047,6 +2455,8 @@ define dso_local { float, double } @test205() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1076
 ; CHECK-NEXT:    vldi $vr1, -820
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2187500000, double -0.2187500000 }
@@ -2057,6 +2467,8 @@ define dso_local { float, double } @test206() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1075
 ; CHECK-NEXT:    vldi $vr1, -819
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2265625000, double -0.2265625000 }
@@ -2067,6 +2479,8 @@ define dso_local { float, double } @test207() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1074
 ; CHECK-NEXT:    vldi $vr1, -818
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2343750000, double -0.2343750000 }
@@ -2077,6 +2491,8 @@ define dso_local { float, double } @test208() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1073
 ; CHECK-NEXT:    vldi $vr1, -817
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2421875000, double -0.2421875000 }
@@ -2087,6 +2503,8 @@ define dso_local { float, double } @test209() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1072
 ; CHECK-NEXT:    vldi $vr1, -816
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2500000000, double -0.2500000000 }
@@ -2097,6 +2515,8 @@ define dso_local { float, double } @test210() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1071
 ; CHECK-NEXT:    vldi $vr1, -815
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2656250000, double -0.2656250000 }
@@ -2107,6 +2527,8 @@ define dso_local { float, double } @test211() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1070
 ; CHECK-NEXT:    vldi $vr1, -814
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2812500000, double -0.2812500000 }
@@ -2117,6 +2539,8 @@ define dso_local { float, double } @test212() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1069
 ; CHECK-NEXT:    vldi $vr1, -813
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.2968750000, double -0.2968750000 }
@@ -2127,6 +2551,8 @@ define dso_local { float, double } @test213() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1068
 ; CHECK-NEXT:    vldi $vr1, -812
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.3125000000, double -0.3125000000 }
@@ -2137,6 +2563,8 @@ define dso_local { float, double } @test214() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1067
 ; CHECK-NEXT:    vldi $vr1, -811
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.3281250000, double -0.3281250000 }
@@ -2147,6 +2575,8 @@ define dso_local { float, double } @test215() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1066
 ; CHECK-NEXT:    vldi $vr1, -810
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.3437500000, double -0.3437500000 }
@@ -2157,6 +2587,8 @@ define dso_local { float, double } @test216() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1065
 ; CHECK-NEXT:    vldi $vr1, -809
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.3593750000, double -0.3593750000 }
@@ -2167,6 +2599,8 @@ define dso_local { float, double } @test217() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1064
 ; CHECK-NEXT:    vldi $vr1, -808
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.3750000000, double -0.3750000000 }
@@ -2177,6 +2611,8 @@ define dso_local { float, double } @test218() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1063
 ; CHECK-NEXT:    vldi $vr1, -807
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.3906250000, double -0.3906250000 }
@@ -2187,6 +2623,8 @@ define dso_local { float, double } @test219() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1062
 ; CHECK-NEXT:    vldi $vr1, -806
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.4062500000, double -0.4062500000 }
@@ -2197,6 +2635,8 @@ define dso_local { float, double } @test220() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1061
 ; CHECK-NEXT:    vldi $vr1, -805
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.4218750000, double -0.4218750000 }
@@ -2207,6 +2647,8 @@ define dso_local { float, double } @test221() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1060
 ; CHECK-NEXT:    vldi $vr1, -804
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.4375000000, double -0.4375000000 }
@@ -2217,6 +2659,8 @@ define dso_local { float, double } @test222() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1059
 ; CHECK-NEXT:    vldi $vr1, -803
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.4531250000, double -0.4531250000 }
@@ -2227,6 +2671,8 @@ define dso_local { float, double } @test223() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1058
 ; CHECK-NEXT:    vldi $vr1, -802
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.4687500000, double -0.4687500000 }
@@ -2237,6 +2683,8 @@ define dso_local { float, double } @test224() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1057
 ; CHECK-NEXT:    vldi $vr1, -801
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.4843750000, double -0.4843750000 }
@@ -2247,6 +2695,8 @@ define dso_local { float, double } @test225() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1056
 ; CHECK-NEXT:    vldi $vr1, -800
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.5000000000, double -0.5000000000 }
@@ -2257,6 +2707,8 @@ define dso_local { float, double } @test226() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1055
 ; CHECK-NEXT:    vldi $vr1, -799
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.5312500000, double -0.5312500000 }
@@ -2267,6 +2719,8 @@ define dso_local { float, double } @test227() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1054
 ; CHECK-NEXT:    vldi $vr1, -798
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.5625000000, double -0.5625000000 }
@@ -2277,6 +2731,8 @@ define dso_local { float, double } @test228() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1053
 ; CHECK-NEXT:    vldi $vr1, -797
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.5937500000, double -0.5937500000 }
@@ -2287,6 +2743,8 @@ define dso_local { float, double } @test229() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1052
 ; CHECK-NEXT:    vldi $vr1, -796
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.6250000000, double -0.6250000000 }
@@ -2297,6 +2755,8 @@ define dso_local { float, double } @test230() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1051
 ; CHECK-NEXT:    vldi $vr1, -795
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.6562500000, double -0.6562500000 }
@@ -2307,6 +2767,8 @@ define dso_local { float, double } @test231() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1050
 ; CHECK-NEXT:    vldi $vr1, -794
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.6875000000, double -0.6875000000 }
@@ -2317,6 +2779,8 @@ define dso_local { float, double } @test232() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1049
 ; CHECK-NEXT:    vldi $vr1, -793
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.7187500000, double -0.7187500000 }
@@ -2327,6 +2791,8 @@ define dso_local { float, double } @test233() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1048
 ; CHECK-NEXT:    vldi $vr1, -792
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.7500000000, double -0.7500000000 }
@@ -2337,6 +2803,8 @@ define dso_local { float, double } @test234() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1047
 ; CHECK-NEXT:    vldi $vr1, -791
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.7812500000, double -0.7812500000 }
@@ -2347,6 +2815,8 @@ define dso_local { float, double } @test235() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1046
 ; CHECK-NEXT:    vldi $vr1, -790
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.8125000000, double -0.8125000000 }
@@ -2357,6 +2827,8 @@ define dso_local { float, double } @test236() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1045
 ; CHECK-NEXT:    vldi $vr1, -789
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.8437500000, double -0.8437500000 }
@@ -2367,6 +2839,8 @@ define dso_local { float, double } @test237() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1044
 ; CHECK-NEXT:    vldi $vr1, -788
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.8750000000, double -0.8750000000 }
@@ -2377,6 +2851,8 @@ define dso_local { float, double } @test238() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1043
 ; CHECK-NEXT:    vldi $vr1, -787
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.9062500000, double -0.9062500000 }
@@ -2387,6 +2863,8 @@ define dso_local { float, double } @test239() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1042
 ; CHECK-NEXT:    vldi $vr1, -786
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.9375000000, double -0.9375000000 }
@@ -2397,6 +2875,8 @@ define dso_local { float, double } @test240() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1041
 ; CHECK-NEXT:    vldi $vr1, -785
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -0.9687500000, double -0.9687500000 }
@@ -2407,6 +2887,8 @@ define dso_local { float, double } @test241() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1040
 ; CHECK-NEXT:    vldi $vr1, -784
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.0000000000, double -1.0000000000 }
@@ -2417,6 +2899,8 @@ define dso_local { float, double } @test242() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1039
 ; CHECK-NEXT:    vldi $vr1, -783
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.0625000000, double -1.0625000000 }
@@ -2427,6 +2911,8 @@ define dso_local { float, double } @test243() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1038
 ; CHECK-NEXT:    vldi $vr1, -782
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.1250000000, double -1.1250000000 }
@@ -2437,6 +2923,8 @@ define dso_local { float, double } @test244() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1037
 ; CHECK-NEXT:    vldi $vr1, -781
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.1875000000, double -1.1875000000 }
@@ -2447,6 +2935,8 @@ define dso_local { float, double } @test245() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1036
 ; CHECK-NEXT:    vldi $vr1, -780
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.2500000000, double -1.2500000000 }
@@ -2457,6 +2947,8 @@ define dso_local { float, double } @test246() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1035
 ; CHECK-NEXT:    vldi $vr1, -779
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.3125000000, double -1.3125000000 }
@@ -2467,6 +2959,8 @@ define dso_local { float, double } @test247() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1034
 ; CHECK-NEXT:    vldi $vr1, -778
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.3750000000, double -1.3750000000 }
@@ -2477,6 +2971,8 @@ define dso_local { float, double } @test248() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1033
 ; CHECK-NEXT:    vldi $vr1, -777
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.4375000000, double -1.4375000000 }
@@ -2487,6 +2983,8 @@ define dso_local { float, double } @test249() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1032
 ; CHECK-NEXT:    vldi $vr1, -776
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.5000000000, double -1.5000000000 }
@@ -2497,6 +2995,8 @@ define dso_local { float, double } @test250() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1031
 ; CHECK-NEXT:    vldi $vr1, -775
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.5625000000, double -1.5625000000 }
@@ -2507,6 +3007,8 @@ define dso_local { float, double } @test251() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1030
 ; CHECK-NEXT:    vldi $vr1, -774
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.6250000000, double -1.6250000000 }
@@ -2517,6 +3019,8 @@ define dso_local { float, double } @test252() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1029
 ; CHECK-NEXT:    vldi $vr1, -773
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.6875000000, double -1.6875000000 }
@@ -2527,6 +3031,8 @@ define dso_local { float, double } @test253() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1028
 ; CHECK-NEXT:    vldi $vr1, -772
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.7500000000, double -1.7500000000 }
@@ -2537,6 +3043,8 @@ define dso_local { float, double } @test254() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1027
 ; CHECK-NEXT:    vldi $vr1, -771
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.8125000000, double -1.8125000000 }
@@ -2547,6 +3055,8 @@ define dso_local { float, double } @test255() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1026
 ; CHECK-NEXT:    vldi $vr1, -770
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.8750000000, double -1.8750000000 }
@@ -2557,6 +3067,8 @@ define dso_local { float, double } @test256() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vldi $vr0, -1025
 ; CHECK-NEXT:    vldi $vr1, -769
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 killed $vr1
 ; CHECK-NEXT:    ret
 entry:
   ret { float, double } { float -1.9375000000, double -1.9375000000 }

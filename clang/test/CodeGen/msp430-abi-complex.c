@@ -202,7 +202,7 @@ float _Complex complex_float_res(void) {
 // CHECK-DAG: clr r12
 // CHECK-DAG: mov #16256, r13
   __imag__ res = -1;
-// CHECK-DAG: clr r14
+// CHECK-DAG: mov r12, r14
 // CHECK-DAG: mov #-16512, r15
   return res;
 // CHECK:     ret
