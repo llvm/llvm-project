@@ -16,6 +16,9 @@
 #include <cstring>
 #include <cassert>
 
+// todo remove after debugging
+#include <iostream>
+
 template <int Size>
 struct S {
   char data[Size];

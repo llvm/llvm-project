@@ -1433,6 +1433,11 @@ Address AtomicInfo::convertToAtomicIntPointer(Address Addr) const {
   uint64_t SourceSizeInBits = CGF.CGM.getDataLayout().getTypeSizeInBits(Ty);
   if (SourceSizeInBits != AtomicSizeInBits) {
     Address Tmp = CreateTempAlloca();
+    CGF.Builder.CreateMemSet(
+        Tmp.emitRawPointer(CGF), llvm::ConstantInt::get(CGF.Int8Ty, 0),
+        CGF.getContext().toCharUnitsFromBits(AtomicSizeInBits).getQuantity(),
+        Tmp.getAlignment().getAsAlign());
+
     CGF.Builder.CreateMemCpy(Tmp, Addr,
                              std::min(AtomicSizeInBits, SourceSizeInBits) / 8);
     Addr = Tmp;

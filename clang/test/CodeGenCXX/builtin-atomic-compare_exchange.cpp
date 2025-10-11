@@ -25,7 +25,9 @@ struct S {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[EXPECTED_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DOTATOMICTMP]], ptr align 1 [[DESIRED]], i64 3, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP]], i8 0, i64 4, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ATOMIC_TEMP]], ptr align 1 [[TMP1]], i64 3, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 4, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], ptr align 1 [[DOTATOMICTMP]], i64 3, i1 false)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ATOMIC_TEMP]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ATOMIC_TEMP1]], align 4
@@ -102,7 +104,9 @@ bool test_compare_exchange(_Atomic(S<4>)* a, S<4>* expected, S<4> desired) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[EXPECTED_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DOTATOMICTMP]], ptr align 1 [[DESIRED]], i64 6, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[ATOMIC_TEMP]], i8 0, i64 8, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ATOMIC_TEMP]], ptr align 1 [[TMP1]], i64 6, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[ATOMIC_TEMP1]], i8 0, i64 8, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ATOMIC_TEMP1]], ptr align 1 [[DOTATOMICTMP]], i64 6, i1 false)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ATOMIC_TEMP]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ATOMIC_TEMP1]], align 8
