@@ -1183,7 +1183,12 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
   // Special check for addrecs using BE taken count
   if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S))
     if (AddRec->isAffine() && AddRec->hasNoSignedWrap()) {
-      const SCEV *BECount = SE->getBackedgeTakenCount(AddRec->getLoop());
+      const SCEV *BECount = collectUpperBound(AddRec->getLoop(), MaxType);
+      // If the BTC cannot be computed, check the base case for S.
+      if (!BECount)
+        return false;
+      if (isa<SCEVCouldNotCompute>(BECount))
+        return SE->isKnownNegative(SE->getMinusSCEV(S, Size));
       const SCEV *Start = AddRec->getStart();
       const SCEV *Step = AddRec->getStepRecurrence(*SE);
       const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
