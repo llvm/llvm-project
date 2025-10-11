@@ -3406,18 +3406,22 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Check if it's really possible to do a tail call. Restrict it to functions
   // that are part of this compilation unit.
   bool InternalLinkage = false;
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
-        CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
-    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      InternalLinkage = G->getGlobal()->hasInternalLinkage();
-      IsTailCall &= (InternalLinkage || G->getGlobal()->hasLocalLinkage() ||
-                     G->getGlobal()->hasPrivateLinkage() ||
-                     G->getGlobal()->hasHiddenVisibility() ||
-                     G->getGlobal()->hasProtectedVisibility());
-     }
+        CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>(), IsMustTail);
+    if (IsTailCall) {
+      if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+        InternalLinkage = G->getGlobal()->hasInternalLinkage();
+        IsTailCall &= (InternalLinkage || G->getGlobal()->hasLocalLinkage() ||
+                       G->getGlobal()->isDSOLocal() ||
+                       G->getGlobal()->hasPrivateLinkage() ||
+                       G->getGlobal()->hasHiddenVisibility() ||
+                       G->getGlobal()->hasProtectedVisibility());
+      }
+    }
   }
-  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
+  if (!IsTailCall && IsMustTail)
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
