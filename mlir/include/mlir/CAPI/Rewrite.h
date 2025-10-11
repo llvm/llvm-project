@@ -20,5 +20,7 @@
 #include "mlir/IR/PatternMatch.h"
 
 DEFINE_C_API_PTR_METHODS(MlirRewriterBase, mlir::RewriterBase)
+DEFINE_C_API_PTR_METHODS(MlirRewritePattern, const mlir::RewritePattern)
+DEFINE_C_API_PTR_METHODS(MlirRewritePatternSet, mlir::RewritePatternSet)
 
 #endif // MLIR_CAPIREWRITER_H
