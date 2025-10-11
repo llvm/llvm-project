@@ -1322,7 +1322,8 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
   if (!CellDescs.isRectangular())
     return;
 
-  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  const int BracePadding =
+      Style.Cpp11BracedListStyle != FormatStyle::CBLSS_Block ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
@@ -1398,7 +1399,8 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   if (!CellDescs.isRectangular())
     return;
 
-  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  const int BracePadding =
+      Style.Cpp11BracedListStyle != FormatStyle::CBLSS_Block ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();

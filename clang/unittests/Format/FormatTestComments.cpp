@@ -4699,6 +4699,113 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
                    getLLVMStyleWithColumns(10)));
 }
 
+TEST_F(FormatTestComments, LineCommentsOnStartOfFunctionCall) {
+  auto Style = getLLVMStyle();
+
+  EXPECT_EQ(Style.Cpp11BracedListStyle, FormatStyle::CBLSS_ToBeNamed);
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{// Comment\n"
+               "      arg};",
+               Style);
+
+  verifyFormat("T baz({// Comment\n"
+               "       arg});",
+               Style);
+
+  verifyFormat("T baz{{// Comment\n"
+               "       arg}};",
+               Style);
+
+  verifyFormat("T b0z(f( // Comment\n"
+               "    arg));",
+               Style);
+
+  verifyFormat("T b0z(F{// Comment\n"
+               "        arg});",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({// Comment\n"
+               "      arg});",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::CBLSS_FunctionCall;
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "    arg};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("T baz{{ // Comment\n"
+               "        arg}};",
+               Style);
+
+  verifyFormat("T b0z(f( // Comment\n"
+               "    arg));",
+               Style);
+
+  verifyFormat("T b0z(F{ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "    arg});",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::CBLSS_Block;
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "       arg\n"
+               "};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "        arg });",
+               Style);
+
+  verifyFormat("T baz{ { // Comment\n"
+               "         arg } };",
+               Style);
+
+  verifyFormat("T b0z(f( // Comment\n"
+               "    arg));",
+               Style);
+
+  verifyFormat("T b0z(F{ // Comment\n"
+               "         arg });",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "       arg });",
+               Style);
+}
+
 } // end namespace
 } // namespace test
 } // end namespace format
