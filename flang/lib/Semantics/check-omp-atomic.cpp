@@ -539,7 +539,6 @@ void OmpStructureChecker::CheckAtomicType(
     return;
   }
 
-  // Variable is a pointer.
   if (typeSpec->IsPolymorphic()) {
     context_.Say(source,
         "Atomic variable %s cannot be a pointer to a polymorphic type"_err_en_US,
@@ -829,6 +828,32 @@ void OmpStructureChecker::CheckAtomicWriteAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
+    // For intrinsic assignment (x = expr), check if the variable is a pointer
+    // to a non-intrinsic type, which is not allowed in ATOMIC WRITE
+    if (!IsPointerAssignment(write)) {
+      std::vector<SomeExpr> dsgs{GetAllDesignators(atom)};
+      if (!dsgs.empty()) {
+        evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
+        if (!syms.empty() && IsPointer(syms.back())) {
+          SymbolRef sym = syms.back();
+          if (const DeclTypeSpec *typeSpec{sym->GetType()}) {
+            using Category = DeclTypeSpec::Category;
+            Category cat{typeSpec->category()};
+            if (cat != Category::Numeric && cat != Category::Logical) {
+              std::string details = " has the POINTER attribute";
+              if (const auto *derived{typeSpec->AsDerived()}) {
+                details +=
+                    " and derived type '"s + derived->name().ToString() + "'";
+              }
+              context_.Say(lsrc,
+                  "ATOMIC WRITE requires an intrinsic scalar variable; '%s'%s"_err_en_US,
+                  sym->name(), details);
+              return;
+            }
+          }
+        }
+      }
+    }
     CheckAtomicVariable(atom, lsrc);
     CheckStorageOverlap(atom, {write.rhs}, source);
   }
