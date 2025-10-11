@@ -18,6 +18,17 @@ struct CASTestingEnv {
   std::unique_ptr<llvm::cas::ActionCache> Cache;
 };
 
+void setMaxOnDiskCASMappingSize();
+
+// Test fixture for on-disk data base tests.
+class OnDiskCASTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    // Use a smaller database size for testing to conserve disk space.
+    setMaxOnDiskCASMappingSize();
+  }
+};
+
 class CASTest
     : public testing::TestWithParam<std::function<CASTestingEnv(int)>> {
 protected:
