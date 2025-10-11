@@ -465,6 +465,10 @@ Bug Fixes to C++ Support
   nontrivial member when another member has an initializer. (#GH81774)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 
+- Emit an error when the same identifier appears with both internal and
+  external linkage in a translation unit Fixes:
+  (`#54215 <https://github.com/llvm/llvm-project/issues/54215>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
