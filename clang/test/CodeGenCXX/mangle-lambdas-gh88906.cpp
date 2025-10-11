@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -mconstructor-aliases -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fclang-abi-compat=18 %s -emit-llvm -mconstructor-aliases  -o - | FileCheck --check-prefix=CLANG18 %s
+// RUN: not %clang_cc1 -triple x86_64-linux-gnu -fclang-abi-compat=18 %s -emit-llvm -mconstructor-aliases 2>&1 | FileCheck --check-prefix=CLANG18 %s
 // RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -mconstructor-aliases -o - | FileCheck --check-prefix=MSABI %s
 
 
@@ -29,12 +29,7 @@ void GH88906(){
 // CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1bMUlvE_EEET_
 // CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1cMUlvE_EEET_
 
-// CLANG18-LABEL: define internal void @_ZZ7GH88906vEN4TestC2Ev
-// CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EZ7GH88906vENS1_UlvE0_EEET_T0_
-// CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EEET_
-// CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EEET_
-
-
+// CLANG18: error: definition with same mangled name '_ZN4funcC1IZ7GH88906vEN4TestUlvE_EEET_' as another definition
 
 // MSABI-LABEL: define internal x86_thiscallcc noundef ptr @"??0Test@?1??GH88906@@YAXXZ@QAE@XZ"
 // MSABI: call x86_thiscallcc noundef ptr @"??$?0V<lambda_1>@a@Test@?1??GH88906@@YAXXZ@V<lambda_2>@12?1??3@YAXXZ@@func@@QAE@V<lambda_1>@a@Test@?1??GH88906@@YAXXZ@V<lambda_2>@23?1??4@YAXXZ@@Z"
