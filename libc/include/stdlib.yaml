@@ -332,3 +332,21 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: arc4random
+    standards:
+      - gnu
+    return_type: uint32_t
+    arguments: []
+  - name: arc4random_buf
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: void *
+      - type: size_t
+  - name: arc4random_uniform
+    standards:
+      - gnu
+    return_type: uint32_t
+    arguments:
+      - type: uint32_t

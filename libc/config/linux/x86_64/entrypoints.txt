@@ -1248,6 +1248,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.arc4random
+    libc.src.stdlib.arc4random_buf
+    libc.src.stdlib.arc4random_uniform
 
     # signal.h entrypoints
     libc.src.signal.kill

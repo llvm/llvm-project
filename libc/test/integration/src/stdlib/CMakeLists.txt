@@ -16,3 +16,15 @@ add_integration_test(
     FRANCE=Paris
     GERMANY=Berlin
 )
+
+add_integration_test(
+  arc4random_test
+  SUITE
+    stdlib-integration-tests
+  SRCS
+    arc4random_test.cpp
+  DEPENDS
+    libc.src.stdlib.arc4random
+    libc.src.stdlib.arc4random_buf
+    libc.src.stdlib.arc4random_uniform
+)
