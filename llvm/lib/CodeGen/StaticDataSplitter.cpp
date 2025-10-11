@@ -133,8 +133,7 @@ StaticDataSplitter::getConstant(const MachineOperand &Op,
     // Skip 'llvm.'-prefixed global variables conservatively because they are
     // often handled specially, and skip those not in static data
     // sections.
-    if (!GV || GV->getName().starts_with("llvm.") ||
-        !inStaticDataSection(*GV, TM))
+    if (!GV || llvm::IsReservedGlobalVariable(*GV) || !inStaticDataSection(*GV, TM))
       return nullptr;
     return GV;
   }

@@ -41,6 +41,7 @@ using namespace llvm::memprof;
 #define DEBUG_TYPE "memprof"
 
 namespace llvm {
+extern cl::opt<bool> AnnotateStaticDataSectionPrefix;
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
@@ -75,10 +76,6 @@ static cl::opt<bool> ClMemProfAttachCalleeGuids(
 static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
-
-static cl::opt<bool> AnnotateStaticDataSectionPrefix(
-    "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
-    cl::desc("If true, annotate the static data section prefix"));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
@@ -797,7 +794,11 @@ bool MemProfUsePass::annotateGlobalVariables(
   if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
     return false;
 
+  // The module flag helps codegen passes interpret empty section prefix:
+  // - 0 : empty section prefix is expected for each GV.
+  // - 1 : empty section prefix means the GV has unknown hotness.
   if (!DataAccessProf) {
+    M.addModuleFlag(Module::Warning, "HasDataAccessProf", 0U);
     M.getContext().diagnose(DiagnosticInfoPGOProfile(
         MemoryProfileFileName.data(),
         StringRef("Data access profiles not found in memprof. Ignore "
@@ -805,6 +806,8 @@ bool MemProfUsePass::annotateGlobalVariables(
         DS_Warning));
     return false;
   }
+
+  M.addModuleFlag(Module::Warning, "HasDataAccessProf", 1);
 
   bool Changed = false;
   // Iterate all global variables in the module and annotate them based on
