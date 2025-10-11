@@ -966,6 +966,7 @@ void GCNScheduleDAGMILive::runSchedStages() {
     if (!Stage->initGCNSchedStage())
       continue;
 
+    bool IsAnyRegionScheduled = false;
     for (auto Region : Regions) {
       RegionBegin = Region.first;
       RegionEnd = Region.second;
@@ -989,11 +990,12 @@ void GCNScheduleDAGMILive::runSchedStages() {
                              Stage->getRegionIdx()));
       }
 
+      IsAnyRegionScheduled = true;
       ScheduleDAGMILive::schedule();
       Stage->finalizeGCNRegion();
     }
 
-    Stage->finalizeGCNSchedStage();
+    Stage->finalizeGCNSchedStage(IsAnyRegionScheduled);
   }
 }
 
@@ -1134,21 +1136,28 @@ bool PreRARematStage::initGCNSchedStage() {
   return true;
 }
 
-void GCNSchedStage::finalizeGCNSchedStage() {
+void GCNSchedStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
   DAG.finishBlock();
   LLVM_DEBUG(dbgs() << "Ending scheduling stage: " << StageID << "\n");
 }
 
-void UnclusteredHighRPStage::finalizeGCNSchedStage() {
+void UnclusteredHighRPStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
   SavedMutations.swap(DAG.Mutations);
   S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
-    LLVM_DEBUG(dbgs() << StageID
-                      << " stage successfully increased occupancy to "
-                      << DAG.MinOccupancy << '\n');
+    if (IsAnyRegionScheduled) {
+      LLVM_DEBUG(dbgs() << StageID
+                        << " stage successfully increased occupancy to "
+                        << DAG.MinOccupancy << '\n');
+    } else {
+      DAG.MinOccupancy = InitialOccupancy;
+      LLVM_DEBUG(dbgs() << StageID
+                        << ": No regions scheduled, resetting min occupancy to "
+                        << InitialOccupancy << "\n");
+    }
   }
 
-  GCNSchedStage::finalizeGCNSchedStage();
+  GCNSchedStage::finalizeGCNSchedStage(IsAnyRegionScheduled);
 }
 
 bool GCNSchedStage::initGCNRegion() {
@@ -1962,7 +1971,7 @@ bool PreRARematStage::isReMaterializable(const MachineInstr &MI) {
   return true;
 }
 
-void PreRARematStage::finalizeGCNSchedStage() {
+void PreRARematStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
   // We consider that reducing spilling is always beneficial so we never
   // rollback rematerializations in such cases. It's also possible that
   // rescheduling lowers occupancy over the one achieved just through remats, in
@@ -2015,7 +2024,7 @@ void PreRARematStage::finalizeGCNSchedStage() {
   for (auto &[I, OriginalRP] : ImpactedRegions)
     DAG.Pressure[I] = OriginalRP;
 
-  GCNSchedStage::finalizeGCNSchedStage();
+  GCNSchedStage::finalizeGCNSchedStage(IsAnyRegionScheduled);
 }
 
 void GCNScheduleDAGMILive::updateRegionBoundaries(
