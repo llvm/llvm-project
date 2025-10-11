@@ -91,17 +91,15 @@
 ; GCN-O0-NEXT:        Live Interval Analysis
 ; GCN-O0-NEXT:        SI Whole Quad Mode
 ; GCN-O0-NEXT:        AMDGPU Pre-RA Long Branch Reg
+; GCN-O0-NEXT:        Virtual Register Map
+; GCN-O0-NEXT:        Live Register Matrix
+; GCN-O0-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:        AMDGPU Partition VGPRs for RA
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        Machine Cycle Info Analysis
 ; GCN-O0-NEXT:        AMDGPU Control Flow Wave Transform
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI lower SGPR spill instructions
-; GCN-O0-NEXT:        Slot index numbering
-; GCN-O0-NEXT:        Live Interval Analysis
-; GCN-O0-NEXT:        Virtual Register Map
-; GCN-O0-NEXT:        Live Register Matrix
-; GCN-O0-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
 ; GCN-O0-NEXT:        AMDGPU Reserve WWM Registers
@@ -367,13 +365,14 @@
 ; GCN-O3-NEXT:        SI Whole Quad Mode
 ; GCN-O3-NEXT:        SI Form memory clauses
 ; GCN-O3-NEXT:        AMDGPU Pre-RA Long Branch Reg
+; GCN-O3-NEXT:        Virtual Register Map
+; GCN-O3-NEXT:        Live Register Matrix
+; GCN-O3-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O3-NEXT:        AMDGPU Partition VGPRs for RA
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Debug Variable Analysis
 ; GCN-O3-NEXT:        Live Stack Slot Analysis
-; GCN-O3-NEXT:        Virtual Register Map
-; GCN-O3-NEXT:        Live Register Matrix
 ; GCN-O3-NEXT:        Bundle Machine CFG Edges
 ; GCN-O3-NEXT:        Spill Code Placement Analysis
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
@@ -401,10 +400,9 @@
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        SI lower SGPR spill instructions
+; GCN-O3-NEXT:        Live Stack Slot Analysis
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix
-; GCN-O3-NEXT:        SI Pre-allocate WWM Registers
-; GCN-O3-NEXT:        Live Stack Slot Analysis
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        SI Lower WWM Copies
 ; GCN-O3-NEXT:        Virtual Register Rewriter

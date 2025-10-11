@@ -1746,6 +1746,11 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&GCNPreRALongBranchRegID);
 
   if (WaveTransformCF) {
+    // To Allocate wwm registers used in whole quad mode operations (for
+    // shaders). Scheduling it early before the AMDGPUPartitionVGPRs pass so
+    // that this custom allocation will always have enough registers.
+    addPass(&SIPreAllocateWWMRegsLegacyID);
+
     // TODO-WAVETRANSFORM: If there are performance concerns, the current
     // partition strategy has to be improved.
     addPass(&AMDGPUPartitionVGPRsForRALegacyID);
@@ -1775,7 +1780,8 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(&SIPreAllocateWWMRegsLegacyID);
+  if (!WaveTransformCF)
+    addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other wwm register operands.
   addPass(createWWMRegAllocPass(false));
@@ -1805,6 +1811,11 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&GCNPreRALongBranchRegID);
 
   if (WaveTransformCF) {
+    // To Allocate wwm registers used in whole quad mode operations (for
+    // shaders). Scheduling it early before the AMDGPUPartitionVGPRs pass so
+    // that this custom allocation will always have enough registers.
+    addPass(&SIPreAllocateWWMRegsLegacyID);
+
     // TODO-WAVETRANSFORM: If there are performance concerns, the current
     // partition strategy has to be improved.
     addPass(&AMDGPUPartitionVGPRsForRALegacyID);
@@ -1851,7 +1862,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(&SIPreAllocateWWMRegsLegacyID);
+  if (!WaveTransformCF)
+    addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
