@@ -1411,10 +1411,33 @@ SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
   const auto *Src0 = TII->getNamedOperand(*CI.I, OpName);
   const auto *Src1 = TII->getNamedOperand(*Paired.I, OpName);
 
+  // Make sure the generated REG_SEQUENCE has sensibly aligned registers.
+  const TargetRegisterClass *CompatRC0 =
+      TRI->getSubRegisterClass(SuperRC, SubRegIdx0);
+  const TargetRegisterClass *CompatRC1 =
+      TRI->getSubRegisterClass(SuperRC, SubRegIdx1);
+  assert(CompatRC0 && CompatRC1 &&
+         "Cannot find compatible TargetRegisterClass");
+
+  Register Src0Reg = CompatRC0 == CI.DataRC
+                         ? Src0->getReg()
+                         : MRI->createVirtualRegister(CompatRC0);
+  Register Src1Reg = CompatRC1 == Paired.DataRC
+                         ? Src1->getReg()
+                         : MRI->createVirtualRegister(CompatRC1);
+
+  if (CompatRC0 != CI.DataRC)
+    BuildMI(*MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Src0Reg)
+        .add(*Src0);
+
+  if (CompatRC1 != Paired.DataRC)
+    BuildMI(*MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Src1Reg)
+        .add(*Src1);
+
   BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-      .add(*Src0)
+      .addReg(Src0Reg)
       .addImm(SubRegIdx0)
-      .add(*Src1)
+      .addReg(Src1Reg)
       .addImm(SubRegIdx1);
 
   return SrcReg;
