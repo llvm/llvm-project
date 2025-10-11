@@ -44,6 +44,8 @@ template <typename T> Triple::ArchType getMachineArchType(T machine) {
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
   case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return llvm::Triple::ArchType::aarch64;
+  case COFF::IMAGE_FILE_MACHINE_LOONGARCH64:
+    return llvm::Triple::ArchType::loongarch64;
   case COFF::IMAGE_FILE_MACHINE_R4000:
     return llvm::Triple::ArchType::mipsel;
   default:
