@@ -188,28 +188,16 @@ bool DwarfUnit::isShareableAcrossCUs(const DINode *D) const {
   // together.
   if (isDwoUnit() && !DD->shareAcrossDWOCUs())
     return false;
-  return (isa<DIType>(D) ||
-          (isa<DISubprogram>(D) && !cast<DISubprogram>(D)->isDefinition())) &&
-         !DD->generateTypeUnits();
-}
-
-DIE *DwarfUnit::getDIE(const DINode *D) const {
-  if (isShareableAcrossCUs(D))
-    return DU->getDIE(D);
-  return MDNodeToDieMap.lookup(D);
+  return !D || ((isa<DIType>(D) || (isa<DISubprogram>(D) &&
+                                    !cast<DISubprogram>(D)->isDefinition())) &&
+                !DD->generateTypeUnits());
 }
 
 void DwarfUnit::insertDIE(const DINode *Desc, DIE *D) {
-  if (isShareableAcrossCUs(Desc)) {
-    DU->insertDIE(Desc, D);
-    return;
-  }
-  MDNodeToDieMap.insert(std::make_pair(Desc, D));
+  getDIEs(Desc).insertDIE(Desc, D);
 }
 
-void DwarfUnit::insertDIE(DIE *D) {
-  MDNodeToDieMap.insert(std::make_pair(nullptr, D));
-}
+void DwarfUnit::insertDIE(DIE *D) { InfoHolder.insertDIE(D); }
 
 void DwarfUnit::addFlag(DIE &Die, dwarf::Attribute Attribute) {
   if (DD->getDwarfVersion() >= 4)
@@ -811,7 +799,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
     addString(Buffer, dwarf::DW_AT_name, Name);
 
   if (DIVariable *Var = STy->getStringLength()) {
-    if (auto *VarDIE = getDIE(Var))
+    if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_string_length, *VarDIE);
   } else if (DIExpression *Expr = STy->getStringLengthExp()) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1130,8 +1118,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           constructTypeDIE(VariantPart, Composite);
         }
       } else if (Tag == dwarf::DW_TAG_namelist) {
-        auto *Var = dyn_cast<DINode>(Element);
-        auto *VarDIE = getDIE(Var);
+        auto *Var = dyn_cast<DIVariable>(Element);
+        auto *VarDIE = getDIEs(Var).getVariableDIE(Var);
         if (VarDIE) {
           DIE &ItemDie = createAndAddDIE(dwarf::DW_TAG_namelist_item, Buffer);
           addDIEEntry(ItemDie, dwarf::DW_AT_namelist_item, *VarDIE);
@@ -1193,7 +1181,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       Tag == dwarf::DW_TAG_class_type || Tag == dwarf::DW_TAG_structure_type ||
       Tag == dwarf::DW_TAG_union_type) {
     if (auto *Var = dyn_cast_or_null<DIVariable>(CTy->getRawSizeInBits())) {
-      if (auto *VarDIE = getDIE(Var))
+      if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
         addDIEEntry(Buffer, dwarf::DW_AT_bit_size, *VarDIE);
     } else if (auto *Exp =
                    dyn_cast_or_null<DIExpression>(CTy->getRawSizeInBits())) {
@@ -1424,7 +1412,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   StringRef LinkageName = SP->getLinkageName();
   // Always emit linkage name for abstract subprograms.
   if (DeclLinkageName != LinkageName &&
-      (DD->useAllLinkageNames() || DU->getAbstractScopeDIEs().lookup(SP)))
+      (DD->useAllLinkageNames() ||
+       DU->getDIEs().getAbstractScopeDIEs().lookup(SP)))
     addLinkageName(SPDie, LinkageName);
 
   if (!DeclDie)
@@ -1594,7 +1583,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &DW_Subrange, const DISubrangeType *SR,
   auto AddBoundTypeEntry = [&](dwarf::Attribute Attr,
                                DISubrangeType::BoundType Bound) -> void {
     if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound)) {
-      if (auto *VarDIE = getDIE(BV))
+      if (auto *VarDIE = getDIEs(BV).getVariableDIE(BV))
         addDIEEntry(DW_Subrange, Attr, *VarDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1636,7 +1625,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR) {
   auto AddBoundTypeEntry = [&](dwarf::Attribute Attr,
                                DISubrange::BoundType Bound) -> void {
     if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound)) {
-      if (auto *VarDIE = getDIE(BV))
+      if (auto *VarDIE = getDIEs(BV).getVariableDIE(BV))
         addDIEEntry(DW_Subrange, Attr, *VarDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1678,7 +1667,7 @@ void DwarfUnit::constructGenericSubrangeDIE(DIE &Buffer,
   auto AddBoundTypeEntry = [&](dwarf::Attribute Attr,
                                DIGenericSubrange::BoundType Bound) -> void {
     if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound)) {
-      if (auto *VarDIE = getDIE(BV))
+      if (auto *VarDIE = getDIEs(BV).getVariableDIE(BV))
         addDIEEntry(DwGenericSubrange, Attr, *VarDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
       if (BE->isConstant() &&
@@ -1757,7 +1746,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   }
 
   if (DIVariable *Var = CTy->getDataLocation()) {
-    if (auto *VarDIE = getDIE(Var))
+    if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_data_location, *VarDIE);
   } else if (DIExpression *Expr = CTy->getDataLocationExp()) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1768,7 +1757,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   }
 
   if (DIVariable *Var = CTy->getAssociated()) {
-    if (auto *VarDIE = getDIE(Var))
+    if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_associated, *VarDIE);
   } else if (DIExpression *Expr = CTy->getAssociatedExp()) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1779,7 +1768,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   }
 
   if (DIVariable *Var = CTy->getAllocated()) {
-    if (auto *VarDIE = getDIE(Var))
+    if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_allocated, *VarDIE);
   } else if (DIExpression *Expr = CTy->getAllocatedExp()) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1904,7 +1893,7 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     if (DT->getRawSizeInBits() == nullptr) {
       // No size, just ignore.
     } else if (auto *Var = dyn_cast<DIVariable>(DT->getRawSizeInBits())) {
-      if (auto *VarDIE = getDIE(Var))
+      if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
         addDIEEntry(MemberDie, dwarf::DW_AT_bit_size, *VarDIE);
     } else if (auto *Exp = dyn_cast<DIExpression>(DT->getRawSizeInBits())) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
@@ -1929,7 +1918,7 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     // See https://dwarfstd.org/issues/250501.1.html
     if (auto *Var = dyn_cast_or_null<DIVariable>(DT->getRawOffsetInBits())) {
       if (!Asm->TM.Options.DebugStrictDwarf || DD->getDwarfVersion() >= 6) {
-        if (auto *VarDIE = getDIE(Var))
+        if (auto *VarDIE = getDIEs(Var).getVariableDIE(Var))
           addDIEEntry(MemberDie, dwarf::DW_AT_data_bit_offset, *VarDIE);
       }
     } else if (auto *Expr =

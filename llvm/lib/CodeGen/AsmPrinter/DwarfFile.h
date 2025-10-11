@@ -15,9 +15,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Allocator.h"
+#include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -26,9 +29,6 @@ class AsmPrinter;
 class DbgEntity;
 class DbgVariable;
 class DbgLabel;
-class DINode;
-class DILocalScope;
-class DISubprogram;
 class DwarfCompileUnit;
 class DwarfUnit;
 class LexicalScope;
@@ -51,6 +51,137 @@ struct RangeSpanList {
   const DwarfCompileUnit *CU;
   // List of ranges.
   SmallVector<RangeSpan, 2> Ranges;
+};
+
+/// Tracks abstract and concrete DIEs for debug info entities of a certain type.
+template <typename DINodeT, typename DbgEntityT> class DINodeInfoHolder {
+public:
+  using AbstractMapT = DenseMap<const DINodeT *, DIE *>;
+  using ConcreteMapT =
+      DenseMap<const DINodeT *, SmallDenseMap<const DbgEntityT *, DIE *, 2>>;
+
+private:
+  AbstractMapT AbstractMap;
+  ConcreteMapT ConcreteMap;
+
+public:
+  void insertAbstractDIE(const DINodeT *N, DIE *D) {
+    auto [_, Inserted] = AbstractMap.try_emplace(N, D);
+    assert(Inserted && "Duplicate abstract DIE for debug info node");
+  }
+
+  void insertConcreteDIE(const DINodeT *N, const DbgEntityT *E, DIE *D) {
+    auto [_, Inserted] = ConcreteMap[N].try_emplace(E, D);
+    assert(Inserted && "Duplicate concrete DIE for debug info node");
+  }
+
+  void insertDIE(const DINodeT *N, const DbgEntityT *E, DIE *D, bool Abstract) {
+    if (Abstract)
+      insertAbstractDIE(N, D);
+    else
+      insertConcreteDIE(N, E, D);
+  }
+
+  DIE *getAbstractDIE(const DINodeT *N) const { return AbstractMap.lookup(N); }
+
+  std::optional<
+      std::reference_wrapper<const typename ConcreteMapT::mapped_type>>
+  getConcreteDIEs(const DINodeT *N) const {
+    if (auto I = ConcreteMap.find(N); I != ConcreteMap.end())
+      return std::make_optional(std::ref(I->second));
+    return std::nullopt;
+  }
+
+  DIE *getConcreteDIE(const DINodeT *N, const DbgEntityT *E) const {
+    if (auto I = getConcreteDIEs(N))
+      return I->get().lookup(E);
+    return nullptr;
+  }
+
+  DIE *getAnyConcreteDIE(const DINodeT *N) const {
+    if (auto I = getConcreteDIEs(N))
+      return I->get().empty() ? nullptr : I->get().begin()->second;
+    return nullptr;
+  }
+
+  /// Returns abstract DIE for the entity.
+  /// If no abstract DIE was created, returns any concrete DIE for the entity.
+  DIE *getDIE(const DINodeT *N) const {
+    if (DIE *D = getAbstractDIE(N))
+      return D;
+
+    return getAnyConcreteDIE(N);
+  }
+
+  AbstractMapT &getAbstractDIEs() { return AbstractMap; }
+};
+
+/// Tracks DIEs for debug info entites.
+/// These DIEs can be shared across CUs, that is why we keep the map here
+/// instead of in DwarfCompileUnit.
+class DwarfInfoHolder {
+  /// DIEs of local DbgVariables.
+  DINodeInfoHolder<DILocalVariable, DbgVariable> LVHolder;
+  /// DIEs of labels.
+  DINodeInfoHolder<DILabel, DbgLabel> LabelHolder;
+  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
+  // List of abstract local scopes (either DISubprogram or DILexicalBlock).
+  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
+  /// Keeps track of abstract subprograms to populate them only once.
+  // FIXME: merge creation and population of abstract scopes.
+  SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
+
+  /// Other DINodes with the corresponding DIEs.
+  DenseMap<const DINode *, DIE *> MDNodeToDieMap;
+
+public:
+  void insertDIE(const DINode *N, DIE *Die) {
+    assert((!isa<DILabel>(N) && !isa<DILocalVariable>(N)) &&
+           "Use getLabels().insertDIE() for labels or getLVs().insertDIE() for "
+           "local variables");
+    auto [_, Inserted] = MDNodeToDieMap.try_emplace(N, Die);
+    assert((Inserted || isa<DISubprogram>(N) || isa<DIType>(N)) &&
+           "DIE for this DINode has already been added");
+  }
+
+  void insertDIE(DIE *D) { MDNodeToDieMap.try_emplace(nullptr, D); }
+
+  DIE *getDIE(const DINode *N) const {
+    DIE *D = MDNodeToDieMap.lookup(N);
+    assert((!D || (!isa<DILabel>(N) && !isa<DILocalVariable>(N))) &&
+           "Use getLabels().getDIE() for labels or getLVs().getDIE() for "
+           "local variables");
+    return D;
+  }
+
+  auto &getLVs() { return LVHolder; }
+  auto &getLVs() const { return LVHolder; }
+
+  auto &getLabels() { return LabelHolder; }
+  auto &getLabels() const { return LabelHolder; }
+
+  /// For a global variable, returns DIE of the variable.
+  ///
+  /// For a local variable, returns abstract DIE of the variable.
+  /// If no abstract DIE was created, returns any concrete DIE of the variable.
+  DIE *getVariableDIE(const DIVariable *V) const {
+    if (auto *LV = dyn_cast<DILocalVariable>(V))
+      if (DIE *D = getLVs().getDIE(LV))
+        return D;
+    return getDIE(V);
+  }
+
+  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
+    return AbstractLocalScopeDIEs;
+  }
+
+  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
+    return AbstractEntities;
+  }
+
+  auto &getFinalizedAbstractSubprograms() {
+    return FinalizedAbstractSubprograms;
+  }
 };
 
 class DwarfFile {
@@ -93,17 +224,7 @@ class DwarfFile {
   using LabelList = SmallVector<DbgLabel *, 4>;
   DenseMap<LexicalScope *, LabelList> ScopeLabels;
 
-  // Collection of abstract subprogram DIEs.
-  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
-  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
-  /// Keeps track of abstract subprograms to populate them only once.
-  // FIXME: merge creation and population of abstract scopes.
-  SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
-
-  /// Maps MDNodes for type system with the corresponding DIEs. These DIEs can
-  /// be shared across CUs, that is why we keep the map here instead
-  /// of in DwarfCompileUnit.
-  DenseMap<const MDNode *, DIE *> DITypeNodeToDieMap;
+  DwarfInfoHolder InfoHolder;
 
 public:
   DwarfFile(AsmPrinter *AP, StringRef Pref, BumpPtrAllocator &DA);
@@ -171,25 +292,7 @@ public:
     return ScopeLabels;
   }
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
-    return AbstractLocalScopeDIEs;
-  }
-
-  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
-    return AbstractEntities;
-  }
-
-  auto &getFinalizedAbstractSubprograms() {
-    return FinalizedAbstractSubprograms;
-  }
-
-  void insertDIE(const MDNode *TypeMD, DIE *Die) {
-    DITypeNodeToDieMap.insert(std::make_pair(TypeMD, Die));
-  }
-
-  DIE *getDIE(const MDNode *TypeMD) {
-    return DITypeNodeToDieMap.lookup(TypeMD);
-  }
+  DwarfInfoHolder &getDIEs() { return InfoHolder; }
 };
 
 } // end namespace llvm
