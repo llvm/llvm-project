@@ -245,6 +245,8 @@ CODEGENOPT(NewStructPathTBAA , 1, 0, Benign) ///< Whether or not to use enhanced
 CODEGENOPT(SaveTempLabels    , 1, 0, Benign) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0, Benign) ///< Enable use-after-scope detection
                                                         ///< in AddressSanitizer
+CODEGENOPT(SanitizeAddressDisableContainerOverflow, 1, 0, Benign) ///< Disable container overflow checks 
+                                                                  ///< in AddressSanitizer
 ENUM_CODEGENOPT(SanitizeAddressUseAfterReturn,
                 AsanDetectStackUseAfterReturnMode, 2,
                 AsanDetectStackUseAfterReturnMode::Runtime,
