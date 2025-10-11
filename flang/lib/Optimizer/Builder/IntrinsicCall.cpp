@@ -502,6 +502,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
      /*isElemental=*/false},
+    {"fence_proxy_async",
+     &I::genFenceProxyAsync,
+     {},
+     /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
      {{{"array", asBox},
@@ -4365,6 +4369,17 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
                                      fir::getBase(args[1])));
+}
+
+// FENCE_PROXY_ASYNC (CUDA)
+void IntrinsicLibrary::genFenceProxyAsync(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  auto kind = mlir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
+  auto space = mlir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
+  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // FINDLOC
