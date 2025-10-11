@@ -31,6 +31,7 @@ endfunction()
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
 set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+
 # bolt only supports ELF, so only enable it for Linux.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
@@ -56,7 +57,7 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(STAGE1_PROJECTS "clang")
 
 # Build all runtimes so we can statically link them into the stage2 compiler.
-set(STAGE1_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind")
+set(STAGE1_RUNTIMES ${DEFAULT_RUNTIMES})
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
@@ -140,7 +141,13 @@ set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRIN
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
 endif()
-set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+# We want to generate an installer on Windows.
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+  set_final_stage_var(CPACK_GENERATOR "WIX" STRING)
+  set_final_stage_var(BUILD_LLVM_C_DYLIB "ON" STRING)
+else()
+  set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+endif()
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
