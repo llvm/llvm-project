@@ -148,8 +148,9 @@ protected:
 
   static lldb::addr_t FindKernelAtLoadAddress(lldb_private::Process *process);
 
+  template <typename Elf_Ehdr>
   static bool ReadELFHeader(lldb_private::Process *process,
-                            lldb::addr_t address, llvm::ELF::Elf32_Ehdr &header,
+                            lldb::addr_t address, Elf_Ehdr &header,
                             bool *read_error = nullptr);
 
   lldb_private::Process *m_process;
