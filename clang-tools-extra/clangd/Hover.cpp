@@ -139,6 +139,15 @@ std::string getNamespaceScope(const Decl *D) {
   return "";
 }
 
+/// Compute the number of child statements in this statement. Includes the
+/// statement itself.
+size_t totalChildrenInStmt(const Stmt *Statement) {
+  size_t Count = 1;
+  for (const auto &Child : Statement->children())
+    Count += totalChildrenInStmt(Child);
+  return Count;
+}
+
 std::string printDefinition(const Decl *D, PrintingPolicy PP,
                             const syntax::TokenBuffer &TB) {
   if (auto *VD = llvm::dyn_cast<VarDecl>(D)) {
@@ -146,8 +155,9 @@ std::string printDefinition(const Decl *D, PrintingPolicy PP,
       // Initializers might be huge and result in lots of memory allocations in
       // some catostrophic cases. Such long lists are not useful in hover cards
       // anyway.
-      if (200 < TB.expandedTokens(IE->getSourceRange()).size())
-        PP.SuppressInitializers = true;
+      PP.SuppressInitializers =
+          200 < TB.expandedTokens(IE->getSourceRange()).size() ||
+          100 < totalChildrenInStmt(IE);
     }
   }
   std::string Definition;
