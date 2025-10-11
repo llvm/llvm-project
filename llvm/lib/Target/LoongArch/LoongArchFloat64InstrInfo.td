@@ -161,6 +161,7 @@ def : PatFprFpr<fminnum, FMIN_D, FPR64>;
 def : PatFpr<fneg, FNEG_D, FPR64>;
 def : PatFpr<fabs, FABS_D, FPR64>;
 def : PatFpr<fsqrt, FSQRT_D, FPR64>;
+def : PatFpr<flog2, FLOGB_D, FPR64>;
 def : Pat<(fdiv fpimm1, (fsqrt FPR64:$fj)), (FRSQRT_D FPR64:$fj)>;
 let Predicates = [IsLA32] in {
 def : Pat<(fdiv (loongarch_movgr2fr_d_lo_hi (i32 0), (i32 1072693248)),
