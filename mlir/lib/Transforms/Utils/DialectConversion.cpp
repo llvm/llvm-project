@@ -2321,6 +2321,10 @@ detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
   return *impl;
 }
 
+bool ConversionPatternRewriter::isOpIgnored(Operation *op) const {
+  return getImpl()->isOpIgnored(op);
+}
+
 //===----------------------------------------------------------------------===//
 // ConversionPattern
 //===----------------------------------------------------------------------===//
