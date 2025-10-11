@@ -73,9 +73,7 @@ CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/RISCV/zmmul.ll
-CodeGen/SPIRV/hlsl-resources/UniqueImplicitBindingNumber.ll
 CodeGen/WebAssembly/memory-interleave.ll
-CodeGen/X86/global-variable-partition-with-dap.ll
 CodeGen/X86/masked_gather_scatter.ll
 CodeGen/X86/nocfivalue.ll
 DebugInfo/AArch64/ir-outliner.ll

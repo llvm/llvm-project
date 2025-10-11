@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Analyses/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/TestAST.h"
@@ -63,7 +63,7 @@ public:
     Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
     Analysis->run();
 
-    AnnotationToPointMap = Analysis->getTestPoints();
+    AnnotationToPointMap = Analysis->getFactManager().getTestPoints();
   }
 
   LifetimeSafetyAnalysis &getAnalysis() { return *Analysis; }
@@ -98,10 +98,11 @@ public:
     auto *VD = findDecl<ValueDecl>(VarName);
     if (!VD)
       return std::nullopt;
-    auto OID = Analysis.getOriginIDForDecl(VD);
-    if (!OID)
-      ADD_FAILURE() << "Origin for '" << VarName << "' not found.";
-    return OID;
+    // This assumes the OriginManager's `get` can find an existing origin.
+    // We might need a `find` method on OriginManager to avoid `getOrCreate`
+    // logic in a const-query context if that becomes an issue.
+    return const_cast<OriginManager &>(Analysis.getFactManager().getOriginMgr())
+        .get(*VD);
   }
 
   std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
@@ -110,7 +111,10 @@ public:
       ADD_FAILURE() << "Failed to find VarDecl for '" << VarName << "'";
       return {};
     }
-    std::vector<LoanID> LID = Analysis.getLoanIDForVar(VD);
+    std::vector<LoanID> LID;
+    for (const Loan &L : Analysis.getFactManager().getLoanMgr().getLoans())
+      if (L.Path.D == VD)
+        LID.push_back(L.ID);
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
       return {};
@@ -123,7 +127,7 @@ public:
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getLoansAtPoint(OID, PP);
+    return Analysis.getLoanPropagation().getLoans(OID, PP);
   }
 
   std::optional<std::vector<std::pair<OriginID, LivenessKind>>>
@@ -131,7 +135,10 @@ public:
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getLiveOriginsAtPoint(PP);
+    std::vector<std::pair<OriginID, LivenessKind>> Result;
+    for (auto &[OID, Info] : Analysis.getLiveOrigins().getLiveOriginsAt(PP))
+      Result.push_back({OID, Info.Kind});
+    return Result;
   }
 
 private:
