@@ -105,10 +105,10 @@ define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[OFF]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i16 1, [[OFF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], [[OFF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = sub <2 x i16> splat (i16 1), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
@@ -116,7 +116,7 @@ define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 9, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], splat (i16 10)
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -257,12 +257,12 @@ define void @ptr_depends_on_possibly_poison_value_from_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 9, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @src, align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[VEC_IND]], splat (i16 10)
-; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i16> splat (i16 1), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[TMP2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 1, [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP3]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
