@@ -104,7 +104,7 @@ struct __atomic_wait_backoff_impl {
   memory_order __order_;
 
   using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
-  using __value_type _LIBCPP_NODEBUG = typename __waitable_traits::__value_type;
+  using __value_type _LIBCPP_NODEBUG      = typename __waitable_traits::__value_type;
 
   _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(4)) {
