@@ -15,8 +15,8 @@
 
 using namespace llvm;
 
-bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                                        unsigned ScalarOpdIdx) {
+bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
+    Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_wave_readlane:
     return ScalarOpdIdx == 1;
@@ -26,9 +26,14 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 }
 
 bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                            int OpdIdx) {
+                                                            int OpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_asdouble:
+  case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
+  case Intrinsic::dx_firstbitlow:
+  case Intrinsic::dx_firstbituhigh:
+  case Intrinsic::dx_firstbitshigh:
     return OpdIdx == 0;
   default:
     return OpdIdx == -1;
@@ -43,6 +48,8 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_firstbitshigh:
   case Intrinsic::dx_firstbituhigh:
   case Intrinsic::dx_frac:
+  case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:
@@ -51,6 +58,8 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_imad:
+  case Intrinsic::dx_umad:
     return true;
   default:
     return false;

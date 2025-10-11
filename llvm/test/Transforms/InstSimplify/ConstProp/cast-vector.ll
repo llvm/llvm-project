@@ -5,7 +5,7 @@
 ; "offsetof-like expression" case).
 ; This used to hit an assert due to not supporting vectors in
 ; llvm::ConstantFoldCastInstruction when handling ptrtoint.
-define <2 x i16> @test1() {
+define <2 x i16> @test1() null_pointer_is_valid {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret <2 x i16> <i16 ptrtoint (ptr getelementptr inbounds ([10 x i32], ptr null, i64 0, i64 5) to i16), i16 ptrtoint (ptr getelementptr inbounds ([10 x i32], ptr null, i64 0, i64 7) to i16)>
@@ -20,7 +20,7 @@ entry:
 ; "sizeof-like expression" case).
 ; This used to hit an assert due to not supporting vectors in
 ; llvm::ConstantFoldCastInstruction when handling ptrtoint.
-define <2 x i16> @test2() {
+define <2 x i16> @test2() null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret <2 x i16> <i16 ptrtoint (ptr getelementptr (i32, ptr null, i64 5) to i16), i16 ptrtoint (ptr getelementptr (i32, ptr null, i64 7) to i16)>

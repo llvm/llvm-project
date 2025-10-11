@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -21,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -44,8 +42,6 @@ STAT_COUNTER(NumReachedInlineCountMax,
 void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
                                   ExplodedNode *Pred) {
   // Get the entry block in the CFG of the callee.
-  const StackFrameContext *calleeCtx = CE.getCalleeContext();
-  PrettyStackTraceLocationContext CrashInfo(calleeCtx);
   const CFGBlock *Entry = CE.getEntry();
 
   // Validate the CFG.
@@ -56,7 +52,7 @@ void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
   const CFGBlock *Succ = *(Entry->succ_begin());
 
   // Construct an edge representing the starting location in the callee.
-  BlockEdge Loc(Entry, Succ, calleeCtx);
+  BlockEdge Loc(Entry, Succ, CE.getCalleeContext());
 
   ProgramStateRef state = Pred->getState();
 
@@ -253,7 +249,6 @@ ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
 /// 5. PostStmt<CallExpr>
 void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 1 CEBNode was generated before the call.
-  PrettyStackTraceLocationContext CrashInfo(CEBNode->getLocationContext());
   const StackFrameContext *calleeCtx = CEBNode->getStackFrame();
 
   // The parent context might not be a stack frame, so make sure we
@@ -746,6 +741,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
                                             const LocationContext *LCtx,
                                             ProgramStateRef State) {
   const Expr *E = Call.getOriginExpr();
+  const ConstCFGElementRef &Elem = Call.getCFGElementRef();
   if (!E)
     return State;
 
@@ -788,7 +784,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     RegionAndSymbolInvalidationTraits ITraits;
     ITraits.setTrait(TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-    State = State->invalidateRegions(TargetR, E, Count, LCtx,
+    State = State->invalidateRegions(TargetR, Elem, Count, LCtx,
                                      /* CausesPointerEscape=*/false, nullptr,
                                      &Call, &ITraits);
 
@@ -800,7 +796,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     // a regular unknown pointer.
     const auto *CNE = dyn_cast<CXXNewExpr>(E);
     if (CNE && CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
-      R = svalBuilder.getConjuredHeapSymbolVal(E, LCtx, Count);
+      R = svalBuilder.getConjuredHeapSymbolVal(Elem, LCtx, E->getType(), Count);
       const MemRegion *MR = R.getAsRegion()->StripCasts();
 
       // Store the extent of the allocated object(s).
@@ -824,7 +820,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
       State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>());
     } else {
-      R = svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
+      R = svalBuilder.conjureSymbolVal(Elem, LCtx, ResultTy, Count);
     }
   }
   return State->BindExpr(E, LCtx, R);

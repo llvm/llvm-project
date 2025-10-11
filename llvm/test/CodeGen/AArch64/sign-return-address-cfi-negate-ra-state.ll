@@ -9,8 +9,8 @@
 define dso_local i32 @_Z3fooi(i32 %x) #0 {
 ; CHECK-V8A-LABEL: _Z3fooi:
 ; CHECK-V8A:       // %bb.0: // %entry
-; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    hint #25
+; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V8A-NEXT:    .cfi_offset w30, -16
@@ -27,8 +27,8 @@ define dso_local i32 @_Z3fooi(i32 %x) #0 {
 ;
 ; CHECK-V83A-LABEL: _Z3fooi:
 ; CHECK-V83A:       // %bb.0: // %entry
-; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    paciasp
+; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V83A-NEXT:    .cfi_offset w30, -16
@@ -62,8 +62,8 @@ return:                                           ; No predecessors!
 define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V8A-LABEL: baz_async:
 ; CHECK-V8A:       // %bb.0: // %entry
-; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    hint #25
+; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V8A-NEXT:    .cfi_offset w30, -16
@@ -74,9 +74,9 @@ define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V8A-NEXT:    bl _Z3bari
 ; CHECK-V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-V8A-NEXT:    .cfi_negate_ra_state
-; CHECK-V8A-NEXT:    hint #29
 ; CHECK-V8A-NEXT:    .cfi_restore w30
+; CHECK-V8A-NEXT:    hint #29
+; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    b _Z3bari
 ; CHECK-V8A-NEXT:  .LBB1_2: // %if.else
 ; CHECK-V8A-NEXT:    .cfi_restore_state
@@ -84,15 +84,15 @@ define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V8A-NEXT:    add w0, w0, #1
 ; CHECK-V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-V8A-NEXT:    .cfi_negate_ra_state
-; CHECK-V8A-NEXT:    hint #29
 ; CHECK-V8A-NEXT:    .cfi_restore w30
+; CHECK-V8A-NEXT:    hint #29
+; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    ret
 ;
 ; CHECK-V83A-LABEL: baz_async:
 ; CHECK-V83A:       // %bb.0: // %entry
-; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    paciasp
+; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V83A-NEXT:    .cfi_offset w30, -16
@@ -103,9 +103,9 @@ define hidden noundef i32 @baz_async(i32 noundef %a) #0 uwtable(async) {
 ; CHECK-V83A-NEXT:    bl _Z3bari
 ; CHECK-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-V83A-NEXT:    .cfi_negate_ra_state
-; CHECK-V83A-NEXT:    autiasp
 ; CHECK-V83A-NEXT:    .cfi_restore w30
+; CHECK-V83A-NEXT:    autiasp
+; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    b _Z3bari
 ; CHECK-V83A-NEXT:  .LBB1_2: // %if.else
 ; CHECK-V83A-NEXT:    .cfi_restore_state
@@ -143,8 +143,8 @@ return:                                           ; preds = %if.else, %if.then
 define hidden noundef i32 @baz_sync(i32 noundef %a) #0 uwtable(sync) {
 ; CHECK-V8A-LABEL: baz_sync:
 ; CHECK-V8A:       // %bb.0: // %entry
-; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    hint #25
+; CHECK-V8A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V8A-NEXT:    .cfi_offset w30, -16
@@ -164,8 +164,8 @@ define hidden noundef i32 @baz_sync(i32 noundef %a) #0 uwtable(sync) {
 ;
 ; CHECK-V83A-LABEL: baz_sync:
 ; CHECK-V83A:       // %bb.0: // %entry
-; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    paciasp
+; CHECK-V83A-NEXT:    .cfi_negate_ra_state
 ; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V83A-NEXT:    .cfi_offset w30, -16
@@ -216,7 +216,7 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP-NOT: DW_CFA_remember_state
 ; CHECK-DUMP-NOT: DW_CFA_restore_state
 
-; CHECK-DUMP: CFA=WSP
+; CHECK-DUMP: CFA=WSP{{$}}
 ; CHECK-DUMP: reg34=1
 ; CHECK-DUMP-NOT: reg34=0
 
@@ -229,7 +229,6 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP:   DW_CFA_restore_state:
 ; CHECK-DUMP:   DW_CFA_AARCH64_negate_ra_state:
 
-; CHECK-DUMP: CFA=WSP
 ;; First DW_CFA_AARCH64_negate_ra_state:
 ; CHECK-DUMP: reg34=1
 ;; Second DW_CFA_AARCH64_negate_ra_state:
@@ -238,6 +237,7 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP: reg34=1
 ;; Third DW_CFA_AARCH64_negate_ra_state:
 ; CHECK-DUMP: reg34=0
+; CHECK-DUMP-NOT: reg34=1
 
 ; baz_sync
 ; CHECK-DUMP-LABEL: FDE
@@ -246,6 +246,6 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP-NOT: DW_CFA_remember_state
 ; CHECK-DUMP-NOT: DW_CFA_restore_state
 
-; CHECK-DUMP: CFA=WSP
+; CHECK-DUMP: CFA=WSP{{$}}
 ; CHECK-DUMP: reg34=1
 ; CHECK-DUMP-NOT: reg34=0

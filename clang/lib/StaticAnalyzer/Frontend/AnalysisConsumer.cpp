@@ -36,14 +36,10 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
-#include <queue>
 #include <utility>
 
 using namespace clang;
@@ -55,6 +51,9 @@ STAT_COUNTER(NumFunctionTopLevel, "The # of functions at top level.");
 ALWAYS_ENABLED_STATISTIC(NumFunctionsAnalyzed,
                          "The # of functions and blocks analyzed (as top level "
                          "with inlining turned on).");
+ALWAYS_ENABLED_STATISTIC(
+    NumFunctionsAnalyzedSyntaxOnly,
+    "The # of functions analyzed by syntax checkers only.");
 ALWAYS_ENABLED_STATISTIC(NumBlocksInAnalyzedFunctions,
                          "The # of basic blocks in the analyzed functions.");
 ALWAYS_ENABLED_STATISTIC(
@@ -68,6 +67,15 @@ STAT_MAX(MaxCFGSize, "The maximum number of basic blocks in a function.");
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+StringRef getMainFileName(const CompilerInvocation &Invocation) {
+  if (!Invocation.getFrontendOpts().Inputs.empty()) {
+    const FrontendInputFile &Input = Invocation.getFrontendOpts().Inputs[0];
+    return Input.isFile() ? Input.getFile()
+                          : Input.getBuffer().getBufferIdentifier();
+  }
+  return "<no input>";
+}
 
 class AnalysisConsumer : public AnalysisASTConsumer,
                          public DynamicRecursiveASTVisitor {
@@ -129,7 +137,8 @@ public:
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
         Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
-    EntryPointStat::lockRegistry();
+
+    EntryPointStat::lockRegistry(getMainFileName(CI.getInvocation()));
     DigestAnalyzerOptions();
 
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
@@ -592,10 +601,10 @@ void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   // If the user wanted to analyze a specific function and the number of basic
   // blocks analyzed is zero, than the user might not specified the function
   // name correctly.
-  // FIXME: The user might have analyzed the requested function in Syntax mode,
-  // but we are unaware of that.
-  if (!Opts.AnalyzeSpecificFunction.empty() && NumFunctionsAnalyzed == 0)
+  if (!Opts.AnalyzeSpecificFunction.empty() && NumFunctionsAnalyzed == 0 &&
+      NumFunctionsAnalyzedSyntaxOnly == 0) {
     reportAnalyzerFunctionMisuse(Opts, *Ctx);
+  }
 }
 
 void AnalysisConsumer::reportAnalyzerProgress(StringRef S) {
@@ -663,8 +672,11 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 AnalysisConsumer::AnalysisMode
 AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   if (!Opts.AnalyzeSpecificFunction.empty() &&
-      AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction)
+      AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction &&
+      cross_tu::CrossTranslationUnitContext::getLookupName(D).value_or("") !=
+          Opts.AnalyzeSpecificFunction) {
     return AM_None;
+  }
 
   // Unless -analyze-all is specified, treat decls differently depending on
   // where they came from:
@@ -727,6 +739,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       SyntaxCheckTimer->startTimer();
     }
     checkerMgr->runCheckersOnASTBody(D, *Mgr, BR);
+    ++NumFunctionsAnalyzedSyntaxOnly;
     if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();

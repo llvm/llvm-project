@@ -105,7 +105,8 @@ let Predicates = [FeatureVector] in {
 
 let Predicates = [FeatureVector] in {
   // Load.
-  defm VL : UnaryVRXAlign<"vl", 0xE706>;
+  let SimpleBDXLoad = 1 in
+      defm VL : UnaryVRXAlign<"vl", 0xE706>;
 
   // Load to block boundary.  The number of loaded bytes is only known
   // at run time.  The instruction is really polymorphic, but v128b matches
@@ -141,7 +142,8 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1, canFoldAsLoad = 1 in {
+  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1 in {
+    def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
   }
@@ -213,7 +215,8 @@ defm : ReplicatePeephole<VLREPG, v2f64, z_load, f64>;
 
 let Predicates = [FeatureVector] in {
   // Store.
-  defm VST : StoreVRXAlign<"vst", 0xE70E>;
+  let SimpleBDXStore = 1 in
+      defm VST : StoreVRXAlign<"vst", 0xE70E>;
 
   // Store with length.  The number of stored bytes is only known at run time.
   def VSTL : StoreLengthVRSb<"vstl", 0xE73F, int_s390_vstl, 0>;
@@ -237,7 +240,8 @@ let Predicates = [FeatureVector] in {
   // STEY and STDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayStore = 1 in {
+  let mayStore = 1, SimpleBDXStore = 1 in {
+    def VST16 : StoreAliasVRX<store, v16hb, bdxaddr12pair>;
     def VST32 : StoreAliasVRX<store, v32sb, bdxaddr12pair>;
     def VST64 : StoreAliasVRX<store, v64db, bdxaddr12pair>;
   }
@@ -676,41 +680,41 @@ let Predicates = [FeatureVector] in {
   let isCommutable = 1 in {
     // Maximum.
     def VMX  : BinaryVRRcGeneric<"vmx", 0xE7FF>;
-    def VMXB : BinaryVRRc<"vmxb", 0xE7FF, null_frag, v128b, v128b, 0>;
-    def VMXH : BinaryVRRc<"vmxh", 0xE7FF, null_frag, v128h, v128h, 1>;
-    def VMXF : BinaryVRRc<"vmxf", 0xE7FF, null_frag, v128f, v128f, 2>;
-    def VMXG : BinaryVRRc<"vmxg", 0xE7FF, null_frag, v128g, v128g, 3>;
+    def VMXB : BinaryVRRc<"vmxb", 0xE7FF, smax, v128b, v128b, 0>;
+    def VMXH : BinaryVRRc<"vmxh", 0xE7FF, smax, v128h, v128h, 1>;
+    def VMXF : BinaryVRRc<"vmxf", 0xE7FF, smax, v128f, v128f, 2>;
+    def VMXG : BinaryVRRc<"vmxg", 0xE7FF, smax, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VMXQ : BinaryVRRc<"vmxq", 0xE7FF, null_frag, v128q, v128q, 4>;
+      def VMXQ : BinaryVRRc<"vmxq", 0xE7FF, smax, v128q, v128q, 4>;
 
     // Maximum logical.
     def VMXL  : BinaryVRRcGeneric<"vmxl", 0xE7FD>;
-    def VMXLB : BinaryVRRc<"vmxlb", 0xE7FD, null_frag, v128b, v128b, 0>;
-    def VMXLH : BinaryVRRc<"vmxlh", 0xE7FD, null_frag, v128h, v128h, 1>;
-    def VMXLF : BinaryVRRc<"vmxlf", 0xE7FD, null_frag, v128f, v128f, 2>;
-    def VMXLG : BinaryVRRc<"vmxlg", 0xE7FD, null_frag, v128g, v128g, 3>;
+    def VMXLB : BinaryVRRc<"vmxlb", 0xE7FD, umax, v128b, v128b, 0>;
+    def VMXLH : BinaryVRRc<"vmxlh", 0xE7FD, umax, v128h, v128h, 1>;
+    def VMXLF : BinaryVRRc<"vmxlf", 0xE7FD, umax, v128f, v128f, 2>;
+    def VMXLG : BinaryVRRc<"vmxlg", 0xE7FD, umax, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VMXLQ : BinaryVRRc<"vmxlq", 0xE7FD, null_frag, v128q, v128q, 4>;
+      def VMXLQ : BinaryVRRc<"vmxlq", 0xE7FD, umax, v128q, v128q, 4>;
   }
 
   let isCommutable = 1 in {
     // Minimum.
     def VMN  : BinaryVRRcGeneric<"vmn", 0xE7FE>;
-    def VMNB : BinaryVRRc<"vmnb", 0xE7FE, null_frag, v128b, v128b, 0>;
-    def VMNH : BinaryVRRc<"vmnh", 0xE7FE, null_frag, v128h, v128h, 1>;
-    def VMNF : BinaryVRRc<"vmnf", 0xE7FE, null_frag, v128f, v128f, 2>;
-    def VMNG : BinaryVRRc<"vmng", 0xE7FE, null_frag, v128g, v128g, 3>;
+    def VMNB : BinaryVRRc<"vmnb", 0xE7FE, smin, v128b, v128b, 0>;
+    def VMNH : BinaryVRRc<"vmnh", 0xE7FE, smin, v128h, v128h, 1>;
+    def VMNF : BinaryVRRc<"vmnf", 0xE7FE, smin, v128f, v128f, 2>;
+    def VMNG : BinaryVRRc<"vmng", 0xE7FE, smin, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VMNQ : BinaryVRRc<"vmnq", 0xE7FE, null_frag, v128q, v128q, 4>;
+      def VMNQ : BinaryVRRc<"vmnq", 0xE7FE, smin, v128q, v128q, 4>;
 
     // Minimum logical.
     def VMNL  : BinaryVRRcGeneric<"vmnl", 0xE7FC>;
-    def VMNLB : BinaryVRRc<"vmnlb", 0xE7FC, null_frag, v128b, v128b, 0>;
-    def VMNLH : BinaryVRRc<"vmnlh", 0xE7FC, null_frag, v128h, v128h, 1>;
-    def VMNLF : BinaryVRRc<"vmnlf", 0xE7FC, null_frag, v128f, v128f, 2>;
-    def VMNLG : BinaryVRRc<"vmnlg", 0xE7FC, null_frag, v128g, v128g, 3>;
+    def VMNLB : BinaryVRRc<"vmnlb", 0xE7FC, umin, v128b, v128b, 0>;
+    def VMNLH : BinaryVRRc<"vmnlh", 0xE7FC, umin, v128h, v128h, 1>;
+    def VMNLF : BinaryVRRc<"vmnlf", 0xE7FC, umin, v128f, v128f, 2>;
+    def VMNLG : BinaryVRRc<"vmnlg", 0xE7FC, umin, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VMNLQ : BinaryVRRc<"vmnlq", 0xE7FC, null_frag, v128q, v128q, 4>;
+      def VMNLQ : BinaryVRRc<"vmnlq", 0xE7FC, umin, v128q, v128q, 4>;
   }
 
   let isCommutable = 1 in {
@@ -1246,54 +1250,45 @@ defm : IntegerAbsoluteVectorOps<v8i16, VLCH, VLPH, 15>;
 defm : IntegerAbsoluteVectorOps<v4i32, VLCF, VLPF, 31>;
 defm : IntegerAbsoluteVectorOps<v2i64, VLCG, VLPG, 63>;
 
-// Instantiate minimum- and maximum-related patterns for TYPE.  CMPH is the
-// signed or unsigned "set if greater than" comparison instruction and
-// MIN and MAX are the associated minimum and maximum instructions.
-multiclass IntegerMinMaxVectorOps<ValueType type, SDPatternOperator cmph,
-                                  Instruction min, Instruction max> {
-  let Predicates = [FeatureVector] in {
-    def : Pat<(type (vselect (cmph VR128:$x, VR128:$y), VR128:$x, VR128:$y)),
-              (max VR128:$x, VR128:$y)>;
-    def : Pat<(type (vselect (cmph VR128:$x, VR128:$y), VR128:$y, VR128:$x)),
-              (min VR128:$x, VR128:$y)>;
-    def : Pat<(type (vselect (z_vnot (cmph VR128:$x, VR128:$y)),
-                             VR128:$x, VR128:$y)),
-              (min VR128:$x, VR128:$y)>;
-    def : Pat<(type (vselect (z_vnot (cmph VR128:$x, VR128:$y)),
-                             VR128:$y, VR128:$x)),
-              (max VR128:$x, VR128:$y)>;
-  }
+// Instantiate packs/packu: recognize a saturating truncation and convert
+// into the corresponding packs/packu instruction.
+multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
+                                    Instruction packs> {
+  def : Pat<
+    (output (z_pack
+      (smin (smax (input VR128:$a), ssat_trunc_min_vec), ssat_trunc_max_vec),
+      (smin (smax (input VR128:$b), ssat_trunc_min_vec), ssat_trunc_max_vec)
+    )),
+    (packs VR128:$a, VR128:$b)
+  >;
+
+  def : Pat<
+    (output (z_pack
+      (smax (smin (input VR128:$a), ssat_trunc_max_vec), ssat_trunc_min_vec),
+      (smax (smin (input VR128:$b), ssat_trunc_max_vec), ssat_trunc_min_vec)
+    )),
+    (packs VR128:$a, VR128:$b)
+  >;
 }
 
-// Signed min/max.
-defm : IntegerMinMaxVectorOps<v16i8, z_vicmph, VMNB, VMXB>;
-defm : IntegerMinMaxVectorOps<v8i16, z_vicmph, VMNH, VMXH>;
-defm : IntegerMinMaxVectorOps<v4i32, z_vicmph, VMNF, VMXF>;
-defm : IntegerMinMaxVectorOps<v2i64, z_vicmph, VMNG, VMXG>;
+defm : SignedSaturatingTruncate<v8i16, v16i8, VPKSH>;
+defm : SignedSaturatingTruncate<v4i32, v8i16, VPKSF>;
+defm : SignedSaturatingTruncate<v2i64, v4i32, VPKSG>;
 
-let Predicates = [FeatureVectorEnhancements3] in {
-  def : Pat<(i128 (or (and VR128:$x, (z_vicmph VR128:$x, VR128:$y)),
-                      (and VR128:$y, (not (z_vicmph VR128:$x, VR128:$y))))),
-            (VMXQ VR128:$x, VR128:$y)>;
-  def : Pat<(i128 (or (and VR128:$y, (z_vicmph VR128:$x, VR128:$y)),
-                      (and VR128:$x, (not (z_vicmph VR128:$x, VR128:$y))))),
-            (VMNQ VR128:$x, VR128:$y)>;
+multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
+                                      Instruction packu> {
+  def : Pat<
+    (output (z_pack
+      (umin (input VR128:$a), usat_trunc_max_vec),
+      (umin (input VR128:$b), usat_trunc_max_vec)
+    )),
+    (packu VR128:$a, VR128:$b)
+  >;
 }
 
-// Unsigned min/max.
-defm : IntegerMinMaxVectorOps<v16i8, z_vicmphl, VMNLB, VMXLB>;
-defm : IntegerMinMaxVectorOps<v8i16, z_vicmphl, VMNLH, VMXLH>;
-defm : IntegerMinMaxVectorOps<v4i32, z_vicmphl, VMNLF, VMXLF>;
-defm : IntegerMinMaxVectorOps<v2i64, z_vicmphl, VMNLG, VMXLG>;
-
-let Predicates = [FeatureVectorEnhancements3] in {
-  def : Pat<(i128 (or (and VR128:$x, (z_vicmphl VR128:$x, VR128:$y)),
-                      (and VR128:$y, (not (z_vicmphl VR128:$x, VR128:$y))))),
-            (VMXLQ VR128:$x, VR128:$y)>;
-  def : Pat<(i128 (or (and VR128:$y, (z_vicmphl VR128:$x, VR128:$y)),
-                      (and VR128:$x, (not (z_vicmphl VR128:$x, VR128:$y))))),
-            (VMNLQ VR128:$x, VR128:$y)>;
-}
+defm : UnsignedSaturatingTruncate<v8i16, v16i8, VPKLSH>;
+defm : UnsignedSaturatingTruncate<v4i32, v8i16, VPKLSF>;
+defm : UnsignedSaturatingTruncate<v2i64, v4i32, VPKLSG>;
 
 // Instantiate comparison patterns to recognize VACC/VSCBI for TYPE.
 multiclass IntegerComputeCarryOrBorrow<ValueType type,
@@ -1995,7 +1990,7 @@ let Predicates = [FeatureVector] in {
             (VLEG (VGBM 0), bdxaddr12only:$addr, 1)>;
 }
 
-// Zero-extensions from VR element to i128 on arch15.
+// Zero-extensions from VR element to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (zext (i64 (z_vector_extract (v2i64 VR128:$src), 0)))),
             (VUPLHG VR128:$src)>;
@@ -2011,7 +2006,7 @@ let Predicates = [FeatureVectorEnhancements3] in {
             (VUPLLG (VUPLLF VR128:$src))>;
 }
 
-// In-register i128 sign-extensions on arch15.
+// In-register i128 sign-extensions on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg VR128:$x, i8)), (VUPLG (VSEGB VR128:$x))>;
   def : Pat<(i128 (sext_inreg VR128:$x, i16)), (VUPLG (VSEGH VR128:$x))>;
@@ -2031,7 +2026,7 @@ let Predicates = [FeatureVector] in {
             (VSRAB (VREPG VR128:$x, 1), (VREPIB 64))>;
 }
 
-// Sign-extensions from GPR to i128 on arch15.
+// Sign-extensions from GPR to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg (anyext GR32:$x), i8)),
             (VUPLG (VLVGP (LGBR (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$x, subreg_l32)),
@@ -2075,7 +2070,7 @@ let Predicates = [FeatureVector] in {
             (VSRAB (VLREPG bdxaddr12only:$addr), (VREPIB 64))>;
 }
 
-// Sign-extensions from VR element to i128 on arch15.
+// Sign-extensions from VR element to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext (i64 (z_vector_extract (v2i64 VR128:$src), 0)))),
             (VUPHG VR128:$src)>;
@@ -2206,6 +2201,8 @@ let Predicates = [FeatureVector] in {
   def : Pat<(f32 (bitconvert (i32 GR32:$src))), (LEFR GR32:$src)>;
   def : Pat<(i32 (bitconvert (f32 VR32:$src))),
             (EXTRACT_SUBREG (LFER VR32:$src), subreg_l32)>;
+  def LEFR_16 : UnaryAliasVRS<VR16, GR32>;
+  def LFER_16 : UnaryAliasVRS<GR32, VR16>;
 }
 
 // Floating-point values are stored in element 0 of the corresponding

@@ -63,7 +63,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc data copyin(invalid:(float)ArrayParam[2])
   ;
 
-  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
   // expected-error@+1{{OpenACC 'copyin' clause is not valid on 'exit data' directive}}
 #pragma acc exit data copyin(LocalInt)
   // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
@@ -81,7 +81,8 @@ void ModList() {
 #pragma acc data copyin(alwaysout: V1)
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc data copyin(zero: V1)
-#pragma acc data copyin(always, alwaysin, readonly: V1)
+#pragma acc data copyin(capture: V1)
+#pragma acc data copyin(always, alwaysin, readonly, capture: V1)
 
   // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
@@ -90,5 +91,6 @@ void ModList() {
 #pragma acc enter data copyin(alwaysout: V1)
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc enter data copyin(zero: V1)
-#pragma acc enter data copyin(always, alwaysin, readonly: V1)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyin' clause}}
+#pragma acc enter data copyin(capture: V1)
 }

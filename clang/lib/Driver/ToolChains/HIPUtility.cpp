@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "Clang.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
@@ -190,8 +189,7 @@ private:
 
         processInput(BufferOrErr.get()->getMemBufferRef());
       } else
-        WorkList.insert(WorkList.end(), CurrentAction->getInputs().begin(),
-                        CurrentAction->getInputs().end());
+        llvm::append_range(WorkList, CurrentAction->getInputs());
     }
   }
 
@@ -473,4 +471,15 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          D.getClangProgramPath(), ClangArgs,
                                          Inputs, Output, D.getPrependArg()));
+}
+
+// Convenience function for creating temporary file for both modes of
+// isSaveTempsEnabled().
+const char *HIP::getTempFile(Compilation &C, StringRef Prefix,
+                             StringRef Extension) {
+  if (C.getDriver().isSaveTempsEnabled()) {
+    return C.getArgs().MakeArgString(Prefix + "." + Extension);
+  }
+  auto TmpFile = C.getDriver().GetTemporaryPath(Prefix, Extension);
+  return C.addTempFile(C.getArgs().MakeArgString(TmpFile));
 }

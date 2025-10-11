@@ -12,7 +12,6 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
-#include "RISCVMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -34,6 +33,10 @@ static cl::opt<bool>
               cl::desc("Disable the emission of assembler pseudo instructions"),
               cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EmitX8AsFP("riscv-emit-x8-as-fp",
+                                cl::desc("Emit x8 as fp instead of s0"),
+                                cl::init(false), cl::Hidden);
+
 // Print architectural register names rather than the ABI names (such as x2
 // instead of sp).
 // TODO: Make RISCVInstPrinter::getRegisterName non-static so that this can a
@@ -54,6 +57,11 @@ bool RISCVInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
     ArchRegNames = true;
     return true;
   }
+  if (Opt == "emit-x8-as-fp") {
+    if (!ArchRegNames)
+      EmitX8AsFP = true;
+    return true;
+  }
 
   return false;
 }
@@ -67,7 +75,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (PrintAliases && !NoAliases)
     Res = RISCVRVC::uncompress(UncompressedMI, *MI, STI);
   if (Res)
-    NewMI = const_cast<MCInst *>(&UncompressedMI);
+    NewMI = &UncompressedMI;
   if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
@@ -78,9 +86,8 @@ void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI, raw_ostream &O,
-                                    const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {
@@ -94,7 +101,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
@@ -209,14 +216,31 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // or non-zero in bits 8 and above.
+  // altfmt=1 without zvfbfa extension, or non-zero in bits 9 and above.
   if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
-      RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
+      RISCVVType::getSEW(Imm) > 64 ||
+      (RISCVVType::isAltFmt(Imm) &&
+       !STI.hasFeature(RISCV::FeatureStdExtZvfbfa)) ||
+      (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
   }
   // Print the text form.
   RISCVVType::printVType(Imm, O);
+}
+
+void RISCVInstPrinter::printXSfmmVType(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  assert(RISCVVType::isValidXSfmmVType(Imm));
+  unsigned SEW = RISCVVType::getSEW(Imm);
+  O << "e" << SEW;
+  bool AltFmt = RISCVVType::isAltFmt(Imm);
+  if (AltFmt)
+    O << "alt";
+  unsigned Widen = RISCVVType::getXSfmmWiden(Imm);
+  O << ", w" << Widen;
 }
 
 // Print a Zcmp RList. If we are printing architectural register names rather
@@ -311,6 +335,13 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
+  // When PrintAliases is enabled, and EmitX8AsFP is enabled, x8 will be printed
+  // as fp instead of s0. Note that these similar registers are not replaced:
+  // - X8_H: used for f16 register in zhinx
+  // - X8_W: used for f32 register in zfinx
+  // - X8_X9: used for GPR Pair
+  if (!ArchRegNames && EmitX8AsFP && Reg == RISCV::X8)
+    return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);
 }

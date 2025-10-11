@@ -17,7 +17,13 @@ typedef half half2 __attribute__((ext_vector_type(2)));
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[DX_DOT2ADD:%.*]] = call float @llvm.dx.dot2add.v2f16(<2 x half> [[TMP0]], <2 x half> [[TMP1]], float [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x half> [[TMP0]], i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[TMP0]], i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x half> [[TMP1]], i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x half> [[TMP1]], i32 1
+// CHECK-NEXT:    [[DX_DOT2ADD:%.*]] = call float @llvm.dx.dot2add(float [[TMP2]], half [[TMP3]], half [[TMP4]], half [[TMP5]], half [[TMP6]])
 // CHECK-NEXT:    ret float [[DX_DOT2ADD]]
 //
-float test_dot2add(half2 X, half2 Y, float Z) { return __builtin_dx_dot2add(X, Y, Z); }
+float test_dot2add(half2 X, half2 Y, float Z) {
+  return __builtin_dx_dot2add(X, Y, Z);
+}

@@ -10,7 +10,7 @@ def NO_RET_ATOMIC_ADD : I<(outs), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 
 // SDAG: case 0: {
 // SDAG-NEXT: // Predicate_atomic_load_add_no_ret_i32
-// SDAG-NEXT: SDNode *N = Node;
+// SDAG-NEXT: SDNode *N = Op.getNode();
 // SDAG-NEXT: (void)N;
 // SDAG-NEXT: if (cast<MemSDNode>(N)->getMemoryVT() != MVT::i32) return false;
 // SDAG-NEXT: if (N->hasAnyUseOfValue(0)) return false;

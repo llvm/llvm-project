@@ -38,7 +38,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_asinpi(__CLC_GENTYPE x) {
   __CLC_UINTN aux = ux & EXSIGNBIT_SP32;
   __CLC_UINTN xs = ux ^ aux;
   __CLC_GENTYPE shalf =
-      __CLC_AS_GENTYPE(xs | __CLC_AS_UINTN((__CLC_GENTYPE)__CLC_FP_LIT(0.5)));
+      __CLC_AS_GENTYPE(xs | __CLC_AS_UINTN(__CLC_FP_LIT(0.5)));
 
   __CLC_INTN xexp = __CLC_AS_INTN(aux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
 

@@ -11,6 +11,7 @@
 
 #include "BreakpointBase.h"
 #include "DAPForward.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBWatchpoint.h"
 #include "lldb/API/SBWatchpointOptions.h"
@@ -21,12 +22,13 @@ namespace lldb_dap {
 
 class Watchpoint : public BreakpointBase {
 public:
-  Watchpoint(DAP &d, const llvm::json::Object &obj);
+  Watchpoint(DAP &d, const protocol::DataBreakpoint &breakpoint);
   Watchpoint(DAP &d, lldb::SBWatchpoint wp) : BreakpointBase(d), m_wp(wp) {}
 
   void SetCondition() override;
   void SetHitCondition() override;
-  void CreateJsonObject(llvm::json::Object &object) override;
+
+  protocol::Breakpoint ToProtocolBreakpoint() override;
 
   void SetWatchpoint();
 

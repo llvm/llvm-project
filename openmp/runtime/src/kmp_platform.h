@@ -27,6 +27,7 @@
 #define KMP_OS_SOLARIS 0
 #define KMP_OS_WASI 0
 #define KMP_OS_EMSCRIPTEN 0
+#define KMP_OS_AIX 0
 #define KMP_OS_UNIX 0 /* disjunction of KMP_OS_LINUX, KMP_OS_DARWIN etc. */
 
 #ifdef _WIN32
@@ -163,11 +164,11 @@
 #undef KMP_ARCH_PPC64_ELFv1
 #define KMP_ARCH_PPC64_ELFv1 1
 #endif
-#elif defined KMP_OS_AIX
+#elif KMP_OS_AIX
 #undef KMP_ARCH_PPC64_XCOFF
 #define KMP_ARCH_PPC64_XCOFF 1
 #endif
-#elif defined(__powerpc__) && defined(KMP_OS_AIX)
+#elif defined(__powerpc__) && KMP_OS_AIX
 #undef KMP_ARCH_PPC_XCOFF
 #define KMP_ARCH_PPC_XCOFF 1
 #undef KMP_ARCH_PPC

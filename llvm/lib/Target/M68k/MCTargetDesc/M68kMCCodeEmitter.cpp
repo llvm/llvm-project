@@ -63,6 +63,11 @@ class M68kMCCodeEmitter : public MCCodeEmitter {
                          APInt &Value, SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  void encodeInverseMoveMask(const MCInst &MI, unsigned OpIdx,
+                             unsigned InsertPos, APInt &Value,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
 public:
   M68kMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : MCII(mcii), Ctx(ctx) {}
@@ -96,6 +101,11 @@ template <unsigned Size> static unsigned getBytePosition(unsigned BitPos) {
     assert(!(BitPos & 0b1111) && "Not aligned to word boundary?");
     return BitPos / 8;
   }
+}
+
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind, bool PCRel = false) {
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
 }
 
 // We need special handlings for relocatable & pc-relative operands that are
@@ -134,9 +144,7 @@ void M68kMCCodeEmitter::encodeRelocImm(const MCInst &MI, unsigned OpIdx,
 
     // Relocatable address
     unsigned InsertByte = getBytePosition<Size>(InsertPos);
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/false),
-                                     MI.getLoc()));
+    addFixup(Fixups, InsertByte, Expr, MCFixup::getDataKindForSize(Size / 8));
   }
 }
 
@@ -170,9 +178,8 @@ void M68kMCCodeEmitter::encodePCRelImm(const MCInst &MI, unsigned OpIdx,
             Expr, MCConstantExpr::create(LabelOffset, Ctx), Ctx);
     }
 
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/true),
-                                     MI.getLoc()));
+    addFixup(Fixups, InsertByte, Expr, MCFixup::getDataKindForSize(Size / 8),
+             true);
   }
 }
 
@@ -194,6 +201,13 @@ void M68kMCCodeEmitter::encodeFPSYSSelect(const MCInst &MI, unsigned OpIdx,
   default:
     llvm_unreachable("Unrecognized FPSYS register");
   }
+}
+
+void M68kMCCodeEmitter::encodeInverseMoveMask(
+    const MCInst &MI, unsigned OpIdx, unsigned InsertPos, APInt &Value,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &Op = MI.getOperand(OpIdx);
+  Value = llvm::reverseBits<uint16_t>((uint16_t)Op.getImm());
 }
 
 void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,

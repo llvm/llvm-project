@@ -35,6 +35,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -142,10 +143,15 @@ public:
   /// Types of profile the function can use. Could be a combination.
   enum {
     PF_NONE = 0,     /// No profile.
-    PF_LBR = 1,      /// Profile is based on last branch records.
-    PF_SAMPLE = 2,   /// Non-LBR sample-based profile.
+    PF_BRANCH = 1,   /// Profile is based on branches or branch stacks.
+    PF_BASIC = 2,    /// Non-branch IP sample-based profile.
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
+
+  void setContainedNegateRAState() { HadNegateRAState = true; }
+  bool containedNegateRAState() const { return HadNegateRAState; }
+  void setInitialRAState(bool State) { InitialRAState = State; }
+  bool getInitialRAState() { return InitialRAState; }
 
   /// Struct for tracking exception handling ranges.
   struct CallSite {
@@ -191,9 +197,6 @@ public:
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
-
-    // Returns constant island alignment
-    uint16_t getAlignment() const { return sizeof(uint64_t); }
   };
 
   static constexpr uint64_t COUNT_NO_PROFILE =
@@ -219,6 +222,12 @@ public:
 private:
   /// Current state of the function.
   State CurrentState{State::Empty};
+
+  /// Indicates if the Function contained .cfi-negate-ra-state. These are not
+  /// read from the binary. This boolean is used when deciding to run the
+  /// .cfi-negate-ra-state rewriting passes on a function or not.
+  bool HadNegateRAState{false};
+  bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.
   ///
@@ -360,6 +369,11 @@ private:
   /// True if the function is used for patching code at a fixed address.
   bool IsPatch{false};
 
+  /// True if the original entry point of the function may get called, but the
+  /// original body cannot be executed and needs to be patched with code that
+  /// redirects execution to the new function body.
+  bool NeedsPatch{false};
+
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
@@ -383,11 +397,15 @@ private:
   /// The profile data for the number of times the function was executed.
   uint64_t ExecutionCount{COUNT_NO_PROFILE};
 
+  /// Profile data for the number of times this function was entered from
+  /// external code (DSO, JIT, etc).
+  uint64_t ExternEntryCount{0};
+
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
 
   /// Raw branch count for this function in the profile.
-  uint64_t RawBranchCount{0};
+  uint64_t RawSampleCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
   uint64_t SampleCountInBytes{0};
@@ -414,8 +432,9 @@ private:
   /// Original LSDA type encoding
   unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
-  /// Containing compilation unit for the function.
-  DWARFUnit *DwarfUnit{nullptr};
+  /// All compilation units this function belongs to.
+  /// Maps DWARF unit offset to the unit pointer.
+  DenseMap<uint64_t, DWARFUnit *> DwarfUnitMap;
 
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
@@ -799,6 +818,19 @@ public:
     return iterator_range<const_cfi_iterator>(cie_begin(), cie_end());
   }
 
+  /// Iterate over instructions (only if CFG is unavailable or not built yet).
+  iterator_range<InstrMapType::iterator> instrs() {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+  iterator_range<InstrMapType::const_iterator> instrs() const {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+
+  /// Returns whether there are any labels at Offset.
+  bool hasLabelAt(unsigned Offset) const { return Labels.count(Offset) != 0; }
+
   /// Iterate over all jump tables associated with this function.
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
   jumpTables() const {
@@ -862,7 +894,7 @@ public:
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 
-  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+  BinaryDominatorTree &getDomTree() { return *BDT; }
 
   /// Constructs DomTree for this function.
   void constructDomTree();
@@ -870,7 +902,7 @@ public:
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
-  const BinaryLoopInfo &getLoopInfo() { return *BLI.get(); }
+  const BinaryLoopInfo &getLoopInfo() { return *BLI; }
 
   bool isLoopFree() {
     if (!hasLoopInfo())
@@ -1367,6 +1399,9 @@ public:
   /// Return true if this function is used for patching existing code.
   bool isPatch() const { return IsPatch; }
 
+  /// Return true if the function requires a patch.
+  bool needsPatch() const { return NeedsPatch; }
+
   /// Return true if the function should not have associated symbol table entry.
   bool isAnonymous() const { return IsAnonymous; }
 
@@ -1616,6 +1651,51 @@ public:
 
   void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
 
+  /// Find corrected offset the same way addCFIInstruction does it to skip NOPs.
+  std::optional<uint64_t> getCorrectedCFIOffset(uint64_t Offset) {
+    assert(!Instructions.empty());
+    auto I = Instructions.lower_bound(Offset);
+    if (Offset == getSize()) {
+      assert(I == Instructions.end() && "unexpected iterator value");
+      // Sometimes compiler issues restore_state after all instructions
+      // in the function (even after nop).
+      --I;
+      Offset = I->first;
+    }
+    assert(I->first == Offset && "CFI pointing to unknown instruction");
+    if (I == Instructions.begin())
+      return {};
+
+    --I;
+    while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
+      Offset = I->first;
+      --I;
+    }
+    return Offset;
+  }
+
+  void setInstModifiesRAState(uint8_t CFIOpcode, uint64_t Offset) {
+    std::optional<uint64_t> CorrectedOffset = getCorrectedCFIOffset(Offset);
+    if (CorrectedOffset) {
+      auto I = Instructions.lower_bound(*CorrectedOffset);
+      I--;
+
+      switch (CFIOpcode) {
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+        BC.MIB->setNegateRAState(I->second);
+        break;
+      case dwarf::DW_CFA_remember_state:
+        BC.MIB->setRememberState(I->second);
+        break;
+      case dwarf::DW_CFA_restore_state:
+        BC.MIB->setRestoreState(I->second);
+        break;
+      default:
+        assert(0 && "CFI Opcode not covered by function");
+      }
+    }
+  }
+
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
 
@@ -1633,7 +1713,11 @@ public:
       Offset = I->first;
     }
     assert(I->first == Offset && "CFI pointing to unknown instruction");
-    if (I == Instructions.begin()) {
+    // When dealing with RememberState, we place this CFI in FrameInstructions.
+    // We want to ensure RememberState and RestoreState CFIs are in the same
+    // list in order to properly populate the StateStack.
+    if (I == Instructions.begin() &&
+        Inst.getOperation() != MCCFIInstruction::OpRememberState) {
       CIEFrameInstructions.emplace_back(std::forward<MCCFIInstruction>(Inst));
       return;
     }
@@ -1752,6 +1836,9 @@ public:
     IsPatch = V;
   }
 
+  /// Mark the function for patching.
+  void setNeedsPatch(bool V) { NeedsPatch = V; }
+
   /// Indicate if the function should have a name in the symbol table.
   void setAnonymous(bool V) {
     assert(isInjected() && "Only injected functions could be anonymous");
@@ -1848,6 +1935,10 @@ public:
     return *this;
   }
 
+  /// Set the profile data for the number of times the function was entered from
+  /// external code (DSO/JIT).
+  void setExternEntryCount(uint64_t Count) { ExternEntryCount = Count; }
+
   /// Adjust execution count for the function by a given \p Count. The value
   /// \p Count will be subtracted from the current function count.
   ///
@@ -1875,13 +1966,17 @@ public:
   /// Return COUNT_NO_PROFILE if there's no profile info.
   uint64_t getExecutionCount() const { return ExecutionCount; }
 
+  /// Return the profile information about the number of times the function was
+  /// entered from external code (DSO/JIT).
+  uint64_t getExternEntryCount() const { return ExternEntryCount; }
+
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.
-  uint64_t getRawBranchCount() const { return RawBranchCount; }
+  uint64_t getRawSampleCount() const { return RawSampleCount; }
 
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
-  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+  void setRawSampleCount(uint64_t Count) { RawSampleCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
   uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
@@ -2072,9 +2167,7 @@ public:
     return *std::prev(CodeIter) <= *DataIter;
   }
 
-  uint16_t getConstantIslandAlignment() const {
-    return Islands ? Islands->getAlignment() : 1;
-  }
+  uint16_t getConstantIslandAlignment() const;
 
   /// If there is a constant island in the range [StartOffset, EndOffset),
   /// return its address.
@@ -2124,6 +2217,15 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  /// Return true if the whole function is a constant island.
+  bool isDataObject() const {
+    return Islands && Islands->CodeOffsets.size() == 0;
+  }
+
+  bool isStartOfConstantIsland(uint64_t Offset) const {
+    return hasConstantIsland() && Islands->DataOffsets.count(Offset);
   }
 
   /// Return true iff the symbol could be seen inside this function otherwise
@@ -2315,6 +2417,7 @@ public:
       releaseCFG();
       CurrentState = State::Emitted;
     }
+    clearList(Relocations);
   }
 
   /// Process LSDA information for the function.
@@ -2364,15 +2467,21 @@ public:
   void
   computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
-  void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
+  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitMap[Unit->getOffset()] = Unit; }
 
-  /// Return DWARF compile unit for this function.
-  DWARFUnit *getDWARFUnit() const { return DwarfUnit; }
+  void removeDWARFUnit(DWARFUnit *Unit) {
+    DwarfUnitMap.erase(Unit->getOffset());
+  }
 
-  /// Return line info table for this function.
-  const DWARFDebugLine::LineTable *getDWARFLineTable() const {
-    return getDWARFUnit() ? BC.DwCtx->getLineTableForUnit(getDWARFUnit())
-                          : nullptr;
+  /// Return DWARF compile units for this function.
+  /// Returns a reference to the map of DWARF unit offsets to units.
+  const DenseMap<uint64_t, DWARFUnit *> &getDWARFUnits() const {
+    return DwarfUnitMap;
+  }
+
+  const DWARFDebugLine::LineTable *
+  getDWARFLineTableForUnit(DWARFUnit *Unit) const {
+    return BC.DwCtx->getLineTableForUnit(Unit);
   }
 
   /// Finalize profile for the function.

@@ -157,7 +157,17 @@ namespace clang {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define GET_BUILTIN_ENUMERATORS
-#include "clang/Basic/BuiltinsSPIRV.inc"
+#include "clang/Basic/BuiltinsSPIRVCommon.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    FirstVKBuiltin,
+    LastCoreBuiltin = FirstVKBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSPIRVVK.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    FirstCLBuiltin,
+    LastVKBuiltin = FirstCLBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSPIRVCL.inc"
 #undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
@@ -197,6 +207,9 @@ namespace clang {
     FirstSiFiveBuiltin,
     LastRVVBuiltin = FirstSiFiveBuiltin - 1,
 #include "clang/Basic/riscv_sifive_vector_builtins.inc"
+    FirstAndesBuiltin,
+    LastSiFiveBuiltin = FirstAndesBuiltin - 1,
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
 #undef GET_RISCVV_BUILTIN_ENUMERATORS
     FirstTSBuiltin,
   };

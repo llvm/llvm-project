@@ -56,7 +56,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     }
 
     // Fix std::count for std::vector<bool> with small storage types, e.g., std::uint16_t, unsigned short.
-    // See https://github.com/llvm/llvm-project/issues/122528
+    // See https://llvm.org/PR122528
     {
       using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
       std::vector<bool, Alloc> in(100, true, Alloc(1));

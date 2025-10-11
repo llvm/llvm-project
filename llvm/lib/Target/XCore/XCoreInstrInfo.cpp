@@ -12,6 +12,7 @@
 
 #include "XCoreInstrInfo.h"
 #include "XCore.h"
+#include "XCoreSubtarget.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -41,10 +42,9 @@ namespace XCore {
 // Pin the vtable to this file.
 void XCoreInstrInfo::anchor() {}
 
-XCoreInstrInfo::XCoreInstrInfo()
-  : XCoreGenInstrInfo(XCore::ADJCALLSTACKDOWN, XCore::ADJCALLSTACKUP),
-    RI() {
-}
+XCoreInstrInfo::XCoreInstrInfo(const XCoreSubtarget &ST)
+    : XCoreGenInstrInfo(ST, XCore::ADJCALLSTACKDOWN, XCore::ADJCALLSTACKUP),
+      RI() {}
 
 static bool isZeroImm(const MachineOperand &op) {
   return op.isImm() && op.getImm() == 0;

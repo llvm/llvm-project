@@ -133,7 +133,7 @@ void f11(void) {
 }
 
 [[attr]] void f12(void); // expected-warning {{unknown attribute 'attr' ignored}}
-[[vendor::attr]] void f13(void); // expected-warning {{unknown attribute 'attr' ignored}}
+[[vendor::attr]] void f13(void); // expected-warning {{unknown attribute 'vendor::attr' ignored}}
 
 // Ensure that asm statements properly handle double colons.
 void test_asm(void) {

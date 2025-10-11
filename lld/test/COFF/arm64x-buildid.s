@@ -6,6 +6,9 @@
 # RUN: llvm-readobj --hex-dump=.test %t.dll | FileCheck %s
 # CHECK: 0x180003000 3c100000 3c100000
 
+# RUN: lld-link -machine:arm64ec -dll -noentry %t-arm64.obj %t-arm64ec.obj -debug -build-id -Brepro -out:%t-ec.dll
+# RUN: llvm-readobj --hex-dump=.test %t-ec.dll | FileCheck %s
+
 .section .test,"dr"
 .rva __buildid
 

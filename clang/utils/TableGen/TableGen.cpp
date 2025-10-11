@@ -25,6 +25,7 @@ using namespace clang;
 enum ActionType {
   PrintRecords,
   DumpJSON,
+  GenCIRLowering,
   GenClangAttrClasses,
   GenClangAttrParserStringSwitches,
   GenClangAttrSubjectMatchRulesParserStringSwitches,
@@ -73,6 +74,7 @@ enum ActionType {
   GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
   GenCXX11AttributeInfo,
+  GenAttributeSpellingList,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -87,12 +89,14 @@ enum ActionType {
   GenArmMveBuiltinAliases,
   GenArmSveHeader,
   GenArmSveBuiltins,
+  GenArmSveBuiltinsJSON,
   GenArmSveBuiltinCG,
   GenArmSveTypeFlags,
   GenArmSveRangeChecks,
   GenArmSveStreamingAttrs,
   GenArmSmeHeader,
   GenArmSmeBuiltins,
+  GenArmSmeBuiltinsJSON,
   GenArmSmeBuiltinCG,
   GenArmSmeRangeChecks,
   GenArmSmeStreamingAttrs,
@@ -109,6 +113,9 @@ enum ActionType {
   GenRISCVSiFiveVectorBuiltins,
   GenRISCVSiFiveVectorBuiltinCG,
   GenRISCVSiFiveVectorBuiltinSema,
+  GenRISCVAndesVectorBuiltins,
+  GenRISCVAndesVectorBuiltinCG,
+  GenRISCVAndesVectorBuiltinSema,
   GenAttrDocs,
   GenDiagDocs,
   GenOptDocs,
@@ -124,6 +131,8 @@ cl::opt<ActionType> Action(
                    "Print all records to stdout (default)"),
         clEnumValN(DumpJSON, "dump-json",
                    "Dump all records as machine-readable JSON"),
+        clEnumValN(GenCIRLowering, "gen-cir-lowering",
+                   "Generate CIR operation lowering patterns"),
         clEnumValN(GenClangAttrClasses, "gen-clang-attr-classes",
                    "Generate clang attribute clases"),
         clEnumValN(GenClangAttrParserStringSwitches,
@@ -240,6 +249,8 @@ cl::opt<ActionType> Action(
                    "Generate OpenCL builtin declaration tests"),
         clEnumValN(GenCXX11AttributeInfo, "gen-cxx11-attribute-info",
                    "Generate CXX11 attributes info"),
+        clEnumValN(GenAttributeSpellingList, "gen-attribute-spelling-list",
+                   "Generate attribute spelling list"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -257,6 +268,8 @@ cl::opt<ActionType> Action(
                    "Generate arm_sve.h for clang"),
         clEnumValN(GenArmSveBuiltins, "gen-arm-sve-builtins",
                    "Generate arm_sve_builtins.inc for clang"),
+        clEnumValN(GenArmSveBuiltinsJSON, "gen-arm-sve-builtins-json",
+                   "Generate arm_sve_buitins.json"),
         clEnumValN(GenArmSveBuiltinCG, "gen-arm-sve-builtin-codegen",
                    "Generate arm_sve_builtin_cg_map.inc for clang"),
         clEnumValN(GenArmSveTypeFlags, "gen-arm-sve-typeflags",
@@ -269,6 +282,8 @@ cl::opt<ActionType> Action(
                    "Generate arm_sme.h for clang"),
         clEnumValN(GenArmSmeBuiltins, "gen-arm-sme-builtins",
                    "Generate arm_sme_builtins.inc for clang"),
+        clEnumValN(GenArmSmeBuiltinsJSON, "gen-arm-sme-builtins-json",
+                   "Generate arm_sme_buitins.json"),
         clEnumValN(GenArmSmeBuiltinCG, "gen-arm-sme-builtin-codegen",
                    "Generate arm_sme_builtin_cg_map.inc for clang"),
         clEnumValN(GenArmSmeRangeChecks, "gen-arm-sme-sema-rangechecks",
@@ -314,6 +329,15 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRISCVSiFiveVectorBuiltinSema,
                    "gen-riscv-sifive-vector-builtin-sema",
                    "Generate riscv_sifive_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltins,
+                   "gen-riscv-andes-vector-builtins",
+                   "Generate riscv_andes_vector_builtins.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltinCG,
+                   "gen-riscv-andes-vector-builtin-codegen",
+                   "Generate riscv_andes_vector_builtin_cg.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltinSema,
+                   "gen-riscv-andes-vector-builtin-sema",
+                   "Generate riscv_andes_vector_builtin_sema.inc for clang"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
@@ -339,6 +363,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case DumpJSON:
     EmitJSON(Records, OS);
     break;
+  case GenCIRLowering:
+    EmitCIRLowering(Records, OS);
+    break;
   case GenClangAttrClasses:
     EmitClangAttrClass(Records, OS);
     break;
@@ -350,6 +377,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenCXX11AttributeInfo:
     EmitCXX11AttributeInfo(Records, OS);
+    break;
+  case GenAttributeSpellingList:
+    EmitAttributeSpellingList(Records, OS);
     break;
   case GenClangAttrImpl:
     EmitClangAttrImpl(Records, OS);
@@ -527,6 +557,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenArmSveBuiltins:
     EmitSveBuiltins(Records, OS);
     break;
+  case GenArmSveBuiltinsJSON:
+    EmitSveBuiltinsJSON(Records, OS);
+    break;
   case GenArmSveBuiltinCG:
     EmitSveBuiltinCG(Records, OS);
     break;
@@ -544,6 +577,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenArmSmeBuiltins:
     EmitSmeBuiltins(Records, OS);
+    break;
+  case GenArmSmeBuiltinsJSON:
+    EmitSmeBuiltinsJSON(Records, OS);
     break;
   case GenArmSmeBuiltinCG:
     EmitSmeBuiltinCG(Records, OS);
@@ -591,6 +627,15 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     EmitRVVBuiltinCG(Records, OS);
     break;
   case GenRISCVSiFiveVectorBuiltinSema:
+    EmitRVVBuiltinSema(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltins:
+    EmitRVVBuiltins(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltinCG:
+    EmitRVVBuiltinCG(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
     break;
   case GenAttrDocs:

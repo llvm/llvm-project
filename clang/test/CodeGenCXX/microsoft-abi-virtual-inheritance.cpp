@@ -80,15 +80,6 @@ B::~B() {
   // CHECK2: call x86_thiscallcc void @"??1VBase@@UAE@XZ"(ptr {{[^,]*}} %[[VBASE_i8]])
   // CHECK2: ret
 
-  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0B@test2@@QAE@XZ"
-  // CHECK2:           (ptr {{[^,]*}} returned align 4 dereferenceable(4) %this, i32 noundef %is_most_derived)
-  // CHECK2: call x86_thiscallcc noundef ptr @"??0A@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
-  // CHECK2: ret
-
-  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GD@pr36921@@UAEPAXI@Z"(
-  // CHECK2:   %[[THIS_RELOAD:.*]] = load ptr, ptr
-  // CHECK2:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_RELOAD]], i32 -4
-
   // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GB@@UAEPAXI@Z"
   // CHECK2:   store ptr %{{.*}}, ptr %[[THIS_ADDR:.*]], align 4
   // CHECK2:   %[[THIS_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_PARAM_i8:.*]], i32 -8
@@ -302,6 +293,11 @@ void callC() { C x; }
 // CHECK: call x86_thiscallcc noundef ptr @"??0A@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
 // CHECK: ret
 
+// CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0B@test2@@QAE@XZ"
+// CHECK2:           (ptr {{[^,]*}} returned align 4 dereferenceable(4) %this, i32 noundef %is_most_derived)
+// CHECK2: call x86_thiscallcc noundef ptr @"??0A@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
+// CHECK2: ret
+
 }
 
 namespace test3 {
@@ -484,6 +480,9 @@ struct B {
 struct C : virtual B {};
 struct D : virtual A, C {};
 D d;
+// CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GD@pr36921@@UAEPAXI@Z"(
+// CHECK2:   %[[THIS_RELOAD:.*]] = load ptr, ptr
+// CHECK2:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_RELOAD]], i32 -4
 }
 
 namespace issue_60465 {

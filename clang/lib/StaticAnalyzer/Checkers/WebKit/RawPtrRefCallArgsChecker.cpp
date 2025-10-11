@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -19,7 +18,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
@@ -69,7 +67,7 @@ public:
       }
 
       bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
-        if (isRefType(safeGetName(Decl)))
+        if (isSmartPtrClass(safeGetName(Decl)))
           return true;
         return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
       }
@@ -219,15 +217,15 @@ public:
         [&](const clang::Expr *ArgOrigin, bool IsSafe) {
           if (IsSafe)
             return true;
-          if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
-            // foo(nullptr)
+          if (isNullPtr(ArgOrigin))
             return true;
-          }
           if (isa<IntegerLiteral>(ArgOrigin)) {
             // FIXME: Check the value.
-            // foo(NULL)
+            // foo(123)
             return true;
           }
+          if (isa<CXXBoolLiteralExpr>(ArgOrigin))
+            return true;
           if (isa<ObjCStringLiteral>(ArgOrigin))
             return true;
           if (isASafeCallArg(ArgOrigin))
@@ -264,7 +262,7 @@ public:
         auto *callee = MemberOp->getDirectCallee();
         if (auto *calleeDecl = dyn_cast<CXXMethodDecl>(callee)) {
           if (const CXXRecordDecl *classDecl = calleeDecl->getParent()) {
-            if (isRefCounted(classDecl))
+            if (isSafePtr(classDecl))
               return true;
           }
         }
@@ -296,7 +294,7 @@ public:
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
         name == "is" || name == "equal" || name == "hash" || name == "isType" ||
         // FIXME: Most/all of these should be implemented via attributes.
-        name == "equalIgnoringASCIICase" ||
+        name == "CFEqual" || name == "equalIgnoringASCIICase" ||
         name == "equalIgnoringASCIICaseCommon" ||
         name == "equalIgnoringNullity" || name == "toString")
       return true;
@@ -388,7 +386,7 @@ public:
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-    Os << "Reciever is " << ptrKind() << " and unsafe.";
+    Os << "Receiver is " << ptrKind() << " and unsafe.";
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -445,6 +443,10 @@ public:
     return isRefOrCheckedPtrType(type);
   }
 
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
+  }
+
   const char *ptrKind() const final { return "unchecked"; }
 };
 
@@ -465,11 +467,11 @@ public:
   }
 
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
 
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
 
   bool isSafeExpr(const Expr *E) const final {

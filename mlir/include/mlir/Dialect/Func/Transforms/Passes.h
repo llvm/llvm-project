@@ -22,11 +22,8 @@ class RewritePatternSet;
 
 namespace func {
 
-#define GEN_PASS_DECL
+#define GEN_PASS_DECL_DUPLICATEFUNCTIONELIMINATIONPASS
 #include "mlir/Dialect/Func/Transforms/Passes.h.inc"
-
-/// Pass to deduplicate functions.
-std::unique_ptr<Pass> createDuplicateFunctionEliminationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

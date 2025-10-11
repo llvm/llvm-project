@@ -45,7 +45,7 @@ struct SemaRecord {
   unsigned Log2LMULMask;
 
   // Required extensions for this intrinsic.
-  uint32_t RequiredExtensions[(RVV_REQ_NUM + 31) / 32];
+  std::string RequiredExtensions;
 
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
@@ -133,28 +133,20 @@ static BasicType ParseBasicType(char c) {
   switch (c) {
   case 'c':
     return BasicType::Int8;
-    break;
   case 's':
     return BasicType::Int16;
-    break;
   case 'i':
     return BasicType::Int32;
-    break;
   case 'l':
     return BasicType::Int64;
-    break;
   case 'x':
     return BasicType::Float16;
-    break;
   case 'f':
     return BasicType::Float32;
-    break;
   case 'd':
     return BasicType::Float64;
-    break;
   case 'y':
     return BasicType::BFloat16;
-    break;
   default:
     return BasicType::Unknown;
   }
@@ -165,6 +157,8 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
   return static_cast<VectorTypeModifier>(
       static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
+
+static const unsigned UnknownIndex = (unsigned)-1;
 
 static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
   // We need a special rule for segment load/store since the data width is not
@@ -183,7 +177,7 @@ static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
   if (IRName.starts_with("vsoxseg") || IRName.starts_with("vsuxseg"))
     return RVVI->isMasked() ? 1 : 0;
 
-  return (unsigned)-1;
+  return UnknownIndex;
 }
 
 // This function is used to get the log2SEW of each segment load/store, this
@@ -249,19 +243,21 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
 
   OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
-  OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
-     << ";\n";
+  unsigned IndexedLoadStorePtrIdx = getIndexedLoadStorePtrIdx(RVVI);
+  if (IndexedLoadStorePtrIdx != UnknownIndex) {
+    OS << "  {\n";
+    OS << "    auto PointeeType = E->getArg(" << IndexedLoadStorePtrIdx
+       << ")->getType()->getPointeeType();\n";
+    OS << "    SegInstSEW = "
+          "llvm::Log2_64(getContext().getTypeSize(PointeeType));\n";
+    OS << "  }\n";
+  } else {
+    OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
+       << ";\n";
+  }
 
   if (RVVI->hasManualCodegen()) {
     OS << "IsMasked = " << (RVVI->isMasked() ? "true" : "false") << ";\n";
-
-    // Skip the non-indexed load/store and compatible header load/store.
-    OS << "if (SegInstSEW == (unsigned)-1) {\n";
-    OS << "  auto PointeeType = E->getArg(" << getIndexedLoadStorePtrIdx(RVVI)
-       << "      )->getType()->getPointeeType();\n";
-    OS << "  SegInstSEW = "
-          "      llvm::Log2_64(getContext().getTypeSize(PointeeType));\n}\n";
-
     OS << RVVI->getManualCodegen();
     OS << "break;\n";
     return;
@@ -768,34 +764,9 @@ void RVVEmitter::createRVVIntrinsics(
       Log2LMULMask |= 1 << (Log2LMUL + 3);
 
     SR.Log2LMULMask = Log2LMULMask;
-
-    memset(SR.RequiredExtensions, 0, sizeof(SR.RequiredExtensions));
-    for (auto RequiredFeature : RequiredFeatures) {
-      unsigned RequireExt =
-          StringSwitch<RVVRequire>(RequiredFeature)
-              .Case("RV64", RVV_REQ_RV64)
-              .Case("Zvfhmin", RVV_REQ_Zvfhmin)
-              .Case("Xsfvcp", RVV_REQ_Xsfvcp)
-              .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
-              .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
-              .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
-              .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
-              .Case("Zvbb", RVV_REQ_Zvbb)
-              .Case("Zvbc", RVV_REQ_Zvbc)
-              .Case("Zvkb", RVV_REQ_Zvkb)
-              .Case("Zvkg", RVV_REQ_Zvkg)
-              .Case("Zvkned", RVV_REQ_Zvkned)
-              .Case("Zvknha", RVV_REQ_Zvknha)
-              .Case("Zvknhb", RVV_REQ_Zvknhb)
-              .Case("Zvksed", RVV_REQ_Zvksed)
-              .Case("Zvksh", RVV_REQ_Zvksh)
-              .Case("Zvfbfwma", RVV_REQ_Zvfbfwma)
-              .Case("Zvfbfmin", RVV_REQ_Zvfbfmin)
-              .Case("Zvfh", RVV_REQ_Zvfh)
-              .Case("Experimental", RVV_REQ_Experimental);
-      SR.RequiredExtensions[RequireExt / 32] |= 1U << (RequireExt % 32);
-    }
-
+    std::string RFs =
+        join(RequiredFeatures.begin(), RequiredFeatures.end(), ",");
+    SR.RequiredExtensions = RFs;
     SR.NF = NF;
     SR.HasMasked = HasMasked;
     SR.HasVL = HasVL;
@@ -837,8 +808,7 @@ void RVVEmitter::createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
     R.PrototypeLength = SR.Prototype.size();
     R.SuffixLength = SR.Suffix.size();
     R.OverloadedSuffixSize = SR.OverloadedSuffix.size();
-    memcpy(R.RequiredExtensions, SR.RequiredExtensions,
-           sizeof(R.RequiredExtensions));
+    R.RequiredExtensions = SR.RequiredExtensions.c_str();
     R.TypeRangeMask = SR.TypeRangeMask;
     R.Log2LMULMask = SR.Log2LMULMask;
     R.NF = SR.NF;

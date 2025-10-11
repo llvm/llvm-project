@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/sched/sched_yield.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcSchedYieldTest, SmokeTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+using LlvmLibcSchedYieldTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcSchedYieldTest, SmokeTest) {
   // sched_yield() always succeeds, just do a basic test that errno/ret are
   // properly 0.
   ASSERT_EQ(LIBC_NAMESPACE::sched_yield(), 0);

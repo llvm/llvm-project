@@ -33,30 +33,18 @@ void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 void HexagonInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                    StringRef Annot, const MCSubtargetInfo &STI,
                                    raw_ostream &OS) {
-  assert(HexagonMCInstrInfo::isBundle(*MI));
-  assert(HexagonMCInstrInfo::bundleSize(*MI) <= HEXAGON_PACKET_SIZE);
-  assert(HexagonMCInstrInfo::bundleSize(*MI) > 0);
-  HasExtender = false;
-  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(*MI)) {
-    MCInst const &MCI = *I.getInst();
-    if (HexagonMCInstrInfo::isDuplex(MII, MCI)) {
-      printInstruction(MCI.getOperand(1).getInst(), Address, OS);
-      OS << '\v';
-      HasExtender = false;
-      printInstruction(MCI.getOperand(0).getInst(), Address, OS);
-    } else
-      printInstruction(&MCI, Address, OS);
-    HasExtender = HexagonMCInstrInfo::isImmext(MCI);
-    OS << "\n";
+  if (HexagonMCInstrInfo::isDuplex(MII, *MI)) {
+    printInstruction(MI->getOperand(1).getInst(), Address, OS);
+    OS << '\v';
+    HasExtender = false;
+    printInstruction(MI->getOperand(0).getInst(), Address, OS);
+  } else {
+    printInstruction(MI, Address, OS);
   }
-
-  bool IsLoop0 = HexagonMCInstrInfo::isInnerLoop(*MI);
-  bool IsLoop1 = HexagonMCInstrInfo::isOuterLoop(*MI);
-  if (IsLoop0) {
-    OS << (IsLoop1 ? " :endloop01" : " :endloop0");
-  } else if (IsLoop1) {
-    OS << " :endloop1";
-  }
+  HasExtender = HexagonMCInstrInfo::isImmext(*MI);
+  if ((MI->getOpcode() & HexagonII::INST_PARSE_MASK) ==
+      HexagonII::INST_PARSE_PACKET_END)
+    HasExtender = false;
 }
 
 void HexagonInstPrinter::printOperand(MCInst const *MI, unsigned OpNo,
@@ -72,7 +60,7 @@ void HexagonInstPrinter::printOperand(MCInst const *MI, unsigned OpNo,
     if (MO.getExpr()->evaluateAsAbsolute(Value))
       O << formatImm(Value);
     else
-      MO.getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *MO.getExpr());
   } else {
     llvm_unreachable("Unknown operand");
   }
@@ -90,6 +78,6 @@ void HexagonInstPrinter::printBrtarget(MCInst const *MI, unsigned OpNo,
     if (HasExtender || HexagonMCInstrInfo::isConstExtended(MII, *MI))
       if (HexagonMCInstrInfo::getExtendableOp(MII, *MI) == OpNo)
         O << "##";
-    Expr.print(O, &MAI);
+    MAI.printExpr(O, Expr);
   }
 }

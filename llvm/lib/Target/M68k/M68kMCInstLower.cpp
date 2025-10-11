@@ -18,7 +18,7 @@
 #include "M68kInstrInfo.h"
 
 #include "MCTargetDesc/M68kBaseInfo.h"
-#include "MCTargetDesc/M68kMCExpr.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -76,7 +76,7 @@ MCOperand M68kMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   // FIXME We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing. This fixme is originally from X86
   const MCExpr *Expr = nullptr;
-  M68kMCExpr::Specifier RefKind = M68kMCExpr::VK_None;
+  M68k::Specifier RefKind = M68k::S_None;
 
   switch (MO.getTargetFlags()) {
   default:
@@ -86,31 +86,31 @@ MCOperand M68kMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case M68kII::MO_PC_RELATIVE_ADDRESS:
     break;
   case M68kII::MO_GOTPCREL:
-    RefKind = M68kMCExpr::VK_GOTPCREL;
+    RefKind = M68k::S_GOTPCREL;
     break;
   case M68kII::MO_GOT:
-    RefKind = M68kMCExpr::VK_GOT;
+    RefKind = M68k::S_GOT;
     break;
   case M68kII::MO_GOTOFF:
-    RefKind = M68kMCExpr::VK_GOTOFF;
+    RefKind = M68k::S_GOTOFF;
     break;
   case M68kII::MO_PLT:
-    RefKind = M68kMCExpr::VK_PLT;
+    RefKind = M68k::S_PLT;
     break;
   case M68kII::MO_TLSGD:
-    RefKind = M68kMCExpr::VK_TLSGD;
+    RefKind = M68k::S_TLSGD;
     break;
   case M68kII::MO_TLSLD:
-    RefKind = M68kMCExpr::VK_TLSLD;
+    RefKind = M68k::S_TLSLD;
     break;
   case M68kII::MO_TLSLDM:
-    RefKind = M68kMCExpr::VK_TLSLDM;
+    RefKind = M68k::S_TLSLDM;
     break;
   case M68kII::MO_TLSIE:
-    RefKind = M68kMCExpr::VK_GOTTPOFF;
+    RefKind = M68k::S_GOTTPOFF;
     break;
   case M68kII::MO_TLSLE:
-    RefKind = M68kMCExpr::VK_TPOFF;
+    RefKind = M68k::S_TPOFF;
     break;
   }
 

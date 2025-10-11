@@ -18,6 +18,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -70,6 +71,7 @@ bool AArch64RegisterInfo::regNeedsCFI(MCRegister Reg,
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     // GHC set of callee saved regs is empty as all those regs are
@@ -98,6 +100,10 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_Win_AArch64_AAPCS_SwiftError_SaveList;
     if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
       return CSR_Win_AArch64_AAPCS_SwiftTail_SaveList;
+    if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
+      return CSR_Win_AArch64_AAVPCS_SaveList;
+    if (AFI.hasSVE_AAPCS(*MF))
+      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
     return CSR_Win_AArch64_AAPCS_SaveList;
   }
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
@@ -140,7 +146,7 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     // This is for OSes other than Windows; Windows is a separate case further
     // above.
     return CSR_AArch64_AAPCS_X18_SaveList;
-  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+  if (AFI.hasSVE_AAPCS(*MF))
     return CSR_AArch64_SVE_AAPCS_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
 }
@@ -150,6 +156,7 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
   assert(MF->getSubtarget<AArch64Subtarget>().isTargetDarwin() &&
          "Invalid subtarget for getDarwinCalleeSavedRegs");
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     report_fatal_error(
@@ -197,7 +204,7 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_Darwin_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
-  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+  if (AFI.hasSVE_AAPCS(*MF))
     return CSR_Darwin_AArch64_SVE_AAPCS_SaveList;
   return CSR_Darwin_AArch64_AAPCS_SaveList;
 }
@@ -433,7 +440,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
 
-  if (TFI->hasFP(MF) || TT.isOSDarwin())
+  if (TFI->isFPReserved(MF))
     markSuperRegs(Reserved, AArch64::W29);
 
   if (MF.getSubtarget<AArch64Subtarget>().isWindowsArm64EC()) {
@@ -519,6 +526,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
 }
 
 BitVector
+AArch64RegisterInfo::getUserReservedRegs(const MachineFunction &MF) const {
+  BitVector Reserved(getNumRegs());
+  for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
+    // ReserveXRegister is set for registers manually reserved
+    // through +reserve-x#i.
+    if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
+      markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
+  }
+  return Reserved;
+}
+
+BitVector
 AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
@@ -532,8 +551,7 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // the pipeline since it prevents other infrastructure from reasoning about
     // it's liveness. We use the NoVRegs property instead of IsSSA because
     // IsSSA is removed before VirtRegRewriter runs.
-    if (!MF.getProperties().hasProperty(
-            MachineFunctionProperties::Property::NoVRegs))
+    if (!MF.getProperties().hasNoVRegs())
       markSuperRegs(Reserved, AArch64::LR);
   }
 
@@ -549,6 +567,11 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
                                         MCRegister Reg) const {
   return getReservedRegs(MF)[Reg];
+}
+
+bool AArch64RegisterInfo::isUserReservedReg(const MachineFunction &MF,
+                                            MCRegister Reg) const {
+  return getUserReservedRegs(MF)[Reg];
 }
 
 bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,
@@ -586,8 +609,7 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
 }
 
 const TargetRegisterClass *
-AArch64RegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
+AArch64RegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &AArch64::GPR64spRegClass;
 }
 
@@ -616,12 +638,24 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
       return true;
 
     auto &ST = MF.getSubtarget<AArch64Subtarget>();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (ST.hasSVE() || ST.isStreaming()) {
-      const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
-      if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
+      if (!AFI->hasCalculatedStackSizeSVE() || AFI->hasSVEStackSize())
         return true;
+    }
+
+    // Frames with hazard padding can have a large offset between the frame
+    // pointer and GPR locals, which includes the emergency spill slot. If the
+    // emergency spill slot is not within range of the load/store instructions
+    // (which have a signed 9-bit range), we will fail to compile if it is used.
+    // Since hasBasePointer() is called before we know if we have hazard padding
+    // or an emergency spill slot we need to enable the basepointer
+    // conservatively.
+    if (ST.getStreamingHazardSize() &&
+        !AFI->getSMEFnAttrs().hasNonStreamingInterfaceAndBody()) {
+      return true;
     }
 
     // Conservatively estimate whether the negative offset from the frame
@@ -748,7 +782,8 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
           AFI->hasCalculatedStackSizeSVE()) &&
          "Expected SVE area to be calculated by this point");
-  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE();
+  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->hasSVEStackSize() &&
+         !AFI->hasStackHazardSlotIndex();
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(
@@ -856,7 +891,7 @@ AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const MCInstrDesc &MCID = TII->get(AArch64::ADDXri);
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   Register BaseReg = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
-  MRI.constrainRegClass(BaseReg, TII->getRegClass(MCID, 0, this, MF));
+  MRI.constrainRegClass(BaseReg, TII->getRegClass(MCID, 0, this));
   unsigned Shifter = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
 
   BuildMI(*MBB, Ins, DL, MCID, BaseReg)
@@ -1181,7 +1216,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       //   is valid but { z1, z2, z3, z5 } is not.
       // * One or more of the registers used by FORM_TRANSPOSED_X4 is already
       //   assigned a physical register, which means only checking that a
-      //   consectutive range of free tuple registers exists which includes
+      //   consecutive range of free tuple registers exists which includes
       //   the assigned register.
       //   e.g. in the example above, if { z0, z8 } is already allocated for
       //   %v0, we just need to ensure that { z1, z9 }, { z2, z10 } and
@@ -1192,7 +1227,6 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         // operands. Look for a valid starting register for the group.
         for (unsigned I = 0; I < StridedOrder.size(); ++I) {
           MCPhysReg Reg = StridedOrder[I];
-          SmallVector<MCPhysReg> Regs;
 
           // If the FORM_TRANSPOSE nodes use the ZPRMul classes, the starting
           // register of the first load should be a multiple of 2 or 4.
@@ -1333,4 +1367,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
 bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
     MCRegister R) const {
   return R == AArch64::VG;
+}
+
+bool AArch64RegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
+  return (LLVMReg >= AArch64::Z0 && LLVMReg <= AArch64::Z31) ||
+         (LLVMReg >= AArch64::P0 && LLVMReg <= AArch64::P15);
 }

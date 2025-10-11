@@ -12,6 +12,7 @@ add_flang_library(FortranParser
   message.cpp
   openacc-parsers.cpp
   openmp-parsers.cpp
+  openmp-utils.cpp
   parse-tree.cpp
   parsing.cpp
   preprocessor.cpp
@@ -35,4 +36,12 @@ add_flang_library(FortranParser
   DEPENDS
   omp_gen
   acc_gen
+)
+
+target_precompile_headers(FortranParser PRIVATE
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/provenance.h"]]
+  [["flang/Parser/message.h"]]
+  [["flang/Parser/parse-tree-visitor.h"]]
 )

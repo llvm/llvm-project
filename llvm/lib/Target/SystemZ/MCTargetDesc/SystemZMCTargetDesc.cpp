@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -64,6 +65,12 @@ const unsigned SystemZMC::GR128Regs[16] = {
     SystemZ::R0Q, 0, SystemZ::R2Q,  0, SystemZ::R4Q,  0, SystemZ::R6Q,  0,
     SystemZ::R8Q, 0, SystemZ::R10Q, 0, SystemZ::R12Q, 0, SystemZ::R14Q, 0};
 
+const unsigned SystemZMC::FP16Regs[16] = {
+    SystemZ::F0H,  SystemZ::F1H,  SystemZ::F2H,  SystemZ::F3H,
+    SystemZ::F4H,  SystemZ::F5H,  SystemZ::F6H,  SystemZ::F7H,
+    SystemZ::F8H,  SystemZ::F9H,  SystemZ::F10H, SystemZ::F11H,
+    SystemZ::F12H, SystemZ::F13H, SystemZ::F14H, SystemZ::F15H};
+
 const unsigned SystemZMC::FP32Regs[16] = {
     SystemZ::F0S,  SystemZ::F1S,  SystemZ::F2S,  SystemZ::F3S,
     SystemZ::F4S,  SystemZ::F5S,  SystemZ::F6S,  SystemZ::F7S,
@@ -79,6 +86,15 @@ const unsigned SystemZMC::FP64Regs[16] = {
 const unsigned SystemZMC::FP128Regs[16] = {
     SystemZ::F0Q, SystemZ::F1Q, 0, 0, SystemZ::F4Q,  SystemZ::F5Q,  0, 0,
     SystemZ::F8Q, SystemZ::F9Q, 0, 0, SystemZ::F12Q, SystemZ::F13Q, 0, 0};
+
+const unsigned SystemZMC::VR16Regs[32] = {
+    SystemZ::F0H,  SystemZ::F1H,  SystemZ::F2H,  SystemZ::F3H,  SystemZ::F4H,
+    SystemZ::F5H,  SystemZ::F6H,  SystemZ::F7H,  SystemZ::F8H,  SystemZ::F9H,
+    SystemZ::F10H, SystemZ::F11H, SystemZ::F12H, SystemZ::F13H, SystemZ::F14H,
+    SystemZ::F15H, SystemZ::F16H, SystemZ::F17H, SystemZ::F18H, SystemZ::F19H,
+    SystemZ::F20H, SystemZ::F21H, SystemZ::F22H, SystemZ::F23H, SystemZ::F24H,
+    SystemZ::F25H, SystemZ::F26H, SystemZ::F27H, SystemZ::F28H, SystemZ::F29H,
+    SystemZ::F30H, SystemZ::F31H};
 
 const unsigned SystemZMC::VR32Regs[32] = {
     SystemZ::F0S,  SystemZ::F1S,  SystemZ::F2S,  SystemZ::F3S,  SystemZ::F4S,
@@ -132,6 +148,7 @@ unsigned SystemZMC::getFirstReg(unsigned Reg) {
       Map[AR32Regs[I]] = I;
     }
     for (unsigned I = 0; I < 32; ++I) {
+      Map[VR16Regs[I]] = I;
       Map[VR32Regs[I]] = I;
       Map[VR64Regs[I]] = I;
       Map[VR128Regs[I]] = I;
@@ -186,25 +203,24 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint) {
-  if (S.getContext().getTargetTriple().isOSzOS())
+  if (S.getContext().getTargetTriple().isOSzOS() && !GNUAsOnzOSCL)
     return new SystemZTargetHLASMStreamer(S, OS);
   else
     return new SystemZTargetGNUStreamer(S, OS);
 }
 
-static MCStreamer *createAsmStreamer(MCContext &Ctx,
-                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                     MCInstPrinter *IP,
-                                     std::unique_ptr<MCCodeEmitter> CE,
-                                     std::unique_ptr<MCAsmBackend> TAB) {
+static MCStreamer *createSystemZAsmStreamer(
+    MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+    std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
+    std::unique_ptr<MCAsmBackend> TAB) {
 
   auto TT = Ctx.getTargetTriple();
   if (TT.isOSzOS() && !GNUAsOnzOSCL)
-    return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                                       std::move(TAB));
+    return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                       std::move(CE), std::move(TAB));
 
-  return llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                                 std::move(TAB));
+  return llvm::createAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                 std::move(CE), std::move(TAB));
 }
 
 static MCTargetStreamer *
@@ -224,7 +240,8 @@ static MCInstrAnalysis *createSystemZMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);
@@ -254,7 +271,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
                                         createSystemZMCInstPrinter);
 
   // Register the asm streamer.
-  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(), createAsmStreamer);
+  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(),
+                                      createSystemZAsmStreamer);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),

@@ -29,10 +29,10 @@ define signext i32 @orcb32_knownbits(i32 signext %a) nounwind {
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    lui a1, 1044480
 ; RV64ZBB-NEXT:    and a0, a0, a1
-; RV64ZBB-NEXT:    lui a1, 2048
-; RV64ZBB-NEXT:    addi a1, a1, 1
-; RV64ZBB-NEXT:    or a0, a0, a1
+; RV64ZBB-NEXT:    lui a1, 4080
 ; RV64ZBB-NEXT:    orc.b a0, a0
+; RV64ZBB-NEXT:    addi a1, a1, 255
+; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    ret
   %tmp = and i32 %a, 4278190080 ; 0xFF000000
@@ -54,19 +54,20 @@ define i64 @orcb64(i64 %a) nounwind {
   ret i64 %tmp
 }
 
-; Second and+or is redundant with the first, make sure we remove them.
+; Second and+or is redundant with the first, make sure we remove one of the ands
+; and one of the ors.
 define i64 @orcb64_knownbits(i64 %a) nounwind {
 ; RV64ZBB-LABEL: orcb64_knownbits:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    lui a1, 65535
-; RV64ZBB-NEXT:    lui a2, 256
+; RV64ZBB-NEXT:    lui a2, 4080
 ; RV64ZBB-NEXT:    slli a1, a1, 12
-; RV64ZBB-NEXT:    addiw a2, a2, 8
+; RV64ZBB-NEXT:    addi a2, a2, 255
 ; RV64ZBB-NEXT:    and a0, a0, a1
-; RV64ZBB-NEXT:    slli a1, a2, 42
+; RV64ZBB-NEXT:    slli a1, a2, 40
+; RV64ZBB-NEXT:    orc.b a0, a0
 ; RV64ZBB-NEXT:    add a1, a2, a1
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    orc.b a0, a0
 ; RV64ZBB-NEXT:    ret
   %tmp = and i64 %a, 1099494850560 ; 0x000000ffff000000
   %tmp2 = or i64 %tmp, 4611721202800525320 ; 0x4000200000100008

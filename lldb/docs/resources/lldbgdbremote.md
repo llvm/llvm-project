@@ -1,3 +1,6 @@
+<!-- Packets are listed in alpabetical order, and if in a section, alphabetical
+     order within that section. -->
+
 # GDB Remote Protocol Extensions
 
 LLDB has added new GDB server packets to better support multi-threaded and
@@ -1998,6 +2001,23 @@ threads (live system debug) / cores (JTAG) in your program have
 stopped and allows LLDB to display and control your program
 correctly.
 
+## qWatchpointSupportInfo
+
+Get the number of hardware watchpoints available on the remote target.
+
+```
+send packet: $qWatchpointSupportInfo:#55
+read packet: $num:4;#f9
+```
+
+`num` is the number of hardware breakpoints, it will be `0` if none are
+available.
+
+**Priority to Implement:** Low. If this packet is not supported, LLDB will assume
+that hardware breakpoints are supported. If that is not the case, LLDB assumes
+that the debug stub will respond with an error when asked to set a hardware
+watchpoint.
+
 ## Stop reply packet extensions
 
 This section describes some of the additional information you can
@@ -2409,6 +2429,73 @@ Argument is a file path in ascii-hex encoding.
 Response is `F` plus the return value of `unlink()`, base 16 encoding.
 Return value may optionally be followed by a comma and the base16
 value of errno if unlink failed.
+
+## Wasm Packets
+
+The packet below are supported by the
+[WAMR](https://github.com/bytecodealliance/wasm-micro-runtime) and
+[V8](https://v8.dev) Wasm runtimes.
+
+
+### qWasmCallStack
+
+Get the Wasm call stack for the given thread id. This returns a hex-encoded
+list of PC values, one for each frame of the call stack. To match the Wasm
+specification, the addresses are encoded in little endian byte order, even if
+the endian of the Wasm runtime's host is not little endian.
+
+```
+send packet: $qWasmCallStack:202dbe040#08
+read packet: $9c01000000000040e501000000000040fe01000000000040#
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+stack traces.
+
+### qWasmGlobal
+
+Get the value of a Wasm global variable for the given frame index at the given
+variable index. The indexes are encoded as base 10. The result is a hex-encoded
+address from where to read the value.
+
+```
+send packet: $qWasmGlobal:0;2#cb
+read packet: $e0030100#b9
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+variables.
+
+
+### qWasmLocal
+
+Get the value of a Wasm function argument or local variable for the given frame
+index at the given variable index. The indexes are encoded as base 10. The
+result is a hex-encoded address from where to read the value.
+
+
+```
+send packet: $qWasmLocal:0;2#cb
+read packet: $e0030100#b9
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+variables.
+
+
+### qWasmStackValue
+
+Get the value of a Wasm local variable from the Wasm operand stack, for the
+given frame index at the given variable index. The indexes are encoded as base
+10. The result is a hex-encoded address from where to read value.
+
+```
+send packet: $qWasmStackValue:0;2#cb
+read packet: $e0030100#b9
+```
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show
+variables.
 
 ## "x" - Binary memory read
 

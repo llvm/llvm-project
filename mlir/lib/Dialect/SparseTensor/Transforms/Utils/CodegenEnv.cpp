@@ -31,11 +31,10 @@ static bool isMaterializing(Value val) {
 /// Sorts the dependent loops such that it is ordered in the same sequence in
 /// which loops will be generated.
 static void sortDependentLoops(std::vector<LoopCoeffPair> &target) {
-  std::sort(target.begin(), target.end(),
-            [](const LoopCoeffPair &l, const LoopCoeffPair &r) {
-              assert(std::addressof(l) == std::addressof(r) || l != r);
-              return l.first < r.first;
-            });
+  llvm::sort(target, [](const LoopCoeffPair &l, const LoopCoeffPair &r) {
+    assert(std::addressof(l) == std::addressof(r) || l != r);
+    return l.first < r.first;
+  });
 }
 //===----------------------------------------------------------------------===//
 // Code generation environment constructor and general methods

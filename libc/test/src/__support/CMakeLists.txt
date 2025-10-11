@@ -63,7 +63,6 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     SUITE
       libc-support-tests
     SRCS
-      fake_heap.s
       freelist_heap_test.cpp
     DEPENDS
       libc.src.__support.CPP.span
@@ -124,11 +123,12 @@ add_libc_test(
     str_to_float_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
+  HDRS
+    str_to_fp_test.h
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
     libc.src.__support.uint128
-    libc.src.errno.errno
 )
 
 
@@ -141,7 +141,17 @@ add_libc_test(
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
+)
+
+add_libc_test(
+  wcs_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcs_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.wcs_to_integer
 )
 
 add_libc_test(
@@ -257,6 +267,7 @@ add_libc_test(
   SRCS
     str_to_float_comparison_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.stdio.printf
     libc.src.stdio.fopen
     libc.src.stdio.fclose
@@ -278,3 +289,8 @@ add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
 add_subdirectory(threads)
+# Requires access to uchar header which is not on MacOS
+# Cannot currently build this on MacOS in overlay mode
+if(NOT(LIBC_TARGET_OS_IS_DARWIN))
+  add_subdirectory(wchar)
+endif()

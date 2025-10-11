@@ -32,6 +32,7 @@ diag_groups = [
   "Refactoring",
   "Sema",
   "Serialization",
+  "Trap",
 ]
 foreach(diag_group, diag_groups) {
   clang_tablegen("Diagnostic${diag_group}Kinds") {
@@ -75,10 +76,10 @@ group("diags_tablegen") {
   public_deps = []
   foreach(diag_group, diag_groups) {
     public_deps += [
-        ":Diagnostic${diag_group}Kinds",
-        ":Diagnostic${diag_group}Enums",
-        ":Diagnostic${diag_group}CompatIDs",
-        ":Diagnostic${diag_group}Interface",
+      ":Diagnostic${diag_group}CompatIDs",
+      ":Diagnostic${diag_group}Enums",
+      ":Diagnostic${diag_group}Interface",
+      ":Diagnostic${diag_group}Kinds",
     ]
   }
 }
@@ -130,6 +131,11 @@ clang_tablegen("CXX11AttributeInfo") {
   td_file = "../Basic/Attr.td"
 }
 
+clang_tablegen("AttributeSpellingList") {
+  args = [ "-gen-attribute-spelling-list" ]
+  td_file = "Attr.td"
+}
+
 clang_tablegen("Builtins") {
   args = [ "-gen-clang-builtins" ]
 }
@@ -154,7 +160,15 @@ clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
 
-clang_tablegen("BuiltinsSPIRV") {
+clang_tablegen("BuiltinsSPIRVCommon") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsSPIRVVK") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsSPIRVCL") {
   args = [ "-gen-clang-builtins" ]
 }
 
@@ -305,4 +319,19 @@ clang_tablegen("riscv_sifive_vector_builtin_cg") {
 clang_tablegen("riscv_sifive_vector_builtin_sema") {
   args = [ "-gen-riscv-sifive-vector-builtin-sema" ]
   td_file = "riscv_sifive_vector.td"
+}
+
+clang_tablegen("riscv_andes_vector_builtins") {
+  args = [ "-gen-riscv-andes-vector-builtins" ]
+  td_file = "riscv_andes_vector.td"
+}
+
+clang_tablegen("riscv_andes_vector_builtin_cg") {
+  args = [ "-gen-riscv-andes-vector-builtin-codegen" ]
+  td_file = "riscv_andes_vector.td"
+}
+
+clang_tablegen("riscv_andes_vector_builtin_sema") {
+  args = [ "-gen-riscv-andes-vector-builtin-sema" ]
+  td_file = "riscv_andes_vector.td"
 }

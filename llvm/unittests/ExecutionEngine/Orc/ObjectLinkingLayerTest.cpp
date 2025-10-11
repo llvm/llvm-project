@@ -19,6 +19,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+#include "OrcTestCommon.h"
+
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::orc;
@@ -299,7 +301,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
 
     void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                             SymbolLookupCompleteFn Complete) override {
-      std::vector<ExecutorSymbolDef> Result;
+      std::vector<std::optional<ExecutorSymbolDef>> Result;
       EXPECT_EQ(Request.size(), 1u);
       for (auto &LR : Request) {
         EXPECT_EQ(LR.Symbols.size(), 1u);
@@ -307,7 +309,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
           if (*Sym.first == "_testFunc") {
             ExecutorSymbolDef Def{ExecutorAddr::fromPtr((void *)0x1000),
                                   JITSymbolFlags::Exported};
-            Result.push_back(Def);
+            Result.emplace_back(Def);
           } else {
             ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
           }

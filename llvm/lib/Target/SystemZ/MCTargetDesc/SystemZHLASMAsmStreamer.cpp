@@ -12,7 +12,7 @@
 #include "llvm/Support/Signals.h"
 #include <sstream>
 
-#include <cmath>
+using namespace llvm;
 
 void SystemZHLASMAsmStreamer::EmitEOL() {
   // Comments are emitted on a new line before the instruction.
@@ -69,8 +69,8 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
 
 void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
                                             uint32_t Subsection) {
-  Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                Subsection);
+  MAI->printSwitchToSection(*Section, Subsection,
+                            getContext().getTargetTriple(), OS);
   MCStreamer::changeSection(Section, Subsection);
 }
 
@@ -137,10 +137,10 @@ void SystemZHLASMAsmStreamer::EmitComment() {
 }
 
 void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
-                                                   int64_t Value,
-                                                   unsigned ValueSize,
+                                                   int64_t Fill,
+                                                   uint8_t FillLen,
                                                    unsigned MaxBytesToEmit) {
-  emitAlignmentDS(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDS(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
 }
 
 void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
@@ -209,7 +209,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
   switch (Value->getKind()) {
   case MCExpr::Constant: {
     OS << "XL" << Size << '\'';
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     OS << '\'';
     return;
   }
@@ -258,12 +258,12 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     return;
   }
   case MCExpr::Target:
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     return;
   default:
     if (Parens)
       OS << "A(";
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     if (Parens)
       OS << ')';
     return;
@@ -278,5 +278,10 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 
   OS << " DC ";
   emitHLASMValueImpl(Value, Size, true);
+  EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::emitEnd() {
+  OS << " END";
   EmitEOL();
 }

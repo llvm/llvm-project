@@ -146,7 +146,7 @@ static bool runImpl(Module &M) {
   // the program never exits) we can simply return early and clear out
   // @llvm.global_dtors.
   if (auto F = dyn_cast<Function>(AtExit.getCallee())) {
-    if (F && F->hasExactDefinition() && F->getArg(0)->getNumUses() == 0) {
+    if (F && F->hasExactDefinition() && F->getArg(0)->use_empty()) {
       GV->eraseFromParent();
       return true;
     }

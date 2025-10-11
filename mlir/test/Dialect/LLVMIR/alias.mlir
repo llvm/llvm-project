@@ -130,12 +130,12 @@ llvm.mlir.global internal constant @g3() : !llvm.ptr {
 
 llvm.mlir.global private @g30(0 : i32) {dso_local} : i32
 
-llvm.mlir.alias private unnamed_addr thread_local @a30 {dso_local} : i32 {
+llvm.mlir.alias private thread_local unnamed_addr @a30 {dso_local} : i32 {
   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
   llvm.return %0 : !llvm.ptr
 }
 
-// CHECK: llvm.mlir.alias private unnamed_addr thread_local @a30 {dso_local} : i32 {
+// CHECK: llvm.mlir.alias private thread_local unnamed_addr @a30 {dso_local} : i32 {
 // CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
 // CHECK:   llvm.return %0 : !llvm.ptr
 // CHECK: }

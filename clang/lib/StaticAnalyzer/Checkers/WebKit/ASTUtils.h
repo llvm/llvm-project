@@ -66,8 +66,15 @@ bool tryToFindPtrOrigin(
 /// \returns Whether \p E is a safe call arugment.
 bool isASafeCallArg(const clang::Expr *E);
 
+/// \returns true if E is nullptr or __null.
+bool isNullPtr(const clang::Expr *E);
+
 /// \returns true if E is a MemberExpr accessing a const smart pointer type.
 bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
+
+/// \returns true if E is a MemberExpr accessing a member variable which
+/// supports CheckedPtr.
+bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E);
 
 /// \returns true if E is a CXXMemberCallExpr which returns a const smart
 /// pointer type.

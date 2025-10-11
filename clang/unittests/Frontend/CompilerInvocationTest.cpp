@@ -29,6 +29,7 @@ using ::testing::StartsWith;
 namespace {
 class CommandLineTest : public ::testing::Test {
 public:
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   SmallVector<const char *, 32> GeneratedArgs;
   BumpPtrAllocator Alloc;
@@ -41,7 +42,7 @@ public:
 
   CommandLineTest()
       : Diags(CompilerInstance::createDiagnostics(
-            *llvm::vfs::getRealFileSystem(), new DiagnosticOptions(),
+            *llvm::vfs::getRealFileSystem(), DiagOpts,
             new TextDiagnosticBuffer())),
         StringPool(Alloc) {}
 };

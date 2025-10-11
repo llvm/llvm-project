@@ -1,4 +1,4 @@
-//===--- ConstCorrectnessCheck.cpp - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -98,11 +98,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  const auto AllowedType = hasType(qualType(anyOf(
-      hasDeclaration(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
-      references(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
-      pointerType(pointee(hasDeclaration(
-          namedDecl(matchers::matchesAnyListedName(AllowedTypes))))))));
+  auto AllowedTypeDecl = namedDecl(
+      anyOf(matchers::matchesAnyListedName(AllowedTypes), usingShadowDecl()));
+
+  const auto AllowedType = hasType(qualType(
+      anyOf(hasDeclaration(AllowedTypeDecl), references(AllowedTypeDecl),
+            pointerType(pointee(hasDeclaration(AllowedTypeDecl))))));
 
   const auto AutoTemplateType = varDecl(
       anyOf(hasType(autoType()), hasType(referenceType(pointee(autoType()))),
@@ -248,7 +249,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
       CheckValue();
     if (WarnPointersAsPointers) {
       if (const auto *PT = dyn_cast<PointerType>(VT)) {
-        if (!PT->getPointeeType().isConstQualified())
+        if (!PT->getPointeeType().isConstQualified() &&
+            !PT->getPointeeType()->isFunctionType())
           CheckPointee();
       }
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {

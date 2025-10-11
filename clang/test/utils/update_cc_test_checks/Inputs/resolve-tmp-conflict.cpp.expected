@@ -13,7 +13,7 @@
 // CHECK-NEXT:    store i32 1, ptr [[REF_TMP]], align 4
 // CHECK-NEXT:    store ptr [[REF_TMP]], ptr [[_TMP1]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[_TMP1]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[_TMP1]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP1]], align 4
 // CHECK-NEXT:    ret void
 //

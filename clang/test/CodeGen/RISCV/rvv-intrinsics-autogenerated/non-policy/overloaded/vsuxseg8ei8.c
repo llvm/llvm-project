@@ -10,7 +10,7 @@
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f16mf4x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f16mf4x8(_Float16 *base, vuint8mf8_t bindex, vfloat16mf4x8_t v_tuple, size_t vl) {
@@ -20,7 +20,7 @@ void test_vsuxseg8ei8_v_f16mf4x8(_Float16 *base, vuint8mf8_t bindex, vfloat16mf4
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f16mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f16mf2x8(_Float16 *base, vuint8mf4_t bindex, vfloat16mf2x8_t v_tuple, size_t vl) {
@@ -30,7 +30,7 @@ void test_vsuxseg8ei8_v_f16mf2x8(_Float16 *base, vuint8mf4_t bindex, vfloat16mf2
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f16m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f16m1x8(_Float16 *base, vuint8mf2_t bindex, vfloat16m1x8_t v_tuple, size_t vl) {
@@ -40,7 +40,7 @@ void test_vsuxseg8ei8_v_f16m1x8(_Float16 *base, vuint8mf2_t bindex, vfloat16m1x8
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f32mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f32mf2x8(float *base, vuint8mf8_t bindex, vfloat32mf2x8_t v_tuple, size_t vl) {
@@ -50,7 +50,7 @@ void test_vsuxseg8ei8_v_f32mf2x8(float *base, vuint8mf8_t bindex, vfloat32mf2x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f32m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f32m1x8(float *base, vuint8mf4_t bindex, vfloat32m1x8_t v_tuple, size_t vl) {
@@ -60,7 +60,7 @@ void test_vsuxseg8ei8_v_f32m1x8(float *base, vuint8mf4_t bindex, vfloat32m1x8_t 
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f64m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 6)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 6)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f64m1x8(double *base, vuint8mf8_t bindex, vfloat64m1x8_t v_tuple, size_t vl) {
@@ -70,7 +70,7 @@ void test_vsuxseg8ei8_v_f64m1x8(double *base, vuint8mf8_t bindex, vfloat64m1x8_t
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8mf8x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv1i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8mf8x8(int8_t *base, vuint8mf8_t bindex, vint8mf8x8_t v_tuple, size_t vl) {
@@ -80,7 +80,7 @@ void test_vsuxseg8ei8_v_i8mf8x8(int8_t *base, vuint8mf8_t bindex, vint8mf8x8_t v
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8mf4x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8mf4x8(int8_t *base, vuint8mf4_t bindex, vint8mf4x8_t v_tuple, size_t vl) {
@@ -90,7 +90,7 @@ void test_vsuxseg8ei8_v_i8mf4x8(int8_t *base, vuint8mf4_t bindex, vint8mf4x8_t v
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8mf2x8(int8_t *base, vuint8mf2_t bindex, vint8mf2x8_t v_tuple, size_t vl) {
@@ -100,7 +100,7 @@ void test_vsuxseg8ei8_v_i8mf2x8(int8_t *base, vuint8mf2_t bindex, vint8mf2x8_t v
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8m1x8(int8_t *base, vuint8m1_t bindex, vint8m1x8_t v_tuple, size_t vl) {
@@ -110,7 +110,7 @@ void test_vsuxseg8ei8_v_i8m1x8(int8_t *base, vuint8m1_t bindex, vint8m1x8_t v_tu
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i16mf4x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i16mf4x8(int16_t *base, vuint8mf8_t bindex, vint16mf4x8_t v_tuple, size_t vl) {
@@ -120,7 +120,7 @@ void test_vsuxseg8ei8_v_i16mf4x8(int16_t *base, vuint8mf8_t bindex, vint16mf4x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i16mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i16mf2x8(int16_t *base, vuint8mf4_t bindex, vint16mf2x8_t v_tuple, size_t vl) {
@@ -130,7 +130,7 @@ void test_vsuxseg8ei8_v_i16mf2x8(int16_t *base, vuint8mf4_t bindex, vint16mf2x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i16m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i16m1x8(int16_t *base, vuint8mf2_t bindex, vint16m1x8_t v_tuple, size_t vl) {
@@ -140,7 +140,7 @@ void test_vsuxseg8ei8_v_i16m1x8(int16_t *base, vuint8mf2_t bindex, vint16m1x8_t 
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i32mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i32mf2x8(int32_t *base, vuint8mf8_t bindex, vint32mf2x8_t v_tuple, size_t vl) {
@@ -150,7 +150,7 @@ void test_vsuxseg8ei8_v_i32mf2x8(int32_t *base, vuint8mf8_t bindex, vint32mf2x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i32m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i32m1x8(int32_t *base, vuint8mf4_t bindex, vint32m1x8_t v_tuple, size_t vl) {
@@ -160,7 +160,7 @@ void test_vsuxseg8ei8_v_i32m1x8(int32_t *base, vuint8mf4_t bindex, vint32m1x8_t 
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i64m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 6)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 6)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i64m1x8(int64_t *base, vuint8mf8_t bindex, vint64m1x8_t v_tuple, size_t vl) {
@@ -170,7 +170,7 @@ void test_vsuxseg8ei8_v_i64m1x8(int64_t *base, vuint8mf8_t bindex, vint64m1x8_t 
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8mf8x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv1i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8mf8x8(uint8_t *base, vuint8mf8_t bindex, vuint8mf8x8_t v_tuple, size_t vl) {
@@ -180,7 +180,7 @@ void test_vsuxseg8ei8_v_u8mf8x8(uint8_t *base, vuint8mf8_t bindex, vuint8mf8x8_t
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8mf4x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8mf4x8(uint8_t *base, vuint8mf4_t bindex, vuint8mf4x8_t v_tuple, size_t vl) {
@@ -190,7 +190,7 @@ void test_vsuxseg8ei8_v_u8mf4x8(uint8_t *base, vuint8mf4_t bindex, vuint8mf4x8_t
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8mf2x8(uint8_t *base, vuint8mf2_t bindex, vuint8mf2x8_t v_tuple, size_t vl) {
@@ -200,7 +200,7 @@ void test_vsuxseg8ei8_v_u8mf2x8(uint8_t *base, vuint8mf2_t bindex, vuint8mf2x8_t
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8m1x8(uint8_t *base, vuint8m1_t bindex, vuint8m1x8_t v_tuple, size_t vl) {
@@ -210,7 +210,7 @@ void test_vsuxseg8ei8_v_u8m1x8(uint8_t *base, vuint8m1_t bindex, vuint8m1x8_t v_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u16mf4x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv2i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u16mf4x8(uint16_t *base, vuint8mf8_t bindex, vuint16mf4x8_t v_tuple, size_t vl) {
@@ -220,7 +220,7 @@ void test_vsuxseg8ei8_v_u16mf4x8(uint16_t *base, vuint8mf8_t bindex, vuint16mf4x
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u16mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u16mf2x8(uint16_t *base, vuint8mf4_t bindex, vuint16mf2x8_t v_tuple, size_t vl) {
@@ -230,7 +230,7 @@ void test_vsuxseg8ei8_v_u16mf2x8(uint16_t *base, vuint8mf4_t bindex, vuint16mf2x
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u16m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u16m1x8(uint16_t *base, vuint8mf2_t bindex, vuint16m1x8_t v_tuple, size_t vl) {
@@ -240,7 +240,7 @@ void test_vsuxseg8ei8_v_u16m1x8(uint16_t *base, vuint8mf2_t bindex, vuint16m1x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u32mf2x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u32mf2x8(uint32_t *base, vuint8mf8_t bindex, vuint32mf2x8_t v_tuple, size_t vl) {
@@ -250,7 +250,7 @@ void test_vsuxseg8ei8_v_u32mf2x8(uint32_t *base, vuint8mf8_t bindex, vuint32mf2x
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u32m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u32m1x8(uint32_t *base, vuint8mf4_t bindex, vuint32m1x8_t v_tuple, size_t vl) {
@@ -260,7 +260,7 @@ void test_vsuxseg8ei8_v_u32m1x8(uint32_t *base, vuint8mf4_t bindex, vuint32m1x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u64m1x8
 // CHECK-RV64-SAME: (ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 6)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv8i8_8t.p0.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], i64 [[VL]], i64 6)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u64m1x8(uint64_t *base, vuint8mf8_t bindex, vuint64m1x8_t v_tuple, size_t vl) {
@@ -270,7 +270,7 @@ void test_vsuxseg8ei8_v_u64m1x8(uint64_t *base, vuint8mf8_t bindex, vuint64m1x8_
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f16mf4x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f16mf4x8_m(vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4x8_t v_tuple, size_t vl) {
@@ -280,7 +280,7 @@ void test_vsuxseg8ei8_v_f16mf4x8_m(vbool64_t mask, _Float16 *base, vuint8mf8_t b
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f16mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f16mf2x8_m(vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2x8_t v_tuple, size_t vl) {
@@ -290,7 +290,7 @@ void test_vsuxseg8ei8_v_f16mf2x8_m(vbool32_t mask, _Float16 *base, vuint8mf4_t b
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f16m1x8_m
 // CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f16m1x8_m(vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1x8_t v_tuple, size_t vl) {
@@ -300,7 +300,7 @@ void test_vsuxseg8ei8_v_f16m1x8_m(vbool16_t mask, _Float16 *base, vuint8mf2_t bi
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f32mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f32mf2x8_m(vbool64_t mask, float *base, vuint8mf8_t bindex, vfloat32mf2x8_t v_tuple, size_t vl) {
@@ -310,7 +310,7 @@ void test_vsuxseg8ei8_v_f32mf2x8_m(vbool64_t mask, float *base, vuint8mf8_t bind
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f32m1x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f32m1x8_m(vbool32_t mask, float *base, vuint8mf4_t bindex, vfloat32m1x8_t v_tuple, size_t vl) {
@@ -320,7 +320,7 @@ void test_vsuxseg8ei8_v_f32m1x8_m(vbool32_t mask, float *base, vuint8mf4_t binde
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_f64m1x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 6)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 6)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_f64m1x8_m(vbool64_t mask, double *base, vuint8mf8_t bindex, vfloat64m1x8_t v_tuple, size_t vl) {
@@ -330,7 +330,7 @@ void test_vsuxseg8ei8_v_f64m1x8_m(vbool64_t mask, double *base, vuint8mf8_t bind
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8mf8x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv1i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv1i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8mf8x8_m(vbool64_t mask, int8_t *base, vuint8mf8_t bindex, vint8mf8x8_t v_tuple, size_t vl) {
@@ -340,7 +340,7 @@ void test_vsuxseg8ei8_v_i8mf8x8_m(vbool64_t mask, int8_t *base, vuint8mf8_t bind
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8mf4x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8mf4x8_m(vbool32_t mask, int8_t *base, vuint8mf4_t bindex, vint8mf4x8_t v_tuple, size_t vl) {
@@ -350,7 +350,7 @@ void test_vsuxseg8ei8_v_i8mf4x8_m(vbool32_t mask, int8_t *base, vuint8mf4_t bind
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8mf2x8_m(vbool16_t mask, int8_t *base, vuint8mf2_t bindex, vint8mf2x8_t v_tuple, size_t vl) {
@@ -360,7 +360,7 @@ void test_vsuxseg8ei8_v_i8mf2x8_m(vbool16_t mask, int8_t *base, vuint8mf2_t bind
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i8m1x8_m
 // CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv8i8.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv8i8.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i8m1x8_m(vbool8_t mask, int8_t *base, vuint8m1_t bindex, vint8m1x8_t v_tuple, size_t vl) {
@@ -370,7 +370,7 @@ void test_vsuxseg8ei8_v_i8m1x8_m(vbool8_t mask, int8_t *base, vuint8m1_t bindex,
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i16mf4x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i16mf4x8_m(vbool64_t mask, int16_t *base, vuint8mf8_t bindex, vint16mf4x8_t v_tuple, size_t vl) {
@@ -380,7 +380,7 @@ void test_vsuxseg8ei8_v_i16mf4x8_m(vbool64_t mask, int16_t *base, vuint8mf8_t bi
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i16mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i16mf2x8_m(vbool32_t mask, int16_t *base, vuint8mf4_t bindex, vint16mf2x8_t v_tuple, size_t vl) {
@@ -390,7 +390,7 @@ void test_vsuxseg8ei8_v_i16mf2x8_m(vbool32_t mask, int16_t *base, vuint8mf4_t bi
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i16m1x8_m
 // CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i16m1x8_m(vbool16_t mask, int16_t *base, vuint8mf2_t bindex, vint16m1x8_t v_tuple, size_t vl) {
@@ -400,7 +400,7 @@ void test_vsuxseg8ei8_v_i16m1x8_m(vbool16_t mask, int16_t *base, vuint8mf2_t bin
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i32mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i32mf2x8_m(vbool64_t mask, int32_t *base, vuint8mf8_t bindex, vint32mf2x8_t v_tuple, size_t vl) {
@@ -410,7 +410,7 @@ void test_vsuxseg8ei8_v_i32mf2x8_m(vbool64_t mask, int32_t *base, vuint8mf8_t bi
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i32m1x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i32m1x8_m(vbool32_t mask, int32_t *base, vuint8mf4_t bindex, vint32m1x8_t v_tuple, size_t vl) {
@@ -420,7 +420,7 @@ void test_vsuxseg8ei8_v_i32m1x8_m(vbool32_t mask, int32_t *base, vuint8mf4_t bin
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_i64m1x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 6)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 6)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_i64m1x8_m(vbool64_t mask, int64_t *base, vuint8mf8_t bindex, vint64m1x8_t v_tuple, size_t vl) {
@@ -430,7 +430,7 @@ void test_vsuxseg8ei8_v_i64m1x8_m(vbool64_t mask, int64_t *base, vuint8mf8_t bin
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8mf8x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv1i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv1i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8mf8x8_m(vbool64_t mask, uint8_t *base, vuint8mf8_t bindex, vuint8mf8x8_t v_tuple, size_t vl) {
@@ -440,7 +440,7 @@ void test_vsuxseg8ei8_v_u8mf8x8_m(vbool64_t mask, uint8_t *base, vuint8mf8_t bin
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8mf4x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8mf4x8_m(vbool32_t mask, uint8_t *base, vuint8mf4_t bindex, vuint8mf4x8_t v_tuple, size_t vl) {
@@ -450,7 +450,7 @@ void test_vsuxseg8ei8_v_u8mf4x8_m(vbool32_t mask, uint8_t *base, vuint8mf4_t bin
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8mf2x8_m(vbool16_t mask, uint8_t *base, vuint8mf2_t bindex, vuint8mf2x8_t v_tuple, size_t vl) {
@@ -460,7 +460,7 @@ void test_vsuxseg8ei8_v_u8mf2x8_m(vbool16_t mask, uint8_t *base, vuint8mf2_t bin
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u8m1x8_m
 // CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv8i8.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv8i8.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 8 x i8> [[BINDEX]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u8m1x8_m(vbool8_t mask, uint8_t *base, vuint8m1_t bindex, vuint8m1x8_t v_tuple, size_t vl) {
@@ -470,7 +470,7 @@ void test_vsuxseg8ei8_v_u8m1x8_m(vbool8_t mask, uint8_t *base, vuint8m1_t bindex
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u16mf4x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv2i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u16mf4x8_m(vbool64_t mask, uint16_t *base, vuint8mf8_t bindex, vuint16mf4x8_t v_tuple, size_t vl) {
@@ -480,7 +480,7 @@ void test_vsuxseg8ei8_v_u16mf4x8_m(vbool64_t mask, uint16_t *base, vuint8mf8_t b
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u16mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u16mf2x8_m(vbool32_t mask, uint16_t *base, vuint8mf4_t bindex, vuint16mf2x8_t v_tuple, size_t vl) {
@@ -490,7 +490,7 @@ void test_vsuxseg8ei8_v_u16mf2x8_m(vbool32_t mask, uint16_t *base, vuint8mf4_t b
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u16m1x8_m
 // CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv4i8.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 4 x i8> [[BINDEX]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u16m1x8_m(vbool16_t mask, uint16_t *base, vuint8mf2_t bindex, vuint16m1x8_t v_tuple, size_t vl) {
@@ -500,7 +500,7 @@ void test_vsuxseg8ei8_v_u16m1x8_m(vbool16_t mask, uint16_t *base, vuint8mf2_t bi
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u32mf2x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u32mf2x8_m(vbool64_t mask, uint32_t *base, vuint8mf8_t bindex, vuint32mf2x8_t v_tuple, size_t vl) {
@@ -510,7 +510,7 @@ void test_vsuxseg8ei8_v_u32mf2x8_m(vbool64_t mask, uint32_t *base, vuint8mf8_t b
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u32m1x8_m
 // CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 5)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv2i8.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 2 x i8> [[BINDEX]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 5)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u32m1x8_m(vbool32_t mask, uint32_t *base, vuint8mf4_t bindex, vuint32m1x8_t v_tuple, size_t vl) {
@@ -520,7 +520,7 @@ void test_vsuxseg8ei8_v_u32m1x8_m(vbool32_t mask, uint32_t *base, vuint8mf4_t bi
 // CHECK-RV64-LABEL: define dso_local void @test_vsuxseg8ei8_v_u64m1x8_m
 // CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 6)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.triscv.vector.tuple_nxv8i8_8t.p0.nxv1i8.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[V_TUPLE]], ptr [[BASE]], <vscale x 1 x i8> [[BINDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 6)
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsuxseg8ei8_v_u64m1x8_m(vbool64_t mask, uint64_t *base, vuint8mf8_t bindex, vuint64m1x8_t v_tuple, size_t vl) {

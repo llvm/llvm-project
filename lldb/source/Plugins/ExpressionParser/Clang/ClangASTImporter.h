@@ -157,6 +157,8 @@ public:
   /// \see ClangASTImporter::Import
   bool CanImport(const CompilerType &type);
 
+  bool CanImport(const clang::Decl *d);
+
   /// If the given type was copied from another TypeSystemClang then copy over
   /// all missing information (e.g., the definition of a 'class' type).
   ///
@@ -225,7 +227,7 @@ public:
     ContextMetadataMap::iterator context_md_iter = m_metadata_map.find(dst_ctx);
 
     if (context_md_iter == m_metadata_map.end()) {
-      context_md = ASTContextMetadataSP(new ASTContextMetadata(dst_ctx));
+      context_md = std::make_shared<ASTContextMetadata>(dst_ctx);
       m_metadata_map[dst_ctx] = context_md;
     } else {
       context_md = context_md_iter->second;
@@ -346,6 +348,8 @@ public:
     llvm::Expected<clang::Decl *> ImportImpl(clang::Decl *From) override;
 
   private:
+    void MarkDeclImported(clang::Decl *from, clang::Decl *to);
+
     /// Decls we should ignore when mapping decls back to their original
     /// ASTContext. Used by the CxxModuleHandler to mark declarations that
     /// were created from the 'std' C++ module to prevent that the Importer
@@ -438,7 +442,7 @@ public:
 
     if (context_md_iter == m_metadata_map.end()) {
       ASTContextMetadataSP context_md =
-          ASTContextMetadataSP(new ASTContextMetadata(dst_ctx));
+          std::make_shared<ASTContextMetadata>(dst_ctx);
       m_metadata_map[dst_ctx] = context_md;
       return context_md;
     }
@@ -462,7 +466,7 @@ public:
 
     if (delegate_iter == delegates.end()) {
       ImporterDelegateSP delegate =
-          ImporterDelegateSP(new ASTImporterDelegate(*this, dst_ctx, src_ctx));
+          std::make_shared<ASTImporterDelegate>(*this, dst_ctx, src_ctx);
       delegates[src_ctx] = delegate;
       return delegate;
     }

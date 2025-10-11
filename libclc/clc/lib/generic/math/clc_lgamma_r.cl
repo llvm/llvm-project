@@ -279,9 +279,6 @@ _CLC_OVERLOAD _CLC_DEF float __clc_lgamma_r(float x, private int *signp) {
   return r;
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_lgamma_r, float,
-                      private, int)
-
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 // ====================================================
@@ -406,13 +403,13 @@ _CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_lgamma_r, float,
 #define v4 1.04222645593369134254e-01 /* 0x3FBAAE55, 0xD6537C88 */
 #define v5 3.21709242282423911810e-03 /* 0x3F6A5ABB, 0x57D0CF61 */
 
-#define s0 -7.72156649015328655494e-02 /* 0xBFB3C467, 0xE37DB0C8 */
-#define s1 2.14982415960608852501e-01  /* 0x3FCB848B, 0x36E20878 */
-#define s2 3.25778796408930981787e-01  /* 0x3FD4D98F, 0x4F139F59 */
-#define s3 1.46350472652464452805e-01  /* 0x3FC2BB9C, 0xBEE5F2F7 */
-#define s4 2.66422703033638609560e-02  /* 0x3F9B481C, 0x7E939961 */
-#define s5 1.84028451407337715652e-03  /* 0x3F5E26B6, 0x7368F239 */
-#define s6 3.19475326584100867617e-05  /* 0x3F00BFEC, 0xDD17E945 */
+#define s0_d -7.72156649015328655494e-02 /* 0xBFB3C467, 0xE37DB0C8 */
+#define s1_d 2.14982415960608852501e-01  /* 0x3FCB848B, 0x36E20878 */
+#define s2_d 3.25778796408930981787e-01  /* 0x3FD4D98F, 0x4F139F59 */
+#define s3_d 1.46350472652464452805e-01  /* 0x3FC2BB9C, 0xBEE5F2F7 */
+#define s4_d 2.66422703033638609560e-02  /* 0x3F9B481C, 0x7E939961 */
+#define s5_d 1.84028451407337715652e-03  /* 0x3F5E26B6, 0x7368F239 */
+#define s6_d 3.19475326584100867617e-05  /* 0x3F00BFEC, 0xDD17E945 */
 
 #define r1 1.39200533467621045958e+00 /* 0x3FF645A7, 0x62C4AB74 */
 #define r2 7.21935547567138069525e-01 /* 0x3FE71A18, 0x93D3DCDC */
@@ -530,10 +527,12 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
             __clc_fma(
                 y,
                 __clc_fma(
-                    y, __clc_fma(y, __clc_fma(y, __clc_fma(y, s6, s5), s4), s3),
-                    s2),
-                s1),
-            s0);
+                    y,
+                    __clc_fma(y, __clc_fma(y, __clc_fma(y, s6_d, s5_d), s4_d),
+                              s3_d),
+                    s2_d),
+                s1_d),
+            s0_d);
     double q = __clc_fma(
         y,
         __clc_fma(
@@ -583,8 +582,6 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   return r;
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_lgamma_r, double,
-                      private, int)
 #endif
 
 #ifdef cl_khr_fp16
@@ -595,10 +592,16 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
   return (half)__clc_lgamma_r((float)x, iptr);
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_lgamma_r, half,
-                      private, int);
-
 #endif
+
+#define __CLC_FUNCTION __clc_lgamma_r
+#define __CLC_ARG2_TYPE int
+#define __CLC_ADDRSPACE private
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRSPACE
+#undef __CLC_ARG2_TYPE
+#undef __CLC_FUNCTION
 
 #define __CLC_ADDRSPACE global
 #define __CLC_BODY <clc_lgamma_r.inc>
@@ -609,3 +612,10 @@ _CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_lgamma_r, half,
 #define __CLC_BODY <clc_lgamma_r.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
+
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+#define __CLC_ADDRSPACE generic
+#define __CLC_BODY <clc_lgamma_r.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRSPACE
+#endif

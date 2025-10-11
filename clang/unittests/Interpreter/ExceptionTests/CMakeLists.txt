@@ -3,7 +3,7 @@
 set(LLVM_REQUIRES_EH ON)
 set(LLVM_REQUIRES_RTTI ON)
 
-add_clang_unittest(ClangReplInterpreterExceptionTests
+add_distinct_clang_unittest(ClangReplInterpreterExceptionTests
   InterpreterExceptionTest.cpp
   EXPORT_SYMBOLS
 

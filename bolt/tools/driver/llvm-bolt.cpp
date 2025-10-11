@@ -237,6 +237,13 @@ int main(int argc, char **argv) {
       if (Error E = RIOrErr.takeError())
         report_error(opts::InputFilename, std::move(E));
       RewriteInstance &RI = *RIOrErr.get();
+
+      if (opts::AggregateOnly && !RI.getBinaryContext().isAArch64() &&
+          opts::ArmSPE) {
+        errs() << ToolName << ": -spe is available only on AArch64.\n";
+        exit(1);
+      }
+
       if (!opts::PerfData.empty()) {
         if (!opts::AggregateOnly) {
           errs() << ToolName

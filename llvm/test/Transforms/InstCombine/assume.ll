@@ -498,13 +498,13 @@ not_taken:
 define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3B(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       not_taken:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -512,10 +512,10 @@ entry:
   %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %load)]
   ret i1 %cmp
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %load)]
   ret i1 %control
 }
 
@@ -544,7 +544,7 @@ taken:
   br label %exit
 exit:
   ; FIXME: this shouldn't be dropped because it is still dominated by the new position of %load
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 %cmp)
   ret i1 %cmp2
 not_taken:
   call void @llvm.assume(i1 %cmp)
@@ -575,7 +575,7 @@ taken:
 exit:
   ret i1 %cmp2
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 %cmp)
   ret i1 %control
 }
 
@@ -1013,8 +1013,7 @@ define i1 @assume_trunc_nuw_eq_one(i8 %x) {
 ; CHECK-LABEL: @assume_trunc_nuw_eq_one(
 ; CHECK-NEXT:    [[A:%.*]] = trunc nuw i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp eq i8 [[X]], 1
-; CHECK-NEXT:    ret i1 [[Q]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = trunc nuw i8 %x to i1
   call void @llvm.assume(i1 %a)

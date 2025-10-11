@@ -102,10 +102,8 @@ static std::string replaceIllegalFilenameChars(std::string Filename,
   std::string IllegalChars =
       is_style_windows(sys::path::Style::native) ? "\\/:?\"<>|" : "/";
 
-  for (char IllegalChar : IllegalChars) {
-    std::replace(Filename.begin(), Filename.end(), IllegalChar,
-                 ReplacementChar);
-  }
+  for (char IllegalChar : IllegalChars)
+    llvm::replace(Filename, IllegalChar, ReplacementChar);
 
   return Filename;
 }

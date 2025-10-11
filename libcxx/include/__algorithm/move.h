@@ -65,7 +65,7 @@ struct __move_impl {
     }
   };
 
-  template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
+  template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator_v<_InIter>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     std::__for_each_segment(__first, __last, _MoveSegment<_InIter, _OutIter>(__result));
@@ -75,12 +75,13 @@ struct __move_impl {
   template <class _InIter,
             class _OutIter,
             __enable_if_t<__has_random_access_iterator_category<_InIter>::value &&
-                              !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
+                              !__is_segmented_iterator_v<_InIter> && __is_segmented_iterator_v<_OutIter>,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
-    using _DiffT  = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
+    using _DiffT =
+        typename common_type<__iterator_difference_type<_InIter>, __iterator_difference_type<_OutIter> >::type;
 
     if (__first == __last)
       return std::make_pair(std::move(__first), std::move(__result));

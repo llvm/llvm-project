@@ -25,7 +25,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Predicate, class _AlgPolicy, class _ForwardIterator, class _Sentinel>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator, _ForwardIterator>
 __partition_impl(_ForwardIterator __first, _Sentinel __last, _Predicate __pred, forward_iterator_tag) {
   while (true) {
     if (__first == __last)
@@ -46,7 +46,7 @@ __partition_impl(_ForwardIterator __first, _Sentinel __last, _Predicate __pred, 
 }
 
 template <class _Predicate, class _AlgPolicy, class _BidirectionalIterator, class _Sentinel>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_BidirectionalIterator, _BidirectionalIterator>
+_LIBCPP_HIDE_FROM_ABI pair<_BidirectionalIterator, _BidirectionalIterator>
 __partition_impl(_BidirectionalIterator __first, _Sentinel __sentinel, _Predicate __pred, bidirectional_iterator_tag) {
   _BidirectionalIterator __original_last = _IterOps<_AlgPolicy>::next(__first, __sentinel);
   _BidirectionalIterator __last          = __original_last;
@@ -69,14 +69,14 @@ __partition_impl(_BidirectionalIterator __first, _Sentinel __sentinel, _Predicat
 }
 
 template <class _AlgPolicy, class _ForwardIterator, class _Sentinel, class _Predicate, class _IterCategory>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _ForwardIterator>
+inline _LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator, _ForwardIterator>
 __partition(_ForwardIterator __first, _Sentinel __last, _Predicate&& __pred, _IterCategory __iter_category) {
   return std::__partition_impl<__remove_cvref_t<_Predicate>&, _AlgPolicy>(
       std::move(__first), std::move(__last), __pred, __iter_category);
 }
 
 template <class _ForwardIterator, class _Predicate>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   using _IterCategory = typename iterator_traits<_ForwardIterator>::iterator_category;
   auto __result = std::__partition<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __pred, _IterCategory());

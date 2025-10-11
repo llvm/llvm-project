@@ -173,9 +173,7 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 
   MachineFunction &MF = MMI->getOrCreateMachineFunction(*F);
   // Remove unnecessary register liveness and set NoVRegs.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
-  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().resetTracksLiveness().resetIsSSA().setNoVRegs();
   MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.
@@ -404,7 +402,7 @@ static bool shouldUseFrameHelper(MachineBasicBlock &MBB,
     InstCount--;
     break;
   case FrameHelperType::PrologFrame: {
-    // Effecitvely no change in InstCount since FpAdjusment is included.
+    // Effectively no change in InstCount since FpAdjustment is included.
     break;
   }
   case FrameHelperType::Epilog:

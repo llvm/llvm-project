@@ -52,9 +52,8 @@ public:
     uint64_t MispredictedCount; /// number of branches mispredicted
 
     bool operator<(const BinaryBranchInfo &Other) const {
-      return (Count < Other.Count) ||
-             (Count == Other.Count &&
-              MispredictedCount < Other.MispredictedCount);
+      return std::tie(Count, MispredictedCount) <
+             std::tie(Other.Count, Other.MispredictedCount);
     }
   };
 

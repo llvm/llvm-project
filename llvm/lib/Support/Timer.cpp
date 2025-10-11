@@ -24,7 +24,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signposts.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <optional>
@@ -58,6 +57,7 @@ static SignpostEmitter &signposts();
 static sys::SmartMutex<true> &timerLock();
 static TimerGroup &defaultTimerGroup();
 static Name2PairMap &namedGroupedTimers();
+static bool isTimerGlobalsConstructed();
 
 //===----------------------------------------------------------------------===//
 //
@@ -306,13 +306,25 @@ TimerGroup::~TimerGroup() {
     PrintQueuedTimers(*OutStream);
   }
 
+  auto unlink = [&]() {
+    *Prev = Next;
+    if (Next)
+      Next->Prev = Prev;
+  };
+
+  // TimerGlobals is always created implicity, through a call to timerLock(),
+  // when a TimeGroup is created. On CRT shutdown, the TimerGlobals instance
+  // might have been destroyed already. Avoid re-creating it if calling
+  // timerLock().
+  if (!isTimerGlobalsConstructed()) {
+    unlink();
+    return;
+  }
+
   // Remove the group from the TimerGroupList.
   sys::SmartScopedLock<true> L(timerLock());
-  *Prev = Next;
-  if (Next)
-    Next->Prev = Prev;
+  unlink();
 }
-
 
 void TimerGroup::removeTimer(Timer &T) {
   sys::SmartScopedLock<true> L(timerLock());
@@ -442,10 +454,6 @@ void TimerGroup::clearAll() {
 
 void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
                                 const char *suffix, double Value) {
-  assert(yaml::needsQuotes(Name) == yaml::QuotingType::None &&
-         "TimerGroup name should not need quotes");
-  assert(yaml::needsQuotes(R.Name) == yaml::QuotingType::None &&
-         "Timer name should not need quotes");
   constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
   OS << "\t\"time." << Name << '.' << R.Name << suffix
      << "\": " << format("%.*e", max_digits10 - 1, Value);
@@ -562,3 +570,7 @@ void TimerGroup::constructForStatistics() {
 }
 
 void *TimerGroup::acquireTimerGlobals() { return ManagedTimerGlobals.claim(); }
+
+static bool isTimerGlobalsConstructed() {
+  return ManagedTimerGlobals.isConstructed();
+}

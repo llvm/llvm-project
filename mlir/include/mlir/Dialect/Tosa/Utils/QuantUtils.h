@@ -47,7 +47,7 @@ Value getConstTensorInt(OpBuilder &builder, Location loc,
   mlir::RankedTensorType const_type =
       RankedTensorType::get({count}, element_type);
   mlir::DenseElementsAttr const_attr = DenseElementsAttr::get(const_type, vec);
-  auto const_op = builder.create<tosa::ConstOp>(loc, const_type, const_attr);
+  auto const_op = tosa::ConstOp::create(builder, loc, const_type, const_attr);
   return const_op.getResult();
 }
 
