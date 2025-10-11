@@ -324,8 +324,7 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(RewriterBase &rewriter,
                                                 LoopLikeOpInterface loopLike,
                                                 BlockArgument iterArg) {
   assert(iterArg.getOwner()->getParentOp() == loopLike && "invalid iter_arg");
-  BlockArgument *it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
-  int64_t iterArgIdx = std::distance(loopLike.getRegionIterArgs().begin(), it);
+  int64_t iterArgIdx = iterArg.getArgNumber() - 1;
   MatchingSubsets subsets;
   if (failed(subsets.populateSubsetOpsAtIterArg(loopLike, iterArg)))
     return loopLike;
