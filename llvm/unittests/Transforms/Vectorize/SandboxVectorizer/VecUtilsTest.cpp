@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
@@ -422,6 +423,80 @@ TEST_F(VecUtilsTest, GetWideType) {
   EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32Ty, 4), Int32X4Ty);
   auto *Int32X8Ty = sandboxir::FixedVectorType::get(Int32Ty, 8);
   EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32X4Ty, 2), Int32X8Ty);
+}
+
+TEST_F(VecUtilsTest, GetCombinedVectorTypeFor) {
+  parseIR(R"IR(
+define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, <2 x i8> %v2xi8, <2 x i16> %v2xi16) {
+  store i8 %i8, ptr %ptr
+  store i16 %i16, ptr %ptr
+  store i32 %i32, ptr %ptr
+  store float %f32, ptr %ptr
+  store double %f64, ptr %ptr
+  store <2 x i8> %v2xi8, ptr %ptr
+  store <2 x i16> %v2xi16, ptr %ptr
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  const auto &DL = F.getParent()->getDataLayout();
+  auto It = BB.begin();
+  auto *Store_i8 = &*It++;
+  auto *Store_i16 = &*It++;
+  auto *Store_i32 = &*It++;
+  auto *Store_f32 = &*It++;
+  auto *Store_f64 = &*It++;
+  auto *Store_2xi8 = &*It++;
+  auto *Store_2xi16 = &*It++;
+
+  auto *I8Ty = sandboxir::IntegerType::get(Ctx, 8);
+  auto *I16Ty = sandboxir::IntegerType::get(Ctx, 16);
+  auto *F32Ty = sandboxir::Type::getFloatTy(Ctx);
+
+  // Check same type.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i8, Store_i8}, DL),
+      sandboxir::FixedVectorType::get(I8Ty, 2));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_2xi8, Store_2xi8}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 4));
+
+  // Check different types, power-of-two.
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i8, Store_i16}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 4));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i8, Store_i16, Store_i32}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 8));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_2xi8, Store_2xi8, Store_2xi16}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 8));
+
+  // Check different types non-power-of-two.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f64}, DL),
+      sandboxir::FixedVectorType::get(F32Ty, 3));
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_i16}, DL),
+      sandboxir::FixedVectorType::get(I16Ty, 3));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i16, Store_i32}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 7));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i16, Store_2xi8}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 5));
+
+  // Mix float and integer.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_f32}, DL),
+      nullptr);
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_f32, Store_2xi8}, DL),
+            nullptr);
 }
 
 TEST_F(VecUtilsTest, GetLowest) {
