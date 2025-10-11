@@ -5341,13 +5341,13 @@ struct AAPotentialConstantValues
 
   /// Return the minimum trailing zeros of potential constants
   unsigned getAssumedMinTrailingZeros() const {
-    if (getAssumedSet().empty())
-      return 0;
-    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth();
+    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth() + 1;
     for (const APInt &It : getAssumedSet()) {
       if (It.countTrailingZeros() < TrailingZeros)
         TrailingZeros = It.countTrailingZeros();
     }
+    if (TrailingZeros > getAssumedSet().begin()->getBitWidth())
+      return 0;
     return TrailingZeros;
   }
   /// See AbstractAttribute::getName()
