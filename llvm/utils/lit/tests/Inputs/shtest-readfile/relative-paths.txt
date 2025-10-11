@@ -1,0 +1,7 @@
+## Tests that readfile works with relative paths.
+# RUN: mkdir -p rel_path_test_folder
+# RUN: echo -n "hello" > rel_path_test_folder/test_file
+# RUN: echo %{readfile:rel_path_test_folder/test_file}
+
+## Fail the test so we can assert on the output.
+# RUN: not echo return

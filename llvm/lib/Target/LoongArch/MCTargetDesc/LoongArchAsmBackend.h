@@ -42,28 +42,16 @@ public:
                 uint64_t &FixedValue, bool IsResolved);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
-
-  // Return Size with extra Nop Bytes for alignment directive in code section.
-  bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
-                                             unsigned &Size) override;
-
-  // Insert target specific fixup type for alignment directive in code section.
-  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     MCAlignFragment &AF) override;
-
-  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                          bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                     bool &WasRelaxed) const override;
-  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+  bool relaxAlign(MCFragment &F, unsigned &Size) override;
+  bool relaxDwarfLineAddr(MCFragment &) const override;
+  bool relaxDwarfCFA(MCFragment &) const override;
+  std::pair<bool, bool> relaxLEB128(MCFragment &F,
                                     int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

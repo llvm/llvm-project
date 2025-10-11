@@ -4,10 +4,10 @@
 program basic
 end program
 
-! CHECK: 1 Program basic
+! CHECK: 1 Program BASIC
 ! CHECK:   1 EndProgramStmt: end program
-! CHECK: End Program basic
+! CHECK: End Program BASIC
 
-! FIR-LABEL: func @_QQmain() attributes {fir.bindc_name = "basic"} {
+! FIR-LABEL: func @_QQmain() attributes {fir.bindc_name = "BASIC"} {
 ! FIR:         return
 ! FIR:       }

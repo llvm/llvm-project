@@ -352,6 +352,13 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestCustomStorageCtor : Test_Type<"TestCustomStorageCtor"> {
+    let mnemonic = "custom_storage_ctor_type";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
+}
+
 def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
   let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
   let mnemonic = "optional_type_string";

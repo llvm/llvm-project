@@ -184,6 +184,12 @@ class StdVectorDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test()
+
     def do_test_ref_and_ptr(self):
         """Test that that file and class static variables display correctly."""
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -214,4 +220,9 @@ class StdVectorDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_ref_and_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ref_and_ptr()
+
+    @add_test_categories(["msvcstl"])
+    def test_ref_and_ptr_msvcstl(self):
+        self.build()
         self.do_test_ref_and_ptr()

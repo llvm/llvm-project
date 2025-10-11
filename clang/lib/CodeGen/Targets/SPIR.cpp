@@ -61,6 +61,9 @@ public:
       QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
+  llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                 llvm::PointerType *T,
+                                 QualType QT) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -118,11 +121,9 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
   if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
     return DefaultABIInfo::classifyReturnType(RetTy);
 
-  if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
-    if (RD->hasFlexibleArrayMember())
-      return DefaultABIInfo::classifyReturnType(RetTy);
-  }
+  if (const auto *RD = RetTy->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyReturnType(RetTy);
 
   // TODO: The AMDGPU ABI is non-trivial to represent in SPIR-V; in order to
   // avoid encoding various architecture specific bits here we return everything
@@ -134,13 +135,14 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().CUDAIsDevice) {
+  if (getContext().getLangOpts().isTargetDevice()) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for HIPSPV/CUDASPV. When the language mode is HIP/CUDA, the
-    // SPIRTargetInfo maps cuda_device to SPIR-V's CrossWorkGroup address space.
+    // pointers for target devices as default address space kernel arguments
+    // are not allowed. We use the opencl_global language address space which
+    // always maps to CrossWorkGroup.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
+    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
     if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
       LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
@@ -186,11 +188,9 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    RAA == CGCXXABI::RAA_DirectInMemory);
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
-    if (RD->hasFlexibleArrayMember())
-      return DefaultABIInfo::classifyArgumentType(Ty);
-  }
+  if (const auto *RD = Ty->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyArgumentType(Ty);
 
   return ABIArgInfo::getDirect(CGT.ConvertType(Ty), 0u, nullptr, false);
 }
@@ -241,6 +241,29 @@ void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
       FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+}
+
+// LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
+// targets use a non-zero encoding for null in certain address spaces.
+// Because SPIR(-V) is a generic target and the bit pattern of null in
+// non-generic AS is unspecified, materialize null in non-generic AS via an
+// addrspacecast from null in generic AS. This allows later lowering to
+// substitute the target's real sentinel value.
+llvm::Constant *
+CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                            llvm::PointerType *PT,
+                                            QualType QT) const {
+  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
+                  ? LangAS::Default
+                  : QT->getPointeeType().getAddressSpace();
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic)
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto &Ctx = CGM.getContext();
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
 }
 
 LangAS
@@ -431,8 +454,7 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
     }
     case SpirvOperandKind::TypeId: {
       QualType TypeOperand = Operand.getResultType();
-      if (auto *RT = TypeOperand->getAs<RecordType>()) {
-        auto *RD = RT->getDecl();
+      if (const auto *RD = TypeOperand->getAsRecordDecl()) {
         assert(RD->isCompleteDefinition() &&
                "Type completion should have been required in Sema");
 
@@ -490,6 +512,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    if (ResAttrs.IsCounter) {
+      llvm::Type *ElemType = llvm::Type::getInt32Ty(Ctx);
+      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {ElemType},
+                                      {StorageClass, true});
+    }
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;
@@ -505,7 +533,8 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
 
     llvm::Type *BufferLayoutTy =
         HLSLBufferLayoutBuilder(CGM, "spirv.Layout")
-            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
+                              Packoffsets);
     uint32_t StorageClass = /* Uniform storage class */ 2;
     return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferLayoutTy},
                                     {StorageClass, false});
@@ -517,14 +546,65 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
   return nullptr;
 }
 
+static unsigned
+getImageFormat(const LangOptions &LangOpts,
+               const HLSLAttributedResourceType::Attributes &attributes,
+               llvm::Type *SampledType, QualType Ty, unsigned NumChannels) {
+  // For images with `Sampled` operand equal to 2, there are restrictions on
+  // using the Unknown image format. To avoid these restrictions in common
+  // cases, we guess an image format for them based on the sampled type and the
+  // number of channels. This is intended to match the behaviour of DXC.
+  if (LangOpts.HLSLSpvUseUnknownImageFormat ||
+      attributes.ResourceClass != llvm::dxil::ResourceClass::UAV) {
+    return 0; // Unknown
+  }
+
+  if (SampledType->isIntegerTy(32)) {
+    if (Ty->isSignedIntegerType()) {
+      if (NumChannels == 1)
+        return 24; // R32i
+      if (NumChannels == 2)
+        return 25; // Rg32i
+      if (NumChannels == 4)
+        return 21; // Rgba32i
+    } else {
+      if (NumChannels == 1)
+        return 33; // R32ui
+      if (NumChannels == 2)
+        return 35; // Rg32ui
+      if (NumChannels == 4)
+        return 30; // Rgba32ui
+    }
+  } else if (SampledType->isIntegerTy(64)) {
+    if (NumChannels == 1) {
+      if (Ty->isSignedIntegerType()) {
+        return 41; // R64i
+      }
+      return 40; // R64ui
+    }
+  } else if (SampledType->isFloatTy()) {
+    if (NumChannels == 1)
+      return 3; // R32f
+    if (NumChannels == 2)
+      return 6; // Rg32f
+    if (NumChannels == 4)
+      return 1; // Rgba32f
+  }
+
+  return 0; // Unknown
+}
+
 llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
     const HLSLAttributedResourceType::Attributes &attributes, QualType Ty,
     CodeGenModule &CGM) const {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
+  unsigned NumChannels = 1;
   Ty = Ty->getCanonicalTypeUnqualified();
-  if (const VectorType *V = dyn_cast<VectorType>(Ty))
+  if (const VectorType *V = dyn_cast<VectorType>(Ty)) {
+    NumChannels = V->getNumElements();
     Ty = V->getElementType();
+  }
   assert(!Ty->isVectorType() && "We still have a vector type.");
 
   llvm::Type *SampledType = CGM.getTypes().ConvertTypeForMem(Ty);
@@ -560,8 +640,8 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
       attributes.ResourceClass == llvm::dxil::ResourceClass::UAV ? 2 : 1;
 
   // Image format.
-  // Setting to unknown for now.
-  IntParams[5] = 0;
+  IntParams[5] = getImageFormat(CGM.getLangOpts(), attributes, SampledType, Ty,
+                                NumChannels);
 
   llvm::TargetExtType *ImageType =
       llvm::TargetExtType::get(Ctx, Name, {SampledType}, IntParams);

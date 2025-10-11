@@ -48,7 +48,7 @@ static void ProcessHandle(const HandleRec &H, raw_ostream &OS) {
     exit(1);
   }
 
-  auto ImplName = H.getName().substr(0, H.getName().size() - 9) + "_impl_t";
+  auto ImplName = getHandleImplName(H);
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", H.getDesc());
   OS << formatv("typedef struct {0} *{1};\n", ImplName, H.getName());
@@ -131,7 +131,8 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv("/// @brief {0}\n", Enum.getDesc());
   OS << formatv("typedef enum {0} {{\n", Enum.getName());
 
-  uint32_t EtorVal = 0;
+  // Bitfields start from 1, other enums from 0
+  uint32_t EtorVal = Enum.isBitField();
   for (const auto &EnumVal : Enum.getValues()) {
     if (Enum.isTyped()) {
       OS << MakeComment(
@@ -141,7 +142,12 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
       OS << MakeComment(EnumVal.getDesc());
     }
     OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(),
-                  EnumVal.getName(), EtorVal++);
+                  EnumVal.getName(), EtorVal);
+    if (Enum.isBitField()) {
+      EtorVal <<= 1u;
+    } else {
+      ++EtorVal;
+    }
   }
 
   // Add last_element/force uint32 val
@@ -220,31 +226,23 @@ OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << FileHeader;
-  // Generate main API definitions
-  for (auto *R : Records.getAllDerivedDefinitions("APIObject")) {
-    if (R->isSubClassOf("Macro")) {
-      ProcessMacro(MacroRec{R}, OS);
-    } else if (R->isSubClassOf("Typedef")) {
-      ProcessTypedef(TypedefRec{R}, OS);
-    } else if (R->isSubClassOf("Handle")) {
-      ProcessHandle(HandleRec{R}, OS);
-    } else if (R->isSubClassOf("Function")) {
-      ProcessFunction(FunctionRec{R}, OS);
-    } else if (R->isSubClassOf("Enum")) {
-      ProcessEnum(EnumRec{R}, OS);
-    } else if (R->isSubClassOf("Struct")) {
-      ProcessStruct(StructRec{R}, OS);
-    } else if (R->isSubClassOf("FptrTypedef")) {
-      ProcessFptrTypedef(FptrTypedefRec{R}, OS);
-    }
-  }
 
-  // Generate auxiliary definitions (func param structs etc)
+  // Generate main API definitions
+  for (auto *R : Records.getAllDerivedDefinitions("Macro"))
+    ProcessMacro(MacroRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Handle"))
+    ProcessHandle(HandleRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Enum"))
+    ProcessEnum(EnumRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Typedef"))
+    ProcessTypedef(TypedefRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("FptrTypedef"))
+    ProcessFptrTypedef(FptrTypedefRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Struct"))
+    ProcessStruct(StructRec{R}, OS);
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     ProcessFuncParamStruct(FunctionRec{R}, OS);
-  }
-
-  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    ProcessFunction(FunctionRec{R}, OS);
     ProcessFuncWithCodeLocVariant(FunctionRec{R}, OS);
   }
 

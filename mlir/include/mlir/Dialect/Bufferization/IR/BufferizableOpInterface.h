@@ -260,12 +260,12 @@ struct BufferizationOptions {
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
-  /// Tensor -> MemRef type converter.
-  /// Parameters: tensor type, memory space, func op, bufferization options
+  /// Tensor-like -> Buffer-like type conversion.
+  /// Parameters: tensor-like type, memory space, func op, bufferization options
   using FunctionArgTypeConverterFn =
-      std::function<BaseMemRefType(TensorType, Attribute memorySpace,
+      std::function<BufferLikeType(TensorLikeType, Attribute memorySpace,
                                    func::FuncOp, const BufferizationOptions &)>;
-  /// Tensor -> MemRef type converter.
+  /// Tensor -> MemRef type conversion.
   /// Parameters: tensor type, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       TensorType, Attribute memorySpace, const BufferizationOptions &)>;
@@ -335,10 +335,12 @@ struct BufferizationOptions {
   /// predictable.
   void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
 
-  /// Type converter from tensors to memrefs. This type converter is used to
-  /// determine bufferized function argument and result types. By default, a
-  /// type converter that returns a memref type with a fully dynamic layout map
-  /// is used.
+  /// Type conversion from tensors to buffers. This type conversion is used to
+  /// determine bufferized function argument and result types.
+  ///
+  /// By default, if tensor is a (builtin) tensor type, it is converted to a
+  /// memref type with a fully dynamic layout map; if tensor is a (generic)
+  /// tensor-like type, it is converted using TensorLikeType::getBufferType().
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
   FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
@@ -350,10 +352,9 @@ struct BufferizationOptions {
   /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
   bool inferFunctionResultLayout = true;
 
-  /// Type converter from tensors to memrefs. This type converter is used if no
-  /// memref type could be inferred during bufferization. By default, a type
-  /// converter that returns a memref type with a fully dynamic layout map is
-  /// used.
+  /// Type conversion from tensors to memrefs. This type conversion is used if
+  /// no memref type could be inferred during bufferization. By default, returns
+  /// a memref type with a fully dynamic layout map.
   UnknownTypeConverterFn unknownTypeConverterFn = nullptr;
 
   // Use during type conversion to determine the memory space for memref based
@@ -651,7 +652,8 @@ void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
 template <typename OpTy, typename... Args>
 OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
                                   Args &&...args) {
-  auto newOp = rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+  auto newOp =
+      OpTy::create(rewriter, op->getLoc(), std::forward<Args>(args)...);
   replaceOpWithBufferizedValues(rewriter, op, newOp->getResults());
   return newOp;
 }

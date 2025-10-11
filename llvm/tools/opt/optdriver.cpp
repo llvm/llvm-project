@@ -217,20 +217,20 @@ static cl::opt<bool> VerifyDebugInfoPreserve(
     cl::desc("Start the pipeline with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<bool> EnableProfileVerification(
+    "enable-profcheck",
+#if defined(LLVM_ENABLE_PROFCHECK)
+    cl::init(true),
+#else
+    cl::init(false),
+#endif
+    cl::desc(
+        "Start the pipeline with prof-inject and end it with prof-verify"));
+
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
                                          cl::init(""));
-
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden);
 
 static cl::opt<bool> RunTwice("run-twice",
                               cl::desc("Run all passes twice, re-using the "
@@ -330,7 +330,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-lower-kernel-attributes",
       "amdgpu-propagate-attributes-early",
       "amdgpu-propagate-attributes-late",
-      "amdgpu-unify-metadata",
       "amdgpu-printf-runtime-binding",
       "amdgpu-always-inline"};
   if (llvm::is_contained(PassNameExactToIgnore, Pass))
@@ -501,7 +500,7 @@ extern "C" int optMain(
   if (!DisableDITypeMap)
     Context.enableDebugTypeODRUniquing();
 
-  Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
+  Expected<LLVMRemarkFileHandle> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
                                    RemarksFormat, RemarksWithHotness,
                                    RemarksHotnessThreshold);
@@ -509,7 +508,7 @@ extern "C" int optMain(
     errs() << toString(std::move(E)) << '\n';
     return 1;
   }
-  std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
+  LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
@@ -744,9 +743,10 @@ extern "C" int optMain(
     return runPassPipeline(
                argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
                RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
-               OK, VK, PreserveAssemblyUseListOrder,
-               PreserveBitcodeUseListOrder, EmitSummaryIndex, EmitModuleHash,
-               EnableDebugify, VerifyDebugInfoPreserve, UnifiedLTO)
+               OK, VK, /* ShouldPreserveAssemblyUseListOrder */ false,
+               /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
+               EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
+               EnableProfileVerification, UnifiedLTO)
                ? 0
                : 1;
   }
@@ -867,9 +867,11 @@ extern "C" int optMain(
       OS = BOS.get();
     }
     if (OutputAssembly)
-      Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
+      Passes.add(createPrintModulePass(
+          *OS, "", /* ShouldPreserveAssemblyUseListOrder */ false));
     else
-      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder));
+      Passes.add(createBitcodeWriterPass(
+          *OS, /* ShouldPreserveBitcodeUseListOrder */ true));
   }
 
   // Before executing passes, print the final values of the LLVM options.

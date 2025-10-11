@@ -150,7 +150,7 @@ any other naming scheme will confuse ``llvm-config`` and produce a lot of
 To make your target actually do something, you need to implement a subclass of
 ``TargetMachine``.  This implementation should typically be in the file
 ``lib/Target/DummyTargetMachine.cpp``, but any file in the ``lib/Target``
-directory will be built and should work.  To use LLVM's target independent code
+directory will be built and should work.  To use LLVM's target-independent code
 generator, you should do what all current machine backends do: create a
 subclass of ``CodeGenTargetMachineImpl``.  (To create a target from scratch, create a
 subclass of ``TargetMachine``.)
@@ -1671,7 +1671,7 @@ For example in ``SparcTargetAsmInfo.cpp``:
   }
 
 The X86 assembly printer implementation (``X86TargetAsmInfo``) is an example
-where the target specific ``TargetAsmInfo`` class uses an overridden methods:
+where the target-specific ``TargetAsmInfo`` class uses an overridden methods:
 ``ExpandInlineAsm``.
 
 A target-specific implementation of ``AsmPrinter`` is written in

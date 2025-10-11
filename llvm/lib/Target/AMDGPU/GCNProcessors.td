@@ -9,11 +9,11 @@
 // The code produced for "generic" is only useful for tests and cannot
 // reasonably be expected to execute on any particular target.
 def : ProcessorModel<"generic", NoSchedModel,
-  [FeatureGDS, FeatureGWS]
+  []
 >;
 
 def : ProcessorModel<"generic-hsa", NoSchedModel,
-  [FeatureGDS, FeatureGWS, FeatureFlatAddressSpace]
+  [FeatureFlatAddressSpace]
 >;
 
 //===------------------------------------------------------------===//
@@ -328,4 +328,8 @@ def : ProcessorModel<"gfx12-generic", GFX12SpeedModel,
 
 def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
   FeatureISAVersion12_50.Features
+>;
+
+def : ProcessorModel<"gfx1251", GFX1250SpeedModel,
+  FeatureISAVersion12_51.Features
 >;

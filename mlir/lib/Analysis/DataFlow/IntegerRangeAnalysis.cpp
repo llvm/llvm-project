@@ -19,15 +19,19 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <cassert>
 #include <optional>
 #include <utility>
@@ -73,9 +77,17 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   else
     dialect = value.getParentBlock()->getParentOp()->getDialect();
 
-  Type type = getElementTypeOrSelf(value);
-  solver->propagateIfChanged(
-      cv, cv->join(ConstantValue(IntegerAttr::get(type, *constant), dialect)));
+  Attribute cstAttr;
+  if (isa<IntegerType, IndexType>(value.getType())) {
+    cstAttr = IntegerAttr::get(value.getType(), *constant);
+  } else if (auto shapedTy = dyn_cast<ShapedType>(value.getType())) {
+    cstAttr = SplatElementsAttr::get(shapedTy, *constant);
+  } else {
+    llvm::report_fatal_error(
+        Twine("FIXME: Don't know how to create a constant for this type: ") +
+        mlir::debugString(value.getType()));
+  }
+  solver->propagateIfChanged(cv, cv->join(ConstantValue(cstAttr, dialect)));
 }
 
 LogicalResult IntegerRangeAnalysis::visitOperation(
@@ -87,7 +99,8 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
     return success();
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
+  LDBG() << "Inferring ranges for "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   auto argRanges = llvm::map_to_vector(
       operands, [](const IntegerValueRangeLattice *lattice) {
         return lattice->getValue();
@@ -99,7 +112,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
       return;
     assert(llvm::is_contained(op->getResults(), result));
 
-    LLVM_DEBUG(llvm::dbgs() << "Inferred range " << attrs << "\n");
+    LDBG() << "Inferred range " << attrs;
     IntegerValueRangeLattice *lattice = results[result.getResultNumber()];
     IntegerValueRange oldRange = lattice->getValue();
 
@@ -114,7 +127,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
     });
     if (isYieldedResult && !oldRange.isUninitialized() &&
         !(lattice->getValue() == oldRange)) {
-      LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
+      LDBG() << "Loop variant loop result detected";
       changed |= lattice->join(IntegerValueRange::getMaxRange(v));
     }
     propagateIfChanged(lattice, changed);
@@ -128,7 +141,8 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     Operation *op, const RegionSuccessor &successor,
     ArrayRef<IntegerValueRangeLattice *> argLattices, unsigned firstIndex) {
   if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
-    LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
+    LDBG() << "Inferring ranges for "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
       return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
@@ -141,7 +155,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
         return;
 
-      LLVM_DEBUG(llvm::dbgs() << "Inferred range " << attrs << "\n");
+      LDBG() << "Inferred range " << attrs;
       IntegerValueRangeLattice *lattice = argLattices[arg.getArgNumber()];
       IntegerValueRange oldRange = lattice->getValue();
 
@@ -156,7 +170,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       });
       if (isYieldedValue && !oldRange.isUninitialized() &&
           !(lattice->getValue() == oldRange)) {
-        LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
+        LDBG() << "Loop variant loop result detected";
         changed |= lattice->join(IntegerValueRange::getMaxRange(v));
       }
       propagateIfChanged(lattice, changed);

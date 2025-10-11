@@ -49,7 +49,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -244,8 +243,6 @@ namespace {
     bool IsProfitableToHoist(MachineInstr &MI, MachineLoop *CurLoop);
 
     bool IsGuaranteedToExecute(MachineBasicBlock *BB, MachineLoop *CurLoop);
-
-    bool isTriviallyReMaterializable(const MachineInstr &MI) const;
 
     void EnterScope(MachineBasicBlock *MBB);
 
@@ -553,23 +550,13 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
       continue;
     }
 
-    if (MO.isImplicit()) {
-      for (MCRegUnit Unit : TRI->regunits(Reg))
-        RUClobbers.set(Unit);
-      if (!MO.isDead())
-        // Non-dead implicit def? This cannot be hoisted.
+    // FIXME: For now, avoid instructions with multiple defs, unless it's dead.
+    if (!MO.isDead()) {
+      if (Def)
         RuledOut = true;
-      // No need to check if a dead implicit def is also defined by
-      // another instruction.
-      continue;
+      else
+        Def = Reg;
     }
-
-    // FIXME: For now, avoid instructions with multiple defs, unless
-    // it's a dead implicit def.
-    if (Def)
-      RuledOut = true;
-    else
-      Def = Reg;
 
     // If we have already seen another instruction that defines the same
     // register, then this is not safe.  Two defs is indicated by setting a
@@ -779,23 +766,6 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
   }
 
   SpeculationState = SpeculateFalse;
-  return true;
-}
-
-/// Check if \p MI is trivially remateralizable and if it does not have any
-/// virtual register uses. Even though rematerializable RA might not actually
-/// rematerialize it in this scenario. In that case we do not want to hoist such
-/// instruction out of the loop in a belief RA will sink it back if needed.
-bool MachineLICMImpl::isTriviallyReMaterializable(
-    const MachineInstr &MI) const {
-  if (!TII->isTriviallyReMaterializable(MI))
-    return false;
-
-  for (const MachineOperand &MO : MI.all_uses()) {
-    if (MO.getReg().isVirtual())
-      return false;
-  }
-
   return true;
 }
 
@@ -1311,9 +1281,9 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
     return false;
   }
 
-  // Rematerializable instructions should always be hoisted providing the
-  // register allocator can just pull them down again when needed.
-  if (isTriviallyReMaterializable(MI))
+  // Trivially rematerializable instructions should always be hoisted
+  // providing the register allocator can just pull them down again when needed.
+  if (TII->isTriviallyReMaterializable(MI))
     return true;
 
   // FIXME: If there are long latency loop-invariant instructions inside the
@@ -1397,7 +1367,7 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
 
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
-  if (!isTriviallyReMaterializable(MI) &&
+  if (!TII->isTriviallyReMaterializable(MI) &&
       !MI.isDereferenceableInvariantLoad()) {
     LLVM_DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
     return false;
@@ -1431,7 +1401,7 @@ MachineInstr *MachineLICMImpl::ExtractHoistableLoad(MachineInstr *MI,
   if (NewOpc == 0) return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
   MachineFunction &MF = *MI->getMF();
-  const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI, MF);
+  const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI);
   // Ok, we're unfolding. Create a temporary register and do the unfold.
   Register Reg = MRI->createVirtualRegister(RC);
 

@@ -42,38 +42,61 @@ inline RT_API_ATTRS A &ExtractElement(IoStatementState &io,
 }
 
 // Defined formatted I/O (maybe)
-static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
+static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     IoStatementState &io, const Descriptor &descriptor,
     const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special,
     const SubscriptValue subscripts[]) {
-  Fortran::common::optional<DataEdit> peek{
-      io.GetNextDataEdit(0 /*to peek at it*/)};
+  // Look at the next data edit descriptor.  If this is list-directed input,
+  // the "maxRepeat=0" argument will prevent the input from advancing over an
+  // initial '(' that shouldn't be consumed now as the start of a real part.
+  // It also allows reaching EOF without crashing, since the EOF only matters
+  // if a child READ is actually performed.
+  common::optional<DataEdit> peek{io.GetNextDataEdit(/*maxRepeat=*/0)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
-          peek->descriptor == DataEdit::ListDirected)) {
+          peek->descriptor == DataEdit::ListDirected ||
+          peek->descriptor == DataEdit::ListDirectedRealPart)) {
     // Defined formatting
     IoErrorHandler &handler{io.GetIoErrorHandler()};
-    DataEdit edit{*io.GetNextDataEdit(1)}; // now consume it; no repeats
-    RUNTIME_CHECK(handler, edit.descriptor == peek->descriptor);
+    DataEdit edit{peek->descriptor == DataEdit::ListDirectedRealPart
+            ? *peek
+            : *io.GetNextDataEdit(1)};
     char ioType[2 + edit.maxIoTypeChars];
     auto ioTypeLen{std::size_t{2} /*"DT"*/ + edit.ioTypeChars};
+    auto &definedIoArgs{*io.get_if<DefinedIoArgs>()};
     if (edit.descriptor == DataEdit::DefinedDerivedType) {
       ioType[0] = 'D';
       ioType[1] = 'T';
-      std::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
+      runtime::memcpy(ioType + 2, definedIoArgs.ioType, edit.ioTypeChars);
     } else {
       runtime::strcpy(
           ioType, io.mutableModes().inNamelist ? "NAMELIST" : "LISTDIRECTED");
       ioTypeLen = runtime::strlen(ioType);
     }
+    // V_LIST= argument
     StaticDescriptor<1, true> vListStatDesc;
     Descriptor &vListDesc{vListStatDesc.descriptor()};
-    vListDesc.Establish(TypeCategory::Integer, sizeof(int), nullptr, 1);
-    vListDesc.set_base_addr(edit.vList);
-    vListDesc.GetDimension(0).SetBounds(1, edit.vListEntries);
-    vListDesc.GetDimension(0).SetByteStride(
-        static_cast<SubscriptValue>(sizeof(int)));
+    bool integer8{special.specialCaseFlag()};
+    std::int64_t vList64[edit.maxVListEntries];
+    if (integer8) {
+      // Convert v_list values to INTEGER(8)
+      for (int j{0}; j < edit.vListEntries; ++j) {
+        vList64[j] = definedIoArgs.vList[j];
+      }
+      vListDesc.Establish(
+          TypeCategory::Integer, sizeof(std::int64_t), nullptr, 1);
+      vListDesc.set_base_addr(vList64);
+      vListDesc.GetDimension(0).SetBounds(1, edit.vListEntries);
+      vListDesc.GetDimension(0).SetByteStride(
+          static_cast<SubscriptValue>(sizeof(std::int64_t)));
+    } else {
+      vListDesc.Establish(TypeCategory::Integer, sizeof(int), nullptr, 1);
+      vListDesc.set_base_addr(definedIoArgs.vList);
+      vListDesc.GetDimension(0).SetBounds(1, edit.vListEntries);
+      vListDesc.GetDimension(0).SetByteStride(
+          static_cast<SubscriptValue>(sizeof(int)));
+    }
     ExternalFileUnit *actualExternal{io.GetExternalFileUnit()};
     ExternalFileUnit *external{actualExternal};
     if (!external) {
@@ -84,13 +107,13 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
     ChildIo &child{external->PushChildIo(io)};
     // Child formatted I/O is nonadvancing by definition (F'2018 12.6.2.4).
     auto restorer{common::ScopedSet(io.mutableModes().nonAdvancing, true)};
-    int unit{external->unitNumber()};
-    int ioStat{IostatOk};
+    std::int32_t unit{external->unitNumber()};
+    std::int32_t ioStat{IostatOk};
     char ioMsg[100];
-    Fortran::common::optional<std::int64_t> startPos;
+    common::optional<std::int64_t> startPos;
     if (edit.descriptor == DataEdit::DefinedDerivedType &&
         special.which() == typeInfo::SpecialBinding::Which::ReadFormatted) {
-      // DT is an edit descriptor so everything that the child
+      // DT is an edit descriptor, so everything that the child
       // I/O subroutine reads counts towards READ(SIZE=).
       startPos = io.InquirePos();
     }
@@ -98,23 +121,45 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
         derived.binding().OffsetElement<const typeInfo::Binding>()};
     if (special.IsArgDescriptor(0)) {
       // "dtv" argument is "class(t)", pass a descriptor
-      auto *p{special.GetProc<void (*)(const Descriptor &, int &, char *,
-          const Descriptor &, int &, char *, std::size_t, std::size_t)>(
-          bindings)};
       StaticDescriptor<1, true, 10 /*?*/> elementStatDesc;
       Descriptor &elementDesc{elementStatDesc.descriptor()};
       elementDesc.Establish(
           derived, nullptr, 0, nullptr, CFI_attribute_pointer);
       elementDesc.set_base_addr(descriptor.Element<char>(subscripts));
-      p(elementDesc, unit, ioType, vListDesc, ioStat, ioMsg, ioTypeLen,
-          sizeof ioMsg);
+      if (integer8) { // 64-bit UNIT=/IOSTAT=
+        std::int64_t unit64{unit};
+        std::int64_t ioStat64{ioStat};
+        auto *p{special.GetProc<void (*)(const Descriptor &, std::int64_t &,
+            char *, const Descriptor &, std::int64_t &, char *, std::size_t,
+            std::size_t)>(bindings)};
+        p(elementDesc, unit64, ioType, vListDesc, ioStat64, ioMsg, ioTypeLen,
+            sizeof ioMsg);
+        ioStat = ioStat64;
+      } else { // 32-bit UNIT=/IOSTAT=
+        auto *p{special.GetProc<void (*)(const Descriptor &, std::int32_t &,
+            char *, const Descriptor &, std::int32_t &, char *, std::size_t,
+            std::size_t)>(bindings)};
+        p(elementDesc, unit, ioType, vListDesc, ioStat, ioMsg, ioTypeLen,
+            sizeof ioMsg);
+      }
     } else {
       // "dtv" argument is "type(t)", pass a raw pointer
-      auto *p{special.GetProc<void (*)(const void *, int &, char *,
-          const Descriptor &, int &, char *, std::size_t, std::size_t)>(
-          bindings)};
-      p(descriptor.Element<char>(subscripts), unit, ioType, vListDesc, ioStat,
-          ioMsg, ioTypeLen, sizeof ioMsg);
+      if (integer8) { // 64-bit UNIT= and IOSTAT=
+        std::int64_t unit64{unit};
+        std::int64_t ioStat64{ioStat};
+        auto *p{special.GetProc<void (*)(const void *, std::int64_t &, char *,
+            const Descriptor &, std::int64_t &, char *, std::size_t,
+            std::size_t)>(bindings)};
+        p(descriptor.Element<char>(subscripts), unit64, ioType, vListDesc,
+            ioStat64, ioMsg, ioTypeLen, sizeof ioMsg);
+        ioStat = ioStat64;
+      } else { // 32-bit UNIT= and IOSTAT=
+        auto *p{special.GetProc<void (*)(const void *, std::int32_t &, char *,
+            const Descriptor &, std::int32_t &, char *, std::size_t,
+            std::size_t)>(bindings)};
+        p(descriptor.Element<char>(subscripts), unit, ioType, vListDesc, ioStat,
+            ioMsg, ioTypeLen, sizeof ioMsg);
+      }
     }
     handler.Forward(ioStat, ioMsg, sizeof ioMsg);
     external->PopChildIo(child);
@@ -128,11 +173,13 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
       io.GotChar(io.InquirePos() - *startPos);
     }
     return handler.GetIoStat() == IostatOk;
+  } else if (peek && peek->descriptor == DataEdit::ListDirectedNullValue) {
+    return false;
   } else {
     // There's a defined I/O subroutine, but there's a FORMAT present and
     // it does not have a DT data edit descriptor, so apply default formatting
     // to the components of the derived type as usual.
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 
@@ -458,11 +505,16 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
                       ? common::DefinedIo::ReadUnformatted
                       : common::DefinedIo::WriteUnformatted)}) {
             if (definedIo->subroutine) {
+              std::uint8_t isArgDescriptorSet{0};
+              if (definedIo->flags & IsDtvArgPolymorphic) {
+                isArgDescriptorSet = 1;
+              }
               typeInfo::SpecialBinding special{DIR == Direction::Input
                       ? typeInfo::SpecialBinding::Which::ReadUnformatted
                       : typeInfo::SpecialBinding::Which::WriteUnformatted,
-                  definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
-                  false};
+                  definedIo->subroutine, isArgDescriptorSet,
+                  /*IsTypeBound=*/false,
+                  /*specialCaseFlag=*/!!(definedIo->flags & DefinedIoInteger8)};
               if (DefinedUnformattedIo(io_, instance_, *type, special)) {
                 anyIoTookPlace_ = true;
                 return StatOk;
@@ -719,8 +771,11 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
             nonTbpSpecial_.emplace(DIR == Direction::Input
                     ? typeInfo::SpecialBinding::Which::ReadFormatted
                     : typeInfo::SpecialBinding::Which::WriteFormatted,
-                definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
-                false);
+                definedIo->subroutine,
+                /*isArgDescriptorSet=*/
+                (definedIo->flags & IsDtvArgPolymorphic) ? 1 : 0,
+                /*isTypeBound=*/false,
+                /*specialCaseFlag=*/!!(definedIo->flags & DefinedIoInteger8));
             special_ = &*nonTbpSpecial_;
           }
         }
@@ -790,12 +845,22 @@ template RT_API_ATTRS int DescriptorIoTicket<Direction::Input>::Continue(
 
 template <Direction DIR>
 RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
-    const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
+    const Descriptor &descriptor, const NonTbpDefinedIoTable *originalTable) {
   bool anyIoTookPlace{false};
+  const NonTbpDefinedIoTable *defaultTable{io.nonTbpDefinedIoTable()};
+  const NonTbpDefinedIoTable *table{originalTable};
+  if (!table) {
+    table = defaultTable;
+  } else if (table != defaultTable) {
+    io.set_nonTbpDefinedIoTable(table); // for nested I/O
+  }
   WorkQueue workQueue{io.GetIoErrorHandler()};
   if (workQueue.BeginDescriptorIo<DIR>(io, descriptor, table, anyIoTookPlace) ==
       StatContinue) {
     workQueue.Run();
+  }
+  if (defaultTable != table) {
+    io.set_nonTbpDefinedIoTable(defaultTable);
   }
   return anyIoTookPlace;
 }

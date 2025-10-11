@@ -22,23 +22,28 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-transfer-opt"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 
 /// Return the ancestor op in the region or nullptr if the region is not
 /// an ancestor of the op.
 static Operation *findAncestorOpInRegion(Region *region, Operation *op) {
+  LDBG() << "    Finding ancestor of " << *op << " in region";
   for (; op != nullptr && op->getParentRegion() != region;
        op = op->getParentOp())
     ;
+  if (op) {
+    LDBG() << "    -> Ancestor: " << *op;
+  } else {
+    LDBG() << "    -> Ancestor: nullptr";
+  }
   return op;
 }
 
@@ -51,8 +56,11 @@ public:
   void deadStoreOp(vector::TransferWriteOp);
   void storeToLoadForwarding(vector::TransferReadOp);
   void removeDeadOp() {
-    for (Operation *op : opToErase)
+    LDBG() << "Removing " << opToErase.size() << " dead operations";
+    for (Operation *op : opToErase) {
+      LDBG() << "  -> Erasing: " << *op;
       rewriter.eraseOp(op);
+    }
     opToErase.clear();
   }
 
@@ -68,12 +76,17 @@ private:
 /// Return true if there is a path from start operation to dest operation,
 /// otherwise return false. The operations have to be in the same region.
 bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
+  LDBG() << "    Checking reachability from " << *start << " to " << *dest;
   assert(start->getParentRegion() == dest->getParentRegion() &&
          "This function only works for ops i the same region");
   // Simple case where the start op dominate the destination.
-  if (dominators.dominates(start, dest))
+  if (dominators.dominates(start, dest)) {
+    LDBG() << "    -> Start dominates dest, reachable";
     return true;
-  return start->getBlock()->isReachable(dest->getBlock());
+  }
+  bool blockReachable = start->getBlock()->isReachable(dest->getBlock());
+  LDBG() << "    -> Block reachable: " << blockReachable;
+  return blockReachable;
 }
 
 /// For transfer_write to overwrite fully another transfer_write must:
@@ -88,75 +101,125 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
 /// transfer_write is dead if all reads that can be reached from the potentially
 /// dead transfer_write are dominated by the overwriting transfer_write.
 void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
-  LLVM_DEBUG(DBGS() << "Candidate for dead store: " << *write.getOperation()
-                    << "\n");
+  LDBG() << "=== Starting deadStoreOp analysis for: " << *write.getOperation();
   llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
   Value source = memref::skipViewLikeOps(cast<MemrefValue>(write.getBase()));
+  LDBG() << "Source memref (after skipping view-like ops): " << source;
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
+  LDBG() << "Found " << users.size() << " users of source memref";
   llvm::SmallDenseSet<Operation *, 32> processed;
   while (!users.empty()) {
     Operation *user = users.pop_back_val();
+    LDBG() << "Processing user: " << *user;
     // If the user has already been processed skip.
-    if (!processed.insert(user).second)
-      continue;
-    if (isa<ViewLikeOpInterface>(user)) {
-      users.append(user->getUsers().begin(), user->getUsers().end());
+    if (!processed.insert(user).second) {
+      LDBG() << "  -> Already processed, skipping";
       continue;
     }
-    if (isMemoryEffectFree(user))
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      LDBG() << "  -> View-like operation, following to destination";
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
-    if (user == write.getOperation())
+    }
+    if (isMemoryEffectFree(user)) {
+      LDBG() << "  -> Memory effect free, skipping";
       continue;
+    }
+    if (user == write.getOperation()) {
+      LDBG() << "  -> Same as write operation, skipping";
+      continue;
+    }
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
+      LDBG() << "  -> Found transfer_write candidate: " << *nextWrite;
       // Check candidate that can override the store.
-      if (memref::isSameViewOrTrivialAlias(
-              cast<MemrefValue>(nextWrite.getBase()),
-              cast<MemrefValue>(write.getBase())) &&
-          checkSameValueWAW(nextWrite, write) &&
-          postDominators.postDominates(nextWrite, write)) {
+      bool sameView = memref::isSameViewOrTrivialAlias(
+          cast<MemrefValue>(nextWrite.getBase()),
+          cast<MemrefValue>(write.getBase()));
+      bool sameValue = checkSameValueWAW(nextWrite, write);
+      bool postDominates = postDominators.postDominates(nextWrite, write);
+      LDBG() << "    -> Same view: " << sameView
+             << ", Same value: " << sameValue
+             << ", Post-dominates: " << postDominates;
+
+      if (sameView && sameValue && postDominates) {
+        LDBG() << "    -> Valid overwrite candidate found";
         if (firstOverwriteCandidate == nullptr ||
-            postDominators.postDominates(firstOverwriteCandidate, nextWrite))
+            postDominators.postDominates(firstOverwriteCandidate, nextWrite)) {
+          LDBG() << "    -> New first overwrite candidate: " << *nextWrite;
           firstOverwriteCandidate = nextWrite;
-        else
+        } else {
+          LDBG() << "    -> Keeping existing first overwrite candidate";
           assert(
               postDominators.postDominates(nextWrite, firstOverwriteCandidate));
+        }
+        continue;
+      }
+      LDBG() << "    -> Not a valid overwrite candidate";
+    }
+    if (auto transferOp = dyn_cast<VectorTransferOpInterface>(user)) {
+      LDBG() << "  -> Found vector transfer operation: " << *transferOp;
+      // Don't need to consider disjoint accesses.
+      bool isDisjoint = vector::isDisjointTransferSet(
+          cast<VectorTransferOpInterface>(write.getOperation()),
+          cast<VectorTransferOpInterface>(transferOp.getOperation()),
+          /*testDynamicValueUsingBounds=*/true);
+      LDBG() << "    -> Is disjoint: " << isDisjoint;
+      if (isDisjoint) {
+        LDBG() << "    -> Skipping disjoint access";
         continue;
       }
     }
-    if (auto transferOp = dyn_cast<VectorTransferOpInterface>(user)) {
-      // Don't need to consider disjoint accesses.
-      if (vector::isDisjointTransferSet(
-              cast<VectorTransferOpInterface>(write.getOperation()),
-              cast<VectorTransferOpInterface>(transferOp.getOperation()),
-              /*testDynamicValueUsingBounds=*/true))
-        continue;
-    }
+    LDBG() << "  -> Adding to blocking accesses: " << *user;
     blockingAccesses.push_back(user);
   }
-  if (firstOverwriteCandidate == nullptr)
+  LDBG() << "Finished processing users. Found " << blockingAccesses.size()
+         << " blocking accesses";
+
+  if (firstOverwriteCandidate == nullptr) {
+    LDBG() << "No overwrite candidate found, store is not dead";
     return;
+  }
+
+  LDBG() << "First overwrite candidate: " << *firstOverwriteCandidate;
   Region *topRegion = firstOverwriteCandidate->getParentRegion();
   Operation *writeAncestor = findAncestorOpInRegion(topRegion, write);
   assert(writeAncestor &&
          "write op should be recursively part of the top region");
+  LDBG() << "Write ancestor in top region: " << *writeAncestor;
 
+  LDBG() << "Checking " << blockingAccesses.size()
+         << " blocking accesses for reachability";
   for (Operation *access : blockingAccesses) {
+    LDBG() << "Checking blocking access: " << *access;
     Operation *accessAncestor = findAncestorOpInRegion(topRegion, access);
     // TODO: if the access and write have the same ancestor we could recurse in
     // the region to know if the access is reachable with more precision.
-    if (accessAncestor == nullptr ||
-        !isReachable(writeAncestor, accessAncestor))
+    if (accessAncestor == nullptr) {
+      LDBG() << "  -> No ancestor in top region, skipping";
       continue;
-    if (!dominators.dominates(firstOverwriteCandidate, accessAncestor)) {
-      LLVM_DEBUG(DBGS() << "Store may not be dead due to op: "
-                        << *accessAncestor << "\n");
+    }
+
+    bool isReachableFromWrite = isReachable(writeAncestor, accessAncestor);
+    LDBG() << "  -> Is reachable from write: " << isReachableFromWrite;
+    if (!isReachableFromWrite) {
+      LDBG() << "  -> Not reachable, skipping";
+      continue;
+    }
+
+    bool overwriteDominatesAccess =
+        dominators.dominates(firstOverwriteCandidate, accessAncestor);
+    LDBG() << "  -> Overwrite dominates access: " << overwriteDominatesAccess;
+    if (!overwriteDominatesAccess) {
+      LDBG() << "Store may not be dead due to op: " << *accessAncestor;
       return;
     }
+    LDBG() << "  -> Access is dominated by overwrite, continuing";
   }
-  LLVM_DEBUG(DBGS() << "Found dead store: " << *write.getOperation()
-                    << " overwritten by: " << *firstOverwriteCandidate << "\n");
+  LDBG() << "Found dead store: " << *write.getOperation()
+         << " overwritten by: " << *firstOverwriteCandidate;
   opToErase.push_back(write.getOperation());
 }
 
@@ -172,72 +235,129 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
 /// potentially aliasing ops that may reach the transfer_read are post-dominated
 /// by the transfer_write.
 void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
-  if (read.hasOutOfBoundsDim())
+  LDBG() << "=== Starting storeToLoadForwarding analysis for: "
+         << *read.getOperation();
+  if (read.hasOutOfBoundsDim()) {
+    LDBG() << "Read has out-of-bounds dimensions, skipping";
     return;
-  LLVM_DEBUG(DBGS() << "Candidate for Forwarding: " << *read.getOperation()
-                    << "\n");
+  }
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
   Value source = memref::skipViewLikeOps(cast<MemrefValue>(read.getBase()));
+  LDBG() << "Source memref (after skipping view-like ops): " << source;
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
+  LDBG() << "Found " << users.size() << " users of source memref";
   llvm::SmallDenseSet<Operation *, 32> processed;
   while (!users.empty()) {
     Operation *user = users.pop_back_val();
+    LDBG() << "Processing user: " << *user;
     // If the user has already been processed skip.
-    if (!processed.insert(user).second)
-      continue;
-    if (isa<ViewLikeOpInterface>(user)) {
-      users.append(user->getUsers().begin(), user->getUsers().end());
+    if (!processed.insert(user).second) {
+      LDBG() << "  -> Already processed, skipping";
       continue;
     }
-    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      LDBG() << "  -> View-like operation, following to destination";
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
+    }
+    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user)) {
+      LDBG() << "  -> Memory effect free or transfer_read, skipping";
+      continue;
+    }
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {
+      LDBG() << "  -> Found transfer_write candidate: " << *write;
       // If there is a write, but we can prove that it is disjoint we can ignore
       // the write.
-      if (vector::isDisjointTransferSet(
-              cast<VectorTransferOpInterface>(write.getOperation()),
-              cast<VectorTransferOpInterface>(read.getOperation()),
-              /*testDynamicValueUsingBounds=*/true))
-        continue;
-      if (memref::isSameViewOrTrivialAlias(
-              cast<MemrefValue>(read.getBase()),
-              cast<MemrefValue>(write.getBase())) &&
-          dominators.dominates(write, read) && checkSameValueRAW(write, read)) {
-        if (lastwrite == nullptr || dominators.dominates(lastwrite, write))
-          lastwrite = write;
-        else
-          assert(dominators.dominates(write, lastwrite));
+      bool isDisjoint = vector::isDisjointTransferSet(
+          cast<VectorTransferOpInterface>(write.getOperation()),
+          cast<VectorTransferOpInterface>(read.getOperation()),
+          /*testDynamicValueUsingBounds=*/true);
+      LDBG() << "    -> Is disjoint: " << isDisjoint;
+      if (isDisjoint) {
+        LDBG() << "    -> Skipping disjoint write";
         continue;
       }
+
+      bool sameView =
+          memref::isSameViewOrTrivialAlias(cast<MemrefValue>(read.getBase()),
+                                           cast<MemrefValue>(write.getBase()));
+      bool dominates = dominators.dominates(write, read);
+      bool sameValue = checkSameValueRAW(write, read);
+      LDBG() << "    -> Same view: " << sameView << ", Dominates: " << dominates
+             << ", Same value: " << sameValue;
+
+      if (sameView && dominates && sameValue) {
+        LDBG() << "    -> Valid forwarding candidate found";
+        if (lastwrite == nullptr || dominators.dominates(lastwrite, write)) {
+          LDBG() << "    -> New last write candidate: " << *write;
+          lastwrite = write;
+        } else {
+          LDBG() << "    -> Keeping existing last write candidate";
+          assert(dominators.dominates(write, lastwrite));
+        }
+        continue;
+      }
+      LDBG() << "    -> Not a valid forwarding candidate";
     }
+    LDBG() << "  -> Adding to blocking writes: " << *user;
     blockingWrites.push_back(user);
   }
+  LDBG() << "Finished processing users. Found " << blockingWrites.size()
+         << " blocking writes";
 
-  if (lastwrite == nullptr)
+  if (lastwrite == nullptr) {
+    LDBG() << "No last write candidate found, cannot forward";
     return;
+  }
 
+  LDBG() << "Last write candidate: " << *lastwrite;
   Region *topRegion = lastwrite->getParentRegion();
   Operation *readAncestor = findAncestorOpInRegion(topRegion, read);
   assert(readAncestor &&
          "read op should be recursively part of the top region");
+  LDBG() << "Read ancestor in top region: " << *readAncestor;
 
+  LDBG() << "Checking " << blockingWrites.size()
+         << " blocking writes for post-dominance";
   for (Operation *write : blockingWrites) {
+    LDBG() << "Checking blocking write: " << *write;
     Operation *writeAncestor = findAncestorOpInRegion(topRegion, write);
+    if (writeAncestor) {
+      LDBG() << "  -> Write ancestor: " << *writeAncestor;
+    } else {
+      LDBG() << "  -> Write ancestor: nullptr";
+    }
+
     // TODO: if the store and read have the same ancestor we could recurse in
     // the region to know if the read is reachable with more precision.
-    if (writeAncestor == nullptr || !isReachable(writeAncestor, readAncestor))
+    if (writeAncestor == nullptr) {
+      LDBG() << "  -> No ancestor in top region, skipping";
       continue;
-    if (!postDominators.postDominates(lastwrite, write)) {
-      LLVM_DEBUG(DBGS() << "Fail to do write to read forwarding due to op: "
-                        << *write << "\n");
+    }
+
+    bool isReachableToRead = isReachable(writeAncestor, readAncestor);
+    LDBG() << "  -> Is reachable to read: " << isReachableToRead;
+    if (!isReachableToRead) {
+      LDBG() << "  -> Not reachable, skipping";
+      continue;
+    }
+
+    bool lastWritePostDominates =
+        postDominators.postDominates(lastwrite, write);
+    LDBG() << "  -> Last write post-dominates blocking write: "
+           << lastWritePostDominates;
+    if (!lastWritePostDominates) {
+      LDBG() << "Fail to do write to read forwarding due to op: " << *write;
       return;
     }
+    LDBG() << "  -> Blocking write is post-dominated, continuing";
   }
 
-  LLVM_DEBUG(DBGS() << "Forward value from " << *lastwrite.getOperation()
-                    << " to: " << *read.getOperation() << "\n");
+  LDBG() << "Forward value from " << *lastwrite.getOperation()
+         << " to: " << *read.getOperation();
   read.replaceAllUsesWith(lastwrite.getVector());
   opToErase.push_back(read.getOperation());
 }
@@ -286,8 +406,8 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
   if (resultType.canonicalizeStridedLayout() ==
       inputType.canonicalizeStridedLayout())
     return input;
-  return rewriter.create<memref::SubViewOp>(loc, resultType, input, offsets,
-                                            sizes, strides);
+  return memref::SubViewOp::create(rewriter, loc, resultType, input, offsets,
+                                   sizes, strides);
 }
 
 /// Returns the number of dims that aren't unit dims.
@@ -330,8 +450,8 @@ createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
     }
     reducedOperands.push_back(operand);
   }
-  return rewriter
-      .create<vector::CreateMaskOp>(loc, reducedType, reducedOperands)
+  return vector::CreateMaskOp::create(rewriter, loc, reducedType,
+                                      reducedOperands)
       .getResult();
 }
 
@@ -348,63 +468,93 @@ class TransferReadDropUnitDimsPattern
   matchAndRewriteMaskableOp(vector::TransferReadOp transferReadOp,
                             vector::MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const override {
+    LDBG() << "=== TransferReadDropUnitDimsPattern: Analyzing "
+           << *transferReadOp;
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
     Value source = transferReadOp.getBase();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor types.
-    if (!sourceType)
+    if (!sourceType) {
+      LDBG() << "  -> Not a MemRefType, skipping";
       return failure();
+    }
     // TODO: generalize this pattern, relax the requirements here.
-    if (transferReadOp.hasOutOfBoundsDim())
+    if (transferReadOp.hasOutOfBoundsDim()) {
+      LDBG() << "  -> Has out-of-bounds dimensions, skipping";
       return failure();
-    if (!transferReadOp.getPermutationMap().isMinorIdentity())
+    }
+    if (!transferReadOp.getPermutationMap().isMinorIdentity()) {
+      LDBG() << "  -> Not minor identity permutation map, skipping";
       return failure();
+    }
     // Check if the source shape can be further reduced.
     int reducedRank = getReducedRank(sourceType.getShape());
-    if (reducedRank == sourceType.getRank())
+    LDBG() << "  -> Source rank: " << sourceType.getRank()
+           << ", Reduced rank: " << reducedRank;
+    if (reducedRank == sourceType.getRank()) {
+      LDBG() << "  -> No unit dimensions to drop, skipping";
       return failure();
+    }
     // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
     // out.
-    if (reducedRank == 0 && maskingOp)
+    if (reducedRank == 0 && maskingOp) {
+      LDBG() << "  -> 0-d vector with masking not supported, skipping";
       return failure();
+    }
     // Check if the reduced vector shape matches the reduced source shape.
     // Otherwise, this case is not supported yet.
     VectorType reducedVectorType = trimNonScalableUnitDims(vectorType);
-    if (reducedRank != reducedVectorType.getRank())
+    LDBG() << "  -> Vector type: " << vectorType
+           << ", Reduced vector type: " << reducedVectorType;
+    if (reducedRank != reducedVectorType.getRank()) {
+      LDBG() << "  -> Reduced ranks don't match, skipping";
       return failure();
+    }
     if (llvm::any_of(transferReadOp.getIndices(), [](Value v) {
           return getConstantIntValue(v) != static_cast<int64_t>(0);
-        }))
+        })) {
+      LDBG() << "  -> Non-zero indices found, skipping";
       return failure();
+    }
 
     Value maskOp = transferReadOp.getMask();
     if (maskOp) {
+      LDBG() << "  -> Processing mask operation";
       auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>();
-      if (!createMaskOp)
+      if (!createMaskOp) {
+        LDBG()
+            << "  -> Unsupported mask op, only 'vector.create_mask' supported";
         return rewriter.notifyMatchFailure(
             transferReadOp, "unsupported mask op, only 'vector.create_mask' is "
                             "currently supported");
+      }
       FailureOr<Value> rankReducedCreateMask =
           createMaskDropNonScalableUnitDims(rewriter, loc, createMaskOp);
-      if (failed(rankReducedCreateMask))
+      if (failed(rankReducedCreateMask)) {
+        LDBG() << "  -> Failed to reduce mask dimensions";
         return failure();
+      }
       maskOp = *rankReducedCreateMask;
+      LDBG() << "  -> Successfully reduced mask dimensions";
     }
 
+    LDBG() << "  -> Creating rank-reduced subview and new transfer_read";
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
-    Operation *newTransferReadOp = rewriter.create<vector::TransferReadOp>(
-        loc, reducedVectorType, reducedShapeSource, zeros, identityMap,
-        transferReadOp.getPadding(), maskOp,
+    Operation *newTransferReadOp = vector::TransferReadOp::create(
+        rewriter, loc, reducedVectorType, reducedShapeSource, zeros,
+        identityMap, transferReadOp.getPadding(), maskOp,
         rewriter.getBoolArrayAttr(inBounds));
+    LDBG() << "  -> Created new transfer_read: " << *newTransferReadOp;
 
     if (maskingOp) {
+      LDBG() << "  -> Applying masking operation";
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
           loc, reducedVectorType.cloneWith(std::nullopt, rewriter.getI1Type()),
           maskingOp.getMask());
@@ -414,6 +564,8 @@ class TransferReadDropUnitDimsPattern
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, vectorType, newTransferReadOp->getResults()[0]);
+    LDBG() << "  -> Created shape cast: " << *shapeCast.getDefiningOp();
+    LDBG() << "  -> Pattern match successful, returning result";
 
     return shapeCast;
   }
@@ -430,64 +582,94 @@ class TransferWriteDropUnitDimsPattern
   matchAndRewriteMaskableOp(vector::TransferWriteOp transferWriteOp,
                             vector::MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const override {
+    LDBG() << "=== TransferWriteDropUnitDimsPattern: Analyzing "
+           << *transferWriteOp;
     auto loc = transferWriteOp.getLoc();
     Value vector = transferWriteOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
     Value source = transferWriteOp.getBase();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor type.
-    if (!sourceType)
+    if (!sourceType) {
+      LDBG() << "  -> Not a MemRefType, skipping";
       return failure();
+    }
     // TODO: generalize this pattern, relax the requirements here.
-    if (transferWriteOp.hasOutOfBoundsDim())
+    if (transferWriteOp.hasOutOfBoundsDim()) {
+      LDBG() << "  -> Has out-of-bounds dimensions, skipping";
       return failure();
-    if (!transferWriteOp.getPermutationMap().isMinorIdentity())
+    }
+    if (!transferWriteOp.getPermutationMap().isMinorIdentity()) {
+      LDBG() << "  -> Not minor identity permutation map, skipping";
       return failure();
+    }
     // Check if the destination shape can be further reduced.
     int reducedRank = getReducedRank(sourceType.getShape());
-    if (reducedRank == sourceType.getRank())
+    LDBG() << "  -> Source rank: " << sourceType.getRank()
+           << ", Reduced rank: " << reducedRank;
+    if (reducedRank == sourceType.getRank()) {
+      LDBG() << "  -> No unit dimensions to drop, skipping";
       return failure();
+    }
     // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
     // out.
-    if (reducedRank == 0 && maskingOp)
+    if (reducedRank == 0 && maskingOp) {
+      LDBG() << "  -> 0-d vector with masking not supported, skipping";
       return failure();
+    }
     // Check if the reduced vector shape matches the reduced destination shape.
     // Otherwise, this case is not supported yet.
     VectorType reducedVectorType = trimNonScalableUnitDims(vectorType);
-    if (reducedRank != reducedVectorType.getRank())
+    LDBG() << "  -> Vector type: " << vectorType
+           << ", Reduced vector type: " << reducedVectorType;
+    if (reducedRank != reducedVectorType.getRank()) {
+      LDBG() << "  -> Reduced ranks don't match, skipping";
       return failure();
+    }
     if (llvm::any_of(transferWriteOp.getIndices(), [](Value v) {
           return getConstantIntValue(v) != static_cast<int64_t>(0);
-        }))
+        })) {
+      LDBG() << "  -> Non-zero indices found, skipping";
       return failure();
+    }
 
     Value maskOp = transferWriteOp.getMask();
     if (maskOp) {
+      LDBG() << "  -> Processing mask operation";
       auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>();
-      if (!createMaskOp)
+      if (!createMaskOp) {
+        LDBG()
+            << "  -> Unsupported mask op, only 'vector.create_mask' supported";
         return rewriter.notifyMatchFailure(
             transferWriteOp,
             "unsupported mask op, only 'vector.create_mask' is "
             "currently supported");
+      }
       FailureOr<Value> rankReducedCreateMask =
           createMaskDropNonScalableUnitDims(rewriter, loc, createMaskOp);
-      if (failed(rankReducedCreateMask))
+      if (failed(rankReducedCreateMask)) {
+        LDBG() << "  -> Failed to reduce mask dimensions";
         return failure();
+      }
       maskOp = *rankReducedCreateMask;
+      LDBG() << "  -> Successfully reduced mask dimensions";
     }
+    LDBG() << "  -> Creating rank-reduced subview and new transfer_write";
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
     auto shapeCastSrc = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, reducedVectorType, vector);
-    Operation *newXferWrite = rewriter.create<vector::TransferWriteOp>(
-        loc, Type(), shapeCastSrc, reducedShapeSource, zeros, identityMap,
-        maskOp, rewriter.getBoolArrayAttr(inBounds));
+    Operation *newXferWrite = vector::TransferWriteOp::create(
+        rewriter, loc, Type(), shapeCastSrc, reducedShapeSource, zeros,
+        identityMap, maskOp, rewriter.getBoolArrayAttr(inBounds));
+    LDBG() << "  -> Created new transfer_write: " << *newXferWrite;
 
     if (maskingOp) {
+      LDBG() << "  -> Applying masking operation";
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
           loc, reducedVectorType.cloneWith(std::nullopt, rewriter.getI1Type()),
           maskingOp.getMask());
@@ -495,11 +677,15 @@ class TransferWriteDropUnitDimsPattern
           mlir::vector::maskOperation(rewriter, newXferWrite, shapeCastMask);
     }
 
-    if (transferWriteOp.hasPureTensorSemantics())
+    if (transferWriteOp.hasPureTensorSemantics()) {
+      LDBG() << "  -> Pattern match successful (tensor semantics), returning "
+                "result";
       return newXferWrite->getResults()[0];
+    }
 
     // With Memref semantics, there's no return value. Use empty value to signal
     // success.
+    LDBG() << "  -> Pattern match successful (memref semantics)";
     return Value();
   }
 };
@@ -520,7 +706,7 @@ static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
   for (int64_t i = firstDimToCollapse; i < inputType.getRank(); ++i)
     collapsedIndices.push_back(i);
   reassociation.push_back(collapsedIndices);
-  return rewriter.create<memref::CollapseShapeOp>(loc, input, reassociation);
+  return memref::CollapseShapeOp::create(rewriter, loc, input, reassociation);
 }
 
 /// Returns the new indices that collapses the inner dimensions starting from
@@ -559,7 +745,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   // one would get the following offset:
   //    %offset = %arg0 * 43
   OpFoldResult collapsedOffset =
-      rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+      arith::ConstantIndexOp::create(rewriter, loc, 0).getResult();
 
   auto collapsedStrides = computeSuffixProduct(
       ArrayRef<int64_t>(shape.begin() + firstDimToCollapse, shape.end()));
@@ -573,8 +759,8 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   if (auto value = dyn_cast<Value>(collapsedOffset)) {
     indicesAfterCollapsing.push_back(value);
   } else {
-    indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
-        loc, *getConstantIntValue(collapsedOffset)));
+    indicesAfterCollapsing.push_back(arith::ConstantIndexOp::create(
+        rewriter, loc, *getConstantIntValue(collapsedOffset)));
   }
 
   return indicesAfterCollapsing;
@@ -600,6 +786,8 @@ public:
 
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const override {
+    LDBG() << "=== FlattenContiguousRowMajorTransferReadPattern: Analyzing "
+           << *transferReadOp;
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
@@ -608,40 +796,61 @@ public:
 
     // 0. Check pre-conditions
     // Contiguity check is valid on tensors only.
-    if (!sourceType)
+    if (!sourceType) {
+      LDBG() << "  -> Not a MemRefType, skipping";
       return failure();
+    }
     // If this is already 0D/1D, there's nothing to do.
-    if (vectorType.getRank() <= 1)
+    if (vectorType.getRank() <= 1) {
+      LDBG() << "  -> Already 0D/1D, skipping";
       return failure();
-    if (!vectorType.getElementType().isSignlessIntOrFloat())
+    }
+    if (!vectorType.getElementType().isSignlessIntOrFloat()) {
+      LDBG() << "  -> Not signless int or float, skipping";
       return failure();
+    }
     unsigned trailingVectorDimBitwidth =
         vectorType.getShape().back() * vectorType.getElementTypeBitWidth();
-    if (trailingVectorDimBitwidth >= targetVectorBitwidth)
+    LDBG() << "  -> Trailing vector dim bitwidth: " << trailingVectorDimBitwidth
+           << ", target: " << targetVectorBitwidth;
+    if (trailingVectorDimBitwidth >= targetVectorBitwidth) {
+      LDBG() << "  -> Trailing dim bitwidth >= target, skipping";
       return failure();
-    if (!vector::isContiguousSlice(sourceType, vectorType))
+    }
+    if (!vector::isContiguousSlice(sourceType, vectorType)) {
+      LDBG() << "  -> Not contiguous slice, skipping";
       return failure();
+    }
     // TODO: generalize this pattern, relax the requirements here.
-    if (transferReadOp.hasOutOfBoundsDim())
+    if (transferReadOp.hasOutOfBoundsDim()) {
+      LDBG() << "  -> Has out-of-bounds dimensions, skipping";
       return failure();
-    if (!transferReadOp.getPermutationMap().isMinorIdentity())
+    }
+    if (!transferReadOp.getPermutationMap().isMinorIdentity()) {
+      LDBG() << "  -> Not minor identity permutation map, skipping";
       return failure();
-    if (transferReadOp.getMask())
+    }
+    if (transferReadOp.getMask()) {
+      LDBG() << "  -> Has mask, skipping";
       return failure();
+    }
 
     // Determine the first memref dimension to collapse - just enough so we can
     // read a flattened vector.
     int64_t firstDimToCollapse =
         sourceType.getRank() -
         vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
+    LDBG() << "  -> First dimension to collapse: " << firstDimToCollapse;
 
     // 1. Collapse the source memref
+    LDBG() << "  -> Collapsing source memref";
     Value collapsedSource =
         collapseInnerDims(rewriter, loc, source, firstDimToCollapse);
     MemRefType collapsedSourceType =
         cast<MemRefType>(collapsedSource.getType());
     int64_t collapsedRank = collapsedSourceType.getRank();
     assert(collapsedRank == firstDimToCollapse + 1);
+    LDBG() << "  -> Collapsed source type: " << collapsedSourceType;
 
     // 2. Generate input args for a new vector.transfer_read that will read
     // from the collapsed memref.
@@ -659,15 +868,19 @@ public:
     // 3. Create new vector.transfer_read that reads from the collapsed memref
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
-    vector::TransferReadOp flatRead = rewriter.create<vector::TransferReadOp>(
-        loc, flatVectorType, collapsedSource, collapsedIndices,
+    LDBG() << "  -> Creating flattened vector type: " << flatVectorType;
+    vector::TransferReadOp flatRead = vector::TransferReadOp::create(
+        rewriter, loc, flatVectorType, collapsedSource, collapsedIndices,
         transferReadOp.getPadding(), collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+    LDBG() << "  -> Created flat transfer_read: " << *flatRead;
 
     // 4. Replace the old transfer_read with the new one reading from the
     // collapsed shape
+    LDBG() << "  -> Replacing with shape cast";
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         transferReadOp, cast<VectorType>(vector.getType()), flatRead);
+    LDBG() << "  -> Pattern match successful";
     return success();
   }
 
@@ -757,10 +970,10 @@ public:
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
     Value flatVector =
-        rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, vector);
-    vector::TransferWriteOp flatWrite =
-        rewriter.create<vector::TransferWriteOp>(
-            loc, flatVector, collapsedSource, collapsedIndices, collapsedMap);
+        vector::ShapeCastOp::create(rewriter, loc, flatVectorType, vector);
+    vector::TransferWriteOp flatWrite = vector::TransferWriteOp::create(
+        rewriter, loc, flatVector, collapsedSource, collapsedIndices,
+        collapsedMap);
     flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
     // 4. Replace the old transfer_write with the new one writing the
@@ -794,7 +1007,7 @@ public:
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     // Match phase.
-    auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
+    auto xferOp = extractOp.getSource().getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
       return failure();
     // Check that we are extracting a scalar and not a sub-vector.
@@ -846,8 +1059,8 @@ public:
       if (auto value = dyn_cast<Value>(composedIdx)) {
         newIndices[idx] = value;
       } else {
-        newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
-            extractOp.getLoc(), *getConstantIntValue(composedIdx));
+        newIndices[idx] = arith::ConstantIndexOp::create(
+            rewriter, extractOp.getLoc(), *getConstantIntValue(composedIdx));
       }
     }
     if (isa<MemRefType>(xferOp.getBase().getType())) {
@@ -868,7 +1081,7 @@ private:
 /// Rewrite transfer_writes of vectors of size 1 (e.g., vector<1x1xf32>)
 /// to memref.store.
 class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
@@ -883,8 +1096,8 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
     // Only float and integer element types are supported.
-    Value scalar =
-        rewriter.create<vector::ExtractOp>(xferOp.getLoc(), xferOp.getVector());
+    Value scalar = vector::ExtractOp::create(rewriter, xferOp.getLoc(),
+                                             xferOp.getVector());
     // Construct a scalar store.
     if (isa<MemRefType>(xferOp.getBase().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(
@@ -901,19 +1114,35 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
 
 void mlir::vector::transferOpflowOpt(RewriterBase &rewriter,
                                      Operation *rootOp) {
+  LDBG() << "=== Starting transferOpflowOpt on root operation: "
+         << OpWithFlags(rootOp, OpPrintingFlags().skipRegions());
   TransferOptimization opt(rewriter, rootOp);
+
   // Run store to load forwarding first since it can expose more dead store
   // opportunity.
+  LDBG() << "Phase 1: Store-to-load forwarding";
+  int readCount = 0;
   rootOp->walk([&](vector::TransferReadOp read) {
-    if (isa<MemRefType>(read.getShapedType()))
+    if (isa<MemRefType>(read.getShapedType())) {
+      LDBG() << "Processing transfer_read #" << ++readCount << ": " << *read;
       opt.storeToLoadForwarding(read);
+    }
   });
+  LDBG() << "Phase 1 complete. Removing dead operations from forwarding";
   opt.removeDeadOp();
+
+  LDBG() << "Phase 2: Dead store elimination";
+  int writeCount = 0;
   rootOp->walk([&](vector::TransferWriteOp write) {
-    if (isa<MemRefType>(write.getShapedType()))
+    if (isa<MemRefType>(write.getShapedType())) {
+      LDBG() << "Processing transfer_write #" << ++writeCount << ": " << *write;
       opt.deadStoreOp(write);
+    }
   });
+  LDBG() << "Phase 2 complete. Removing dead operations from dead store "
+            "elimination";
   opt.removeDeadOp();
+  LDBG() << "=== transferOpflowOpt complete";
 }
 
 void mlir::vector::populateScalarVectorTransferLoweringPatterns(

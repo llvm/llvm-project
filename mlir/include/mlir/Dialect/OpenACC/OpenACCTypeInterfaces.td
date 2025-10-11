@@ -70,6 +70,86 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         return ::mlir::acc::VariableTypeCategory::uncategorized;
       }]
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates allocation operations for the pointer-like type. It will create
+        an allocate that produces memory space for an instance of the current type.
+
+        The `varName` parameter is optional and can be used to provide a name
+        for the allocated variable. If the current type is represented
+        in a way that it does not capture the pointee type, `varType` must be
+        passed in to provide the necessary type information.
+
+        The `originalVar` parameter is optional but enables support for dynamic
+        types (e.g., dynamic memrefs). When provided, implementations can extract
+        runtime dimension information from the original variable to create
+        allocations with matching dynamic sizes.
+
+        Returns a Value representing the result of the allocation. If no value
+        is returned, it means the allocation was not successfully generated.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genAllocate",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::llvm::StringRef":$varName,
+                    "::mlir::Type":$varType,
+                    "::mlir::Value":$originalVar),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates deallocation operations for the pointer-like type. It deallocates
+        the instance provided.
+
+        The `varPtr` parameter is required and must represent an instance that was
+        previously allocated. If the current type is represented in a way that it
+        does not capture the pointee type, `varType` must be passed in to provide
+        the necessary type information. Nothing is generated in case the allocate
+        is `alloca`-like.
+
+        Returns true if deallocation was successfully generated or successfully
+        deemed as not needed to be generated, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"genFree",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+                    "::mlir::Type":$varType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates copy operations for the pointer-like type. It copies the memory
+        from the source to the destination. Typically used to initialize one
+        variable of this type from another.
+
+        The `destination` and `source` parameters represent the target and source
+        instances respectively. If the current type is represented in a way that it
+        does not capture the pointee type, `varType` must be passed in to provide
+        the necessary type information.
+
+        Returns true if copy was successfully generated, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"genCopy",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$destination,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$source,
+                    "::mlir::Type":$varType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 }
 
@@ -178,6 +258,36 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::acc::VariableTypeCategory::uncategorized;
+      }]
+    >,
+      InterfaceMethod<
+      /*description=*/[{
+        Generates the operations that would be normally placed in a recipe's
+        init region. It inserts at the builder's current location.
+        It can be used either to directly "inline" the init region
+        or if the caller sets the insertion point to inside a recipe body,
+        it fills it in. This does not generate the `acc.yield` that normally
+        would terminate a recipe.
+
+        The `extents` are optional and can be empty - it is only when a
+        slice of the private variable needs allocation.
+        The `initVal` can be empty - it is primarily needed for reductions
+        to ensure the variable is also initialized with appropriate value.
+
+        If the return value is empty, it means that recipe body was not
+        successfully generated.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"generatePrivateInit",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
+                    "::llvm::StringRef":$varName,
+                    "::mlir::ValueRange":$extents,
+                    "::mlir::Value":$initVal),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
       }]
     >,
   ];

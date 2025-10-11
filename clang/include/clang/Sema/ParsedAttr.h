@@ -678,7 +678,7 @@ class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
   AttributeFactory &Factory;
-  llvm::SmallVector<ParsedAttr *> Attrs;
+  llvm::SmallVector<ParsedAttr *, 2> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
@@ -808,7 +808,7 @@ public:
 
 class ParsedAttributesView {
   friend class AttributePool;
-  using VecTy = llvm::SmallVector<ParsedAttr *>;
+  using VecTy = llvm::SmallVector<ParsedAttr *, 2>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
@@ -856,19 +856,19 @@ public:
     friend class ParsedAttributesView;
   };
 
-  void addAll(iterator B, iterator E) {
+  void prepend(iterator B, iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAll(const_iterator B, const_iterator E) {
+  void prepend(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAllAtEnd(iterator B, iterator E) {
+  void append(iterator B, iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
-  void addAllAtEnd(const_iterator B, const_iterator E) {
+  void append(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
@@ -943,18 +943,18 @@ public:
 
   AttributePool &getPool() const { return pool; }
 
-  void takeAllFrom(ParsedAttributes &Other) {
+  void takeAllPrependingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAll(Other.begin(), Other.end());
+    prepend(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
 
-  void takeAllAtEndFrom(ParsedAttributes &Other) {
+  void takeAllAppendingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAllAtEnd(Other.begin(), Other.end());
+    append(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }

@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -634,7 +635,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   // Transform (sra (shl X, C1) C2) with C1 < C2
   //        -> (SignedBitfieldExtract X, msb, lsb)
   if (N0.getOpcode() == ISD::SHL) {
-    auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    auto *N01C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     if (!N01C)
       return false;
 
@@ -676,43 +677,6 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
-bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
-  // Supported only in Xqcibm for now.
-  if (!Subtarget->hasVendorXqcibm())
-    return false;
-
-  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-  if (!N1C)
-    return false;
-
-  int32_t C1 = N1C->getSExtValue();
-  if (!isShiftedMask_32(C1) || isInt<12>(C1))
-    return false;
-
-  // If C1 is a shifted mask (but can't be formed as an ORI),
-  // use a bitfield insert of -1.
-  // Transform (or x, C1)
-  //        -> (qc.insbi x, width, shift)
-  const unsigned Leading = llvm::countl_zero((uint32_t)C1);
-  const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
-  const unsigned Width = 32 - Leading - Trailing;
-
-  // If Zbs is enabled and it is a single bit set we can use BSETI which
-  // can be compressed to C_BSETI when Xqcibm in enabled.
-  if (Width == 1 && Subtarget->hasStdExtZbs())
-    return false;
-
-  SDLoc DL(Node);
-  MVT VT = Node->getSimpleValueType(0);
-
-  SDValue Ops[] = {CurDAG->getSignedTargetConstant(-1, DL, VT),
-                   CurDAG->getTargetConstant(Width, DL, VT),
-                   CurDAG->getTargetConstant(Trailing, DL, VT)};
-  SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
-  ReplaceNode(Node, BitIns);
-  return true;
-}
-
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
@@ -744,7 +708,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Transform (sra (shl X, C1) C2) with C1 > C2
   //        -> (NDS.BFOS X, lsb, msb)
   if (N0.getOpcode() == ISD::SHL) {
-    auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    auto *N01C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     if (!N01C)
       return false;
 
@@ -999,7 +963,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  bool HasBitTest = Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
+  bool HasBitTest = Subtarget->hasBEXTILike();
 
   switch (Opcode) {
   case ISD::Constant: {
@@ -1185,7 +1149,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C)
         // where C2 has 32 leading zeros and C3 trailing zeros.
         SDNode *SRLIW = CurDAG->getMachineNode(
-            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            RISCV::SRLIW, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(TrailingZeros, DL, VT));
         SDNode *SLLI = CurDAG->getMachineNode(
             RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
@@ -1204,7 +1168,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // - without Zba a tablegen pattern applies the very same
         //   transform as we would have done here
         SDNode *SLLI = CurDAG->getMachineNode(
-            RISCV::SLLI, DL, VT, N0->getOperand(0),
+            RISCV::SLLI, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(LeadingZeros, DL, VT));
         SDNode *SRLI = CurDAG->getMachineNode(
             RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
@@ -1233,7 +1197,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       unsigned TrailingZeros = llvm::countr_zero(Mask);
       if (LeadingZeros == 32 && TrailingZeros > ShAmt) {
         SDNode *SRLIW = CurDAG->getMachineNode(
-            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            RISCV::SRLIW, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(TrailingZeros, DL, VT));
         SDNode *SLLI = CurDAG->getMachineNode(
             RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
@@ -1260,7 +1224,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (TrailingOnes == 32) {
       SDNode *SRLI = CurDAG->getMachineNode(
           Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI, DL, VT,
-          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+          N0.getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, SRLI);
       return;
     }
@@ -1273,19 +1237,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (HasBitTest && ShAmt + 1 == TrailingOnes) {
       SDNode *BEXTI = CurDAG->getMachineNode(
           Subtarget->hasStdExtZbs() ? RISCV::BEXTI : RISCV::TH_TST, DL, VT,
-          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+          N0.getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, BEXTI);
       return;
     }
 
     const unsigned Msb = TrailingOnes - 1;
     const unsigned Lsb = ShAmt;
-    if (tryUnsignedBitfieldExtract(Node, DL, VT, N0->getOperand(0), Msb, Lsb))
+    if (tryUnsignedBitfieldExtract(Node, DL, VT, N0.getOperand(0), Msb, Lsb))
       return;
 
     unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
     SDNode *SLLI =
-        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0.getOperand(0),
                                CurDAG->getTargetConstant(LShAmt, DL, VT));
     SDNode *SRLI = CurDAG->getMachineNode(
         RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
@@ -1322,7 +1286,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     unsigned LShAmt = Subtarget->getXLen() - ExtSize;
     SDNode *SLLI =
-        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0.getOperand(0),
                                CurDAG->getTargetConstant(LShAmt, DL, VT));
     SDNode *SRAI = CurDAG->getMachineNode(
         RISCV::SRAI, DL, VT, SDValue(SLLI, 0),
@@ -1331,9 +1295,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::OR: {
-    if (trySignedBitfieldInsertInMask(Node))
-      return;
-
     if (tryShrinkShlLogicImm(Node))
       return;
 
@@ -1638,7 +1599,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue()) &&
+        !(C1 == 0xffff && Subtarget->hasStdExtZbb()) &&
+        !(C1 == 0xffffffff && Subtarget->hasStdExtZba())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
@@ -2268,8 +2231,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Load =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Load);
       return;
@@ -2487,8 +2449,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           IsMasked, IsStrided, Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Store);
       return;
@@ -2823,6 +2784,8 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 static bool isWorthFoldingAdd(SDValue Add) {
   for (auto *User : Add->users()) {
     if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != RISCVISD::LD_RV32 &&
+        User->getOpcode() != RISCVISD::SD_RV32 &&
         User->getOpcode() != ISD::ATOMIC_LOAD &&
         User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
@@ -2837,6 +2800,9 @@ static bool isWorthFoldingAdd(SDValue Add) {
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
       return false;
+    if (User->getOpcode() == RISCVISD::SD_RV32 &&
+        (User->getOperand(0) == Add || User->getOperand(1) == Add))
+      return false;
     if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
   }
@@ -2844,54 +2810,63 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
-bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
-                                              unsigned MaxShiftAmount,
-                                              SDValue &Base, SDValue &Index,
-                                              SDValue &Scale) {
-  EVT VT = Addr.getSimpleValueType();
-  auto UnwrapShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
-                                              SDValue &Shift) {
-    uint64_t ShiftAmt = 0;
-    Index = N;
-
-    if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
-      // Only match shifts by a value in range [0, MaxShiftAmount].
-      if (N.getConstantOperandVal(1) <= MaxShiftAmount) {
-        Index = N.getOperand(0);
-        ShiftAmt = N.getConstantOperandVal(1);
-      }
-    }
-
-    Shift = CurDAG->getTargetConstant(ShiftAmt, SDLoc(N), VT);
-    return ShiftAmt != 0;
-  };
-
-  if (Addr.getOpcode() == ISD::ADD) {
-    if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue AddrB = Addr.getOperand(0);
-      if (AddrB.getOpcode() == ISD::ADD &&
-          UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
-          !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
-          isInt<12>(C1->getSExtValue())) {
-        // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
-        SDValue C1Val =
-            CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
-        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
-                                              AddrB.getOperand(1), C1Val),
-                       0);
-        return true;
-      }
-    } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
-      Base = Addr.getOperand(1);
-      return true;
-    } else {
-      UnwrapShl(Addr.getOperand(1), Index, Scale);
-      Base = Addr.getOperand(0);
-      return true;
-    }
+bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
+  switch (User->getOpcode()) {
+  default:
+    return false;
+  case ISD::LOAD:
+  case RISCVISD::LD_RV32:
+  case ISD::ATOMIC_LOAD:
+    break;
+  case ISD::STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<StoreSDNode>(User)->getValue() == Add)
+      return false;
+    break;
+  case RISCVISD::SD_RV32:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
+      return false;
+    break;
+  case ISD::ATOMIC_STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    break;
   }
 
-  return false;
+  return true;
+}
+
+// To prevent SelectAddrRegImm from folding offsets that conflict with the
+// fusion of PseudoMovAddr, check if the offset of every use of a given address
+// is within the alignment.
+bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
+                                                  Align Alignment) {
+  assert(Addr->getOpcode() == RISCVISD::ADD_LO);
+  for (auto *User : Addr->users()) {
+    // If the user is a load or store, then the offset is 0 which is always
+    // within alignment.
+    if (isRegImmLoadOrStore(User, Addr))
+      continue;
+
+    if (CurDAG->isBaseWithConstantOffset(SDValue(User, 0))) {
+      int64_t CVal = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (!isInt<12>(CVal) || Alignment <= CVal)
+        return false;
+
+      // Make sure all uses are foldable load/stores.
+      for (auto *AddUser : User->users())
+        if (!isRegImmLoadOrStore(AddUser, SDValue(User, 0)))
+          return false;
+
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
@@ -2903,14 +2878,26 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
+    bool CanFold = true;
+    // Unconditionally fold if operand 1 is not a global address (e.g.
+    // externsymbol)
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = commonAlignment(
+          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
+      if (!areOffsetsWithinAlignment(Addr, Alignment))
+        CanFold = false;
+    }
+    if (CanFold) {
+      Base = Addr.getOperand(0);
+      Offset = Addr.getOperand(1);
+      return true;
+    }
   }
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal) && isInt<12>(CVal)) {
+    if (isInt<12>(CVal)) {
       Base = Addr.getOperand(0);
       if (Base.getOpcode() == RISCVISD::ADD_LO) {
         SDValue LoOperand = Base.getOperand(1);
@@ -2923,7 +2910,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal)) {
+          if ((CVal == 0 || Alignment > CVal) &&
+              areOffsetsWithinAlignment(Base, Alignment)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -2944,8 +2932,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   // Handle ADD with large immediates.
   if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
-           "simm12 not already handled?");
+    assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
     // Handle immediates in the range [-4096,-2049] or [2048, 4094]. We can use
     // an ADDI for part of the offset and fold the rest into the load/store.
@@ -2986,8 +2973,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   return true;
 }
 
-/// Similar to SelectAddrRegImm, except that the offset restricted for
-/// unsinged nine bits.
+/// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -3078,6 +3064,163 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
   return true;
+}
+
+/// Return true if this a load/store that we have a RegRegScale instruction for.
+static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
+                                     const RISCVSubtarget &Subtarget) {
+  if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE)
+    return false;
+  EVT VT = cast<MemSDNode>(User)->getMemoryVT();
+  if (!(VT.isScalarInteger() &&
+        (Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls())) &&
+      !((VT == MVT::f32 || VT == MVT::f64) &&
+        Subtarget.hasVendorXTHeadFMemIdx()))
+    return false;
+  // Don't allow stores of the value. It must be used as the address.
+  if (User->getOpcode() == ISD::STORE &&
+      cast<StoreSDNode>(User)->getValue() == Add)
+    return false;
+
+  return true;
+}
+
+/// Is it profitable to fold this Add into RegRegScale load/store. If \p
+/// Shift is non-null, then we have matched a shl+add. We allow reassociating
+/// (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2)) if there is a
+/// single addi and we don't have a SHXADD instruction we could use.
+/// FIXME: May still need to check how many and what kind of users the SHL has.
+static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
+                                          SDValue Add,
+                                          SDValue Shift = SDValue()) {
+  bool FoundADDI = false;
+  for (auto *User : Add->users()) {
+    if (isRegRegScaleLoadOrStore(User, Add, Subtarget))
+      continue;
+
+    // Allow a single ADDI that is used by loads/stores if we matched a shift.
+    if (!Shift || FoundADDI || User->getOpcode() != ISD::ADD ||
+        !isa<ConstantSDNode>(User->getOperand(1)) ||
+        !isInt<12>(cast<ConstantSDNode>(User->getOperand(1))->getSExtValue()))
+      return false;
+
+    FoundADDI = true;
+
+    // If we have a SHXADD instruction, prefer that over reassociating an ADDI.
+    assert(Shift.getOpcode() == ISD::SHL);
+    unsigned ShiftAmt = Shift.getConstantOperandVal(1);
+    if (Subtarget.hasShlAdd(ShiftAmt))
+      return false;
+
+    // All users of the ADDI should be load/store.
+    for (auto *ADDIUser : User->users())
+      if (!isRegRegScaleLoadOrStore(ADDIUser, SDValue(User, 0), Subtarget))
+        return false;
+  }
+
+  return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
+                                              unsigned MaxShiftAmount,
+                                              SDValue &Base, SDValue &Index,
+                                              SDValue &Scale) {
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+  SDValue LHS = Addr.getOperand(0);
+  SDValue RHS = Addr.getOperand(1);
+
+  EVT VT = Addr.getSimpleValueType();
+  auto SelectShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
+                                              SDValue &Shift) {
+    if (N.getOpcode() != ISD::SHL || !isa<ConstantSDNode>(N.getOperand(1)))
+      return false;
+
+    // Only match shifts by a value in range [0, MaxShiftAmount].
+    unsigned ShiftAmt = N.getConstantOperandVal(1);
+    if (ShiftAmt > MaxShiftAmount)
+      return false;
+
+    Index = N.getOperand(0);
+    Shift = CurDAG->getTargetConstant(ShiftAmt, SDLoc(N), VT);
+    return true;
+  };
+
+  if (auto *C1 = dyn_cast<ConstantSDNode>(RHS)) {
+    // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
+    if (LHS.getOpcode() == ISD::ADD &&
+        !isa<ConstantSDNode>(LHS.getOperand(1)) &&
+        isInt<12>(C1->getSExtValue())) {
+      if (SelectShl(LHS.getOperand(1), Index, Scale) &&
+          isWorthFoldingIntoRegRegScale(*Subtarget, LHS, LHS.getOperand(1))) {
+        SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
+                                                  SDLoc(Addr), VT);
+        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                              LHS.getOperand(0), C1Val),
+                       0);
+        return true;
+      }
+
+      // Add is commutative so we need to check both operands.
+      if (SelectShl(LHS.getOperand(0), Index, Scale) &&
+          isWorthFoldingIntoRegRegScale(*Subtarget, LHS, LHS.getOperand(0))) {
+        SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
+                                                  SDLoc(Addr), VT);
+        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                              LHS.getOperand(1), C1Val),
+                       0);
+        return true;
+      }
+    }
+
+    // Don't match add with constants.
+    // FIXME: Is this profitable for large constants that have 0s in the lower
+    // 12 bits that we can materialize with LUI?
+    return false;
+  }
+
+  // Try to match a shift on the RHS.
+  if (SelectShl(RHS, Index, Scale)) {
+    if (!isWorthFoldingIntoRegRegScale(*Subtarget, Addr, RHS))
+      return false;
+    Base = LHS;
+    return true;
+  }
+
+  // Try to match a shift on the LHS.
+  if (SelectShl(LHS, Index, Scale)) {
+    if (!isWorthFoldingIntoRegRegScale(*Subtarget, Addr, LHS))
+      return false;
+    Base = RHS;
+    return true;
+  }
+
+  if (!isWorthFoldingIntoRegRegScale(*Subtarget, Addr))
+    return false;
+
+  Base = LHS;
+  Index = RHS;
+  Scale = CurDAG->getTargetConstant(0, SDLoc(Addr), VT);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegZextRegScale(SDValue Addr,
+                                                  unsigned MaxShiftAmount,
+                                                  unsigned Bits, SDValue &Base,
+                                                  SDValue &Index,
+                                                  SDValue &Scale) {
+  if (!SelectAddrRegRegScale(Addr, MaxShiftAmount, Base, Index, Scale))
+    return false;
+
+  if (Index.getOpcode() == ISD::AND) {
+    auto *C = dyn_cast<ConstantSDNode>(Index.getOperand(1));
+    if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
+      Index = Index.getOperand(0);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
@@ -3464,11 +3607,10 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 }
 
 bool RISCVDAGToDAGISel::orDisjoint(const SDNode *N) const {
+  assert(N->getOpcode() == ISD::OR || N->getOpcode() == RISCVISD::OR_VL);
   if (N->getFlags().hasDisjoint())
     return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
 }
 
 bool RISCVDAGToDAGISel::selectImm64IfCheaper(int64_t Imm, int64_t OrigImm,
@@ -3770,6 +3912,15 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
+    case RISCV::TH_EXT:
+    case RISCV::TH_EXTU: {
+      unsigned Msb = User->getConstantOperandVal(1);
+      unsigned Lsb = User->getConstantOperandVal(2);
+      // Behavior of Msb < Lsb is not well documented.
+      if (Msb >= Lsb && Bits > Msb)
+        break;
+      return false;
+    }
     }
   }
 
@@ -3779,21 +3930,18 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
 // Select a constant that can be represented as (sign_extend(imm5) << imm2).
 bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
                                         SDValue &Shl2) {
-  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
-    int64_t Offset = C->getSExtValue();
-    unsigned Shift;
-    for (Shift = 0; Shift < 4; Shift++)
-      if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
-        break;
+  auto *C = dyn_cast<ConstantSDNode>(N);
+  if (!C)
+    return false;
 
-    // Constant cannot be encoded.
-    if (Shift == 4)
-      return false;
-
-    EVT Ty = N->getValueType(0);
-    Simm5 = CurDAG->getSignedTargetConstant(Offset >> Shift, SDLoc(N), Ty);
-    Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), Ty);
-    return true;
+  int64_t Offset = C->getSExtValue();
+  for (unsigned Shift = 0; Shift < 4; Shift++) {
+    if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0)) {
+      EVT VT = N->getValueType(0);
+      Simm5 = CurDAG->getSignedTargetConstant(Offset >> Shift, SDLoc(N), VT);
+      Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), VT);
+      return true;
+    }
   }
 
   return false;

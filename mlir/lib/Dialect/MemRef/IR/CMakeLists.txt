@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRMemRefDialect
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
+  MLIRMemOpInterfaces
   MLIRMemorySlotInterfaces
   MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces

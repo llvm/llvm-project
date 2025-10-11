@@ -8,7 +8,7 @@ define <vscale x 1 x i64> @masked_load_nxv1i64(ptr %a, <vscale x 1 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64(ptr %a, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i64> undef)
+  %load = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64(ptr %a, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
   ret <vscale x 1 x i64> %load
 }
 declare <vscale x 1 x i64> @llvm.masked.load.nxv1i64(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
@@ -19,7 +19,7 @@ define <vscale x 2 x i64> @masked_load_nxv2i64(ptr %a, <vscale x 2 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr %a, i32 8, <vscale x 2 x i1> %mask, <vscale x 2 x i64> undef)
+  %load = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr %a, i32 8, <vscale x 2 x i1> %mask, <vscale x 2 x i64> poison)
   ret <vscale x 2 x i64> %load
 }
 declare <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
@@ -30,7 +30,7 @@ define <vscale x 4 x i64> @masked_load_nxv4i64(ptr %a, <vscale x 4 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64(ptr %a, i32 8, <vscale x 4 x i1> %mask, <vscale x 4 x i64> undef)
+  %load = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64(ptr %a, i32 8, <vscale x 4 x i1> %mask, <vscale x 4 x i64> poison)
   ret <vscale x 4 x i64> %load
 }
 declare <vscale x 4 x i64> @llvm.masked.load.nxv4i64(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i64>)
@@ -41,7 +41,7 @@ define <vscale x 8 x i64> @masked_load_nxv8i64(ptr %a, <vscale x 8 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x i64> undef)
+  %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x i64> poison)
   ret <vscale x 8 x i64> %load
 }
 declare <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i64>)

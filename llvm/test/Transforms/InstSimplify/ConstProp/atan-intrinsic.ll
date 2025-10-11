@@ -35,8 +35,7 @@ define double @test_atan_neg0() {
 
 define double @test_atan_poison() {
 ; CHECK-LABEL: define double @test_atan_poison() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.atan.f64(double poison)
-; CHECK-NEXT:    ret double [[RES]]
+; CHECK-NEXT:    ret double poison
 ;
   %res = call double @llvm.atan.f64(double poison)
   ret double %res

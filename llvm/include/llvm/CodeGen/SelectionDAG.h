@@ -238,8 +238,6 @@ class SelectionDAG {
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
 
-  bool DivergentTarget = false;
-
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
 
@@ -473,16 +471,14 @@ public:
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
-                     FunctionVarLocs const *FnVarLocs, bool HasDivergency);
+                     FunctionVarLocs const *FnVarLocs);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
             const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
-            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs,
-            bool HasDivergency) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs,
-         HasDivergency);
+            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
+    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -1202,13 +1198,16 @@ public:
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
-                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops,
+                           const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
 
   // Use flags from current flag inserter.
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops);
+  LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -1256,6 +1255,12 @@ public:
   /// loaded from the stack. This is used in tail call lowering to protect
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
+
+  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                        SDValue Dst, SDValue Src, SDValue Size,
+                                        const CallInst *CI);
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
@@ -1346,9 +1351,10 @@ public:
   /// Helper function to make it easier to build SelectCC's if you just have an
   /// ISD::CondCode instead of an SDValue.
   SDValue getSelectCC(const SDLoc &DL, SDValue LHS, SDValue RHS, SDValue True,
-                      SDValue False, ISD::CondCode Cond) {
+                      SDValue False, ISD::CondCode Cond,
+                      SDNodeFlags Flags = SDNodeFlags()) {
     return getNode(ISD::SELECT_CC, DL, True.getValueType(), LHS, RHS, True,
-                   False, getCondCode(Cond));
+                   False, getCondCode(Cond), Flags);
   }
 
   /// Try to simplify a select/vselect into 1 of its operands or a constant.
@@ -1424,11 +1430,9 @@ public:
                                        EVT MemVT, MachineMemOperand *MMO);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
-  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
-  /// offsets `Offset` and `Offset + Size`.
+  /// (`IsStart==false`) the lifetime of the `FrameIndex`.
   LLVM_ABI SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
-                                   int FrameIndex, int64_t Size,
-                                   int64_t Offset = -1);
+                                   int FrameIndex);
 
   /// Creates a PseudoProbeSDNode with function GUID `Guid` and
   /// the index of the block `Index` it is probing, as well as the attributes
@@ -1666,6 +1670,9 @@ public:
                                       ArrayRef<SDValue> Ops,
                                       MachineMemOperand *MMO,
                                       ISD::MemIndexType IndexType);
+  LLVM_ABI SDValue getLoadFFVP(EVT VT, const SDLoc &DL, SDValue Chain,
+                               SDValue Ptr, SDValue Mask, SDValue EVL,
+                               MachineMemOperand *MMO);
 
   LLVM_ABI SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
                                EVT MemVT, MachineMemOperand *MMO);
@@ -1952,6 +1959,10 @@ public:
   LLVM_ABI SDValue makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
                                                 SDValue NewMemOp);
 
+  /// Get all the nodes in their topological order without modifying any states.
+  LLVM_ABI void getTopologicallyOrderedNodes(
+      SmallVectorImpl<const SDNode *> &SortedNodes) const;
+
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their
   /// topological order. Returns the number of nodes.
@@ -2002,7 +2013,9 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
-  LLVM_ABI void dump() const;
+  /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
+  /// Sorted is true.
+  LLVM_ABI void dump(bool Sorted = false) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the
@@ -2346,35 +2359,35 @@ public:
 
   /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidShiftAmount(SDValue V, const APInt &DemandedElts,
                       unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the minimum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMinimumShiftAmount(SDValue V, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the minimum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMinimumShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the maximum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMaximumShiftAmount(SDValue V, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the maximum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMaximumShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction
@@ -2488,8 +2501,7 @@ public:
 
   /// Check if a value \op N is a constant using the target's BooleanContent for
   /// its type.
-  LLVM_ABI std::optional<bool>
-  isBoolConstant(SDValue N, bool AllowTruncation = false) const;
+  LLVM_ABI std::optional<bool> isBoolConstant(SDValue N) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {

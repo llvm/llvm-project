@@ -105,6 +105,7 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ;
 ; RV32ZBBXQCIBM-LABEL: test_cttz_i16:
 ; RV32ZBBXQCIBM:       # %bb.0:
+; RV32ZBBXQCIBM-NEXT:    not a0, a0
 ; RV32ZBBXQCIBM-NEXT:    qc.insbi a0, -1, 1, 16
 ; RV32ZBBXQCIBM-NEXT:    ctz a0, a0
 ; RV32ZBBXQCIBM-NEXT:    ret
@@ -170,8 +171,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s1, a1, 1329
+; RV32I-NEXT:    lui s1, 30667
+; RV32I-NEXT:    addi s1, s1, 1329
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s0, a0
@@ -363,8 +364,8 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ; RV32I-NEXT:    not s4, a0
 ; RV32I-NEXT:    neg a0, s4
 ; RV32I-NEXT:    and a0, s4, a0
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s1, a1, 1329
+; RV32I-NEXT:    lui s1, 30667
+; RV32I-NEXT:    addi s1, s1, 1329
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s0, a0

@@ -192,9 +192,9 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   unsigned DestReg = X86::EAX;
 
   if (F.getParent()->getModuleFlag("kcfi-arity")) {
-    // The ArityToRegMap assumes the 64-bit Linux kernel ABI
+    // The ArityToRegMap assumes the 64-bit SysV ABI.
     [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
-    assert(Triple.isArch64Bit() && Triple.isOSLinux());
+    assert(Triple.isX86_64() && !Triple.isOSWindows());
 
     // Determine the function's arity (i.e., the number of arguments) at the ABI
     // level by counting the number of parameters that are passed
@@ -476,10 +476,11 @@ static bool isIndirectBranchOrTailCall(const MachineInstr &MI) {
   return MI.getDesc().isIndirectBranch() /*Make below code in a good shape*/ ||
          Opc == X86::TAILJMPr || Opc == X86::TAILJMPm ||
          Opc == X86::TAILJMPr64 || Opc == X86::TAILJMPm64 ||
-         Opc == X86::TCRETURNri || Opc == X86::TCRETURNmi ||
-         Opc == X86::TCRETURNri64 || Opc == X86::TCRETURNmi64 ||
-         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TAILJMPr64_REX ||
-         Opc == X86::TAILJMPm64_REX;
+         Opc == X86::TCRETURNri || Opc == X86::TCRETURN_WIN64ri ||
+         Opc == X86::TCRETURN_HIPE32ri || Opc == X86::TCRETURNmi ||
+         Opc == X86::TCRETURN_WINmi64 || Opc == X86::TCRETURNri64 ||
+         Opc == X86::TCRETURNmi64 || Opc == X86::TCRETURNri64_ImpCall ||
+         Opc == X86::TAILJMPr64_REX || Opc == X86::TAILJMPm64_REX;
 }
 
 void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
@@ -896,7 +897,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (FeatureFlagsAnd) {
       // Emit a .note.gnu.property section with the flags.
-      assert((TT.isArch32Bit() || TT.isArch64Bit()) &&
+      assert((TT.isX86_32() || TT.isX86_64()) &&
              "CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
       MCSection *Nt = MMI->getContext().getELFSection(
@@ -904,7 +905,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->switchSection(Nt);
 
       // Emitting note header.
-      const int WordSize = TT.isArch64Bit() && !TT.isX32() ? 8 : 4;
+      const int WordSize = TT.isX86_64() && !TT.isX32() ? 8 : 4;
       emitAlignment(WordSize == 4 ? Align(4) : Align(8));
       OutStreamer->emitIntValue(4, 4 /*size*/); // data size for "GNU\0"
       OutStreamer->emitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
@@ -1088,7 +1089,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   }
 
   // Emit __morestack address if needed for indirect calls.
-  if (TT.getArch() == Triple::x86_64 && TM.getCodeModel() == CodeModel::Large) {
+  if (TT.isX86_64() && TM.getCodeModel() == CodeModel::Large) {
     if (MCSymbol *AddrSymbol = OutContext.lookupSymbol("__morestack_addr")) {
       Align Alignment(1);
       MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(

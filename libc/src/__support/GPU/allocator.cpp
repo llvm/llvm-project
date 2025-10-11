@@ -16,9 +16,11 @@
 
 #include "allocator.h"
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/GPU/fixedstack.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
@@ -31,15 +33,18 @@ constexpr static uint64_t SLAB_SIZE = /* 2 MiB */ 2ull * 1024 * 1024;
 constexpr static uint64_t ARRAY_SIZE = MAX_SIZE / SLAB_SIZE;
 constexpr static uint64_t SLAB_ALIGNMENT = SLAB_SIZE - 1;
 constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
+constexpr static uint32_t BITS_IN_DWORD = sizeof(uint64_t) * 8;
 constexpr static uint32_t MIN_SIZE = 16;
 constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 
-// A sentinel used to indicate an invalid but non-null pointer value.
-constexpr static uint64_t SENTINEL = cpp::numeric_limits<uint64_t>::max();
+// The number of times to attempt claiming an in-progress slab allocation.
+constexpr static uint32_t MAX_TRIES = 1024;
 
-// The number of times we will try starting on a single index before skipping
-// past it.
-constexpr static uint32_t MAX_TRIES = 512;
+// The number of previously allocated slabs we will keep in memory.
+constexpr static uint32_t CACHED_SLABS = 8;
+
+// Configuration for whether or not we will return unused slabs to memory.
+constexpr static bool RECLAIM = true;
 
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
@@ -71,8 +76,8 @@ static void rpc_free(void *ptr) {
 
 // Convert a potentially disjoint bitmask into an increasing integer per-lane
 // for use with indexing between gpu lanes.
-static inline uint32_t lane_count(uint64_t lane_mask) {
-  return cpp::popcount(lane_mask & ((uint64_t(1) << gpu::get_lane_id()) - 1));
+static inline uint32_t lane_count(uint64_t lane_mask, uint32_t id) {
+  return cpp::popcount(lane_mask & ((uint64_t(1) << id) - 1));
 }
 
 // Obtain an initial value to seed a random number generator. We use the rounded
@@ -92,20 +97,10 @@ static inline uint32_t xorshift32(uint32_t &state) {
   return state * 0x9e3779bb;
 }
 
-// Final stage of murmurhash used to get a unique index for the global array
-static inline uint32_t hash(uint32_t x) {
-  x ^= x >> 16;
-  x *= 0x85ebca6b;
-  x ^= x >> 13;
-  x *= 0xc2b2ae35;
-  x ^= x >> 16;
-  return x;
-}
-
 // Rounds the input value to the closest permitted chunk size. Here we accept
 // the sum of the closest three powers of two. For a 2MiB slab size this is 48
 // different chunk sizes. This gives us average internal fragmentation of 87.5%.
-static inline uint32_t get_chunk_size(uint32_t x) {
+static inline constexpr uint32_t get_chunk_size(uint32_t x) {
   uint32_t y = x < MIN_SIZE ? MIN_SIZE : x;
   uint32_t pow2 = BITS_IN_WORD - cpp::countl_zero(y - 1);
 
@@ -123,6 +118,16 @@ static inline uint32_t get_chunk_size(uint32_t x) {
   return (s3 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
 }
 
+// Converts a chunk size into an index suitable for a statically sized array.
+static inline constexpr uint32_t get_chunk_id(uint32_t x) {
+  if (x <= MIN_SIZE)
+    return 0;
+  uint32_t y = x >> 4;
+  if (x < MIN_SIZE << 2)
+    return cpp::popcount(y);
+  return cpp::popcount(y) + 3 * (BITS_IN_WORD - cpp::countl_zero(y)) - 7;
+}
+
 // Rounds to the nearest power of two.
 template <uint32_t N, typename T>
 static inline constexpr T round_up(const T x) {
@@ -134,13 +139,41 @@ static inline constexpr T round_up(const T x) {
 void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
   uint64_t mask = gpu::get_lane_mask();
   uint32_t workers = cpp::popcount(uniform);
-  for (uint32_t i = impl::lane_count(mask & uniform); i < n; i += workers)
+  for (uint32_t i = impl::lane_count(mask & uniform, gpu::get_lane_id()); i < n;
+       i += workers)
     s[i] = c;
 }
 
 // Indicates that the provided value is a power of two.
 static inline constexpr bool is_pow2(uint64_t x) {
   return x && (x & (x - 1)) == 0;
+}
+
+// Where this chunk size should start looking in the global array. Small
+// allocations are much more likely than large ones, so we give them the most
+// space. We use a cubic easing function normalized on the possible chunks.
+static inline constexpr uint32_t get_start_index(uint32_t chunk_size) {
+  constexpr uint32_t max_chunk = impl::get_chunk_id(SLAB_SIZE / 2);
+  uint64_t norm =
+      (1 << 16) - (impl::get_chunk_id(chunk_size) << 16) / max_chunk;
+  uint64_t bias = (norm * norm * norm) >> 32;
+  uint64_t inv = (1 << 16) - bias;
+  return static_cast<uint32_t>(((ARRAY_SIZE - 1) * inv) >> 16);
+}
+
+// Returns the id of the lane below this one that acts as its leader.
+static inline uint32_t get_leader_id(uint64_t ballot, uint32_t id) {
+  uint64_t mask = id < BITS_IN_DWORD - 1 ? ~0ull << (id + 1) : 0;
+  return BITS_IN_DWORD - cpp::countl_zero(ballot & ~mask) - 1;
+}
+
+// We use a sentinal value to indicate a failed or in-progress allocation.
+template <typename T> bool is_sentinel(const T &x) {
+  if constexpr (cpp::is_pointer_v<T>)
+    return reinterpret_cast<uintptr_t>(x) ==
+           cpp::numeric_limits<uintptr_t>::max();
+  else
+    return x == cpp::numeric_limits<T>::max();
 }
 
 } // namespace impl
@@ -163,20 +196,35 @@ struct Slab {
   struct alignas(MIN_SIZE) Header {
     uint32_t chunk_size;
     uint32_t global_index;
+    uint32_t cached_chunk_size;
   };
 
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
     Header *header = reinterpret_cast<Header *>(memory);
+    header->cached_chunk_size = cpp::numeric_limits<uint32_t>::max();
     header->chunk_size = chunk_size;
     header->global_index = global_index;
+  }
+
+  // Reset the memory with a new index and chunk size, not thread safe.
+  Slab *reset(uint32_t chunk_size, uint32_t global_index) {
+    Header *header = reinterpret_cast<Header *>(memory);
+    header->cached_chunk_size = header->chunk_size;
+    header->chunk_size = chunk_size;
+    header->global_index = global_index;
+    return this;
   }
 
   // Set the necessary bitfield bytes to zero in parallel using many lanes. This
   // must be called before the bitfield can be accessed safely, memory is not
   // guaranteed to be zero initialized in the current implementation.
   void initialize(uint64_t uniform) {
+    // If this is a re-used slab the memory is already set to zero.
+    if (get_cached_chunk_size() <= get_chunk_size())
+      return;
+
     uint32_t size = (bitfield_bytes(get_chunk_size()) + sizeof(uint32_t) - 1) /
                     sizeof(uint32_t);
     impl::uniform_memset(get_bitfield(), 0, size, uniform);
@@ -214,6 +262,11 @@ struct Slab {
     return reinterpret_cast<const Header *>(memory)->chunk_size;
   }
 
+  // Get the chunk size that was previously used.
+  uint32_t get_cached_chunk_size() const {
+    return reinterpret_cast<const Header *>(memory)->cached_chunk_size;
+  }
+
   // Get the location in the memory where we will store the global index.
   uint32_t get_global_index() const {
     return reinterpret_cast<const Header *>(memory)->global_index;
@@ -244,44 +297,57 @@ struct Slab {
 
   // Randomly walks the bitfield until it finds a free bit. Allocations attempt
   // to put lanes right next to each other for better caching and convergence.
-  void *allocate(uint64_t lane_mask, uint64_t uniform) {
+  void *allocate(uint64_t uniform, uint32_t reserved) {
     uint32_t chunk_size = get_chunk_size();
     uint32_t state = impl::entropy();
 
-    // The uniform mask represents which lanes contain a uniform target pointer.
-    // We attempt to place these next to each other.
-    void *result = nullptr;
-    for (uint64_t mask = lane_mask; mask;
-         mask = gpu::ballot(lane_mask, !result)) {
-      if (result)
-        continue;
+    // Try to find the empty bit in the bitfield to finish the allocation. We
+    // start at the number of allocations as this is guaranteed to be available
+    // until the user starts freeing memory.
+    uint64_t lane_mask = gpu::get_lane_mask();
+    uint32_t start = gpu::shuffle(
+        lane_mask, cpp::countr_zero(uniform & lane_mask), reserved);
+    for (;;) {
+      uint64_t lane_mask = gpu::get_lane_mask();
 
-      uint32_t start = gpu::broadcast_value(lane_mask, impl::xorshift32(state));
-
-      uint32_t id = impl::lane_count(uniform & mask);
+      // Each lane tries to claim one bit in a single contiguous mask.
+      uint32_t id = impl::lane_count(uniform & lane_mask, gpu::get_lane_id());
       uint32_t index = (start + id) % usable_bits(chunk_size);
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
 
       // Get the mask of bits destined for the same slot and coalesce it.
-      uint64_t match = uniform & gpu::match_any(mask, slot);
-      uint32_t length = cpp::popcount(match);
-      uint32_t bitmask = static_cast<uint32_t>((uint64_t(1) << length) - 1)
-                         << bit;
+      uint32_t leader = impl::get_leader_id(
+          uniform & gpu::ballot(lane_mask, !id || index % BITS_IN_WORD == 0),
+          gpu::get_lane_id());
+      uint32_t length = cpp::popcount(uniform & lane_mask) -
+                        impl::lane_count(uniform & lane_mask, leader);
+      uint32_t bitmask =
+          static_cast<uint32_t>(
+              (uint64_t(1) << cpp::min(length, BITS_IN_WORD)) - 1)
+          << bit;
 
       uint32_t before = 0;
-      if (gpu::get_lane_id() == static_cast<uint32_t>(cpp::countr_zero(match)))
+      if (gpu::get_lane_id() == leader)
         before = cpp::AtomicRef(get_bitfield()[slot])
                      .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
-      before = gpu::shuffle(mask, cpp::countr_zero(match), before);
-      if (~before & (1 << bit))
-        result = ptr_from_index(index, chunk_size);
-      else
-        sleep_briefly();
-    }
+      before = gpu::shuffle(lane_mask, leader, before);
+      if (~before & (1 << bit)) {
+        cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+        return ptr_from_index(index, chunk_size);
+      }
 
-    cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-    return result;
+      // If the previous operation found an empty bit we move there, otherwise
+      // we generate new random index to start at.
+      uint32_t after = before | bitmask;
+      start = gpu::shuffle(
+          gpu::get_lane_mask(),
+          cpp::countr_zero(uniform & gpu::get_lane_mask()),
+          ~after ? __builtin_align_down(index, BITS_IN_WORD) +
+                       cpp::countr_zero(~after)
+                 : __builtin_align_down(impl::xorshift32(state), BITS_IN_WORD));
+      sleep_briefly();
+    }
   }
 
   // Deallocates memory by resetting its corresponding bit in the bitfield.
@@ -302,26 +368,29 @@ struct Slab {
   uint8_t memory[SLAB_SIZE];
 };
 
+// A global cache of previously allocated slabs for efficient reuse.
+static FixedStack<Slab *, CACHED_SLABS> slab_cache;
+
 /// A wait-free guard around a pointer resource to be created dynamically if
 /// space is available and freed once there are no more users.
 struct GuardPtr {
 private:
   struct RefCounter {
     // Indicates that the object is in its deallocation phase and thus invalid.
-    static constexpr uint64_t INVALID = uint64_t(1) << 63;
+    static constexpr uint32_t INVALID = uint32_t(1) << 31;
 
     // If a read preempts an unlock call we indicate this so the following
     // unlock call can swap out the helped bit and maintain exclusive ownership.
-    static constexpr uint64_t HELPED = uint64_t(1) << 62;
+    static constexpr uint32_t HELPED = uint32_t(1) << 30;
 
     // Resets the reference counter, cannot be reset to zero safely.
-    void reset(uint32_t n, uint64_t &count) {
+    void reset(uint32_t n, uint32_t &count) {
       counter.store(n, cpp::MemoryOrder::RELAXED);
       count = n;
     }
 
     // Acquire a slot in the reference counter if it is not invalid.
-    bool acquire(uint32_t n, uint64_t &count) {
+    bool acquire(uint32_t n, uint32_t &count) {
       count = counter.fetch_add(n, cpp::MemoryOrder::RELAXED) + n;
       return (count & INVALID) == 0;
     }
@@ -333,8 +402,8 @@ private:
       // and obtain exclusive rights to deconstruct it. If the CAS failed either
       // another thread resurrected the counter and we quit, or a parallel read
       // helped us invalidating it. For the latter, claim that flag and return.
-      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
-        uint64_t expected = 0;
+      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n && RECLAIM) {
+        uint32_t expected = 0;
         if (counter.compare_exchange_strong(expected, INVALID,
                                             cpp::MemoryOrder::RELAXED,
                                             cpp::MemoryOrder::RELAXED))
@@ -351,46 +420,59 @@ private:
     // thread.
     uint64_t read() {
       auto val = counter.load(cpp::MemoryOrder::RELAXED);
-      if (val == 0 && counter.compare_exchange_strong(
-                          val, INVALID | HELPED, cpp::MemoryOrder::RELAXED))
+      if (val == 0 && RECLAIM &&
+          counter.compare_exchange_strong(val, INVALID | HELPED,
+                                          cpp::MemoryOrder::RELAXED))
         return 0;
       return (val & INVALID) ? 0 : val;
     }
 
-    cpp::Atomic<uint64_t> counter{0};
+    cpp::Atomic<uint32_t> counter{0};
   };
 
-  cpp::Atomic<Slab *> ptr{nullptr};
-  RefCounter ref{};
+  cpp::Atomic<Slab *> ptr;
+  RefCounter ref;
 
   // Should be called be a single lane for each different pointer.
   template <typename... Args>
-  Slab *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
+  Slab *try_lock_impl(uint32_t n, uint32_t &count, Args &&...args) {
     Slab *expected = ptr.load(cpp::MemoryOrder::RELAXED);
     if (!expected &&
         ptr.compare_exchange_strong(
-            expected, reinterpret_cast<Slab *>(SENTINEL),
+            expected,
+            reinterpret_cast<Slab *>(cpp::numeric_limits<uintptr_t>::max()),
             cpp::MemoryOrder::RELAXED, cpp::MemoryOrder::RELAXED)) {
-      count = cpp::numeric_limits<uint64_t>::max();
+      count = cpp::numeric_limits<uint32_t>::max();
+
+      Slab *cached = nullptr;
+      if (slab_cache.pop(cached))
+        return cached->reset(cpp::forward<Args>(args)...);
+
       void *raw = impl::rpc_allocate(sizeof(Slab));
       if (!raw)
         return nullptr;
       return new (raw) Slab(cpp::forward<Args>(args)...);
     }
 
-    if (!expected || expected == reinterpret_cast<Slab *>(SENTINEL))
+    // If there is a slab allocation in progress we retry a few times.
+    for (uint32_t t = 0; impl::is_sentinel(expected) && t < MAX_TRIES; ++t) {
+      sleep_briefly();
+      expected = ptr.load(cpp::MemoryOrder::RELAXED);
+    }
+
+    if (!expected || impl::is_sentinel(expected))
       return nullptr;
 
     if (!ref.acquire(n, count))
       return nullptr;
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-    return ptr.load(cpp::MemoryOrder::RELAXED);
+    return RECLAIM ? ptr.load(cpp::MemoryOrder::RELAXED) : expected;
   }
 
   // Finalize the associated memory and signal that it is ready to use by
   // resetting the counter.
-  void finalize(Slab *mem, uint32_t n, uint64_t &count) {
+  void finalize(Slab *mem, uint32_t n, uint32_t &count) {
     cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     ptr.store(mem, cpp::MemoryOrder::RELAXED);
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
@@ -403,7 +485,7 @@ public:
   // The uniform mask represents which lanes share the same pointer. For each
   // uniform value we elect a leader to handle it on behalf of the other lanes.
   template <typename... Args>
-  Slab *try_lock(uint64_t lane_mask, uint64_t uniform, uint64_t &count,
+  Slab *try_lock(uint64_t lane_mask, uint64_t uniform, uint32_t &count,
                  Args &&...args) {
     count = 0;
     Slab *result = nullptr;
@@ -418,14 +500,17 @@ public:
 
     // We defer storing the newly allocated slab until now so that we can use
     // multiple lanes to initialize it and release it for use.
-    if (count == cpp::numeric_limits<uint64_t>::max()) {
+    if (impl::is_sentinel(count)) {
       result->initialize(uniform);
       if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
         finalize(result, cpp::popcount(uniform), count);
+      count =
+          gpu::shuffle(gpu::get_lane_mask(), cpp::countr_zero(uniform), count);
     }
 
-    if (count != cpp::numeric_limits<uint64_t>::max())
-      count = count - cpp::popcount(uniform) + impl::lane_count(uniform) + 1;
+    if (!impl::is_sentinel(count))
+      count = count - cpp::popcount(uniform) +
+              impl::lane_count(uniform, gpu::get_lane_id());
 
     return result;
   }
@@ -436,8 +521,10 @@ public:
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(mask)) &&
         ref.release(cpp::popcount(mask))) {
       Slab *p = ptr.load(cpp::MemoryOrder::RELAXED);
-      p->~Slab();
-      impl::rpc_free(p);
+      if (!slab_cache.push(p)) {
+        p->~Slab();
+        impl::rpc_free(p);
+      }
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
     }
@@ -451,66 +538,61 @@ public:
 // The global array used to search for a valid slab to allocate from.
 static GuardPtr slots[ARRAY_SIZE] = {};
 
+// Keep a cache of the last successful slot for each chunk size. Initialize it
+// to an even spread of the total size. Must be updated if the chunking scheme
+// changes.
+#define S(X) (impl::get_start_index(X))
+static cpp::Atomic<uint32_t> indices[] = {
+    S(16),     S(32),     S(48),     S(64),     S(96),     S(112),    S(128),
+    S(192),    S(224),    S(256),    S(384),    S(448),    S(512),    S(768),
+    S(896),    S(1024),   S(1536),   S(1792),   S(2048),   S(3072),   S(3584),
+    S(4096),   S(6144),   S(7168),   S(8192),   S(12288),  S(14336),  S(16384),
+    S(24576),  S(28672),  S(32768),  S(49152),  S(57344),  S(65536),  S(98304),
+    S(114688), S(131072), S(196608), S(229376), S(262144), S(393216), S(458752),
+    S(524288), S(786432), S(917504), S(1048576)};
+#undef S
+
 // Tries to find a slab in the table that can support the given chunk size.
-static Slab *find_slab(uint32_t chunk_size) {
-  // We start at a hashed value to spread out different chunk sizes.
-  uint32_t start = impl::hash(chunk_size);
-  uint64_t lane_mask = gpu::get_lane_mask();
-  uint64_t uniform = gpu::match_any(lane_mask, chunk_size);
+static Slab *find_slab(uint32_t chunk_size, uint64_t &uniform,
+                       uint32_t &reserved) {
+  // We start at the index of the last successful allocation for this kind.
+  uint32_t chunk_id = impl::get_chunk_id(chunk_size);
+  uint32_t start = indices[chunk_id].load(cpp::MemoryOrder::RELAXED);
 
-  Slab *result = nullptr;
-  uint32_t nudge = 0;
-  for (uint64_t mask = lane_mask; mask;
-       mask = gpu::ballot(lane_mask, !result), ++nudge) {
-    uint32_t index = cpp::numeric_limits<uint32_t>::max();
-    for (uint32_t offset = nudge / MAX_TRIES;
-         gpu::ballot(lane_mask, index == cpp::numeric_limits<uint32_t>::max());
-         offset += cpp::popcount(uniform & lane_mask)) {
-      uint32_t candidate =
-          (start + offset + impl::lane_count(uniform & lane_mask)) % ARRAY_SIZE;
-      uint64_t available =
-          gpu::ballot(lane_mask, slots[candidate].use_count() <
-                                     Slab::available_chunks(chunk_size));
-      uint32_t new_index = gpu::shuffle(
-          lane_mask, cpp::countr_zero(available & uniform), candidate);
+  for (uint32_t offset = 0; offset <= ARRAY_SIZE; ++offset) {
+    uint32_t index =
+        !offset ? start
+                : (impl::get_start_index(chunk_size) + offset - 1) % ARRAY_SIZE;
 
-      // Each uniform group will use the first empty slot they find.
-      if ((index == cpp::numeric_limits<uint32_t>::max() &&
-           (available & uniform)))
-        index = new_index;
+    if (!offset ||
+        slots[index].use_count() < Slab::available_chunks(chunk_size)) {
+      uint64_t lane_mask = gpu::get_lane_mask();
 
-      // Guaruntees that this loop will eventuall exit if there is no space.
-      if (offset >= ARRAY_SIZE) {
-        result = reinterpret_cast<Slab *>(SENTINEL);
-        index = 0;
-      }
-    }
-
-    // Try to claim a slot for the found slot.
-    if (!result) {
-      uint64_t reserved = 0;
-      Slab *slab = slots[index].try_lock(lane_mask & mask, uniform & mask,
+      Slab *slab = slots[index].try_lock(lane_mask, uniform & lane_mask,
                                          reserved, chunk_size, index);
+
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case
-      // of out-of-memory we return a sentinel value.
-      if (slab && reserved <= Slab::available_chunks(chunk_size) &&
+      // of out-of-memory we receive a sentinel value and return a failure.
+      if (slab && reserved < Slab::available_chunks(chunk_size) &&
           slab->get_chunk_size() == chunk_size) {
-        result = slab;
-      } else if (slab && (reserved > Slab::available_chunks(chunk_size) ||
+        if (index != start)
+          indices[chunk_id].store(index, cpp::MemoryOrder::RELAXED);
+        uniform = uniform & gpu::get_lane_mask();
+        return slab;
+      } else if (slab && (reserved >= Slab::available_chunks(chunk_size) ||
                           slab->get_chunk_size() != chunk_size)) {
-        if (slab->get_chunk_size() != chunk_size)
-          start = index + 1;
         slots[index].unlock(gpu::get_lane_mask(),
                             gpu::get_lane_mask() & uniform);
-      } else if (!slab && reserved == cpp::numeric_limits<uint64_t>::max()) {
-        result = reinterpret_cast<Slab *>(SENTINEL);
+      } else if (!slab && impl::is_sentinel(reserved)) {
+        uniform = uniform & gpu::get_lane_mask();
+        return nullptr;
       } else {
         sleep_briefly();
       }
     }
   }
-  return result;
+  return nullptr;
 }
 
 // Release the lock associated with a given slab.
@@ -533,13 +615,13 @@ void *allocate(uint64_t size) {
 
   // Try to find a slab for the rounded up chunk size and allocate from it.
   uint32_t chunk_size = impl::get_chunk_size(static_cast<uint32_t>(size));
-  Slab *slab = find_slab(chunk_size);
-  if (!slab || slab == reinterpret_cast<Slab *>(SENTINEL))
+  uint64_t uniform = gpu::match_any(gpu::get_lane_mask(), chunk_size);
+  uint32_t reserved = 0;
+  Slab *slab = find_slab(chunk_size, uniform, reserved);
+  if (!slab)
     return nullptr;
 
-  uint64_t lane_mask = gpu::get_lane_mask();
-  uint64_t uniform = gpu::match_any(lane_mask, slab->get_global_index());
-  void *ptr = slab->allocate(lane_mask, uniform);
+  void *ptr = slab->allocate(uniform, reserved);
   return ptr;
 }
 

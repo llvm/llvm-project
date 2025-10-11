@@ -7,6 +7,8 @@
 //===---------------------------------------------------------------------===//
 
 #include "Generic.h"
+#include "LibStdcpp.h"
+#include "MsvcStl.h"
 
 lldb::ValueObjectSP lldb_private::formatters::GetDesugaredSmartPointerValue(
     ValueObject &ptr, ValueObject &container) {
@@ -16,7 +18,8 @@ lldb::ValueObjectSP lldb_private::formatters::GetDesugaredSmartPointerValue(
 
   auto arg = container_type.GetTypeTemplateArgument(0);
   if (!arg)
-    return nullptr;
+    // If there isn't enough debug info, use the pointer type as is
+    return ptr.GetSP();
 
   return ptr.Cast(arg.GetPointerType());
 }

@@ -22,7 +22,7 @@ contains
 end module module1
 
 program test_omp_reduction
-!CHECK: MainProgram scope: test_omp_reduction
+!CHECK: MainProgram scope: TEST_OMP_REDUCTION
   use module1, only: t1, operator(.modmul.) => operator(.mul.)
 
 !CHECK: .modmul. (Function): Use from .mul. in module1

@@ -304,8 +304,7 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
-  static PointerType *Ty = PointerType::get(C, 10);
-  return Ty;
+  return PointerType::get(C, 10);
 }
 
 Type *Type::getWasm_NonNullExternrefTy(LLVMContext &C) {
@@ -316,8 +315,7 @@ Type *Type::getWasm_NonNullExternrefTy(LLVMContext &C) {
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(20)
-  static PointerType *Ty = PointerType::get(C, 20);
-  return Ty;
+  return PointerType::get(C, 20);
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,12 +328,12 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
 
   // Check for the built-in integer types
   switch (NumBits) {
-  case   1: return cast<IntegerType>(Type::getInt1Ty(C));
-  case   8: return cast<IntegerType>(Type::getInt8Ty(C));
-  case  16: return cast<IntegerType>(Type::getInt16Ty(C));
-  case  32: return cast<IntegerType>(Type::getInt32Ty(C));
-  case  64: return cast<IntegerType>(Type::getInt64Ty(C));
-  case 128: return cast<IntegerType>(Type::getInt128Ty(C));
+  case   1: return Type::getInt1Ty(C);
+  case   8: return Type::getInt8Ty(C);
+  case  16: return Type::getInt16Ty(C);
+  case  32: return Type::getInt32Ty(C);
+  case  64: return Type::getInt64Ty(C);
+  case 128: return Type::getInt128Ty(C);
   default:
     break;
   }
@@ -1044,7 +1042,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   // DirectX resources
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeLocal);
+                          TargetExtType::CanBeLocal,
+                          TargetExtType::IsTokenLike);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {
@@ -1060,6 +1059,14 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   }
 
   return TargetTypeInfo(Type::getVoidTy(C));
+}
+
+bool Type::isTokenLikeTy() const {
+  if (isTokenTy())
+    return true;
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return TT->hasProperty(TargetExtType::Property::IsTokenLike);
+  return false;
 }
 
 Type *TargetExtType::getLayoutType() const {

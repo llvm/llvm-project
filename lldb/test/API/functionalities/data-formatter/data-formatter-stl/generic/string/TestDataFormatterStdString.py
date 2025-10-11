@@ -80,6 +80,8 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
                 "(%s::string *) null_str = nullptr" % ns,
+                '(CustomString) custom_str = "hello!"',
+                '(CustomWString) custom_wstr = L"hello!"',
             ],
         )
 
@@ -143,6 +145,10 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::u16string) u16_empty = u""' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
                 '(%s::u32string) u32_empty = U""' % ns,
+                '(CustomStringU16) custom_u16 = u"ß水氶"',
+                '(CustomStringU16) custom_u16_empty = u""',
+                '(CustomStringU32) custom_u32 = U"🍄🍅🍆🍌"',
+                '(CustomStringU32) custom_u32_empty = U""',
             ],
         )
 
@@ -217,9 +223,6 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test_summary_unavailable()
 
-    @expectedFailureAll(
-        bugnumber="libstdc++ std::string summary provider doesn't output a user-friendly message for invalid strings."
-    )
     @add_test_categories(["libstdcxx"])
     def test_unavailable_summary_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})

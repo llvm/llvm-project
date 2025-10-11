@@ -755,6 +755,8 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
     typedefNameDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl> typeAliasDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, UsingShadowDecl>
+    usingShadowDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasTemplateDecl>
     typeAliasTemplateDecl;
 const internal::VariadicAllOfMatcher<Decl> decl;
@@ -808,8 +810,6 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
-    elaboratedTypeLoc;
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
@@ -1103,15 +1103,12 @@ const AstTypeMatcher<TemplateSpecializationType> templateSpecializationType;
 const AstTypeMatcher<UnaryTransformType> unaryTransformType;
 const AstTypeMatcher<RecordType> recordType;
 const AstTypeMatcher<TagType> tagType;
-const AstTypeMatcher<ElaboratedType> elaboratedType;
 const AstTypeMatcher<UsingType> usingType;
 const AstTypeMatcher<SubstTemplateTypeParmType> substTemplateTypeParmType;
 const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
 const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 const AstTypeMatcher<DecayedType> decayedType;
 const AstTypeMatcher<DependentNameType> dependentNameType;
-const AstTypeMatcher<DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasElementType,
                                  AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
                                                                  ComplexType));

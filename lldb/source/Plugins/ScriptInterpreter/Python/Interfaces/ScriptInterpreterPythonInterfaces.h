@@ -16,6 +16,8 @@
 #if LLDB_ENABLE_PYTHON
 
 #include "OperatingSystemPythonInterface.h"
+#include "ScriptedBreakpointPythonInterface.h"
+#include "ScriptedFramePythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedStopHookPythonInterface.h"

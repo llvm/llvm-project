@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
@@ -99,6 +100,24 @@ static bool upgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
                                       Function *&NewFn) {
   // Check if the return type is a vector.
   if (F->getReturnType()->isVectorTy())
+    return false;
+
+  rename(F);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  return true;
+}
+
+// Upgrade the declaration of multiply and add bytes intrinsics whose input
+// arguments' types have changed from vectors of i32 to vectors of i8
+static bool upgradeX86MultiplyAddBytes(Function *F, Intrinsic::ID IID,
+                                       Function *&NewFn) {
+  // check if input argument type is a vector of i8
+  Type *Arg1Type = F->getFunctionType()->getParamType(1);
+  Type *Arg2Type = F->getFunctionType()->getParamType(2);
+  if (Arg1Type->isVectorTy() &&
+      cast<VectorType>(Arg1Type)->getElementType()->isIntegerTy(8) &&
+      Arg2Type->isVectorTy() &&
+      cast<VectorType>(Arg2Type)->getElementType()->isIntegerTy(8))
     return false;
 
   rename(F);
@@ -545,19 +564,70 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
   if (ID != Intrinsic::not_intrinsic)
     return upgradeX86IntrinsicsWith8BitMask(F, ID, NewFn);
 
-  if (Name.consume_front("avx512.mask.cmp.")) {
-    // Added in 7.0
+  if (Name.consume_front("avx512.")) {
+    if (Name.consume_front("mask.cmp.")) {
+      // Added in 7.0
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("pd.128", Intrinsic::x86_avx512_mask_cmp_pd_128)
+               .Case("pd.256", Intrinsic::x86_avx512_mask_cmp_pd_256)
+               .Case("pd.512", Intrinsic::x86_avx512_mask_cmp_pd_512)
+               .Case("ps.128", Intrinsic::x86_avx512_mask_cmp_ps_128)
+               .Case("ps.256", Intrinsic::x86_avx512_mask_cmp_ps_256)
+               .Case("ps.512", Intrinsic::x86_avx512_mask_cmp_ps_512)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic)
+        return upgradeX86MaskedFPCompare(F, ID, NewFn);
+    } else if (Name.starts_with("vpdpbusd.") ||
+               Name.starts_with("vpdpbusds.")) {
+      // Added in 21.1
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("vpdpbusd.128", Intrinsic::x86_avx512_vpdpbusd_128)
+               .Case("vpdpbusd.256", Intrinsic::x86_avx512_vpdpbusd_256)
+               .Case("vpdpbusd.512", Intrinsic::x86_avx512_vpdpbusd_512)
+               .Case("vpdpbusds.128", Intrinsic::x86_avx512_vpdpbusds_128)
+               .Case("vpdpbusds.256", Intrinsic::x86_avx512_vpdpbusds_256)
+               .Case("vpdpbusds.512", Intrinsic::x86_avx512_vpdpbusds_512)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic)
+        return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    }
+    return false; // No other 'x86.avx512.*'.
+  }
+
+  if (Name.consume_front("avx2.vpdpb")) {
+    // Added in 21.1
     ID = StringSwitch<Intrinsic::ID>(Name)
-             .Case("pd.128", Intrinsic::x86_avx512_mask_cmp_pd_128)
-             .Case("pd.256", Intrinsic::x86_avx512_mask_cmp_pd_256)
-             .Case("pd.512", Intrinsic::x86_avx512_mask_cmp_pd_512)
-             .Case("ps.128", Intrinsic::x86_avx512_mask_cmp_ps_128)
-             .Case("ps.256", Intrinsic::x86_avx512_mask_cmp_ps_256)
-             .Case("ps.512", Intrinsic::x86_avx512_mask_cmp_ps_512)
+             .Case("ssd.128", Intrinsic::x86_avx2_vpdpbssd_128)
+             .Case("ssd.256", Intrinsic::x86_avx2_vpdpbssd_256)
+             .Case("ssds.128", Intrinsic::x86_avx2_vpdpbssds_128)
+             .Case("ssds.256", Intrinsic::x86_avx2_vpdpbssds_256)
+             .Case("sud.128", Intrinsic::x86_avx2_vpdpbsud_128)
+             .Case("sud.256", Intrinsic::x86_avx2_vpdpbsud_256)
+             .Case("suds.128", Intrinsic::x86_avx2_vpdpbsuds_128)
+             .Case("suds.256", Intrinsic::x86_avx2_vpdpbsuds_256)
+             .Case("uud.128", Intrinsic::x86_avx2_vpdpbuud_128)
+             .Case("uud.256", Intrinsic::x86_avx2_vpdpbuud_256)
+             .Case("uuds.128", Intrinsic::x86_avx2_vpdpbuuds_128)
+             .Case("uuds.256", Intrinsic::x86_avx2_vpdpbuuds_256)
              .Default(Intrinsic::not_intrinsic);
     if (ID != Intrinsic::not_intrinsic)
-      return upgradeX86MaskedFPCompare(F, ID, NewFn);
-    return false; // No other 'x86.avx523.mask.cmp.*'.
+      return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    return false; // No other 'x86.avx2.*'
+  }
+
+  if (Name.consume_front("avx10.vpdpb")) {
+    // Added in 21.1
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("ssd.512", Intrinsic::x86_avx10_vpdpbssd_512)
+             .Case("ssds.512", Intrinsic::x86_avx10_vpdpbssds_512)
+             .Case("sud.512", Intrinsic::x86_avx10_vpdpbsud_512)
+             .Case("suds.512", Intrinsic::x86_avx10_vpdpbsuds_512)
+             .Case("uud.512", Intrinsic::x86_avx10_vpdpbuud_512)
+             .Case("uuds.512", Intrinsic::x86_avx10_vpdpbuuds_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    return false; // No other 'x86.avx10.*'
   }
 
   if (Name.consume_front("avx512bf16.")) {
@@ -1225,6 +1295,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
               .StartsWith("reverse.", Intrinsic::vector_reverse)
               .StartsWith("interleave2.", Intrinsic::vector_interleave2)
               .StartsWith("deinterleave2.", Intrinsic::vector_deinterleave2)
+              .StartsWith("partial.reduce.add",
+                          Intrinsic::vector_partial_reduce_add)
               .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         const auto *FT = F->getFunctionType();
@@ -1235,7 +1307,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           Tys.push_back(FT->getReturnType());
         if (ID != Intrinsic::vector_interleave2)
           Tys.push_back(FT->getParamType(0));
-        if (ID == Intrinsic::vector_insert)
+        if (ID == Intrinsic::vector_insert ||
+            ID == Intrinsic::vector_partial_reduce_add)
           // Inserting overloads the inserted type.
           Tys.push_back(FT->getParamType(1));
         rename(F);
@@ -1307,6 +1380,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       rename(F);
       NewFn = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::launder_invariant_group, ObjectPtr);
+      return true;
+    }
+    break;
+  case 'l':
+    if ((Name.starts_with("lifetime.start") ||
+         Name.starts_with("lifetime.end")) &&
+        F->arg_size() == 2) {
+      Intrinsic::ID IID = Name.starts_with("lifetime.start")
+                              ? Intrinsic::lifetime_start
+                              : Intrinsic::lifetime_end;
+      rename(F);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                F->getArg(0)->getType());
       return true;
     }
     break;
@@ -1438,6 +1524,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("popc.ll", true)
                      .Case("h2f", true)
                      .Case("swap.lo.hi.b64", true)
+                     .Case("tanh.approx.f32", true)
                      .Default(false);
 
       if (Expand) {
@@ -1629,7 +1716,6 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   NewFn = nullptr;
   bool Upgraded =
       upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
-  assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
@@ -2532,6 +2618,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "tanh.approx.f32") {
+    // nvvm.tanh.approx.f32 -> afn llvm.tanh.f32
+    FastMathFlags FMF;
+    FMF.setApproxFunc();
+    Rep = Builder.CreateUnaryIntrinsic(Intrinsic::tanh, CI->getArgOperand(0),
+                                       FMF);
   } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
     Value *Arg =
         Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
@@ -4129,6 +4221,32 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
+
+    // Input arguments types were incorrectly set to vectors of i32 before but
+    // they should be vectors of i8. Insert bit cast when encountering the old
+    // types
+    if (Args[1]->getType()->isVectorTy() &&
+        cast<VectorType>(Args[1]->getType())
+            ->getElementType()
+            ->isIntegerTy(32) &&
+        Args[2]->getType()->isVectorTy() &&
+        cast<VectorType>(Args[2]->getType())
+            ->getElementType()
+            ->isIntegerTy(32)) {
+      Type *NewArgType = nullptr;
+      if (VecWidth == 128)
+        NewArgType = VectorType::get(Builder.getInt8Ty(), 16, false);
+      else if (VecWidth == 256)
+        NewArgType = VectorType::get(Builder.getInt8Ty(), 32, false);
+      else if (VecWidth == 512)
+        NewArgType = VectorType::get(Builder.getInt8Ty(), 64, false);
+      else
+        llvm_unreachable("Unexpected vector bit width");
+
+      Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
+      Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
+    }
+
     Rep = Builder.CreateIntrinsic(IID, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
@@ -4570,6 +4688,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   }
 
   const auto &DefaultCase = [&]() -> void {
+    if (F == NewFn)
+      return;
+
     if (CI->getFunctionType() == NewFn->getFunctionType()) {
       // Handle generic mangling change.
       assert(
@@ -5109,6 +5230,65 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
+
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end: {
+    if (CI->arg_size() != 2) {
+      DefaultCase();
+      return;
+    }
+
+    Value *Ptr = CI->getArgOperand(1);
+    // Try to strip pointer casts, such that the lifetime works on an alloca.
+    Ptr = Ptr->stripPointerCasts();
+    if (isa<AllocaInst>(Ptr)) {
+      // Don't use NewFn, as we might have looked through an addrspacecast.
+      if (NewFn->getIntrinsicID() == Intrinsic::lifetime_start)
+        NewCall = Builder.CreateLifetimeStart(Ptr);
+      else
+        NewCall = Builder.CreateLifetimeEnd(Ptr);
+      break;
+    }
+
+    // Otherwise remove the lifetime marker.
+    CI->eraseFromParent();
+    return;
+  }
+
+  case Intrinsic::x86_avx512_vpdpbusd_128:
+  case Intrinsic::x86_avx512_vpdpbusd_256:
+  case Intrinsic::x86_avx512_vpdpbusd_512:
+  case Intrinsic::x86_avx512_vpdpbusds_128:
+  case Intrinsic::x86_avx512_vpdpbusds_256:
+  case Intrinsic::x86_avx512_vpdpbusds_512:
+  case Intrinsic::x86_avx2_vpdpbssd_128:
+  case Intrinsic::x86_avx2_vpdpbssd_256:
+  case Intrinsic::x86_avx10_vpdpbssd_512:
+  case Intrinsic::x86_avx2_vpdpbssds_128:
+  case Intrinsic::x86_avx2_vpdpbssds_256:
+  case Intrinsic::x86_avx10_vpdpbssds_512:
+  case Intrinsic::x86_avx2_vpdpbsud_128:
+  case Intrinsic::x86_avx2_vpdpbsud_256:
+  case Intrinsic::x86_avx10_vpdpbsud_512:
+  case Intrinsic::x86_avx2_vpdpbsuds_128:
+  case Intrinsic::x86_avx2_vpdpbsuds_256:
+  case Intrinsic::x86_avx10_vpdpbsuds_512:
+  case Intrinsic::x86_avx2_vpdpbuud_128:
+  case Intrinsic::x86_avx2_vpdpbuud_256:
+  case Intrinsic::x86_avx10_vpdpbuud_512:
+  case Intrinsic::x86_avx2_vpdpbuuds_128:
+  case Intrinsic::x86_avx2_vpdpbuuds_256:
+  case Intrinsic::x86_avx10_vpdpbuuds_512: {
+    unsigned NumElts = CI->getType()->getPrimitiveSizeInBits() / 8;
+    Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
+                     CI->getArgOperand(2)};
+    Type *NewArgType = VectorType::get(Builder.getInt8Ty(), NumElts, false);
+    Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
+    Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
@@ -5131,7 +5311,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (F != NewFn)
+      F->eraseFromParent();
   }
 }
 
@@ -5209,6 +5390,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
+  llvm::TimeTraceScope timeScope("Upgrade debug info");
   // We need to get metadata before the module is verified (i.e., getModuleFlag
   // makes assumptions that we haven't verified yet). Carefully extract the flag
   // from the metadata.
@@ -5334,6 +5516,16 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
     upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
+  if (K == "grid_constant") {
+    const auto Attr = Attribute::get(GV->getContext(), "nvvm.grid_constant");
+    for (const auto &Op : cast<MDNode>(V)->operands()) {
+      // For some reason, the index is 1-based in the metadata. Good thing we're
+      // able to auto-upgrade it!
+      const auto Index = mdconst::extract<ConstantInt>(Op)->getZExtValue() - 1;
+      cast<Function>(GV)->addParamAttr(Index, Attr);
+    }
+    return true;
+  }
 
   return false;
 }
@@ -5344,7 +5536,7 @@ void llvm::UpgradeNVVMAnnotations(Module &M) {
     return;
 
   SmallVector<MDNode *, 8> NewNodes;
-  SmallSet<const MDNode *, 8> SeenNodes;
+  SmallPtrSet<const MDNode *, 8> SeenNodes;
   for (MDNode *MD : NamedMD->operands()) {
     if (!SeenNodes.insert(MD).second)
       continue;

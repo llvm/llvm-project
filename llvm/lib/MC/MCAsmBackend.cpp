@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
@@ -105,7 +106,8 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
   if (!Resolved)
@@ -121,13 +123,11 @@ void MCAsmBackend::maybeAddReloc(const MCFragment &F, const MCFixup &Fixup,
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
+  assert(getContext().isMachO());
   // Consider a NULL personality (ie., no personality encoding) to be canonical
   // because it's always at 0.
   if (!Sym)
     return true;
-
-  if (!Sym->isMachO())
-    llvm_unreachable("Expected MachO symbols only");
 
   StringRef name = Sym->getName();
   // XXX: We intentionally leave out "___gcc_personality_v0" because, despite
@@ -138,9 +138,7 @@ bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
 
 const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
   const MCSubtargetInfo *STI = nullptr;
-  if (auto *DF = dyn_cast<MCEncodedFragment>(&F)) {
-    STI = DF->getSubtargetInfo();
-    assert(!DF->hasInstructions() || STI != nullptr);
-  }
+  STI = F.getSubtargetInfo();
+  assert(!F.hasInstructions() || STI != nullptr);
   return STI;
 }

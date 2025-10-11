@@ -4,7 +4,9 @@
 // RUN:   -o - | FileCheck %s
 
 // CHECK-NOT: __riscv_xandesperf {{.*$}}
+// CHECK-NOT: __riscv_xandesbfhcvt {{.*$}}
 // CHECK-NOT: __riscv_xandesvbfhcvt {{.*$}}
+// CHECK-NOT: __riscv_xandesvsinth {{.*$}}
 // CHECK-NOT: __riscv_xandesvsintload {{.*$}}
 // CHECK-NOT: __riscv_xandesvpackfph {{.*$}}
 // CHECK-NOT: __riscv_xandesvdot {{.*$}}
@@ -18,12 +20,28 @@
 // CHECK-XANDESPERF: __riscv_xandesperf  5000000{{$}}
 
 // RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32i_xandesbfhcvt -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESBFHCVT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64i_xandesbfhcvt -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESBFHCVT %s
+// CHECK-XANDESBFHCVT: __riscv_xandesbfhcvt  5000000{{$}}
+
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_xandesvbfhcvt -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVBFHCVT %s
 // RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_xandesvbfhcvt -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVBFHCVT %s
 // CHECK-XANDESVBFHCVT: __riscv_xandesvbfhcvt  5000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32i_xandesvsinth -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVSINTH %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64i_xandesvsinth -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVSINTH %s
+// CHECK-XANDESVSINTH: __riscv_xandesvsinth  5000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_xandesvsintload -E -dM %s \

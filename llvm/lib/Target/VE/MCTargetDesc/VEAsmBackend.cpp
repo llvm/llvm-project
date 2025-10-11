@@ -112,8 +112,7 @@ public:
   }
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  MutableArrayRef<char>, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *, uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
@@ -152,9 +151,9 @@ public:
 } // end anonymous namespace
 
 void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                              const MCValue &Target, MutableArrayRef<char> Data,
+                              const MCValue &Target, uint8_t *Data,
                               uint64_t Value, bool IsResolved) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case VE::fixup_ve_tls_gd_hi32:
   case VE::fixup_ve_tls_gd_lo32:
   case VE::fixup_ve_tpoff_hi32:
@@ -173,14 +172,14 @@ void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
   // For each byte of the fragment that the fixup touches, mask in the bits
   // from the fixup value. The Value has been "split up" into the
   // appropriate bitfields above.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-    Data[Offset + Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
   }
 }
 

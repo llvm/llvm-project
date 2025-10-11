@@ -176,6 +176,7 @@ enum RegBankLLTMappingApplyID {
 
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
+  UniInVgprS16,
   UniInVgprS32,
   UniInVgprV2S16,
   UniInVgprV4S32,
@@ -188,7 +189,11 @@ enum RegBankLLTMappingApplyID {
 
   Sgpr32Trunc,
 
-  // Src only modifiers: waterfalls, extends
+  // Src only modifiers: execute in waterfall loop if divergent
+  Sgpr32_WF,
+  SgprV4S32_WF,
+
+  // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
@@ -207,6 +212,7 @@ enum LoweringMethodID {
   VccExtToSel,
   UniExtToSel,
   UnpackBitShift,
+  UnpackMinMax,
   S_BFE,
   V_BFE,
   VgprToVccCopy,
@@ -217,6 +223,7 @@ enum LoweringMethodID {
   UniCstExt,
   SplitLoad,
   WidenLoad,
+  WidenMMOToS32
 };
 
 enum FastRulesTypes {

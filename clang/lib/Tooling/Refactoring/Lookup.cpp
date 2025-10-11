@@ -108,16 +108,6 @@ static StringRef getBestNamespaceSubstr(const DeclContext *DeclA,
   }
 }
 
-/// Check if the name specifier begins with a written "::".
-static bool isFullyQualified(const NestedNameSpecifier *NNS) {
-  while (NNS) {
-    if (NNS->getKind() == NestedNameSpecifier::Global)
-      return true;
-    NNS = NNS->getPrefix();
-  }
-  return false;
-}
-
 // Adds more scope specifier to the spelled name until the spelling is not
 // ambiguous. A spelling is ambiguous if the resolution of the symbol is
 // ambiguous. For example, if QName is "::y::bar", the spelling is "y::bar", and
@@ -182,7 +172,7 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
   return Disambiguated;
 }
 
-std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
+std::string tooling::replaceNestedName(NestedNameSpecifier Use,
                                        SourceLocation UseLoc,
                                        const DeclContext *UseContext,
                                        const NamedDecl *FromDecl,
@@ -217,7 +207,7 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   // We work backwards (from most specific possible namespace to least
   // specific).
   StringRef Suggested = getBestNamespaceSubstr(UseContext, ReplacementString,
-                                               isFullyQualified(Use));
+                                               Use.isFullyQualified());
 
   return disambiguateSpellingInScope(Suggested, ReplacementString, *UseContext,
                                      UseLoc);

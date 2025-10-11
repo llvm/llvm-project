@@ -66,7 +66,55 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
-class DbgVariableIntrinsic;
+/// Wrapper structure that holds a language name and its version.
+///
+/// Some debug-info formats, particularly DWARF, distniguish between
+/// language codes that include the version name and codes that don't.
+/// DISourceLanguageName may hold either of these.
+///
+class DISourceLanguageName {
+  /// Language version. The version scheme is language
+  /// dependent.
+  uint32_t Version = 0;
+
+  /// Language name.
+  /// If \ref HasVersion is \c true, then this name
+  /// is version independent (i.e., doesn't include the language
+  /// version in its name).
+  uint16_t Name;
+
+  /// If \c true, then \ref Version is interpretable and \ref Name
+  /// is a version independent name.
+  bool HasVersion;
+
+public:
+  bool hasVersionedName() const { return HasVersion; }
+
+  /// Returns a versioned or unversioned language name.
+  uint16_t getName() const { return Name; }
+
+  /// Transitional API for cases where we do not yet support
+  /// versioned source language names. Use \ref getName instead.
+  ///
+  /// FIXME: remove once all callers of this API account for versioned
+  /// names.
+  uint16_t getUnversionedName() const {
+    assert(!hasVersionedName());
+    return Name;
+  }
+
+  /// Returns language version. Only valid for versioned language names.
+  uint32_t getVersion() const {
+    assert(hasVersionedName());
+    return Version;
+  }
+
+  DISourceLanguageName(uint16_t Lang, uint32_t Version)
+      : Version(Version), Name(Lang), HasVersion(true) {};
+  DISourceLanguageName(uint16_t Lang)
+      : Version(0), Name(Lang), HasVersion(false) {};
+};
+
 class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
@@ -2004,7 +2052,7 @@ public:
   LLVM_ABI static const char *nameTableKindString(DebugNameTableKind PK);
 
 private:
-  unsigned SourceLanguage;
+  DISourceLanguageName SourceLanguage;
   unsigned RuntimeVersion;
   uint64_t DWOId;
   unsigned EmissionKind;
@@ -2014,16 +2062,17 @@ private:
   bool DebugInfoForProfiling;
   bool RangesBaseAddress;
 
-  DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
-                bool IsOptimized, unsigned RuntimeVersion,
-                unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
-                bool DebugInfoForProfiling, unsigned NameTableKind,
-                bool RangesBaseAddress, ArrayRef<Metadata *> Ops);
+  DICompileUnit(LLVMContext &C, StorageType Storage,
+                DISourceLanguageName SourceLanguage, bool IsOptimized,
+                unsigned RuntimeVersion, unsigned EmissionKind, uint64_t DWOId,
+                bool SplitDebugInlining, bool DebugInfoForProfiling,
+                unsigned NameTableKind, bool RangesBaseAddress,
+                ArrayRef<Metadata *> Ops);
   ~DICompileUnit() = default;
 
   static DICompileUnit *
-  getImpl(LLVMContext &Context, unsigned SourceLanguage, DIFile *File,
-          StringRef Producer, bool IsOptimized, StringRef Flags,
+  getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
+          DIFile *File, StringRef Producer, bool IsOptimized, StringRef Flags,
           unsigned RuntimeVersion, StringRef SplitDebugFilename,
           unsigned EmissionKind, DICompositeTypeArray EnumTypes,
           DIScopeArray RetainedTypes,
@@ -2043,8 +2092,8 @@ private:
         getCanonicalMDString(Context, SDK), Storage, ShouldCreate);
   }
   LLVM_ABI static DICompileUnit *
-  getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
-          MDString *Producer, bool IsOptimized, MDString *Flags,
+  getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
+          Metadata *File, MDString *Producer, bool IsOptimized, MDString *Flags,
           unsigned RuntimeVersion, MDString *SplitDebugFilename,
           unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
           Metadata *GlobalVariables, Metadata *ImportedEntities,
@@ -2069,7 +2118,7 @@ public:
 
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
-      (unsigned SourceLanguage, DIFile *File, StringRef Producer,
+      (DISourceLanguageName SourceLanguage, DIFile *File, StringRef Producer,
        bool IsOptimized, StringRef Flags, unsigned RuntimeVersion,
        StringRef SplitDebugFilename, DebugEmissionKind EmissionKind,
        DICompositeTypeArray EnumTypes, DIScopeArray RetainedTypes,
@@ -2085,7 +2134,7 @@ public:
        SysRoot, SDK))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
-      (unsigned SourceLanguage, Metadata *File, MDString *Producer,
+      (DISourceLanguageName SourceLanguage, Metadata *File, MDString *Producer,
        bool IsOptimized, MDString *Flags, unsigned RuntimeVersion,
        MDString *SplitDebugFilename, unsigned EmissionKind, Metadata *EnumTypes,
        Metadata *RetainedTypes, Metadata *GlobalVariables,
@@ -2100,7 +2149,7 @@ public:
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
-  unsigned getSourceLanguage() const { return SourceLanguage; }
+  DISourceLanguageName getSourceLanguage() const { return SourceLanguage; }
   bool isOptimized() const { return IsOptimized; }
   unsigned getRuntimeVersion() const { return RuntimeVersion; }
   DebugEmissionKind getEmissionKind() const {
@@ -2507,10 +2556,8 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
              unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
@@ -2540,20 +2587,8 @@ class DILocation : public MDNode {
   }
 
 public:
-  uint64_t getAtomGroup() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomGroup;
-#else
-    return 0;
-#endif
-  }
-  uint8_t getAtomRank() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomRank;
-#else
-    return 0;
-#endif
-  }
+  uint64_t getAtomGroup() const { return AtomGroup; }
+  uint8_t getAtomRank() const { return AtomRank; }
 
   const DILocation *getWithoutAtom() const {
     if (!getAtomGroup() && !getAtomRank())
@@ -2615,14 +2650,19 @@ public:
   StringRef getDirectory() const { return getScope()->getDirectory(); }
   std::optional<StringRef> getSource() const { return getScope()->getSource(); }
 
-  /// Get the scope where this is inlined.
-  ///
-  /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
-  /// location.
+  /// Walk through \a getInlinedAt() and return the \a DILocation of the
+  /// outermost call site in the inlining chain.
+  const DILocation *getInlinedAtLocation() const {
+    const DILocation *Current = this;
+    while (const DILocation *Next = Current->getInlinedAt())
+      Current = Next;
+    return Current;
+  }
+
+  // Return the \a DILocalScope of the outermost call site in the inlining
+  // chain.
   DILocalScope *getInlinedAtScope() const {
-    if (auto *IA = getInlinedAt())
-      return IA->getInlinedAtScope();
-    return getScope();
+    return getInlinedAtLocation()->getScope();
   }
 
   /// Get the DWARF discriminator.
@@ -4613,7 +4653,6 @@ class DebugVariable {
   LLVM_ABI static const FragmentInfo DefaultFragment;
 
 public:
-  LLVM_ABI DebugVariable(const DbgVariableIntrinsic *DII);
   LLVM_ABI DebugVariable(const DbgVariableRecord *DVR);
 
   DebugVariable(const DILocalVariable *Var,
@@ -4681,7 +4720,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 /// information).
 class DebugVariableAggregate : public DebugVariable {
 public:
-  LLVM_ABI DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  LLVM_ABI DebugVariableAggregate(const DbgVariableRecord *DVR);
   DebugVariableAggregate(const DebugVariable &V)
       : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
 };
