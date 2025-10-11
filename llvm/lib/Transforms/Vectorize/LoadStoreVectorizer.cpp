@@ -157,6 +157,7 @@ using EqClassKey =
 struct ChainElem {
   Instruction *Inst;
   APInt OffsetFromLeader;
+  bool Redundant = false; // Set to true when load is redundant.
   ChainElem(Instruction *Inst, APInt OffsetFromLeader)
       : Inst(std::move(Inst)), OffsetFromLeader(std::move(OffsetFromLeader)) {}
 };
@@ -626,26 +627,33 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
 
+  APInt PrevReadEnd = C[0].OffsetFromLeader +
+                      DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
     // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
-    const ChainElem &Prev = CurChain.back();
-    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*Prev.Inst));
+    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*It->Inst));
     assert(SzBits % 8 == 0 && "Non-byte sizes should have been filtered out by "
                               "collectEquivalenceClass");
-    APInt PrevReadEnd = Prev.OffsetFromLeader + SzBits / 8;
 
     // Add this instruction to the end of the current chain, or start a new one.
+    APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
+    bool IsRedundant = ReadEnd.sle(PrevReadEnd);
     bool AreContiguous = It->OffsetFromLeader == PrevReadEnd;
-    LLVM_DEBUG(dbgs() << "LSV: Instructions are "
-                      << (AreContiguous ? "" : "not ") << "contiguous: "
-                      << *Prev.Inst << " (ends at offset " << PrevReadEnd
-                      << ") -> " << *It->Inst << " (starts at offset "
+
+    LLVM_DEBUG(dbgs() << "LSV: Instruction is "
+                      << (AreContiguous
+                              ? "contiguous"
+                              : ((IsRedundant ? "redundant" : "chain-breaker")))
+                      << *It->Inst << " (starts at offset "
                       << It->OffsetFromLeader << ")\n");
-    if (AreContiguous)
+
+    It->Redundant = IsRedundant;
+    if (AreContiguous || IsRedundant)
       CurChain.push_back(*It);
     else
       Ret.push_back({*It});
+    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
   }
 
   // Filter out length-1 chains, these are uninteresting.
@@ -874,10 +882,12 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   Type *VecElemTy = getChainElemTy(C);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  unsigned ChainBytes = std::accumulate(
-      C.begin(), C.end(), 0u, [&](unsigned Bytes, const ChainElem &E) {
-        return Bytes + DL.getTypeStoreSize(getLoadStoreType(E.Inst));
-      });
+  unsigned ChainBytes = 0;
+  for (auto &E : C) {
+    if (E.Redundant)
+      continue;
+    ChainBytes += DL.getTypeStoreSize(getLoadStoreType(E.Inst));
+  }
   assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
@@ -916,20 +926,19 @@ bool Vectorizer::vectorizeChain(Chain &C) {
                                         getLoadStorePointerOperand(C[0].Inst),
                                         Alignment);
 
-    unsigned VecIdx = 0;
     for (const ChainElem &E : C) {
       Instruction *I = E.Inst;
       Value *V;
       Type *T = getLoadStoreType(I);
+      int EOffset = (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
+      int VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (auto *VT = dyn_cast<FixedVectorType>(T)) {
         auto Mask = llvm::to_vector<8>(
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
         V = Builder.CreateShuffleVector(VecInst, Mask, I->getName());
-        VecIdx += VT->getNumElements();
       } else {
         V = Builder.CreateExtractElement(VecInst, Builder.getInt32(VecIdx),
                                          I->getName());
-        ++VecIdx;
       }
       if (V->getType() != I->getType())
         V = Builder.CreateBitOrPointerCast(V, I->getType());
@@ -964,22 +973,24 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
     // Build the vector to store.
     Value *Vec = PoisonValue::get(VecTy);
-    unsigned VecIdx = 0;
-    auto InsertElem = [&](Value *V) {
+    auto InsertElem = [&](Value *V, unsigned VecIdx) {
       if (V->getType() != VecElemTy)
         V = Builder.CreateBitOrPointerCast(V, VecElemTy);
-      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx++));
+      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx));
     };
     for (const ChainElem &E : C) {
       auto *I = cast<StoreInst>(E.Inst);
+      int EOffset = (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
+      int VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (FixedVectorType *VT =
               dyn_cast<FixedVectorType>(getLoadStoreType(I))) {
         for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
           InsertElem(Builder.CreateExtractElement(I->getValueOperand(),
-                                                  Builder.getInt32(J)));
+                                                  Builder.getInt32(J)),
+                     VecIdx++);
         }
       } else {
-        InsertElem(I->getValueOperand());
+        InsertElem(I->getValueOperand(), VecIdx);
       }
     }
 
