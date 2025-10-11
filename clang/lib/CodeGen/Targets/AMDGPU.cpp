@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -544,14 +545,47 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
   if (!RMW)
     return;
 
-  AtomicOptions AO = CGF.CGM.getAtomicOpts();
   llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
-  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+  const bool IsFP = llvm::AtomicRMWInst::isFPOperation(RMW->getOperation());
+  llvm::AMDGPU::IsaVersion ISAVer =
+      llvm::AMDGPU::getIsaVersion(CGF.getTarget().getTargetOpts().CPU);
+  const bool Compat = CGF.CGM.getLangOpts().AtomicBackwardCompatible &&
+                      (ISAVer.Major >= 11 && ISAVer.Major <= 12);
+  // Establish local defaults based on compat mode and FP-ness.
+  //    - compat + FP: default to remote_memory=true, fine_grained_memory=true
+  //    - otherwise:   default to remote_memory=false, fine_grained_memory=false
+  //    - ignore_denormal_mode defaults to false
+  bool Remote = (Compat && IsFP);
+  bool FineGrained = (Compat && IsFP);
+  bool IgnoreDenorm = false;
+
+  // Override with -cc1/driver-specified LangOptions if explicitly specified.
+  const clang::LangOptions &LO = CGF.CGM.getLangOpts();
+  if (LO.AtomicRemoteMemorySpecified)
+    Remote = LO.AtomicRemoteMemory;
+  if (LO.AtomicFineGrainedMemorySpecified)
+    FineGrained = LO.AtomicFineGrainedMemory;
+  if (LO.AtomicIgnoreDenormalModeSpecified)
+    IgnoreDenorm = LO.AtomicIgnoreDenormalMode;
+
+  // Override with statement attribute values if present (CGM-scoped).
+  //    We assume AtomicOptions holds tri-state (std::optional<bool>) fields:
+  //    remote_memory, fine_grained_memory, ignore_denormal_mode.
+  if (auto MaybeAO = CGF.CGM.getAtomicOpts()) {
+    if (MaybeAO->remote_memory.has_value())
+      Remote = *MaybeAO->remote_memory;
+    if (MaybeAO->fine_grained_memory.has_value())
+      FineGrained = *MaybeAO->fine_grained_memory;
+    if (MaybeAO->ignore_denormal_mode.has_value())
+      IgnoreDenorm = *MaybeAO->ignore_denormal_mode;
+  }
+
+  // Emit metadata according to final values.
+  if (!FineGrained)
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
-  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+  if (!Remote)
     RMW->setMetadata("amdgpu.no.remote.memory", Empty);
-  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+  if (IgnoreDenorm && RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
       RMW->getType()->isFloatTy())
     RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
 }
