@@ -466,8 +466,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Set DAG combine for 'LASX' feature.
 
-  if (Subtarget.hasExtLASX())
+  if (Subtarget.hasExtLASX()) {
     setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+    setTargetDAGCombine(ISD::BUILD_VECTOR);
+  }
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -6679,6 +6681,58 @@ performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
+                                          TargetLowering::DAGCombinerInfo &DCI,
+                                          const LoongArchSubtarget &Subtarget,
+                                          const LoongArchTargetLowering &TLI) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  unsigned NumElts = N->getNumOperands();
+
+  if (!VT.is128BitVector() || !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  // Combine:
+  //   t1 = extract_vector_elt t0, imm1
+  //   t2 = extract_vector_elt t0, imm2
+  //   t3 = BUILD_VECTOR t1, t2
+  // to:
+  //   t4 = extract_subvector t0, 0
+  //   t5 = extract_subvector t0, 2
+  //   t3 = vector_shuffle t4, t5, <imm1, imm2>
+  SDValue OrigVec;
+  SmallVector<int, 16> Mask(NumElts, -1);
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Op = N->getOperand(i);
+
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+
+    auto *ExtractIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (!ExtractIdx)
+      return SDValue();
+    Mask[i] = ExtractIdx->getZExtValue();
+
+    SDValue Vec = Op.getOperand(0);
+    if (i == 0) {
+      OrigVec = Vec;
+      EVT OrigTy = OrigVec.getValueType();
+      if (!OrigTy.is256BitVector() || !TLI.isTypeLegal(OrigTy))
+        return SDValue();
+      if (OrigTy.getVectorElementType() != VT.getVectorElementType() ||
+          OrigTy.getVectorNumElements() != NumElts * 2)
+        return SDValue();
+    } else {
+      if (Vec != OrigVec)
+        return SDValue();
+    }
+  }
+
+  SDValue SubVec0 = DAG.getExtractSubvector(DL, VT, OrigVec, 0);
+  SDValue SubVec1 = DAG.getExtractSubvector(DL, VT, OrigVec, NumElts);
+  return DAG.getVectorShuffle(VT, DL, SubVec0, SubVec1, Mask);
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6714,6 +6768,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
     return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
+  case ISD::BUILD_VECTOR:
+    return performBUILD_VECTORCombine(N, DAG, DCI, Subtarget, *this);
   }
   return SDValue();
 }
