@@ -270,15 +270,6 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
-static inline mlir::RewritePatternSet *unwrap(MlirRewritePatternSet module) {
-  assert(module.ptr && "unexpected null module");
-  return static_cast<mlir::RewritePatternSet *>(module.ptr);
-}
-
-static inline MlirRewritePatternSet wrap(mlir::RewritePatternSet *module) {
-  return {module};
-}
-
 static inline mlir::FrozenRewritePatternSet *
 unwrap(MlirFrozenRewritePatternSet module) {
   assert(module.ptr && "unexpected null module");
@@ -336,15 +327,6 @@ MlirRewriterBase mlirPatternRewriterAsBase(MlirPatternRewriter rewriter) {
 //===----------------------------------------------------------------------===//
 /// RewritePattern API
 //===----------------------------------------------------------------------===//
-
-inline const mlir::RewritePattern *unwrap(MlirRewritePattern pattern) {
-  assert(pattern.ptr && "expected non-null pattern");
-  return static_cast<const mlir::RewritePattern *>(pattern.ptr);
-}
-
-inline MlirRewritePattern wrap(const mlir::RewritePattern *pattern) {
-  return {pattern};
-}
 
 namespace mlir {
 
