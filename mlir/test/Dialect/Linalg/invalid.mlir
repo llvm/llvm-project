@@ -681,7 +681,7 @@ func.func @map_binary_wrong_yield_operands(
    %add = linalg.map
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
           outs(%init:tensor<64xf32>)
-          (%lhs_elem: f32, %rhs_elem: f32) {
+          (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem: f32
             // expected-error @+1{{'linalg.yield' op expected number of yield values (2) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
             linalg.yield %0, %0: f32, f32
@@ -694,11 +694,11 @@ func.func @map_binary_wrong_yield_operands(
 func.func @map_input_mapper_arity_mismatch(
     %lhs: tensor<64xf32>, %rhs: tensor<64xf32>, %init: tensor<64xf32>)
     -> tensor<64xf32> {
-  // expected-error@+1{{'linalg.map' op expects number of operands to match the arity of mapper, but got: 2 and 3}}
+  // expected-error@+1{{'linalg.map' op expects number of operands to match the arity of mapper, but got: 3 and 4}}
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
       outs(%init:tensor<64xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32, %extra_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32, %extra_elem: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
@@ -714,7 +714,7 @@ func.func @map_input_mapper_type_mismatch(
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
       outs(%init:tensor<64xf32>)
-      (%lhs_elem: f64, %rhs_elem: f64) {
+      (%lhs_elem: f64, %rhs_elem: f64, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f64
         linalg.yield %0: f64
       }
@@ -730,7 +730,7 @@ func.func @map_input_output_shape_mismatch(
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64x64xf32>, tensor<64x64xf32>)
       outs(%init:tensor<32xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
