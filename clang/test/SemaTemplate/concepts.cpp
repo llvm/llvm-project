@@ -833,13 +833,13 @@ struct Parent {
 static_assert(Parent<void>::TakesUnary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesUnary'}}
 // expected-note@#UNARY{{because 'decltype(0ULL)' (aka 'unsigned long long') does not satisfy 'C'}}
-// expected-note@#61777_C{{because 'sizeof(unsigned long long) == 4' (8 == 4) evaluated to false}}
+// expected-note@#61777_C{{because 'sizeof(decltype(0ULL)) == 4' (8 == 4) evaluated to false}}
 static_assert(Parent<void>::TakesUnary<int, 0uLL>::i == 0);
 
 static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesBinary'}}
 // expected-note@#BINARY{{because 'C2<decltype(0ULL), int>' evaluated to false}}
-// expected-note@#61777_C2{{because 'sizeof(unsigned long long) == sizeof(int)' (8 == 4) evaluated to false}}
+// expected-note@#61777_C2{{because 'sizeof(decltype(0ULL)) == sizeof(int)' (8 == 4) evaluated to false}}
 static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
 }
 
@@ -1329,8 +1329,8 @@ static_assert(__cpp17_iterator<not_move_constructible>); \
 // expected-error {{static assertion failed}} \
 // expected-note {{because 'not_move_constructible' does not satisfy '__cpp17_iterator'}} \
 // expected-note@#__cpp17_copy_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_copy_constructible'}} \
-// expected-note@#__cpp17_move_constructible {{because 'parameter_mapping_regressions::case3::not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
-// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
+// expected-note@#__cpp17_move_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
+// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<not_move_constructible>' evaluated to false}}
 }
 
 namespace case4 {

@@ -68,8 +68,8 @@ struct my_range{
 void baz() {
 auto it = begin(rng); // #BEGIN_CALL
 // expected-error-re@#INF_REQ {{satisfaction of constraint {{.*}} depends on itself}}
-// expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<DirectRecursiveCheck::my_range>' requested here}}
-// expected-note@#INF_BEGIN_EXPR {{while checking constraint satisfaction for template 'begin<DirectRecursiveCheck::my_range>' required here}}
+// expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<struct my_range>' requested here}}
+// expected-note@#INF_BEGIN_EXPR {{while checking constraint satisfaction for template 'begin<struct my_range>' required here}}
 // expected-note@#INF_BEGIN_EXPR {{while substituting deduced template arguments into function template 'begin'}}
 // expected-note@#INF_BEGIN_EXPR {{in instantiation of requirement here}}
 // expected-note@#INF_REQ {{while substituting template arguments into constraint expression here}}
