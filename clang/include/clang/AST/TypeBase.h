@@ -1148,7 +1148,7 @@ public:
 
   /// Check if this is a WebAssembly non null Externref Type.
   bool isWebAssemblyNonNullExternrefType() const;
-  
+
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
 
