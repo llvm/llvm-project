@@ -16,6 +16,7 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
@@ -107,7 +108,10 @@ static Value *simplifyShiftSelectingPackedElement(Instruction *I,
   Value *ShrAmtZ =
       IC.Builder.CreateICmpEQ(ShrAmt, Constant::getNullValue(ShrAmt->getType()),
                               ShrAmt->getName() + ".z");
-  Value *Select = IC.Builder.CreateSelect(ShrAmtZ, Lower, Upper);
+  // There is no existing !prof metadata we can derive the !prof metadata for
+  // this select.
+  Value *Select = IC.createSelectInstWithUnknownProfile(ShrAmtZ, Lower, Upper);
+  IC.Builder.Insert(Select);
   Select->takeName(I);
   return Select;
 }

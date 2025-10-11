@@ -5290,6 +5290,33 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
   return OriginalTy;
 }
 
+QualType ArraySectionExpr::getElementType() const {
+  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    BaseTy = ASE->getElementType();
+
+  if (BaseTy->isAnyPointerType())
+    return BaseTy->getPointeeType();
+  if (BaseTy->isArrayType())
+    return BaseTy->castAsArrayTypeUnsafe()->getElementType();
+
+  // If this isn't a pointer or array, the base is a dependent expression, so
+  // just return the BaseTy anyway.
+  assert(BaseTy->isInstantiationDependentType());
+  return BaseTy;
+}
+
+QualType ArraySectionExpr::getBaseType() const {
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    return ASE->getElementType();
+
+  return getBase()->IgnoreParenImpCasts()->getType();
+}
+
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
                            SourceLocation EndLoc, ArrayRef<Expr *> SubExprs)
     : Expr(RecoveryExprClass, T.getNonReferenceType(),

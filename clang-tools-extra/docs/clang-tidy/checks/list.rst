@@ -372,7 +372,7 @@ Clang-Tidy Checks
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
-   :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
+   :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
    :doc:`readability-container-contains <readability/container-contains>`, "Yes"
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
@@ -571,12 +571,12 @@ Check aliases
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
+   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
+   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,

@@ -1037,7 +1037,7 @@ void test() {
 
 namespace GH66612 {
   template<typename C>
-    auto end(C c) ->int;
+    auto end(C c) ->int; // expected-note {{possible target for call}}
 
   template <typename T>
     concept Iterator = true;
@@ -1047,9 +1047,8 @@ namespace GH66612 {
         { end } -> Iterator; // #66612GH_END
     };
 
-  static_assert(Container<int>);// expected-error{{static assertion failed}}
-  // expected-note@-1{{because 'int' does not satisfy 'Container'}}
-  // expected-note@#66612GH_END{{because 'end' would be invalid: reference to overloaded function could not be resolved; did you mean to call it?}}
+  static_assert(Container<int>);
+  // expected-error@#66612GH_END{{reference to overloaded function could not be resolved; did you mean to call it?}}
 }
 
 namespace GH66938 {
@@ -1405,8 +1404,19 @@ static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
 
 }
 
+namespace case7 {
+
+template <class _Tp, class _Up>
+concept __same_as_impl = __is_same(_Tp, _Up);
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up>;
+template <typename>
+concept IsEntitySpec =
+  requires { requires same_as<void, void>; };
+
 }
 
+}
 
 namespace GH162125 {
 template<typename, int size>
@@ -1444,3 +1454,54 @@ struct s {
 
 void(*test)(int) = &s<bool>::f<int>;
 }
+namespace GH51246 {
+void f(); // expected-note {{possible target for call}}
+void f(int); // expected-note {{possible target for call}}
+void g();
+static_assert(requires { f; }); // expected-error {{reference to overloaded function could not be resolved}}
+static_assert(requires { g; });
+struct S {
+    void mf() {
+        static_assert(requires { mf(); });
+        static_assert(requires { mf; });    // expected-error {{reference to non-static member function must be called}}
+        static_assert(requires { S::mf; }); // expected-error {{reference to non-static member function must be called}}
+    }
+    void mf2(int); // expected-note 2{{possible target for call}}
+    void mf2() { // expected-note 2{{possible target for call}}
+        static_assert(requires { mf2; });    // expected-error {{reference to non-static member function must be called}}
+        static_assert(requires { S::mf2; }); // expected-error {{reference to non-static member function must be called}}
+    }
+};
+
+} // namespace GH51246
+
+
+namespace GH97753 {
+
+void f(); // expected-note {{possible target for call}}
+void f(int); // expected-note {{possible target for call}}
+
+template<typename T>
+concept C = sizeof(T) == 42;
+
+static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
+// expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+
+}
+
+namespace GH162770 {
+  enum e {};
+  template<e> struct s {};
+
+  template<typename> struct specialized;
+  template<e x> struct specialized<s<x>> {
+    static auto make(auto) -> s<x>;
+  };
+
+  template<e x> struct check {
+    static constexpr auto m = requires { specialized<s<x>>::make(0); };
+  };
+
+  template<typename... Ts> auto comma = (..., Ts());
+  auto b = comma<check<e{}>>;
+} // namespace GH162770

@@ -651,7 +651,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom conversions to/from v2i8.
   setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
 
-  // Only logical ops can be done on v4i8 directly, others must be done
+  // Only logical ops can be done on v4i8/v2i32 directly, others must be done
   // elementwise.
   setOperationAction(
       {ISD::ABS,         ISD::ADD,        ISD::ADDC,        ISD::ADDE,
@@ -669,7 +669,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
        ISD::UMIN,        ISD::UMULO,      ISD::UMUL_LOHI,   ISD::UREM,
        ISD::USHLSAT,     ISD::USUBO,      ISD::USUBO_CARRY, ISD::VSELECT,
        ISD::USUBSAT},
-      MVT::v4i8, Expand);
+      {MVT::v4i8, MVT::v2i32}, Expand);
 
   // Operations not directly supported by NVPTX.
   for (MVT VT : {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32,
@@ -689,7 +689,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8 , Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::v2i16, MVT::v2i32}, Expand);
 
   setOperationAction(ISD::SHL_PARTS, MVT::i32  , Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i32  , Custom);

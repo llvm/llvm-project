@@ -480,6 +480,10 @@ public:
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
 
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a

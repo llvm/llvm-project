@@ -3174,6 +3174,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
 
+  if (VF.isScalable() && !isSingleScalar())
+    return InstructionCost::getInvalid();
+
   switch (UI->getOpcode()) {
   case Instruction::GetElementPtr:
     // We mark this instruction as zero-cost because the cost of GEPs in
@@ -3220,9 +3223,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                  ElementCount::getFixed(1), Ctx));
       return ScalarCallCost;
     }
-
-    if (VF.isScalable())
-      return InstructionCost::getInvalid();
 
     return ScalarCallCost * VF.getFixedValue() +
            Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
@@ -3274,9 +3274,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    if (VF.isScalable() && !isSingleScalar())
-      return InstructionCost::getInvalid();
-
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
     const VPRegionBlock *ParentRegion = getParent()->getParent();

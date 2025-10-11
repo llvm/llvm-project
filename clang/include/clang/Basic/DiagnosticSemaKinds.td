@@ -6326,11 +6326,14 @@ def warn_internal_linkage_local_storage : Warning<
   InGroup<IgnoredAttributes>;
 
 def ext_internal_in_extern_inline : ExtWarn<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is a C2y extension">, InGroup<StaticInInline>;
 def ext_internal_in_extern_inline_quiet : Extension<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  ext_internal_in_extern_inline.Summary>, InGroup<StaticInInline>;
+def warn_c2y_compat_internal_in_extern_inline : Warning<
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 def warn_static_local_in_extern_inline : Warning<
   "non-constant static local variable in inline function may be different "
   "in different files">, InGroup<StaticLocalInInline>;

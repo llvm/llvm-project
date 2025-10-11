@@ -27,8 +27,8 @@ func.func @test_poly_expr_without_associate() {
 // CHECK:           %[[VAL_16:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_13]], %[[VAL_14]], %[[VAL_11]], %[[VAL_12:.*]], {{.*}}
 // CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>
 // CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = ".tmp"} : (!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>) -> (!fir.class<!fir.type<_QFtestTt{c:i32}>>, !fir.class<!fir.type<_QFtestTt{c:i32}>>)
-// CHECK:           %[[VAL_19:.*]] = arith.constant true
 // CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_18]]#0 temporary_lhs : !fir.class<!fir.type<_QFtestTt{c:i32}>>, !fir.class<!fir.type<_QFtestTt{c:i32}>>
+// CHECK:           %[[VAL_19:.*]] = arith.constant true
 // CHECK:           %[[VAL_20:.*]] = fir.undefined tuple<!fir.class<!fir.type<_QFtestTt{c:i32}>>, i1>
 // CHECK:           %[[VAL_21:.*]] = fir.insert_value %[[VAL_20]], %[[VAL_19]], [1 : index] : (tuple<!fir.class<!fir.type<_QFtestTt{c:i32}>>, i1>, i1) -> tuple<!fir.class<!fir.type<_QFtestTt{c:i32}>>, i1>
 // CHECK:           %[[VAL_22:.*]] = fir.insert_value %[[VAL_21]], %[[VAL_18]]#0, [0 : index] : (tuple<!fir.class<!fir.type<_QFtestTt{c:i32}>>, i1>, !fir.class<!fir.type<_QFtestTt{c:i32}>>) -> tuple<!fir.class<!fir.type<_QFtestTt{c:i32}>>, i1>
@@ -84,8 +84,8 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
 // CHECK:           %[[VAL_19:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_16]], %[[VAL_17]], %[[VAL_14]], %[[VAL_15]], {{.*}}
 // CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>
 // CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = ".tmp"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>)
-// CHECK:           %[[VAL_22:.*]] = arith.constant true
 // CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_21]]#0 temporary_lhs : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, !fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>
+// CHECK:           %[[VAL_22:.*]] = arith.constant true
 // CHECK:           %[[VAL_23:.*]] = fir.undefined tuple<!fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>, i1>
 // CHECK:           %[[VAL_24:.*]] = fir.insert_value %[[VAL_23]], %[[VAL_22]], [1 : index] : (tuple<!fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>, i1>, i1) -> tuple<!fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>, i1>
 // CHECK:           %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[VAL_21]]#0, [0 : index] : (tuple<!fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>, i1>, !fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>) -> tuple<!fir.class<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>, i1>

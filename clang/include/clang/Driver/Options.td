@@ -545,15 +545,16 @@ multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
               Group<f_Group>;
 }
 
-// Creates a BoolOption where both of the flags are prefixed with "g" and have
-// the Group<g_Group>.
+// Creates a BoolOption where both of the flags are prefixed with "g".
+// Does *not* map to g_Group, because that is reserved for flags that are
+// intended to enable (or disable) debug info, which is not appropriate for a
+// negative boolean flag (-gno-${feature}).
 // Used for -cc1 frontend options. Driver-only options do not map to
 // CompilerInvocation.
 multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[]>> {
-  defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>,
-              Group<g_Group>;
+  defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>;
 }
 
 multiclass BoolMOption<string flag_base, KeyPathAndMacro kpm,
@@ -4845,8 +4846,7 @@ defm structor_decl_linkage_names
                   NegFlag<SetFalse>,
                   PosFlag<SetTrue, [], [],
                           "Attach linkage names to C++ constructor/destructor "
-                          "declarations in DWARF."
-                          "Implies -g.">,
+                          "declarations in DWARF.">,
                   BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
                   DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach ``DW_AT_linkage_name`` to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With ``-gstructor-decl-linkage-names``, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name ``_ZN3FooC4Ev`` may have multiple definitions associated with it such as ``_ZN3FooC1Ev`` and ``_ZN3FooC2Ev``.
 
@@ -4855,7 +4855,7 @@ defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
         "Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code"
-        " in some debuggers. DWARF only. Implies -g.">,
+        " in some debuggers. DWARF only.">,
     BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
