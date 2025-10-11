@@ -414,7 +414,7 @@ ConstantFPRange ConstantFPRange::negate() const {
   return ConstantFPRange(-Upper, -Lower, MayBeQNaN, MayBeSNaN);
 }
 
-// Return true if the finite part is not empty after removing infinities.
+/// Return true if the finite part is not empty after removing infinities.
 static bool removeInf(APFloat &Lower, APFloat &Upper, bool &HasPosInf,
                       bool &HasNegInf) {
   assert(strictCompare(Lower, Upper) != APFloat::cmpGreaterThan &&
