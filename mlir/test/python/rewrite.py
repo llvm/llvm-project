@@ -15,12 +15,12 @@ def run(f):
 # CHECK-LABEL: TEST: testRewritePattern
 @run
 def testRewritePattern():
-    def to_muli(op, rewriter, pattern):
+    def to_muli(op, rewriter):
         with rewriter.ip:
             new_op = arith.muli(op.operands[0], op.operands[1], loc=op.location)
         rewriter.replace_op(op, new_op.owner)
 
-    def constant_1_to_2(op, rewriter, pattern):
+    def constant_1_to_2(op, rewriter):
         c = op.attributes["value"].value
         if c != 1:
             return True  # failed to match

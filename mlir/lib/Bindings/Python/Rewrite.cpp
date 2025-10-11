@@ -193,11 +193,11 @@ public:
     callbacks.destruct = [](void *userData) {
       nb::handle(static_cast<PyObject *>(userData)).dec_ref();
     };
-    callbacks.matchAndRewrite = [](MlirRewritePattern pattern, MlirOperation op,
+    callbacks.matchAndRewrite = [](MlirRewritePattern, MlirOperation op,
                                    MlirPatternRewriter rewriter,
                                    void *userData) -> MlirLogicalResult {
       nb::handle f(static_cast<PyObject *>(userData));
-      nb::object res = f(op, PyPatternRewriter(rewriter), pattern);
+      nb::object res = f(op, PyPatternRewriter(rewriter));
       return logicalResultFromObject(res);
     };
     MlirRewritePattern pattern = mlirOpRewritePattenCreate(
