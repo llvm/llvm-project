@@ -76,8 +76,7 @@ static std::vector<lldb_private::RegisterInfo> &GetSharedRegisterInfoVector() {
 
 static const RegisterInfo *
 GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
-  static std::vector<lldb_private::RegisterInfo> g_register_infos(
-      GetSharedRegisterInfoVector());
+  static std::vector<lldb_private::RegisterInfo> g_register_infos;
 
   // Allocate RegisterInfo only once
   if (g_register_infos.empty()) {
@@ -93,6 +92,9 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
 #define UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
 #include "RegisterInfos_x86_64.h"
 #undef UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
+    std::vector<lldb_private::RegisterInfo> &shared_regs =
+        GetSharedRegisterInfoVector();
+    shared_regs = g_register_infos;
   }
 
   return &g_register_infos[0];
