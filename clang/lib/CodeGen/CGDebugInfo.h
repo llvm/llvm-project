@@ -140,7 +140,7 @@ class CGDebugInfo {
   std::vector<void *> RetainedTypes;
 
   /// Cache of forward declared types to RAUW at the end of compilation.
-  std::vector<std::pair<const TagType *, llvm::TrackingMDRef>> ReplaceMap;
+  std::vector<std::pair<const Type *, llvm::TrackingMDRef>> ReplaceMap;
 
   /// Cache of replaceable forward declarations (functions and
   /// variables) to RAUW at the end of compilation.
@@ -212,7 +212,10 @@ private:
                            llvm::DIFile *F);
   llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
-  llvm::DIType *CreateType(const RecordType *Tyg);
+  llvm::DIType *
+  CreateType(const RecordType *Tyg,
+             std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+             const Type *OrigTy);
 
   /// Create definition for the specified 'Ty'.
   ///
@@ -220,9 +223,14 @@ private:
   /// of the 'Ty'. The second is the type specified by the preferred_name
   /// attribute on 'Ty', which can be a nullptr if no such attribute
   /// exists.
-  std::pair<llvm::DIType *, llvm::DIType *>
-  CreateTypeDefinition(const RecordType *Ty);
-  llvm::DICompositeType *CreateLimitedType(const RecordType *Ty);
+  std::pair<llvm::DIType *, llvm::DIType *> CreateTypeDefinition(
+      const RecordType *Ty,
+      std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+      const Type *OrigTy);
+  llvm::DICompositeType *CreateLimitedType(
+      const RecordType *Ty,
+      std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+      const Type *OrigTy);
   void CollectContainingType(const CXXRecordDecl *RD,
                              llvm::DICompositeType *CT);
   /// Get Objective-C interface type.
@@ -318,7 +326,8 @@ private:
 
   struct TemplateArgs {
     const TemplateParameterList *TList;
-    llvm::ArrayRef<TemplateArgument> Args;
+    llvm::ArrayRef<TemplateArgument> AsWrittenArgs;
+    llvm::ArrayRef<TemplateArgument> ConvertedArgs;
   };
   /// A helper function to collect template parameters.
   llvm::DINodeArray CollectTemplateParams(std::optional<TemplateArgs> Args,
@@ -334,13 +343,10 @@ private:
                                              llvm::DIFile *Unit);
 
   std::optional<TemplateArgs> GetTemplateArgs(const VarDecl *) const;
-  std::optional<TemplateArgs> GetTemplateArgs(const RecordDecl *) const;
+  std::optional<TemplateArgs>
+  GetTemplateArgs(const RecordDecl *,
+                  std::optional<ArrayRef<TemplateArgument>>) const;
   std::optional<TemplateArgs> GetTemplateArgs(const FunctionDecl *) const;
-
-  /// A helper function to collect debug info for template
-  /// parameters.
-  llvm::DINodeArray CollectCXXTemplateParams(const RecordDecl *TS,
-                                             llvm::DIFile *F);
 
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
@@ -725,8 +731,10 @@ private:
   llvm::DIScope *getCurrentContextDescriptor(const Decl *Decl);
 
   /// Create a forward decl for a RecordType in a given context.
-  llvm::DICompositeType *getOrCreateRecordFwdDecl(const RecordType *,
-                                                  llvm::DIScope *);
+  llvm::DICompositeType *
+  getOrCreateRecordFwdDecl(const RecordType *, llvm::DIScope *,
+                           std::optional<ArrayRef<TemplateArgument>>,
+                           const Type *OrigTy);
 
   /// Return current directory name.
   StringRef getCurrentDirname();
@@ -764,7 +772,10 @@ private:
 
   /// Get the type from the cache or create a new partial type if
   /// necessary.
-  llvm::DICompositeType *getOrCreateLimitedType(const RecordType *Ty);
+  llvm::DICompositeType *getOrCreateLimitedType(
+      const RecordType *Ty,
+      std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+      const Type *OrigTy);
 
   /// Create type metadata for a source language type.
   llvm::DIType *CreateTypeNode(QualType Ty, llvm::DIFile *Fg);

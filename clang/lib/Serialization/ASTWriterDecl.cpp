@@ -2404,7 +2404,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
     Abv->Add(BitCodeAbbrevOp(TemplateArgument::Type)); // Template Argument Kind
     Abv->Add(
         BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Template Argument Type
-    Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Is Defaulted
     Abv->Add(BitCodeAbbrevOp(0)); // TemplateArgumentsAsWritten
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SourceLocation
     Abv->Add(BitCodeAbbrevOp(0));

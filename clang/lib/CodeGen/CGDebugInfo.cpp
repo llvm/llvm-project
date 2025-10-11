@@ -1323,9 +1323,10 @@ static llvm::dwarf::Tag getTagForRecord(const RecordDecl *RD) {
   return Tag;
 }
 
-llvm::DICompositeType *
-CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
-                                      llvm::DIScope *Ctx) {
+llvm::DICompositeType *CGDebugInfo::getOrCreateRecordFwdDecl(
+    const RecordType *Ty, llvm::DIScope *Ctx,
+    std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+    const Type *OrigTy) {
   const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
   if (llvm::DIType *T = getTypeOrNull(QualType(Ty, 0)))
     return cast<llvm::DICompositeType>(T);
@@ -1359,12 +1360,19 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align, Flags,
       Identifier);
-  if (CGM.getCodeGenOpts().DebugFwdTemplateParams)
-    if (auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-      DBuilder.replaceArrays(RetTy, llvm::DINodeArray(),
-                             CollectCXXTemplateParams(TSpecial, DefUnit));
+  if (CGM.getCodeGenOpts().DebugFwdTemplateParams) {
+    if (auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+      DBuilder.replaceArrays(
+          RetTy, llvm::DINodeArray(),
+          CollectTemplateParams(GetTemplateArgs(TSpecial, AsWrittenArgsOrNone),
+                                DefUnit));
+    } else {
+      assert(!AsWrittenArgsOrNone);
+    }
+  }
+
   ReplaceMap.emplace_back(
-      std::piecewise_construct, std::make_tuple(Ty),
+      std::piecewise_construct, std::make_tuple(OrigTy),
       std::make_tuple(static_cast<llvm::Metadata *>(RetTy)));
   return RetTy;
 }
@@ -1541,7 +1549,10 @@ GetTemplateArgs(const TemplateDecl *TD, const TemplateSpecializationType *Ty) {
 
 llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
                                       llvm::DIFile *Unit) {
-  assert(Ty->isTypeAlias());
+  if (!Ty->isTypeAlias())
+    return CreateType(cast<RecordType>(Ty->desugar()), Ty->template_arguments(),
+                      Ty);
+
   llvm::DIType *Src = getOrCreateType(Ty->getAliasedType(), Unit);
 
   const TemplateDecl *TD = Ty->getTemplateName().getAsTemplateDecl();
@@ -1562,7 +1573,6 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias) {
     auto ArgVector = ::GetTemplateArgs(TD, Ty);
-    TemplateArgs Args = {TD->getTemplateParameters(), ArgVector};
 
     // FIXME: Respect DebugTemplateNameKind::Mangled, e.g. by using GetName.
     // Note we can't use GetName without additional work: TypeAliasTemplateDecl
@@ -1574,8 +1584,12 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
     TD->getNameForDiagnostic(OS, PP, /*Qualified=*/false);
     if (CGM.getCodeGenOpts().getDebugSimpleTemplateNames() !=
             llvm::codegenoptions::DebugTemplateNamesKind::Simple ||
-        !HasReconstitutableArgs(Args.Args))
-      printTemplateArgumentList(OS, Args.Args, PP);
+        !HasReconstitutableArgs(ArgVector))
+      printTemplateArgumentList(OS, ArgVector, PP);
+
+    TemplateArgs Args = {TD->getTemplateParameters(),
+                         /*AsWrittenArgs=*/ArgVector,
+                         /*ConvertedArgs=*/{}};
 
     llvm::DIDerivedType *AliasTy = DBuilder.createTemplateAlias(
         Src, Name, getOrCreateFile(Loc), getLineNumber(Loc),
@@ -2446,14 +2460,31 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
                                    llvm::DIFile *Unit) {
   if (!OArgs)
     return llvm::DINodeArray();
-  TemplateArgs &Args = *OArgs;
+  auto [TList, AsWrittenArgs, ConvertedArgs] = *OArgs;
+
+  SmallVector<TemplateArgument> UnpackedArgs;
+  if (!ConvertedArgs.empty() &&
+      ConvertedArgs.back().getKind() == TemplateArgument::Pack) {
+    UnpackedArgs.resize(ConvertedArgs.size());
+    unsigned NumPackedArgs =
+        int32_t(AsWrittenArgs.size()) - int32_t(ConvertedArgs.size() - 1);
+    assert(NumPackedArgs >= 0);
+    llvm::copy(AsWrittenArgs.drop_back(NumPackedArgs), UnpackedArgs.data());
+    UnpackedArgs.back() = TemplateArgument::CreatePackCopy(
+        CGM.getContext(), AsWrittenArgs.take_back(NumPackedArgs));
+    AsWrittenArgs = UnpackedArgs;
+  }
+
   SmallVector<llvm::Metadata *, 16> TemplateParams;
-  for (unsigned i = 0, e = Args.Args.size(); i != e; ++i) {
-    const TemplateArgument &TA = Args.Args[i];
-    StringRef Name;
-    const bool defaultParameter = TA.getIsDefaulted();
-    if (Args.TList)
-      Name = Args.TList->getParam(i)->getName();
+  for (unsigned i = 0, e = ConvertedArgs.empty() ? AsWrittenArgs.size()
+                                                 : ConvertedArgs.size();
+       i != e; ++i) {
+    auto [TA, defaultParameter] = i < AsWrittenArgs.size()
+                                      ? std::make_tuple(AsWrittenArgs[i], false)
+                                      : std::make_tuple(ConvertedArgs[i], true);
+    StringRef Name =
+        TList ? TList->getParam(std::min(i, TList->size() - 1))->getName()
+              : StringRef();
 
     switch (TA.getKind()) {
     case TemplateArgument::Type: {
@@ -2553,7 +2584,10 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
     case TemplateArgument::Pack:
       TemplateParams.push_back(DBuilder.createTemplateParameterPack(
           TheCU, Name, nullptr,
-          CollectTemplateParams({{nullptr, TA.getPackAsArray()}}, Unit)));
+          CollectTemplateParams(
+              {{nullptr, /*AsWrittenArgs=*/TA.getPackAsArray(),
+                /*ConvertedArgs=*/{}}},
+              Unit)));
       break;
     case TemplateArgument::Expression: {
       const Expr *E = TA.getAsExpr();
@@ -2583,7 +2617,9 @@ CGDebugInfo::GetTemplateArgs(const FunctionDecl *FD) const {
     const TemplateParameterList *TList = FD->getTemplateSpecializationInfo()
                                              ->getTemplate()
                                              ->getTemplateParameters();
-    return {{TList, FD->getTemplateSpecializationArgs()->asArray()}};
+    return {{TList,
+             /*AsWrittenArgs=*/FD->getTemplateSpecializationArgs()->asArray(),
+             /*ConvertedArgs=*/{}}};
   }
   return std::nullopt;
 }
@@ -2598,10 +2634,11 @@ CGDebugInfo::GetTemplateArgs(const VarDecl *VD) const {
   VarTemplateDecl *T = TS->getSpecializedTemplate();
   const TemplateParameterList *TList = T->getTemplateParameters();
   auto TA = TS->getTemplateArgs().asArray();
-  return {{TList, TA}};
+  return {{TList, TA, /*ConvertedArgs=*/{}}};
 }
-std::optional<CGDebugInfo::TemplateArgs>
-CGDebugInfo::GetTemplateArgs(const RecordDecl *RD) const {
+std::optional<CGDebugInfo::TemplateArgs> CGDebugInfo::GetTemplateArgs(
+    const RecordDecl *RD,
+    std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone) const {
   if (auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
     // Always get the full list of parameters, not just the ones from the
     // specialization. A partial specialization may have fewer parameters than
@@ -2609,7 +2646,12 @@ CGDebugInfo::GetTemplateArgs(const RecordDecl *RD) const {
     TemplateParameterList *TPList =
         TSpecial->getSpecializedTemplate()->getTemplateParameters();
     const TemplateArgumentList &TAList = TSpecial->getTemplateArgs();
-    return {{TPList, TAList.asArray()}};
+    return {{TPList,
+             /*AsWrittenArgs=*/
+             AsWrittenArgsOrNone ? *AsWrittenArgsOrNone : TAList.asArray(),
+             /*ConvertedArgs=*/
+             AsWrittenArgsOrNone ? TAList.asArray()
+                                 : ArrayRef<TemplateArgument>()}};
   }
   return std::nullopt;
 }
@@ -2623,11 +2665,6 @@ CGDebugInfo::CollectFunctionTemplateParams(const FunctionDecl *FD,
 llvm::DINodeArray CGDebugInfo::CollectVarTemplateParams(const VarDecl *VL,
                                                         llvm::DIFile *Unit) {
   return CollectTemplateParams(GetTemplateArgs(VL), Unit);
-}
-
-llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(const RecordDecl *RD,
-                                                        llvm::DIFile *Unit) {
-  return CollectTemplateParams(GetTemplateArgs(RD), Unit);
 }
 
 llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
@@ -2966,7 +3003,9 @@ void CGDebugInfo::completeClass(const RecordDecl *RD) {
   // We want the canonical definition of the structure to not
   // be the typedef. Since that would lead to circular typedef
   // metadata.
-  auto [Res, PrefRes] = CreateTypeDefinition(dyn_cast<RecordType>(Ty));
+  auto [Res, PrefRes] = CreateTypeDefinition(
+      dyn_cast<RecordType>(Ty), /*AsWrittenArgsOrNone=*/std::nullopt,
+      /*OrigTy=*/Ty->getTypePtr());
   assert(!Res->isForwardDecl());
   TypeCache[TyPtr].reset(Res);
 }
@@ -3076,17 +3115,21 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
     completeClassData(RD);
 }
 
-llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
+llvm::DIType *CGDebugInfo::CreateType(
+    const RecordType *Ty,
+    std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+    const Type *OrigTy) {
   RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
   llvm::DIType *T = cast_or_null<llvm::DIType>(getTypeOrNull(QualType(Ty, 0)));
   if (T || shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD,
                                 CGM.getLangOpts())) {
     if (!T)
-      T = getOrCreateRecordFwdDecl(Ty, getDeclContextDescriptor(RD));
+      T = getOrCreateRecordFwdDecl(Ty, getDeclContextDescriptor(RD),
+                                   AsWrittenArgsOrNone, OrigTy);
     return T;
   }
 
-  auto [Def, Pref] = CreateTypeDefinition(Ty);
+  auto [Def, Pref] = CreateTypeDefinition(Ty, AsWrittenArgsOrNone, OrigTy);
 
   return Pref ? Pref : Def;
 }
@@ -3103,8 +3146,10 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
   return getOrCreateType(PNA->getTypedefType(), Unit);
 }
 
-std::pair<llvm::DIType *, llvm::DIType *>
-CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
+std::pair<llvm::DIType *, llvm::DIType *> CGDebugInfo::CreateTypeDefinition(
+    const RecordType *Ty,
+    std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+    const Type *OrigTy) {
   RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
@@ -3116,7 +3161,8 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   // its members.  Finally, we create a descriptor for the complete type (which
   // may refer to the forward decl if the struct is recursive) and replace all
   // uses of the forward declaration with the final definition.
-  llvm::DICompositeType *FwdDecl = getOrCreateLimitedType(Ty);
+  llvm::DICompositeType *FwdDecl =
+      getOrCreateLimitedType(Ty, AsWrittenArgsOrNone, OrigTy);
 
   const RecordDecl *D = RD->getDefinition();
   if (!D || !D->isCompleteDefinition())
@@ -3876,11 +3922,7 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
       return C.getQualifiedType(T->getCanonicalTypeUnqualified().getTypePtr(),
                                 Quals);
     case Type::TemplateSpecialization: {
-      const auto *Spec = cast<TemplateSpecializationType>(T);
-      if (Spec->isTypeAlias())
-        return C.getQualifiedType(T.getTypePtr(), Quals);
-      T = Spec->desugar();
-      break;
+      return C.getQualifiedType(T.getTypePtr(), Quals);
     }
     case Type::TypeOfExpr:
       T = cast<TypeOfExprType>(T)->getUnderlyingExpr()->getType();
@@ -4066,7 +4108,9 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Typedef:
     return CreateType(cast<TypedefType>(Ty), Unit);
   case Type::Record:
-    return CreateType(cast<RecordType>(Ty));
+    return CreateType(cast<RecordType>(Ty),
+                      /*AsWrittenArgsOrNone=*/std::nullopt,
+                      /*OrigTy=*/Ty.getTypePtr());
   case Type::Enum:
     return CreateEnumType(cast<EnumType>(Ty));
   case Type::FunctionProto:
@@ -4124,8 +4168,10 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   llvm_unreachable("type should have been unwrapped!");
 }
 
-llvm::DICompositeType *
-CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
+llvm::DICompositeType *CGDebugInfo::getOrCreateLimitedType(
+    const RecordType *Ty,
+    std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+    const Type *OrigTy) {
   QualType QTy(Ty, 0);
 
   auto *T = cast_or_null<llvm::DICompositeType>(getTypeOrNull(QTy));
@@ -4137,7 +4183,8 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
     return T;
 
   // Otherwise create the type.
-  llvm::DICompositeType *Res = CreateLimitedType(Ty);
+  llvm::DICompositeType *Res =
+      CreateLimitedType(Ty, AsWrittenArgsOrNone, OrigTy);
 
   // Propagate members from the declaration to the definition
   // CreateType(const RecordType*) will overwrite this with the members in the
@@ -4150,7 +4197,10 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
 }
 
 // TODO: Currently used for context chains when limiting debug info.
-llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
+llvm::DICompositeType *CGDebugInfo::CreateLimitedType(
+    const RecordType *Ty,
+    std::optional<ArrayRef<TemplateArgument>> AsWrittenArgsOrNone,
+    const Type *OrigTy) {
   RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
@@ -4176,7 +4226,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   // appropriately marked node and just return it.
   const RecordDecl *D = RD->getDefinition();
   if (!D || !D->isCompleteDefinition())
-    return getOrCreateRecordFwdDecl(Ty, RDContext);
+    return getOrCreateRecordFwdDecl(Ty, RDContext, AsWrittenArgsOrNone, OrigTy);
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
   // __attribute__((aligned)) can increase or decrease alignment *except* on a
@@ -4249,8 +4299,10 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    DBuilder.replaceArrays(RealDecl, llvm::DINodeArray(),
-                           CollectCXXTemplateParams(TSpecial, DefUnit));
+    DBuilder.replaceArrays(
+        RealDecl, llvm::DINodeArray(),
+        CollectTemplateParams(GetTemplateArgs(TSpecial, AsWrittenArgsOrNone),
+                              DefUnit));
   return RealDecl;
 }
 
@@ -5873,7 +5925,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
 
   bool IsOperatorOverload = false; // isa<CXXConversionDecl>(ND);
   if (auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
-    Args = GetTemplateArgs(RD);
+    Args = GetTemplateArgs(RD, /*AsWrittenArgsOrNone=*/std::nullopt);
   } else if (auto *FD = dyn_cast<FunctionDecl>(ND)) {
     Args = GetTemplateArgs(FD);
     auto NameKind = ND->getDeclName().getNameKind();
@@ -5905,8 +5957,8 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
   // Other operator overloads that aren't conversion operators could be
   // reconstituted but would require a bit more nuance about detecting the
   // difference between these different operators during that rebuilding.
-  bool Reconstitutable =
-      Args && HasReconstitutableArgs(Args->Args) && !IsOperatorOverload;
+  bool Reconstitutable = Args && HasReconstitutableArgs(Args->AsWrittenArgs) &&
+                         !IsOperatorOverload;
 
   PrintingPolicy PP = getPrintingPolicy();
 
@@ -5927,8 +5979,8 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
 
     if (Mangled) {
       OS << "|";
-      printTemplateArgumentList(OS, Args->Args, PP);
-      printTemplateArgumentList(EncodedOriginalNameOS, Args->Args, PP);
+      printTemplateArgumentList(OS, Args->AsWrittenArgs, PP);
+      printTemplateArgumentList(EncodedOriginalNameOS, Args->AsWrittenArgs, PP);
 #ifndef NDEBUG
       std::string CanonicalOriginalName;
       llvm::raw_string_ostream OriginalOS(CanonicalOriginalName);
