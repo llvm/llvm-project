@@ -405,9 +405,13 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     AddCXXIncludePath(P);
     break;
   }
-  case ToolChain::CST_Libstdcxx:
+  case ToolChain::CST_Libstdcxx: {
     addLibStdCxxIncludePaths(DriverArgs, CC1Args);
     break;
+  }
+  default: {
+    break;
+  }
   }
 
   std::string SysRootDir(computeSysRoot());
@@ -454,6 +458,8 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       }
       break;
     }
+    default:
+      break;
     }
   }
   switch (GetCXXStdlibType(DriverArgs)) {
@@ -464,7 +470,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
     break;
   }
-  case ToolChain::CST_Libstdcxx:
+  default:
     break;
   }
 }
@@ -587,6 +593,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
             TC.getCompilerRTArgString(Args, "crtend", ToolChain::FT_Object);
         break;
       }
+      default:
+        return;
       }
       CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTBegin)));
     }
