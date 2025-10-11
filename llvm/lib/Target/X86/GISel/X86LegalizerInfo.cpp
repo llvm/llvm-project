@@ -338,9 +338,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     Action.legalForTypesWithMemDesc({{s8, p0, s8, 1},
                                      {s16, p0, s16, 1},
                                      {s32, p0, s32, 1},
-                                     {s80, p0, s80, 1},
                                      {p0, p0, p0, 1},
                                      {v4s8, p0, v4s8, 1}});
+
+    if (UseX87)
+      Action.legalForTypesWithMemDesc({{s80, p0, s32, 1},
+                                       {s80, p0, s64, 1},
+                                       {s32, p0, s80, 1},
+                                       {s64, p0, s80, 1},
+                                       {s80, p0, s80, 1}});
     if (Is64Bit)
       Action.legalForTypesWithMemDesc(
           {{s64, p0, s64, 1}, {v2s32, p0, v2s32, 1}});
@@ -446,12 +452,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(HasSSE2, {{s64, s32}})
       .legalFor(HasAVX, {{v4s64, v4s32}})
-      .legalFor(HasAVX512, {{v8s64, v8s32}});
+      .legalFor(HasAVX512, {{v8s64, v8s32}})
+      .lowerFor(UseX87, {{s64, s32}, {s80, s32}, {s80, s64}});
 
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(HasSSE2, {{s32, s64}})
       .legalFor(HasAVX, {{v4s32, v4s64}})
-      .legalFor(HasAVX512, {{v8s32, v8s64}});
+      .legalFor(HasAVX512, {{v8s32, v8s64}})
+      .lowerFor(UseX87, {{s32, s64}, {s32, s80}, {s64, s80}});
 
   getActionDefinitionsBuilder(G_SITOFP)
       .legalFor(HasSSE1, {{s32, s32}})
