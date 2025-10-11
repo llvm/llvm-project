@@ -110,6 +110,9 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Let C++ empty record fall through to the standard argument-handling path instead of
+  always pass a single ``i8`` according to aarch64 AAPCS rules.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
