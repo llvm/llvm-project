@@ -149,8 +149,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms() {
   assert(copies == 0);
 #endif
   (void)std::generate(first, last, NullaryValue<T>(&copies));
-  assert(copies == 1);
-  copies = 0;
+  assert(copies == 0);
   (void)std::generate_n(first, count, NullaryValue<T>(&copies));
   assert(copies == 0);
   (void)std::includes(first, last, first2, last2, Less<T>(&copies));

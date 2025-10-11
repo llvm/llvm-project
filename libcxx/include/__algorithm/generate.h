@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator, class _Sent, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__generate(_ForwardIterator __first, _Sent __last, _Generator __gen) {
+__generate(_ForwardIterator __first, _Sent __last, _Generator& __gen) {
   for (; __first != __last; ++__first)
     *__first = __gen();
 }
