@@ -966,6 +966,7 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
   // recurse on our operand.  This can cut a long search short if we know we're
   // not going to be able to get any useful information anways.
   switch (CI->getOpcode()) {
+  case Instruction::PtrToInt:
   case Instruction::Trunc:
   case Instruction::SExt:
   case Instruction::ZExt:
@@ -976,6 +977,11 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
                       << "' - overdefined (unknown cast).\n");
     return ValueLatticeElement::getOverdefined();
   }
+
+  // Assumed predicate over the integral value of the pointer are constraints on
+  // the cast to integer value itself.
+  if (auto *PTI = dyn_cast<PtrToIntInst>(CI))
+    return getBlockValue(PTI->getPointerOperand(), BB, PTI);
 
   // Figure out the range of the LHS.  If that fails, we still apply the
   // transfer rule on the full set since we may be able to locally infer
@@ -1350,6 +1356,20 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
   }
 
   Type *Ty = Val->getType();
+
+  // On the off-chance we may compute a range over the address of a pointer.
+  ConstantInt *CI = nullptr;
+  if (Ty->isPointerTy() && LHS == Val &&
+      match(RHS, m_IntToPtr(m_ConstantInt(CI)))) {
+    if (Ty->getPointerAddressSpace() ==
+        RHS->getType()->getPointerAddressSpace()) {
+      ConstantRange RHSRange(CI->getValue());
+      ConstantRange AllowedR =
+          ConstantRange::makeAllowedICmpRegion(EdgePred, RHSRange);
+      return ValueLatticeElement::getRange(AllowedR);
+    }
+  }
+
   if (!Ty->isIntegerTy())
     return ValueLatticeElement::getOverdefined();
 
