@@ -22,8 +22,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <WriteMode write_mode>
-int printf_main(Writer<write_mode> *writer, const char *__restrict str,
-                internal::ArgList &args) {
+PrintfResult printf_main(Writer<write_mode> *writer, const char *__restrict str,
+                         internal::ArgList &args) {
   Parser<internal::ArgList> parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
@@ -33,9 +33,8 @@ int printf_main(Writer<write_mode> *writer, const char *__restrict str,
       result = convert(writer, cur_section);
     else
       result = writer->write(cur_section.raw_string);
-
     if (result < 0)
-      return result;
+      return {0, -result};
   }
 
   return writer->get_chars_written();

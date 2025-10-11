@@ -22,6 +22,18 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
+struct PrintfResult {
+  size_t value;
+  int error;
+
+  constexpr PrintfResult(size_t val) : value(val), error(0) {}
+  constexpr PrintfResult(size_t val, int error) : value(val), error(error) {}
+
+  constexpr bool has_error() { return error != 0; }
+
+  constexpr operator size_t() { return value; }
+};
+
 // These length modifiers match the length modifiers in the format string, which
 // is why they are formatted differently from the rest of the file.
 enum class LengthModifier { hh, h, l, ll, j, z, t, L, w, wf, none };
@@ -132,14 +144,6 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
 
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
-// These are the printf return values for when an error has occurred. They are
-// all negative, and should be distinct.
-constexpr int FILE_WRITE_ERROR = -1;
-constexpr int FILE_STATUS_ERROR = -2;
-constexpr int NULLPTR_WRITE_ERROR = -3;
-constexpr int INT_CONVERSION_ERROR = -4;
-constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
-constexpr int ALLOCATION_ERROR = -6;
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 

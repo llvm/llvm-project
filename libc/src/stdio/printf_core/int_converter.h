@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/ctype_utils.h"
@@ -91,7 +92,7 @@ LIBC_INLINE int convert_int(Writer<write_mode> *writer,
   cpp::array<char, details::num_buf_size()> buf;
   auto str = details::num_to_strview(num, buf, to_conv.conv_name);
   if (!str)
-    return INT_CONVERSION_ERROR;
+    return -ERANGE;
 
   size_t digits_written = str->size();
 

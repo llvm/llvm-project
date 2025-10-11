@@ -36,7 +36,8 @@ int strftime_main(printf_core::Writer<write_mode> *writer,
       return result;
   }
 
-  return writer->get_chars_written();
+  // TODO: return result struct like printf, so that size_t can be returned
+  return static_cast<int>(writer->get_chars_written());
 }
 
 } // namespace strftime_core
