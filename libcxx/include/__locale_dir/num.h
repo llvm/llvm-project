@@ -885,7 +885,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
   const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
   typedef typename numpunct<char_type>::string_type string_type;
   string_type __nm = __v ? __np.truename() : __np.falsename();
-  for (typename string_type::iterator __i = __nm.begin(); __i != __nm.end(); ++__i, ++__s)
+  for (typename string_type::iterator __i = __nm.begin(); __i != __nm.end(); ++__i, (void)++__s)
     *__s = *__i;
   return __s;
 }
