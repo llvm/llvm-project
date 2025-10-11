@@ -665,10 +665,10 @@ void LiveIntervals::extendToIndices(LiveRange &LR,
 void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,
                                SmallVectorImpl<SlotIndex> *EndPoints) {
   LiveQueryResult LRQ = LR.Query(Kill);
-  // LR may have liveness reachable from early clobber killer, which may be
+  // LR may have liveness reachable from early clobber slot, which may be
   // only live-in instead of live-out of the instruction.
   // For example, LR =[1r, 3r), Kill = 3e, we have to prune [3e, 3r) of LR.
-  VNInfo *VNI = Kill.isEarlyClobber() ? LRQ.valueIn() : LRQ.valueOutOrDead();
+  VNInfo *VNI = LRQ.valueOutOrDead() ? LRQ.valueOutOrDead() : LRQ.valueIn();
   if (!VNI)
     return;
 
