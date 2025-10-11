@@ -93,12 +93,6 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     auto &Tok = *Tokens.back();
     const auto NewlinesBefore = Tok.NewlinesBefore;
     switch (FormatOff) {
-    case FO_CurrentLine:
-      if (NewlinesBefore == 0)
-        Tok.Finalized = true;
-      else
-        FormatOff = FO_None;
-      break;
     case FO_NextLine:
       if (NewlinesBefore > 1) {
         FormatOff = FO_None;
@@ -107,6 +101,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
         FormatOff = FO_CurrentLine;
       }
       break;
+    case FO_CurrentLine:
+      if (NewlinesBefore == 0) {
+        Tok.Finalized = true;
+        break;
+      }
+      FormatOff = FO_None;
+      [[fallthrough]];
     default:
       if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
         if (Tok.is(tok::comment) &&
