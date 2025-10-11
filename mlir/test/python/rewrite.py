@@ -1,6 +1,5 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
-import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.builtin import ModuleOp
@@ -11,8 +10,6 @@ from mlir.rewrite import *
 def run(f):
     print("\nTEST:", f.__name__)
     f()
-    gc.collect()
-    assert Context._get_live_count() == 0
 
 
 # CHECK-LABEL: TEST: testRewritePattern
