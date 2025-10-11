@@ -70,6 +70,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
 
   ASSERT_FP_EQ(float(8 << 5), LIBC_NAMESPACE::shared::ldexpf(8.0f, 5));
   ASSERT_FP_EQ(float(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf(-8.0f, 5));
+
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::rsqrtf(1.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {

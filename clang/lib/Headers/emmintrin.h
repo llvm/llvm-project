@@ -2290,8 +2290,8 @@ _mm_avg_epu16(__m128i __a, __m128i __b) {
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [4 x i32] vector containing the sums of products
 ///    of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_madd_epi16(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_madd_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmaddwd128((__v8hi)__a, (__v8hi)__b);
 }
 
