@@ -18,292 +18,9 @@
 namespace clang::dataflow::statusor_model {
 namespace {
 
-static constexpr const char *kAbslDefsHeader = R"cc(
-  // Contains minimal mock declarations of common entities from //base, //util
-  // and //testing.
-
-#pragma clang system_header
-
-#ifndef BASE_DEFS_H_
-#define BASE_DEFS_H_
-
-#include "absl_type_traits.h"
-#include "std_type_traits.h"
-#include "stdlib_defs.h"
-#include "string_defs.h"
-
-  namespace absl {
-  struct in_place_t {};
-
-  constexpr in_place_t in_place;
-
-  struct nullopt_t {
-    constexpr explicit nullopt_t() {}
-  };
-
-  constexpr nullopt_t nullopt;
-  }  // namespace absl
-
-  namespace std {
-
-  struct in_place_t {};
-
-  constexpr in_place_t in_place;
-
-  struct nullopt_t {
-    constexpr explicit nullopt_t() {}
-  };
-
-  constexpr nullopt_t nullopt;
-
-  template <class _Tp>
-  struct __optional_destruct_base {
-    constexpr void reset() noexcept;
-  };
-
-  template <class _Tp>
-  struct __optional_storage_base : __optional_destruct_base<_Tp> {
-    constexpr bool has_value() const noexcept;
-  };
-
-  template <typename _Tp>
-  class optional : private __optional_storage_base<_Tp> {
-    using __base = __optional_storage_base<_Tp>;
-
-   public:
-    using value_type = _Tp;
-
-   private:
-    struct _CheckOptionalArgsConstructor {
-      template <class _Up>
-      static constexpr bool __enable_implicit() {
-        return is_constructible_v<_Tp, _Up&&> && is_convertible_v<_Up&&, _Tp>;
-      }
-
-      template <class _Up>
-      static constexpr bool __enable_explicit() {
-        return is_constructible_v<_Tp, _Up&&> && !is_convertible_v<_Up&&, _Tp>;
-      }
-    };
-    template <class _Up>
-    using _CheckOptionalArgsCtor =
-        _If<_IsNotSame<__uncvref_t<_Up>, in_place_t>::value &&
-                _IsNotSame<__uncvref_t<_Up>, optional>::value,
-            _CheckOptionalArgsConstructor, __check_tuple_constructor_fail>;
-    template <class _QualUp>
-    struct _CheckOptionalLikeConstructor {
-      template <class _Up, class _Opt = optional<_Up>>
-      using __check_constructible_from_opt =
-          _Or<is_constructible<_Tp, _Opt&>, is_constructible<_Tp, _Opt const&>,
-              is_constructible<_Tp, _Opt&&>,
-              is_constructible<_Tp, _Opt const&&>, is_convertible<_Opt&, _Tp>,
-              is_convertible<_Opt const&, _Tp>, is_convertible<_Opt&&, _Tp>,
-              is_convertible<_Opt const&&, _Tp>>;
-      template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_implicit() {
-        return is_convertible<_QUp, _Tp>::value &&
-               !__check_constructible_from_opt<_Up>::value;
-      }
-      template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_explicit() {
-        return !is_convertible<_QUp, _Tp>::value &&
-               !__check_constructible_from_opt<_Up>::value;
-      }
-    };
-
-    template <class _Up, class _QualUp>
-    using _CheckOptionalLikeCtor =
-        _If<_And<_IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>>::value,
-            _CheckOptionalLikeConstructor<_QualUp>,
-            __check_tuple_constructor_fail>;
-    template <class _Up, class _QualUp>
-    using _CheckOptionalLikeAssign =
-        _If<_And<_IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>,
-                 is_assignable<_Tp&, _QualUp>>::value,
-            _CheckOptionalLikeConstructor<_QualUp>,
-            __check_tuple_constructor_fail>;
-
-   public:
-    constexpr optional() noexcept {}
-    constexpr optional(const optional&) = default;
-    constexpr optional(optional&&) = default;
-    constexpr optional(nullopt_t) noexcept {}
-
-    template <class _InPlaceT, class... _Args,
-              class = std::enable_if_t<
-                  _And<_IsSame<_InPlaceT, in_place_t>,
-                       is_constructible<value_type, _Args...>>::value>>
-    constexpr explicit optional(_InPlaceT, _Args&&... __args);
-
-    template <class _Up, class... _Args,
-              class = std::enable_if_t<is_constructible_v<
-                  value_type, initializer_list<_Up>&, _Args...>>>
-    constexpr explicit optional(in_place_t, initializer_list<_Up> __il,
-                                _Args&&... __args);
-
-    template <class _Up = value_type,
-              std::enable_if_t<_CheckOptionalArgsCtor<
-                                   _Up>::template __enable_implicit<_Up>(),
-                               int> = 0>
-    constexpr optional(_Up&& __v);
-
-    template <class _Up, std::enable_if_t<_CheckOptionalArgsCtor<_Up>::
-                                              template __enable_explicit<_Up>(),
-                                          int> = 0>
-    constexpr explicit optional(_Up&& __v);
-
-    template <class _Up,
-              std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::
-                                   template __enable_implicit<_Up>(),
-                               int> = 0>
-    constexpr optional(const optional<_Up>& __v);
-
-    template <class _Up,
-              std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::
-                                   template __enable_explicit<_Up>(),
-                               int> = 0>
-    constexpr explicit optional(const optional<_Up>& __v);
-
-    template <class _Up, std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
-                                              template __enable_implicit<_Up>(),
-                                          int> = 0>
-    constexpr optional(optional<_Up>&& __v);
-
-    template <class _Up, std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
-                                              template __enable_explicit<_Up>(),
-                                          int> = 0>
-    constexpr explicit optional(optional<_Up>&& __v);
-
-    constexpr optional& operator=(nullopt_t) noexcept;
-
-    optional& operator=(const optional&);
-
-    optional& operator=(optional&&);
-
-    template <class _Up = value_type,
-              class = std::enable_if_t<
-                  _And<_IsNotSame<__uncvref_t<_Up>, optional>,
-                       _Or<_IsNotSame<__uncvref_t<_Up>, value_type>,
-                           _Not<is_scalar<value_type>>>,
-                       is_constructible<value_type, _Up>,
-                       is_assignable<value_type&, _Up>>::value>>
-    constexpr optional& operator=(_Up&& __v);
-
-    template <class _Up,
-              std::enable_if_t<_CheckOptionalLikeAssign<_Up, _Up const&>::
-                                   template __enable_assign<_Up>(),
-                               int> = 0>
-    constexpr optional& operator=(const optional<_Up>& __v);
-
-    template <class _Up, std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
-                                              template __enable_assign<_Up>(),
-                                          int> = 0>
-    constexpr optional& operator=(optional<_Up>&& __v);
-
-    const _Tp& operator*() const&;
-    _Tp& operator*() &;
-    const _Tp&& operator*() const&&;
-    _Tp&& operator*() &&;
-
-    const _Tp* operator->() const;
-    _Tp* operator->();
-
-    const _Tp& value() const&;
-    _Tp& value() &;
-    const _Tp&& value() const&&;
-    _Tp&& value() &&;
-
-    template <typename U>
-    constexpr _Tp value_or(U&& v) const&;
-    template <typename U>
-    _Tp value_or(U&& v) &&;
-
-    constexpr explicit operator bool() const noexcept;
-
-    using __base::has_value;
-
-    template <typename... Args>
-    _Tp& emplace(Args&&... args);
-
-    template <typename U, typename... Args>
-    _Tp& emplace(std::initializer_list<U> ilist, Args&&... args);
-
-    using __base::reset;
-
-    constexpr void swap(optional& __opt) noexcept;
-  };
-
-  template <class _Tp, class _Up>
-  constexpr std::enable_if_t<
-      is_convertible_v<decltype(declval<const _Tp&>() == declval<const _Up&>()),
-                       bool>,
-      bool>
-  operator==(const optional<_Tp>& __x, const optional<_Up>& __y);
-
-  template <class _Tp, class _Up>
-  constexpr std::enable_if_t<
-      is_convertible_v<decltype(declval<const _Tp&>() != declval<const _Up&>()),
-                       bool>,
-      bool>
-  operator!=(const optional<_Tp>& __x, const optional<_Up>& __y);
-
-  template <class _Tp>
-  constexpr bool operator==(const optional<_Tp>& __x, nullopt_t) noexcept;
-
-  template <class _Tp>
-  constexpr bool operator==(nullopt_t, const optional<_Tp>& __x) noexcept;
-
-  template <class _Tp>
-  constexpr bool operator!=(const optional<_Tp>& __x, nullopt_t) noexcept;
-
-  template <class _Tp>
-  constexpr bool operator!=(nullopt_t, const optional<_Tp>& __x) noexcept;
-
-  template <class _Tp, class _Up>
-  constexpr std::enable_if_t<
-      is_convertible_v<decltype(declval<const _Tp&>() == declval<const _Up&>()),
-                       bool>,
-      bool>
-  operator==(const optional<_Tp>& __x, const _Up& __v);
-
-  template <class _Tp, class _Up>
-  constexpr std::enable_if_t<
-      is_convertible_v<decltype(declval<const _Tp&>() == declval<const _Up&>()),
-                       bool>,
-      bool>
-  operator==(const _Tp& __v, const optional<_Up>& __x);
-
-  template <class _Tp, class _Up>
-  constexpr std::enable_if_t<
-      is_convertible_v<decltype(declval<const _Tp&>() != declval<const _Up&>()),
-                       bool>,
-      bool>
-  operator!=(const optional<_Tp>& __x, const _Up& __v);
-
-  template <class _Tp, class _Up>
-  constexpr std::enable_if_t<
-      is_convertible_v<decltype(declval<const _Tp&>() != declval<const _Up&>()),
-                       bool>,
-      bool>
-  operator!=(const _Tp& __v, const optional<_Up>& __x);
-
-  template <typename T>
-  constexpr optional<typename std::decay<T>::type> make_optional(T&& v) {
-    return optional<typename std::decay<T>::type>(std::forward<T>(v));
-  }
-
-  template <typename T, typename... Args>
-  constexpr optional<T> make_optional(Args&&... args) {
-    return optional<T>(in_place_t(), std::forward<Args>(args)...);
-  }
-
-  template <typename T, typename U, typename... Args>
-  constexpr optional<T> make_optional(std::initializer_list<U> il,
-                                      Args&&... args) {
-    return optional<T>(in_place_t(), il, std::forward<Args>(args)...);
-  }
-
-  }  // namespace std
+constexpr const char kAbslLogHeader[] = R"cc(
+#ifndef ABSL_LOG_H
+#define ABSL_LOG_H
 
   namespace absl {
 
@@ -525,6 +242,33 @@ static constexpr const char *kAbslDefsHeader = R"cc(
 #define CHECK_OK(val) ABSL_LOG_INTERNAL_CHECK_OK(val)
 #define DCHECK_OK(val) ABSL_LOG_INTERNAL_CHECK_OK(val)
 #define QCHECK_OK(val) ABSL_LOG_INTERNAL_QCHECK_OK(val)
+#endif // ABSL_LOG_H
+)cc";
+
+constexpr const char kAbslDefsHeader[] = R"cc(
+#pragma clang system_header
+
+#ifndef BASE_DEFS_H_
+#define BASE_DEFS_H_
+
+#include "absl_type_traits.h"
+#include "std_type_traits.h"
+#include "stdlib_defs.h"
+#include "string_defs.h"
+#include "std_optional.h"
+#include "absl_log.h"
+
+  namespace absl {
+  struct in_place_t {};
+
+  constexpr in_place_t in_place;
+
+  struct nullopt_t {
+    constexpr explicit nullopt_t() {}
+  };
+
+  constexpr nullopt_t nullopt;
+  }  // namespace absl
 
   namespace testing {
   struct AssertionResult {
@@ -759,7 +503,7 @@ static constexpr const char *kAbslDefsHeader = R"cc(
 #endif  // BASE_DEFS_H_
 )cc";
 
-constexpr const char *kAbslTypeTraitsHeader = R"cc(
+constexpr const char kAbslTypeTraitsHeader[] = R"cc(
 #pragma clang system_header
 
 #ifndef ABSL_TYPE_TRAITS_H_
@@ -812,7 +556,7 @@ constexpr const char *kAbslTypeTraitsHeader = R"cc(
 #endif  // ABSL_TYPE_TRAITS_H_
 )cc";
 
-constexpr const char *kStdTypeTraitsHeader = R"cc(
+constexpr const char kStdTypeTraitsHeader[] = R"cc(
 #pragma clang system_header
 
 #ifndef STD_TYPE_TRAITS_H_
@@ -1275,7 +1019,7 @@ constexpr const char *kStdTypeTraitsHeader = R"cc(
 #endif  // STD_TYPE_TRAITS_H_
 )cc";
 
-constexpr const char *kStdLibDefsHeader = R"cc(
+constexpr const char kStdLibDefsHeader[] = R"cc(
 #pragma clang system_header
 
 #ifndef STDLIB_DEFS_H_
@@ -1691,7 +1435,273 @@ template <typename T> struct remove_reference<T&&> { using type = T; };
 #endif  // STDLIB_DEFS_H_
 )cc";
 
-constexpr const char *kStringDefsHeader = R"cc(
+constexpr const char kStdOptionalHeader[] = R"cc(
+#ifndef STD_OPTIONAL_H
+#define STD_OPTIONAL_H
+ namespace std {
+
+  struct in_place_t {};
+
+  constexpr in_place_t in_place;
+
+  struct nullopt_t {
+    constexpr explicit nullopt_t() {}
+  };
+
+  constexpr nullopt_t nullopt;
+
+  template <class _Tp>
+  struct __optional_destruct_base {
+    constexpr void reset() noexcept;
+  };
+
+  template <class _Tp>
+  struct __optional_storage_base : __optional_destruct_base<_Tp> {
+    constexpr bool has_value() const noexcept;
+  };
+
+  template <typename _Tp>
+  class optional : private __optional_storage_base<_Tp> {
+    using __base = __optional_storage_base<_Tp>;
+
+   public:
+    using value_type = _Tp;
+
+   private:
+    struct _CheckOptionalArgsConstructor {
+      template <class _Up>
+      static constexpr bool __enable_implicit() {
+        return is_constructible_v<_Tp, _Up&&> && is_convertible_v<_Up&&, _Tp>;
+      }
+
+      template <class _Up>
+      static constexpr bool __enable_explicit() {
+        return is_constructible_v<_Tp, _Up&&> && !is_convertible_v<_Up&&, _Tp>;
+      }
+    };
+    template <class _Up>
+    using _CheckOptionalArgsCtor =
+        _If<_IsNotSame<__uncvref_t<_Up>, in_place_t>::value &&
+                _IsNotSame<__uncvref_t<_Up>, optional>::value,
+            _CheckOptionalArgsConstructor, __check_tuple_constructor_fail>;
+    template <class _QualUp>
+    struct _CheckOptionalLikeConstructor {
+      template <class _Up, class _Opt = optional<_Up>>
+      using __check_constructible_from_opt =
+          _Or<is_constructible<_Tp, _Opt&>, is_constructible<_Tp, _Opt const&>,
+              is_constructible<_Tp, _Opt&&>,
+              is_constructible<_Tp, _Opt const&&>, is_convertible<_Opt&, _Tp>,
+              is_convertible<_Opt const&, _Tp>, is_convertible<_Opt&&, _Tp>,
+              is_convertible<_Opt const&&, _Tp>>;
+      template <class _Up, class _QUp = _QualUp>
+      static constexpr bool __enable_implicit() {
+        return is_convertible<_QUp, _Tp>::value &&
+               !__check_constructible_from_opt<_Up>::value;
+      }
+      template <class _Up, class _QUp = _QualUp>
+      static constexpr bool __enable_explicit() {
+        return !is_convertible<_QUp, _Tp>::value &&
+               !__check_constructible_from_opt<_Up>::value;
+      }
+    };
+
+    template <class _Up, class _QualUp>
+    using _CheckOptionalLikeCtor =
+        _If<_And<_IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>>::value,
+            _CheckOptionalLikeConstructor<_QualUp>,
+            __check_tuple_constructor_fail>;
+    template <class _Up, class _QualUp>
+    using _CheckOptionalLikeAssign =
+        _If<_And<_IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>,
+                 is_assignable<_Tp&, _QualUp>>::value,
+            _CheckOptionalLikeConstructor<_QualUp>,
+            __check_tuple_constructor_fail>;
+
+   public:
+    constexpr optional() noexcept {}
+    constexpr optional(const optional&) = default;
+    constexpr optional(optional&&) = default;
+    constexpr optional(nullopt_t) noexcept {}
+
+    template <class _InPlaceT, class... _Args,
+              class = std::enable_if_t<
+                  _And<_IsSame<_InPlaceT, in_place_t>,
+                       is_constructible<value_type, _Args...>>::value>>
+    constexpr explicit optional(_InPlaceT, _Args&&... __args);
+
+    template <class _Up, class... _Args,
+              class = std::enable_if_t<is_constructible_v<
+                  value_type, initializer_list<_Up>&, _Args...>>>
+    constexpr explicit optional(in_place_t, initializer_list<_Up> __il,
+                                _Args&&... __args);
+
+    template <class _Up = value_type,
+              std::enable_if_t<_CheckOptionalArgsCtor<
+                                   _Up>::template __enable_implicit<_Up>(),
+                               int> = 0>
+    constexpr optional(_Up&& __v);
+
+    template <class _Up, std::enable_if_t<_CheckOptionalArgsCtor<_Up>::
+                                              template __enable_explicit<_Up>(),
+                                          int> = 0>
+    constexpr explicit optional(_Up&& __v);
+
+    template <class _Up,
+              std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::
+                                   template __enable_implicit<_Up>(),
+                               int> = 0>
+    constexpr optional(const optional<_Up>& __v);
+
+    template <class _Up,
+              std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::
+                                   template __enable_explicit<_Up>(),
+                               int> = 0>
+    constexpr explicit optional(const optional<_Up>& __v);
+
+    template <class _Up, std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
+                                              template __enable_implicit<_Up>(),
+                                          int> = 0>
+    constexpr optional(optional<_Up>&& __v);
+
+    template <class _Up, std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
+                                              template __enable_explicit<_Up>(),
+                                          int> = 0>
+    constexpr explicit optional(optional<_Up>&& __v);
+
+    constexpr optional& operator=(nullopt_t) noexcept;
+
+    optional& operator=(const optional&);
+
+    optional& operator=(optional&&);
+
+    template <class _Up = value_type,
+              class = std::enable_if_t<
+                  _And<_IsNotSame<__uncvref_t<_Up>, optional>,
+                       _Or<_IsNotSame<__uncvref_t<_Up>, value_type>,
+                           _Not<is_scalar<value_type>>>,
+                       is_constructible<value_type, _Up>,
+                       is_assignable<value_type&, _Up>>::value>>
+    constexpr optional& operator=(_Up&& __v);
+
+    template <class _Up,
+              std::enable_if_t<_CheckOptionalLikeAssign<_Up, _Up const&>::
+                                   template __enable_assign<_Up>(),
+                               int> = 0>
+    constexpr optional& operator=(const optional<_Up>& __v);
+
+    template <class _Up, std::enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
+                                              template __enable_assign<_Up>(),
+                                          int> = 0>
+    constexpr optional& operator=(optional<_Up>&& __v);
+
+    const _Tp& operator*() const&;
+    _Tp& operator*() &;
+    const _Tp&& operator*() const&&;
+    _Tp&& operator*() &&;
+
+    const _Tp* operator->() const;
+    _Tp* operator->();
+
+    const _Tp& value() const&;
+    _Tp& value() &;
+    const _Tp&& value() const&&;
+    _Tp&& value() &&;
+
+    template <typename U>
+    constexpr _Tp value_or(U&& v) const&;
+    template <typename U>
+    _Tp value_or(U&& v) &&;
+
+    constexpr explicit operator bool() const noexcept;
+
+    using __base::has_value;
+
+    template <typename... Args>
+    _Tp& emplace(Args&&... args);
+
+    template <typename U, typename... Args>
+    _Tp& emplace(std::initializer_list<U> ilist, Args&&... args);
+
+    using __base::reset;
+
+    constexpr void swap(optional& __opt) noexcept;
+  };
+
+  template <class _Tp, class _Up>
+  constexpr std::enable_if_t<
+      is_convertible_v<decltype(declval<const _Tp&>() == declval<const _Up&>()),
+                       bool>,
+      bool>
+  operator==(const optional<_Tp>& __x, const optional<_Up>& __y);
+
+  template <class _Tp, class _Up>
+  constexpr std::enable_if_t<
+      is_convertible_v<decltype(declval<const _Tp&>() != declval<const _Up&>()),
+                       bool>,
+      bool>
+  operator!=(const optional<_Tp>& __x, const optional<_Up>& __y);
+
+  template <class _Tp>
+  constexpr bool operator==(const optional<_Tp>& __x, nullopt_t) noexcept;
+
+  template <class _Tp>
+  constexpr bool operator==(nullopt_t, const optional<_Tp>& __x) noexcept;
+
+  template <class _Tp>
+  constexpr bool operator!=(const optional<_Tp>& __x, nullopt_t) noexcept;
+
+  template <class _Tp>
+  constexpr bool operator!=(nullopt_t, const optional<_Tp>& __x) noexcept;
+
+  template <class _Tp, class _Up>
+  constexpr std::enable_if_t<
+      is_convertible_v<decltype(declval<const _Tp&>() == declval<const _Up&>()),
+                       bool>,
+      bool>
+  operator==(const optional<_Tp>& __x, const _Up& __v);
+
+  template <class _Tp, class _Up>
+  constexpr std::enable_if_t<
+      is_convertible_v<decltype(declval<const _Tp&>() == declval<const _Up&>()),
+                       bool>,
+      bool>
+  operator==(const _Tp& __v, const optional<_Up>& __x);
+
+  template <class _Tp, class _Up>
+  constexpr std::enable_if_t<
+      is_convertible_v<decltype(declval<const _Tp&>() != declval<const _Up&>()),
+                       bool>,
+      bool>
+  operator!=(const optional<_Tp>& __x, const _Up& __v);
+
+  template <class _Tp, class _Up>
+  constexpr std::enable_if_t<
+      is_convertible_v<decltype(declval<const _Tp&>() != declval<const _Up&>()),
+                       bool>,
+      bool>
+  operator!=(const _Tp& __v, const optional<_Up>& __x);
+
+  template <typename T>
+  constexpr optional<typename std::decay<T>::type> make_optional(T&& v) {
+    return optional<typename std::decay<T>::type>(std::forward<T>(v));
+  }
+
+  template <typename T, typename... Args>
+  constexpr optional<T> make_optional(Args&&... args) {
+    return optional<T>(in_place_t(), std::forward<Args>(args)...);
+  }
+
+  template <typename T, typename U, typename... Args>
+  constexpr optional<T> make_optional(std::initializer_list<U> il,
+                                      Args&&... args) {
+    return optional<T>(in_place_t(), il, std::forward<Args>(args)...);
+  }
+
+  }  // namespace std
+    #endif
+)cc";
+
+constexpr const char kStringDefsHeader[] = R"cc(
   // string_defs.h
   //
   // This file contains minimal mock declarations of the string type and
@@ -1805,7 +1815,7 @@ constexpr const char *kStringDefsHeader = R"cc(
 #endif  // STRING_DEFS_H_
 )cc";
 
-constexpr const char *kStdCharTraitsHeader = R"cc(
+constexpr const char kStdCharTraitsHeader[] = R"cc(
 #ifndef STD_CHAR_TRAITS_H_
 #define STD_CHAR_TRAITS_H_
 
@@ -1819,7 +1829,7 @@ constexpr const char *kStdCharTraitsHeader = R"cc(
 #endif  // STD_CHAR_TRAITS_H_
 )cc";
 
-constexpr const char *kStdStringViewHeader = R"cc(
+constexpr const char kStdStringViewHeader[] = R"cc(
   // This file is a mock of the <string_view> standard library header.
 
 #pragma clang system_header
@@ -1884,10 +1894,10 @@ constexpr const char *kStdStringViewHeader = R"cc(
 #endif  // STD_STRING_VIEW_H_
 )cc";
 
-constexpr const char *kStatusOrDefsHeader =
+constexpr const char kStatusDefsHeader[] =
     R"cc(
-#ifndef STATUSOR_H_
-#define STATUSOR_H_
+#ifndef STATUS_H_
+#define STATUS_H_
 
 #include "absl_defs.h"
 #include "std_string_view.h"
@@ -1987,7 +1997,13 @@ constexpr const char *kStatusOrDefsHeader =
 
   Status OkStatus();
   Status InvalidArgumentError(char*);
+#endif  // STATUS_H
+)cc";
 
+constexpr const char kStatusOrDefsHeader[] = R"cc(
+#ifndef STATUSOR_H_
+#define STATUSOR_H_
+  #include "status_defs.h"
   template <typename T>
   struct StatusOr;
 
@@ -2313,7 +2329,6 @@ constexpr const char *kStatusOrDefsHeader =
     T&& ValueOrDie() &&;
 
     using StatusOr::OperatorBase::operator*;
-
     using StatusOr::OperatorBase::operator->;
 
     template <typename U>
@@ -4846,8 +4861,24 @@ GetHeaders(UncheckedStatusOrAccessModelTestAliasKind AliasKind) {
   Headers.emplace_back("std_string_view.h", kStdStringViewHeader);
   Headers.emplace_back("std_char_traits.h", kStdCharTraitsHeader);
   Headers.emplace_back("string_defs.h", kStringDefsHeader);
+  Headers.emplace_back("status_defs.h", kStatusDefsHeader);
   Headers.emplace_back("statusor_defs.h", kStatusOrDefsHeader);
   Headers.emplace_back("stdlib_defs.h", kStdLibDefsHeader);
+  Headers.emplace_back("std_optional.h", kStdOptionalHeader);
+  Headers.emplace_back("absl_log.h", kAbslLogHeader);
+  // Make sure we can build on MSVC.
+  static_assert(sizeof(kAbslTypeTraitsHeader) <= 16384);
+  static_assert(sizeof(kAbslDefsHeader) <= 16384);
+  static_assert(sizeof(kStdTypeTraitsHeader) <= 16384);
+  static_assert(sizeof(kStdStringViewHeader) <= 16384);
+  static_assert(sizeof(kStdCharTraitsHeader) <= 16384);
+  static_assert(sizeof(kStringDefsHeader) <= 16384);
+  static_assert(sizeof(kStatusDefsHeader) <= 16384);
+  static_assert(sizeof(kStatusOrDefsHeader) <= 16384);
+  static_assert(sizeof(kStdLibDefsHeader) <= 16384);
+  static_assert(sizeof(kStdOptionalHeader) <= 16384);
+  static_assert(sizeof(kAbslLogHeader) <= 16384);
+
   Headers.emplace_back("unchecked_statusor_use_test_defs.h",
                        R"cc(
 #include "absl_defs.h"
