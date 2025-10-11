@@ -35,13 +35,13 @@ define i32 @test() local_unnamed_addr #0 {
 entry:
     tail call void @llvm.memcpy.p0.p0.i64(ptr @g1, ptr @test.t1, i64 3, i1 false)
     tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 @g2, ptr align 4 @test.t2, i64 20, i1 false)
-; CHECK:  r1 = g1
-; CHECK:  r2 = 0
-; CHECK:  *(u8 *)(r1 + 1) = r2
-; CHECK:  r3 = 1
-; CHECK:  *(u8 *)(r1 + 2) = r3
-; CHECK:  r1 = g2
-; CHECK:  *(u32 *)(r1 + 8) = r3
+; CHECK:  r1 = g1 ll
+; CHECK:  r0 = 0
+; CHECK:  *(u8 *)(r1 + 1) = r0
+; CHECK:  r2 = 1
+; CHECK:  *(u8 *)(r1 + 2) = r2
+; CHECK:  r1 = g2 ll
+; CHECK:  *(u32 *)(r1 + 8) = r2
     ret i32 0
 }
 ; CHECK: .section  .rodata,"a",@progbits

@@ -195,8 +195,8 @@ define <vscale x 2 x i64> @zero_fill_non_zero_index(<vscale x 2 x i1> %pg, <vsca
 define <vscale x 4 x i64> @zero_fill_type_mismatch(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) #0 {
 ; CHECK-LABEL: zero_fill_type_mismatch:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    ret
   %t1 = call i64 @llvm.aarch64.sve.uminv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a)
   %t2 = insertelement <vscale x 4 x i64> zeroinitializer, i64 %t1, i64 0

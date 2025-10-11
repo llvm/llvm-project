@@ -23,7 +23,7 @@ define i64 @test_readcyclecounter() nounwind {
 ; MIPSEL_NOT_SUPPORTED:       # %bb.0: # %entry
 ; MIPSEL_NOT_SUPPORTED-NEXT:    addiu $2, $zero, 0
 ; MIPSEL_NOT_SUPPORTED-NEXT:    jr $ra
-; MIPSEL_NOT_SUPPORTED-NEXT:    addiu $3, $zero, 0
+; MIPSEL_NOT_SUPPORTED-NEXT:    move	$3, $2
 ;
 ; MIPS64EL-LABEL: test_readcyclecounter:
 ; MIPS64EL:       # %bb.0: # %entry

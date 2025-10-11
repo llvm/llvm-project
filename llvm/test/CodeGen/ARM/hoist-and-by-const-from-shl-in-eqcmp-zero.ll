@@ -576,20 +576,20 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ARM6-LABEL: vec_4xi32_nonsplat_eq:
 ; ARM6:       @ %bb.0:
-; ARM6-NEXT:    ldr r12, [sp, #4]
+; ARM6-NEXT:    push {r11, lr}
+; ARM6-NEXT:    ldr r12, [sp, #12]
 ; ARM6-NEXT:    mov r0, #1
+; ARM6-NEXT:    mov lr, #65280
+; ARM6-NEXT:    orr lr, lr, #16711680
 ; ARM6-NEXT:    bic r1, r0, r1, lsr r12
-; ARM6-NEXT:    ldr r12, [sp, #8]
-; ARM6-NEXT:    mov r0, #65280
-; ARM6-NEXT:    orr r0, r0, #16711680
-; ARM6-NEXT:    and r0, r0, r2, lsr r12
-; ARM6-NEXT:    clz r0, r0
-; ARM6-NEXT:    lsr r2, r0, #5
-; ARM6-NEXT:    ldr r0, [sp, #12]
-; ARM6-NEXT:    mvn r0, r3, lsr r0
-; ARM6-NEXT:    lsr r3, r0, #31
-; ARM6-NEXT:    mov r0, #1
-; ARM6-NEXT:    bx lr
+; ARM6-NEXT:    ldr r12, [sp, #16]
+; ARM6-NEXT:    and r2, lr, r2, lsr r12
+; ARM6-NEXT:    ldr r12, [sp, #20]
+; ARM6-NEXT:    clz r2, r2
+; ARM6-NEXT:    mvn r3, r3, lsr r12
+; ARM6-NEXT:    lsr r2, r2, #5
+; ARM6-NEXT:    lsr r3, r3, #31
+; ARM6-NEXT:    pop {r11, pc}
 ;
 ; ARM78-LABEL: vec_4xi32_nonsplat_eq:
 ; ARM78:       @ %bb.0:
@@ -670,16 +670,14 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ARM6-LABEL: vec_4xi32_nonsplat_undef0_eq:
 ; ARM6:       @ %bb.0:
-; ARM6-NEXT:    push {r11, lr}
-; ARM6-NEXT:    ldr r2, [sp, #12]
-; ARM6-NEXT:    mov lr, #1
-; ARM6-NEXT:    ldr r12, [sp, #8]
-; ARM6-NEXT:    bic r1, lr, r1, lsr r2
-; ARM6-NEXT:    ldr r2, [sp, #20]
-; ARM6-NEXT:    bic r0, lr, r0, lsr r12
-; ARM6-NEXT:    bic r3, lr, r3, lsr r2
+; ARM6-NEXT:    ldr r12, [sp]
 ; ARM6-NEXT:    mov r2, #1
-; ARM6-NEXT:    pop {r11, pc}
+; ARM6-NEXT:    bic r0, r2, r0, lsr r12
+; ARM6-NEXT:    ldr r12, [sp, #4]
+; ARM6-NEXT:    bic r1, r2, r1, lsr r12
+; ARM6-NEXT:    ldr r12, [sp, #12]
+; ARM6-NEXT:    bic r3, r2, r3, lsr r12
+; ARM6-NEXT:    bx lr
 ;
 ; ARM78-LABEL: vec_4xi32_nonsplat_undef0_eq:
 ; ARM78:       @ %bb.0:

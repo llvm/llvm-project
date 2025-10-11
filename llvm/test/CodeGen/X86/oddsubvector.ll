@@ -123,17 +123,16 @@ define <16 x i32> @PR42819(ptr %a0) {
 ; SSE-NEXT:    movdqu (%rdi), %xmm3
 ; SSE-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7,8,9,10,11]
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR42819:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,0,1,2]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4],ymm0[5,6,7]
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm0[0,1,2,3,4],ymm1[5,6,7]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: PR42819:
