@@ -406,7 +406,11 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPM_Fast:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
+    // We always honor fp-contract pragmas for PlayStation.
+    if (CI.getASTContext().getTargetInfo().getTriple().isPS())
+      Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
+    else
+      Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     break;
   }
 
