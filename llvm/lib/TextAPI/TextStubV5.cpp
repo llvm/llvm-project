@@ -768,7 +768,7 @@ template <typename ContainerT = Array>
 bool insertNonEmptyValues(Object &Obj, TBDKey Key, ContainerT &&Contents) {
   if (Contents.empty())
     return false;
-  Obj[Keys[Key]] = std::move(Contents);
+  Obj[Keys[Key]] = std::forward<ContainerT>(Contents);
   return true;
 }
 
