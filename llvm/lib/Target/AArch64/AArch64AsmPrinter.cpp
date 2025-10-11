@@ -162,8 +162,7 @@ public:
                                           Register ScratchReg,
                                           AArch64PACKey::ID Key,
                                           AArch64PAuth::AuthCheckMethod Method,
-                                          bool ShouldTrap,
-                                          const MCSymbol *OnFailure);
+                                          const MCSymbol *OnFailure = nullptr);
 
   // Check authenticated LR before tail calling.
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
@@ -1939,14 +1938,19 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   return ScratchReg;
 }
 
-/// Emits a code sequence to check an authenticated pointer value.
+/// Emit a code sequence to check an authenticated pointer value.
 ///
-/// If OnFailure argument is passed, jump there on check failure instead
-/// of proceeding to the next instruction (only if ShouldTrap is false).
+/// This function emits a sequence of instructions that checks if TestedReg was
+/// authenticated successfully. On success, execution continues at the next
+/// instruction after the sequence.
+///
+/// The action performed on failure depends on the OnFailure argument:
+/// * if OnFailure is not nullptr, control is transferred to that label after
+///   clearing the PAC field
+/// * otherwise, BRK instruction is emitted to generate an error
 void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
     Register TestedReg, Register ScratchReg, AArch64PACKey::ID Key,
-    AArch64PAuth::AuthCheckMethod Method, bool ShouldTrap,
-    const MCSymbol *OnFailure) {
+    AArch64PAuth::AuthCheckMethod Method, const MCSymbol *OnFailure) {
   // Insert a sequence to check if authentication of TestedReg succeeded,
   // such as:
   //
@@ -1983,7 +1987,7 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
                        .addReg(getWRegFromXReg(ScratchReg))
                        .addReg(TestedReg)
                        .addImm(0));
-    assert(ShouldTrap && !OnFailure && "DummyLoad always traps on error");
+    assert(!OnFailure && "DummyLoad always traps on error");
     return;
   }
 
@@ -2037,15 +2041,14 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
     llvm_unreachable("Unsupported check method");
   }
 
-  if (ShouldTrap) {
-    assert(!OnFailure && "Cannot specify OnFailure with ShouldTrap");
+  if (!OnFailure) {
     // Trapping sequences do a 'brk'.
     //  brk #<0xc470 + aut key>
     EmitToStreamer(MCInstBuilder(AArch64::BRK).addImm(0xc470 | Key));
   } else {
     // Non-trapping checked sequences return the stripped result in TestedReg,
-    // skipping over success-only code (such as re-signing the pointer) if
-    // there is one.
+    // skipping over success-only code (such as re-signing the pointer) by
+    // jumping to OnFailure label.
     // Note that this can introduce an authentication oracle (such as based on
     // the high bits of the re-signed value).
 
@@ -2070,12 +2073,9 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
           MCInstBuilder(XPACOpc).addReg(TestedReg).addReg(TestedReg));
     }
 
-    if (OnFailure) {
-      //  b Lend
-      EmitToStreamer(
-          MCInstBuilder(AArch64::B)
-              .addExpr(MCSymbolRefExpr::create(OnFailure, OutContext)));
-    }
+    //  b Lend
+    const auto *OnFailureExpr = MCSymbolRefExpr::create(OnFailure, OutContext);
+    EmitToStreamer(MCInstBuilder(AArch64::B).addExpr(OnFailureExpr));
   }
 
   // If the auth check succeeds, we can continue.
@@ -2102,9 +2102,8 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
          "Neither x16 nor x17 is available as a scratch register");
   AArch64PACKey::ID Key =
       AArch64FI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
-  emitPtrauthCheckAuthenticatedValue(
-      AArch64::LR, ScratchReg, Key, LRCheckMethod,
-      /*ShouldTrap=*/true, /*OnFailure=*/nullptr);
+  emitPtrauthCheckAuthenticatedValue(AArch64::LR, ScratchReg, Key,
+                                     LRCheckMethod);
 }
 
 void AArch64AsmPrinter::emitPtrauthAuthResign(
@@ -2178,9 +2177,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     if (IsAUTPAC && !ShouldTrap)
       EndSym = createTempSymbol("resign_end_");
 
-    emitPtrauthCheckAuthenticatedValue(AUTVal, Scratch, AUTKey,
-                                       AArch64PAuth::AuthCheckMethod::XPAC,
-                                       ShouldTrap, EndSym);
+    emitPtrauthCheckAuthenticatedValue(
+        AUTVal, Scratch, AUTKey, AArch64PAuth::AuthCheckMethod::XPAC, EndSym);
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
@@ -2519,9 +2517,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                                                      : AArch64PACKey::DA);
 
         emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
-                                           AArch64PAuth::AuthCheckMethod::XPAC,
-                                           /*ShouldTrap=*/true,
-                                           /*OnFailure=*/nullptr);
+                                           AArch64PAuth::AuthCheckMethod::XPAC);
       }
     } else {
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
@@ -2654,9 +2650,7 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
         (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
 
     emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
-                                       AArch64PAuth::AuthCheckMethod::XPAC,
-                                       /*ShouldTrap=*/true,
-                                       /*OnFailure=*/nullptr);
+                                       AArch64PAuth::AuthCheckMethod::XPAC);
 
     emitMovXReg(DstReg, AuthResultReg);
   }
