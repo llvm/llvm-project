@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-linux -stop-after=early-tailduplication \
 ; RUN:  -verify-machineinstrs < %s | FileCheck %s
 
-; Ensure that we don't duplicate a block with an "INLINEASM_BR" instruction
+; Ensure that we don't insert copy after "INLINEASM_BR" instruction
 ; during code gen.
 declare dso_local void @foo()
 
@@ -20,30 +20,31 @@ define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.bb100:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000), %bb.4(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   MOV64mi32 [[COPY1]], 1, $noreg, 0, $noreg, 0 :: (store (s64) into %ir.arg1)
-  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[MOV64rm]]
+  ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42, 13 /* imm */, 0, 13 /* imm */, %bb.4, 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb106:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000), %bb.4(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.bb110:
-  ; CHECK-NEXT:   successors: %bb.5(0x80000000), %bb.4(0x00000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY]], %bb.2, [[MOV64rm]], %bb.1
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42, 13 /* imm */, 0, 13 /* imm */, %bb.4, 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.bb17.i.i.i (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY2]], %bb.1, [[COPY3]], %bb.2
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.kmem_cache_has_cpu_partial.exit:
-  ; CHECK-NEXT:   $rax = COPY [[PHI]]
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:gr64 = PHI [[PHI]], %bb.4, [[COPY2]], %bb.1, [[COPY3]], %bb.2
+  ; CHECK-NEXT:   $rax = COPY [[PHI1]]
   ; CHECK-NEXT:   RET 0, $rax
 bb:
   %i28.i = load ptr, ptr %arg1, align 8

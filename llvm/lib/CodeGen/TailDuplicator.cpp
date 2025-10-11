@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TailDuplicator.h"
+#include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -650,14 +651,6 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
     if (PreRegAlloc && MI.isCall())
       return false;
 
-    // TailDuplicator::appendCopies will erroneously place COPYs after
-    // INLINEASM_BR instructions after 4b0aa5724fea, which demonstrates the same
-    // bug that was fixed in f7a53d82c090.
-    // FIXME: Use findPHICopyInsertPoint() to find the correct insertion point
-    //        for the COPY when replacing PHIs.
-    if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
-      return false;
-
     if (MI.isBundle())
       InstrCount += MI.getBundleSize();
     else if (!MI.isPHI() && !MI.isMetaInstruction())
@@ -925,7 +918,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
         duplicateInstruction(&MI, TailBB, PredBB, LocalVRMap, UsedByPhi);
       }
     }
-    appendCopies(PredBB, CopyInfos, Copies);
+    appendCopies(PredBB, TailBB, CopyInfos, Copies);
 
     NumTailDupAdded += TailBB->size() - 1; // subtract one for removed branch
 
@@ -993,7 +986,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
           duplicateInstruction(MI, TailBB, PrevBB, LocalVRMap, UsedByPhi);
           MI->eraseFromParent();
         }
-        appendCopies(PrevBB, CopyInfos, Copies);
+        appendCopies(PrevBB, TailBB, CopyInfos, Copies);
       } else {
         TII->removeBranch(*PrevBB);
         // No PHIs to worry about, just splice the instructions over.
@@ -1057,7 +1050,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
       // from PredBB.
       processPHI(&MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, false);
     }
-    appendCopies(PredBB, CopyInfos, Copies);
+    appendCopies(PredBB, TailBB, CopyInfos, Copies);
   }
 
   return Changed;
@@ -1065,12 +1058,16 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
 
 /// At the end of the block \p MBB generate COPY instructions between registers
 /// described by \p CopyInfos. Append resulting instructions to \p Copies.
-void TailDuplicator::appendCopies(MachineBasicBlock *MBB,
-      SmallVectorImpl<std::pair<Register, RegSubRegPair>> &CopyInfos,
-      SmallVectorImpl<MachineInstr*> &Copies) {
-  MachineBasicBlock::iterator Loc = MBB->getFirstTerminator();
+void TailDuplicator::appendCopies(
+    MachineBasicBlock *MBB, MachineBasicBlock *SuccMBB,
+    SmallVectorImpl<std::pair<Register, RegSubRegPair>> &CopyInfos,
+    SmallVectorImpl<MachineInstr *> &Copies) {
   const MCInstrDesc &CopyD = TII->get(TargetOpcode::COPY);
+
   for (auto &CI : CopyInfos) {
+    MachineBasicBlock::iterator Loc =
+        findPHICopyInsertPoint(MBB, SuccMBB, CI.second.Reg);
+
     auto C = BuildMI(*MBB, Loc, DebugLoc(), CopyD, CI.first)
                 .addReg(CI.second.Reg, 0, CI.second.SubReg);
     Copies.push_back(C);

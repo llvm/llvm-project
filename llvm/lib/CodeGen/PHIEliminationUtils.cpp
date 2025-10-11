@@ -32,7 +32,12 @@ llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
   // instructions that are Calls with EHPad successors or INLINEASM_BR in a
   // block.
   bool EHPadSuccessor = SuccMBB->isEHPad();
-  if (!EHPadSuccessor && !SuccMBB->isInlineAsmBrIndirectTarget())
+  // Bypass fast path if the block itself contains INLINEASM_BR.
+  bool HasInlineAsmBr = llvm::any_of(*MBB, [](const MachineInstr &MI) {
+    return MI.getOpcode() == TargetOpcode::INLINEASM_BR;
+  });
+
+  if (!EHPadSuccessor && !HasInlineAsmBr)
     return MBB->getFirstTerminator();
 
   // Discover any defs in this basic block.
