@@ -266,7 +266,7 @@ define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr add
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 8, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 7, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -279,9 +279,8 @@ define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr add
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT * T0.W, PV.W, literal.x,
 ; EG-NEXT:    255(3.573311e-43), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T0.W, literal.x, PV.W,
-; EG-NEXT:    -1(nan), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.X, PV.W, KC0[2].Y,
+; EG-NEXT:     LSHL * T1.W, KC0[2].Y, PV.W,
+; EG-NEXT:     LSHR T0.X, PV.W, T0.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
@@ -289,7 +288,7 @@ define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr add
 ; CM:       ; %bb.0:
 ; CM-NEXT:    ALU 0, @8, KC0[], KC1[]
 ; CM-NEXT:    TEX 0 @6
-; CM-NEXT:    ALU 8, @9, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    ALU 7, @9, KC0[CB0:0-32], KC1[]
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
@@ -302,9 +301,8 @@ define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr add
 ; CM-NEXT:    32(4.484155e-44), 0(0.000000e+00)
 ; CM-NEXT:     AND_INT * T0.W, PV.W, literal.x,
 ; CM-NEXT:    255(3.573311e-43), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T0.W, literal.x, PV.W,
-; CM-NEXT:    -1(nan), 0(0.000000e+00)
-; CM-NEXT:     AND_INT * T0.X, PV.W, KC0[2].Y,
+; CM-NEXT:     LSHL * T1.W, KC0[2].Y, PV.W,
+; CM-NEXT:     LSHR * T0.X, PV.W, T0.W,
 ; CM-NEXT:     LSHR * T1.X, KC0[2].W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %numhighbits = sub i8 32, %numlowbits
