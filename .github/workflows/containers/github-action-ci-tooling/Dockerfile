@@ -10,7 +10,8 @@ RUN apt-get update && \
     tar -xvJf llvm.tar.xz -C /llvm-extract \
         # Only unpack these tools to save space on Github runner.
         LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy \
-        LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format && \
+        LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format \
+        LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format && \
     rm llvm.tar.xz
 
 
@@ -35,7 +36,9 @@ RUN apt-get update && \
 FROM base AS ci-container-code-format
 ARG LLVM_VERSION
 
-COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format ${LLVM_SYSROOT}/bin/clang-format
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format \
+                            /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format \
+                            ${LLVM_SYSROOT}/bin/
 
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 

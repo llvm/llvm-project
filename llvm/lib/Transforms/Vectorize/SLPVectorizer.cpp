@@ -5291,19 +5291,19 @@ private:
         // data.
         for (TreeEntry *TE : Entries) {
           // Check if the user is commutative.
-          // The commutatives are handled later, as their oeprands can be
+          // The commutatives are handled later, as their operands can be
           // reordered.
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
               ::isCommutative(User) ||
               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
-          EdgeInfo EI(TE, U.getOperandNo());
           if (!IsCommutativeUser && !isa<CmpInst>(User)) {
             unsigned &OpCnt =
                 OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
+            EdgeInfo EI(TE, U.getOperandNo());
             if (!getScheduleCopyableData(EI, Op) && OpCnt < NumOps)
-              return false;
+              continue;
             // Found copyable operand - continue.
             ++OpCnt;
             continue;
@@ -5312,33 +5312,38 @@ private:
                 .first->getSecond();
         }
       }
-      // Check the commutative/cmp entries.
-      if (!PotentiallyReorderedEntriesCount.empty()) {
-        for (auto &P : PotentiallyReorderedEntriesCount) {
-          auto *It = find(P.first->Scalars, User);
-          assert(It != P.first->Scalars.end() &&
-                 "User is not in the tree entry");
-          int Lane = std::distance(P.first->Scalars.begin(), It);
-          assert(Lane >= 0 && "Lane is not found");
-          if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
-            Lane = P.first->ReorderIndices[Lane];
-          assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
-                 "Couldn't find extract lane");
-          SmallVector<unsigned> OpIndices;
-          for (unsigned OpIdx :
-               seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
-                   P.first->getMainOp()))) {
-            if (P.first->getOperand(OpIdx)[Lane] == Op &&
-                getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
-              --P.getSecond();
-          }
-        }
-        return all_of(PotentiallyReorderedEntriesCount,
+      if (PotentiallyReorderedEntriesCount.empty())
+        return all_of(OrderedEntriesCount,
                       [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                        return P.second == NumOps - 1;
+                        return P.second == NumOps;
                       });
+      // Check the commutative/cmp entries.
+      for (auto &P : PotentiallyReorderedEntriesCount) {
+        auto *It = find(P.first->Scalars, User);
+        assert(It != P.first->Scalars.end() && "User is not in the tree entry");
+        int Lane = std::distance(P.first->Scalars.begin(), It);
+        assert(Lane >= 0 && "Lane is not found");
+        if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
+          Lane = P.first->ReorderIndices[Lane];
+        assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
+               "Couldn't find extract lane");
+        SmallVector<unsigned> OpIndices;
+        for (unsigned OpIdx :
+             seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
+                 P.first->getMainOp()))) {
+          if (P.first->getOperand(OpIdx)[Lane] == Op &&
+              getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
+            --P.getSecond();
+        }
       }
-      return true;
+      return all_of(PotentiallyReorderedEntriesCount,
+                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
+                      return P.second == NumOps - 1;
+                    }) &&
+             all_of(OrderedEntriesCount,
+                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
+                      return P.second == NumOps;
+                    });
     }
 
     SmallVector<ScheduleCopyableData *>

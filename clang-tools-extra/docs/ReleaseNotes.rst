@@ -402,6 +402,11 @@ Changes in existing checks
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones.
 
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
+  adding parentheses when the inner expression are implicitly converted
+  multiple times.
+
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.

@@ -17086,11 +17086,6 @@ static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
          N->getFlags().hasAllowContract();
 }
 
-// Returns true if `N` can assume no infinities involved in its computation.
-static bool hasNoInfs(const TargetOptions &Options, SDValue N) {
-  return Options.NoInfsFPMath || N->getFlags().hasNoInfs();
-}
-
 /// Try to perform FMA combining on a given FADD node.
 template <class MatchContextClass>
 SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
@@ -17666,7 +17661,7 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
   // The transforms below are incorrect when x == 0 and y == inf, because the
   // intermediate multiplication produces a nan.
   SDValue FAdd = N0.getOpcode() == ISD::FADD ? N0 : N1;
-  if (!hasNoInfs(Options, FAdd))
+  if (!FAdd->getFlags().hasNoInfs())
     return SDValue();
 
   // Floating-point multiply-add without intermediate rounding.
@@ -18343,7 +18338,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       return matcher.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
   }
 
-  if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
+  if ((Options.NoNaNsFPMath && N->getFlags().hasNoInfs()) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
     if (N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
@@ -18533,7 +18528,6 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
   SDNodeFlags Flags = N->getFlags();
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
@@ -18644,7 +18638,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     }
 
     // Fold into a reciprocal estimate and multiply instead of a real divide.
-    if (Options.NoInfsFPMath || Flags.hasNoInfs())
+    if (Flags.hasNoInfs())
       if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
         return RV;
   }
@@ -18721,12 +18715,10 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
 
 SDValue DAGCombiner::visitFSQRT(SDNode *N) {
   SDNodeFlags Flags = N->getFlags();
-  const TargetOptions &Options = DAG.getTarget().Options;
 
   // Require 'ninf' flag since sqrt(+Inf) = +Inf, but the estimation goes as:
   // sqrt(+Inf) == rsqrt(+Inf) * +Inf = 0 * +Inf = NaN
-  if (!Flags.hasApproximateFuncs() ||
-      (!Options.NoInfsFPMath && !Flags.hasNoInfs()))
+  if (!Flags.hasApproximateFuncs() || !Flags.hasNoInfs())
     return SDValue();
 
   SDValue N0 = N->getOperand(0);

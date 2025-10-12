@@ -757,7 +757,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
   if (!AttachInfo.NewAllocations.empty()) {
     DP("Tracked %u total new allocations:\n",
        (unsigned)AttachInfo.NewAllocations.size());
-    for (const auto &Alloc : AttachInfo.NewAllocations) {
+    for ([[maybe_unused]] const auto &Alloc : AttachInfo.NewAllocations) {
       DP("  Host ptr: " DPxMOD ", Size: %" PRId64 " bytes\n",
          DPxPTR(Alloc.first), Alloc.second);
     }
