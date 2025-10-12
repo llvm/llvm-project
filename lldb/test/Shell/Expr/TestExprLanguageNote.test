@@ -1,3 +1,5 @@
+# REQUIRES: (system-windows && lld) || !system-windows
+
 # RUN: split-file %s %t
 # RUN: %clang_host -g %t/main.cpp -o %t.out
 #
@@ -11,7 +13,7 @@
 
 int main() {
   int x = 10;
-  __builtin_debugtrap();
+  return x;
 }
 
 #--- with-target.input
@@ -21,6 +23,7 @@ expr blah
 # CHECK-TARGET: (lldb) expr
 # CHECK-TARGET: note: Falling back to default language. Ran expression as 'Objective C++'.
 
+b 4
 run
 
 expr blah
