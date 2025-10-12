@@ -511,6 +511,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
@@ -878,9 +879,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement: {
-    unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+    unsigned Offset =
+        getOpcode() == VPInstruction::ExtractPenultimateElement ? 2 : 1;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -1166,6 +1169,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractLastElement ||
+         getOpcode() == VPInstruction::ExtractLastLanePerPart ||
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
@@ -1229,6 +1233,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::FirstActiveLane:
@@ -1375,6 +1380,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
+    break;
+  case VPInstruction::ExtractLastLanePerPart:
+    O << "extract-last-lane-per-part";
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
