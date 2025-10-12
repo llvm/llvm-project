@@ -170,6 +170,20 @@ static uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
   return addr;
 }
 
+/// Attempts to parse a prefix of `number_str` as a uint64_t. If
+/// successful, the number is returned and the prefix is dropped from
+/// `number_str`.
+static std::optional<uint64_t> extract_u64(std::string_view &number_str) {
+  char *str_end = nullptr;
+  errno = 0;
+  uint64_t number = strtoull(number_str.data(), &str_end, 16);
+  if (errno != 0)
+    return std::nullopt;
+  assert(str_end);
+  number_str.remove_prefix(str_end - number_str.data());
+  return number;
+}
+
 static void append_hex_value(std::ostream &ostrm, const void *buf,
                              size_t buf_size, bool swap) {
   int i;
@@ -202,6 +216,25 @@ static void append_hexified_string(std::ostream &ostrm,
   for (size_t i = 0; i < string_size; i++) {
     ostrm << RAWHEX8(*(string_buf + i));
   }
+}
+
+/// Returns true if `str` starts with `prefix`.
+static bool starts_with(std::string_view str, std::string_view prefix) {
+  return str.substr(0, prefix.size()) == prefix;
+}
+
+/// Splits `list_str` into multiple string_views separated by `,`.
+static std::vector<std::string_view>
+parse_comma_separated_list(std::string_view list_str) {
+  std::vector<std::string_view> list;
+  while (!list_str.empty()) {
+    auto pos = list_str.find(',');
+    list.push_back(list_str.substr(0, pos));
+    if (pos == list_str.npos)
+      break;
+    list_str.remove_prefix(pos + 1);
+  }
+  return list;
 }
 
 // from System.framework/Versions/B/PrivateHeaders/sys/codesign.h
@@ -3155,42 +3188,6 @@ rnb_err_t RNBRemote::HandlePacket_m(const char *p) {
   return SendPacket(ostrm.str());
 }
 
-/// Returns true if `str` starts with `prefix`.
-static bool starts_with(std::string_view str, std::string_view prefix) {
-  return str.size() >= prefix.size() &&
-         str.compare(0, prefix.size(), prefix) == 0;
-}
-
-/// Attempts to parse a prefix of `number_str` as a number of type `T`. If
-/// successful, the number is returned and the prefix is dropped from
-/// `number_str`.
-template <typename T>
-static std::optional<T> extract_number(std::string_view &number_str) {
-  static_assert(std::is_integral<T>());
-  char *str_end = nullptr;
-  errno = 0;
-  nub_addr_t number = strtoull(number_str.data(), &str_end, 16);
-  if (errno != 0)
-    return std::nullopt;
-  assert(str_end);
-  number_str.remove_prefix(str_end - number_str.data());
-  return number;
-}
-
-/// Splits `list_str` into multiple string_views separated by `,`.
-static std::vector<std::string_view>
-parse_comma_separated_list(std::string_view list_str) {
-  std::vector<std::string_view> list;
-  while (!list_str.empty()) {
-    auto pos = list_str.find(',');
-    list.push_back(list_str.substr(0, pos));
-    if (pos == list_str.npos)
-      break;
-    list_str.remove_prefix(pos + 1);
-  }
-  return list;
-}
-
 rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
   const std::string_view packet_name("MultiMemRead:");
   std::string_view packet(p);
@@ -3227,10 +3224,8 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
         "MultiMemRead has an odd number of numbers for the ranges");
 
   for (unsigned idx = 0; idx < numbers_list.size(); idx += 2) {
-    std::optional<nub_addr_t> maybe_addr =
-        extract_number<nub_addr_t>(numbers_list[idx]);
-    std::optional<size_t> maybe_length =
-        extract_number<size_t>(numbers_list[idx + 1]);
+    std::optional<uint64_t> maybe_addr = extract_u64(numbers_list[idx]);
+    std::optional<uint64_t> maybe_length = extract_u64(numbers_list[idx + 1]);
     if (!maybe_addr || !maybe_length)
       return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
                                     "Invalid MultiMemRead range");
@@ -3248,28 +3243,14 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
     return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
                                   "MultiMemRead has an empty range list");
 
-  // If 'options:' is present, ensure it's empty.
-  const std::string_view options_prefix("options:");
-  if (starts_with(packet, options_prefix)) {
-    packet.remove_prefix(options_prefix.size());
-    if (packet.empty())
-      return HandlePacket_ILLFORMED(
-          __FILE__, __LINE__, packet.data(),
-          "Too short 'options' in MultiMemRead packet");
-    if (packet[0] != ';')
-      return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
-                                    "Unimplemented 'options' in MultiMemRead");
-    packet.remove_prefix(1);
-  }
-
   if (!packet.empty())
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid MultiMemRead address_range");
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p, "MultiMemRead packet has unrecognized fields");
 
   std::vector<std::vector<uint8_t>> buffers;
   buffers.reserve(ranges.size());
   for (auto [base_addr, length] : ranges) {
-    buffers.emplace_back(length, '\0');
+    buffers.emplace_back(length, 0);
     nub_size_t bytes_read = DNBProcessMemoryRead(m_ctx.ProcessID(), base_addr,
                                                  length, buffers.back().data());
     buffers.back().resize(bytes_read);
