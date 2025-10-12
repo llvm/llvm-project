@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -1615,15 +1616,18 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     }
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
+    // The addresses from FoundFns come from LC_FUNCTION_STARTS. Its contents
+    // are delta encoded addresses from the start of __TEXT, ending when zero
+    // is found. Because of this, the addresses should be unique, and even if
+    // we create fake entries on SymbolList in the second loop, SymbolAddresses
+    // should not need to be updated there.
+    SmallSet<uint64_t, 32> SymbolAddresses;
+    for (const auto &S : SymbolList)
+      SymbolAddresses.insert(S.Address);
     for (uint64_t f = 0; f < FoundFns.size(); f++) {
-      bool found = false;
-      for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-        if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-          found = true;
-      }
-      // See this address is not already in the symbol table fake up an
-      // nlist for it.
-      if (!found) {
+      // See if this address is already in the symbol table, otherwise fake up
+      // an nlist for it.
+      if (!SymbolAddresses.contains(FoundFns[f] + BaseSegmentAddress)) {
         NMSymbol F = {};
         F.Name = "<redacted function X>";
         F.Address = FoundFns[f] + BaseSegmentAddress;

@@ -216,6 +216,20 @@ public:
   /// Get the range without infinities. It is useful when we apply ninf flag to
   /// range of operands/results.
   LLVM_ABI ConstantFPRange getWithoutInf() const;
+
+  /// Return a new range in the specified format with the specified rounding
+  /// mode.
+  LLVM_ABI ConstantFPRange
+  cast(const fltSemantics &DstSem,
+       APFloat::roundingMode RM = APFloat::rmNearestTiesToEven) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from an addition of a value in this range and a value in \p Other.
+  LLVM_ABI ConstantFPRange add(const ConstantFPRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a subtraction of a value in this range and a value in \p Other.
+  LLVM_ABI ConstantFPRange sub(const ConstantFPRange &Other) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {
