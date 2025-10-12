@@ -11340,42 +11340,6 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   if (SDValue NarrowLoad = reduceLoadWidth(N))
     return NarrowLoad;
 
-  // Here is a common situation. We want to optimize:
-  //
-  //   %a = ...
-  //   %b = and i32 %a, 2
-  //   %c = srl i32 %b, 1
-  //   brcond i32 %c ...
-  //
-  // into
-  //
-  //   %a = ...
-  //   %b = and %a, 2
-  //   %c = setcc eq %b, 0
-  //   brcond %c ...
-  //
-  // However when after the source operand of SRL is optimized into AND, the SRL
-  // itself may not be optimized further. Look for it and add the BRCOND into
-  // the worklist.
-  //
-  // The also tends to happen for binary operations when SimplifyDemandedBits
-  // is involved.
-  //
-  // FIXME: This is unecessary if we process the DAG in topological order,
-  // which we plan to do. This workaround can be removed once the DAG is
-  // processed in topological order.
-  if (N->hasOneUse()) {
-    SDNode *User = *N->user_begin();
-
-    // Look pass the truncate.
-    if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse())
-      User = *User->user_begin();
-
-    if (User->getOpcode() == ISD::BRCOND || User->getOpcode() == ISD::AND ||
-        User->getOpcode() == ISD::OR || User->getOpcode() == ISD::XOR)
-      AddToWorklist(User);
-  }
-
   // Try to transform this shift into a multiply-high if
   // it matches the appropriate pattern detected in combineShiftToMULH.
   if (SDValue MULH = combineShiftToMULH(N, DL, DAG, TLI))
