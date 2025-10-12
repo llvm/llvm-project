@@ -502,6 +502,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
      /*isElemental=*/false},
+    {"fence_proxy_async",
+     &I::genFenceProxyAsync,
+     {},
+     /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
      {{{"array", asBox},
@@ -1012,6 +1016,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"tma_bulk_commit_group",
+     &I::genTMABulkCommitGroup,
+     {{}},
+     /*isElemental=*/false},
+    {"tma_bulk_wait_group",
+     &I::genTMABulkWaitGroup,
+     {{}},
+     /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -3236,6 +3248,11 @@ void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
       convertBarrierToLLVM(builder, loc, fir::getBase(args[0]));
   mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
                                            fir::getBase(args[1]), {});
+  auto kind = mlir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
+  auto space = mlir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
+  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // BESSEL_JN
@@ -4352,6 +4369,17 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
                                      fir::getBase(args[1])));
+}
+
+// FENCE_PROXY_ASYNC (CUDA)
+void IntrinsicLibrary::genFenceProxyAsync(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  auto kind = mlir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
+  auto space = mlir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
+  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // FINDLOC
@@ -9167,6 +9195,21 @@ mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
   assert(args.size() == 0);
   return builder.createConvert(loc, resultType,
                                fir::runtime::genTime(builder, loc));
+}
+
+// TMA_BULK_COMMIT_GROUP (CUDA)
+void IntrinsicLibrary::genTMABulkCommitGroup(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  mlir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
+}
+
+// TMA_BULK_WAIT_GROUP (CUDA)
+void IntrinsicLibrary::genTMABulkWaitGroup(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  auto group = builder.getIntegerAttr(builder.getI32Type(), 0);
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc, group, {});
 }
 
 // TRIM
