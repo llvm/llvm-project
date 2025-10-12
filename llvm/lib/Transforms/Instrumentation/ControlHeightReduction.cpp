@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This pass merges conditional blocks of code and reduces the number of some extra test that will trigger the formatting job
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
