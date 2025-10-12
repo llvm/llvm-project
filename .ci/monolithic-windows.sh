@@ -43,6 +43,7 @@ ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.
 
 where cl.exe
 
+ls -l "C:/BuildTools/VC/Tools/*"
 #where clang-cl.exe
 
 export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
