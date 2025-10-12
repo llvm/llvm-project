@@ -8774,13 +8774,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(RecurrenceKind) &&
              "Unexpected truncated min-max recurrence!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
-      auto *Trunc =
-          new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
+      VPWidenCastRecipe *Trunc;
       Instruction::CastOps ExtendOpc =
           RdxDesc.isSigned() ? Instruction::SExt : Instruction::ZExt;
-      auto *Extnd = new VPWidenCastRecipe(ExtendOpc, Trunc, PhiTy);
-      Trunc->insertAfter(NewExitingVPV->getDefiningRecipe());
-      Extnd->insertAfter(Trunc);
+      VPWidenCastRecipe *Extnd;
+      {
+        VPBuilder::InsertPointGuard Guard(Builder);
+        Builder.setInsertPoint(
+            NewExitingVPV->getDefiningRecipe()->getParent(),
+            std::next(NewExitingVPV->getDefiningRecipe()->getIterator()));
+        Trunc =
+            Builder.createWidenCast(Instruction::Trunc, NewExitingVPV, RdxTy);
+        Extnd = Builder.createWidenCast(ExtendOpc, Trunc, PhiTy);
+      }
       if (PhiR->getOperand(1) == NewExitingVPV)
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
