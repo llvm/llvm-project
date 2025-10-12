@@ -24,6 +24,10 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
+      
+      - name: Set Safe Directory
+        run: |
+          git config --global --add safe.directory $(pwd)
 
       - name: Get changed files
         id: changed-files
