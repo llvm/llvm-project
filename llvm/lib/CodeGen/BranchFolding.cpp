@@ -2013,18 +2013,12 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
           break;
         }
 
-        if (Defs.count(Reg) && !MO.isDead()) {
-          // Don't hoist the instruction if the def would be clobber by the
-          // instruction at the point insertion. FIXME: This is overly
-          // conservative. It should be possible to hoist the instructions
-          // in BB2 in the following example:
-          // BB1:
-          // r1, eflag = op1 r2, r3
-          // brcc eflag
-          //
-          // BB2:
-          // r1 = op2, ...
-          //    = op3, killed r1
+        if (Defs.count(Reg) && !MO.isDead() && ActiveDefsSet.count(Reg)) {
+          // Don't hoist the instruction if the def would be clobbered by the
+          // instruction at the point of insertion and the register is actually
+          // live at that point. This is less conservative than the previous
+          // check which prevented hoisting whenever a register was defined at
+          // the insertion point, even if it wasn't live.
           IsSafe = false;
           break;
         }
