@@ -25,9 +25,11 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: debug
+      # We need to set the repo checkout as safe, otherwise tj-actions/changed-files
+      # will fail due to the changed ownership inside the container.
+      - name: Set Safe Directory
         run: |
-          git config --global --add safe.directory /__w/llvm-project/llvm-project
+          git config --global --add safe.directory $(pwd)
 
       - name: Get changed files
         id: changed-files
@@ -37,7 +39,6 @@ jobs:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
           sha: 'HEAD'
-          token: ''
 
       - name: "Listed files"
         env:
