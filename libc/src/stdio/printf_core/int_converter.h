@@ -92,7 +92,7 @@ LIBC_INLINE int convert_int(Writer<write_mode> *writer,
   cpp::array<char, details::num_buf_size()> buf;
   auto str = details::num_to_strview(num, buf, to_conv.conv_name);
   if (!str)
-    return -ERANGE;
+    return INT_CONVERSION_ERROR;
 
   size_t digits_written = str->size();
 

@@ -11,6 +11,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -32,7 +33,7 @@ LLVM_LIBC_FUNCTION(int, vsprintf,
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
   if (ret_val.has_error()) {
-    libc_errno = ret_val.error;
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error);
     return -1;
   }
   wb.buff[wb.buff_cur] = '\0';

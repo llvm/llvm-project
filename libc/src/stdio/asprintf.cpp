@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, asprintf,
   va_end(vlist);
   auto ret_val = printf_core::vasprintf_internal(buffer, format, args);
   if (ret_val.has_error()) {
-    libc_errno = ret_val.error;
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error);
     return -1;
   }
   if (ret_val.value > cpp::numeric_limits<int>::max()) {

@@ -60,7 +60,7 @@ LIBC_INLINE constexpr uint32_t const_ten_exp(uint32_t exponent) {
       READ_FX_BITS(unsigned LENGTH_MODIFIER accum);                            \
     } else {                                                                   \
       LIBC_ASSERT(false && "Invalid conversion name passed to convert_fixed"); \
-      return -EINVAL;                                                          \
+      return FIXED_POINT_CONVERSION_ERROR;                                     \
     }                                                                          \
   } while (false)
 

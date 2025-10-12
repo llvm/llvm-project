@@ -125,6 +125,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
 )
 
 add_entrypoint_object(
@@ -136,6 +137,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
 )
 
 add_entrypoint_object(
@@ -146,6 +148,7 @@ add_entrypoint_object(
     asprintf.h
   DEPENDS
     libc.src.stdio.printf_core.vasprintf_internal
+    libc.src.stdio.printf_core.core_structs
 )
 
 add_entrypoint_object(
@@ -157,6 +160,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
 )
 
 add_entrypoint_object(
@@ -168,6 +172,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
 )
 
 add_entrypoint_object(
@@ -178,6 +183,7 @@ add_entrypoint_object(
     vasprintf.h
   DEPENDS
     libc.src.stdio.printf_core.vasprintf_internal
+    libc.src.stdio.printf_core.core_structs
 )
 
 add_subdirectory(printf_core)

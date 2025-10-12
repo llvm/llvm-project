@@ -11,6 +11,7 @@
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include "hdr/types/FILE.h"
@@ -26,7 +27,7 @@ LLVM_LIBC_FUNCTION(int, vfprintf,
                                  // destruction automatically.
   auto ret_val = printf_core::vfprintf_internal(stream, format, args);
   if (ret_val.has_error()) {
-    libc_errno = ret_val.error;
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error, stream);
     return -1;
   }
   if (ret_val.value > cpp::numeric_limits<int>::max()) {

@@ -10,6 +10,7 @@
 
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -34,7 +35,7 @@ LLVM_LIBC_FUNCTION(int, snprintf,
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
   if (ret_val.has_error()) {
-    libc_errno = ret_val.error;
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error);
     return -1;
   }
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.

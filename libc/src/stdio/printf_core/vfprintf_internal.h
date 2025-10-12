@@ -64,7 +64,7 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   size_t written = internal::fwrite_unlocked(new_str.data(), sizeof(char),
                                              new_str.size(), target_file);
   if (written != new_str.size() || internal::ferror_unlocked(target_file))
-    return -EIO;
+    return FILE_WRITE_ERROR;
   return WRITE_OK;
 }
 

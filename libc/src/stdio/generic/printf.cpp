@@ -11,6 +11,7 @@
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include "hdr/types/FILE.h"
@@ -34,7 +35,10 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   auto ret_val = printf_core::vfprintf_internal(
       reinterpret_cast<::FILE *>(PRINTF_STDOUT), format, args);
   if (ret_val.has_error()) {
-    libc_errno = ret_val.error;
+    libc_errno = printf_core::internal_error_to_errno(
+        ret_val.error, reinterpret_cast<::FILE *>(PRINTF_STDOUT));
+    return -1;
+    ;
     return -1;
   }
   if (ret_val.value > cpp::numeric_limits<int>::max()) {

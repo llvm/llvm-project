@@ -11,9 +11,11 @@
 
 #include "src/__support/macros/config.h"
 
+#include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/File/file.h"
 #include "src/stdio/printf_core/printf_config.h"
 
 #include <inttypes.h>
@@ -144,6 +146,49 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
 
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
+// These are the printf return values for when an error has occurred. They are
+// all negative, and should be distinct.
+constexpr int FILE_WRITE_ERROR = -1;
+constexpr int FILE_STATUS_ERROR = -2;
+constexpr int NULLPTR_WRITE_ERROR = -3;
+constexpr int INT_CONVERSION_ERROR = -4;
+constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
+constexpr int ALLOCATION_ERROR = -6;
+
+LIBC_INLINE static int internal_error_to_errno(int internal_errno,
+                                               FILE *f = nullptr) {
+#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+  LIBC_NAMESPACE::File *file = reinterpret_cast<LIBC_NAMESPACE::File *>(f);
+#else
+  LIBC_NAMESPACE::File *file = nullptr;
+  (void)f;
+#endif
+
+  switch (-internal_errno) {
+  case WRITE_OK:
+    return 0;
+  case FILE_WRITE_ERROR:
+    if (file == nullptr)
+      return EIO;
+    return file->error_unlocked() ? file->error_code_unlocked() : EIO;
+  case FILE_STATUS_ERROR:
+    return EIO;
+  case NULLPTR_WRITE_ERROR:
+    return EINVAL;
+  case INT_CONVERSION_ERROR:
+    return ERANGE;
+  case FIXED_POINT_CONVERSION_ERROR:
+    return EINVAL;
+  case ALLOCATION_ERROR:
+    return ENOMEM;
+  default:
+    LIBC_ASSERT(
+        false &&
+        "Invalid internal printf error code passed to internal_error_to_errno");
+    return EINVAL;
+  }
+}
+
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 

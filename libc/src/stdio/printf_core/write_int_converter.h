@@ -27,7 +27,7 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   // This is an additional check added by LLVM-libc.
   if (to_conv.conv_val_ptr == nullptr)
-    return -EINVAL;
+    return NULLPTR_WRITE_ERROR;
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   size_t written = writer->get_chars_written();

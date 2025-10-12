@@ -44,13 +44,13 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
 
   auto retval = printf_core::printf_main(&writer, format, args);
   if (retval.has_error()) {
-    libc_errno = retval.error;
+    libc_errno = retval.error; // TODO map
     return -1;
   }
 
   int flushval = wb.overflow_write("");
   if (flushval != printf_core::WRITE_OK) {
-    libc_errno = -flushval;
+    libc_errno = -flushval; // TODO map
     return -1;
   }
 

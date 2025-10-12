@@ -30,7 +30,7 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
   if (new_buff == nullptr) {
     if (wb->buff != wb->init_buff)
       free(wb->buff);
-    return -ENOMEM;
+    return ALLOCATION_ERROR;
   }
   if (isBuffOnStack)
     inline_memcpy(new_buff, wb->buff, wb->buff_cur);
@@ -59,7 +59,7 @@ LIBC_INLINE PrintfResult vasprintf_internal(char **ret,
   if (wb.buff == init_buff_on_stack) {
     *ret = static_cast<char *>(malloc(ret_val.value + 1));
     if (ret == nullptr)
-      return {0, ENOMEM};
+      return {0, ALLOCATION_ERROR};
     inline_memcpy(*ret, wb.buff, ret_val.value);
   } else {
     *ret = wb.buff;
