@@ -3499,10 +3499,8 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     failForInvalidBundles(I, "callbrs",
                           {LLVMContext::OB_deopt, LLVMContext::OB_funclet});
     visitInlineAsm(I);
-  } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
-    visitCallBrIntrinsic(I);
   } else {
-    report_fatal_error("only know how to handle inlineasm/intrinsic callbr");
+    visitCallBrIntrinsic(I);
   }
   CopyToExportRegsIfNeeded(&I);
 

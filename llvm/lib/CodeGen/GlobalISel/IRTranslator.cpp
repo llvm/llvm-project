@@ -3051,8 +3051,6 @@ bool IRTranslator::translateCallBr(const User &U,
   Intrinsic::ID IID = I.getIntrinsicID();
   if (I.isInlineAsm())
     return false;
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
   if (!translateIntrinsic(I, IID, MIRBuilder))
     return false;
 
