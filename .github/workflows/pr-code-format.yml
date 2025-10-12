@@ -33,6 +33,7 @@ jobs:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
           sha: 'HEAD'
+          token: ''
 
       - name: "Listed files"
         env:
