@@ -15634,12 +15634,12 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         };
 
     // Return a new SCEV that modifies \p Expr to the closest number divides by
-    // \p Divisor and greater or equal than Expr.
-    // For now, only handle constant Expr.
+    // \p Divisor and greater or equal than Expr. For now, only handle constant
+    // Expr.
     auto GetNextSCEVDividesByDivisor = [&](const SCEV *Expr,
                                            const APInt &DivisorVal) {
       const APInt *ExprVal;
-      if (!match(Expr, m_scev_APInt(ExprVal)) ||
+      if (!match(Expr, m_scev_APInt(ExprVal)) || ExprVal->isNegative() ||
           DivisorVal.isNonPositive())
         return Expr;
       APInt Rem = ExprVal->urem(DivisorVal);
@@ -15650,12 +15650,12 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     };
 
     // Return a new SCEV that modifies \p Expr to the closest number divides by
-    // \p Divisor and less or equal than Expr.
-    // For now, only handle constant Expr.
+    // \p Divisor and less or equal than Expr. For now, only handle constant
+    // Expr.
     auto GetPreviousSCEVDividesByDivisor = [&](const SCEV *Expr,
                                                const APInt &DivisorVal) {
       const APInt *ExprVal;
-      if (!match(Expr, m_scev_APInt(ExprVal)) || 
+      if (!match(Expr, m_scev_APInt(ExprVal)) || ExprVal->isNegative() ||
           DivisorVal.isNonPositive())
         return Expr;
       APInt Rem = ExprVal->urem(DivisorVal);
