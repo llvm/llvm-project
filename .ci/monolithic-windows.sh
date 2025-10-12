@@ -34,21 +34,21 @@ popd
 mkdir /tmp/clang-download
 pushd /tmp/clang-download
 curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
-ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+#ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
 /tmp/xz-download/bin_x86-64/xz.exe -d -qq "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
 tar xf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
-ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+#ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 
-#ls -l "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm"
+##ls -l "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm"
 
-where cl.exe
+##where cl.exe
 
 
-ls -l "C:\BuildTools\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\cl.exe"
+##ls -l "C:\BuildTools\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\cl.exe"
 
 #where clang-cl.exe
 
-ls -l "C:\BuildTools\VC\Tools"
+##ls -l "C:\BuildTools\VC\Tools"
 
 #where clang-cl.exe
 
@@ -78,61 +78,73 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D COMPILER_SUPPORTS_WARNING_WEAK_VTABLES=OFF \
+      -D CXX_SUPPORTS_WERROR_GLOBAL_CONSTRUCTOR=OFF \
+      -D C_SUPPORTS_WERROR_GLOBAL_CONSTRUCTOR=OFF \
+      -D C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION=OFF \
+      -D C_SUPPORTS_WERROR_MISMATCHED_TAGS=OFF \
+      -D C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW=OFF \
+      -D C_SUPPORTS_WUNDEF=OFF \
+      -D HAS_ATTRIBUTE_WARN_UNUSED_RESULT=OFF \
+      -D HAS_WERROR_GLOBAL_CTORS=OFF \
+      -D HAVE_DECL___BUILTIN_FFS=OFF \
+      -D HAVE___ATTRIBUTE__=OFF
+      
 
-cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang1.txt
+##cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang1.txt
 
-pushd ${BUILD_DIR}
-rm -Rf *
-popd
+##pushd ${BUILD_DIR}
+##rm -Rf *
+##popd
 
-export CC=cl
-export CXX=cl
-export LD=link
+#export CC=cl
+#export CXX=cl
+#export LD=link
 
-cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
-      -D LLVM_ENABLE_PROJECTS="${projects}" \
-      -G Ninja \
-      -D CMAKE_BUILD_TYPE=Release \
-      -D LLVM_ENABLE_ASSERTIONS=ON \
-      -D LLVM_BUILD_EXAMPLES=ON \
-      -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
-      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
-      -D COMPILER_RT_BUILD_ORC=OFF \
-      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
-      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
-      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+#cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
+#      -D LLVM_ENABLE_PROJECTS="${projects}" \
+#      -G Ninja \
+#      -D CMAKE_BUILD_TYPE=Release \
+#      -D LLVM_ENABLE_ASSERTIONS=ON \
+#      -D LLVM_BUILD_EXAMPLES=ON \
+#      -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
+#      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
+#      -D COMPILER_RT_BUILD_ORC=OFF \
+#      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+#      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+#      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+#      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
+#      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
+#      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+#      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
-cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.msvc.txt
+#cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.msvc.txt
 
-export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
-export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
-export LD=link
+#export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+#export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+#export LD=link
 
-cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
-      -D LLVM_ENABLE_PROJECTS="${projects}" \
-      -G Ninja \
-      -D CMAKE_BUILD_TYPE=Release \
-      -D LLVM_ENABLE_ASSERTIONS=ON \
-      -D LLVM_BUILD_EXAMPLES=ON \
-      -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
-      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
-      -D COMPILER_RT_BUILD_ORC=OFF \
-      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
-      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
-      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+#cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
+#      -D LLVM_ENABLE_PROJECTS="${projects}" \
+#      -G Ninja \
+#      -D CMAKE_BUILD_TYPE=Release \
+#      -D LLVM_ENABLE_ASSERTIONS=ON \
+#      -D LLVM_BUILD_EXAMPLES=ON \
+#      -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
+#      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
+#      -D COMPILER_RT_BUILD_ORC=OFF \
+#      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+#      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+#      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+#      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
+#      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
+#      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+#      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
-cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
+#cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
 
-diff ${MONOREPO_ROOT}/CMakeCache.clang1.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
+#diff ${MONOREPO_ROOT}/CMakeCache.clang1.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
 
 
 start-group "ninja"
