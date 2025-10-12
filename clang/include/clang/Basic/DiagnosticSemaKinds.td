@@ -6326,11 +6326,14 @@ def warn_internal_linkage_local_storage : Warning<
   InGroup<IgnoredAttributes>;
 
 def ext_internal_in_extern_inline : ExtWarn<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is a C2y extension">, InGroup<StaticInInline>;
 def ext_internal_in_extern_inline_quiet : Extension<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  ext_internal_in_extern_inline.Summary>, InGroup<StaticInInline>;
+def warn_c2y_compat_internal_in_extern_inline : Warning<
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 def warn_static_local_in_extern_inline : Warning<
   "non-constant static local variable in inline function may be different "
   "in different files">, InGroup<StaticLocalInInline>;
@@ -13295,6 +13298,8 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 def warn_unsafe_buffer_usage_in_container : Warning<
   "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
