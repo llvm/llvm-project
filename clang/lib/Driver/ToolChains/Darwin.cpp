@@ -667,6 +667,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addAllArgs(CmdArgs, {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_u_Group});
 
+  // Add local file paths to ensure the toolchain's libc++ is used instead of
+  // the system's.
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+
   // Forward -ObjC when either -ObjC or -ObjC++ is used, to force loading
   // members of static archive libraries which implement Objective-C classes or
   // categories.
