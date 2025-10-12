@@ -27,8 +27,7 @@ jobs:
 
       - name: debug
         run: |
-          pwd
-          ls -a
+          git config --global --add safe.directory /__w/llvm-project/llvm-project
 
       - name: Get changed files
         id: changed-files
