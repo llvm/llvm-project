@@ -420,7 +420,7 @@ public:
   /// @}
 
   /// Returns whether this instance allocated memory.
-  [[nodiscard]] bool needsCleanup() const { return partCount() > 1; }
+  bool needsCleanup() const { return partCount() > 1; }
 
   /// \name Convenience "constructors"
   /// @{
@@ -462,11 +462,11 @@ public:
   LLVM_ABI opStatus convertFromAPInt(const APInt &, bool, roundingMode);
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   LLVM_ABI APInt bitcastToAPInt() const;
-  [[nodiscard]] LLVM_ABI double convertToDouble() const;
+  LLVM_ABI double convertToDouble() const;
 #ifdef HAS_IEE754_FLOAT128
-  [[nodiscard]] LLVM_ABI float128 convertToQuad() const;
+  LLVM_ABI float128 convertToQuad() const;
 #endif
-  [[nodiscard]] LLVM_ABI float convertToFloat() const;
+  LLVM_ABI float convertToFloat() const;
 
   /// @}
 
@@ -477,10 +477,10 @@ public:
 
   /// IEEE comparison with another floating point number (NaNs compare
   /// unordered, 0==-0).
-  [[nodiscard]] LLVM_ABI cmpResult compare(const IEEEFloat &) const;
+  LLVM_ABI cmpResult compare(const IEEEFloat &) const;
 
   /// Bitwise comparison for equality (QNaNs compare equal, 0!=-0).
-  [[nodiscard]] LLVM_ABI bool bitwiseIsEqual(const IEEEFloat &) const;
+  LLVM_ABI bool bitwiseIsEqual(const IEEEFloat &) const;
 
   /// Write out a hexadecimal representation of the floating point value to DST,
   /// which must be of sufficient size, in the C99 form [-]0xh.hhhhp[+-]d.
@@ -495,66 +495,62 @@ public:
   /// negative.
   ///
   /// This applies to zeros and NaNs as well.
-  [[nodiscard]] bool isNegative() const { return sign; }
+  bool isNegative() const { return sign; }
 
   /// IEEE-754R isNormal: Returns true if and only if the current value is normal.
   ///
   /// This implies that the current value of the float is not zero, subnormal,
   /// infinite, or NaN following the definition of normality from IEEE-754R.
-  [[nodiscard]] bool isNormal() const {
-    return !isDenormal() && isFiniteNonZero();
-  }
+  bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }
 
   /// Returns true if and only if the current value is zero, subnormal, or
   /// normal.
   ///
   /// This means that the value is not infinite or NaN.
-  [[nodiscard]] bool isFinite() const { return !isNaN() && !isInfinity(); }
+  bool isFinite() const { return !isNaN() && !isInfinity(); }
 
   /// Returns true if and only if the float is plus or minus zero.
-  [[nodiscard]] bool isZero() const { return category == fltCategory::fcZero; }
+  bool isZero() const { return category == fltCategory::fcZero; }
 
   /// IEEE-754R isSubnormal(): Returns true if and only if the float is a
   /// denormal.
-  [[nodiscard]] LLVM_ABI bool isDenormal() const;
+  LLVM_ABI bool isDenormal() const;
 
   /// IEEE-754R isInfinite(): Returns true if and only if the float is infinity.
-  [[nodiscard]] bool isInfinity() const { return category == fcInfinity; }
+  bool isInfinity() const { return category == fcInfinity; }
 
   /// Returns true if and only if the float is a quiet or signaling NaN.
-  [[nodiscard]] bool isNaN() const { return category == fcNaN; }
+  bool isNaN() const { return category == fcNaN; }
 
   /// Returns true if and only if the float is a signaling NaN.
-  [[nodiscard]] LLVM_ABI bool isSignaling() const;
+  LLVM_ABI bool isSignaling() const;
 
   /// @}
 
   /// \name Simple Queries
   /// @{
 
-  [[nodiscard]] fltCategory getCategory() const { return category; }
-  [[nodiscard]] const fltSemantics &getSemantics() const { return *semantics; }
-  [[nodiscard]] bool isNonZero() const {
-    return category != fltCategory::fcZero;
-  }
-  [[nodiscard]] bool isFiniteNonZero() const { return isFinite() && !isZero(); }
-  [[nodiscard]] bool isPosZero() const { return isZero() && !isNegative(); }
-  [[nodiscard]] bool isNegZero() const { return isZero() && isNegative(); }
+  fltCategory getCategory() const { return category; }
+  const fltSemantics &getSemantics() const { return *semantics; }
+  bool isNonZero() const { return category != fltCategory::fcZero; }
+  bool isFiniteNonZero() const { return isFinite() && !isZero(); }
+  bool isPosZero() const { return isZero() && !isNegative(); }
+  bool isNegZero() const { return isZero() && isNegative(); }
 
   /// Returns true if and only if the number has the smallest possible non-zero
   /// magnitude in the current semantics.
-  [[nodiscard]] LLVM_ABI bool isSmallest() const;
+  LLVM_ABI bool isSmallest() const;
 
   /// Returns true if this is the smallest (by magnitude) normalized finite
   /// number in the given semantics.
-  [[nodiscard]] LLVM_ABI bool isSmallestNormalized() const;
+  LLVM_ABI bool isSmallestNormalized() const;
 
   /// Returns true if and only if the number has the largest possible finite
   /// magnitude in the current semantics.
-  [[nodiscard]] LLVM_ABI bool isLargest() const;
+  LLVM_ABI bool isLargest() const;
 
   /// Returns true if and only if the number is an exact integer.
-  [[nodiscard]] LLVM_ABI bool isInteger() const;
+  LLVM_ABI bool isInteger() const;
 
   /// @}
 
@@ -603,7 +599,7 @@ public:
                          unsigned FormatMaxPadding = 3,
                          bool TruncateZero = true) const;
 
-  [[nodiscard]] LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
+  LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
   LLVM_ABI friend int ilogb(const IEEEFloat &Arg);
 
@@ -630,16 +626,15 @@ public:
 
   /// @}
 
-  [[nodiscard]] LLVM_ABI cmpResult
-  compareAbsoluteValue(const IEEEFloat &) const;
+  LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
 private:
   /// \name Simple Queries
   /// @{
 
   integerPart *significandParts();
-  [[nodiscard]] const integerPart *significandParts() const;
-  [[nodiscard]] LLVM_ABI unsigned int partCount() const;
+  const integerPart *significandParts() const;
+  LLVM_ABI unsigned int partCount() const;
 
   /// @}
 
@@ -659,16 +654,16 @@ private:
   void initialize(const fltSemantics *);
   void shiftSignificandLeft(unsigned int);
   lostFraction shiftSignificandRight(unsigned int);
-  [[nodiscard]] unsigned int significandLSB() const;
-  [[nodiscard]] unsigned int significandMSB() const;
+  unsigned int significandLSB() const;
+  unsigned int significandMSB() const;
   void zeroSignificand();
-  [[nodiscard]] unsigned int getNumHighBits() const;
+  unsigned int getNumHighBits() const;
   /// Return true if the significand excluding the integral bit is all ones.
-  [[nodiscard]] bool isSignificandAllOnes() const;
-  [[nodiscard]] bool isSignificandAllOnesExceptLSB() const;
+  bool isSignificandAllOnes() const;
+  bool isSignificandAllOnesExceptLSB() const;
   /// Return true if the significand excluding the integral bit is all zeros.
-  [[nodiscard]] bool isSignificandAllZeros() const;
-  [[nodiscard]] bool isSignificandAllZerosExceptMSB() const;
+  bool isSignificandAllZeros() const;
+  bool isSignificandAllZerosExceptMSB() const;
 
   /// @}
 
@@ -690,8 +685,7 @@ private:
   opStatus normalize(roundingMode, lostFraction);
   opStatus addOrSubtract(const IEEEFloat &, roundingMode, bool subtract);
   opStatus handleOverflow(roundingMode);
-  [[nodiscard]] bool roundAwayFromZero(roundingMode, lostFraction,
-                                       unsigned int) const;
+  bool roundAwayFromZero(roundingMode, lostFraction, unsigned int) const;
   opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart>,
                                         unsigned int, bool, roundingMode,
                                         bool *) const;
@@ -703,9 +697,9 @@ private:
                                  roundingMode) const;
   opStatus roundSignificandWithExponent(const integerPart *, unsigned int, int,
                                         roundingMode);
-  [[nodiscard]] ExponentType exponentNaN() const;
-  [[nodiscard]] ExponentType exponentInf() const;
-  [[nodiscard]] ExponentType exponentZero() const;
+  ExponentType exponentNaN() const;
+  ExponentType exponentInf() const;
+  ExponentType exponentZero() const;
 
   /// @}
 
@@ -829,12 +823,12 @@ public:
   LLVM_ABI DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
   inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
 
-  [[nodiscard]] bool needsCleanup() const { return Floats != nullptr; }
+  bool needsCleanup() const { return Floats != nullptr; }
 
   inline APFloat &getFirst();
-  [[nodiscard]] inline const APFloat &getFirst() const;
+  inline const APFloat &getFirst() const;
   inline APFloat &getSecond();
-  [[nodiscard]] inline const APFloat &getSecond() const;
+  inline const APFloat &getSecond() const;
 
   LLVM_ABI opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
   LLVM_ABI opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);
@@ -847,11 +841,10 @@ public:
                                      roundingMode RM);
   LLVM_ABI opStatus roundToIntegral(roundingMode RM);
   LLVM_ABI void changeSign();
-  [[nodiscard]] LLVM_ABI cmpResult
-  compareAbsoluteValue(const DoubleAPFloat &RHS) const;
+  LLVM_ABI cmpResult compareAbsoluteValue(const DoubleAPFloat &RHS) const;
 
-  [[nodiscard]] LLVM_ABI fltCategory getCategory() const;
-  [[nodiscard]] LLVM_ABI bool isNegative() const;
+  LLVM_ABI fltCategory getCategory() const;
+  LLVM_ABI bool isNegative() const;
 
   LLVM_ABI void makeInf(bool Neg);
   LLVM_ABI void makeZero(bool Neg);
@@ -860,8 +853,8 @@ public:
   LLVM_ABI void makeSmallestNormalized(bool Neg);
   LLVM_ABI void makeNaN(bool SNaN, bool Neg, const APInt *fill);
 
-  [[nodiscard]] LLVM_ABI cmpResult compare(const DoubleAPFloat &RHS) const;
-  [[nodiscard]] LLVM_ABI bool bitwiseIsEqual(const DoubleAPFloat &RHS) const;
+  LLVM_ABI cmpResult compare(const DoubleAPFloat &RHS) const;
+  LLVM_ABI bool bitwiseIsEqual(const DoubleAPFloat &RHS) const;
   LLVM_ABI APInt bitcastToAPInt() const;
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   LLVM_ABI opStatus next(bool nextDown);
@@ -875,17 +868,17 @@ public:
                                            bool UpperCase,
                                            roundingMode RM) const;
 
-  [[nodiscard]] LLVM_ABI bool isDenormal() const;
-  [[nodiscard]] LLVM_ABI bool isSmallest() const;
-  [[nodiscard]] LLVM_ABI bool isSmallestNormalized() const;
-  [[nodiscard]] LLVM_ABI bool isLargest() const;
-  [[nodiscard]] LLVM_ABI bool isInteger() const;
+  LLVM_ABI bool isDenormal() const;
+  LLVM_ABI bool isSmallest() const;
+  LLVM_ABI bool isSmallestNormalized() const;
+  LLVM_ABI bool isLargest() const;
+  LLVM_ABI bool isInteger() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
 
-  [[nodiscard]] LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
+  LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
   LLVM_ABI friend int ilogb(const DoubleAPFloat &X);
   LLVM_ABI friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp,
@@ -1016,7 +1009,7 @@ class APFloat : public APFloatBase {
     llvm_unreachable("Unexpected semantics");
   }
 
-  [[nodiscard]] const IEEEFloat &getIEEE() const {
+  const IEEEFloat &getIEEE() const {
     if (usesLayout<IEEEFloat>(*U.semantics))
       return U.IEEE;
     if (usesLayout<DoubleAPFloat>(*U.semantics))
@@ -1050,7 +1043,7 @@ class APFloat : public APFloatBase {
 
   // Compares the absolute value of this APFloat with another.  Both operands
   // must be finite non-zero.
-  [[nodiscard]] cmpResult compareAbsoluteValue(const APFloat &RHS) const {
+  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
     if (usesLayout<IEEEFloat>(getSemantics()))
@@ -1078,9 +1071,7 @@ public:
 
   ~APFloat() = default;
 
-  [[nodiscard]] bool needsCleanup() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(needsCleanup());
-  }
+  bool needsCleanup() const { APFLOAT_DISPATCH_ON_SEMANTICS(needsCleanup()); }
 
   /// Factory for Positive and Negative Zero.
   ///
@@ -1368,7 +1359,7 @@ public:
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host double type without loss of precision. It can be IEEEdouble and
   /// shorter semantics, like IEEEsingle and others.
-  [[nodiscard]] LLVM_ABI double convertToDouble() const;
+  LLVM_ABI double convertToDouble() const;
 
   /// Converts this APFloat to host float value.
   ///
@@ -1376,7 +1367,7 @@ public:
   /// the host float type without loss of precision. It can be IEEEquad and
   /// shorter semantics, like IEEEdouble and others.
 #ifdef HAS_IEE754_FLOAT128
-  [[nodiscard]] LLVM_ABI float128 convertToQuad() const;
+  LLVM_ABI float128 convertToQuad() const;
 #endif
 
   /// Converts this APFloat to host float value.
@@ -1384,7 +1375,7 @@ public:
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host float type without loss of precision. It can be IEEEsingle and
   /// shorter semantics, like IEEEhalf.
-  [[nodiscard]] LLVM_ABI float convertToFloat() const;
+  LLVM_ABI float convertToFloat() const;
 
   bool operator==(const APFloat &RHS) const { return compare(RHS) == cmpEqual; }
 
@@ -1410,7 +1401,7 @@ public:
 
   // IEEE comparison with another floating point number (NaNs compare unordered,
   // 0==-0).
-  [[nodiscard]] cmpResult compare(const APFloat &RHS) const {
+  cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
     if (usesLayout<IEEEFloat>(getSemantics()))
@@ -1420,7 +1411,7 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
 
-  [[nodiscard]] bool bitwiseIsEqual(const APFloat &RHS) const {
+  bool bitwiseIsEqual(const APFloat &RHS) const {
     if (&getSemantics() != &RHS.getSemantics())
       return false;
     if (usesLayout<IEEEFloat>(getSemantics()))
@@ -1438,7 +1429,7 @@ public:
   /// We leave the version with the double argument here because it's just so
   /// convenient to write "2.0" and the like.  Without this function we'd
   /// have to duplicate its logic everywhere it's called.
-  [[nodiscard]] bool isExactlyValue(double V) const {
+  bool isExactlyValue(double V) const {
     bool ignored;
     APFloat Tmp(V);
     Tmp.convert(getSemantics(), APFloat::rmNearestTiesToEven, &ignored);
@@ -1451,53 +1442,35 @@ public:
         convertToHexString(DST, HexDigits, UpperCase, RM));
   }
 
-  [[nodiscard]] bool isZero() const { return getCategory() == fcZero; }
-  [[nodiscard]] bool isInfinity() const { return getCategory() == fcInfinity; }
-  [[nodiscard]] bool isNaN() const { return getCategory() == fcNaN; }
+  bool isZero() const { return getCategory() == fcZero; }
+  bool isInfinity() const { return getCategory() == fcInfinity; }
+  bool isNaN() const { return getCategory() == fcNaN; }
 
-  [[nodiscard]] bool isNegative() const { return getIEEE().isNegative(); }
-  [[nodiscard]] bool isDenormal() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(isDenormal());
-  }
-  [[nodiscard]] bool isSignaling() const { return getIEEE().isSignaling(); }
+  bool isNegative() const { return getIEEE().isNegative(); }
+  bool isDenormal() const { APFLOAT_DISPATCH_ON_SEMANTICS(isDenormal()); }
+  bool isSignaling() const { return getIEEE().isSignaling(); }
 
-  [[nodiscard]] bool isNormal() const {
-    return !isDenormal() && isFiniteNonZero();
-  }
-  [[nodiscard]] bool isFinite() const { return !isNaN() && !isInfinity(); }
+  bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }
+  bool isFinite() const { return !isNaN() && !isInfinity(); }
 
-  [[nodiscard]] fltCategory getCategory() const {
-    return getIEEE().getCategory();
-  }
-  [[nodiscard]] const fltSemantics &getSemantics() const {
-    return *U.semantics;
-  }
-  [[nodiscard]] bool isNonZero() const { return !isZero(); }
-  [[nodiscard]] bool isFiniteNonZero() const { return isFinite() && !isZero(); }
-  [[nodiscard]] bool isPosZero() const { return isZero() && !isNegative(); }
-  [[nodiscard]] bool isNegZero() const { return isZero() && isNegative(); }
-  [[nodiscard]] bool isPosInfinity() const {
-    return isInfinity() && !isNegative();
-  }
-  [[nodiscard]] bool isNegInfinity() const {
-    return isInfinity() && isNegative();
-  }
-  [[nodiscard]] bool isSmallest() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest());
-  }
-  [[nodiscard]] bool isLargest() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(isLargest());
-  }
-  [[nodiscard]] bool isInteger() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(isInteger());
-  }
+  fltCategory getCategory() const { return getIEEE().getCategory(); }
+  const fltSemantics &getSemantics() const { return *U.semantics; }
+  bool isNonZero() const { return !isZero(); }
+  bool isFiniteNonZero() const { return isFinite() && !isZero(); }
+  bool isPosZero() const { return isZero() && !isNegative(); }
+  bool isNegZero() const { return isZero() && isNegative(); }
+  bool isPosInfinity() const { return isInfinity() && !isNegative(); }
+  bool isNegInfinity() const { return isInfinity() && isNegative(); }
+  bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
+  bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
+  bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
 
-  [[nodiscard]] bool isSmallestNormalized() const {
+  bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
   }
 
   /// Return the FPClassTest which will return true for the value.
-  [[nodiscard]] LLVM_ABI FPClassTest classify() const;
+  LLVM_ABI FPClassTest classify() const;
 
   APFloat &operator=(const APFloat &RHS) = default;
   APFloat &operator=(APFloat &&RHS) = default;
@@ -1520,13 +1493,15 @@ public:
 
   // If this is an exact power of two, return the exponent while ignoring the
   // sign bit. If it's not an exact power of 2, return INT_MIN
-  [[nodiscard]] LLVM_READONLY int getExactLog2Abs() const {
+  LLVM_READONLY
+  int getExactLog2Abs() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2Abs());
   }
 
   // If this is an exact power of two, return the exponent. If it's not an exact
   // power of 2, return INT_MIN
-  [[nodiscard]] LLVM_READONLY int getExactLog2() const {
+  LLVM_READONLY
+  int getExactLog2() const {
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
 

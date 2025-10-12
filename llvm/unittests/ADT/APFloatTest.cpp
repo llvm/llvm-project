@@ -1816,9 +1816,9 @@ TEST(APFloatTest, makeNaN) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(APFloatTest, SemanticsDeath) {
-  EXPECT_DEATH((void)APFloat(APFloat::IEEEquad(), 0).convertToDouble(),
+  EXPECT_DEATH(APFloat(APFloat::IEEEquad(), 0).convertToDouble(),
                "Float semantics is not representable by IEEEdouble");
-  EXPECT_DEATH((void)APFloat(APFloat::IEEEdouble(), 0).convertToFloat(),
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), 0).convertToFloat(),
                "Float semantics is not representable by IEEEsingle");
 }
 #endif

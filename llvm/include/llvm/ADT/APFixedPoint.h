@@ -56,33 +56,28 @@ public:
 
   /// Check if the Semantic follow the requirements of an older more limited
   /// version of this class
-  [[nodiscard]] bool isValidLegacySema() const {
+  bool isValidLegacySema() const {
     return LsbWeight <= 0 && static_cast<int>(Width) >= -LsbWeight;
   }
-  [[nodiscard]] unsigned getWidth() const { return Width; }
-  [[nodiscard]] unsigned getScale() const {
-    assert(isValidLegacySema());
-    return -LsbWeight;
-  }
-  [[nodiscard]] int getLsbWeight() const { return LsbWeight; }
-  [[nodiscard]] int getMsbWeight() const {
+  unsigned getWidth() const { return Width; }
+  unsigned getScale() const { assert(isValidLegacySema()); return -LsbWeight; }
+  int getLsbWeight() const { return LsbWeight; }
+  int getMsbWeight() const {
     return LsbWeight + Width - 1 /*Both lsb and msb are both part of width*/;
   }
-  [[nodiscard]] bool isSigned() const { return IsSigned; }
-  [[nodiscard]] bool isSaturated() const { return IsSaturated; }
-  [[nodiscard]] bool hasUnsignedPadding() const { return HasUnsignedPadding; }
+  bool isSigned() const { return IsSigned; }
+  bool isSaturated() const { return IsSaturated; }
+  bool hasUnsignedPadding() const { return HasUnsignedPadding; }
 
   void setSaturated(bool Saturated) { IsSaturated = Saturated; }
 
   /// return true if the first bit doesn't have a strictly positive weight
-  [[nodiscard]] bool hasSignOrPaddingBit() const {
-    return IsSigned || HasUnsignedPadding;
-  }
+  bool hasSignOrPaddingBit() const { return IsSigned || HasUnsignedPadding; }
 
   /// Return the number of integral bits represented by these semantics. These
   /// are separate from the fractional bits and do not include the sign or
   /// padding bit.
-  [[nodiscard]] unsigned getIntegralBits() const {
+  unsigned getIntegralBits() const {
     return std::max(getMsbWeight() + 1 - hasSignOrPaddingBit(), 0);
   }
 
@@ -90,7 +85,7 @@ public:
   /// precision semantic that can precisely represent the precision and ranges
   /// of both input values. This does not compute the resulting semantics for a
   /// given binary operation.
-  [[nodiscard]] LLVM_ABI FixedPointSemantics
+  LLVM_ABI FixedPointSemantics
   getCommonSemantics(const FixedPointSemantics &Other) const;
 
   /// Print semantics for debug purposes
@@ -103,8 +98,7 @@ public:
   /// minimum integer representation of 127 and -128, respectively. If both of
   /// these values can be represented (possibly inexactly) in the floating
   /// point semantic without overflowing, this returns true.
-  [[nodiscard]] LLVM_ABI bool
-  fitsInFloatSemantics(const fltSemantics &FloatSema) const;
+  LLVM_ABI bool fitsInFloatSemantics(const fltSemantics &FloatSema) const;
 
   /// Return the FixedPointSemantics for an integer type.
   static FixedPointSemantics GetIntegerSemantics(unsigned Width,
@@ -125,7 +119,7 @@ public:
   /// The result is dependent on the host endianness and not stable across LLVM
   /// versions. See getFromOpaqueInt() to convert it back to a
   /// FixedPointSemantics object.
-  [[nodiscard]] LLVM_ABI uint32_t toOpaqueInt() const;
+  LLVM_ABI uint32_t toOpaqueInt() const;
   /// Create a FixedPointSemantics object from an integer created via
   /// toOpaqueInt().
   LLVM_ABI static FixedPointSemantics getFromOpaqueInt(uint32_t);
@@ -183,18 +177,16 @@ public:
   APFixedPoint(const FixedPointSemantics &Sema) : APFixedPoint(0, Sema) {}
 
   APSInt getValue() const { return APSInt(Val, !Sema.isSigned()); }
-  [[nodiscard]] inline unsigned getWidth() const { return Sema.getWidth(); }
-  [[nodiscard]] inline unsigned getScale() const { return Sema.getScale(); }
-  [[nodiscard]] int getLsbWeight() const { return Sema.getLsbWeight(); }
-  [[nodiscard]] int getMsbWeight() const { return Sema.getMsbWeight(); }
-  [[nodiscard]] inline bool isSaturated() const { return Sema.isSaturated(); }
-  [[nodiscard]] inline bool isSigned() const { return Sema.isSigned(); }
-  [[nodiscard]] inline bool hasPadding() const {
-    return Sema.hasUnsignedPadding();
-  }
-  [[nodiscard]] FixedPointSemantics getSemantics() const { return Sema; }
+  inline unsigned getWidth() const { return Sema.getWidth(); }
+  inline unsigned getScale() const { return Sema.getScale(); }
+  int getLsbWeight() const { return Sema.getLsbWeight(); }
+  int getMsbWeight() const { return Sema.getMsbWeight(); }
+  inline bool isSaturated() const { return Sema.isSaturated(); }
+  inline bool isSigned() const { return Sema.isSigned(); }
+  inline bool hasPadding() const { return Sema.hasUnsignedPadding(); }
+  FixedPointSemantics getSemantics() const { return Sema; }
 
-  [[nodiscard]] bool getBoolValue() const { return Val.getBoolValue(); }
+  bool getBoolValue() const { return Val.getBoolValue(); }
 
   // Convert this number to match the semantics provided. If the overflow
   // parameter is provided, set this value to true or false to indicate if this
@@ -252,11 +244,10 @@ public:
 
   /// Convert this fixed point number to a floating point value with the
   /// provided semantics.
-  [[nodiscard]] LLVM_ABI APFloat
-  convertToFloat(const fltSemantics &FloatSema) const;
+  LLVM_ABI APFloat convertToFloat(const fltSemantics &FloatSema) const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str) const;
-  [[nodiscard]] std::string toString() const {
+  std::string toString() const {
     SmallString<40> S;
     toString(S);
     return std::string(S);
@@ -269,7 +260,7 @@ public:
 #endif
 
   // If LHS > RHS, return 1. If LHS == RHS, return 0. If LHS < RHS, return -1.
-  [[nodiscard]] LLVM_ABI int compare(const APFixedPoint &Other) const;
+  LLVM_ABI int compare(const APFixedPoint &Other) const;
   bool operator==(const APFixedPoint &Other) const {
     return compare(Other) == 0;
   }

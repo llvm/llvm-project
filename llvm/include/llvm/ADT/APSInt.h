@@ -47,14 +47,12 @@ public:
   /// Determine sign of this APSInt.
   ///
   /// \returns true if this APSInt is negative, false otherwise
-  [[nodiscard]] bool isNegative() const {
-    return isSigned() && APInt::isNegative();
-  }
+  bool isNegative() const { return isSigned() && APInt::isNegative(); }
 
   /// Determine if this APSInt Value is non-negative (>= 0)
   ///
   /// \returns true if this APSInt is non-negative, false otherwise
-  [[nodiscard]] bool isNonNegative() const { return !isNegative(); }
+  bool isNonNegative() const { return !isNegative(); }
 
   /// Determine if this APSInt Value is positive.
   ///
@@ -62,9 +60,7 @@ public:
   /// that 0 is not a positive value.
   ///
   /// \returns true if this APSInt is positive.
-  [[nodiscard]] bool isStrictlyPositive() const {
-    return isNonNegative() && !isZero();
-  }
+  bool isStrictlyPositive() const { return isNonNegative() && !isZero(); }
 
   APSInt &operator=(APInt RHS) {
     // Retain our current sign.
@@ -79,8 +75,8 @@ public:
   }
 
   // Query sign information.
-  [[nodiscard]] bool isSigned() const { return !IsUnsigned; }
-  [[nodiscard]] bool isUnsigned() const { return IsUnsigned; }
+  bool isSigned() const { return !IsUnsigned; }
+  bool isUnsigned() const { return IsUnsigned; }
   void setIsUnsigned(bool Val) { IsUnsigned = Val; }
   void setIsSigned(bool Val) { IsUnsigned = !Val; }
 
@@ -91,7 +87,7 @@ public:
   using APInt::toString;
 
   /// If this int is representable using an int64_t.
-  [[nodiscard]] bool isRepresentableByInt64() const {
+  bool isRepresentableByInt64() const {
     // For unsigned values with 64 active bits, they technically fit into a
     // int64_t, but the user may get negative numbers and has to manually cast
     // them to unsigned. Let's not bet the user has the sanity to do that and
@@ -100,12 +96,12 @@ public:
   }
 
   /// Get the correctly-extended \c int64_t value.
-  [[nodiscard]] int64_t getExtValue() const {
+  int64_t getExtValue() const {
     assert(isRepresentableByInt64() && "Too many bits for int64_t");
     return isSigned() ? getSExtValue() : getZExtValue();
   }
 
-  [[nodiscard]] std::optional<int64_t> tryExtValue() const {
+  std::optional<int64_t> tryExtValue() const {
     return isRepresentableByInt64() ? std::optional<int64_t>(getExtValue())
                                     : std::nullopt;
   }
