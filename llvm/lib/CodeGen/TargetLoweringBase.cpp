@@ -869,6 +869,7 @@ void TargetLoweringBase::initActions() {
                          VT, Expand);
 
       // Constrained floating-point operations default to expand.
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"

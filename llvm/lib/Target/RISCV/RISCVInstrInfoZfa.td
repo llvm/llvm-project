@@ -251,7 +251,7 @@ def: PatFprFpr<fmaximum, FMAXM_S, FPR32, f32>;
 def: Pat<(any_frint FPR32:$rs1), (FROUNDNX_S FPR32:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_DYN)>;
+def: Pat<(fnearbyint FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_DYN)>;
 
 def: Pat<(any_fround FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RMM)>;
 def: Pat<(any_froundeven FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RNE)>;
@@ -276,7 +276,7 @@ def: PatFprFpr<fmaximum, FMAXM_D, FPR64, f64>;
 def: Pat<(any_frint FPR64:$rs1), (FROUNDNX_D FPR64:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_DYN)>;
+def: Pat<(fnearbyint FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_DYN)>;
 
 def: Pat<(any_fround FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RMM)>;
 def: Pat<(any_froundeven FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RNE)>;
@@ -306,7 +306,7 @@ def: PatFprFpr<fmaximum, FMAXM_H, FPR16, f16>;
 def: Pat<(f16 (any_frint FPR16:$rs1)), (FROUNDNX_H FPR16:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(f16 (any_fnearbyint FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_DYN)>;
+def: Pat<(f16 (fnearbyint FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_DYN)>;
 
 def: Pat<(f16 (any_fround FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RMM)>;
 def: Pat<(f16 (any_froundeven FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RNE)>;

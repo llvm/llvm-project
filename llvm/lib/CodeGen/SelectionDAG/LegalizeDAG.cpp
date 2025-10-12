@@ -2196,7 +2196,7 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
   if (LC == RTLIB::UNKNOWN_LIBCALL)
     llvm_unreachable("Can't create an unknown libcall!");
 
-  if (Node->isStrictFPOpcode()) {
+  if (Node->isStrictFPOpcode() || (Node->hasChain() && Node->isFPOperation())) {
     EVT RetVT = Node->getValueType(0);
     SmallVector<SDValue, 4> Ops(drop_begin(Node->ops()));
     TargetLowering::MakeLibCallOptions CallOptions;
@@ -4791,7 +4791,6 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::RINT_PPCF128, Results);
     break;
   case ISD::FNEARBYINT:
-  case ISD::STRICT_FNEARBYINT:
     ExpandFPLibCall(Node, RTLIB::NEARBYINT_F32,
                     RTLIB::NEARBYINT_F64,
                     RTLIB::NEARBYINT_F80,
@@ -5760,7 +5759,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FFLOOR:
   case ISD::FCEIL:
   case ISD::FRINT:
-  case ISD::FNEARBYINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
@@ -5792,7 +5790,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FCEIL:
   case ISD::STRICT_FRINT:
-  case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FROUNDEVEN:
   case ISD::STRICT_FTRUNC:
@@ -5820,6 +5817,25 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                         DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
+    break;
+  case ISD::FNEARBYINT:
+    if (Node->hasChain()) {
+      Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                         {Node->getOperand(0), Node->getOperand(1)});
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
+                         {Tmp1.getValue(1), Tmp1});
+      Tmp3 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
+                         {Tmp2.getValue(1), Tmp2,
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
+      Results.push_back(Tmp3);
+      Results.push_back(Tmp3.getValue(1));
+    } else {
+      Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+      Results.push_back(
+          DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2,
+                      DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
+    }
     break;
   case ISD::BUILD_VECTOR: {
     MVT EltVT = OVT.getVectorElementType();

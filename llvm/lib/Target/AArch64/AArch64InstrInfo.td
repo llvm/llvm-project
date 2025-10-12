@@ -5465,7 +5465,7 @@ defm FABS   : SingleOperandFPDataNoException<0b0001, "fabs", fabs>;
 defm FMOV   : SingleOperandFPDataNoException<0b0000, "fmov">;
 defm FNEG   : SingleOperandFPDataNoException<0b0010, "fneg", fneg>;
 defm FRINTA : SingleOperandFPData<0b1100, "frinta", any_fround>;
-defm FRINTI : SingleOperandFPData<0b1111, "frinti", any_fnearbyint>;
+defm FRINTI : SingleOperandFPData<0b1111, "frinti", fnearbyint>;
 defm FRINTM : SingleOperandFPData<0b1010, "frintm", any_ffloor>;
 defm FRINTN : SingleOperandFPData<0b1000, "frintn", any_froundeven>;
 defm FRINTP : SingleOperandFPData<0b1001, "frintp", any_fceil>;
@@ -5865,7 +5865,7 @@ def : Pat<(v2i64 (int_aarch64_neon_fcvtzu v2f64:$Rn)), (FCVTZUv2f64 $Rn)>;
 defm FNEG   : SIMDTwoVectorFPNoException<1, 1, 0b01111, "fneg", fneg>;
 defm FRECPE : SIMDTwoVectorFP<0, 1, 0b11101, "frecpe", int_aarch64_neon_frecpe>;
 defm FRINTA : SIMDTwoVectorFP<1, 0, 0b11000, "frinta", any_fround>;
-defm FRINTI : SIMDTwoVectorFP<1, 1, 0b11001, "frinti", any_fnearbyint>;
+defm FRINTI : SIMDTwoVectorFP<1, 1, 0b11001, "frinti", fnearbyint>;
 defm FRINTM : SIMDTwoVectorFP<0, 0, 0b11001, "frintm", any_ffloor>;
 defm FRINTN : SIMDTwoVectorFP<0, 0, 0b11000, "frintn", any_froundeven>;
 defm FRINTP : SIMDTwoVectorFP<0, 1, 0b11000, "frintp", any_fceil>;
@@ -11056,7 +11056,7 @@ multiclass PromoteUnaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst>
 }
 defm : PromoteUnaryv8f16Tov4f32<any_fceil,  	FRINTPv4f32>;
 defm : PromoteUnaryv8f16Tov4f32<any_ffloor, 	FRINTMv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_fnearbyint, FRINTIv4f32>;
+defm : PromoteUnaryv8f16Tov4f32<fnearbyint, FRINTIv4f32>;
 defm : PromoteUnaryv8f16Tov4f32<any_fround, 	FRINTAv4f32>;
 defm : PromoteUnaryv8f16Tov4f32<any_froundeven, FRINTNv4f32>;
 defm : PromoteUnaryv8f16Tov4f32<any_frint,  	FRINTXv4f32>;

@@ -4463,52 +4463,12 @@ entry:
 define <2 x double> @constrained_vector_nearbyint_v2f64(<2 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_nearbyint_v2f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    li 3, 48
-; PC64LE-NEXT:    std 0, 96(1)
-; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    li 3, 64
-; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 31, 2
-; PC64LE-NEXT:    xxlor 1, 63, 63
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xxlor 62, 1, 1
-; PC64LE-NEXT:    xxswapd 1, 63
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    li 3, 64
-; PC64LE-NEXT:    xxmrghd 34, 62, 1
-; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
-; PC64LE-NEXT:    li 3, 48
-; PC64LE-NEXT:    lxvd2x 62, 1, 3 # 16-byte Folded Reload
-; PC64LE-NEXT:    addi 1, 1, 80
-; PC64LE-NEXT:    ld 0, 16(1)
-; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    xvrdpic 34, 34
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_nearbyint_v2f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    stdu 1, -64(1)
-; PC64LE9-NEXT:    std 0, 80(1)
-; PC64LE9-NEXT:    stxv 63, 48(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    vmr 31, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
-; PC64LE9-NEXT:    stxv 62, 32(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscpsgndp 62, 1, 1
-; PC64LE9-NEXT:    xxswapd 1, 63
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xxmrghd 34, 62, 1
-; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
-; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
-; PC64LE9-NEXT:    addi 1, 1, 64
-; PC64LE9-NEXT:    ld 0, 16(1)
-; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    xvrdpic 34, 34
 ; PC64LE9-NEXT:    blr
 entry:
   %nearby = call <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(
@@ -4611,32 +4571,21 @@ define <3 x double> @constrained_vector_nearby_v3f64(<3 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_nearby_v3f64:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    stdu 1, -80(1)
+; PC64LE-NEXT:    stdu 1, -64(1)
+; PC64LE-NEXT:    xxmrghd 0, 2, 1
+; PC64LE-NEXT:    fmr 1, 3
 ; PC64LE-NEXT:    li 3, 48
-; PC64LE-NEXT:    std 0, 96(1)
-; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    fmr 30, 2
-; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    fmr 31, 3
+; PC64LE-NEXT:    std 0, 80(1)
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xxlor 63, 1, 1
-; PC64LE-NEXT:    fmr 1, 30
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xxmrghd 63, 1, 63
-; PC64LE-NEXT:    fmr 1, 31
+; PC64LE-NEXT:    xvrdpic 63, 0
 ; PC64LE-NEXT:    bl nearbyint
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    fmr 3, 1
 ; PC64LE-NEXT:    xxswapd 1, 63
-; PC64LE-NEXT:    lfd 31, 72(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    xxlor 2, 63, 63
-; PC64LE-NEXT:    lfd 30, 64(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
-; PC64LE-NEXT:    addi 1, 1, 80
+; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    mtlr 0
 ; PC64LE-NEXT:    blr
@@ -4644,30 +4593,19 @@ define <3 x double> @constrained_vector_nearby_v3f64(<3 x double> %x) #0 {
 ; PC64LE9-LABEL: constrained_vector_nearby_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    stdu 1, -64(1)
-; PC64LE9-NEXT:    std 0, 80(1)
-; PC64LE9-NEXT:    stfd 30, 48(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stdu 1, -48(1)
+; PC64LE9-NEXT:    xxmrghd 0, 2, 1
+; PC64LE9-NEXT:    fmr 1, 3
+; PC64LE9-NEXT:    std 0, 64(1)
 ; PC64LE9-NEXT:    stxv 63, 32(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    stfd 31, 56(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    fmr 31, 3
-; PC64LE9-NEXT:    fmr 30, 2
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscpsgndp 63, 1, 1
-; PC64LE9-NEXT:    fmr 1, 30
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xxmrghd 63, 1, 63
-; PC64LE9-NEXT:    fmr 1, 31
+; PC64LE9-NEXT:    xvrdpic 63, 0
 ; PC64LE9-NEXT:    bl nearbyint
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    fmr 3, 1
 ; PC64LE9-NEXT:    xxswapd 1, 63
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
 ; PC64LE9-NEXT:    lxv 63, 32(1) # 16-byte Folded Reload
-; PC64LE9-NEXT:    lfd 31, 56(1) # 8-byte Folded Reload
-; PC64LE9-NEXT:    lfd 30, 48(1) # 8-byte Folded Reload
-; PC64LE9-NEXT:    addi 1, 1, 64
+; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
 ; PC64LE9-NEXT:    mtlr 0
 ; PC64LE9-NEXT:    blr
@@ -4682,78 +4620,14 @@ entry:
 define <4 x double> @constrained_vector_nearbyint_v4f64(<4 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_nearbyint_v4f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    li 3, 48
-; PC64LE-NEXT:    std 0, 112(1)
-; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    li 3, 64
-; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
-; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
-; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 31, 3
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xxlor 61, 1, 1
-; PC64LE-NEXT:    xxswapd 1, 62
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xxmrghd 62, 61, 1
-; PC64LE-NEXT:    xxlor 1, 63, 63
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xxlor 61, 1, 1
-; PC64LE-NEXT:    xxswapd 1, 63
-; PC64LE-NEXT:    bl nearbyint
-; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    vmr 2, 30
-; PC64LE-NEXT:    xxmrghd 35, 61, 1
-; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
-; PC64LE-NEXT:    li 3, 64
-; PC64LE-NEXT:    lxvd2x 62, 1, 3 # 16-byte Folded Reload
-; PC64LE-NEXT:    li 3, 48
-; PC64LE-NEXT:    lxvd2x 61, 1, 3 # 16-byte Folded Reload
-; PC64LE-NEXT:    addi 1, 1, 96
-; PC64LE-NEXT:    ld 0, 16(1)
-; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    xvrdpic 35, 35
+; PC64LE-NEXT:    xvrdpic 34, 34
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_nearbyint_v4f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    stdu 1, -80(1)
-; PC64LE9-NEXT:    std 0, 96(1)
-; PC64LE9-NEXT:    stxv 62, 48(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    vmr 30, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
-; PC64LE9-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    stxv 63, 64(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    vmr 31, 3
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
-; PC64LE9-NEXT:    xxswapd 1, 62
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xxmrghd 62, 61, 1
-; PC64LE9-NEXT:    xscpsgndp 1, 63, 63
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
-; PC64LE9-NEXT:    xxswapd 1, 63
-; PC64LE9-NEXT:    bl nearbyint
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xxmrghd 35, 61, 1
-; PC64LE9-NEXT:    vmr 2, 30
-; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
-; PC64LE9-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload
-; PC64LE9-NEXT:    lxv 61, 32(1) # 16-byte Folded Reload
-; PC64LE9-NEXT:    addi 1, 1, 80
-; PC64LE9-NEXT:    ld 0, 16(1)
-; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    xvrdpic 35, 35
+; PC64LE9-NEXT:    xvrdpic 34, 34
 ; PC64LE9-NEXT:    blr
 entry:
   %nearby = call <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(

@@ -8362,6 +8362,10 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   unsigned Opcode;
   switch (FPI.getIntrinsicID()) {
   default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
+#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                  \
+  case Intrinsic::INTRINSIC:                                                   \
+    Opcode = ISD::DAGN;                                                        \
+    break;
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case Intrinsic::INTRINSIC:                                                   \
     Opcode = ISD::STRICT_##DAGN;                                               \

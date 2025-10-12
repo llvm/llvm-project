@@ -430,9 +430,9 @@ let Predicates = [FeatureFPExtension] in {
   }
 
   // fnearbyint is like frint but does not detect inexact conditions.
-  def : Pat<(any_fnearbyint FP32:$src),  (FIEBRA 0, FP32:$src,  4)>;
-  def : Pat<(any_fnearbyint FP64:$src),  (FIDBRA 0, FP64:$src,  4)>;
-  def : Pat<(any_fnearbyint FP128:$src), (FIXBRA 0, FP128:$src, 4)>;
+  def : Pat<(fnearbyint FP32:$src),  (FIEBRA 0, FP32:$src,  4)>;
+  def : Pat<(fnearbyint FP64:$src),  (FIDBRA 0, FP64:$src,  4)>;
+  def : Pat<(fnearbyint FP128:$src), (FIXBRA 0, FP128:$src, 4)>;
 
   // floor is no longer allowed to raise an inexact condition,
   // so restrict it to the cases where the condition can be suppressed.

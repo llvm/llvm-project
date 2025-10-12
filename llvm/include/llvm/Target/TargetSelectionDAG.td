@@ -575,7 +575,7 @@ def frint      : SDNode<"ISD::FRINT"      , SDTFPUnaryOp>;
 def ftrunc     : SDNode<"ISD::FTRUNC"     , SDTFPUnaryOp>;
 def fceil      : SDNode<"ISD::FCEIL"      , SDTFPUnaryOp>;
 def ffloor     : SDNode<"ISD::FFLOOR"     , SDTFPUnaryOp>;
-def fnearbyint : SDNode<"ISD::FNEARBYINT" , SDTFPUnaryOp>;
+def fnearbyint : SDNode<"ISD::FNEARBYINT" , SDTFPUnaryOp, [SDNPMayHaveChain]>;
 def fround     : SDNode<"ISD::FROUND"     , SDTFPUnaryOp>;
 def froundeven : SDNode<"ISD::FROUNDEVEN" , SDTFPUnaryOp>;
 
@@ -653,8 +653,6 @@ def strict_lrint      : SDNode<"ISD::STRICT_LRINT",
                                SDTFPToIntOp, [SDNPHasChain]>;
 def strict_llrint     : SDNode<"ISD::STRICT_LLRINT",
                                SDTFPToIntOp, [SDNPHasChain]>;
-def strict_fnearbyint : SDNode<"ISD::STRICT_FNEARBYINT",
-                               SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fceil      : SDNode<"ISD::STRICT_FCEIL",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ffloor     : SDNode<"ISD::STRICT_FFLOOR",
@@ -1704,9 +1702,6 @@ def any_lrint      : PatFrags<(ops node:$src),
 def any_llrint     : PatFrags<(ops node:$src),
                               [(strict_llrint node:$src),
                                (llrint node:$src)]>;
-def any_fnearbyint : PatFrags<(ops node:$src),
-                              [(strict_fnearbyint node:$src),
-                               (fnearbyint node:$src)]>;
 def any_fceil      : PatFrags<(ops node:$src),
                               [(strict_fceil node:$src),
                                (fceil node:$src)]>;

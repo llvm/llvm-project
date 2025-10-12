@@ -1271,7 +1271,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Legal);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
       setOperationAction(ISD::STRICT_FRINT, MVT::f128, Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f128, Legal);
       setOperationAction(ISD::STRICT_FFLOOR, MVT::f128, Legal);
       setOperationAction(ISD::STRICT_FCEIL, MVT::f128, Legal);
       setOperationAction(ISD::STRICT_FTRUNC, MVT::f128, Legal);

@@ -601,7 +601,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STRICT_FRINT, VT, Legal);
       setOperationAction(ISD::STRICT_FP_ROUND, VT, Legal);
       if (Subtarget.hasFPExtension()) {
-        setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
         setOperationAction(ISD::STRICT_FFLOOR, VT, Legal);
         setOperationAction(ISD::STRICT_FCEIL, VT, Legal);
         setOperationAction(ISD::STRICT_FTRUNC, VT, Legal);
@@ -653,7 +652,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FRINT, MVT::v2f64, Legal);
-    setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FFLOOR, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FCEIL, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f64, Legal);
@@ -721,7 +719,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FRINT, MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FCEIL, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);

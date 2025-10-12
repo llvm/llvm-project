@@ -1409,7 +1409,7 @@ let Predicates = [FeatureVector] in {
 // rounding modes.
 multiclass VectorRounding<Instruction insn, TypedReg tr> {
   def : FPConversion<insn, any_frint,      tr, tr, 0, 0>;
-  def : FPConversion<insn, any_fnearbyint, tr, tr, 4, 0>;
+  def : FPConversion<insn, fnearbyint, tr, tr, 4, 0>;
   def : FPConversion<insn, any_ffloor,     tr, tr, 4, 7>;
   def : FPConversion<insn, any_fceil,      tr, tr, 4, 6>;
   def : FPConversion<insn, any_ftrunc,     tr, tr, 4, 5>;

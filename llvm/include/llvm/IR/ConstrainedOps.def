@@ -39,6 +39,12 @@
 #define CMP_INSTRUCTION(N,A,R,I,D) DAG_INSTRUCTION(N,A,R,I,D)
 #endif
 
+// FP_OPERATION is same as DAG_FUNCTION, but in DAG it is represented by the
+// same node, as non-constrained function.
+#ifndef FP_OPERATION
+#define FP_OPERATION(N,A,R,I,D) DAG_FUNCTION(N,A,R,I,D)
+#endif
+
 // Arguments of the entries are:
 // - instruction or intrinsic function name.
 // - Number of original instruction/intrinsic arguments.
@@ -91,7 +97,7 @@ DAG_FUNCTION(maxnum,          2, 0, experimental_constrained_maxnum,     FMAXNUM
 DAG_FUNCTION(minnum,          2, 0, experimental_constrained_minnum,     FMINNUM)
 DAG_FUNCTION(maximum,         2, 0, experimental_constrained_maximum,    FMAXIMUM)
 DAG_FUNCTION(minimum,         2, 0, experimental_constrained_minimum,    FMINIMUM)
-DAG_FUNCTION(nearbyint,       1, 1, experimental_constrained_nearbyint,  FNEARBYINT)
+FP_OPERATION(nearbyint,       1, 1, experimental_constrained_nearbyint,  FNEARBYINT)
 DAG_FUNCTION(pow,             2, 1, experimental_constrained_pow,        FPOW)
 DAG_FUNCTION(powi,            2, 1, experimental_constrained_powi,       FPOWI)
 DAG_FUNCTION(ldexp,           2, 1, experimental_constrained_ldexp,      FLDEXP)
@@ -114,3 +120,4 @@ FUNCTION(fmuladd,         3, 1, experimental_constrained_fmuladd)
 #undef CMP_INSTRUCTION
 #undef DAG_INSTRUCTION
 #undef DAG_FUNCTION
+#undef FP_OPERATION
