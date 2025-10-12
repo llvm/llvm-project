@@ -107,6 +107,17 @@ static void snmm_reserve(OnCompleteFn &&OnComplete,
 }
 
 template <typename OnCompleteFn>
+static void snmm_releaseMultiple(OnCompleteFn &&OnComplete,
+                                 SimpleNativeMemoryMap *Instance,
+                                 span<void *> Addr) {
+  using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
+  SPSWrapperFunction<SPSSig>::call(
+      DirectCaller(nullptr,
+                   orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper),
+      std::forward<OnCompleteFn>(OnComplete), Instance, Addr);
+}
+
+template <typename OnCompleteFn>
 static void snmm_finalize(OnCompleteFn &&OnComplete,
                           SimpleNativeMemoryMap *Instance,
                           TestSNMMFinalizeRequest FR) {
@@ -118,22 +129,14 @@ static void snmm_finalize(OnCompleteFn &&OnComplete,
 }
 
 template <typename OnCompleteFn>
-static void snmm_deallocate(OnCompleteFn &&OnComplete,
-                            SimpleNativeMemoryMap *Instance, void *Base) {
-  using SPSSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
+static void snmm_deallocateMultiple(OnCompleteFn &&OnComplete,
+                                    SimpleNativeMemoryMap *Instance,
+                                    span<void *> Base) {
+  using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
   SPSWrapperFunction<SPSSig>::call(
       DirectCaller(nullptr,
-                   orc_rt_SimpleNativeMemoryMap_deallocate_sps_wrapper),
+                   orc_rt_SimpleNativeMemoryMap_deallocateMultiple_sps_wrapper),
       std::forward<OnCompleteFn>(OnComplete), Instance, Base);
-}
-
-template <typename OnCompleteFn>
-static void snmm_release(OnCompleteFn &&OnComplete,
-                         SimpleNativeMemoryMap *Instance, void *Addr) {
-  using SPSSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
-  SPSWrapperFunction<SPSSig>::call(
-      DirectCaller(nullptr, orc_rt_SimpleNativeMemoryMap_release_sps_wrapper),
-      std::forward<OnCompleteFn>(OnComplete), Instance, Addr);
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
@@ -145,7 +148,7 @@ TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
   auto Addr = cantFail(cantFail(ReserveAddr.get()));
 
   std::future<Expected<Error>> ReleaseResult;
-  snmm_release(waitFor(ReleaseResult), SNMM.get(), Addr);
+  snmm_releaseMultiple(waitFor(ReleaseResult), SNMM.get(), {&Addr, 1});
   cantFail(cantFail(ReleaseResult.get()));
 }
 
@@ -239,7 +242,8 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Expected<Error>> DeallocResult;
-  snmm_deallocate(waitFor(DeallocResult), SNMM.get(), FinalizeKeyAddr);
+  snmm_deallocateMultiple(waitFor(DeallocResult), SNMM.get(),
+                          {&FinalizeKeyAddr, 1});
   cantFail(cantFail(DeallocResult.get()));
 
   EXPECT_EQ(SentinelValue1, 42U);
@@ -247,7 +251,7 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Expected<Error>> ReleaseResult;
-  snmm_release(waitFor(ReleaseResult), SNMM.get(), Addr);
+  snmm_releaseMultiple(waitFor(ReleaseResult), SNMM.get(), {&Addr, 1});
   cantFail(cantFail(ReleaseResult.get()));
 }
 
