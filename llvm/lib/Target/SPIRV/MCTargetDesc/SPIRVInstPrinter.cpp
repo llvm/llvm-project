@@ -52,8 +52,8 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   const unsigned Opcode = MI->getOpcode();
 
   // We support up to 1024 bits for integers, and 64 bits for floats
-  assert(((NumVarOps <= 32 && Opcode == SPIRV::OpConstantI) || 
-          (NumVarOps <= 2 && Opcode == SPIRV::OpConstantF)) && 
+  assert(((NumVarOps <= 32 && Opcode == SPIRV::OpConstantI) ||
+          (NumVarOps <= 2 && Opcode == SPIRV::OpConstantF)) &&
          "Unsupported number of operands for constant");
 
   O << ' ';
