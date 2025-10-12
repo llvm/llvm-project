@@ -181,7 +181,7 @@ public:
     KnownBits ToPtrBits =
         computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 
-    return std::pair(FromPtrBits, ToPtrBits);
+    return {FromPtrBits, ToPtrBits};
   }
 
   virtual KnownBits

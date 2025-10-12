@@ -156,6 +156,23 @@ define i8 @ptrmask_vector_cast_flat_null_to_local(<3 x i64> %mask, i32 %ptridx, 
   ret i8 %load
 }
 
+define i8 @ptrmask_vector_cast_flat_null_with_poison_to_local(<3 x i64> %mask, i32 %ptridx, i32 %idx) {
+; CHECK-LABEL: @ptrmask_vector_cast_flat_null_with_poison_to_local(
+; CHECK-NEXT:    [[MASKED:%.*]] = call <3 x ptr> @llvm.ptrmask.v3p0.v3i64(<3 x ptr> <ptr null, ptr poison, ptr null>, <3 x i64> [[MASK:%.*]])
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast <3 x ptr> [[MASKED]] to <3 x ptr addrspace(3)>
+; CHECK-NEXT:    [[PTR:%.*]] = extractelement <3 x ptr addrspace(3)> [[CAST]], i32 [[PTRIDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(3) [[PTR]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+  %masked = call <3 x ptr> @llvm.ptrmask.v3p0.v3i64(<3 x ptr> <ptr null, ptr poison, ptr null>, <3 x i64> %mask)
+  %cast = addrspacecast <3 x ptr> %masked to <3 x ptr addrspace(3)>
+  %ptr = extractelement <3 x ptr addrspace(3)> %cast, i32 %ptridx
+  %gep = getelementptr i8, ptr addrspace(3) %ptr, i32 %idx
+  %load = load i8, ptr addrspace(3) %gep
+  ret i8 %load
+}
+
 
 define i8 @ptrmask_cast_flat_to_private(ptr %ptr, i64 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_flat_to_private(

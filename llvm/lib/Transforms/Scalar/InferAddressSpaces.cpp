@@ -669,14 +669,11 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
   Value *MaskOp = I->getArgOperand(1);
   Type *MaskTy = MaskOp->getType();
 
-  std::optional<KnownBits> OldPtrBits;
-  std::optional<KnownBits> NewPtrBits;
+  KnownBits OldPtrBits{DL->getPointerSizeInBits(OldAddrSpace)};
+  KnownBits NewPtrBits{DL->getPointerSizeInBits(NewAddrSpace)};
   if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
-    if (std::optional<std::pair<KnownBits, KnownBits>> KB =
-            TTI->computeKnownBitsAddrSpaceCast(NewAddrSpace, *PtrOpUse.get())) {
-      OldPtrBits = KB->first;
-      NewPtrBits = KB->second;
-    }
+    std::tie(OldPtrBits, NewPtrBits) =
+        TTI->computeKnownBitsAddrSpaceCast(NewAddrSpace, *PtrOpUse.get());
   }
 
   // If the pointers in both addrspaces have a bitwise representation and if the
@@ -685,18 +682,18 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
   // masking only clearing the low bits will also apply in the new addrspace
   // Note: checking if the mask clears high bits is not sufficient as those
   // might have already been 0 in the old ptr.
-  if (NewPtrBits && OldPtrBits->getBitWidth() > NewPtrBits->getBitWidth()) {
+  if (OldPtrBits.getBitWidth() > NewPtrBits.getBitWidth()) {
     KnownBits MaskBits =
         computeKnownBits(MaskOp, *DL, /*AssumptionCache=*/nullptr, I);
     // Set all unknown bits of the old ptr to 1, so that we are conservative in
     // checking which bits are cleared by the mask.
-    OldPtrBits->One |= ~OldPtrBits->Zero;
+    OldPtrBits.One |= ~OldPtrBits.Zero;
     // Check which bits are cleared by the mask in the old ptr.
-    KnownBits ClearedBits = KnownBits::sub(*OldPtrBits, *OldPtrBits & MaskBits);
+    KnownBits ClearedBits = KnownBits::sub(OldPtrBits, OldPtrBits & MaskBits);
 
     // If the mask isn't applicable to the new ptr, leave the ptrmask as-is and
     // insert an addrspacecast after it.
-    if (ClearedBits.countMaxActiveBits() > NewPtrBits->countMaxActiveBits()) {
+    if (ClearedBits.countMaxActiveBits() > NewPtrBits.countMaxActiveBits()) {
       std::optional<BasicBlock::iterator> InsertPoint =
           I->getInsertionPointAfterDef();
       assert(InsertPoint && "insertion after ptrmask should be possible");
@@ -709,8 +706,8 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
   }
 
   IRBuilder<> B(I);
-  if (NewPtrBits) {
-    MaskTy = MaskTy->getWithNewBitWidth(NewPtrBits->getBitWidth());
+  if (NewPtrBits.getBitWidth() < MaskTy->getScalarSizeInBits()) {
+    MaskTy = MaskTy->getWithNewBitWidth(NewPtrBits.getBitWidth());
     MaskOp = B.CreateTrunc(MaskOp, MaskTy);
   }
   Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
