@@ -2194,7 +2194,9 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
                     ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2))
               : IRB.CreateAnd(
                     WideShadow,
-                    ConstantInt::get(WideShadowTy, 0xFFFFFFFF00000000ULL));
+                    ConstantInt::get(WideShadowTy,
+                                     (1 - (1 << (WideShadowBitWidth / 2)))
+                                         << (WideShadowBitWidth / 2)));
       Shadows.push_back(WideShadow);
       Origins.push_back(DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr));
 
