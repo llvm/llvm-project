@@ -17,14 +17,17 @@ add_integration_test(
     GERMANY=Berlin
 )
 
-add_integration_test(
-  setenv_test
-  SUITE
-    stdlib-integration-tests
-  SRCS
-    setenv_test.cpp
-  DEPENDS
-    libc.src.stdlib.getenv
-    libc.src.stdlib.setenv
-    libc.src.string.strcmp
-)
+# Environment variable functions only make sense in full build mode.
+if(LLVM_LIBC_FULL_BUILD)
+  add_integration_test(
+    setenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      setenv_test.cpp
+    DEPENDS
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.string.strcmp
+  )
+endif()
