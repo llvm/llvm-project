@@ -1026,6 +1026,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       PredPHI->replaceAllUsesWith(Op);
   }
 
+  VPBuilder Builder(Def);
   VPValue *A;
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     Type *TruncTy = TypeInfo.inferScalarType(Def);
@@ -1041,18 +1042,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        auto *VPC =
-            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
+                                            TruncTy);
         if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
-          VPC->setUnderlyingValue(UnderlyingExt);
+          Ext->setUnderlyingValue(UnderlyingExt);
         }
-        VPC->insertBefore(&R);
-        Def->replaceAllUsesWith(VPC);
+        Def->replaceAllUsesWith(Ext);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-        auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
-        VPC->insertBefore(&R);
-        Def->replaceAllUsesWith(VPC);
+        auto *Trunc = Builder.createWidenCast(Instruction::Trunc, A, TruncTy);
+        Def->replaceAllUsesWith(Trunc);
       }
     }
 #ifndef NDEBUG
@@ -1098,7 +1097,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(Def->getOperand(1));
 
   // (x && y) || (x && z) -> x && (y || z)
-  VPBuilder Builder(Def);
   if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
       // Simplify only if one of the operands has one use to avoid creating an
@@ -2206,20 +2204,20 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
         auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
-        VPWidenCastRecipe *NewOp =
-            IterIsEmpty
-                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy,
-                                        VPIRFlags::TruncFlagsTy(false, false))
-                : ProcessedIter->second;
-        R.setOperand(Idx, NewOp);
-        if (!IterIsEmpty)
+        if (!IterIsEmpty) {
+          R.setOperand(Idx, ProcessedIter->second);
           continue;
-        ProcessedIter->second = NewOp;
-        if (!Op->isLiveIn()) {
-          NewOp->insertBefore(&R);
-        } else {
-          PH->appendRecipe(NewOp);
         }
+
+        VPBuilder Builder;
+        if (Op->isLiveIn())
+          Builder.setInsertPoint(PH);
+        else
+          Builder.setInsertPoint(&R);
+        VPWidenCastRecipe *NewOp =
+            Builder.createWidenCast(Instruction::Trunc, Op, NewResTy);
+        ProcessedIter->second = NewOp;
+        R.setOperand(Idx, NewOp);
       }
 
     }
