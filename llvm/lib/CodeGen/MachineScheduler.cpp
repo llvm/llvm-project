@@ -920,7 +920,6 @@ ScheduleDAGMI::~ScheduleDAGMI() = default;
 /// ReleaseSucc - Decrement the NumPredsLeft count of a successor. When
 /// NumPredsLeft reaches zero, release the successor node.
 ///
-/// FIXME: Adjust SuccSU height based on MinLatency.
 void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
   SUnit *SuccSU = SuccEdge->getSUnit();
 
@@ -941,6 +940,9 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
   if (SuccSU->TopReadyCycle < SU->TopReadyCycle + SuccEdge->getLatency())
     SuccSU->TopReadyCycle = SU->TopReadyCycle + SuccEdge->getLatency();
 
+  // Adjust SuccSU height based on latency
+  SuccSU->setHeightToAtLeast(SU->getHeight() + SuccEdge->getLatency());
+
   --SuccSU->NumPredsLeft;
   if (SuccSU->NumPredsLeft == 0 && SuccSU != &ExitSU)
     SchedImpl->releaseTopNode(SuccSU);
@@ -955,7 +957,6 @@ void ScheduleDAGMI::releaseSuccessors(SUnit *SU) {
 /// ReleasePred - Decrement the NumSuccsLeft count of a predecessor. When
 /// NumSuccsLeft reaches zero, release the predecessor node.
 ///
-/// FIXME: Adjust PredSU height based on MinLatency.
 void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
   SUnit *PredSU = PredEdge->getSUnit();
 
@@ -975,6 +976,9 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
   // CurrCycle may have advanced since then.
   if (PredSU->BotReadyCycle < SU->BotReadyCycle + PredEdge->getLatency())
     PredSU->BotReadyCycle = SU->BotReadyCycle + PredEdge->getLatency();
+
+  // Adjust PredSU height based on latency
+  PredSU->setHeightToAtLeast(SU->getHeight() + PredEdge->getLatency());
 
   --PredSU->NumSuccsLeft;
   if (PredSU->NumSuccsLeft == 0 && PredSU != &EntrySU)
