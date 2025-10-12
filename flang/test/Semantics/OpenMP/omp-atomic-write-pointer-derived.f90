@@ -4,5 +4,5 @@ end type
 type(t), pointer :: a1, a2
 !$omp atomic write
 a1 = a2
-! CHECK: error: ATOMIC WRITE requires an intrinsic scalar variable; 'a1' has the POINTER attribute and derived type 't'
+! CHECK: error: ATOMIC operation requires an intrinsic scalar variable; 'a1' has the POINTER attribute and derived type 't'
 end
