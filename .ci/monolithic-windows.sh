@@ -69,6 +69,61 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
+cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang1.txt
+
+pushd ${BUILD_DIR}
+rm -Rf *
+popd
+
+export CC=cl
+export CXX=cl
+export LD=link
+
+cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
+      -D LLVM_ENABLE_PROJECTS="${projects}" \
+      -G Ninja \
+      -D CMAKE_BUILD_TYPE=Release \
+      -D LLVM_ENABLE_ASSERTIONS=ON \
+      -D LLVM_BUILD_EXAMPLES=ON \
+      -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
+      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
+      -D COMPILER_RT_BUILD_ORC=OFF \
+      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+
+cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.msvc.txt
+
+export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+export LD=link
+
+cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
+      -D LLVM_ENABLE_PROJECTS="${projects}" \
+      -G Ninja \
+      -D CMAKE_BUILD_TYPE=Release \
+      -D LLVM_ENABLE_ASSERTIONS=ON \
+      -D LLVM_BUILD_EXAMPLES=ON \
+      -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
+      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
+      -D COMPILER_RT_BUILD_ORC=OFF \
+      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+
+cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
+
+diff ${BUILD_DIR}/CMakeCache.clang1.txt ${BUILD_DIR}/CMakeCache.clang2.txt
+
+
 start-group "ninja"
 
 
