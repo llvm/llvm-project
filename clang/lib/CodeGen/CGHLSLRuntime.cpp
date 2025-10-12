@@ -145,19 +145,29 @@ static CXXMethodDecl *lookupResourceInitMethodAndSetupArgs(
     // explicit binding
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, Binding.getSlot());
     Args.add(RValue::get(RegSlot), AST.UnsignedIntTy);
-    CreateMethod = lookupMethod(ResourceDecl, "__createFromBinding", SC_Static);
+    const char *Name = Binding.hasCounterImplicitOrderID()
+                           ? "__createFromBindingWithImplicitCounter"
+                           : "__createFromBinding";
+    CreateMethod = lookupMethod(ResourceDecl, Name, SC_Static);
   } else {
     // implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, Binding.getImplicitOrderID());
     Args.add(RValue::get(OrderID), AST.UnsignedIntTy);
-    CreateMethod =
-        lookupMethod(ResourceDecl, "__createFromImplicitBinding", SC_Static);
+    const char *Name = Binding.hasCounterImplicitOrderID()
+                           ? "__createFromImplicitBindingWithImplicitCounter"
+                           : "__createFromImplicitBinding";
+    CreateMethod = lookupMethod(ResourceDecl, Name, SC_Static);
   }
   Args.add(RValue::get(Space), AST.UnsignedIntTy);
   Args.add(RValue::get(Range), AST.IntTy);
   Args.add(RValue::get(Index), AST.UnsignedIntTy);
   Args.add(RValue::get(NameStr), AST.getPointerType(AST.CharTy.withConst()));
+  if (Binding.hasCounterImplicitOrderID()) {
+    uint32_t CounterBinding = Binding.getCounterImplicitOrderID();
+    auto *CounterOrderID = llvm::ConstantInt::get(CGM.IntTy, CounterBinding);
+    Args.add(RValue::get(CounterOrderID), AST.UnsignedIntTy);
+  }
 
   return CreateMethod;
 }

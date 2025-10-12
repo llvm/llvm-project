@@ -812,7 +812,9 @@ static bool isPointerUseReplacable(const Use &U) {
     auto *User = Worklist.pop_back_val();
     if (!Visited.insert(User).second)
       continue;
-    if (isa<ICmpInst, PtrToIntInst>(User))
+    // FIXME: The PtrToIntInst case here is not strictly correct, as it
+    // changes which provenance is exposed.
+    if (isa<ICmpInst, PtrToIntInst, PtrToAddrInst>(User))
       continue;
     if (isa<PHINode, SelectInst>(User))
       Worklist.append(User->user_begin(), User->user_end());
