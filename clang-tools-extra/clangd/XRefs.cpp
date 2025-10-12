@@ -2405,7 +2405,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // potential calls through the base function.
   if (Item.kind == SymbolKind::Method) {
     llvm::DenseSet<SymbolID> IDs;
-    RelationsRequest Req{{ID.get()}, RelationKind::OverriddenBy};
+    RelationsRequest Req{{ID.get()}, RelationKind::OverriddenBy, std::nullopt};
     Index->reverseRelations(Req, [&](const SymbolID &, const Symbol &Caller) {
       IDs.insert(Caller.ID);
     });

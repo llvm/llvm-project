@@ -33,9 +33,9 @@ public:
                                      static_cast<uint8_t>(R.Predicate))]
           .push_back(R.Object);
       if (R.Predicate == RelationKind::OverriddenBy) {
-        this->ReverseRelations[std::make_pair(R.Object,
-                                     static_cast<uint8_t>(R.Predicate))]
-          .push_back(R.Subject);
+        this->ReverseRelations[std::make_pair(
+                                   R.Object, static_cast<uint8_t>(R.Predicate))]
+            .push_back(R.Subject);
       }
     }
   }
@@ -87,9 +87,10 @@ public:
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
 
-  void reverseRelations(const RelationsRequest &Req,
-                 llvm::function_ref<void(const SymbolID &, const Symbol &)>
-                     Callback) const override;
+  void
+  reverseRelations(const RelationsRequest &Req,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>
+                       Callback) const override;
 
   llvm::unique_function<IndexContents(llvm::StringRef) const>
   indexedFiles() const override;
@@ -106,7 +107,8 @@ private:
                 "RelationKind should be of same size as a uint8_t");
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> Relations;
   // Reverse relations, currently only for OverridenBy
-  llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> ReverseRelations;
+  llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>>
+      ReverseRelations;
   // Set of files which were used during this index build.
   llvm::StringSet<> Files;
   // Contents of the index (symbols, references, etc.)

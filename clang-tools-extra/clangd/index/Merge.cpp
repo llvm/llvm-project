@@ -229,20 +229,22 @@ void MergedIndex::reverseRelations(
   // We might return stale relations from the static index;
   // we don't currently have a good way of identifying them.
   llvm::DenseSet<std::pair<SymbolID, SymbolID>> SeenRelations;
-  Dynamic->reverseRelations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    Callback(Subject, Object);
-    SeenRelations.insert(std::make_pair(Subject, Object.ID));
-    --Remaining;
-  });
+  Dynamic->reverseRelations(
+      Req, [&](const SymbolID &Subject, const Symbol &Object) {
+        Callback(Subject, Object);
+        SeenRelations.insert(std::make_pair(Subject, Object.ID));
+        --Remaining;
+      });
   if (Remaining == 0)
     return;
-  Static->reverseRelations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    if (Remaining > 0 &&
-        !SeenRelations.count(std::make_pair(Subject, Object.ID))) {
-      --Remaining;
-      Callback(Subject, Object);
-    }
-  });
+  Static->reverseRelations(
+      Req, [&](const SymbolID &Subject, const Symbol &Object) {
+        if (Remaining > 0 &&
+            !SeenRelations.count(std::make_pair(Subject, Object.ID))) {
+          --Remaining;
+          Callback(Subject, Object);
+        }
+      });
 }
 
 // Returns true if \p L is (strictly) preferred to \p R (e.g. by file paths). If

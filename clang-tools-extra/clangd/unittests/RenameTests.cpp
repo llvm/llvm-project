@@ -1674,9 +1674,10 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>
                        Callback) const override {}
 
-    void reverseRelations(const RelationsRequest &Req,
-                   llvm::function_ref<void(const SymbolID &, const Symbol &)>
-                       Callback) const override {}
+    void
+    reverseRelations(const RelationsRequest &Req,
+                     llvm::function_ref<void(const SymbolID &, const Symbol &)>
+                         Callback) const override {}
 
     llvm::unique_function<IndexContents(llvm::StringRef) const>
     indexedFiles() const override {
@@ -1733,8 +1734,9 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>)
         const override {}
 
-    void reverseRelations(const RelationsRequest &,
-                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+    void
+    reverseRelations(const RelationsRequest &,
+                     llvm::function_ref<void(const SymbolID &, const Symbol &)>)
         const override {}
 
     llvm::unique_function<IndexContents(llvm::StringRef) const>

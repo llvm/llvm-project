@@ -185,10 +185,10 @@ TEST(CallHierarchy, IncomingIncludeOverrides) {
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
   ASSERT_THAT(Items, ElementsAre(withName("callee")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
-  ASSERT_THAT(
-      IncomingLevel1,
-      ElementsAre(AllOf(from(AllOf(withName("Func"), withDetail("Implementation::Func"))),
-                        iFromRanges(Source.range("Callee")))));
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(AllOf(withName("Func"),
+                                           withDetail("Implementation::Func"))),
+                                iFromRanges(Source.range("Callee")))));
   auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
   ASSERT_THAT(
       IncomingLevel2,
