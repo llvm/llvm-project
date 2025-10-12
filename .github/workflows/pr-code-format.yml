@@ -28,7 +28,7 @@ jobs:
       - name: debug
         run: |
           pwd
-          ls
+          ls -a
 
       - name: Get changed files
         id: changed-files
