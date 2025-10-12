@@ -33,8 +33,10 @@ define amdgpu_kernel void @no_crash(i32 %arg) {
 ; GCN: store <2 x i32> zeroinitializer{{.*}} %tmp1
 ; GCN: load <2 x i32>{{.*}} %tmp2
 ; GCN: load <2 x i32>{{.*}} %tmp4
-; GCN: load i32{{.*}} %tmp5
-; GCN: load i32{{.*}} %tmp5
+; GCN: extractelement <2 x i32>
+; GCN: extractelement <2 x i32>
+; GCN: extractelement <2 x i32>
+; GCN: extractelement <2 x i32>
 
 define amdgpu_kernel void @interleave_get_longest(i32 %arg) {
   %a1 = add i32 %arg, 1
