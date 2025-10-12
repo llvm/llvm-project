@@ -1633,8 +1633,8 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
                                                     const InterpFrame *Frame,
                                                     const CallExpr *Call,
                                                     unsigned BuiltinID) {
-  const bool HasZeroArg = Call->getNumArgs() == 2;
-  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_ctzg;
+  bool HasZeroArg = Call->getNumArgs() == 2;
+  bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_ctzg;
   assert(Call->getNumArgs() == 1 || HasZeroArg);
   if (Call->getArg(0)->getType()->isIntegerType()) {
     PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
@@ -2447,18 +2447,18 @@ interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   const ASTContext &ASTCtx = S.getASTContext();
-  const unsigned SrcBits = ASTCtx.getIntWidth(VT0->getElementType());
-  const unsigned LHSVecLen = VT0->getNumElements();
-  const unsigned SrcPerLane = 128 / SrcBits;
-  const unsigned Lanes = LHSVecLen * SrcBits / 128;
+  unsigned SrcBits = ASTCtx.getIntWidth(VT0->getElementType());
+  unsigned LHSVecLen = VT0->getNumElements();
+  unsigned SrcPerLane = 128 / SrcBits;
+  unsigned Lanes = LHSVecLen * SrcBits / 128;
 
   PrimType SrcT = *S.getContext().classify(VT0->getElementType());
   PrimType DstT = *S.getContext().classify(getElemType(Dst));
-  const bool IsUnsigend = getElemType(Dst)->isUnsignedIntegerType();
+  bool IsUnsigend = getElemType(Dst)->isUnsignedIntegerType();
 
   for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
-    const unsigned BaseSrc = Lane * SrcPerLane;
-    const unsigned BaseDst = Lane * (2 * SrcPerLane);
+    unsigned BaseSrc = Lane * SrcPerLane;
+    unsigned BaseDst = Lane * (2 * SrcPerLane);
 
     for (unsigned I = 0; I != SrcPerLane; ++I) {
       INT_TYPE_SWITCH_NO_BOOL(SrcT, {
@@ -2596,9 +2596,9 @@ static bool interp__builtin_elementwise_triop_fp(
 
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
-  const QualType Arg1Type = Call->getArg(0)->getType();
-  const QualType Arg2Type = Call->getArg(1)->getType();
-  const QualType Arg3Type = Call->getArg(2)->getType();
+  QualType Arg1Type = Call->getArg(0)->getType();
+  QualType Arg2Type = Call->getArg(1)->getType();
+  QualType Arg3Type = Call->getArg(2)->getType();
 
   // Non-vector floating point types.
   if (!Arg1Type->isVectorType()) {
@@ -2621,16 +2621,16 @@ static bool interp__builtin_elementwise_triop_fp(
   assert(Arg1Type->isVectorType() && Arg2Type->isVectorType() &&
          Arg3Type->isVectorType());
 
-  const VectorType *VecT = Arg1Type->castAs<VectorType>();
-  const QualType ElemT = VecT->getElementType();
-  unsigned NumElems = VecT->getNumElements();
+  const VectorType *VecTy = Arg1Type->castAs<VectorType>();
+  QualType ElemQT = VecTy->getElementType();
+  unsigned NumElems = VecTy->getNumElements();
 
-  assert(ElemT == Arg2Type->castAs<VectorType>()->getElementType() &&
-         ElemT == Arg3Type->castAs<VectorType>()->getElementType());
+  assert(ElemQT == Arg2Type->castAs<VectorType>()->getElementType() &&
+         ElemQT == Arg3Type->castAs<VectorType>()->getElementType());
   assert(NumElems == Arg2Type->castAs<VectorType>()->getNumElements() &&
          NumElems == Arg3Type->castAs<VectorType>()->getNumElements());
-  assert(ElemT->isRealFloatingType());
-  (void)ElemT;
+  assert(ElemQT->isRealFloatingType());
+  (void)ElemQT;
 
   const Pointer &VZ = S.Stk.pop<Pointer>();
   const Pointer &VY = S.Stk.pop<Pointer>();
@@ -2775,7 +2775,7 @@ static bool interp__builtin_elementwise_triop(
   }
 
   const auto *VecT = Arg0Type->castAs<VectorType>();
-  const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
+  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
   unsigned NumElems = VecT->getNumElements();
   bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
 
@@ -2847,9 +2847,9 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   unsigned Lane = static_cast<unsigned>(Index % NumLanes);
   unsigned InsertPos = Lane * SubElements;
 
-  PrimType ElemPT = BaseVec.getFieldDesc()->getPrimType();
+  PrimType ElemT = BaseVec.getFieldDesc()->getPrimType();
 
-  TYPE_SWITCH(ElemPT, {
+  TYPE_SWITCH(ElemT, {
     for (unsigned I = 0; I != BaseElements; ++I)
       Dst.elem<T>(I) = BaseVec.elem<T>(I);
     for (unsigned I = 0; I != SubElements; ++I)
@@ -2872,12 +2872,12 @@ static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   unsigned DstLen = A.getNumElems();
-  const QualType ElemQT = getElemType(A);
-  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  QualType ElemQT = getElemType(A);
+  OptPrimType ElemT = S.getContext().classify(ElemQT);
   unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
   bool DstUnsigned = ElemQT->isUnsignedIntegerOrEnumerationType();
 
-  INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+  INT_TYPE_SWITCH_NO_BOOL(*ElemT, {
     for (unsigned I = 0; I != DstLen; ++I) {
       APInt ALane = A.elem<T>(I).toAPSInt();
       APInt BLane = B.elem<T>(I).toAPSInt();
@@ -2916,13 +2916,13 @@ static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
   unsigned Index =
       static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElems - 1));
 
-  PrimType ElemPT = Vec.getFieldDesc()->getPrimType();
+  PrimType ElemT = Vec.getFieldDesc()->getPrimType();
   // FIXME(#161685): Replace float+int split with a numeric-only type switch
-  if (ElemPT == PT_Float) {
+  if (ElemT == PT_Float) {
     S.Stk.push<Floating>(Vec.elem<Floating>(Index));
     return true;
   }
-  INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     APSInt V = Vec.elem<T>(Index).toAPSInt();
     pushInteger(S, V, Call->getType());
   });
@@ -2947,8 +2947,8 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   unsigned Index =
       static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElems - 1));
 
-  PrimType ElemPT = Base.getFieldDesc()->getPrimType();
-  INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
+  PrimType ElemT = Base.getFieldDesc()->getPrimType();
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     for (unsigned I = 0; I != NumElems; ++I)
       Dst.elem<T>(I) = Base.elem<T>(I);
     Dst.elem<T>(Index) = static_cast<T>(ValAPS);
