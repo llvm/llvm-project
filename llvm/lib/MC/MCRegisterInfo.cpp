@@ -114,9 +114,8 @@ MCRegisterInfo::getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
 }
 
 MCRegister MCRegisterInfo::getSubReg(MCRegister Reg, unsigned Idx) const {
-  if (!Idx)
-    return Reg;
-  assert(Idx < getNumSubRegIndices() && "This is not a subregister index");
+  assert(Idx && Idx < getNumSubRegIndices() &&
+         "This is not a subregister index");
   // Get a pointer to the corresponding SubRegIndices list. This list has the
   // name of each sub-register in the same order as MCSubRegIterator.
   const uint16_t *SRI = SubRegIndices + get(Reg).SubRegIndices;

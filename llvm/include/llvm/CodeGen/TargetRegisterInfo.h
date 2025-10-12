@@ -487,10 +487,10 @@ public:
       return (LA & LB).any();
     }
     if (RegA.isPhysical() && RegB.isPhysical()) {
-      RegA = getSubReg(RegA.asMCReg(), SubA);
-      RegB = getSubReg(RegB.asMCReg(), SubB);
-      assert(RegB.isValid() && RegA.isValid() && "invalid subregister");
-      return MCRegisterInfo::regsOverlap(RegA.asMCReg(), RegB.asMCReg());
+      MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
+      MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
+      assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
+      return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
     }
     return false;
   }
