@@ -35,6 +35,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -147,6 +148,11 @@ public:
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
+  void setContainedNegateRAState() { HadNegateRAState = true; }
+  bool containedNegateRAState() const { return HadNegateRAState; }
+  void setInitialRAState(bool State) { InitialRAState = State; }
+  bool getInitialRAState() { return InitialRAState; }
+
   /// Struct for tracking exception handling ranges.
   struct CallSite {
     const MCSymbol *Start;
@@ -191,9 +197,6 @@ public:
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
-
-    // Returns constant island alignment
-    uint16_t getAlignment() const { return sizeof(uint64_t); }
   };
 
   static constexpr uint64_t COUNT_NO_PROFILE =
@@ -219,6 +222,12 @@ public:
 private:
   /// Current state of the function.
   State CurrentState{State::Empty};
+
+  /// Indicates if the Function contained .cfi-negate-ra-state. These are not
+  /// read from the binary. This boolean is used when deciding to run the
+  /// .cfi-negate-ra-state rewriting passes on a function or not.
+  bool HadNegateRAState{false};
+  bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.
   ///
@@ -423,8 +432,9 @@ private:
   /// Original LSDA type encoding
   unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
-  /// Containing compilation unit for the function.
-  DWARFUnit *DwarfUnit{nullptr};
+  /// All compilation units this function belongs to.
+  /// Maps DWARF unit offset to the unit pointer.
+  DenseMap<uint64_t, DWARFUnit *> DwarfUnitMap;
 
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
@@ -1196,11 +1206,6 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
-  /// Remove a label from the secondary entry point map.
-  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
-    SecondaryEntryPoints.erase(Label);
-  }
-
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {
@@ -1645,6 +1650,51 @@ public:
   bool hasInferredProfile() const { return HasInferredProfile; }
 
   void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
+
+  /// Find corrected offset the same way addCFIInstruction does it to skip NOPs.
+  std::optional<uint64_t> getCorrectedCFIOffset(uint64_t Offset) {
+    assert(!Instructions.empty());
+    auto I = Instructions.lower_bound(Offset);
+    if (Offset == getSize()) {
+      assert(I == Instructions.end() && "unexpected iterator value");
+      // Sometimes compiler issues restore_state after all instructions
+      // in the function (even after nop).
+      --I;
+      Offset = I->first;
+    }
+    assert(I->first == Offset && "CFI pointing to unknown instruction");
+    if (I == Instructions.begin())
+      return {};
+
+    --I;
+    while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
+      Offset = I->first;
+      --I;
+    }
+    return Offset;
+  }
+
+  void setInstModifiesRAState(uint8_t CFIOpcode, uint64_t Offset) {
+    std::optional<uint64_t> CorrectedOffset = getCorrectedCFIOffset(Offset);
+    if (CorrectedOffset) {
+      auto I = Instructions.lower_bound(*CorrectedOffset);
+      I--;
+
+      switch (CFIOpcode) {
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+        BC.MIB->setNegateRAState(I->second);
+        break;
+      case dwarf::DW_CFA_remember_state:
+        BC.MIB->setRememberState(I->second);
+        break;
+      case dwarf::DW_CFA_restore_state:
+        BC.MIB->setRestoreState(I->second);
+        break;
+      default:
+        assert(0 && "CFI Opcode not covered by function");
+      }
+    }
+  }
 
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
@@ -2117,9 +2167,7 @@ public:
     return *std::prev(CodeIter) <= *DataIter;
   }
 
-  uint16_t getConstantIslandAlignment() const {
-    return Islands ? Islands->getAlignment() : 1;
-  }
+  uint16_t getConstantIslandAlignment() const;
 
   /// If there is a constant island in the range [StartOffset, EndOffset),
   /// return its address.
@@ -2169,6 +2217,11 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  /// Return true if the whole function is a constant island.
+  bool isDataObject() const {
+    return Islands && Islands->CodeOffsets.size() == 0;
   }
 
   bool isStartOfConstantIsland(uint64_t Offset) const {
@@ -2414,15 +2467,21 @@ public:
   void
   computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
-  void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
+  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitMap[Unit->getOffset()] = Unit; }
 
-  /// Return DWARF compile unit for this function.
-  DWARFUnit *getDWARFUnit() const { return DwarfUnit; }
+  void removeDWARFUnit(DWARFUnit *Unit) {
+    DwarfUnitMap.erase(Unit->getOffset());
+  }
 
-  /// Return line info table for this function.
-  const DWARFDebugLine::LineTable *getDWARFLineTable() const {
-    return getDWARFUnit() ? BC.DwCtx->getLineTableForUnit(getDWARFUnit())
-                          : nullptr;
+  /// Return DWARF compile units for this function.
+  /// Returns a reference to the map of DWARF unit offsets to units.
+  const DenseMap<uint64_t, DWARFUnit *> &getDWARFUnits() const {
+    return DwarfUnitMap;
+  }
+
+  const DWARFDebugLine::LineTable *
+  getDWARFLineTableForUnit(DWARFUnit *Unit) const {
+    return BC.DwCtx->getLineTableForUnit(Unit);
   }
 
   /// Finalize profile for the function.

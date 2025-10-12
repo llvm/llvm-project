@@ -394,7 +394,7 @@ def TruncIShrSIToTrunciShrUI :
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
 
 //===----------------------------------------------------------------------===//
-// TruncIOp
+// TruncFOp
 //===----------------------------------------------------------------------===//
 
 // truncf(sitofp(x)) -> sitofp(x) if default rounding mode.

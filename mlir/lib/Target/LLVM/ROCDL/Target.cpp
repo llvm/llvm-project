@@ -289,7 +289,7 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   llvm::Triple triple(llvm::Triple::normalize(targetTriple));
   std::string error;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.normalize(), error);
+      llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
     emitError(loc, Twine("failed to lookup target: ") + error);
     return std::nullopt;
@@ -299,12 +299,11 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa), SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
-  std::unique_ptr<llvm::MCRegisterInfo> mri(
-      target->createMCRegInfo(targetTriple));
+  std::unique_ptr<llvm::MCRegisterInfo> mri(target->createMCRegInfo(triple));
   std::unique_ptr<llvm::MCAsmInfo> mai(
-      target->createMCAsmInfo(*mri, targetTriple, mcOptions));
+      target->createMCAsmInfo(*mri, triple, mcOptions));
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
-      target->createMCSubtargetInfo(targetTriple, chip, features));
+      target->createMCSubtargetInfo(triple, chip, features));
 
   llvm::MCContext ctx(triple, mai.get(), mri.get(), sti.get(), &srcMgr,
                       &mcOptions);

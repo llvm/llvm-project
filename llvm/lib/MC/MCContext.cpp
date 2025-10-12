@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -153,15 +152,12 @@ void MCContext::reset() {
   SPIRVAllocator.DestroyAll();
   WasmSignatureAllocator.DestroyAll();
 
-  // ~CodeViewContext may destroy a MCFragment outside of sections and need to
-  // be reset before FragmentAllocator.
   CVContext.reset();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
   Allocator.Reset();
-  FragmentAllocator.Reset();
   Instances.clear();
   CompilationDir.clear();
   MainFileName.clear();
@@ -207,27 +203,6 @@ MCInst *MCContext::createMCInst() {
 MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
-  if (NameRef.contains('\\')) {
-    NameSV = NameRef;
-    size_t S = 0;
-    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
-    // other characters following \\, which we do not implement due to code
-    // structure.
-    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
-      char C = NameSV[I];
-      if (C == '\\' && I + 1 != E) {
-        switch (NameSV[I + 1]) {
-        case '"':
-        case '\\':
-          C = NameSV[++I];
-          break;
-        }
-      }
-      NameSV[S++] = C;
-    }
-    NameSV.resize(S);
-    NameRef = NameSV;
-  }
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
@@ -246,6 +221,34 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   }
 
   return Entry.second.Symbol;
+}
+
+MCSymbol *MCContext::parseSymbol(const Twine &Name) {
+  SmallString<128> SV;
+  StringRef NameRef = Name.toStringRef(SV);
+  if (NameRef.contains('\\')) {
+    SV = NameRef;
+    size_t S = 0;
+    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
+    // other characters following \\, which we do not implement due to code
+    // structure.
+    for (size_t I = 0, E = SV.size(); I != E; ++I) {
+      char C = SV[I];
+      if (C == '\\' && I + 1 != E) {
+        switch (SV[I + 1]) {
+        case '"':
+        case '\\':
+          C = SV[++I];
+          break;
+        }
+      }
+      SV[S++] = C;
+    }
+    SV.resize(S);
+    NameRef = SV;
+  }
+
+  return getOrCreateSymbol(NameRef);
 }
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
@@ -297,11 +300,9 @@ MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
   case MCContext::IsDXContainer:
     break;
   case MCContext::IsSPIRV:
-    return new (Name, *this)
-        MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
+    return new (Name, *this) MCSymbol(Name, IsTemporary);
   }
-  return new (Name, *this)
-      MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
+  return new (Name, *this) MCSymbol(Name, IsTemporary);
 }
 
 MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
@@ -309,13 +310,16 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
   auto Name = Sym.getNameEntryPtr();
   switch (getObjectFileType()) {
   case MCContext::IsCOFF:
-    NewSym = new (Name, *this) MCSymbolCOFF(cast<MCSymbolCOFF>(Sym));
+    NewSym =
+        new (Name, *this) MCSymbolCOFF(static_cast<const MCSymbolCOFF &>(Sym));
     break;
   case MCContext::IsELF:
-    NewSym = new (Name, *this) MCSymbolELF(cast<MCSymbolELF>(Sym));
+    NewSym =
+        new (Name, *this) MCSymbolELF(static_cast<const MCSymbolELF &>(Sym));
     break;
   case MCContext::IsMachO:
-    NewSym = new (Name, *this) MCSymbolMachO(cast<MCSymbolMachO>(Sym));
+    NewSym = new (Name, *this)
+        MCSymbolMachO(static_cast<const MCSymbolMachO &>(Sym));
     break;
   default:
     reportFatalUsageError(".set redefinition is not supported");
@@ -329,7 +333,6 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
 
   // Ensure the original symbol is not emitted to the symbol table.
   Sym.IsTemporary = true;
-  Sym.setExternal(false);
   return NewSym;
 }
 
@@ -446,7 +449,7 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   // Use the symbol's index to track if it has been used as a section symbol.
   // Set to -1 to catch potential bugs if misused as a symbol index.
   if (Sym && Sym->getIndex() != -1u) {
-    R = cast<Symbol>(Sym);
+    R = static_cast<Symbol *>(Sym);
   } else {
     SymEntry.second.Used = true;
     R = new (&SymEntry, *this) Symbol(&SymEntry, /*isTemporary=*/false);
@@ -586,7 +589,7 @@ MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
 
   return createELFSectionImpl(
       I->getKey(), Type, Flags, EntrySize, Group, true, true,
-      cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
+      static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
@@ -604,7 +607,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
-    GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
+    GroupSym = static_cast<MCSymbolELF *>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, IsComdat,
                        UniqueID, LinkedToSym);
@@ -817,7 +820,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
                                          unsigned UniqueID) {
   MCSymbolWasm *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
-    GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
+    GroupSym = static_cast<MCSymbolWasm *>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
     if (K.isMetadata() && !GroupSym->getType().has_value()) {
       // Comdat group symbol associated with a custom section is a section
@@ -848,7 +851,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   MCSymbol *Begin = createRenamableSymbol(CachedName, true, false);
   // Begin always has a different name than CachedName... see #48596.
   getSymbolTableEntry(Begin->getName()).second.Symbol = Begin;
-  cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
+  static_cast<MCSymbolWasm *>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
       MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
@@ -889,9 +892,9 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   MCSymbolXCOFF *QualName = nullptr;
   // Debug section don't have storage class attribute.
   if (IsDwarfSec)
-    QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(CachedName));
+    QualName = static_cast<MCSymbolXCOFF *>(getOrCreateSymbol(CachedName));
   else
-    QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
+    QualName = static_cast<MCSymbolXCOFF *>(getOrCreateSymbol(
         CachedName + "[" +
         XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
 

@@ -810,6 +810,26 @@ public:
   /// Whether the intrinsic is signed or unsigned.
   bool isSigned() const { return isSigned(getIntrinsicID()); };
 
+  /// Whether the intrinsic is a smin or umin.
+  static bool isMin(Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::umin:
+    case Intrinsic::smin:
+      return true;
+    case Intrinsic::umax:
+    case Intrinsic::smax:
+      return false;
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Whether the intrinsic is a smin or a umin.
+  bool isMin() const { return isMin(getIntrinsicID()); }
+
+  /// Whether the intrinsic is a smax or a umax.
+  bool isMax() const { return !isMin(getIntrinsicID()); }
+
   /// Min/max intrinsics are monotonic, they operate on a fixed-bitwidth values,
   /// so there is a certain threshold value, upon reaching which,
   /// their value can no longer change. Return said threshold.
@@ -987,6 +1007,13 @@ public:
   const Use &getLengthUse() const { return getArgOperandUse(ARG_LENGTH); }
   Use &getLengthUse() { return getArgOperandUse(ARG_LENGTH); }
 
+  std::optional<APInt> getLengthInBytes() const {
+    ConstantInt *C = dyn_cast<ConstantInt>(getLength());
+    if (!C)
+      return std::nullopt;
+    return C->getValue();
+  }
+
   /// This is just like getRawDest, but it strips off any cast
   /// instructions (including addrspacecast) that feed it, giving the
   /// original input.  The returned value is guaranteed to be a pointer.
@@ -996,14 +1023,6 @@ public:
     return cast<PointerType>(getRawDest()->getType())->getAddressSpace();
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getDestAlign() instead.
-  LLVM_DEPRECATED("Use getDestAlign() instead", "getDestAlign")
-  unsigned getDestAlignment() const {
-    if (auto MA = getParamAlign(ARG_DEST))
-      return MA->value();
-    return 0;
-  }
   MaybeAlign getDestAlign() const { return getParamAlign(ARG_DEST); }
 
   /// Set the specified arguments of the instruction.
@@ -1030,6 +1049,10 @@ public:
            "setLength called with value of wrong type!");
     setArgOperand(ARG_LENGTH, L);
   }
+
+  void setLength(uint64_t L) {
+    setLength(ConstantInt::get(getLength()->getType(), L));
+  }
 };
 
 /// Common base class for all memory transfer intrinsics. Simply provides
@@ -1055,15 +1078,6 @@ public:
 
   unsigned getSourceAddressSpace() const {
     return cast<PointerType>(getRawSource()->getType())->getAddressSpace();
-  }
-
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getSourceAlign() instead.
-  LLVM_DEPRECATED("Use getSourceAlign() instead", "getSourceAlign")
-  unsigned getSourceAlignment() const {
-    if (auto MA = BaseCL::getParamAlign(ARG_SOURCE))
-      return MA->value();
-    return 0;
   }
 
   MaybeAlign getSourceAlign() const {

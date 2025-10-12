@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "openmp-utils.h"
+#include "flang/Semantics/openmp-utils.h"
 
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
@@ -21,6 +22,7 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
@@ -37,6 +39,25 @@
 #include <vector>
 
 namespace Fortran::semantics::omp {
+using namespace Fortran::parser::omp;
+
+const Scope &GetScopingUnit(const Scope &scope) {
+  const Scope *iter{&scope};
+  for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockConstruct:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::DerivedType:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+    case Scope::Kind::Subprogram:
+      return *iter;
+    default:
+      break;
+    }
+  }
+  return *iter;
+}
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
@@ -103,6 +124,16 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object) {
+  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+    return name->source;
+  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+    return GetLastName(*desg).source;
+  }
+  return std::nullopt;
+}
+
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
@@ -112,14 +143,12 @@ const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   return nullptr;
 }
 
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    return GetLastName(*desg).source;
+const parser::OmpObject *GetArgumentObject(
+    const parser::OmpArgument &argument) {
+  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
+    return std::get_if<parser::OmpObject>(&locator->u);
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 bool IsCommonBlock(const Symbol &sym) {
@@ -186,6 +215,46 @@ std::optional<evaluate::DynamicType> GetDynamicType(
 }
 
 namespace {
+struct LogicalConstantVistor : public evaluate::Traverse<LogicalConstantVistor,
+                                   std::optional<bool>, false> {
+  using Result = std::optional<bool>;
+  using Base = evaluate::Traverse<LogicalConstantVistor, Result, false>;
+  LogicalConstantVistor() : Base(*this) {}
+
+  Result Default() const { return std::nullopt; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    if constexpr (T::category == common::TypeCategory::Logical) {
+      return llvm::transformOptional(
+          x.GetScalarValue(), [](auto &&v) { return v.IsTrue(); });
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    if constexpr (sizeof...(results) == 0) {
+      return result;
+    } else {
+      if (result.has_value()) {
+        return result;
+      } else {
+        return Combine(std::move(results)...);
+      }
+    }
+  }
+};
+} // namespace
+
+std::optional<bool> GetLogicalValue(const SomeExpr &expr) {
+  return LogicalConstantVistor{}(expr);
+}
+
+namespace {
 struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
@@ -223,7 +292,7 @@ private:
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object) {
   return common::visit( //
-      common::visitors{
+      common::visitors{//
           [&](const parser::Name &x) {
             // Any member of a common block must be contiguous.
             return std::optional<bool>{true};
@@ -235,7 +304,9 @@ std::optional<bool> IsContiguous(
             }
             return std::optional<bool>{};
           },
-      },
+          [&](const parser::OmpObject::Invalid &) {
+            return std::optional<bool>{};
+          }},
       object.u);
 }
 
@@ -268,28 +339,6 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
     (moveAppend(v, std::move(results)), ...);
     return v;
   }
-};
-
-struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
-  using Base = evaluate::AnyTraverse<VariableFinder>;
-  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
-
-  using Base::operator();
-
-  template <typename T>
-  bool operator()(const evaluate::Designator<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-  template <typename T>
-  bool operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-private:
-  const SomeExpr &var;
 };
 
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
@@ -380,10 +429,6 @@ const SomeExpr *HasStorageOverlap(
   return nullptr;
 }
 
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
-  return VariableFinder{sub}(super);
-}
-
 // Check if the ActionStmt is actually a [Pointer]AssignmentStmt. This is
 // to separate cases where the source has something that looks like an
 // assignment, but is semantically wrong (diagnosed by general semantic
@@ -423,16 +468,21 @@ const parser::Block &GetInnermostExecPart(const parser::Block &block) {
   const parser::Block *iter{&block};
   while (iter->size() == 1) {
     const parser::ExecutionPartConstruct &ep{iter->front()};
-    if (auto *exec{std::get_if<parser::ExecutableConstruct>(&ep.u)}) {
-      using BlockConstruct = common::Indirection<parser::BlockConstruct>;
-      if (auto *bc{std::get_if<BlockConstruct>(&exec->u)}) {
-        iter = &std::get<parser::Block>(bc->value().t);
-        continue;
-      }
+    if (auto *bc{GetFortranBlockConstruct(ep)}) {
+      iter = &std::get<parser::Block>(bc->t);
+    } else {
+      break;
     }
-    break;
   }
   return *iter;
+}
+
+bool IsStrictlyStructuredBlock(const parser::Block &block) {
+  if (block.size() == 1) {
+    return GetFortranBlockConstruct(block.front()) != nullptr;
+  } else {
+    return false;
+  }
 }
 
 } // namespace Fortran::semantics::omp

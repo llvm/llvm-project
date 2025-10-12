@@ -114,13 +114,16 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "llvm/Transforms/Scalar/LoopTermFold.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
+#include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
@@ -734,7 +737,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
   addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandFpPass(&TM));
+  addPass(ExpandFpPass(&TM, getOptLevel()));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -754,7 +757,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
-    addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
+    LoopPassManager LPM;
+    LPM.addPass(CanonicalizeFreezeInLoopsPass());
+    LPM.addPass(LoopStrengthReducePass());
+    if (Opt.EnableLoopTermFold)
+      LPM.addPass(LoopTermFoldPass());
+    addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                             /*UseMemorySSA=*/true));
   }
 
@@ -799,7 +807,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   addPass(ScalarizeMaskedMemIntrinPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
-  addPass(ExpandReductionsPass());
+  if (!Opt.DisableExpandReductions)
+    addPass(ExpandReductionsPass());
 
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
@@ -876,6 +885,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
 
   if (Opt.RequiresCodeGenSCCOrder)
     addPass.requireCGSCCOrder();
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(ObjCARCContractPass());
 
   addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
@@ -1083,11 +1095,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (Opt.EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner = RunOnAllFunctions || TM.Options.SupportsDefaultOutlining;
-    if (AddOutliner)
-      addPass(MachineOutlinerPass(RunOnAllFunctions));
+    if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
+        TM.Options.SupportsDefaultOutlining)
+      addPass(MachineOutlinerPass(Opt.EnableMachineOutliner));
   }
 
   addPass(StackFrameLayoutAnalysisPass());

@@ -54,18 +54,16 @@ DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
       Fragment(DVR->getExpression()->getFragmentInfo()),
       InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
+DebugVariableAggregate::DebugVariableAggregate(const DbgVariableRecord *DVR)
+    : DebugVariable(DVR->getVariable(), std::nullopt,
+                    DVR->getDebugLoc()->getInlinedAt()) {}
+
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs)
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-      ,
-      AtomGroup(AtomGroup), AtomRank(AtomRank)
-#endif
-{
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
+      AtomRank(AtomRank) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
-#endif
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
@@ -1012,7 +1010,7 @@ DIDerivedType *DIDerivedType::getImpl(
 std::optional<DIDerivedType::PtrAuthData>
 DIDerivedType::getPtrAuthData() const {
   return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
-             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             ? std::make_optional<PtrAuthData>(SubclassData32)
              : std::nullopt;
 }
 
@@ -1186,9 +1184,10 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
-                             unsigned SourceLanguage, bool IsOptimized,
-                             unsigned RuntimeVersion, unsigned EmissionKind,
-                             uint64_t DWOId, bool SplitDebugInlining,
+                             DISourceLanguageName SourceLanguage,
+                             bool IsOptimized, unsigned RuntimeVersion,
+                             unsigned EmissionKind, uint64_t DWOId,
+                             bool SplitDebugInlining,
                              bool DebugInfoForProfiling, unsigned NameTableKind,
                              bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
     : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
@@ -1201,7 +1200,7 @@ DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
 }
 
 DICompileUnit *DICompileUnit::getImpl(
-    LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
+    LLVMContext &Context, DISourceLanguageName SourceLanguage, Metadata *File,
     MDString *Producer, bool IsOptimized, MDString *Flags,
     unsigned RuntimeVersion, MDString *SplitDebugFilename,
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
@@ -1770,6 +1769,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_bregx:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_consts:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
@@ -1777,6 +1777,8 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       break;
     }
   }

@@ -29,6 +29,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Demangle/Demangle.h"
@@ -599,9 +600,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                            !IsRISCV64 && !IsLoongArch64 &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
-  bool IsAndroidWithIfuncSupport =
-      IsAndroid && !TargetTriple.isAndroidVersionLT(21);
-  Mapping.InGlobal = ClWithIfunc && IsAndroidWithIfuncSupport && IsArmOrThumb;
+  Mapping.InGlobal = ClWithIfunc && IsAndroid && IsArmOrThumb;
 
   return Mapping;
 }
@@ -803,7 +802,8 @@ struct AddressSanitizer {
 
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
   void getInterestingMemoryOperands(
-      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
+      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting,
+      const TargetTransformInfo *TTI);
 
   void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
                      InterestingMemoryOperand &O, bool UseCalls,
@@ -843,7 +843,8 @@ struct AddressSanitizer {
   void instrumentMemIntrinsic(MemIntrinsic *MI, RuntimeCallInserter &RTCI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
-  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
+  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI,
+                          const TargetTransformInfo *TTI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
@@ -1211,23 +1212,21 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
       return;
     if (!II.isLifetimeStartOrEnd())
       return;
-    // Found lifetime intrinsic, add ASan instrumentation if necessary.
-    auto *Size = cast<ConstantInt>(II.getArgOperand(0));
-    // If size argument is undefined, don't do anything.
-    if (Size->isMinusOne()) return;
-    // Check that size doesn't saturate uint64_t and can
-    // be stored in IntptrTy.
-    const uint64_t SizeValue = Size->getValue().getLimitedValue();
-    if (SizeValue == ~0ULL ||
-        !ConstantInt::isValueValidForType(IntptrTy, SizeValue))
-      return;
     // Find alloca instruction that corresponds to llvm.lifetime argument.
-    AllocaInst *AI = cast<AllocaInst>(II.getArgOperand(1));
+    AllocaInst *AI = dyn_cast<AllocaInst>(II.getArgOperand(0));
     // We're interested only in allocas we can handle.
-    if (!ASan.isInterestingAlloca(*AI))
+    if (!AI || !ASan.isInterestingAlloca(*AI))
       return;
+
+    std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());
+    // Check that size is known and can be stored in IntptrTy.
+    // TODO: Add support for scalable vectors if possible.
+    if (!Size || Size->isScalable() ||
+        !ConstantInt::isValueValidForType(IntptrTy, *Size))
+      return;
+
     bool DoPoison = (ID == Intrinsic::lifetime_end);
-    AllocaPoisonCall APC = {&II, AI, SizeValue, DoPoison};
+    AllocaPoisonCall APC = {&II, AI, *Size, DoPoison};
     if (AI->isStaticAlloca())
       StaticAllocaPoisonCallVec.push_back(APC);
     else if (ClInstrumentDynamicAllocas)
@@ -1316,7 +1315,8 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
         Options.MaxInlinePoisoningSize, Options.CompileKernel, Options.Recover,
         Options.UseAfterScope, Options.UseAfterReturn);
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
+    const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI, &TTI);
   }
   Modified |= ModuleSanitizer.instrumentModule();
   if (!Modified)
@@ -1454,7 +1454,8 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
 }
 
 void AddressSanitizer::getInterestingMemoryOperands(
-    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
+    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting,
+    const TargetTransformInfo *TTI) {
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)
     return;
@@ -1572,6 +1573,12 @@ void AddressSanitizer::getInterestingMemoryOperands(
       break;
     }
     default:
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+        MemIntrinsicInfo IntrInfo;
+        if (TTI->getTgtMemIntrinsic(II, IntrInfo))
+          Interesting = IntrInfo.InterestingOperands;
+        return;
+      }
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
             ignoreAccess(I, CI->getArgOperand(ArgNo)))
@@ -1776,6 +1783,25 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     NumInstrumentedWrites++;
   else
     NumInstrumentedReads++;
+
+  if (O.MaybeByteOffset) {
+    Type *Ty = Type::getInt8Ty(*C);
+    IRBuilder IB(O.getInsn());
+
+    Value *OffsetOp = O.MaybeByteOffset;
+    if (TargetTriple.isRISCV()) {
+      Type *OffsetTy = OffsetOp->getType();
+      // RVV indexed loads/stores zero-extend offset operands which are narrower
+      // than XLEN to XLEN.
+      if (OffsetTy->getScalarType()->getIntegerBitWidth() <
+          static_cast<unsigned>(LongSize)) {
+        VectorType *OrigType = cast<VectorType>(OffsetTy);
+        Type *ExtendTy = VectorType::get(IntptrTy, OrigType);
+        OffsetOp = IB.CreateZExt(OffsetOp, ExtendTy);
+      }
+    }
+    Addr = IB.CreateGEP(Ty, Addr, {OffsetOp});
+  }
 
   unsigned Granularity = 1 << Mapping.Scale;
   if (O.MaybeMask) {
@@ -2634,7 +2660,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
 
-    Constant *ODRIndicator = ConstantPointerNull::get(PtrTy);
+    Constant *ODRIndicator = Constant::getNullValue(IntptrTy);
     GlobalValue *InstrumentedGlobal = NewGlobal;
 
     bool CanUsePrivateAliases =
@@ -2649,8 +2675,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
 
     // ODR should not happen for local linkage.
     if (NewGlobal->hasLocalLinkage()) {
-      ODRIndicator =
-          ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, -1), PtrTy);
+      ODRIndicator = ConstantInt::get(IntptrTy, -1);
     } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
@@ -2664,7 +2689,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
       ODRIndicatorSym->setVisibility(NewGlobal->getVisibility());
       ODRIndicatorSym->setDLLStorageClass(NewGlobal->getDLLStorageClass());
       ODRIndicatorSym->setAlignment(Align(1));
-      ODRIndicator = ODRIndicatorSym;
+      ODRIndicator = ConstantExpr::getPtrToInt(ODRIndicatorSym, IntptrTy);
     }
 
     Constant *Initializer = ConstantStruct::get(
@@ -2675,8 +2700,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
         ConstantExpr::getPointerCast(Name, IntptrTy),
         ConstantExpr::getPointerCast(getOrCreateModuleName(), IntptrTy),
         ConstantInt::get(IntptrTy, MD.IsDynInit),
-        Constant::getNullValue(IntptrTy),
-        ConstantExpr::getPointerCast(ODRIndicator, IntptrTy));
+        Constant::getNullValue(IntptrTy), ODRIndicator);
 
     LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 
@@ -2987,7 +3011,8 @@ bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
 }
 
 bool AddressSanitizer::instrumentFunction(Function &F,
-                                          const TargetLibraryInfo *TLI) {
+                                          const TargetLibraryInfo *TLI,
+                                          const TargetTransformInfo *TTI) {
   bool FunctionModified = false;
 
   // Do not apply any instrumentation for naked functions.
@@ -3040,7 +3065,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
-      getInterestingMemoryOperands(&Inst, InterestingOperands);
+      getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
 
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {

@@ -91,6 +91,10 @@ inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
   return V;
 }
 
+inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
+  return V;
+}
+
 /// Match a specified const SCEV *.
 struct specificscev_ty {
   const SCEV *Expr;
@@ -111,6 +115,18 @@ struct is_specific_cst {
 
 /// Match an SCEV constant with a plain unsigned integer.
 inline cst_pred_ty<is_specific_cst> m_scev_SpecificInt(uint64_t V) { return V; }
+
+struct is_specific_signed_cst {
+  int64_t CV;
+  is_specific_signed_cst(int64_t C) : CV(C) {}
+  bool isValue(const APInt &C) const { return C.trySExtValue() == CV; }
+};
+
+/// Match an SCEV constant with a plain signed integer (sign-extended value will
+/// be matched)
+inline cst_pred_ty<is_specific_signed_cst> m_scev_SpecificSInt(int64_t V) {
+  return V;
+}
 
 struct bind_cst_ty {
   const APInt *&CR;
@@ -167,7 +183,9 @@ m_scev_PtrToInt(const Op0_t &Op0) {
 }
 
 /// Match a binary SCEV.
-template <typename SCEVTy, typename Op0_t, typename Op1_t>
+template <typename SCEVTy, typename Op0_t, typename Op1_t,
+          SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
+          bool Commutable = false>
 struct SCEVBinaryExpr_match {
   Op0_t Op0;
   Op1_t Op1;
@@ -175,16 +193,25 @@ struct SCEVBinaryExpr_match {
   SCEVBinaryExpr_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
 
   bool match(const SCEV *S) const {
+    if (auto WrappingS = dyn_cast<SCEVNAryExpr>(S))
+      if (WrappingS->getNoWrapFlags(WrapFlags) != WrapFlags)
+        return false;
+
     auto *E = dyn_cast<SCEVTy>(S);
-    return E && E->getNumOperands() == 2 && Op0.match(E->getOperand(0)) &&
-           Op1.match(E->getOperand(1));
+    return E && E->getNumOperands() == 2 &&
+           ((Op0.match(E->getOperand(0)) && Op1.match(E->getOperand(1))) ||
+            (Commutable && Op0.match(E->getOperand(1)) &&
+             Op1.match(E->getOperand(0))));
   }
 };
 
-template <typename SCEVTy, typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t>
+template <typename SCEVTy, typename Op0_t, typename Op1_t,
+          SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
+          bool Commutable = false>
+inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>
 m_scev_Binary(const Op0_t &Op0, const Op1_t &Op1) {
-  return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t>(Op0, Op1);
+  return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>(Op0,
+                                                                           Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -197,6 +224,20 @@ template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t>
 m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVMulExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
+m_scev_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(Op0,
+                                                                           Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNUW, true>
+m_scev_c_NUWMul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNUW, true>(Op0,
+                                                                       Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -176,10 +177,6 @@ private:
 
     void checkFor();
 
-    //  void checkRangeFor(); ?? ERICH
-    //  const ValueDecl *checkInit();
-    //  void checkCond(const ValueDecl *Init);
-    //  void checkInc(const ValueDecl *Init);
   public:
     // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
@@ -240,6 +237,12 @@ public:
   bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
+
+  OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
+  OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
+  OpenACCReductionRecipe
+  CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
+                            const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -908,6 +911,7 @@ public:
   ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                OpenACCReductionOperator ReductionOp,
                                Expr *VarExpr);
+  bool CheckReductionVarType(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -942,12 +946,12 @@ public:
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
   // Does the checking for a 'reduction ' clause that needs to be done in
   // dependent and not dependent cases.
-  OpenACCClause *
-  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
-                       OpenACCDirectiveKind DirectiveKind,
-                       SourceLocation BeginLoc, SourceLocation LParenLoc,
-                       OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+  OpenACCClause *CheckReductionClause(
+      ArrayRef<const OpenACCClause *> ExistingClauses,
+      OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
+      SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
+      ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+      SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

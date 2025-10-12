@@ -23,6 +23,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -62,14 +63,14 @@ class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
   InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
+                   Function &F, AAResults *AA, AssumptionCache &AC,
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
                    ProfileSummaryInfo *PSI, const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, RPOT) {}
+      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
+                     PSI, DL, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
@@ -142,6 +143,7 @@ public:
   Instruction *visitUIToFP(CastInst &CI);
   Instruction *visitSIToFP(CastInst &CI);
   Instruction *visitPtrToInt(PtrToIntInst &CI);
+  Instruction *visitPtrToAddr(PtrToAddrInst &CI);
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
@@ -221,23 +223,6 @@ public:
   /// ignorable).
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                         const Instruction *CtxI) const;
-
-  Constant *getLosslessTrunc(Constant *C, Type *TruncTy, unsigned ExtOp) {
-    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
-    Constant *ExtTruncC =
-        ConstantFoldCastOperand(ExtOp, TruncC, C->getType(), DL);
-    if (ExtTruncC && ExtTruncC == C)
-      return TruncC;
-    return nullptr;
-  }
-
-  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
-    return getLosslessTrunc(C, TruncTy, Instruction::ZExt);
-  }
-
-  Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
-    return getLosslessTrunc(C, TruncTy, Instruction::SExt);
-  }
 
   std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
   convertOrOfShiftsToFunnelShift(Instruction &Or);
@@ -487,6 +472,18 @@ private:
                                 unsigned Depth = 0);
 
 public:
+  /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
+  /// from existing profile metadata: if the Function has profiles, this will
+  /// set the profile of this select to "unknown".
+  SelectInst *
+  createSelectInstWithUnknownProfile(Value *C, Value *S1, Value *S2,
+                                     const Twine &NameStr = "",
+                                     InsertPosition InsertBefore = nullptr) {
+    auto *Sel = SelectInst::Create(C, S1, S2, NameStr, InsertBefore, nullptr);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, F, DEBUG_TYPE);
+    return Sel;
+  }
+
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
@@ -710,7 +707,7 @@ public:
   bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
-                                            GlobalVariable *GV, CmpInst &ICI,
+                                            CmpInst &ICI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
@@ -721,6 +718,7 @@ public:
   Instruction *foldICmpUsingKnownBits(ICmpInst &Cmp);
   Instruction *foldICmpWithDominatingICmp(ICmpInst &Cmp);
   Instruction *foldICmpWithConstant(ICmpInst &Cmp);
+  Instruction *foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp);
   Instruction *foldICmpUsingBoolRange(ICmpInst &I);
   Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
@@ -729,6 +727,7 @@ public:
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);
+  Instruction *foldICmpWithClamp(ICmpInst &Cmp, Value *X, MinMaxIntrinsic *Min);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);

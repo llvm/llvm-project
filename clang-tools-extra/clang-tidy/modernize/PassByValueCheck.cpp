@@ -1,4 +1,4 @@
-//===--- PassByValueCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -77,8 +77,7 @@ AST_MATCHER_P(CXXRecordDecl, isMoveConstructibleInBoundCXXRecordDecl, StringRef,
 
 static TypeMatcher notTemplateSpecConstRefType() {
   return lValueReferenceType(
-      pointee(unless(elaboratedType(namesType(templateSpecializationType()))),
-              isConstQualified()));
+      pointee(unless(templateSpecializationType()), isConstQualified()));
 }
 
 static TypeMatcher nonConstValueType() {

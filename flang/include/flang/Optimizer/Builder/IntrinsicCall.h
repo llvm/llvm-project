@@ -208,6 +208,9 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genBarrierArrive(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genBarrierArriveCnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genBarrierInit(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genBesselJn(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genBesselYn(mlir::Type,
@@ -246,9 +249,15 @@ struct IntrinsicLibrary {
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCPtrCompare(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoMax(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoMin(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoSum(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genDsecnds(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
@@ -265,6 +274,7 @@ struct IntrinsicLibrary {
                                       llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genFenceProxyAsync(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
@@ -378,6 +388,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genNumImages(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   template <typename OpTy>
   mlir::Value genNVVMTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -405,6 +417,8 @@ struct IntrinsicLibrary {
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSecnds(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genSecond(std::optional<mlir::Type>,
                                mlir::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSelectedCharKind(mlir::Type,
@@ -443,12 +457,16 @@ struct IntrinsicLibrary {
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genTMABulkCommitGroup(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkWaitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTranspose(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genThisImage(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);

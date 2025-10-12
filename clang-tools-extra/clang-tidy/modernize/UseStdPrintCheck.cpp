@@ -1,4 +1,4 @@
-//===--- UseStdPrintCheck.cpp - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), PP(nullptr),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       PrintfLikeFunctions(utils::options::parseStringList(
           Options.get("PrintfLikeFunctions", ""))),
       FprintfLikeFunctions(utils::options::parseStringList(

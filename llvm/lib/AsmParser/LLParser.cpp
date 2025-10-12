@@ -1258,6 +1258,9 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       GV->setPartition(Lex.getStrVal());
       if (parseToken(lltok::StringConstant, "expected partition string"))
         return true;
+    } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
+      if (parseGlobalObjectMetadataAttachment(*GI.get()))
+        return true;
     } else {
       return tokError("unknown alias or ifunc property!");
     }
@@ -2312,6 +2315,15 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
 #undef CC_VLS_CASE
     }
     return false;
+  case lltok::kw_cheriot_compartmentcallcc:
+    CC = CallingConv::CHERIoT_CompartmentCall;
+    break;
+  case lltok::kw_cheriot_compartmentcalleecc:
+    CC = CallingConv::CHERIoT_CompartmentCallee;
+    break;
+  case lltok::kw_cheriot_librarycallcc:
+    CC = CallingConv::CHERIoT_LibraryCall;
+    break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -4273,6 +4285,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint: {
     unsigned Opc = Lex.getUIntVal();
     Type *DestTy = nullptr;
@@ -4727,6 +4740,10 @@ struct DwarfLangField : public MDUnsignedField {
   DwarfLangField() : MDUnsignedField(0, dwarf::DW_LANG_hi_user) {}
 };
 
+struct DwarfSourceLangNameField : public MDUnsignedField {
+  DwarfSourceLangNameField() : MDUnsignedField(0, UINT32_MAX) {}
+};
+
 struct DwarfCCField : public MDUnsignedField {
   DwarfCCField() : MDUnsignedField(0, dwarf::DW_CC_hi_user) {}
 };
@@ -4979,6 +4996,25 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfLangField &Result) {
     return tokError("invalid DWARF language" + Twine(" '") + Lex.getStrVal() +
                     "'");
   assert(Lang <= Result.Max && "Expected valid DWARF language");
+  Result.assign(Lang);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfSourceLangNameField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfSourceLangName)
+    return tokError("expected DWARF source language name");
+
+  unsigned Lang = dwarf::getSourceLanguageName(Lex.getStrVal());
+  if (!Lang)
+    return tokError("invalid DWARF source language name" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(Lang <= Result.Max && "Expected valid DWARF source language name");
   Result.assign(Lang);
   Lex.Lex();
   return false;
@@ -5823,9 +5859,12 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");
 
+  LocTy Loc = Lex.getLoc();
+
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(language, DwarfLangField, );                                        \
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
+  OPTIONAL(language, DwarfLangField, );                                        \
+  OPTIONAL(sourceLanguageName, DwarfSourceLangNameField, );                    \
   OPTIONAL(producer, MDStringField, );                                         \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(flags, MDStringField, );                                            \
@@ -5847,12 +5886,23 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  if (!language.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "missing one of 'language' or 'sourceLanguageName', "
+                      "required for !DICompileUnit");
+
+  if (language.Seen && sourceLanguageName.Seen)
+    return error(Loc, "can only specify one of 'language' and "
+                      "'sourceLanguageName' on !DICompileUnit");
+
   Result = DICompileUnit::getDistinct(
-      Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
-      runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      rangesBaseAddress.Val, sysroot.Val, sdk.Val);
+      Context,
+      language.Seen ? DISourceLanguageName(language.Val)
+                    : DISourceLanguageName(sourceLanguageName.Val, 0),
+      file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
+      splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
+      globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
+      debugInfoForProfiling.Val, nameTableKind.Val, rangesBaseAddress.Val,
+      sysroot.Val, sdk.Val);
   return false;
 }
 
@@ -7310,6 +7360,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
   case lltok::kw_fptrunc:

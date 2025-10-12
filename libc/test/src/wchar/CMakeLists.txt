@@ -53,7 +53,7 @@ add_libc_test(
   SRCS
     mbrtowc_test.cpp
   DEPENDS
-    libc.src.__support.libc_errno
+    libc.hdr.errno_macros
     libc.src.__support.wchar.mbstate
     libc.src.string.memset
     libc.src.wchar.mbrtowc
@@ -69,8 +69,21 @@ add_libc_test(
   SRCS
     mbtowc_test.cpp
   DEPENDS
-    libc.src.__support.libc_errno
+    libc.hdr.errno_macros
     libc.src.wchar.mbtowc
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbstowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbstowcs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.wchar.mbstowcs
     libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -82,8 +95,24 @@ add_libc_test(
   SRCS
     mblen_test.cpp
   DEPENDS
-    libc.src.__support.libc_errno
+    libc.hdr.errno_macros
     libc.src.wchar.mblen
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbsrtowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbsrtowcs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memset
+    libc.src.wchar.mbsrtowcs
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -94,14 +123,30 @@ add_libc_test(
   SRCS
     mbrlen_test.cpp
   DEPENDS
-    libc.src.__support.libc_errno
+    libc.hdr.errno_macros
     libc.src.__support.wchar.mbstate
     libc.src.string.memset
-    libc.src.wchar.mbrlen
+    libc.src.wchar.mbsrlen
     libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest
-)   
+)
+
+add_libc_test(
+  mbsnrtowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbsnrtowcs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memset
+    libc.src.wchar.mbsnrtowcs
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
 
 add_libc_test(
   mbsinit_test
@@ -134,11 +179,11 @@ add_libc_test(
   SRCS
     wcrtomb_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.wchar.wcrtomb
     libc.src.string.memset
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
-    libc.src.__support.libc_errno
     libc.src.__support.wchar.mbstate
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -150,6 +195,7 @@ add_libc_test(
   SRCS
     wctomb_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.wchar.wctomb
     libc.hdr.types.wchar_t
 )
@@ -433,9 +479,9 @@ add_header_library(
   HDRS
     WcstolTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 

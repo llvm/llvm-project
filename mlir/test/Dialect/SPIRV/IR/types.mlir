@@ -238,6 +238,16 @@ func.func private @samped_image_type_invaid_type(!spirv.sampled_image<f32>) -> (
 
 // -----
 
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got Buffer}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got SubpassData}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//
@@ -295,6 +305,12 @@ func.func private @struct_type_with_matrix_2(!spirv.struct<(!spirv.matrix<3 x ve
 
 // CHECK: func private @struct_empty(!spirv.struct<()>)
 func.func private @struct_empty(!spirv.struct<()>)
+
+// CHECK: func.func private @struct_block(!spirv.struct<(vector<4xf32> [BuiltIn=0], f32 [BuiltIn=1]), Block>)
+func.func private @struct_block(!spirv.struct<(vector<4xf32> [BuiltIn=0], f32 [BuiltIn=1]), Block>)
+
+// CHECK: func.func private @struct_two_dec(!spirv.struct<(vector<4xf32> [BuiltIn=0], f32 [BuiltIn=1]), Block, CPacked>)
+func.func private @struct_two_dec(!spirv.struct<(vector<4xf32> [BuiltIn=0], f32 [BuiltIn=1]), Block, CPacked>)
 
 // -----
 

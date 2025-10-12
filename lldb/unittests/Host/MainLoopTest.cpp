@@ -80,6 +80,8 @@ TEST_F(MainLoopTest, ReadSocketObject) {
   ASSERT_EQ(1u, callback_count);
 }
 
+// Flakey, see https://github.com/llvm/llvm-project/issues/152677.
+#ifndef _WIN32
 TEST_F(MainLoopTest, ReadPipeObject) {
   Pipe pipe;
 
@@ -142,6 +144,7 @@ TEST_F(MainLoopTest, MultipleReadsPipeObject) {
   ASSERT_EQ(5u, callback_count);
   async_writer.wait();
 }
+#endif
 
 TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
   Pipe pipe;
@@ -421,9 +424,9 @@ TEST_F(MainLoopTest, ManyPendingCallbacks) {
 
 TEST_F(MainLoopTest, CallbackWithTimeout) {
   MainLoop loop;
+  auto start = std::chrono::steady_clock::now();
   loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
                    std::chrono::seconds(2));
-  auto start = std::chrono::steady_clock::now();
   ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
   EXPECT_GE(std::chrono::steady_clock::now() - start, std::chrono::seconds(2));
 }

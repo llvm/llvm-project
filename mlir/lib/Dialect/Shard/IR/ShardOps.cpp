@@ -38,7 +38,6 @@
 #include <utility>
 
 #define DEBUG_TYPE "shard-ops"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 using namespace mlir;
 using namespace mlir::shard;
@@ -1009,18 +1008,6 @@ static LogicalResult verifyInGroupDevice(Location loc, StringRef deviceName,
     }
   }
   return success();
-}
-
-template <typename It>
-static auto product(It begin, It end) {
-  using ElementType = std::decay_t<decltype(*begin)>;
-  return std::accumulate(begin, end, static_cast<ElementType>(1),
-                         std::multiplies<ElementType>());
-}
-
-template <typename R>
-static auto product(R &&range) {
-  return product(adl_begin(range), adl_end(range));
 }
 
 static LogicalResult verifyDimensionCompatibility(Location loc,

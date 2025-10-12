@@ -742,7 +742,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_impl_coroutine", "201902L");
     Builder.defineMacro("__cpp_designated_initializers", "201707L");
     Builder.defineMacro("__cpp_impl_three_way_comparison", "201907L");
-    //Builder.defineMacro("__cpp_modules", "201907L");
+    // Intentionally to set __cpp_modules to 1.
+    // See https://github.com/llvm/llvm-project/issues/71364 for details.
+    // Builder.defineMacro("__cpp_modules", "201907L");
+    Builder.defineMacro("__cpp_modules", "1");
     Builder.defineMacro("__cpp_using_enum", "201907L");
   }
   // C++23 features.
@@ -766,7 +769,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
-  // Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
+  Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -945,8 +948,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
-  if (TI.getTriple().isWindowsGNUEnvironment()) {
-    // Set ABI defining macros for libstdc++ for MinGW, where the
+  if (TI.getTriple().isOSCygMing()) {
+    // Set ABI defining macros for libstdc++ for MinGW and Cygwin, where the
     // default in libstdc++ differs from the defaults for this target.
     Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
   }
@@ -1519,6 +1522,17 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
+                                 SanitizerKind::KernelAddress))
+    Builder.defineMacro("__SANITIZE_ADDRESS__");
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
+                                 SanitizerKind::KernelHWAddress))
+    Builder.defineMacro("__SANITIZE_HWADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::Thread))
+    Builder.defineMacro("__SANITIZE_THREAD__");
+  if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
+    Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
+
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
     const llvm::Triple &Triple = TI.getTriple();
@@ -1527,6 +1541,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #include "clang/Basic/TargetOSMacros.def"
 #undef TARGET_OS
   }
+
+  if (LangOpts.PointerAuthIntrinsics)
+    Builder.defineMacro("__PTRAUTH__");
 
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);

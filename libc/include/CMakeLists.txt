@@ -70,6 +70,7 @@ add_header_macro(
   dlfcn.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.dl_info
 )
 
 add_header_macro(
@@ -188,6 +189,17 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .inttypes
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.netinet_in_macros
 )
 
 add_header_macro(
@@ -392,6 +404,8 @@ add_header_macro(
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_key_t
+    .llvm-libc-types.pthread_barrier_t
+    .llvm-libc-types.pthread_barrierattr_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
     .llvm-libc-types.pthread_once_t

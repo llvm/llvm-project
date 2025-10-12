@@ -165,10 +165,17 @@ public:
   bool CheckForNullPointer(const char *where = "as an operand here");
   bool CheckForAssumedRank(const char *where = "as an operand here");
 
+  bool AnyCUDADeviceData() const;
+  // Returns true if an interface has been defined for an intrinsic operator
+  // with one or more device operands.
+  bool HasDeviceDefinedIntrinsicOpOverride(const char *) const;
+  template <typename E> bool HasDeviceDefinedIntrinsicOpOverride(E opr) const {
+    return HasDeviceDefinedIntrinsicOpOverride(
+        context_.context().languageFeatures().GetNames(opr));
+  }
+
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
-  // If a definedOpSymbolPtr is provided, the caller must check
-  // for its accessibility.
   MaybeExpr TryDefinedOp(
       const char *, parser::MessageFixedText, bool isUserOp = false);
   template <typename E>
@@ -183,6 +190,8 @@ public:
   void Dump(llvm::raw_ostream &);
 
 private:
+  bool HasDeviceDefinedIntrinsicOpOverride(
+      const std::vector<const char *> &) const;
   MaybeExpr TryDefinedOp(
       const std::vector<const char *> &, parser::MessageFixedText);
   MaybeExpr TryBoundOp(const Symbol &, int passIndex);
@@ -202,7 +211,7 @@ private:
   void SayNoMatch(
       const std::string &, bool isAssignment = false, bool isAmbiguous = false);
   std::string TypeAsFortran(std::size_t);
-  bool AnyUntypedOrMissingOperand();
+  bool AnyUntypedOrMissingOperand() const;
 
   ExpressionAnalyzer &context_;
   ActualArguments actuals_;
@@ -819,7 +828,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
 
 template <typename TYPE>
 Constant<TYPE> ReadRealLiteral(
-    parser::CharBlock source, FoldingContext &context) {
+    parser::CharBlock source, FoldingContext &context, bool isDefaultKind) {
   const char *p{source.begin()};
   auto valWithFlags{
       Scalar<TYPE>::Read(p, context.targetCharacteristics().roundingMode())};
@@ -829,19 +838,24 @@ Constant<TYPE> ReadRealLiteral(
   if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     value = value.FlushSubnormalToZero();
   }
-  return {value};
+  typename Constant<TYPE>::Result resultInfo;
+  resultInfo.set_isFromInexactLiteralConversion(
+      isDefaultKind && valWithFlags.flags.test(RealFlag::Inexact));
+  return {value, resultInfo};
 }
 
 struct RealTypeVisitor {
   using Result = std::optional<Expr<SomeReal>>;
   using Types = RealTypes;
 
-  RealTypeVisitor(int k, parser::CharBlock lit, FoldingContext &ctx)
-      : kind{k}, literal{lit}, context{ctx} {}
+  RealTypeVisitor(
+      int k, parser::CharBlock lit, FoldingContext &ctx, bool isDeftKind)
+      : kind{k}, literal{lit}, context{ctx}, isDefaultKind{isDeftKind} {}
 
   template <typename T> Result Test() {
     if (kind == T::kind) {
-      return {AsCategoryExpr(ReadRealLiteral<T>(literal, context))};
+      return {
+          AsCategoryExpr(ReadRealLiteral<T>(literal, context, isDefaultKind))};
     }
     return std::nullopt;
   }
@@ -849,6 +863,7 @@ struct RealTypeVisitor {
   int kind;
   parser::CharBlock literal;
   FoldingContext &context;
+  bool isDefaultKind;
 };
 
 // Reads a real literal constant and encodes it with the right kind.
@@ -900,8 +915,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
           "Explicit kind parameter together with non-'E' exponent letter is not standard"_port_en_US);
     }
   }
-  auto result{common::SearchTypes(
-      RealTypeVisitor{kind, x.real.source, GetFoldingContext()})};
+  bool isDefaultKind{!x.kind && letterKind.value_or('e') == 'e'};
+  auto result{common::SearchTypes(RealTypeVisitor{
+      kind, x.real.source, GetFoldingContext(), isDefaultKind})};
   if (!result) { // C717
     Say("Unsupported REAL(KIND=%d)"_err_en_US, kind);
   }
@@ -1832,8 +1848,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
           if (*thisLen != *constantLength_ && !(messageDisplayedSet_ & 1)) {
             exprAnalyzer_.Warn(
                 common::LanguageFeature::DistinctArrayConstructorLengths,
-                "Character literal in array constructor without explicit "
-                "type has different length than earlier elements"_port_en_US);
+                "Character literal in array constructor without explicit type has different length than earlier elements"_port_en_US);
             messageDisplayedSet_ |= 1;
           }
           if (*thisLen > *constantLength_) {
@@ -1853,17 +1868,17 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
     } else {
       if (!(messageDisplayedSet_ & 2)) {
         exprAnalyzer_.Say(
-            "Values in array constructor must have the same declared type "
-            "when no explicit type appears"_err_en_US); // C7110
+            "Values in array constructor must have the same declared type when no explicit type appears"_err_en_US); // C7110
         messageDisplayedSet_ |= 2;
       }
     }
   } else {
+    CheckRealWidening(*x, *type_, exprAnalyzer_.GetFoldingContext());
     if (auto cast{ConvertToType(*type_, std::move(*x))}) {
       values_.Push(std::move(*cast));
     } else if (!(messageDisplayedSet_ & 4)) {
-      exprAnalyzer_.Say("Value in array constructor of type '%s' could not "
-                        "be converted to the type of the array '%s'"_err_en_US,
+      exprAnalyzer_.Say(
+          "Value in array constructor of type '%s' could not be converted to the type of the array '%s'"_err_en_US,
           x->GetType()->AsFortran(), type_->AsFortran()); // C7111, C7112
       messageDisplayedSet_ |= 4;
     }
@@ -2056,8 +2071,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
 
 // Check if implicit conversion of expr to the symbol type is legal (if needed),
 // and make it explicit if requested.
-static MaybeExpr ImplicitConvertTo(const semantics::Symbol &sym,
-    Expr<SomeType> &&expr, bool keepConvertImplicit) {
+static MaybeExpr ImplicitConvertTo(const Symbol &sym, Expr<SomeType> &&expr,
+    bool keepConvertImplicit, FoldingContext &foldingContext) {
+  CheckRealWidening(expr, DynamicType::From(sym), foldingContext);
   if (!keepConvertImplicit) {
     return ConvertToType(sym, std::move(expr));
   } else {
@@ -2155,17 +2171,29 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // T(1) or T(PT=PT(1)).  There may be multiple parent components.
       if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
-        for (auto parent{components.begin()};
-             parent != afterLastParentComponentIter; ++parent) {
-          if (auto parentType{DynamicType::From(*parent)}; parentType &&
-              parent->test(Symbol::Flag::ParentComp) &&
-              valueType->IsEquivalentTo(*parentType)) {
-            symbol = &*parent;
-            nextAnonymous = ++parent;
-            Warn(LanguageFeature::AnonymousParents, source,
-                "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
-                symbol->name());
-            break;
+        auto parent{components.begin()};
+        if (!parent->test(Symbol::Flag::ParentComp)) {
+          // Ensure that the first value can't initialize the first actual
+          // component.
+          if (auto firstComponentType{DynamicType::From(*parent)}) {
+            if (firstComponentType->IsTkCompatibleWith(*valueType) &&
+                value.Rank() == parent->Rank()) {
+              parent = afterLastParentComponentIter; // skip next loop
+            }
+          }
+        }
+        for (; parent != afterLastParentComponentIter; ++parent) {
+          if (auto parentType{DynamicType::From(*parent)}) {
+            if (parent->test(Symbol::Flag::ParentComp) &&
+                valueType->IsEquivalentTo(*parentType) &&
+                value.Rank() == 0 /* scalar only */) {
+              symbol = &*parent;
+              nextAnonymous = ++parent;
+              Warn(LanguageFeature::AnonymousParents, source,
+                  "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
+                  symbol->name());
+              break;
+            }
           }
         }
       }
@@ -2182,7 +2210,8 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     }
     if (symbol) {
       const semantics::Scope &innermost{context_.FindScope(exprSource)};
-      if (auto msg{CheckAccessibleSymbol(innermost, *symbol)}) {
+      if (auto msg{CheckAccessibleSymbol(
+              innermost, *symbol, /*inStructureConstructor=*/true)}) {
         Say(exprSource, std::move(*msg));
       }
       if (checkConflicts) {
@@ -2284,10 +2313,12 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // convert would cause a segfault. Lowering will deal with
       // conditionally converting and preserving the lower bounds in this
       // case.
-      if (MaybeExpr converted{ImplicitConvertTo(
-              *symbol, std::move(value), IsAllocatable(*symbol))}) {
-        if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
-          if (auto valueShape{GetShape(GetFoldingContext(), *converted)}) {
+      FoldingContext &foldingContext{GetFoldingContext()};
+      if (MaybeExpr converted{ImplicitConvertTo(*symbol, std::move(value),
+              /*keepConvertImplicit=*/IsAllocatable(*symbol),
+              foldingContext)}) {
+        if (auto componentShape{GetShape(foldingContext, *symbol)}) {
+          if (auto valueShape{GetShape(foldingContext, *converted)}) {
             if (GetRank(*componentShape) == 0 && GetRank(*valueShape) > 0) {
               AttachDeclaration(
                   Say(exprSource,
@@ -2298,10 +2329,10 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
               auto checked{CheckConformance(messages, *componentShape,
                   *valueShape, CheckConformanceFlags::RightIsExpandableDeferred,
                   "component", "value")};
-              if (checked && *checked && GetRank(*componentShape) > 0 &&
+              if (checked.value_or(false) && GetRank(*componentShape) > 0 &&
                   GetRank(*valueShape) == 0 &&
                   (IsDeferredShape(*symbol) ||
-                      !IsExpandableScalar(*converted, GetFoldingContext(),
+                      !IsExpandableScalar(*converted, foldingContext,
                           *componentShape, true /*admit PURE call*/))) {
                 AttachDeclaration(
                     Say(exprSource,
@@ -3609,7 +3640,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   if (chars) {
     std::string whyNot;
     if (treatExternalAsImplicit &&
-        !chars->CanBeCalledViaImplicitInterface(&whyNot)) {
+        !chars->CanBeCalledViaImplicitInterface(&whyNot, /*checkCUDA=*/false)) {
       if (auto *msg{Say(callSite,
               "References to the procedure '%s' require an explicit interface"_err_en_US,
               DEREF(procSymbol).name())};
@@ -3625,18 +3656,23 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       Say(callSite,
           "Assumed-length character function must be defined with a length to be called"_err_en_US);
     }
+    if (!chars->IsPure()) {
+      if (const semantics::Scope *pure{semantics::FindPureProcedureContaining(
+              context_.FindScope(callSite))}) {
+        std::string name;
+        if (procSymbol) {
+          name = "'"s + procSymbol->name().ToString() + "'";
+        } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
+          name = "'"s + intrinsic->name + "'";
+        }
+        Say(callSite,
+            "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
+            name, DEREF(pure->symbol()).name());
+      }
+    }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
         context_.FindScope(callSite), treatExternalAsImplicit,
         /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
-  }
-  if (procSymbol && !IsPureProcedure(*procSymbol)) {
-    if (const semantics::Scope *
-        pure{semantics::FindPureProcedureContaining(
-            context_.FindScope(callSite))}) {
-      Say(callSite,
-          "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-          procSymbol->name(), DEREF(pure->symbol()).name());
-    }
   }
   if (ok && !treatExternalAsImplicit && procSymbol &&
       !(chars && chars->HasExplicitInterface())) {
@@ -3681,7 +3717,10 @@ static MaybeExpr NumericUnaryHelper(ExpressionAnalyzer &context,
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       if (opr == NumericOperator::Add) {
-        return analyzer.MoveExpr(0);
+        // +x -> (x), not a bare x, because the bounds of the argument must
+        // not be exposed to allocatable assignments or structure constructor
+        // components.
+        return Parenthesize(analyzer.MoveExpr(0));
       } else {
         return Negation(context.GetContextualMessages(), analyzer.MoveExpr(0));
       }
@@ -3765,10 +3804,9 @@ MaybeExpr NumericBinaryHelper(
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
-      constexpr bool canBeUnsigned{opr != NumericOperator::Power};
-      return NumericOperation<OPR, canBeUnsigned>(
-          context.GetContextualMessages(), analyzer.MoveExpr(0),
-          analyzer.MoveExpr(1), context.GetDefaultKind(TypeCategory::Real));
+      return NumericOperation<OPR>(context.GetContextualMessages(),
+          analyzer.MoveExpr(0), analyzer.MoveExpr(1),
+          context.GetDefaultKind(TypeCategory::Real));
     } else {
       return analyzer.TryDefinedOp(AsFortran(opr),
           "Operands of %s must be numeric; have %s and %s"_err_en_US);
@@ -4497,13 +4535,20 @@ void ArgumentAnalyzer::Analyze(
 bool ArgumentAnalyzer::IsIntrinsicRelational(RelationalOperator opr,
     const DynamicType &leftType, const DynamicType &rightType) const {
   CHECK(actuals_.size() == 2);
-  return semantics::IsIntrinsicRelational(
-      opr, leftType, GetRank(0), rightType, GetRank(1));
+  return !(context_.context().languageFeatures().IsEnabled(
+               common::LanguageFeature::CUDA) &&
+             HasDeviceDefinedIntrinsicOpOverride(opr)) &&
+      semantics::IsIntrinsicRelational(
+          opr, leftType, GetRank(0), rightType, GetRank(1));
 }
 
 bool ArgumentAnalyzer::IsIntrinsicNumeric(NumericOperator opr) const {
   std::optional<DynamicType> leftType{GetType(0)};
-  if (actuals_.size() == 1) {
+  if (context_.context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CUDA) &&
+      HasDeviceDefinedIntrinsicOpOverride(AsFortran(opr))) {
+    return false;
+  } else if (actuals_.size() == 1) {
     if (IsBOZLiteral(0)) {
       return opr == NumericOperator::Add; // unary '+'
     } else {
@@ -4607,7 +4652,7 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
 
 bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
   for (const std::optional<ActualArgument> &arg : actuals_) {
-    if (arg && IsAssumedRank(arg->UnwrapExpr())) {
+    if (arg && semantics::IsAssumedRank(arg->UnwrapExpr())) {
       context_.Say(source_,
           "An assumed-rank dummy argument is not allowed %s"_err_en_US, where);
       fatalErrors_ = true;
@@ -4615,6 +4660,53 @@ bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
     }
   }
   return true;
+}
+
+bool ArgumentAnalyzer::AnyCUDADeviceData() const {
+  for (const std::optional<ActualArgument> &arg : actuals_) {
+    if (arg) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (HasCUDADeviceAttrs(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Some operations can be defined with explicit non-type-bound interfaces
+// that would erroneously conflict with intrinsic operations in their
+// types and ranks but have one or more dummy arguments with the DEVICE
+// attribute.
+bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
+    const char *opr) const {
+  if (AnyCUDADeviceData() && !AnyUntypedOrMissingOperand()) {
+    std::string oprNameString{"operator("s + opr + ')'};
+    parser::CharBlock oprName{oprNameString};
+    parser::Messages buffer;
+    auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
+    const auto &scope{context_.context().FindScope(source_)};
+    if (Symbol * generic{scope.FindSymbol(oprName)}) {
+      parser::Name name{generic->name(), generic};
+      const Symbol *resultSymbol{nullptr};
+      if (context_.AnalyzeDefinedOp(
+              name, ActualArguments{actuals_}, resultSymbol)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
+    const std::vector<const char *> &oprNames) const {
+  for (const char *opr : oprNames) {
+    if (HasDeviceDefinedIntrinsicOpOverride(opr)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
@@ -4764,6 +4856,11 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
     // conversion in this case.
     if (lhsType) {
       if (rhsType) {
+        FoldingContext &foldingContext{context_.GetFoldingContext()};
+        auto restorer{foldingContext.messages().SetLocation(
+            actuals_.at(1).value().sourceLocation().value_or(
+                foldingContext.messages().at()))};
+        CheckRealWidening(rhs, lhsType, foldingContext);
         if (!IsAllocatableDesignator(lhs) || context_.inWhereBody()) {
           AddAssignmentConversion(*lhsType, *rhsType);
         }
@@ -5135,7 +5232,7 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   }
 }
 
-bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() {
+bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() const {
   for (const auto &actual : actuals_) {
     if (!actual ||
         (!actual->GetType() && !IsBareNullPointer(actual->UnwrapExpr()))) {

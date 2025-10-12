@@ -1,26 +1,26 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %T/non-optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %T/optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %T/default.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %t.optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %t.default.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%t.optimized.cpp
 
-// RUN: diff %T/default.cpp %T/optimized.cpp
+// RUN: diff %t.default.cpp %t.optimized.cpp
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -535,7 +535,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1894 bytes
+// R00O-NEXT:  }; // Size: 1902 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -617,11 +617,11 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // R02N-NEXT:    // MIs[0] Operand 2
 // R02N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
 //
-// R02C-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-2)
+// R02C-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 254,
 // R02C-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -2:{ *:[i32] }) => (XORI:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // R02C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORI),
 // R02C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// R02C-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/uint8_t(-1),
+// R02C-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/255,
 // R02C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
 // R02C-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // R02C-NEXT:    // GIR_Coverage, 2,
@@ -648,7 +648,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
 // NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-3)
+// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 253,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -3:{ *:[i32] }) => (XOR:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XOR),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
@@ -676,11 +676,11 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
 // NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-4)
+// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 252,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -4:{ *:[i32] }) => (XORlike:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORlike),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/uint8_t(-1),
+// NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/255,
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -705,11 +705,11 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
 // NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-5),
+// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 251,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -5:{ *:[i32] }) => (XORManyDefaults:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORManyDefaults),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/uint8_t(-1),
+// NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/255,
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
@@ -735,7 +735,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
 // NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-6)
+// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 250,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -6:{ *:[i32] }) => (XORIb:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORIb),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
@@ -766,7 +766,7 @@ def XORIb : I<(outs GPR32:$dst), (ins mb:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
 // NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-1),
+// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 255,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$Wm, -1:{ *:[i32] }) => (ORN:{ *:[i32] } R0:{ *:[i32] }, GPR32:{ *:[i32] }:$Wm)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ORN),
 // NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]

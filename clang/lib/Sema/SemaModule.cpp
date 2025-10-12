@@ -13,7 +13,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -137,7 +137,7 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
          "modules only.");
 
   llvm::SmallVector<Module *, 4> Worklist;
-  llvm::SmallSet<Module *, 16> Visited;
+  llvm::SmallPtrSet<Module *, 16> Visited;
   Worklist.push_back(Imported);
 
   Module *FoundPrimaryModuleInterface =
@@ -265,10 +265,11 @@ Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
                       ModuleIdPath Partition, ModuleImportState &ImportState,
-                      bool IntroducerIsFirstPPToken) {
+                      bool SeenNoTrivialPPDirective) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
+  bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
   bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
   // If any of the steps here fail, we count that as invalidating C++20
   // module state;
@@ -336,7 +337,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   // In C++20, A module directive may only appear as the first preprocessing
   // tokens in a file (excluding the global module fragment.).
-  if (getLangOpts().CPlusPlusModules && !IntroducerIsFirstPPToken && !SeenGMF) {
+  if (getLangOpts().CPlusPlusModules &&
+      (!IsFirstDecl || SeenNoTrivialPPDirective) && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
     SourceLocation BeginLoc = PP.getMainFileFirstPPTokenLoc();
     Diag(BeginLoc, diag::note_global_module_introducer_missing)
@@ -770,7 +772,12 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, DirectiveLoc, false, false);
     (void)ThisModule;
-    assert(ThisModule && "was expecting a module if building one");
+    // For named modules, the current module name is not known while parsing the
+    // global module fragment and lookupModule may return null.
+    assert((getLangOpts().getCompilingModule() ==
+                LangOptionsBase::CMK_ModuleInterface ||
+            ThisModule) &&
+           "was expecting a module if building a Clang module");
   }
 }
 
@@ -1222,7 +1229,8 @@ bool ExposureChecker::isTULocal(const NamedDecl *D) {
   // [basic.link]p15.5
   // - a specialization of a template whose (possibly instantiated) declaration
   // is an exposure.
-  if (checkExposure(PrimaryTemplate, /*Diag=*/false))
+  if (ExposureSet.count(PrimaryTemplate) ||
+      checkExposure(PrimaryTemplate, /*Diag=*/false))
     return true;
 
   // Avoid calling checkExposure again since it is expensive.
@@ -1422,14 +1430,14 @@ bool ExposureChecker::checkExposure(const CXXRecordDecl *RD, bool Diag) {
   return IsExposure;
 }
 
-template <typename CallbackTy>
-class ReferenceTULocalChecker
-    : public clang::RecursiveASTVisitor<ReferenceTULocalChecker<CallbackTy>> {
+class ReferenceTULocalChecker : public DynamicRecursiveASTVisitor {
 public:
+  using CallbackTy = std::function<void(DeclRefExpr *, ValueDecl *)>;
+
   ReferenceTULocalChecker(ExposureChecker &C, CallbackTy &&Callback)
       : Checker(C), Callback(std::move(Callback)) {}
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     ValueDecl *Referenced = DRE->getDecl();
     if (!Referenced)
       return true;
@@ -1467,10 +1475,6 @@ public:
   ExposureChecker &Checker;
   CallbackTy Callback;
 };
-
-template <typename CallbackTy>
-ReferenceTULocalChecker(ExposureChecker &, CallbackTy &&)
-    -> ReferenceTULocalChecker<CallbackTy>;
 
 bool ExposureChecker::checkExposure(const Stmt *S, bool Diag) {
   if (!S)
