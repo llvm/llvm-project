@@ -50,7 +50,13 @@ public:
 
   /// Release a slab of contiguous address space back to the system.
   using OnReleaseCompleteFn = move_only_function<void(Error)>;
-  void release(OnReleaseCompleteFn &&OnComplete, void *Addr);
+  void release(OnReleaseCompleteFn &&OnComplete, void *Addrs);
+
+  /// Convenience method to release multiple slabs with one call. This can be
+  /// used to save on interprocess communication at the cost of less expressive
+  /// errors.
+  void releaseMultiple(OnReleaseCompleteFn &&OnComplete,
+                       std::vector<void *> Addrs);
 
   struct FinalizeRequest {
     struct Segment {
@@ -74,6 +80,12 @@ public:
   using OnDeallocateCompleteFn = move_only_function<void(Error)>;
   void deallocate(OnDeallocateCompleteFn &&OnComplete, void *Base);
 
+  /// Convenience method to deallocate multiple regions with one call. This can
+  /// be used to save on interprocess communication at the cost of less
+  /// expressive errors.
+  void deallocateMultiple(OnDeallocateCompleteFn &&OnComplete,
+                          std::vector<void *> Bases);
+
   void detach(ResourceManager::OnCompleteFn OnComplete) override;
   void shutdown(ResourceManager::OnCompleteFn OnComplete) override;
 
@@ -84,6 +96,10 @@ private:
     std::unordered_map<void *, std::vector<AllocAction>> DeallocActions;
   };
 
+  void releaseNext(OnReleaseCompleteFn &&OnComplete, std::vector<void *> Addrs,
+                   bool AnyError, Error LastErr);
+  void deallocateNext(OnDeallocateCompleteFn &&OnComplete,
+                      std::vector<void *> Bases, bool AnyError, Error LastErr);
   void shutdownNext(OnCompleteFn OnComplete, std::vector<void *> Bases);
   Error makeBadSlabError(void *Base, const char *Op);
   SlabInfo *findSlabInfoFor(void *Base);
@@ -100,7 +116,8 @@ ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_release_sps_wrapper(
+ORC_RT_SPS_INTERFACE void
+orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
@@ -108,7 +125,8 @@ ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_finalize_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_deallocate_sps_wrapper(
+ORC_RT_SPS_INTERFACE void
+orc_rt_SimpleNativeMemoryMap_deallocateMultiple_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
