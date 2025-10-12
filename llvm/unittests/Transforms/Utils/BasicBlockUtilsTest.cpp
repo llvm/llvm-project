@@ -716,3 +716,27 @@ attributes #0 = { presplitcoroutine }
   EXPECT_FALSE(llvm::isPresplitCoroSuspendExitEdge(
       *ExitN.getSinglePredecessor(), ExitN));
 }
+
+TEST(BasicBlockUtils, BasicBlockPrintable) {
+  std::string S;
+  llvm::raw_string_ostream OS{S};
+
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @foo() {
+.entry:
+  br label %bb0
+bb0:
+  ret void
+}
+)IR");
+
+  Function *F = M->getFunction("foo");
+  for (BasicBlock &BB : *F) {
+    OS << printBasicBlock(&BB);
+    EXPECT_EQ(OS.str(), "label %" + BB.getName().str());
+    S.clear();
+  }
+  OS << printBasicBlock(nullptr);
+  EXPECT_EQ(OS.str(), "");
+}
