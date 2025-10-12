@@ -167,6 +167,56 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// TestFuseProducerOp
+//===----------------------------------------------------------------------===//
+
+/// Apply fusing of producer transformation to all payload ops and store both
+/// the original producer operation as well as the fused producer operation.
+template <typename Range>
+static LogicalResult
+applyFuseProducer(RewriterBase &rewriter, Operation *transformOp,
+                  Range &&payloadOps, TransformResults &transformResults) {
+  SmallVector<Operation *> originalProducerOps;
+  SmallVector<Operation *> fusedProducerOps;
+
+  for (Operation *target : payloadOps) {
+    rewriter.setInsertionPoint(target);
+
+    std::optional<scf::SCFFuseProducerOfSliceResult> fuseProducerResults =
+        scf::tileAndFuseProducerOfSlice(rewriter, target);
+
+    if (!fuseProducerResults)
+      return failure();
+
+    // Report back the relevant handles to the transform op.
+    originalProducerOps.push_back(fuseProducerResults->origProducer.getOwner());
+    fusedProducerOps.push_back(fuseProducerResults->tiledOps[0]);
+  }
+
+  transformResults.set(transformOp->getOpResult(0), originalProducerOps);
+  transformResults.set(transformOp->getOpResult(1), fusedProducerOps);
+  return success();
+}
+
+DiagnosedSilenceableFailure
+transform::TestFuseProducerOp::apply(TransformRewriter &rewriter,
+                                     TransformResults &transformResults,
+                                     TransformState &state) {
+  LogicalResult result =
+      applyFuseProducer(rewriter, getOperation(),
+                        state.getPayloadOps(getTarget()), transformResults);
+  return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
+                        : DiagnosedSilenceableFailure::success();
+}
+
+void transform::TestFuseProducerOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // TestFuseConsumerOp
 //===----------------------------------------------------------------------===//
 
