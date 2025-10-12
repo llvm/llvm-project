@@ -388,6 +388,7 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
         arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
   }
   Value indices = gatScatOp.getIndices();
+  // Extract indices layout and propagate it to all 'vector' ops created here
   auto indicesLayout = mlir::xegpu::getDistributeLayoutAttr(indices);
   VectorType vecType = cast<VectorType>(indices.getType());
 
