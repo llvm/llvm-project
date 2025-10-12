@@ -46,9 +46,9 @@ where cl.exe
 
 ls -l "C:\BuildTools\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\cl.exe"
 
-where clang-cl.exe
+#where clang-cl.exe
 
-ls -l "C:\BuildTools\VC\Tools\*"
+ls -l "C:\BuildTools\VC\Tools"
 
 #where clang-cl.exe
 
