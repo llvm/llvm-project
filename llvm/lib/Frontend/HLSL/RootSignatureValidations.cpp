@@ -41,8 +41,6 @@ bool verifyRootDescriptorFlag(uint32_t Version,
   if (Version == 1)
     return Flags == FlagT::DataVolatile;
 
-  assert((Version <= 3) && "Provided invalid root signature version");
-
   // The data-specific flags are mutually exclusive.
   FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
                     FlagT::DataStaticWhileSetAtExecute;
@@ -117,8 +115,6 @@ bool verifyStaticSamplerFlags(uint32_t Version,
                               dxbc::StaticSamplerFlags Flags) {
   if (Version <= 2)
     return Flags == dxbc::StaticSamplerFlags::None;
-
-  assert(Version == 3 && "Provided invalid root signature version");
 
   dxbc::StaticSamplerFlags Mask =
       dxbc::StaticSamplerFlags::NonNormalizedCoordinates |

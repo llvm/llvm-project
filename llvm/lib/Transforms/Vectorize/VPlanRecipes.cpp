@@ -3141,7 +3141,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
   while (!WorkList.empty()) {
     auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
-    if (!Cur || !Seen.insert(Cur).second)
+    if (!Cur || !Seen.insert(Cur).second || isa<VPBlendRecipe>(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {
@@ -3173,6 +3173,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
+
+  if (VF.isScalable() && !isSingleScalar())
+    return InstructionCost::getInvalid();
 
   switch (UI->getOpcode()) {
   case Instruction::GetElementPtr:
@@ -3220,9 +3223,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                  ElementCount::getFixed(1), Ctx));
       return ScalarCallCost;
     }
-
-    if (VF.isScalable())
-      return InstructionCost::getInvalid();
 
     return ScalarCallCost * VF.getFixedValue() +
            Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
@@ -3274,9 +3274,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    if (VF.isScalable() && !isSingleScalar())
-      return InstructionCost::getInvalid();
-
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
     const VPRegionBlock *ParentRegion = getParent()->getParent();
