@@ -39,7 +39,11 @@ ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
 tar xf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
 ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 
+ls -l "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm"
 
+where cl.exe
+
+where clang-cl.exe
 
 export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
