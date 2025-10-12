@@ -335,7 +335,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_clamp                                201603L
 # define __cpp_lib_enable_shared_from_this              201603L
 // # define __cpp_lib_execution                            201603L
-# if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if _LIBCPP_HAS_FILESYSTEM
 #   define __cpp_lib_filesystem                         201703L
 # endif
 # define __cpp_lib_gcd_lcm                              201606L
@@ -393,10 +393,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_atomic_ref                           201806L
 // # define __cpp_lib_atomic_shared_ptr                    201711L
 # define __cpp_lib_atomic_value_initialization          201911L
-# if _LIBCPP_AVAILABILITY_HAS_SYNC
-#   define __cpp_lib_atomic_wait                        201907L
-# endif
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# define __cpp_lib_atomic_wait                          201907L
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_barrier                            201907L
 # endif
 # define __cpp_lib_bind_front                           201907L
@@ -441,10 +439,10 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_is_layout_compatible                 201907L
 # define __cpp_lib_is_nothrow_convertible               201806L
 // # define __cpp_lib_is_pointer_interconvertible          201907L
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_jthread                            201911L
 # endif
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_latch                              201907L
 # endif
 # define __cpp_lib_list_remove_return_type              201806L
@@ -457,7 +455,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # endif
 # define __cpp_lib_ranges                               202110L
 # define __cpp_lib_remove_cvref                         201711L
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_semaphore                          201907L
 # endif
 # undef  __cpp_lib_shared_ptr_arrays
