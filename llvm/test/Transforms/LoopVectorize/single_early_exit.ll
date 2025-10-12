@@ -606,14 +606,15 @@ define i64 @loop_guards_needed_to_prove_deref_multiple(i32 %x, i1 %c, ptr derefe
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP11]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_SPLIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_SPLIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.split:
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[VECTOR_EARLY_EXIT:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       middle.block:
@@ -635,7 +636,7 @@ define i64 @loop_guards_needed_to_prove_deref_multiple(i32 %x, i1 %c, ptr derefe
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV1]], [[N_EXT]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP_HEADER1]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP_HEADER1]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi i64 [ [[IV1]], [[LOOP_HEADER1]] ], [ 0, [[LOOP_LATCH1]] ], [ 0, [[LOOP_LATCH]] ], [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -684,4 +685,13 @@ exit:
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
 ;.
