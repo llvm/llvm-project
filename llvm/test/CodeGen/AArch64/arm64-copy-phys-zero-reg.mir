@@ -39,7 +39,7 @@ body:             |
     ; CHECK-NO-ZCM-GPR32-ZCM-GPR64-NO-ZCZ-LABEL: name: f0
     ; CHECK-NO-ZCM-GPR32-ZCM-GPR64-NO-ZCZ: liveins: $x0, $lr
     ; CHECK-NO-ZCM-GPR32-ZCM-GPR64-NO-ZCZ-NEXT: {{  $}}
-    ; CHECK-NO-ZCM-GPR32-ZCM-GPR64-NO-ZCZ-NEXT: $x0 = ORRXrr $xzr, undef $xzr, implicit $wzr
+    ; CHECK-NO-ZCM-GPR32-ZCM-GPR64-NO-ZCZ-NEXT: $w0 = ORRWrr $wzr, $wzr
     ; CHECK-NO-ZCM-GPR32-ZCM-GPR64-NO-ZCZ-NEXT: BL @f2, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
     ;
     ; CHECK-ZCM-GPR32-ZCM-GPR64-NO-ZCZ-LABEL: name: f0
@@ -103,7 +103,7 @@ body:             |
     ; CHECK-ZCM-ZCZ: liveins: $x0, $lr
     ; CHECK-ZCM-ZCZ-NEXT: {{  $}}
     ; CHECK-ZCM-ZCZ-NEXT: $x0 = MOVZXi 0, 0
-    ; CHECK-ZCM-ZCZ-NEXT:BL @f2, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    ; CHECK-ZCM-ZCZ-NEXT: BL @f2, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
     $x0 = COPY $xzr
     BL @f2, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
 ...
