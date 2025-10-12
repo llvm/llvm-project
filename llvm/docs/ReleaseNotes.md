@@ -147,6 +147,7 @@ Changes to the C API
 --------------------
 
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
+* Allow `LLVMGetVolatile` and `LLVMSetVolatile` to work on memory intrinsics like `memset`, `memcpy`, and `memmove`.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
