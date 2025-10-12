@@ -719,23 +719,28 @@ attributes #0 = { presplitcoroutine }
 
 TEST(BasicBlockUtils, BasicBlockPrintable) {
   std::string S;
+  std::string SCheck;
   llvm::raw_string_ostream OS{S};
+  llvm::raw_string_ostream OSCheck{SCheck};
 
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
 define void @foo() {
-.entry:
   br label %bb0
 bb0:
+  br label %.exit
+.exit:
   ret void
 }
 )IR");
 
   Function *F = M->getFunction("foo");
-  for (BasicBlock &BB : *F) {
+  for (const BasicBlock &BB : *F) {
     OS << printBasicBlock(&BB);
-    EXPECT_EQ(OS.str(), "label %" + BB.getName().str());
+    BB.printAsOperand(OSCheck);
+    EXPECT_EQ(OS.str(), OSCheck.str());
     S.clear();
+    SCheck.clear();
   }
   OS << printBasicBlock(nullptr);
   EXPECT_EQ(OS.str(), "");
