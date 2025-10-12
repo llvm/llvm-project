@@ -6,15 +6,21 @@ tablegen(LLVM LoongArchGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM LoongArchGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM LoongArchGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM LoongArchGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM LoongArchGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM LoongArchGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LoongArchGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM LoongArchGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM LoongArchGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM LoongArchGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM LoongArchGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(LoongArchCommonTableGen)
 
 add_llvm_target(LoongArchCodeGen
+  GISel/LoongArchCallLowering.cpp
+  GISel/LoongArchInstructionSelector.cpp
+  GISel/LoongArchLegalizerInfo.cpp
+  GISel/LoongArchRegisterBankInfo.cpp
   LoongArchAsmPrinter.cpp
   LoongArchDeadRegisterDefinitions.cpp
   LoongArchExpandAtomicPseudoInsts.cpp
@@ -37,6 +43,7 @@ add_llvm_target(LoongArchCodeGen
   CodeGen
   CodeGenTypes
   Core
+  GlobalISel
   LoongArchDesc
   LoongArchInfo
   MC

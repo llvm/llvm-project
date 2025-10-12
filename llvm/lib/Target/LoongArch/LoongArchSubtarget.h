@@ -13,11 +13,15 @@
 #ifndef LLVM_LIB_TARGET_LOONGARCH_LOONGARCHSUBTARGET_H
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHSUBTARGET_H
 
+#include "GISel/LoongArchRegisterBankInfo.h"
 #include "LoongArchFrameLowering.h"
 #include "LoongArchISelLowering.h"
 #include "LoongArchInstrInfo.h"
 #include "LoongArchRegisterInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -106,6 +110,19 @@ public:
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   bool enableMachineScheduler() const override { return true; }
   bool useAA() const override;
+
+protected:
+  // GlobalISel related APIs.
+  mutable std::unique_ptr<CallLowering> CallLoweringInfo;
+  mutable std::unique_ptr<InstructionSelector> InstSelector;
+  mutable std::unique_ptr<LegalizerInfo> Legalizer;
+  mutable std::unique_ptr<LoongArchRegisterBankInfo> RegBankInfo;
+
+public:
+  const CallLowering *getCallLowering() const override;
+  InstructionSelector *getInstructionSelector() const override;
+  const LegalizerInfo *getLegalizerInfo() const override;
+  const LoongArchRegisterBankInfo *getRegBankInfo() const override;
 };
 } // end namespace llvm
 
