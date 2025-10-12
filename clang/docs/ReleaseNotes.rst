@@ -406,6 +406,10 @@ Bug Fixes in This Version
   (#GH159080)
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using
