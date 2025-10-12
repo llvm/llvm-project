@@ -8,7 +8,6 @@
 
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/setenv.h"
-#include "src/stdlib/unsetenv.h"
 #include "src/string/strcmp.h"
 
 #include "test/IntegrationTest/test.h"
@@ -27,8 +26,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_TRUE(value != nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "test_value"), 0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("SETENV_TEST_VAR");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("SETENV_TEST_VAR");
   }
 
   // Test: OverwriteExisting
@@ -45,8 +44,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
                                      "replaced"),
               0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("OVERWRITE_VAR");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("OVERWRITE_VAR");
   }
 
   // Test: NoOverwriteFlag
@@ -69,8 +68,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
                                      "changed"),
               0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("NO_OVERWRITE_VAR");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("NO_OVERWRITE_VAR");
   }
 
   // Test: NullName
@@ -110,8 +109,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_TRUE(value != nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, ""), 0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("EMPTY_VALUE_VAR");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("EMPTY_VALUE_VAR");
   }
 
   // Test: MultipleVariables
@@ -129,10 +128,10 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("VAR3"), "value3"),
               0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("VAR1");
-    LIBC_NAMESPACE::unsetenv("VAR2");
-    LIBC_NAMESPACE::unsetenv("VAR3");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("VAR1");
+    // LIBC_NAMESPACE::unsetenv("VAR2");
+    // LIBC_NAMESPACE::unsetenv("VAR3");
   }
 
   // Test: LongValues
@@ -148,8 +147,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
         LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv(long_name), long_value),
         0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv(long_name);
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv(long_name);
   }
 
   // Test: SpecialCharacters
@@ -160,8 +159,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
                                      "!@#$%^&*()"),
               0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("SPECIAL_CHARS");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("SPECIAL_CHARS");
   }
 
   // Test: ReplaceMultipleTimes
@@ -182,8 +181,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
                                      "value3"),
               0);
 
-    // Clean up
-    LIBC_NAMESPACE::unsetenv("MULTI_REPLACE");
+    // Uncomment after unsetenv is committed
+    // LIBC_NAMESPACE::unsetenv("MULTI_REPLACE");
   }
 
   return 0;
