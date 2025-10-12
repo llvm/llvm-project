@@ -18,7 +18,7 @@ namespace clang::tidy::abseil {
 /// deduction (CTAD), in C++17 and higher.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/cleanup-ctad.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/cleanup-ctad.html
 class CleanupCtadCheck : public utils::TransformerClangTidyCheck {
 public:
   CleanupCtadCheck(StringRef Name, ClangTidyContext *Context);

@@ -321,7 +321,6 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
     stream << "[Error] ";
     break;
   case lldb::eSeverityInfo:
-  default:
     stream << "[Info] ";
     break;
   }

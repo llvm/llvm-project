@@ -196,22 +196,10 @@ constexpr ::llvm::StringRef strip_quotes(const char *Str) {
   return S;
 }
 
-/// Fail compilation if DEBUG_TYPE is not defined.
-/// This is a workaround for GCC <=12 and clang <=16 which do not support
-/// static_assert in templated constexpr functions.
-#if (defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 12) ||            \
-    (defined(__clang__) && __clang_major__ <= 16)
-#define MISSING_DEBUG_TYPE()                                                   \
-  extern void missing_DEBUG_TYPE(void);                                        \
-  missing_DEBUG_TYPE();
-#else
-#define MISSING_DEBUG_TYPE() static_assert(false, "DEBUG_TYPE is not defined");
-#endif
-
 /// Helper to provide the default level (=1) or type (=DEBUG_TYPE). This is used
 /// when a single argument is passed to LDBG() (or LDBG_OS()), if it is an
-/// integer we return DEBUG_TYPE and if it is a string we return 1. This fails
-/// with a static_assert if we pass an integer and DEBUG_TYPE is not defined.
+/// integer we return DEBUG_TYPE and if it is a string we return 1.
+/// When DEBUG_TYPE is not defined, we return the current file name instead.
 #define LDBG_GET_DEFAULT_TYPE_OR_LEVEL(LEVEL_OR_TYPE)                          \
   [](auto LevelOrType) {                                                       \
     if constexpr (std::is_integral_v<decltype(LevelOrType)>) {                 \
@@ -219,7 +207,7 @@ constexpr ::llvm::StringRef strip_quotes(const char *Str) {
       if constexpr (DebugType[0] == '"') {                                     \
         return ::llvm::impl::strip_quotes(DebugType);                          \
       } else {                                                                 \
-        MISSING_DEBUG_TYPE();                                                  \
+        return __LLVM_FILE_NAME__;                                             \
       }                                                                        \
     } else {                                                                   \
       return 1;                                                                \
@@ -331,9 +319,10 @@ static LLVM_ATTRIBUTE_UNUSED std::string
 computePrefix(StringRef DebugType, const char *File, int Line, int Level) {
   std::string Prefix;
   raw_string_ostream OsPrefix(Prefix);
-  if (!DebugType.empty())
-    OsPrefix << "[" << DebugType << ":" << Level << "] ";
-  OsPrefix << File << ":" << Line << " ";
+  OsPrefix << "[";
+  if (!DebugType.empty() && DebugType != File)
+    OsPrefix << DebugType << " ";
+  OsPrefix << File << ":" << Line << " " << Level << "] ";
   return OsPrefix.str();
 }
 /// Overload allowing to swap the order of the DebugType and Level arguments.

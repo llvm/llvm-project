@@ -21,7 +21,7 @@ namespace clang::tidy::google::build {
 /// Corresponding cpplint.py check name: 'build/explicit_make_pair'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/build-explicit-make-pair.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/build-explicit-make-pair.html
 class ExplicitMakePairCheck : public ClangTidyCheck {
 public:
   ExplicitMakePairCheck(StringRef Name, ClangTidyContext *Context)

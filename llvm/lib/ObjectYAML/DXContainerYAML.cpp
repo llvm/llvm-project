@@ -154,7 +154,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         if (Error E = readDescriptorRanges<dxbc::RTS0::v1::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
-      } else if (Version == 2) {
+      } else if (Version == 2 || Version == 3) {
         if (Error E = readDescriptorRanges<dxbc::RTS0::v2::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
@@ -209,6 +209,11 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     NewS.RegisterSpace = S.RegisterSpace;
     NewS.ShaderVisibility = dxbc::ShaderVisibility(S.ShaderVisibility);
 
+    if (Version > 2) {
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  NewS.Enum = (S.Flags & llvm::to_underlying(dxbc::StaticSamplerFlags::Enum));
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    }
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
 
@@ -241,6 +246,15 @@ uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
   if (Enum)                                                                    \
     Flags |= (uint32_t)dxbc::DescriptorRangeFlags::Enum;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flags;
+}
+
+uint32_t DXContainerYAML::StaticSamplerYamlDesc::getEncodedFlags() const {
+  uint64_t Flags = 0;
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  if (Enum)                                                                    \
+    Flags |= (uint32_t)dxbc::StaticSamplerFlags::Enum;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return Flags;
 }
@@ -512,6 +526,9 @@ void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
   IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  IO.mapOptional(#Flag, S.Enum, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,

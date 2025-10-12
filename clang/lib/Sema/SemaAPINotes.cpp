@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CheckExprLifetime.h"
 #include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/APINotes/Types.h"
@@ -18,6 +17,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaObjC.h"
@@ -654,7 +654,7 @@ static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
                             const api_notes::CXXMethodInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (Info.This && Info.This->isLifetimebound() &&
-      !sema::implicitObjectParamIsLifetimeBound(Method)) {
+      !lifetimes::implicitObjectParamIsLifetimeBound(Method)) {
     auto MethodType = Method->getType();
     auto *attr = ::new (S.Context)
         LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());

@@ -145,12 +145,8 @@ struct is_valid_option<ilist_parent<ParentTy>> : std::true_type {};
 /// Check whether options are valid.
 ///
 /// The conjunction of \a is_valid_option on each individual option.
-template <class... Options> struct check_options;
-template <> struct check_options<> : std::true_type {};
-template <class Option1, class... Options>
-struct check_options<Option1, Options...>
-    : std::bool_constant<is_valid_option<Option1>::value &&
-                         check_options<Options...>::value> {};
+template <class... Options>
+struct check_options : std::conjunction<is_valid_option<Options>...> {};
 
 /// Traits for options for \a ilist_node.
 ///

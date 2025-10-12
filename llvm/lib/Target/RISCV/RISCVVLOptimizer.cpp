@@ -1665,7 +1665,8 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     assert(MDT->isReachableFromEntry(MBB));
     for (MachineInstr &MI : reverse(*MBB))
-      Worklist.insert(&MI);
+      if (!MI.isDebugInstr())
+        Worklist.insert(&MI);
   }
 
   while (!Worklist.empty()) {

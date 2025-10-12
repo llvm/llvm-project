@@ -190,6 +190,11 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
+
+  bool shouldBuildRelLookupTables() const override {
+    // Self-referential globals are not supported.
+    return false;
+  }
 };
 
 } // end namespace llvm

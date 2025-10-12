@@ -770,6 +770,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":CodeGenTypes",
+        ":Option",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
@@ -2224,7 +2225,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "-ignore-non-decodable-operands",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -4772,6 +4772,17 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-offload-binary",
+    srcs = glob(["tools/llvm-offload-binary/*.cpp"]),
+    stamp = 0,
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-pdbutil",
     srcs = glob([
         "tools/llvm-pdbutil/*.cpp",
@@ -4805,7 +4816,7 @@ cc_library(
     ],
 )
 
-llvm_driver_cc_binary(
+cc_binary(
     name = "llvm-profdata",
     stamp = 0,
     deps = [":llvm-profdata-lib"],
@@ -4967,6 +4978,22 @@ cc_binary(
         ":TransformUtils",
         ":config",
         ":llvm-reduce-defs-lib",
+    ],
+)
+
+cc_binary(
+    name = "llvm-remarkutil",
+    srcs = glob([
+        "tools/llvm-remarkutil/**/*.cpp",
+        "tools/llvm-remarkutil/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-remarkutil"],
+    stamp = 0,
+    deps = [
+        ":Demangle",
+        ":Remarks",
+        ":Support",
     ],
 )
 

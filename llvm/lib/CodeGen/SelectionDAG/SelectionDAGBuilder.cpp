@@ -223,10 +223,9 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
           std::swap(Lo, Hi);
         EVT TotalVT = EVT::getIntegerVT(*DAG.getContext(), NumParts * PartBits);
         Hi = DAG.getNode(ISD::ANY_EXTEND, DL, TotalVT, Hi);
-        Hi = DAG.getNode(ISD::SHL, DL, TotalVT, Hi,
-                         DAG.getConstant(Lo.getValueSizeInBits(), DL,
-                                         TLI.getShiftAmountTy(
-                                             TotalVT, DAG.getDataLayout())));
+        Hi = DAG.getNode(
+            ISD::SHL, DL, TotalVT, Hi,
+            DAG.getShiftAmountConstant(Lo.getValueSizeInBits(), TotalVT, DL));
         Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, TotalVT, Lo);
         Val = DAG.getNode(ISD::OR, DL, TotalVT, Lo, Hi);
       }
@@ -4469,9 +4468,10 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         if (ElementMul != 1) {
           if (ElementMul.isPowerOf2()) {
             unsigned Amt = ElementMul.logBase2();
-            IdxN = DAG.getNode(ISD::SHL, dl, N.getValueType(), IdxN,
-                               DAG.getConstant(Amt, dl, IdxN.getValueType()),
-                               ScaleFlags);
+            IdxN = DAG.getNode(
+                ISD::SHL, dl, N.getValueType(), IdxN,
+                DAG.getShiftAmountConstant(Amt, N.getValueType(), dl),
+                ScaleFlags);
           } else {
             SDValue Scale = DAG.getConstant(ElementMul.getZExtValue(), dl,
                                             IdxN.getValueType());
@@ -5460,10 +5460,8 @@ static SDValue GetExponent(SelectionDAG &DAG, SDValue Op,
                            const TargetLowering &TLI, const SDLoc &dl) {
   SDValue t0 = DAG.getNode(ISD::AND, dl, MVT::i32, Op,
                            DAG.getConstant(0x7f800000, dl, MVT::i32));
-  SDValue t1 = DAG.getNode(
-      ISD::SRL, dl, MVT::i32, t0,
-      DAG.getConstant(23, dl,
-                      TLI.getShiftAmountTy(MVT::i32, DAG.getDataLayout())));
+  SDValue t1 = DAG.getNode(ISD::SRL, dl, MVT::i32, t0,
+                           DAG.getShiftAmountConstant(23, MVT::i32, dl));
   SDValue t2 = DAG.getNode(ISD::SUB, dl, MVT::i32, t1,
                            DAG.getConstant(127, dl, MVT::i32));
   return DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f32, t2);
@@ -5488,11 +5486,8 @@ static SDValue getLimitedPrecisionExp2(SDValue t0, const SDLoc &dl,
   SDValue X = DAG.getNode(ISD::FSUB, dl, MVT::f32, t0, t1);
 
   //   IntegerPartOfX <<= 23;
-  IntegerPartOfX =
-      DAG.getNode(ISD::SHL, dl, MVT::i32, IntegerPartOfX,
-                  DAG.getConstant(23, dl,
-                                  DAG.getTargetLoweringInfo().getShiftAmountTy(
-                                      MVT::i32, DAG.getDataLayout())));
+  IntegerPartOfX = DAG.getNode(ISD::SHL, dl, MVT::i32, IntegerPartOfX,
+                               DAG.getShiftAmountConstant(23, MVT::i32, dl));
 
   SDValue TwoToFractionalPartOfX;
   if (LimitFloatPrecision <= 6) {
@@ -8107,11 +8102,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Trunc);
     return;
   }
-  case Intrinsic::experimental_vector_partial_reduce_add: {
-    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      visitTargetIntrinsic(I, Intrinsic);
-      return;
-    }
+  case Intrinsic::vector_partial_reduce_add: {
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
     setValue(&I,
@@ -9335,9 +9326,8 @@ bool SelectionDAGBuilder::visitStrLenCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrlen(DAG, getCurSDLoc(), DAG.getRoot(),
-                                getValue(Arg0), MachinePointerInfo(Arg0));
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrlen(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), &I);
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, false);
     PendingLoads.push_back(Res.second);

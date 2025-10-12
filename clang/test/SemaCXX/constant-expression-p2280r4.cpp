@@ -44,7 +44,7 @@ void splash(Swim& swam) {                 // nointerpreter-note {{declared here}
   static_assert(how_many(swam) == 28);    // ok
   static_assert(Swim().lochte() == 12);   // ok
   static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
-                                          // nointerpreter-note {{virtual function called on object 'swam' whose dynamic type is not constant}}
+                                          // expected-note {{virtual function called on object 'swam' whose dynamic type is not constant}}
   static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
                                           // nointerpreter-note {{read of variable 'swam' whose value is not known}}
 }

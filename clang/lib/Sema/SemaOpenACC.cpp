@@ -2724,16 +2724,6 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
   return InitExpr;
 }
 
-const Expr *StripOffBounds(const Expr *VarExpr) {
-  while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
-    if (const auto *AS = dyn_cast<ArraySectionExpr>(VarExpr))
-      VarExpr = AS->getBase()->IgnoreParenImpCasts();
-    else if (const auto *Sub = dyn_cast<ArraySubscriptExpr>(VarExpr))
-      VarExpr = Sub->getBase()->IgnoreParenImpCasts();
-  }
-  return VarExpr;
-}
-
 VarDecl *CreateAllocaDecl(ASTContext &Ctx, DeclContext *DC,
                           SourceLocation BeginLoc, IdentifierInfo *VarName,
                           QualType VarTy) {
@@ -2758,16 +2748,18 @@ ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,
 } // namespace
 
 OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCPrivateRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2780,21 +2772,30 @@ OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
   InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
   ExprResult Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
 
-  return OpenACCPrivateRecipe(AllocaDecl, Init.get());
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCPrivateRecipe(AllocaDecl);
 }
 
 OpenACCFirstPrivateRecipe
 SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCFirstPrivateRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2818,7 +2819,14 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   if (!ArrTy) {
     ExprResult Init = FinishValueInit(
         SemaRef.SemaRef, Entity, VarExpr->getBeginLoc(), VarTy, TemporaryDRE);
-    return OpenACCFirstPrivateRecipe(AllocaDecl, Init.get(), Temporary);
+
+    // For 'no bounds' version, we can use this as a shortcut, so set the init
+    // anyway.
+    if (Init.isUsable()) {
+      AllocaDecl->setInit(Init.get());
+      AllocaDecl->setInitStyle(VarDecl::CallInit);
+    }
+    return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
   }
 
   // Arrays need to have each individual element initialized as there
@@ -2865,20 +2873,30 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
                                     VarExpr->getBeginLoc(), VarTy, InitExpr);
 
-  return OpenACCFirstPrivateRecipe(AllocaDecl, Init.get(), Temporary);
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
 }
+
 OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
     OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCReductionRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2921,5 +2939,12 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
 
   ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
                                     VarExpr->getBeginLoc(), VarTy, InitExpr);
-  return OpenACCReductionRecipe(AllocaDecl, Init.get());
+
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+  return OpenACCReductionRecipe(AllocaDecl, {});
 }

@@ -25,7 +25,8 @@ using llvm::StringInit;
 // InterfaceMethod
 //===----------------------------------------------------------------------===//
 
-InterfaceMethod::InterfaceMethod(const Record *def) : def(def) {
+InterfaceMethod::InterfaceMethod(const Record *def, std::string uniqueName)
+    : def(def), uniqueName(uniqueName) {
   const DagInit *args = def->getValueAsDag("arguments");
   for (unsigned i = 0, e = args->getNumArgs(); i != e; ++i) {
     arguments.push_back({cast<StringInit>(args->getArg(i))->getValue(),
@@ -41,6 +42,9 @@ StringRef InterfaceMethod::getReturnType() const {
 StringRef InterfaceMethod::getName() const {
   return def->getValueAsString("name");
 }
+
+// Return the name of this method.
+StringRef InterfaceMethod::getUniqueName() const { return uniqueName; }
 
 // Return if this method is static.
 bool InterfaceMethod::isStatic() const {
@@ -83,8 +87,19 @@ Interface::Interface(const Record *def) : def(def) {
 
   // Initialize the interface methods.
   auto *listInit = dyn_cast<ListInit>(def->getValueInit("methods"));
-  for (const Init *init : listInit->getElements())
-    methods.emplace_back(cast<DefInit>(init)->getDef());
+  // In case of overloaded methods, we need to find a unique name for each for
+  // the internal function pointer in the "vtable" we generate. This is an
+  // internal name, we could use a randomly generated name as long as there are
+  // no collisions.
+  StringSet<> uniqueNames;
+  for (const Init *init : listInit->getElements()) {
+    std::string name =
+        cast<DefInit>(init)->getDef()->getValueAsString("name").str();
+    while (!uniqueNames.insert(name).second) {
+      name = name + "_" + std::to_string(uniqueNames.size());
+    }
+    methods.emplace_back(cast<DefInit>(init)->getDef(), name);
+  }
 
   // Initialize the interface base classes.
   auto *basesInit = dyn_cast<ListInit>(def->getValueInit("baseInterfaces"));

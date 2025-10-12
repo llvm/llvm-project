@@ -1718,7 +1718,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #54
+  ; CHECK: call void @f.nobuiltin() #55
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2151,6 +2151,9 @@ declare void @f.sanitize_realtime() sanitize_realtime
 declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
 ; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
+declare void @f.sanitize_alloc_token() sanitize_alloc_token
+; CHECK: declare void @f.sanitize_alloc_token() #54
+
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 
@@ -2284,7 +2287,8 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
 ; CHECK: attributes #53 = { sanitize_realtime_blocking }
-; CHECK: attributes #54 = { builtin }
+; CHECK: attributes #54 = { sanitize_alloc_token }
+; CHECK: attributes #55 = { builtin }
 
 ;; Metadata
 
