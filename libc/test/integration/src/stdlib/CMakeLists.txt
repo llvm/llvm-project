@@ -12,6 +12,7 @@ add_integration_test(
     getenv_test.cpp
   DEPENDS
     libc.src.stdlib.getenv
+    libc.src.string.strcmp
   ENV
     FRANCE=Paris
     GERMANY=Berlin
