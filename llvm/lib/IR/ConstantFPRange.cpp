@@ -326,6 +326,8 @@ std::optional<bool> ConstantFPRange::getSignBit() const {
 }
 
 bool ConstantFPRange::operator==(const ConstantFPRange &CR) const {
+  assert(&getSemantics() == &CR.getSemantics() &&
+         "Should only use the same semantics");
   if (MayBeSNaN != CR.MayBeSNaN || MayBeQNaN != CR.MayBeQNaN)
     return false;
   return Lower.bitwiseIsEqual(CR.Lower) && Upper.bitwiseIsEqual(CR.Upper);
@@ -410,4 +412,35 @@ ConstantFPRange ConstantFPRange::abs() const {
 
 ConstantFPRange ConstantFPRange::negate() const {
   return ConstantFPRange(-Upper, -Lower, MayBeQNaN, MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::getWithoutInf() const {
+  if (isNaNOnly())
+    return *this;
+  APFloat NewLower = Lower;
+  APFloat NewUpper = Upper;
+  if (Lower.isNegInfinity())
+    NewLower = APFloat::getLargest(getSemantics(), /*Negative=*/true);
+  if (Upper.isPosInfinity())
+    NewUpper = APFloat::getLargest(getSemantics(), /*Negative=*/false);
+  canonicalizeRange(NewLower, NewUpper);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper), MayBeQNaN,
+                         MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::cast(const fltSemantics &DstSem,
+                                      APFloat::roundingMode RM) const {
+  bool LosesInfo;
+  APFloat NewLower = Lower;
+  APFloat NewUpper = Upper;
+  // For conservative, return full range if conversion is invalid.
+  if (NewLower.convert(DstSem, RM, &LosesInfo) == APFloat::opInvalidOp ||
+      NewLower.isNaN())
+    return getFull(DstSem);
+  if (NewUpper.convert(DstSem, RM, &LosesInfo) == APFloat::opInvalidOp ||
+      NewUpper.isNaN())
+    return getFull(DstSem);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper),
+                         /*MayBeQNaNVal=*/MayBeQNaN || MayBeSNaN,
+                         /*MayBeSNaNVal=*/false);
 }

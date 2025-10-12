@@ -316,6 +316,9 @@ private:
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
+  bool selectResourceNonUniformIndex(Register &ResVReg,
+                                     const SPIRVType *ResType,
+                                     MachineInstr &I) const;
   bool selectModf(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectUpdateCounter(Register &ResVReg, const SPIRVType *ResType,
@@ -347,7 +350,7 @@ private:
                                   SPIRV::StorageClass::StorageClass SC,
                                   uint32_t Set, uint32_t Binding,
                                   uint32_t ArraySize, Register IndexReg,
-                                  bool IsNonUniform, StringRef Name,
+                                  StringRef Name,
                                   MachineIRBuilder MIRBuilder) const;
   SPIRVType *widenTypeToVec4(const SPIRVType *Type, MachineInstr &I) const;
   bool extractSubvector(Register &ResVReg, const SPIRVType *ResType,
@@ -364,6 +367,7 @@ private:
                           MachineInstr &I) const;
   bool loadHandleBeforePosition(Register &HandleReg, const SPIRVType *ResType,
                                 GIntrinsic &HandleDef, MachineInstr &Pos) const;
+  void decorateUsesAsNonUniform(Register &NonUniformReg) const;
 };
 
 bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
@@ -3465,6 +3469,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_resource_nonuniformindex: {
+    return selectResourceNonUniformIndex(ResVReg, ResType, I);
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -3504,7 +3511,6 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   uint32_t Binding = getIConstVal(Intr.getOperand(3).getReg(), MRI);
   uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
   Register IndexReg = MainHandleDef->getOperand(5).getReg();
-  const bool IsNonUniform = false;
   std::string CounterName =
       getStringValueFromReg(MainHandleDef->getOperand(6).getReg(), *MRI) +
       ".counter";
@@ -3513,7 +3519,7 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   MachineIRBuilder MIRBuilder(I);
   Register CounterVarReg = buildPointerToResource(
       GR.getPointeeType(ResType), GR.getPointerStorageClass(ResType), Set,
-      Binding, ArraySize, IndexReg, IsNonUniform, CounterName, MIRBuilder);
+      Binding, ArraySize, IndexReg, CounterName, MIRBuilder);
 
   return BuildCOPY(ResVReg, CounterVarReg, I);
 }
@@ -3713,6 +3719,55 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ObjReg = I.getOperand(2).getReg();
+  if (!BuildCOPY(ResVReg, ObjReg, I))
+    return false;
+
+  buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::NonUniformEXT, {});
+  // Check for the registers that use the index marked as non-uniform
+  // and recursively mark them as non-uniform.
+  // Per the spec, it's necessary that the final argument used for
+  // load/store/sample/atomic must be decorated, so we need to propagate the
+  // decoration through access chains and copies.
+  // https://docs.vulkan.org/samples/latest/samples/extensions/descriptor_indexing/README.html#_when_to_use_non_uniform_indexing_qualifier
+  decorateUsesAsNonUniform(ResVReg);
+  return true;
+}
+
+void SPIRVInstructionSelector::decorateUsesAsNonUniform(
+    Register &NonUniformReg) const {
+  llvm::SmallVector<Register> WorkList = {NonUniformReg};
+  while (WorkList.size() > 0) {
+    Register CurrentReg = WorkList.back();
+    WorkList.pop_back();
+
+    bool IsDecorated = false;
+    for (MachineInstr &Use : MRI->use_instructions(CurrentReg)) {
+      if (Use.getOpcode() == SPIRV::OpDecorate &&
+          Use.getOperand(1).getImm() == SPIRV::Decoration::NonUniformEXT) {
+        IsDecorated = true;
+        continue;
+      }
+      // Check if the instruction has the result register and add it to the
+      // worklist.
+      if (Use.getOperand(0).isReg() && Use.getOperand(0).isDef()) {
+        Register ResultReg = Use.getOperand(0).getReg();
+        if (ResultReg == CurrentReg)
+          continue;
+        WorkList.push_back(ResultReg);
+      }
+    }
+
+    if (!IsDecorated) {
+      buildOpDecorate(CurrentReg, *MRI->getVRegDef(CurrentReg), TII,
+                      SPIRV::Decoration::NonUniformEXT, {});
+    }
+  }
+  return;
+}
+
 bool SPIRVInstructionSelector::extractSubvector(
     Register &ResVReg, const SPIRVType *ResType, Register &ReadReg,
     MachineInstr &InsertionPoint) const {
@@ -3784,7 +3839,7 @@ bool SPIRVInstructionSelector::selectImageWriteIntrinsic(
 Register SPIRVInstructionSelector::buildPointerToResource(
     const SPIRVType *SpirvResType, SPIRV::StorageClass::StorageClass SC,
     uint32_t Set, uint32_t Binding, uint32_t ArraySize, Register IndexReg,
-    bool IsNonUniform, StringRef Name, MachineIRBuilder MIRBuilder) const {
+    StringRef Name, MachineIRBuilder MIRBuilder) const {
   const Type *ResType = GR.getTypeForSPIRVType(SpirvResType);
   if (ArraySize == 1) {
     SPIRVType *PtrType =
@@ -3803,14 +3858,7 @@ Register SPIRVInstructionSelector::buildPointerToResource(
 
   SPIRVType *ResPointerType =
       GR.getOrCreateSPIRVPointerType(ResType, MIRBuilder, SC);
-
   Register AcReg = MRI->createVirtualRegister(GR.getRegClass(ResPointerType));
-  if (IsNonUniform) {
-    // It is unclear which value needs to be marked an non-uniform, so both
-    // the index and the access changed are decorated as non-uniform.
-    buildOpDecorate(IndexReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
-    buildOpDecorate(AcReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
-  }
 
   MIRBuilder.buildInstr(SPIRV::OpAccessChain)
       .addDef(AcReg)
@@ -4560,9 +4608,6 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   uint32_t Binding = foldImm(HandleDef.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
   Register IndexReg = HandleDef.getOperand(5).getReg();
-  // FIXME: The IsNonUniform flag needs to be set based on resource analysis.
-  // https://github.com/llvm/llvm-project/issues/155701
-  bool IsNonUniform = false;
   std::string Name =
       getStringValueFromReg(HandleDef.getOperand(6).getReg(), *MRI);
 
@@ -4576,13 +4621,8 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     SC = GR.getPointerStorageClass(ResType);
   }
 
-  Register VarReg =
-      buildPointerToResource(VarType, SC, Set, Binding, ArraySize, IndexReg,
-                             IsNonUniform, Name, MIRBuilder);
-
-  if (IsNonUniform)
-    buildOpDecorate(HandleReg, HandleDef, TII, SPIRV::Decoration::NonUniformEXT,
-                    {});
+  Register VarReg = buildPointerToResource(VarType, SC, Set, Binding, ArraySize,
+                                           IndexReg, Name, MIRBuilder);
 
   // The handle for the buffer is the pointer to the resource. For an image, the
   // handle is the image object. So images get an extra load.

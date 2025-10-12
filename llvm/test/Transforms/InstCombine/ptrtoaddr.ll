@@ -10,8 +10,18 @@ target datalayout = "pe1:64:64:64:32"
 @g.as1 = external addrspace(1) global i8
 @g2.as1 = external addrspace(1) global i8
 
-define i32 @ptrtoaddr_inttoptr_arg(i32 %a) {
-; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_arg(
+define i64 @ptrtoaddr_inttoptr_arg(i64 %a) {
+; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_arg(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  %toptr = inttoptr i64 %a to ptr
+  %toaddr = ptrtoaddr ptr %toptr to i64
+  ret i64 %toaddr
+}
+
+define i32 @ptrtoaddr_inttoptr_arg_addrsize(i32 %a) {
+; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_arg_addrsize(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TOPTR:%.*]] = inttoptr i64 [[TMP1]] to ptr addrspace(1)
