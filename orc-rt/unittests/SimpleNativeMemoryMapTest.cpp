@@ -31,49 +31,32 @@ struct SPSSimpleNativeMemoryMapSegment;
 struct TestSNMMSegment
     : public SimpleNativeMemoryMap::FinalizeRequest::Segment {
 
-  enum TestSNMMSegmentContent { Uninitialized, ZeroFill };
-
-  TestSNMMSegment(void *Address, AllocGroup G, std::string Content)
+  TestSNMMSegment(AllocGroup AG, char *Address, size_t Size,
+                  std::vector<char> C = {})
       : SimpleNativeMemoryMap::FinalizeRequest::Segment(
-            Address, Content.size(), G, ContentType::Regular),
-        Content(std::move(Content)) {}
+            {AG, Address, Size, {}}),
+        OwnedContent(std::move(C)) {
+    this->Content = {OwnedContent.data(), OwnedContent.size()};
+  }
 
-  TestSNMMSegment(void *Address, size_t Size, AllocGroup G,
-                  TestSNMMSegmentContent Content)
-      : SimpleNativeMemoryMap::FinalizeRequest::Segment(
-            Address, Size, G,
-            Content == ZeroFill ? ContentType::ZeroFill
-                                : ContentType::Uninitialized) {}
-
-  std::string Content;
+  std::vector<char> OwnedContent;
 };
 
 template <>
 class SPSSerializationTraits<SPSSimpleNativeMemoryMapSegment, TestSNMMSegment> {
-  using SPSType = SPSTuple<SPSExecutorAddr, uint64_t, SPSAllocGroup, uint8_t>;
+  using SPSType =
+      SPSTuple<SPSAllocGroup, SPSExecutorAddr, uint64_t, SPSSequence<char>>;
 
 public:
   static size_t size(const TestSNMMSegment &S) {
-    using ContentType =
-        SimpleNativeMemoryMap::FinalizeRequest::Segment::ContentType;
-    assert((S.C != ContentType::Regular || S.Size == S.Content.size()));
-    return SPSType::AsArgList::size(ExecutorAddr::fromPtr(S.Address),
-                                    static_cast<uint64_t>(S.Size), S.G,
-                                    static_cast<uint8_t>(S.C)) +
-           (S.C == ContentType::Regular ? S.Size : 0);
+    return SPSType::AsArgList::size(S.AG, ExecutorAddr::fromPtr(S.Address),
+                                    static_cast<uint64_t>(S.Size), S.Content);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const TestSNMMSegment &S) {
-    using ContentType =
-        SimpleNativeMemoryMap::FinalizeRequest::Segment::ContentType;
-    assert((S.C != ContentType::Regular || S.Size == S.Content.size()));
-    if (!SPSType::AsArgList::serialize(OB, ExecutorAddr::fromPtr(S.Address),
-                                       static_cast<uint64_t>(S.Size), S.G,
-                                       static_cast<uint8_t>(S.C)))
-      return false;
-    if (S.C == ContentType::Regular)
-      return OB.write(S.Content.data(), S.Content.size());
-    return true;
+    return SPSType::AsArgList::serialize(
+        OB, S.AG, ExecutorAddr::fromPtr(S.Address),
+        static_cast<uint64_t>(S.Size), S.Content);
   }
 };
 
@@ -124,6 +107,17 @@ static void snmm_reserve(OnCompleteFn &&OnComplete,
 }
 
 template <typename OnCompleteFn>
+static void snmm_releaseMultiple(OnCompleteFn &&OnComplete,
+                                 SimpleNativeMemoryMap *Instance,
+                                 span<void *> Addr) {
+  using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
+  SPSWrapperFunction<SPSSig>::call(
+      DirectCaller(nullptr,
+                   orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper),
+      std::forward<OnCompleteFn>(OnComplete), Instance, Addr);
+}
+
+template <typename OnCompleteFn>
 static void snmm_finalize(OnCompleteFn &&OnComplete,
                           SimpleNativeMemoryMap *Instance,
                           TestSNMMFinalizeRequest FR) {
@@ -135,22 +129,14 @@ static void snmm_finalize(OnCompleteFn &&OnComplete,
 }
 
 template <typename OnCompleteFn>
-static void snmm_deallocate(OnCompleteFn &&OnComplete,
-                            SimpleNativeMemoryMap *Instance, void *Base) {
-  using SPSSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
+static void snmm_deallocateMultiple(OnCompleteFn &&OnComplete,
+                                    SimpleNativeMemoryMap *Instance,
+                                    span<void *> Base) {
+  using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
   SPSWrapperFunction<SPSSig>::call(
       DirectCaller(nullptr,
-                   orc_rt_SimpleNativeMemoryMap_deallocate_sps_wrapper),
+                   orc_rt_SimpleNativeMemoryMap_deallocateMultiple_sps_wrapper),
       std::forward<OnCompleteFn>(OnComplete), Instance, Base);
-}
-
-template <typename OnCompleteFn>
-static void snmm_release(OnCompleteFn &&OnComplete,
-                         SimpleNativeMemoryMap *Instance, void *Addr) {
-  using SPSSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
-  SPSWrapperFunction<SPSSig>::call(
-      DirectCaller(nullptr, orc_rt_SimpleNativeMemoryMap_release_sps_wrapper),
-      std::forward<OnCompleteFn>(OnComplete), Instance, Addr);
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
@@ -162,7 +148,7 @@ TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
   auto Addr = cantFail(cantFail(ReserveAddr.get()));
 
   std::future<Expected<Error>> ReleaseResult;
-  snmm_release(waitFor(ReleaseResult), SNMM.get(), Addr);
+  snmm_releaseMultiple(waitFor(ReleaseResult), SNMM.get(), {&Addr, 1});
   cantFail(cantFail(ReleaseResult.get()));
 }
 
@@ -207,33 +193,65 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
 
   std::future<Expected<Expected<void *>>> FinalizeKey;
   TestSNMMFinalizeRequest FR;
-  void *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
-      reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(Addr) + 64 * 1024);
-  uint64_t SentinelValue = 0;
+  char *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
+      reinterpret_cast<char *>(Addr) + 64 * 1024;
+  uint64_t SentinelValue1 = 0; // Read from pre-filled content
+  uint64_t SentinelValue2 = 0; // Written in finalize, read back during dealloc.
+  uint64_t SentinelValue3 = 42; // Read from zero-filled region.
 
-  FR.Segments.push_back({FinalizeBase, 64 * 1024,
-                         MemProt::Read | MemProt::Write,
-                         TestSNMMSegment::ZeroFill});
+  // Build initial content vector.
+  std::vector<char> Content;
+  Content.resize(sizeof(uint64_t) * 2);
+  memcpy(Content.data(), &SentinelValue3, sizeof(uint64_t));
+  memcpy(Content.data() + sizeof(uint64_t), &SentinelValue1, sizeof(uint64_t));
+
+  FR.Segments.push_back({MemProt::Read | MemProt::Write, FinalizeBase,
+                         64 * 1024, std::move(Content)});
+
+  // Read initial content into Sentinel 1.
+  FR.AAPs.push_back({
+      *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
+          read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue1),
+          ExecutorAddr::fromPtr(FinalizeBase)),
+      {} // No dealloc action.
+  });
+
+  // Write value in finalize action, then read back into Sentinel 2.
   FR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
-           write_value_sps_allocaction, ExecutorAddr::fromPtr(FinalizeBase),
+           write_value_sps_allocaction,
+           ExecutorAddr::fromPtr(FinalizeBase) + sizeof(uint64_t),
            uint64_t(42)),
        *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
-           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
-           ExecutorAddr::fromPtr(FinalizeBase))});
+           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue2),
+           ExecutorAddr::fromPtr(FinalizeBase) + sizeof(uint64_t))});
+
+  // Read first 64 bits of the zero-fill region.
+  FR.AAPs.push_back({
+      *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
+          read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue3),
+          ExecutorAddr::fromPtr(FinalizeBase) + sizeof(uint64_t) * 2),
+      {} // No dealloc action.
+  });
+
   snmm_finalize(waitFor(FinalizeKey), SNMM.get(), std::move(FR));
   void *FinalizeKeyAddr = cantFail(cantFail(FinalizeKey.get()));
 
-  EXPECT_EQ(SentinelValue, 0U);
+  EXPECT_EQ(SentinelValue1, 42U);
+  EXPECT_EQ(SentinelValue2, 0U);
+  EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Expected<Error>> DeallocResult;
-  snmm_deallocate(waitFor(DeallocResult), SNMM.get(), FinalizeKeyAddr);
+  snmm_deallocateMultiple(waitFor(DeallocResult), SNMM.get(),
+                          {&FinalizeKeyAddr, 1});
   cantFail(cantFail(DeallocResult.get()));
 
-  EXPECT_EQ(SentinelValue, 42);
+  EXPECT_EQ(SentinelValue1, 42U);
+  EXPECT_EQ(SentinelValue2, 42U);
+  EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Expected<Error>> ReleaseResult;
-  snmm_release(waitFor(ReleaseResult), SNMM.get(), Addr);
+  snmm_releaseMultiple(waitFor(ReleaseResult), SNMM.get(), {&Addr, 1});
   cantFail(cantFail(ReleaseResult.get()));
 }
 
@@ -248,13 +266,13 @@ TEST(SimpleNativeMemoryMap, ReserveFinalizeShutdown) {
 
   std::future<Expected<Expected<void *>>> FinalizeKey;
   TestSNMMFinalizeRequest FR;
-  void *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
-      reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(Addr) + 64 * 1024);
+  char *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
+      reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
-  FR.Segments.push_back({FinalizeBase, 64 * 1024,
-                         MemProt::Read | MemProt::Write,
-                         TestSNMMSegment::ZeroFill});
+  FR.Segments.push_back(
+      {MemProt::Read | MemProt::Write, FinalizeBase, 64 * 1024});
+
   FR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
            write_value_sps_allocaction, ExecutorAddr::fromPtr(FinalizeBase),
@@ -285,13 +303,13 @@ TEST(SimpleNativeMemoryMap, ReserveFinalizeDetachShutdown) {
 
   std::future<Expected<Expected<void *>>> FinalizeKey;
   TestSNMMFinalizeRequest FR;
-  void *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
-      reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(Addr) + 64 * 1024);
+  char *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
+      reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
-  FR.Segments.push_back({FinalizeBase, 64 * 1024,
-                         MemProt::Read | MemProt::Write,
-                         TestSNMMSegment::ZeroFill});
+  FR.Segments.push_back(
+      {MemProt::Read | MemProt::Write, FinalizeBase, 64 * 1024});
+
   FR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
            write_value_sps_allocaction, ExecutorAddr::fromPtr(FinalizeBase),
