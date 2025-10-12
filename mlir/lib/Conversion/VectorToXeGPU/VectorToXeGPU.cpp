@@ -374,22 +374,29 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
         arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
   }
   Value indices = gatScatOp.getIndices();
+  auto indicesLayout = mlir::xegpu::getDistributeLayoutAttr(indices);
   VectorType vecType = cast<VectorType>(indices.getType());
 
-  Value strideVector =
-      vector::BroadcastOp::create(rewriter, loc, vecType, strides.back())
-          .getResult();
-  Value stridedIndices =
-      arith::MulIOp::create(rewriter, loc, strideVector, indices).getResult();
+  auto strideVector =
+      vector::BroadcastOp::create(rewriter, loc, vecType, strides.back());
+  mlir::xegpu::setDistributeLayoutAttr(strideVector->getOpResult(0),
+                                       indicesLayout);
 
-  Value baseVector =
-      vector::BroadcastOp::create(
-          rewriter, loc,
-          VectorType::get(vecType.getShape(), rewriter.getIndexType()),
-          baseOffset)
-          .getResult();
-  return arith::AddIOp::create(rewriter, loc, baseVector, stridedIndices)
-      .getResult();
+  auto stridedIndices =
+      arith::MulIOp::create(rewriter, loc, strideVector.getResult(), indices);
+  mlir::xegpu::setDistributeLayoutAttr(stridedIndices->getOpResult(0),
+                                       indicesLayout);
+
+  auto baseVector = vector::BroadcastOp::create(
+      rewriter, loc,
+      VectorType::get(vecType.getShape(), rewriter.getIndexType()), baseOffset);
+  mlir::xegpu::setDistributeLayoutAttr(baseVector->getOpResult(0),
+                                       indicesLayout);
+
+  auto result = arith::AddIOp::create(rewriter, loc, baseVector.getResult(),
+                                      stridedIndices.getResult());
+  mlir::xegpu::setDistributeLayoutAttr(result->getOpResult(0), indicesLayout);
+  return result.getResult();
 }
 
 template <
@@ -616,16 +623,34 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         computeOffsets(rewriter, gatherOp, meta.first, meta.second);
     Value flatMemref = memrefToIndexPtr(gatherOp, rewriter);
 
+    auto numOffsets = gatherOp.getOffsets().size();
+    auto layoutRes = mlir::xegpu::getDistributeLayoutAttr(gatherOp.getResult());
+    auto layoutIndices = mlir::xegpu::getDistributeLayoutAttr(
+        gatherOp->getOpOperand(numOffsets + 1));
+    auto layoutMask = mlir::xegpu::getDistributeLayoutAttr(
+        gatherOp->getOpOperand(numOffsets + 2));
+    auto layoutPassThru = mlir::xegpu::getDistributeLayoutAttr(
+        gatherOp->getOpOperand(numOffsets + 3));
     auto xeGatherOp = xegpu::LoadGatherOp::create(
         rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
         /*chunk_size=*/IntegerAttr{},
         /*l1_hint=*/xegpu::CachePolicyAttr{},
         /*l2_hint=*/xegpu::CachePolicyAttr{},
         /*l3_hint=*/xegpu::CachePolicyAttr{});
+    mlir::xegpu::setDistributeLayoutAttr(xeGatherOp->getOpResult(0), layoutRes);
+    mlir::xegpu::setDistributeLayoutAttr(xeGatherOp->getOpOperand(1),
+                                         layoutIndices);
+    mlir::xegpu::setDistributeLayoutAttr(xeGatherOp->getOpOperand(2),
+                                         layoutMask);
 
     auto selectOp =
         arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
                                 xeGatherOp.getResult(), gatherOp.getPassThru());
+    mlir::xegpu::setDistributeLayoutAttr(selectOp->getOpOperand(0), layoutMask);
+    mlir::xegpu::setDistributeLayoutAttr(selectOp->getOpOperand(2),
+                                         layoutPassThru);
+    mlir::xegpu::setDistributeLayoutAttr(selectOp->getOpResult(0), layoutRes);
+
     rewriter.replaceOp(gatherOp, selectOp.getResult());
     return success();
   }
@@ -650,12 +675,24 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
         computeOffsets(rewriter, scatterOp, meta.first, meta.second);
     Value flatMemref = memrefToIndexPtr(scatterOp, rewriter);
 
-    xegpu::StoreScatterOp::create(rewriter, loc, scatterOp.getValueToStore(),
-                                  flatMemref, localOffsets, scatterOp.getMask(),
-                                  /*chunk_size=*/IntegerAttr{},
-                                  /*l1_hint=*/xegpu::CachePolicyAttr{},
-                                  /*l2_hint=*/xegpu::CachePolicyAttr{},
-                                  /*l3_hint=*/xegpu::CachePolicyAttr{});
+    auto numOffsets = scatterOp.getOffsets().size();
+    auto layoutIndices = mlir::xegpu::getDistributeLayoutAttr(
+        scatterOp->getOpOperand(numOffsets + 1));
+    auto layoutMask = mlir::xegpu::getDistributeLayoutAttr(
+        scatterOp->getOpOperand(numOffsets + 2));
+    auto layoutVal = mlir::xegpu::getDistributeLayoutAttr(
+        scatterOp->getOpOperand(numOffsets + 3));
+    auto storeOp = xegpu::StoreScatterOp::create(
+        rewriter, loc, scatterOp.getValueToStore(), flatMemref, localOffsets,
+        scatterOp.getMask(),
+        /*chunk_size=*/IntegerAttr{},
+        /*l1_hint=*/xegpu::CachePolicyAttr{},
+        /*l2_hint=*/xegpu::CachePolicyAttr{},
+        /*l3_hint=*/xegpu::CachePolicyAttr{});
+    mlir::xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(0), layoutVal);
+    mlir::xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(2),
+                                         layoutIndices);
+    mlir::xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(3), layoutMask);
     rewriter.eraseOp(scatterOp);
     return success();
   }
