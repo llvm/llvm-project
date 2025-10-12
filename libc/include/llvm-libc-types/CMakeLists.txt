@@ -298,3 +298,5 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
+
+add_header(errno_t HDR errno_t.h)
