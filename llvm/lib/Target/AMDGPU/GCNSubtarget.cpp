@@ -656,7 +656,7 @@ getVOP3PSourceModifierFromOpIdx(const MachineInstr *UseI, int UseOpIdx,
 // Get the subreg idx of the subreg that is used by the given instruction
 // operand, considering the given op_sel modifier.
 // Return 0 if the whole register is used or as a conservative fallback.
-static unsigned getEffectiveSubRegIdx(const SIRegisterInfo *TRI,
+static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
                                       const SIInstrInfo &InstrInfo,
                                       const MachineOperand &Op) {
   const MachineInstr *I = Op.getParent();
@@ -690,14 +690,14 @@ static unsigned getEffectiveSubRegIdx(const SIRegisterInfo *TRI,
       (InstrInfo.isVOP3PMix(*I) && !OpSelHi))
     return 0;
 
-  const TargetRegisterClass *RC =
-      InstrInfo.getOpRegClass(*I, Op.getOperandNo());
+  const MachineRegisterInfo &MRI = I->getParent()->getParent()->getRegInfo();
+  const TargetRegisterClass *RC = TRI.getRegClassForOperandReg(MRI, Op);
 
   if (unsigned SubRegIdx = OpSel ? AMDGPU::sub1 : AMDGPU::sub0;
-      TRI->getSubRegisterClass(RC, SubRegIdx))
+      TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
     return SubRegIdx;
   if (unsigned SubRegIdx = OpSel ? AMDGPU::hi16 : AMDGPU::lo16;
-      TRI->getSubRegisterClass(RC, SubRegIdx))
+      TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
     return SubRegIdx;
 
   return 0;
@@ -721,7 +721,7 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
   unsigned DefSubRegIdx = DefOp.getSubReg();
   if (DefReg.isVirtual() && !DefSubRegIdx)
     return DefReg;
-  unsigned UseSubRegIdx = getEffectiveSubRegIdx(TRI, InstrInfo, UseOp);
+  unsigned UseSubRegIdx = getEffectiveSubRegIdx(*TRI, InstrInfo, UseOp);
   if (UseReg.isVirtual() && !UseSubRegIdx)
     return DefReg;
 
@@ -733,8 +733,10 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
   // apply to virtual registers because we cannot construct a subreg for them.
   if (DefReg.isVirtual())
     return DefReg;
-  MCRegister DefMCReg = TRI->getSubReg(DefReg.asMCReg(), DefSubRegIdx);
-  MCRegister UseMCReg = TRI->getSubReg(UseReg.asMCReg(), UseSubRegIdx);
+  MCRegister DefMCReg =
+      DefSubRegIdx ? TRI->getSubReg(DefReg, DefSubRegIdx) : DefReg.asMCReg();
+  MCRegister UseMCReg =
+      UseSubRegIdx ? TRI->getSubReg(UseReg, UseSubRegIdx) : UseReg.asMCReg();
   const TargetRegisterClass *DefRC = TRI->getPhysRegBaseClass(DefMCReg);
   const TargetRegisterClass *UseRC = TRI->getPhysRegBaseClass(UseMCReg);
   // Some registers, such as SGPR[0-9]+_HI16, do not have a register class.
