@@ -4071,10 +4071,13 @@ public:
   VPCanonicalIVPHIRecipe *getCanonicalIV() {
     VPBasicBlock *EntryVPBB = getEntryBasicBlock();
     if (EntryVPBB->empty()) {
-      // VPlan native path.
+      // VPlan native path. TODO: Unify both code paths.
       EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
     }
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
+  }
+  const VPCanonicalIVPHIRecipe *getCanonicalIV() const {
+    return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
 };
 

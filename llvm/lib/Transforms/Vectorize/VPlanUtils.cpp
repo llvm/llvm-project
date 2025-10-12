@@ -105,7 +105,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   }
 
   auto *CanonicalIV =
-      R->getParent()->getPlan()->getVectorLoopRegion()->getCanonicalIV();
+      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
   // Canonical IV chain is uniform.
   if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
     return true;
