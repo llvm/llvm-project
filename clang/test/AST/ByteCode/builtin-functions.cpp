@@ -828,6 +828,25 @@ namespace bswap {
   int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
   int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
   int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
+
+  constexpr const int const_expr = 0x1234;
+
+  void test_constexpr_reference() {
+    const int expr = 0x1234; 
+    const int& ref = expr; // #declare
+    
+    constexpr const int& const_ref = const_expr;
+
+    constexpr auto result2 = __builtin_bswapg(ref); 
+    //expected-error@-1 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //expected-note@-2 {{initializer of 'ref' is not a constant expression}}
+    //expected-note@#declare {{declared here}}
+    //ref-error@-4 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //ref-note@-5 {{initializer of 'ref' is not a constant expression}}
+    //ref-note@#declare {{declared here}}
+      
+    constexpr auto result3 = __builtin_bswapg(const_ref);
+  }
 }
 
 #define CFSTR __builtin___CFStringMakeConstantString

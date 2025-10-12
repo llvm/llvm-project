@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
-// expected-no-diagnostics
 
 void test_basic_type_checks() {
   static_assert(__is_same(char, decltype(__builtin_bswapg((char)0))), "");
@@ -83,3 +82,79 @@ template struct ValueTemplateTypeTest<0x1234>;
 template struct ValueTemplateTypeTest<0x12345678UL>;
 template struct ValueTemplateTypeTest<(short)0x1234>;
 template struct ValueTemplateTypeTest<(char)0x12>;
+
+template<typename T>
+void test_invalid_type() {
+  __builtin_bswapg(T{}); // #invalid_type_use
+}
+
+void test_basic_errors() {
+  test_invalid_type<float>();
+  // expected-note@-1 {{in instantiation of function template specialization 'test_invalid_type<float>' requested here}}
+  // expected-error@#invalid_type_use {{1st argument must be a scalar integer type (was 'float')}}
+  
+  test_invalid_type<double>(); 
+  // expected-note@-1 {{in instantiation of function template specialization 'test_invalid_type<double>' requested here}}
+  // expected-error@#invalid_type_use {{1st argument must be a scalar integer type (was 'double')}}
+
+  test_invalid_type<void*>(); 
+  // expected-note@-1 {{in instantiation of function template specialization 'test_invalid_type<void *>' requested here}}
+  // expected-error@#invalid_type_use {{1st argument must be a scalar integer type (was 'void *')}}
+}
+
+template<typename T>
+auto test_dependent_context(T value) -> decltype(__builtin_bswapg(value)) { // #dependent_use
+  return __builtin_bswapg(value); 
+}
+
+void test_dependent_errors() {
+  test_dependent_context(1.0f); 
+  // expected-error@-1 {{no matching function for call to 'test_dependent_context'}}
+  // expected-note@#dependent_use {{candidate template ignored: substitution failure [with T = float]: 1st argument must be a scalar integer type (was 'float')}}
+  test_dependent_context(1.0l); 
+  // expected-error@-1 {{no matching function for call to 'test_dependent_context'}}
+  // expected-note@#dependent_use {{candidate template ignored: substitution failure [with T = long double]: 1st argument must be a scalar integer type (was 'long double')}}
+  test_dependent_context("hello"); 
+  // expected-error@-1 {{no matching function for call to 'test_dependent_context'}}
+  // expected-note@#dependent_use {{candidate template ignored: substitution failure [with T = const char *]: 1st argument must be a scalar integer type (was 'const char *')}}
+}
+
+void test_lambda_errors() {
+  auto lambda = [](auto x) {
+    return __builtin_bswapg(x); // #lambda_use
+  };
+  
+  lambda(1.0f);
+  // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'float')}}
+  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<float>' requested here}}
+  lambda(1.0l);
+  // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'long double')}}
+  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<long double>' requested here}}
+  lambda("hello");
+  // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'const char *')}}
+  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<const char *>' requested here}}
+}
+
+void test_argument_count_errors() {
+  int h14 = __builtin_bswapg(1, 2); // expected-error {{too many arguments to function call, expected 1, have 2}}
+}
+
+void test_lvalue_reference(int& a) {
+    auto result = __builtin_bswapg(a);
+    static_assert(__is_same(int, decltype(result)), "Should decay reference to value type");
+}
+
+void test_const_lvalue_reference(const int& a) {
+    auto result = __builtin_bswapg(a);
+    static_assert(__is_same(int, decltype(result)), "Should decay const reference to value type");
+}
+
+void test_rvalue_reference(int&& a) {
+    auto result = __builtin_bswapg(a);
+    static_assert(__is_same(int, decltype(result)), "Should decay rvalue reference to value type");
+}
+
+void test_const_rvalue_reference(const int&& a) {
+    auto result = __builtin_bswapg(a);
+    static_assert(__is_same(int, decltype(result)), "Should decay const rvalue reference to value type");
+}

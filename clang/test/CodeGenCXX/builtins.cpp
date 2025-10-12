@@ -83,3 +83,40 @@ int structured_binding_size() {
   return __builtin_structured_binding_size(S2);
   // CHECK: ret i32 2
 }
+
+void test_int_reference(int& a) {
+    __builtin_bswapg(a);
+}
+// CHECK-LABEL: @_Z18test_int_referenceRi
+// CHECK: store ptr %a, ptr
+// CHECK: load ptr, ptr
+// CHECK: load i32, ptr
+// CHECK: call i32 @llvm.bswap.i32
+
+void test_long_reference(long& a) {
+    __builtin_bswapg(a);
+}
+// CHECK-LABEL: @_Z19test_long_referenceRl
+// CHECK: store ptr %a, ptr
+// CHECK: load ptr, ptr
+// CHECK: load i64, ptr
+// CHECK: call i64 @llvm.bswap.i64
+
+// 2. 不同大小的引用测试
+void test_short_reference(short& a) {
+    __builtin_bswapg(a);
+}
+// CHECK-LABEL: @_Z20test_short_referenceRs
+// CHECK: store ptr %a, ptr
+// CHECK: load ptr, ptr 
+// CHECK: load i16, ptr
+// CHECK: call i16 @llvm.bswap.i16
+
+void test_char_reference(char& a) {
+    __builtin_bswapg(a);
+}
+// CHECK-LABEL: @_Z19test_char_referenceRc
+// CHECK: store ptr %a, ptr
+// CHECK: load ptr, ptr
+// CHECK-NOT: call i8 @llvm.bswap.i8
+// CHECK: ret void

@@ -483,6 +483,10 @@ int h6 = __builtin_bswapg((char)(0x12)) == (char)(0x12) ? 1 : f();
 int h7 = __builtin_bswapg((short)(0x1234)) == (short)(0x3412) ? 1 : f();
 int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
 int h9 = __builtin_bswapg(0x0000000000001234ULL) == 0x3412000000000000 ? 1 : f();
+float h10 = __builtin_bswapg(1.0f); // expected-error {{1st argument must be a scalar integer type (was 'float')}}
+double h12 = __builtin_bswapg(1.0L); // expected-error {{1st argument must be a scalar integer type (was 'long double')}}
+char *h13 = __builtin_bswapg("hello"); // expected-error {{1st argument must be a scalar integer type (was 'char[6]')}}
+int h14 = __builtin_bswapg(1, 2); // expected-error {{too many arguments to function call, expected 1, have 2}}
 extern long int bi0;
 extern __typeof__(__builtin_expect(0, 0)) bi0;
 

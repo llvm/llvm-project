@@ -2218,7 +2218,7 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
 
   if (!ArgTy->isIntegerType()) {
     S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /* scalar */ 1 << /* unsigned integer ty */ 1 << /* no fp */ 0
+        << 1 << /*scalar=*/ 1 << /*unsigned integer=*/ 1 << /*floating point=*/ 0
         << ArgTy;
     return true;
   }
