@@ -19093,7 +19093,8 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
     SDValue Ext1 = Op1.getOperand(0);
     if (Ext0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
         Ext1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        Ext0.getOperand(0) != Ext1.getOperand(0))
+        Ext0.getOperand(0) != Ext1.getOperand(0) ||
+        Ext0.getOperand(0).getValueType().isScalableVector())
       return SDValue();
     // Check that the type is twice the add types, and the extract are from
     // upper/lower parts of the same source.
