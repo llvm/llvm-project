@@ -91,6 +91,13 @@ public:
   bool atLeastM68040() const { return SubtargetKind >= M40; }
   bool atLeastM68060() const { return SubtargetKind >= M60; }
 
+  bool atMostM68000() const { return SubtargetKind <= M00; }
+  bool atMostM68010() const { return SubtargetKind <= M10; }
+  bool atMostM68020() const { return SubtargetKind <= M20; }
+  bool atMostM68030() const { return SubtargetKind <= M30; }
+  bool atMostM68040() const { return SubtargetKind <= M40; }
+  bool atMostM68060() const { return SubtargetKind <= M60; }
+
   /// Floating point support
   bool hasFPU() const { return FPUKind.has_value(); }
   bool atLeastM68881() const { return hasFPU() && *FPUKind >= M881; }
