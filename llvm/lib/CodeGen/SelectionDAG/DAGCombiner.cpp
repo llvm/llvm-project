@@ -29832,7 +29832,8 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
     if (!Reciprocal) {
       SDLoc DL(Op);
       // Try the target specific test first.
-      SDValue Test = TLI.getSqrtInputTest(Op, DAG, DAG.getDenormalMode(VT));
+      SDValue Test =
+          TLI.getSqrtInputTest(Op, DAG, DAG.getDenormalMode(VT), Flags);
 
       // The estimate is now completely wrong if the input was exactly 0.0 or
       // possibly a denormal. Force the answer to 0.0 or value provided by
