@@ -342,24 +342,21 @@ static SerialBackgroundWorkQueue pageInQueue;
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(DeferredFiles &deferred) {
+  using namespace std::chrono;
   static const size_t pageSize = Process::getPageSizeEstimate();
   static const size_t largeArchive = 10 * 1024 * 1024;
-#ifndef NDEBUG
-  using namespace std::chrono;
   static std::atomic_uint64_t totalBytes = 0;
   std::atomic_int numDeferedFilesAdvised = 0;
   auto t0 = high_resolution_clock::now();
-#endif
 
   auto preloadDeferredFile = [&](const DeferredFile &deferredFile) {
     const StringRef &buff = deferredFile.buffer.getBuffer();
     if (buff.size() > largeArchive)
       return;
 
-#ifndef NDEBUG
     totalBytes += buff.size();
     numDeferedFilesAdvised += 1;
-#endif
+
 #if _WIN32
     // Reference all file's mmap'd pages to load them into memory.
     for (const char *page = buff.data(), *end = page + buff.size();
@@ -390,13 +387,11 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
       });
   }
 
-#ifndef NDEBUG
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
                  << numDeferedFilesAdvised << "/" << deferred.size() << "/"
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
-#endif
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred) {
