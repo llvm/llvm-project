@@ -1234,6 +1234,18 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (!Plan->isUnrolled())
     return;
 
+  // Hoist an invariant increment Y of a phi X, by having X start at Y.
+  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && Y->isLiveIn() &&
+      isa<VPPhi>(X)) {
+    auto *Phi = cast<VPPhi>(X);
+    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
+        Phi->getNumUsers() == 1 && (*Phi->user_begin() == &R)) {
+      Phi->setOperand(0, Y);
+      Def->replaceAllUsesWith(Phi);
+      return;
+    }
+  }
+
   // VPVectorPointer for part 0 can be replaced by their start pointer.
   if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&R)) {
     if (VecPtr->isFirstPart()) {

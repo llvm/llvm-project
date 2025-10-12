@@ -5767,11 +5767,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // even if the nonan flag is dropped somewhere.
     unsigned CCOp = Opcode == ISD::SETCC ? 2 : 4;
     ISD::CondCode CCCode = cast<CondCodeSDNode>(Op.getOperand(CCOp))->get();
-    if (((unsigned)CCCode & 0x10U))
-      return true;
-
-    const TargetOptions &Options = getTarget().Options;
-    return Options.NoNaNsFPMath || Options.NoInfsFPMath;
+    return (unsigned)CCCode & 0x10U;
   }
 
   case ISD::OR:

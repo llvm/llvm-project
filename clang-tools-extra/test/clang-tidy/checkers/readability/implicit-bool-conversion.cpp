@@ -547,3 +547,13 @@ namespace PR71848 {
 // CHECK-FIXES: return static_cast<int>( foo );
   }
 }
+
+namespace PR161318 {  
+  int AddParenOutsideOfCompoundAssignOp() {
+    int val = -1;
+    while(val >>= 7) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: implicit conversion 'int' -> 'bool' [readability-implicit-bool-conversion]
+    // CHECK-FIXES: while((val >>= 7) != 0) {
+    }
+  }
+}

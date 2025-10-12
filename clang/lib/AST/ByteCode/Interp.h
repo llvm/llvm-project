@@ -3183,9 +3183,8 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     if (!CheckLoad(S, OpPC, SP))
       return false;
 
-    const Pointer &DP = DestPtr.atIndex(DestIndex + I);
-    DP.deref<T>() = SP.deref<T>();
-    DP.initialize();
+    DestPtr.elem<T>(DestIndex + I) = SrcPtr.elem<T>(SrcIndex + I);
+    DestPtr.initializeElement(DestIndex + I);
   }
   return true;
 }

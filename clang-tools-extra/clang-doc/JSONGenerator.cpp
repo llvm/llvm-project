@@ -584,12 +584,20 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
     FileName = RecordSymbolInfo->MangledName;
   } else if (I->USR == GlobalNamespaceID)
     FileName = "index";
-  else
+  else if (I->IT == InfoType::IT_namespace) {
+    for (const auto &NS : I->Namespace) {
+      FileName += NS.Name;
+      FileName += "_";
+    }
+    FileName += I->Name;
+  } else
     FileName = I->Name;
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
+// FIXME: Revert back to creating nested directories for namespaces instead of
+// putting everything in a flat directory structure.
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {
