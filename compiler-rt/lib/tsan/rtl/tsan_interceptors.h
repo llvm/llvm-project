@@ -1,6 +1,9 @@
 #ifndef TSAN_INTERCEPTORS_H
 #define TSAN_INTERCEPTORS_H
 
+#if SANITIZER_APPLE
+#  include "sanitizer_common/sanitizer_mac.h"
+#endif
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "tsan_rtl.h"
 
@@ -43,7 +46,12 @@ inline bool in_symbolizer() {
 #endif
 
 inline bool MustIgnoreInterceptor(ThreadState *thr) {
-  return !thr->is_inited || thr->ignore_interceptors || thr->in_ignored_lib;
+  return !thr->is_inited || thr->ignore_interceptors || thr->in_ignored_lib
+#if SANITIZER_APPLE
+         || (flags()->lock_during_write != kLockDuringAllWrites &&
+             thr->in_internal_write_call)
+#endif
+      ;
 }
 
 }  // namespace __tsan
