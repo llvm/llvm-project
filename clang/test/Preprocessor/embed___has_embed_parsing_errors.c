@@ -250,3 +250,10 @@
 
 #if __has_embed("") // expected-error {{empty filename}}
 #endif
+
+// expected-error@+4 {{missing ')' after '__has_embed'}} \
+   expected-error@+4 {{expected value in expression}} \
+   expected-error@+4 {{unterminated conditional directive}} \
+   expected-note@+4 {{to match this '('}}
+#if __has_embed (__FILE__ limit(1) foo
+int a = __has_embed (__FILE__);

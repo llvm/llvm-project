@@ -3648,14 +3648,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           std::pair<tok::TokenKind, SourceLocation> Matches) {
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
       };
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
       Diag(CurTok, diag::err_expected) << Kind;
-      if (CurTok.isNot(tok::eod))
+      if (CurTok.isNot(EndTokenKind))
         DiscardUntilEndOfDirective(CurTok);
       return false;
     }
@@ -3746,7 +3746,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -3889,7 +3889,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       }
       if (!ForHasEmbed) {
         Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
