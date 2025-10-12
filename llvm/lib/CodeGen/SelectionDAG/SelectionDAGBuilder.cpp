@@ -3484,7 +3484,8 @@ void SelectionDAGBuilder::visitCallBrIntrinsic(const CallBrInst &I) {
   SDVTList VTs = getTargetIntrinsicVTList(I, HasChain);
 
   // Create the node.
-  SDValue Result = getTargetNonMemIntrinsicNode(I, HasChain, Ops, VTs);
+  SDValue Result =
+      getTargetNonMemIntrinsicNode(*I.getType(), HasChain, Ops, VTs);
   Result = handleTargetIntrinsicRet(I, HasChain, OnlyLoad, Result);
 
   setValue(&I, Result);
