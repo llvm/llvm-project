@@ -121,7 +121,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
 
 cp ${BUILD_DIR}/CMakeCache.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
 
-diff ${BUILD_DIR}/CMakeCache.clang1.txt ${BUILD_DIR}/CMakeCache.clang2.txt
+diff ${MONOREPO_ROOT}/CMakeCache.clang1.txt ${MONOREPO_ROOT}/CMakeCache.clang2.txt
 
 
 start-group "ninja"
