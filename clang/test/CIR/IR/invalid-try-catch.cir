@@ -122,7 +122,7 @@ cir.func dso_local @invalid_catch_all_with_type_info() {
   cir.scope {
     cir.try {
       cir.yield
-    } 
+    }
     // expected-error @below {{op 'cir.try' catch all dosen't need RTTI info attribute}}
     catch [all] {
       cir.yield
@@ -133,3 +133,24 @@ cir.func dso_local @invalid_catch_all_with_type_info() {
 
 }
 
+// -----
+
+module {
+
+cir.func dso_local @invalid_unwind_with_catch_all() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    }
+    catch all {
+      cir.yield
+    }
+    // expected-error @below {{op 'cir.try' unwind can't be used with catch all}}
+    unwind {
+
+    }
+  }
+  cir.return
+}
+
+}

@@ -3023,6 +3023,10 @@ parseCatchRegions(mlir::OpAsmParser &parser,
   }
 
   if (parser.parseOptionalKeyword("unwind").succeeded()) {
+    if (hasCatchAll)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unwind can't be used with catch all");
+
     catcherAttrs.push_back(cir::UnwindAttr::get(parser.getContext()));
     if (parseCheckedCatcherRegion().failed())
       return mlir::failure();
