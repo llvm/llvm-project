@@ -103,6 +103,13 @@ using ControlFoldFn = std::function<bool(OpOperand *)>;
 void populateRewriteAsConstantPatterns(RewritePatternSet &patterns,
                                        const ControlFoldFn &controlFn);
 
+/// Populates `patterns` with patterns that decompose `tensor.gather` into
+/// `tensor.empty` and `linalg.geric`, followed by a chain
+/// of `tensor.extract_slice` operations on the inputs. This is intended to be
+/// used as a tensor -> linalg lowering that decomposes gather such
+/// that it can be bufferized into a sequence of bufferized op.
+void populateDecomposeTensorGatherPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 // Transform helpers
 //===----------------------------------------------------------------------===//
