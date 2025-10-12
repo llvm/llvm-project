@@ -222,6 +222,7 @@ gpu.func @store_dynamic_layout_operands(%vec: vector<8x16xf32>, %source: memref<
 // CHECK-SAME:   %[[VEC:.+]]: vector<8x16xf32>, %[[SRC:.+]]: memref<?x?xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>, %[[MASK:.+]]: vector<8x16xi1>) {
+// %indices producer doesn't have a layout, so as 'broadcast/add' ops computing linear index.
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} :  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<8x16xindex>
 // CHECK:        xegpu.store %[[VEC]], %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
@@ -251,6 +252,7 @@ gpu.func @store_dynamic_layout_mixed(%source: memref<?x?x?xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>) {
 // CHECK:        %[[VEC:.+]] = arith.constant {layout_operand_0 = #xegpu.layout<sg_layout = [0]>} dense<1.000000e+00> : vector<8x16xf32>
+// Verify that linear-indices computation uses layout from the 'indices' producer op (%2).
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} :  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
 // CHECK:        xegpu.store %[[VEC]], %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
@@ -280,6 +282,7 @@ gpu.func @store_static_layout_mixed(%source: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>) {
 // CHECK:        %[[VEC:.+]] = arith.constant {layout_operand_0 = #xegpu.layout<sg_layout = [0]>} dense<1.000000e+00> : vector<8x16xf32>
+// Verify that linear-indices computation uses layout from the 'indices' producer op (%2).
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} :  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
 // CHECK:        xegpu.store %[[VEC]], %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
@@ -310,9 +313,43 @@ gpu.func @store_dynamic_layout_mixed_override(%source: memref<?x?x?xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>) {
 // CHECK:        %[[VEC:.+]] = arith.constant {layout_operand_0 = #xegpu.layout<sg_layout = [0]>} dense<1.000000e+00> : vector<8x16xf32>
+// Verify that linear-indices computation uses layout from the 'indices' producer op (%2)
+// and not it's overriden version from the scatter_op (sg_layout = [99])
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} :  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
 // CHECK:        xegpu.store %[[VEC]], %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
 // CHECK-SAME:   {{[^}]*}}layout_operand_2 = #xegpu.layout<sg_layout = [99]>,
 // CHECK-SAME:   {{[^}]*}}layout_operand_3 = #xegpu.layout<sg_layout = [6]>}
+}
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @store_with_cache_hints(%vec: vector<8xf32>, %source: memref<8x16x32xf32>,
+     %off1: index, %off2: index, %off3: index,
+     %indices: vector<8xindex>, %mask: vector<8xi1>) {
+  vector.scatter %source[%off1, %off2, %off3][%indices], %mask, %vec {
+    l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<write_back>
+  } : memref<8x16x32xf32>, vector<8xindex>, vector<8xi1>, vector<8xf32>
+  gpu.return
+}
+// CHECK-LABEL:  @store_with_cache_hints(
+// CHECK:        xegpu.store {{[^<]*}}
+// CHECK-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<write_back>}>
+}
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @store_with_partial_cache_hints(%vec: vector<8xf32>, %source: memref<8x16x32xf32>,
+     %off1: index, %off2: index, %off3: index,
+     %indices: vector<8xindex>, %mask: vector<8xi1>) {
+  vector.scatter %source[%off1, %off2, %off3][%indices], %mask, %vec {
+    l1_hint = #xegpu.cache_hint<cached>, l3_hint = #xegpu.cache_hint<write_back>
+  } : memref<8x16x32xf32>, vector<8xindex>, vector<8xi1>, vector<8xf32>
+  gpu.return
+}
+// CHECK-LABEL:  @store_with_partial_cache_hints(
+// CHECK:        xegpu.store {{[^<]*}}
+// CHECK-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l3_hint = #xegpu.cache_hint<write_back>}>
 }

@@ -97,6 +97,20 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
+// Extract cache hints from the op attributes if available.
+static void getOpCacheHints(Operation *op,
+                            SmallVector<xegpu::CachePolicyAttr, 3> &hints) {
+  assert(hints.size() == 3 &&
+         "Expecting a vector of size 3 for l1, l2, l3 hints.");
+  // get l1, l2, l3 hints from attributes if available.
+  if (auto l1Attr = op->getAttrOfType<xegpu::CachePolicyAttr>("l1_hint"))
+    hints[0] = l1Attr;
+  if (auto l2Attr = op->getAttrOfType<xegpu::CachePolicyAttr>("l2_hint"))
+    hints[1] = l2Attr;
+  if (auto l3Attr = op->getAttrOfType<xegpu::CachePolicyAttr>("l3_hint"))
+    hints[2] = l3Attr;
+}
+
 static xegpu::CreateNdDescOp
 createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
@@ -631,12 +645,17 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         gatherOp->getOpOperand(numOffsets + 2));
     auto layoutPassThru = mlir::xegpu::getDistributeLayoutAttr(
         gatherOp->getOpOperand(numOffsets + 3));
+
+    SmallVector<xegpu::CachePolicyAttr, 3> cacheHints{xegpu::CachePolicyAttr{},
+                                                      xegpu::CachePolicyAttr{},
+                                                      xegpu::CachePolicyAttr{}};
+    getOpCacheHints(gatherOp, cacheHints);
     auto xeGatherOp = xegpu::LoadGatherOp::create(
         rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
         /*chunk_size=*/IntegerAttr{},
-        /*l1_hint=*/xegpu::CachePolicyAttr{},
-        /*l2_hint=*/xegpu::CachePolicyAttr{},
-        /*l3_hint=*/xegpu::CachePolicyAttr{});
+        /*l1_hint=*/cacheHints[0],
+        /*l2_hint=*/cacheHints[1],
+        /*l3_hint=*/cacheHints[2]);
     mlir::xegpu::setDistributeLayoutAttr(xeGatherOp->getOpResult(0), layoutRes);
     mlir::xegpu::setDistributeLayoutAttr(xeGatherOp->getOpOperand(1),
                                          layoutIndices);
@@ -682,13 +701,17 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
         scatterOp->getOpOperand(numOffsets + 2));
     auto layoutVal = mlir::xegpu::getDistributeLayoutAttr(
         scatterOp->getOpOperand(numOffsets + 3));
+    SmallVector<xegpu::CachePolicyAttr, 3> cacheHints{xegpu::CachePolicyAttr{},
+                                                      xegpu::CachePolicyAttr{},
+                                                      xegpu::CachePolicyAttr{}};
+    getOpCacheHints(scatterOp, cacheHints);
     auto storeOp = xegpu::StoreScatterOp::create(
         rewriter, loc, scatterOp.getValueToStore(), flatMemref, localOffsets,
         scatterOp.getMask(),
         /*chunk_size=*/IntegerAttr{},
-        /*l1_hint=*/xegpu::CachePolicyAttr{},
-        /*l2_hint=*/xegpu::CachePolicyAttr{},
-        /*l3_hint=*/xegpu::CachePolicyAttr{});
+        /*l1_hint=*/cacheHints[0],
+        /*l2_hint=*/cacheHints[1],
+        /*l3_hint=*/cacheHints[2]);
     mlir::xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(0), layoutVal);
     mlir::xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(2),
                                          layoutIndices);
