@@ -867,7 +867,7 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
   if (auto *CanIV = getCanonicalIV()) {
     O << '\n';
     CanIV->print(O, SlotTracker);
-    O << '\n';
+    O << " = CANONICAL-IV\n";
   }
   for (auto *BlockBase : vp_depth_first_shallow(Entry)) {
     O << '\n';

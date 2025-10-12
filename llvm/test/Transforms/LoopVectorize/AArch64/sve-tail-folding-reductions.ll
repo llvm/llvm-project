@@ -116,6 +116,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true
+; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -147,6 +148,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-IN-LOOP-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-IN-LOOP-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true
+; CHECK-IN-LOOP-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP16]]
 ; CHECK-IN-LOOP-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-IN-LOOP:       middle.block:
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -200,6 +202,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP16]], true
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP22]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP20]])
@@ -236,6 +239,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-IN-LOOP-NEXT:    [[TMP22:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-IN-LOOP-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP22]], true
+; CHECK-IN-LOOP-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP21]]
 ; CHECK-IN-LOOP-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-IN-LOOP:       middle.block:
 ; CHECK-IN-LOOP-NEXT:    br label [[FOR_INC:%.*]]

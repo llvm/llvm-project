@@ -63,7 +63,6 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP17]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK4]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP18]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK5]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP19]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK6]])
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX]], i64 [[TMP6]])
 ; CHECK-UF4-NEXT:    [[TMP12]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 12)
 ; CHECK-UF4-NEXT:    [[TMP11]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 8)

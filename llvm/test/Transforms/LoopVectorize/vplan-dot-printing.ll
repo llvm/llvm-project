@@ -39,8 +39,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    label="\<x1\> vector loop"
 ; CHECK-NEXT:    N4 [label =
 ; CHECK-NEXT:    "vector.body:\l" +
-; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION ir\<0\>, vp\<[[CAN_IV_NEXT:%.+]]\>\l" +
-; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<1\>, vp\<[[VF]]\>\l" +
+; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV:%.+]]\>, ir\<1\>, vp\<[[VF]]\>\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr inbounds ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR:%.+]]\> = vector-pointer ir\<%arrayidx\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load vp\<[[VEC_PTR]]\>\l" +
@@ -48,7 +47,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR2:%.+]]\> = vector-pointer ir\<%arrayidx2\>\l" +
 ; CHECK-NEXT:    "  WIDEN store vp\<[[VEC_PTR2]]\>, ir\<%call\>\l" +
-; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT]]\> = add nuw vp\<[[CAN_IV]]\>, vp\<[[VFxUF]]\>\l" +
+; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT:%.+]]\> = add nuw vp\<[[CAN_IV]]\>, vp\<[[VFxUF]]\>\l" +
 ; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\>, vp\<[[VEC_TC]]\>\l" +
 ; CHECK-NEXT:    "No successors\l"
 ; CHECK-NEXT:  ]

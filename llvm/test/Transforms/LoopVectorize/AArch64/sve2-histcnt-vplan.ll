@@ -24,8 +24,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   [[IV:.*]] = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT [[IV:.*]] = CANONICAL-INDUCTION ir<0>, [[IV_NEXT:.*]]
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     CLONE [[IDX:.*]] = load [[GEP_IDX]]
@@ -34,7 +35,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     CLONE [[HISTVAL:.*]] = load [[GEP_BUCKET]]
 ; CHECK-NEXT:     CLONE [[UPDATE:.*]] = add nsw [[HISTVAL]], ir<1>
 ; CHECK-NEXT:     CLONE store [[UPDATE]], [[GEP_BUCKET]]
-; CHECK-NEXT:     EMIT [[IV_NEXT]] = add nuw [[IV]], [[VFxUF]]
+; CHECK-NEXT:     EMIT [[IV_NEXT:.*]] = add nuw [[IV]], [[VFxUF]]
 ; CHECK-NEXT:     EMIT branch-on-count [[IV_NEXT]], [[VTC]]
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -72,8 +73,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   [[IV:.*]] = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT [[IV:.*]] = CANONICAL-INDUCTION ir<0>, [[IV_NEXT:.*]]
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer [[GEP_IDX]]
@@ -81,7 +83,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext [[IDX]] to i64
 ; CHECK-NEXT:     WIDEN-GEP Inv[Var] [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
 ; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: [[GEP_BUCKET]], inc: ir<1>
-; CHECK-NEXT:     EMIT [[IV_NEXT]] = add nuw [[IV]], [[VFxUF]]
+; CHECK-NEXT:     EMIT [[IV_NEXT:.*]] = add nuw [[IV]], [[VFxUF]]
 ; CHECK-NEXT:     EMIT branch-on-count [[IV_NEXT]], [[VTC]]
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

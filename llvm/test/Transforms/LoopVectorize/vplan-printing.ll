@@ -21,7 +21,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -90,7 +90,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
@@ -165,7 +165,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   ir<%i> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
@@ -261,7 +261,7 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<4>
@@ -348,7 +348,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -459,7 +459,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[EXP_SCEV]]>, vp<[[VF]]> (truncated to i8)
@@ -527,7 +527,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
@@ -594,7 +594,7 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -666,7 +666,7 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -736,7 +736,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -837,7 +837,7 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -907,7 +907,7 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -954,7 +954,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
@@ -1028,7 +1028,7 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK: <x1> vector loop: {
-; CHECK-NEXT:   vp<[[IV:%.+]]> = CANONICAL-IV ir<0>
+; CHECK-NEXT:   vp<[[IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     vp<[[ST:%.+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>

@@ -243,6 +243,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
@@ -377,6 +378,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP18]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
@@ -537,6 +539,7 @@ define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p,
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP23]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
