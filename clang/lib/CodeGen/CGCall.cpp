@@ -5271,6 +5271,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   const FunctionDecl *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl);
   CGM.getTargetCodeGenInfo().checkFunctionCallABI(CGM, Loc, CallerDecl,
                                                   CalleeDecl, CallArgs, RetTy);
+  // 0. Allow the target to emit an additional prolog for the function call
+  CGM.getTargetCodeGenInfo().emitFunctionCallProlog(Builder, CallerDecl,
+                                                    CalleeDecl);
 
   // 1. Set up the arguments.
 
