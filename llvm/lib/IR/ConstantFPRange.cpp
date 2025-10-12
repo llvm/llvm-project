@@ -414,15 +414,31 @@ ConstantFPRange ConstantFPRange::negate() const {
   return ConstantFPRange(-Upper, -Lower, MayBeQNaN, MayBeSNaN);
 }
 
+/// Return true if the finite part is not empty after removing infinities.
+static bool removeInf(APFloat &Lower, APFloat &Upper, bool &HasPosInf,
+                      bool &HasNegInf) {
+  assert(strictCompare(Lower, Upper) != APFloat::cmpGreaterThan &&
+         "Non-NaN part is empty.");
+  auto &Sem = Lower.getSemantics();
+  if (Lower.isNegInfinity()) {
+    Lower = APFloat::getLargest(Sem, /*Negative=*/true);
+    HasNegInf = true;
+  }
+  if (Upper.isPosInfinity()) {
+    Upper = APFloat::getLargest(Sem, /*Negative=*/false);
+    HasPosInf = true;
+  }
+  return strictCompare(Lower, Upper) != APFloat::cmpGreaterThan;
+}
+
 ConstantFPRange ConstantFPRange::getWithoutInf() const {
   if (isNaNOnly())
     return *this;
   APFloat NewLower = Lower;
   APFloat NewUpper = Upper;
-  if (Lower.isNegInfinity())
-    NewLower = APFloat::getLargest(getSemantics(), /*Negative=*/true);
-  if (Upper.isPosInfinity())
-    NewUpper = APFloat::getLargest(getSemantics(), /*Negative=*/false);
+  bool UnusedFlag;
+  removeInf(NewLower, NewUpper, /*HasPosInf=*/UnusedFlag,
+            /*HasNegInf=*/UnusedFlag);
   canonicalizeRange(NewLower, NewUpper);
   return ConstantFPRange(std::move(NewLower), std::move(NewUpper), MayBeQNaN,
                          MayBeSNaN);
@@ -443,4 +459,50 @@ ConstantFPRange ConstantFPRange::cast(const fltSemantics &DstSem,
   return ConstantFPRange(std::move(NewLower), std::move(NewUpper),
                          /*MayBeQNaNVal=*/MayBeQNaN || MayBeSNaN,
                          /*MayBeSNaNVal=*/false);
+}
+
+ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
+  bool ResMayBeQNaN = ((MayBeQNaN || MayBeSNaN) && !Other.isEmptySet()) ||
+                      ((Other.MayBeQNaN || Other.MayBeSNaN) && !isEmptySet());
+  if (isNaNOnly() || Other.isNaNOnly())
+    return getNaNOnly(getSemantics(), /*MayBeQNaN=*/ResMayBeQNaN,
+                      /*MayBeSNaN=*/false);
+  bool LHSHasNegInf = false, LHSHasPosInf = false;
+  APFloat LHSLower = Lower, LHSUpper = Upper;
+  bool LHSFiniteIsNonEmpty =
+      removeInf(LHSLower, LHSUpper, LHSHasPosInf, LHSHasNegInf);
+  bool RHSHasNegInf = false, RHSHasPosInf = false;
+  APFloat RHSLower = Other.Lower, RHSUpper = Other.Upper;
+  bool RHSFiniteIsNonEmpty =
+      removeInf(RHSLower, RHSUpper, RHSHasPosInf, RHSHasNegInf);
+  // -inf + +inf = QNaN
+  ResMayBeQNaN |=
+      (LHSHasNegInf && RHSHasPosInf) || (LHSHasPosInf && RHSHasNegInf);
+  // +inf + finite/+inf = +inf, -inf + finite/-inf = -inf
+  bool HasNegInf = (LHSHasNegInf && (RHSFiniteIsNonEmpty || RHSHasNegInf)) ||
+                   (RHSHasNegInf && (LHSFiniteIsNonEmpty || LHSHasNegInf));
+  bool HasPosInf = (LHSHasPosInf && (RHSFiniteIsNonEmpty || RHSHasPosInf)) ||
+                   (RHSHasPosInf && (LHSFiniteIsNonEmpty || LHSHasPosInf));
+  if (LHSFiniteIsNonEmpty && RHSFiniteIsNonEmpty) {
+    APFloat NewLower =
+        HasNegInf ? APFloat::getInf(LHSLower.getSemantics(), /*Negative=*/true)
+                  : LHSLower + RHSLower;
+    APFloat NewUpper =
+        HasPosInf ? APFloat::getInf(LHSUpper.getSemantics(), /*Negative=*/false)
+                  : LHSUpper + RHSUpper;
+    return ConstantFPRange(NewLower, NewUpper, ResMayBeQNaN,
+                           /*MayBeSNaN=*/false);
+  }
+  // If both HasNegInf and HasPosInf are false, the non-NaN part is empty.
+  // We just return the canonical form [+inf, -inf] for the empty non-NaN set.
+  return ConstantFPRange(
+      APFloat::getInf(Lower.getSemantics(), /*Negative=*/HasNegInf),
+      APFloat::getInf(Upper.getSemantics(), /*Negative=*/!HasPosInf),
+      ResMayBeQNaN,
+      /*MayBeSNaN=*/false);
+}
+
+ConstantFPRange ConstantFPRange::sub(const ConstantFPRange &Other) const {
+  // fsub X, Y = fadd X, (fneg Y)
+  return add(Other.negate());
 }
