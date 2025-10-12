@@ -41,12 +41,12 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   std::string Features = join(FeaturesVec, ",");
 
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+  llvm::Triple TheTriple(TT);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
   if (!TheTarget) {
     return AMD_COMGR_STATUS_ERROR;
   }
 
-  llvm::Triple TheTriple(TT);
   std::unique_ptr<const MCRegisterInfo>
     MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {

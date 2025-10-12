@@ -350,7 +350,8 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
                           raw_ostream &LogS) {
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(
+    llvm::Triple(Opts.Triple), Error);
   if (!TheTarget) {
     return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
   }
