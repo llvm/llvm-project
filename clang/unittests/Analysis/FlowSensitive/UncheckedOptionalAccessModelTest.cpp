@@ -98,7 +98,7 @@ protected:
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
-    auto Headers = GetHeaders();
+    auto Headers = getMockHeaders();
     Headers.emplace_back("unchecked_optional_access_test.h", R"(
       #include "absl_optional.h"
       #include "base_optional.h"

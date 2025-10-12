@@ -21,7 +21,7 @@ namespace clang {
 namespace dataflow {
 namespace test {
 
-std::vector<std::pair<std::string, std::string>> GetHeaders();
+std::vector<std::pair<std::string, std::string>> getMockHeaders();
 
 } // namespace test
 } // namespace dataflow

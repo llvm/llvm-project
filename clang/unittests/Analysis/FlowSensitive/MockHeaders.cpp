@@ -1240,7 +1240,7 @@ constexpr bool operator!=(const T &value, const Optional<U> &opt);
 } // namespace base
 )";
 
-std::vector<std::pair<std::string, std::string>> GetHeaders() {
+std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CSDtdDefHeader);
   Headers.emplace_back("std_initializer_list.h", StdInitializerListHeader);
