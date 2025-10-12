@@ -7,14 +7,12 @@
 define void @zero_f16(ptr %i) {
 ; RV32-LABEL: zero_f16:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.h.x fa5, zero
-; RV32-NEXT:    fsh fa5, 0(a0)
+; RV32-NEXT:    sh zero, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_f16:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.h.x fa5, zero
-; RV64-NEXT:    fsh fa5, 0(a0)
+; RV64-NEXT:    sh zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store half 0.0, ptr %i, align 4
@@ -24,14 +22,12 @@ entry:
 define void @zero_bf16(ptr %i) {
 ; RV32-LABEL: zero_bf16:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.h.x fa5, zero
-; RV32-NEXT:    fsh fa5, 0(a0)
+; RV32-NEXT:    sh zero, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_bf16:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.h.x fa5, zero
-; RV64-NEXT:    fsh fa5, 0(a0)
+; RV64-NEXT:    sh zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store bfloat 0.0, ptr %i, align 4
@@ -41,14 +37,12 @@ entry:
 define void @zero_f32(ptr %i) {
 ; RV32-LABEL: zero_f32:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.w.x fa5, zero
-; RV32-NEXT:    fsw fa5, 0(a0)
+; RV32-NEXT:    sw zero, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_f32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.w.x fa5, zero
-; RV64-NEXT:    fsw fa5, 0(a0)
+; RV64-NEXT:    sw zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store float 0.0, ptr %i, align 4
@@ -69,8 +63,7 @@ define void @zero_f64(ptr %i) {
 ;
 ; RV64-LABEL: zero_f64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.d.x fa5, zero
-; RV64-NEXT:    fsd fa5, 0(a0)
+; RV64-NEXT:    sd zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store double 0.0, ptr %i, align 8
@@ -80,14 +73,12 @@ entry:
 define void @zero_v1f32(ptr %i) {
 ; RV32-LABEL: zero_v1f32:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.w.x fa5, zero
-; RV32-NEXT:    fsw fa5, 0(a0)
+; RV32-NEXT:    sw zero, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_v1f32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.w.x fa5, zero
-; RV64-NEXT:    fsw fa5, 0(a0)
+; RV64-NEXT:    sw zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store <1 x float> <float 0.0>, ptr %i, align 8
@@ -97,16 +88,14 @@ entry:
 define void @zero_v2f32(ptr %i) {
 ; RV32-LABEL: zero_v2f32:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.w.x fa5, zero
-; RV32-NEXT:    fsw fa5, 0(a0)
-; RV32-NEXT:    fsw fa5, 4(a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_v2f32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.w.x fa5, zero
-; RV64-NEXT:    fsw fa5, 0(a0)
-; RV64-NEXT:    fsw fa5, 4(a0)
+; RV64-NEXT:    sw zero, 0(a0)
+; RV64-NEXT:    sw zero, 4(a0)
 ; RV64-NEXT:    ret
 entry:
   store <2 x float> <float 0.0, float 0.0>, ptr %i, align 8
@@ -116,20 +105,18 @@ entry:
 define void @zero_v4f32(ptr %i) {
 ; RV32-LABEL: zero_v4f32:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.w.x fa5, zero
-; RV32-NEXT:    fsw fa5, 0(a0)
-; RV32-NEXT:    fsw fa5, 4(a0)
-; RV32-NEXT:    fsw fa5, 8(a0)
-; RV32-NEXT:    fsw fa5, 12(a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
+; RV32-NEXT:    sw zero, 8(a0)
+; RV32-NEXT:    sw zero, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_v4f32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.w.x fa5, zero
-; RV64-NEXT:    fsw fa5, 0(a0)
-; RV64-NEXT:    fsw fa5, 4(a0)
-; RV64-NEXT:    fsw fa5, 8(a0)
-; RV64-NEXT:    fsw fa5, 12(a0)
+; RV64-NEXT:    sw zero, 0(a0)
+; RV64-NEXT:    sw zero, 4(a0)
+; RV64-NEXT:    sw zero, 8(a0)
+; RV64-NEXT:    sw zero, 12(a0)
 ; RV64-NEXT:    ret
 entry:
   store <4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>, ptr %i, align 8
@@ -149,8 +136,7 @@ define void @zero_v1f64(ptr %i) {
 ;
 ; RV64-LABEL: zero_v1f64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.d.x fa5, zero
-; RV64-NEXT:    fsd fa5, 0(a0)
+; RV64-NEXT:    sd zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store <1 x double> <double 0.0>, ptr %i, align 8
@@ -172,9 +158,8 @@ define void @zero_v2f64(ptr %i) {
 ;
 ; RV64-LABEL: zero_v2f64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.d.x fa5, zero
-; RV64-NEXT:    fsd fa5, 0(a0)
-; RV64-NEXT:    fsd fa5, 8(a0)
+; RV64-NEXT:    sd zero, 0(a0)
+; RV64-NEXT:    sd zero, 8(a0)
 ; RV64-NEXT:    ret
 entry:
   store <2 x double> <double 0.0, double 0.0>, ptr %i, align 8
@@ -200,11 +185,10 @@ define void @zero_v4f64(ptr %i) {
 ;
 ; RV64-LABEL: zero_v4f64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.d.x fa5, zero
-; RV64-NEXT:    fsd fa5, 0(a0)
-; RV64-NEXT:    fsd fa5, 8(a0)
-; RV64-NEXT:    fsd fa5, 16(a0)
-; RV64-NEXT:    fsd fa5, 24(a0)
+; RV64-NEXT:    sd zero, 0(a0)
+; RV64-NEXT:    sd zero, 8(a0)
+; RV64-NEXT:    sd zero, 16(a0)
+; RV64-NEXT:    sd zero, 24(a0)
 ; RV64-NEXT:    ret
 entry:
   store <4 x double> <double 0.0, double 0.0, double 0.0, double 0.0>, ptr %i, align 8

@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define GET_GICOMBINER_DEPS
 #include "RISCVGenPostLegalizeGICombiner.inc"
@@ -98,6 +99,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  bool combineFPZeroStore(MachineFunction &MF, const RISCVSubtarget &STI);
+
 private:
   RISCVPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
@@ -120,6 +123,54 @@ RISCVPostLegalizerCombiner::RISCVPostLegalizerCombiner()
     : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
+}
+
+/// Try to fold:
+///   G_STORE (G_FCONSTANT +0.0), addr
+/// into:
+///   G_STORE (G_CONSTANT 0 [XLEN]), addr
+bool RISCVPostLegalizerCombiner::combineFPZeroStore(MachineFunction &MF,
+                                                    const RISCVSubtarget &STI) {
+  bool Changed = false;
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() != TargetOpcode::G_STORE)
+        continue;
+
+      Register SrcReg = MI.getOperand(0).getReg();
+      if (!SrcReg.isVirtual())
+        continue;
+
+      MachineInstr *Def = MRI.getVRegDef(SrcReg);
+      if (!Def || Def->getOpcode() != TargetOpcode::G_FCONSTANT)
+        continue;
+
+      auto *CFP = Def->getOperand(1).getFPImm();
+      if (!CFP || !CFP->getValueAPF().isPosZero())
+        continue;
+
+      // Use XLEN-wide integer zero
+      MachineIRBuilder MIB(MI);
+      const unsigned XLen = STI.getXLen();
+      auto Zero = MIB.buildConstant(LLT::scalar(XLen), 0);
+      MI.getOperand(0).setReg(Zero.getReg(0));
+
+      LLT ValTy = MRI.getType(SrcReg);
+      if (MRI.use_nodbg_empty(SrcReg))
+        Def->eraseFromParent();
+
+      [[maybe_unused]] unsigned ValBits = ValTy.getSizeInBits();
+      LLVM_DEBUG(dbgs() << formatv("[{0}] Fold FP zero store -> int zero "
+                                   "(XLEN={1}, ValBits={2}) : \n\t{3}\n",
+                                   DEBUG_TYPE, XLen, ValBits, MI));
+
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -147,7 +198,12 @@ bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
                      F.hasMinSize());
   RISCVPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
                                       ST, MDT, LI);
-  return Impl.combineMachineInstrs();
+
+  bool TableCombChanged = Impl.combineMachineInstrs();
+
+  bool LocalChanged = combineFPZeroStore(MF, ST);
+
+  return TableCombChanged || LocalChanged;
 }
 
 char RISCVPostLegalizerCombiner::ID = 0;
