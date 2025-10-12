@@ -1049,19 +1049,6 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     MRI->setType(DstReg, sXLen);
     break;
   }
-  case TargetOpcode::G_STORE: {
-    Register SrcReg = MI.getOperand(0).getReg();
-    MachineInstr *Def = MRI->getVRegDef(SrcReg);
-    if (Def && Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
-      if (Def->getOperand(1).getFPImm()->getValueAPF().isPosZero()) {
-        MI.getOperand(0).setReg(RISCV::X0);
-
-        if (MRI->use_nodbg_empty(SrcReg))
-          Def->eraseFromParent();
-      }
-    }
-    break;
-  }
   }
 }
 
