@@ -1338,6 +1338,8 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(
                     "echo '\\1' > nul && " if command else "echo '\\1' > nul"
                 )
+                if command:
+                    commands[i] += command
         f.write("@echo on\n")
         f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
