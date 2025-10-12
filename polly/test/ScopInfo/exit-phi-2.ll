@@ -1,4 +1,6 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb \
+; RUN: -polly-region-expansion-profitability-check=0 \
+; RUN: '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Check that there is no MK_ExitPHI READ access.
 ;

@@ -1,4 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output \
+; RUN: -polly-region-expansion-profitability-check=0 < %s 2>&1 | FileCheck %s
 ;
 ; Allow the user to define function names that are treated as
 ; error functions and assumed not to be executed.

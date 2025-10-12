@@ -1,5 +1,6 @@
 ; RUN: opt %loadNPMPolly -disable-output '-passes=print<polly-function-scops>' \
-; RUN: -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s
+; RUN: -polly-invariant-load-hoisting=true -polly-region-expansion-profitability-check=0 \
+; RUN: < %s 2>&1 | FileCheck %s
 ;
 ; Check that propagation of domains from A(X) to A(X+1) will keep the
 ; domains small and concise.

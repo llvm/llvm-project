@@ -1,4 +1,5 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen \
+; RUN: -polly-region-expansion-profitability-check=0 -S < %s | FileCheck %s
 
 ; CHECK:       polly.merge_new_and_old:
 ; CHECK-NEXT:    merge = phi
