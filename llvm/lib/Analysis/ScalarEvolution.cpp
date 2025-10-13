@@ -2699,13 +2699,12 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   }
 
   // Canonicalize (-1 * urem X, Y) + X --> (Y * X/Y)
-  const SCEV *X;
   const SCEV *Y;
   if (Ops.size() == 2 &&
-      match(Ops[0], m_scev_Mul(m_scev_AllOnes(),
-                               m_scev_URem(m_SCEV(X), m_SCEV(Y), *this))) &&
-      X == Ops[1])
-    return getMulExpr(Y, getUDivExpr(X, Y));
+      match(Ops[0],
+            m_scev_Mul(m_scev_AllOnes(),
+                       m_scev_URem(m_scev_Specific(Ops[1]), m_SCEV(Y), *this))))
+    return getMulExpr(Y, getUDivExpr(Ops[1], Y));
 
   // Skip past any other cast SCEVs.
   while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scAddExpr)
