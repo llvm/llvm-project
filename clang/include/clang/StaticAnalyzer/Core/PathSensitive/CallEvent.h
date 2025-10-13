@@ -242,7 +242,7 @@ public:
 
   /// NOTE: There are plans for refactoring that would eliminate this method.
   /// Prefer to use CheckerContext::getASTContext if possible!
-  ASTContext &getASTContext() const {
+  const ASTContext &getASTContext() const {
     return getState()->getStateManager().getContext();
   }
 
