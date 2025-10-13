@@ -15836,8 +15836,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           }
           auto AddSubRewrite = [&](const SCEV *A, const SCEV *B) {
             const SCEV *Sub = SE.getMinusSCEV(A, B);
-            AddRewrite(Sub, Sub,
-                       SE.getUMaxExpr(Sub, SE.getOne(From->getType())));
+            const SCEV *OneAlignedUp = GetNextSCEVDividesByDivisor(
+                SE.getOne(From->getType()), SE.getConstantMultiple(Sub));
+            AddRewrite(Sub, Sub, SE.getUMaxExpr(Sub, OneAlignedUp));
           };
           AddSubRewrite(LHS, RHS);
           AddSubRewrite(RHS, LHS);
