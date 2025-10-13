@@ -169,17 +169,20 @@ llvm::Error ol_platform_impl_t::init() {
       return;
     }
 
-    for (auto DevNum = 0; DevNum < Plugin->number_of_devices(); DevNum++) {
-      if (Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
-        auto Device = &Plugin->getDevice(DevNum);
-        auto Info = Device->obtainInfoImpl();
-        if (llvm::Error Err = Info.takeError()) {
-          Storage = std::make_unique<llvm::Error>(std::move(Err));
-          return;
-        }
-        Devices.emplace_back(std::make_unique<ol_device_impl_t>(
-            DevNum, Device, *this, std::move(*Info)));
+    for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
+      if (llvm::Error Err = Plugin->initDevice(Id)) {
+        Storage = std::make_unique<llvm::Error>(std::move(Err));
+        return;
       }
+
+      auto Device = &Plugin->getDevice(Id);
+      auto Info = Device->obtainInfoImpl();
+      if (llvm::Error Err = Info.takeError()) {
+        Storage = std::make_unique<llvm::Error>(std::move(Err));
+        return;
+      }
+      Devices.emplace_back(std::make_unique<ol_device_impl_t>(
+          Id, Device, *this, std::move(*Info)));
     }
   });
 
@@ -374,14 +377,11 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
   bool IsHost = Platform->BackendType == OL_PLATFORM_BACKEND_HOST;
 
-  auto PluginOrErr = Platform->getPlugin();
-  if (!PluginOrErr)
-    return PluginOrErr.takeError();
-  GenericPluginTy *Plugin = *PluginOrErr;
-
+  // Note that the plugin is potentially uninitialized here. It will need to be
+  // initialized once info is added that requires it to be initialized.
   switch (PropName) {
   case OL_PLATFORM_INFO_NAME:
-    return Info.writeString(IsHost ? "Host" : Plugin->getName());
+    return Info.writeString(IsHost ? "Host" : Platform->Plugin->getName());
   case OL_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
     return Info.writeString("Unknown platform vendor");
