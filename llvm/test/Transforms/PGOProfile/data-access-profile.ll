@@ -31,8 +31,10 @@
 ; LOG: Global variable var2.llvm.125 is annotated as hot
 ; LOG: Global variable bar is not annotated
 ; LOG: Global variable foo is annotated as unlikely
-; LOG: Global variable var3 has explicit section name. Skip annotating.
-; LOG: Global variable var4 has explicit section name. Skip annotating.
+; LOG: Skip annotation for var3 due to explicit section name.
+; LOG: Skip annotation for var4 due to explicit section name.
+; LOG: Skip annotation for llvm.fake_var due to name starts with `llvm.`.
+; LOG: Skip annotation for qux due to linker declaration.
 
 ;; String literals are not annotated.
 ; IR: @.str = unnamed_addr constant [5 x i8] c"abcde"
@@ -53,6 +55,11 @@
 
 ; IR-NEXT: @var3 = constant [2 x i32] [i32 12345, i32 6789], section "sec1"
 ; IR-NEXT: @var4 = constant [1 x i64] [i64 98765] #0
+
+; IR: @llvm.fake_var = global i32 123
+; IR-NOT: !section_prefix
+; IR: @qux = external global i64
+; IR-NOT: !section_prefix
 
 ; IR: attributes #0 = { "rodata-section"="sec2" }
 
@@ -112,11 +119,14 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo = global i8 2
 @var3 = constant [2 x i32][i32 12345, i32 6789], section "sec1"
 @var4 = constant [1 x i64][i64 98765] #0
+@llvm.fake_var = global i32 123
+@qux = external global i64
 
 define i32 @func() {
   %a = load i32, ptr @var1
   %b = load i32, ptr @var2.llvm.125
-  %ret = call i32 (...) @func_taking_arbitrary_param(i32 %a, i32 %b)
+  %c = load i32, ptr @llvm.fake_var
+  %ret = call i32 (...) @func_taking_arbitrary_param(i32 %a, i32 %b, i32 %c)
   ret i32 %ret
 }
 
@@ -136,5 +146,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo = global i8 2
 @var3 = constant [2 x i32][i32 12345, i32 6789], section "sec1"
 @var4 = constant [1 x i64][i64 98765] #0
+@llvm.fake_var = global i32 123
+@qux = external global i64
+
 
 attributes #0 = { "rodata-section"="sec2" }
