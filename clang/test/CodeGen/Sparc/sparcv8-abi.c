@@ -20,3 +20,10 @@ r (long long __complex__  a, long long __complex__  b)
 {
   return 0;
 }
+
+// CHECK-LABEL: define{{.*}} void @s(ptr dead_on_unwind noalias writable sret(fp128) align 8 %agg.result, ptr noundef byval(fp128) align 8 %0) #0
+long double
+s(long double a)
+{
+    return 0;
+}

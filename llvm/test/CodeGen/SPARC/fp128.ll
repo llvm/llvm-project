@@ -241,3 +241,9 @@ entry:
   store fp128 %1, ptr %scalar.result, align 8
   ret void
 }
+
+define fp128 @f128_direct(fp128 %num) {
+    %ret = call fp128 @f128_callee(fp128 %num, fp128 %num)
+    ret fp128 %ret
+}
+declare fp128 @f128_callee(fp128 %a, fp128 %b)
