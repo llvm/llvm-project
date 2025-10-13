@@ -365,6 +365,11 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+- Added the ``-Wvla-potential-size-confusion`` diagnostic, which is grouped
+  under ``-Wvla`` to diagnose when a variably-modified type in a function
+  parameter list is using a variable from an outer scope as opposed to a
+  variable declared later in the parameter list.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
