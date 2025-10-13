@@ -414,6 +414,7 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
     if (llvm::sys::path::is_relative(FileName)) {
       SmallString<8> DirectoryStorage;
       SmallString<128> AbsolutePath(Directory->getValue(DirectoryStorage));
+      llvm::sys::fs::make_absolute(AbsolutePath);
       llvm::sys::path::append(AbsolutePath, FileName);
       llvm::sys::path::native(AbsolutePath, NativeFilePath);
     } else {
