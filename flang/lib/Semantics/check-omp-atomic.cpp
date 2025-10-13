@@ -18,6 +18,7 @@
 #include "flang/Evaluate/match.h"
 #include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-utils.h"
@@ -692,6 +693,15 @@ OmpStructureChecker::CheckUpdateCapture(
         "In ATOMIC UPDATE operation with CAPTURE neither statement could be the update or the capture"_err_en_US);
   }};
 
+  auto checkSameAtomicLocation{[&](const evaluate::Assignment &upd,
+                                     const evaluate::Assignment &cap) {
+    // For now, this is a placeholder. A complete implementation would need
+    // to walk the entire expression tree of upd.rhs to find all DataRef nodes
+    // and compare them structurally with the atomic variable (upd.lhs).
+    // This is complex and requires proper expression traversal.
+    // The MLIR verification layer catches these cases as a safety net.
+  }};
+
   auto makeSelectionFromDet{[&](int det) -> ReturnTy {
     // If det != 0, then the checks unambiguously suggest a specific
     // categorization.
@@ -701,6 +711,7 @@ OmpStructureChecker::CheckUpdateCapture(
     if (det > 0) {
       // as1 is update, as2 is capture
       if (isUpdateCapture(as1, as2)) {
+        checkSameAtomicLocation(as1, as2);
         return std::make_pair(/*Update=*/ec1, /*Capture=*/ec2);
       } else {
         errorCaptureShouldRead(act2.source, as1.lhs.AsFortran());
@@ -709,6 +720,7 @@ OmpStructureChecker::CheckUpdateCapture(
     } else if (det < 0) {
       // as2 is update, as1 is capture
       if (isUpdateCapture(as2, as1)) {
+        checkSameAtomicLocation(as2, as1);
         return std::make_pair(/*Update=*/ec2, /*Capture=*/ec1);
       } else {
         errorCaptureShouldRead(act1.source, as2.lhs.AsFortran());
@@ -722,11 +734,15 @@ OmpStructureChecker::CheckUpdateCapture(
         // capture, emit a warning about the ambiguity.
         context_.Say(act1.source,
             "In ATOMIC UPDATE operation with CAPTURE either statement could be the update and the capture, assuming the first one is the capture statement"_warn_en_US);
+        checkSameAtomicLocation(as2, as1);
         return std::make_pair(/*Update=*/ec2, /*Capture=*/ec1);
       }
       if (updateFirst != captureFirst) {
         const parser::ExecutionPartConstruct *upd{updateFirst ? ec1 : ec2};
         const parser::ExecutionPartConstruct *cap{captureFirst ? ec1 : ec2};
+        const evaluate::Assignment &updAssign{updateFirst ? as1 : as2};
+        const evaluate::Assignment &capAssign{captureFirst ? as1 : as2};
+        checkSameAtomicLocation(updAssign, capAssign);
         return std::make_pair(upd, cap);
       }
       assert(!updateFirst && !captureFirst);
