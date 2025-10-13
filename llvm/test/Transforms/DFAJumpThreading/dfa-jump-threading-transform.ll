@@ -470,11 +470,9 @@ define i16 @DTU_update_crash() {
 ; CHECK-NEXT:    [[P_24_ADDR_3_JT0:%.*]] = phi i32 [ 0, [[FOR_BODY_SELECTBLOCK]] ], [ 0, [[SEL_SI_UNFOLD_FALSE_JT0]] ]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[P_24_ADDR_31:%.*]] = phi i32 [ [[P_24_ADDR_3_JT0]], [[SWITCHBLOCK_JT0]] ], [ [[P_24_ADDR_3]], [[SWITCHBLOCK]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY_SELECTBLOCK]], label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[P_24_ADDR_32:%.*]] = phi i32 [ [[P_24_ADDR_31]], [[FOR_INC]] ], [ [[P_24_ADDR_3]], [[SWITCHBLOCK]] ], [ [[P_24_ADDR_3]], [[SWITCHBLOCK]] ]
-; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[P_24_ADDR_32]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[P_24_ADDR_3_JT0]])
 ; CHECK-NEXT:    ret i16 0
 ;
 entry:
@@ -505,6 +503,8 @@ declare void @llvm.fake.use(...)
 
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 3, i32 5}
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}
