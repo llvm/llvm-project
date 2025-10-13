@@ -1258,7 +1258,8 @@ apply_patterns_and_fold_greedily(module, frozen)
 The PDL dialect bindings also enable defining and generating rewrite patterns in Python.
 The `mlir.rewrite.PDLModule` class accepts a module containing `pdl.pattern` ops,
 which can be transformed into a `FrozenRewritePatternSet` using the `freeze` method.
-This frozen set can then be applied to an operation using the greedy rewrite pattern driver via `apply_patterns_and_fold_greedily`.
+This frozen set can then be applied to an operation
+using the greedy rewrite pattern driver via `apply_patterns_and_fold_greedily`.
 For further information, see [the PDL dialect documentation](/docs/Dialects/PDLOps/).
 
 ### Other functionality
