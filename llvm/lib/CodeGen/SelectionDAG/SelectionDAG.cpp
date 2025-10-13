@@ -8800,8 +8800,8 @@ static SDValue getMemcpyLoadsAndStores(
       EVT NVT = TLI.getTypeToTransformTo(C, VT);
       assert(NVT.bitsGE(VT));
 
-       bool isDereferenceable =
-        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+      bool isDereferenceable =
+          SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
       MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
       if (isDereferenceable)
         SrcMMOFlags |= MachineMemOperand::MODereferenceable;
@@ -8947,7 +8947,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     SDValue Value;
 
     bool isDereferenceable =
-      SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
     MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
     if (isDereferenceable)
       SrcMMOFlags |= MachineMemOperand::MODereferenceable;
@@ -9102,7 +9102,9 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-        DstPtrInfo.getWithOffset(DstOff), Alignment, isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone, NewAAInfo);
+        DstPtrInfo.getWithOffset(DstOff), Alignment,
+        isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
+        NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VT.getSizeInBits() / 8;
     Size -= VTSize;
