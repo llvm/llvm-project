@@ -592,7 +592,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
 
     SmallVector<uint64_t, 32> BitsetValues(
-        divideCeil(RuntimeLibcallImplDefList.size(), BitsPerStorageElt));
+        divideCeil(RuntimeLibcallImplDefList.size() + 1, BitsPerStorageElt));
 
     for (const Record *Elt : *Elements) {
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
