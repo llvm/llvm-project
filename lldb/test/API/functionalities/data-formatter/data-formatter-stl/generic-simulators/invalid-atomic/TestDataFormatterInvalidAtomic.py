@@ -1,5 +1,5 @@
 """
-Test formatting of `std::atomic`s not from MSVC's STL
+Test formatting of `std::atomic`s not from any STL
 """
 
 import lldb
@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class MsvcStlInvalidAtomicDataFormatterTestCase(TestBase):
+class InvalidAtomicDataFormatterTestCase(TestBase):
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -26,5 +26,20 @@ class MsvcStlInvalidAtomicDataFormatterTestCase(TestBase):
             result_children=[
                 ValueCheck(name="foo", value="3"),
                 ValueCheck(name="bar", value="4"),
+            ],
+        )
+
+        self.expect_expr(
+            "c",
+            result_children=[
+                ValueCheck(name="foo", value="5"),
+                ValueCheck(name="bar", value="6"),
+            ],
+        )
+        self.expect_expr(
+            "d",
+            result_children=[
+                ValueCheck(name="foo", value="7"),
+                ValueCheck(name="bar", value="8"),
             ],
         )
