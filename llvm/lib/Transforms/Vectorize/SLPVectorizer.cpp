@@ -10659,7 +10659,8 @@ class InstructionsCompatibilityAnalysis {
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::LShr ||
            Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv;
+           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
+           Opcode == Instruction::Or || Opcode == Instruction::Xor;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10984,6 +10985,9 @@ public:
       case Instruction::Shl:
       case Instruction::SDiv:
       case Instruction::UDiv:
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
@@ -19456,7 +19460,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       assert(getNumElements(Cond->getType()) == TrueNumElements &&
              "Cannot vectorize Instruction::Select");
-      Value *V = Builder.CreateSelect(Cond, True, False);
+      Value *V =
+          Builder.CreateSelectWithUnknownProfile(Cond, True, False, DEBUG_TYPE);
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
@@ -20076,7 +20081,9 @@ Value *BoUpSLP::vectorizeTree(
     // The is because source vector that supposed to feed this gather node was
     // inserted at the end of the block [after stab instruction]. So we need
     // to adjust insertion point again to the end of block.
-    if (isa<PHINode>(UserI)) {
+    if (isa<PHINode>(UserI) ||
+        (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
       for (User *U : PrevVec->users()) {
@@ -23574,18 +23581,19 @@ class HorizontalReduction {
     switch (Kind) {
     case RecurKind::Or: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
-            RHS, Name);
+            RHS, DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
     case RecurKind::And: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, RHS,
-            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)), Name);
+            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)),
+            DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
@@ -23606,7 +23614,8 @@ class HorizontalReduction {
       if (UseSelect) {
         CmpInst::Predicate Pred = llvm::getMinMaxReductionPredicate(Kind);
         Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+        return Builder.CreateSelectWithUnknownProfile(Cmp, LHS, RHS, DEBUG_TYPE,
+                                                      Name);
       }
       [[fallthrough]];
     case RecurKind::FMax:
