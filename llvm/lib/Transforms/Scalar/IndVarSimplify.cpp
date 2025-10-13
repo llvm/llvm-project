@@ -1720,10 +1720,7 @@ static bool crashingBBWithoutEffect(const BasicBlock &BB) {
     // Now if the loop stored a non-nullptr to %a, we could cause a nullptr
     // dereference by skipping over loop iterations.
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
-      if (CB->onlyAccessesInaccessibleMemory() &&
-          llvm::all_of(CB->args(), [](const llvm::Use &U) {
-            return isa<Constant>(U.get());
-          }))
+      if (CB->onlyAccessesInaccessibleMemory())
         return true;
     }
     return isa<UnreachableInst>(I);
