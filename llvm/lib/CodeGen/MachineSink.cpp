@@ -1209,7 +1209,7 @@ MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB,
                                          MIE = MBB.instr_begin();
        MII != MIE; --MII) {
     const MachineInstr &MI = *std::prev(MII);
-    if (MI.isDebugInstr() || MI.isPseudoProbe())
+    if (MI.isDebugOrPseudoInstr())
       continue;
     RegisterOperands RegOpers;
     RegOpers.collect(MI, *TRI, *MRI, false, false);

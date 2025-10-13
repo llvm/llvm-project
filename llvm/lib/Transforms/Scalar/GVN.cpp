@@ -170,9 +170,7 @@ struct llvm::GVNPass::Expression {
   }
 };
 
-namespace llvm {
-
-template <> struct DenseMapInfo<GVNPass::Expression> {
+template <> struct llvm::DenseMapInfo<GVNPass::Expression> {
   static inline GVNPass::Expression getEmptyKey() { return ~0U; }
   static inline GVNPass::Expression getTombstoneKey() { return ~1U; }
 
@@ -187,8 +185,6 @@ template <> struct DenseMapInfo<GVNPass::Expression> {
     return LHS == RHS;
   }
 };
-
-} // end namespace llvm
 
 /// Represents a particular available value that we know how to materialize.
 /// Materialization of an AvailableValue never fails.  An AvailableValue is
@@ -2158,6 +2154,9 @@ bool GVNPass::processLoad(LoadInst *L) {
 
   // This code hasn't been audited for ordered or volatile memory access.
   if (!L->isUnordered())
+    return false;
+
+  if (L->getType()->isTokenLikeTy())
     return false;
 
   if (L->use_empty()) {

@@ -3726,6 +3726,23 @@ def : GCNPat <
 } // End foreach Ty = ...
 } // End AddedComplexity = 1
 
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (i32 (DivergentBinFrag<or>
+    (i32 (zext i16:$src_lo)),
+    (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi)))))
+  )),
+  (REG_SEQUENCE VGPR_32, $src_lo, lo16, $src_hi, hi16)
+>;
+def : GCNPat<
+  (i32 (DivergentBinFrag<or>
+    (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
+    (i32 (zext i16:$src_lo))
+  )),
+  (REG_SEQUENCE VGPR_32, $src_lo, lo16, $src_hi, hi16)
+>;
+}
+
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 undef), (i16 (trunc i32:$src1)))),
