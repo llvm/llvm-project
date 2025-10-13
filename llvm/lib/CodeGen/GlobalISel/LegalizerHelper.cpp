@@ -4523,6 +4523,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return Legalized;
   }
   case TargetOpcode::G_FMAD:
+  case TargetOpcode::G_STRICT_FMAD:
     return lowerFMad(MI);
   case TargetOpcode::G_FFLOOR:
     return lowerFFloor(MI);

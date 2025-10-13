@@ -193,8 +193,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
-  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA, G_STRICT_FMULADD})
+  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
       .legalFor(allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder(G_STRICT_FMAD)
+      .lower();
 
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
