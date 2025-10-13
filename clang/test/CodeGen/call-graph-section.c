@@ -6,28 +6,33 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fexperimental-call-graph-section \
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MS %s
 
-// CHECK-DAG: define {{(dso_local)?}} void @foo({{.*}} !type [[F_TVOID:![0-9]+]]
+// CHECK-LABEL: define {{(dso_local)?}} void @foo(
+// CHECK: {{.*}} !type [[F_TVOID:![0-9]+]]
 void foo() {
 }
 
-// CHECK-DAG: define {{(dso_local)?}} void @bar({{.*}} !type [[F_TVOID]]
+// CHECK-LABEL: define {{(dso_local)?}} void @bar(
+// CHECK: {{.*}} !type [[F_TVOID]]
 void bar() {
   void (*fp)() = foo;
   // CHECK: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   fp();
 }
 
-// CHECK-DAG: define {{(dso_local)?}} i32 @baz({{.*}} !type [[F_TPRIMITIVE:![0-9]+]]
+// CHECK-LABEL: define {{(dso_local)?}} i32 @baz(
+// CHECK: {{.*}} !type [[F_TPRIMITIVE:![0-9]+]]
 int baz(char a, float b, double c) {
   return 1;
 }
 
-// CHECK-DAG: define {{(dso_local)?}} ptr @qux({{.*}} !type [[F_TPTR:![0-9]+]]
+// CHECK-LABEL: define {{(dso_local)?}} ptr @qux(
+// CHECK: {{.*}} !type [[F_TPTR:![0-9]+]]
 int *qux(char *a, float *b, double *c) {
   return 0;
 }
 
-// CHECK-DAG: define {{(dso_local)?}} void @corge({{.*}} !type [[F_TVOID]]
+// CHECK-LABEL: define {{(dso_local)?}} void @corge(
+// CHECK: {{.*}} !type [[F_TVOID]]
 void corge() {
   int (*fp_baz)(char, float, double) = baz;
   // CHECK: call i32 {{.*}}, !callee_type [[F_TPRIMITIVE_CT:![0-9]+]]  
@@ -46,10 +51,12 @@ struct st2 {
   struct st1 m;
 };
 
-// CHECK-DAG: define {{(dso_local)?}} void @stparam({{.*}} !type [[F_TSTRUCT:![0-9]+]]
+// CHECK-LABEL: define {{(dso_local)?}} void @stparam(
+// CHECK: {{.*}} !type [[F_TSTRUCT:![0-9]+]]
 void stparam(struct st2 a, struct st2 *b) {}
 
-// CHECK-DAG: define {{(dso_local)?}} void @stf({{.*}} !type [[F_TVOID]]
+// CHECK-LABEL: define {{(dso_local)?}} void @stf(
+// CHECK: {{.*}} !type [[F_TVOID]]
 void stf() {
   struct st1 St1;
   St1.fp = qux;
