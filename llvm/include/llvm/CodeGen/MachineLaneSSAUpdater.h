@@ -33,87 +33,13 @@ class MachineDominatorTree;
 class MachinePostDominatorTree; // optional if you choose to use it
 
 //===----------------------------------------------------------------------===//
-// CutEndPoints: Opaque token representing a spill-time cut of a value.
-// Constructed only by SpillCutCollector and consumed by the updater in
-// addDefAndRepairAfterSpill().
-//===----------------------------------------------------------------------===//
-class CutEndPoints {
-public:
-  CutEndPoints() = delete;
-
-  Register getOrigVReg() const { return OrigVReg; }
-  SlotIndex getCutIdx() const { return CutIdx; }
-  const SmallVector<LaneBitmask, 4> &getTouchedLaneMasks() const { return TouchedLaneMasks; }
-  
-  // Access to captured endpoint data for extendToIndices()
-  const SmallVector<SlotIndex, 8> &getMainEndPoints() const { return MainEndPoints; }
-  const DenseMap<LaneBitmask, SmallVector<SlotIndex, 8>> &getSubrangeEndPoints() const { 
-    return SubrangeEndPoints; 
-  }
-
-  // Optional: debugging aids (not required for functionality).
-  const SmallVector<LiveRange::Segment, 4> &getDebugSegsBefore() const { return SegsBefore; }
-
-private:
-  friend class SpillCutCollector; // only the collector can create valid tokens
-
-  // Private constructor used by the collector.
-  CutEndPoints(Register VReg,
-               SlotIndex Cut,
-               SmallVector<LaneBitmask, 4> Lanes,
-               SmallVector<SlotIndex, 8> MainEP,
-               DenseMap<LaneBitmask, SmallVector<SlotIndex, 8>> SubEP,
-               SmallVector<LiveRange::Segment, 4> Before)
-      : OrigVReg(VReg), CutIdx(Cut),
-        TouchedLaneMasks(std::move(Lanes)), 
-        MainEndPoints(std::move(MainEP)),
-        SubrangeEndPoints(std::move(SubEP)),
-        SegsBefore(std::move(Before)) {}
-
-  Register OrigVReg;
-  SlotIndex CutIdx;
-  SmallVector<LaneBitmask, 4> TouchedLaneMasks; // main + touched subranges
-  
-  // Captured endpoint data for extendToIndices()
-  SmallVector<SlotIndex, 8> MainEndPoints;
-  DenseMap<LaneBitmask, SmallVector<SlotIndex, 8>> SubrangeEndPoints;
-
-  // Optional diagnostics: segments before pruning (for asserts/debug dumps).
-  SmallVector<LiveRange::Segment, 4> SegsBefore;
-};
-
-//===----------------------------------------------------------------------===//
-// SpillCutCollector: captures EndPoints at spill-time by calling pruneValue()
-// on the main live range and the touched subranges. The opaque CutEndPoints
-// are later consumed by the updater.
-//===----------------------------------------------------------------------===//
-class SpillCutCollector {
-public:
-  explicit SpillCutCollector(LiveIntervals &LIS, MachineRegisterInfo &MRI) 
-      : LIS(LIS), MRI(MRI) {}
-
-  // Decide a cut at CutIdx for OrigVReg (lane-aware). This should:
-  //  - call pruneValue() on main + subranges as needed,
-  //  - stash the returned endpoints needed by extendToIndices(),
-  //  - return an opaque token capturing OrigVReg, CutIdx, and masks.
-  CutEndPoints cut(Register OrigVReg, SlotIndex CutIdx, LaneBitmask LanesToCut);
-
-private:
-  LiveIntervals &LIS;
-  MachineRegisterInfo &MRI;
-};
-
-//===----------------------------------------------------------------------===//
 // MachineLaneSSAUpdater: universal SSA repair for Machine IR (lane-aware)
 //
-// Use Case 1 (Common): repairSSAForNewDef()
+// Use Case: repairSSAForNewDef()
 //   - Caller creates a new instruction that defines an existing vreg (violating SSA)
 //   - This function creates a new vreg, replaces the operand, and repairs SSA
-//   - Example: User inserts "OrigVReg = ADD ..." and calls repairSSAForNewDef()
-//
-// Use Case 2 (Spill/Reload): addDefAndRepairAfterSpill()
-//   - Spiller has already created both instruction and new vreg
-//   - Must consume CutEndPoints from spill-time
+//   - Example: Insert "OrigVReg = ADD ..." and call repairSSAForNewDef()
+//   - This works for all scenarios including spill/reload
 //===----------------------------------------------------------------------===//
 class MachineLaneSSAUpdater {
 public:
@@ -138,15 +64,8 @@ public:
   // Returns: The newly created virtual register
   Register repairSSAForNewDef(MachineInstr &NewDefMI, Register OrigVReg);
 
-  // Reload-after-spill path (requires spill-time EndPoints). Will assert
-  // if the token does not match the OrigVReg or if indices are inconsistent.
-  Register addDefAndRepairAfterSpill(MachineInstr &ReloadMI,
-                                     Register OrigVReg,
-                                     LaneBitmask DefMask,
-                                     const CutEndPoints &EP);
-
 private:
-  // Common SSA repair logic used by both entry points
+  // Common SSA repair logic
   void performSSARepair(Register NewVReg, Register OrigVReg, 
                         LaneBitmask DefMask, MachineBasicBlock *DefBB);
 
