@@ -256,14 +256,11 @@ class TypeSourceInfo;
     /// Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
     NonEquivalentDeclSet NonEquivalentDecls;
-    // When template function return type is auto and return type is declared as
-    // typename from template params, there could be cycles in function
-    // importing when function decaration is still the need for return type
-    // declaration import. We have code path for nested types inside function
-    // (see hasReturnTypeDeclaredInside): assuming return type as VoidTy and
-    // calculate it later under UsedDifferentProtoType boolean. This class is
-    // reuse of this approach and make logic lazy - detect cycle - calculate
-    // return type later on.
+    /// A FunctionDecl can have properties that have a reference to the
+    /// function itself and are imported before the function is created. This
+    /// can come for example from auto return type or when template parameters
+    /// are used in the return type or parameters. This member is used to detect
+    /// cyclic import of FunctionDecl objects to avoid infinite recursion.
     std::unique_ptr<FunctionReturnTypeDeclCycleDetector>
         FunctionReturnTypeCycleDetector;
 

@@ -3204,7 +3204,7 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
 }
 
-TEST_P(ImportExpr, CycleInAutoTemplateSpec) {
+TEST_P(ImportDecl, CycleInAutoTemplateSpec) {
   MatchVerifier<Decl> Verifier;
   const char *Code = R"(
   template <class _CharT>

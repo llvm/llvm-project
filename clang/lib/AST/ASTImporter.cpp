@@ -1289,34 +1289,34 @@ using namespace clang;
 
 class ASTImporter::FunctionReturnTypeDeclCycleDetector {
 public:
-  class ScopedReturnTypeImport {
+  class DeclCycleMapInserter {
   public:
     // Do not track cycles on D == nullptr.
-    ScopedReturnTypeImport(FunctionReturnTypeDeclCycleDetector &owner,
-                           const FunctionDecl *D)
+    DeclCycleMapInserter(FunctionReturnTypeDeclCycleDetector &owner,
+                         const FunctionDecl *D)
         : CycleDetector(owner), D(D) {
       if (D)
         CycleDetector.FunctionReturnTypeDeclCycles.insert(D);
     }
-    ~ScopedReturnTypeImport() {
+    ~DeclCycleMapInserter() {
       if (D)
         CycleDetector.FunctionReturnTypeDeclCycles.erase(D);
     }
-    ScopedReturnTypeImport(const ScopedReturnTypeImport &) = delete;
-    ScopedReturnTypeImport &operator=(const ScopedReturnTypeImport &) = delete;
+    DeclCycleMapInserter(const DeclCycleMapInserter &) = delete;
+    DeclCycleMapInserter &operator=(const DeclCycleMapInserter &) = delete;
 
   private:
     FunctionReturnTypeDeclCycleDetector &CycleDetector;
     const FunctionDecl *D;
   };
 
-  ScopedReturnTypeImport DetectImportCycles(const FunctionDecl *D) {
-    if (!IsCycle(D))
-      return ScopedReturnTypeImport(*this, D);
-    return ScopedReturnTypeImport(*this, nullptr);
+  DeclCycleMapInserter detectImportCycle(const FunctionDecl *D) {
+    if (!isCycle(D))
+      return DeclCycleMapInserter(*this, D);
+    return DeclCycleMapInserter(*this, nullptr);
   }
 
-  bool IsCycle(const FunctionDecl *D) const {
+  bool isCycle(const FunctionDecl *D) const {
     return FunctionReturnTypeDeclCycles.find(D) !=
            FunctionReturnTypeDeclCycles.end();
   }
@@ -4075,7 +4075,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // Reuse this approach for auto return types declared as typenames from
     // template pamams, tracked in FunctionReturnTypeCycleDetector.
     if (hasReturnTypeDeclaredInside(D) ||
-        Importer.FunctionReturnTypeCycleDetector->IsCycle(D)) {
+        Importer.FunctionReturnTypeCycleDetector->isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -4099,7 +4099,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   Error Err = Error::success();
   auto ScopedReturnTypeDeclCycleDetector =
-      Importer.FunctionReturnTypeCycleDetector->DetectImportCycles(D);
+      Importer.FunctionReturnTypeCycleDetector->detectImportCycle(D);
   auto T = importChecked(Err, FromTy);
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
