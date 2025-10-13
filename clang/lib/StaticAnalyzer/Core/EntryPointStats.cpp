@@ -60,7 +60,7 @@ template <typename Callback> void enumerateStatVectors(const Callback &Fn) {
   Fn(StatsRegistry->CounterStats);
 }
 
-void clearSnapshots(void*) { StatsRegistry->Snapshots.clear(); }
+void clearSnapshots(void *) { StatsRegistry->Snapshots.clear(); }
 
 } // namespace
 
@@ -81,7 +81,8 @@ static void checkStatName(const EntryPointStat *M) {
   }
 }
 
-void EntryPointStat::lockRegistry(llvm::StringRef CPPFileName, ASTContext &Ctx) {
+void EntryPointStat::lockRegistry(llvm::StringRef CPPFileName,
+                                  ASTContext &Ctx) {
   auto CmpByNames = [](const EntryPointStat *L, const EntryPointStat *R) {
     return L->name() < R->name();
   };
