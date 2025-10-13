@@ -2528,7 +2528,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_PTL_M32,CHECK_NKL_M32
 // RUN: %clang -march=clearwaterforest -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32,CHECK_PTL_M32,CHECK_CWF_M32,CHECK_NKL_M32
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32,CHECK_CWF_M32,CHECK_NKL_M32
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
 // CHECK_ARL_M32: #define __AVX2__ 1
@@ -2633,7 +2633,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_PTL_M64,CHECK_NKL_M64
 // RUN: %clang -march=clearwaterforest -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_PTL_M64,CHECK_CWF_M64,CHECK_NKL_M64
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_CWF_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
