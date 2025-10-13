@@ -1043,8 +1043,7 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     NewCU.addUInt(Die, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2,
                   Lang.getName());
 
-    if (uint32_t LangVersion = Lang.getVersion();
-        LangVersion != 0)
+    if (uint32_t LangVersion = Lang.getVersion(); LangVersion != 0)
       NewCU.addUInt(Die, dwarf::DW_AT_language_version, /*Form=*/std::nullopt,
                     LangVersion);
   } else {
