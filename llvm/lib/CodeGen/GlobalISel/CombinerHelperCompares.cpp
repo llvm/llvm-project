@@ -188,8 +188,8 @@ bool CombinerHelper::combineMergedBFXCompare(MachineInstr &MI) const {
 
     if (Cur->getOpcode() == TargetOpcode::G_UBFX) {
       Register Op = Cur->getOperand(1).getReg();
-      Register Width = Cur->getOperand(2).getReg();
-      Register Off = Cur->getOperand(3).getReg();
+      Register Off = Cur->getOperand(2).getReg();
+      Register Width = Cur->getOperand(3).getReg();
 
       auto WidthCst = getIConstantVRegVal(Width, MRI);
       auto OffCst = getIConstantVRegVal(Off, MRI);
@@ -209,7 +209,7 @@ bool CombinerHelper::combineMergedBFXCompare(MachineInstr &MI) const {
       Register RHS = Cur->getOperand(2).getReg();
 
       auto MaskCst = getIConstantVRegVal(RHS, MRI);
-      if (!MaskCst || !MaskCst->isMask() || !IsSrc(LHS))
+      if (!MaskCst || !IsSrc(LHS))
         return false;
 
       PartsMask |= *MaskCst;
@@ -219,7 +219,7 @@ bool CombinerHelper::combineMergedBFXCompare(MachineInstr &MI) const {
     return false;
   }
 
-  if (!PartsMask.isMask() || !Src)
+  if (!Src)
     return false;
 
   assert(OpTy == MRI.getType(Src) && "Ignored a type casting operation?");
