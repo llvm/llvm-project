@@ -7,7 +7,9 @@ import shutil
 import signal
 import subprocess
 import sys
-import winreg
+
+if sys.platform == "win32":
+    import winreg
 
 
 if __name__ != "__main__":
