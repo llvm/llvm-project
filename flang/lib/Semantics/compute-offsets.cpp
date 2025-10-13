@@ -207,7 +207,10 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // where COMMON blocks are illegal (C1107 and C1108).
   if (scope.kind() != Scope::Kind::BlockConstruct) {
     for (auto &pair : scope.commonBlocks()) {
-      DoCommonBlock(*pair.second);
+      // Only process actual COMMON block objects, not their uses
+      if (pair.second->has<CommonBlockDetails>()) {
+        DoCommonBlock(*pair.second);
+      }
     }
   }
   for (auto &[symbol, dep] : dependents_) {

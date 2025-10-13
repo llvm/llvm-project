@@ -1698,20 +1698,9 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
   if (!name) {
     return nullptr;
   }
-  // Check the local and surrounding scopes first
-  if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
-              .FindCommonBlock(name->source)}) {
+  if (auto *cb{GetContext().scope.FindCommonBlockInScopes(name->source)}) {
     name->symbol = cb;
     return cb;
-  }
-  // Look for COMMON block in the modules
-  for (const Scope &childScope : context_.globalScope().children()) {
-    if (childScope.kind() == Scope::Kind::Module) {
-      if (auto *cb{childScope.FindCommonBlock(name->source)}) {
-        name->symbol = cb;
-        return cb;
-      }
-    }
   }
   return nullptr;
 }

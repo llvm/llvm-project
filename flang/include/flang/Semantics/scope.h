@@ -189,7 +189,22 @@ public:
   mapType &commonBlocks() { return commonBlocks_; }
   const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(SourceName, SourceName location);
+  bool AddCommonBlock(const SourceName &name, Symbol &cbSymbol);
+
+  /// Find COMMON block in the current scope
+  Symbol *FindCB(const SourceName &name) const {
+    if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
+      return &*it->second;
+    }
+    return nullptr;
+  }
+
+  /// Find COMMON block that is not USE-associated in the current scope
   Symbol *FindCommonBlock(const SourceName &) const;
+
+  /// Find COMMON block in current and surrounding scopes, follow USE
+  /// associations
+  Symbol *FindCommonBlockInScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>
