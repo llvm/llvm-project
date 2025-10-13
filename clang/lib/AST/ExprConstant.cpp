@@ -990,7 +990,7 @@ namespace {
       // of arrays to avoid exhausting the system resources, as initialization
       // of each element is likely to take some number of steps anyway.
       uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
-      if (ElemCount > Limit) {
+      if (Limit != 0 && ElemCount > Limit) {
         if (Diag)
           FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
               << ElemCount << Limit;
@@ -1016,6 +1016,9 @@ namespace {
     }
 
     bool nextStep(const Stmt *S) {
+      if (Ctx.getLangOpts().ConstexprStepLimit == 0)
+        return true;
+
       if (!StepsLeft) {
         FFDiag(S->getBeginLoc(), diag::note_constexpr_step_limit_exceeded);
         return false;
@@ -1186,7 +1189,8 @@ namespace {
     /// Should we continue evaluation as much as possible after encountering a
     /// construct which can't be reduced to a value?
     bool keepEvaluatingAfterFailure() const override {
-      if (!StepsLeft)
+      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+      if (Limit != 0 && !StepsLeft)
         return false;
 
       switch (EvalMode) {
