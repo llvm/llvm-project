@@ -13006,7 +13006,7 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
-    llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
+    llvm::SmallVector<OpenACCReductionRecipeWithStorage> RecipeList;
 
     for (unsigned I = 0; I < VarList.size(); ++I) {
       VarDecl *Recipe = readDeclAs<VarDecl>();
