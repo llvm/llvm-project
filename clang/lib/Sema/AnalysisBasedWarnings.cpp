@@ -2609,6 +2609,30 @@ public:
     S.Diag(Loc, diag::warn_assign_to_count_attributed_must_be_simple_stmt)
         << VD->isDependentCount() << VD->getName();
   }
+
+  static int getBoundsAttributedObjectKind(const ValueDecl *VD) {
+    switch (VD->getKind()) {
+    case Decl::Var:
+      return 0;
+    case Decl::ParmVar:
+      return 1;
+    case Decl::Field:
+      return 2;
+    default:
+      llvm_unreachable("unexpected bounds-attributed decl kind");
+      return 0;
+    }
+  }
+
+  void handleAssignToImmutableObject(const BinaryOperator *Assign,
+                                     const ValueDecl *VD,
+                                     AssignToImmutableObjectKind Kind,
+                                     bool IsRelatedToDecl,
+                                     ASTContext &Ctx) override {
+    S.Diag(Assign->getOperatorLoc(),
+           diag::warn_cannot_assign_to_immutable_bounds_attributed_object)
+        << getBoundsAttributedObjectKind(VD) << VD << Kind;
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,

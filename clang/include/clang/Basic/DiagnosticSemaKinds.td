@@ -14114,6 +14114,13 @@ def warn_assign_to_count_attributed_must_be_simple_stmt : Warning<
   "assignment to %select{count-attributed pointer|dependent count}0 '%1' "
   "must be a simple statement '%1 = ...'">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_cannot_assign_to_immutable_bounds_attributed_object : Warning<
+  "cannot assign to %select{variable|parameter|member}0 %1 because %select{"
+  "it points to a count-attributed pointer|"
+  "it points to a dependent count|"
+  "its type depends on an inout dependent count|"
+  "it's used as dependent count in an inout count-attributed pointer"
+  "}2">, InGroup<UnsafeBufferUsage>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
