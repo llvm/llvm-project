@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-not-null-terminated-result %t -- \
+// RUN: %check_clang_tidy %s bugprone-not-null-terminated-result %t -- \
 // RUN: -- -I %S/Inputs/not-null-terminated-result
 
 // FIXME: Something wrong with the APInt un/signed conversion on Windows:
@@ -70,13 +70,13 @@ void good_strerror_s(int errno) {
 int bad_strncmp_1(char *str0, const char *str1) {
   return strncmp(str0, str1, (strlen(str0) + 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: strncmp(str0, str1, (strlen(str0)));
+  // CHECK-FIXES: return strncmp(str0, str1, (strlen(str0)));
 }
 
 int bad_strncmp_2(char *str2, const char *str3) {
   return strncmp(str2, str3, 1 + strlen(str2));
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: strncmp(str2, str3, strlen(str2));
+  // CHECK-FIXES: return strncmp(str2, str3, strlen(str2));
 }
 
 int good_strncmp_1_2(char *str4, const char *str5) {
@@ -86,7 +86,7 @@ int good_strncmp_1_2(char *str4, const char *str5) {
 int bad_strncmp_3(char *str6) {
   return strncmp(str6, "string", 7);
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: strncmp(str6, "string", 6);
+  // CHECK-FIXES: return strncmp(str6, "string", 6);
 }
 
 int good_strncmp_3(char *str7) {
