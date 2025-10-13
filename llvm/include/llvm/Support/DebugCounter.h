@@ -178,7 +178,7 @@ protected:
     std::string Desc;
     SmallVector<Chunk> Chunks;
   };
-  LLVM_ABI bool handleCounterIncrement(CounterInfo &Info);
+  bool handleCounterIncrement(CounterInfo &Info);
 
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
