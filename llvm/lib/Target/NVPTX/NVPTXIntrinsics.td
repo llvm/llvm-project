@@ -5103,8 +5103,8 @@ let Predicates = [hasSM<90>, hasPTX<78>] in {
 def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
-let isConvergent = true, Predicates = [hasTcgen05Instructions] in {
-
+let isConvergent = true in {
+let Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 multiclass TCGEN05_ALLOC_INTR<string AS, string num, Intrinsic Intr> {
   def "" : BasicNVPTXInst<(outs),
              (ins ADDR:$dst, B32:$ncols),
@@ -5156,15 +5156,6 @@ defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"", "2">;
 defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<"shared", "1">;
 defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<"shared", "2">;
 
-multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins ADDR:$tmem_addr),
-             "tcgen05.shift.cta_group::" # num # ".down",
-             [(Intr addr:$tmem_addr)]>;
-}
-defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
-defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
-
 multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
   defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
   defvar fmt_asm = StrJoin<".", [dst_fmt, src_fmt]>.ret;
@@ -5195,9 +5186,22 @@ foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
   defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
   defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
 }
+} // Predicates
+
+let Predicates = [callSubtarget<"hasTcgen05ShiftSupport">] in {
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def "" : BasicNVPTXInst<(outs),
+             (ins ADDR:$tmem_addr),
+             "tcgen05.shift.cta_group::" # num # ".down",
+             [(Intr addr:$tmem_addr)]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+} // Predicates
+
 } // isConvergent
 
-let hasSideEffects = 1, Predicates = [hasTcgen05Instructions] in {
+let hasSideEffects = 1, Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 
   def tcgen05_fence_before_thread_sync: NullaryInst<
     "tcgen05.fence::before_thread_sync", int_nvvm_tcgen05_fence_before_thread_sync>;
@@ -5231,8 +5235,7 @@ class TCGEN05_LDST_REGINFO<int Veclen> {
 //
 
 class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
-        NVPTXInst<(outs), (ins), "?", []>,
-        Requires<[hasTcgen05Instructions]> {
+        NVPTXInst<(outs), (ins), "?", []> {
 
   TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
@@ -5256,8 +5259,7 @@ class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
 //
 
 class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
-        NVPTXInst<(outs), (ins), "?", []>,
-        Requires<[hasTcgen05Instructions]> {
+        NVPTXInst<(outs), (ins), "?", []> {
 
   TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
