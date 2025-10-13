@@ -7,7 +7,7 @@ import socket
 import traceback
 from enum import Enum
 from lldbsuite.support import seven
-from typing import Optional, List, Tuple, Literal, Union, Sequence
+from typing import Optional, List, Tuple, Union, Sequence
 
 
 def checksum(message):
@@ -77,6 +77,35 @@ def hex_decode_bytes(hex_bytes):
     return out
 
 
+class PacketDirection(Enum):
+    RECV = "recv"
+    SEND = "send"
+
+
+class PacketLog:
+    def __init__(self):
+        self._packets: list[tuple[PacketDirection, str]] = []
+
+    def add_sent(self, packet: str):
+        self._packets.append((PacketDirection.SEND, packet))
+
+    def add_received(self, packet: str):
+        self._packets.append((PacketDirection.RECV, packet))
+
+    def get_sent(self):
+        return [
+            pkt for direction, pkt in self._packets if direction == PacketDirection.SEND
+        ]
+
+    def get_received(self):
+        return [
+            pkt for direction, pkt in self._packets if direction == PacketDirection.RECV
+        ]
+
+    def __iter__(self):
+        return iter(self._packets)
+
+
 class MockGDBServerResponder:
     """
     A base class for handling client packets and issuing server responses for
@@ -100,17 +129,21 @@ class MockGDBServerResponder:
     type Response = Union[str, SpecialResponse]
 
     def __init__(self):
-        self.packetLog: List[str] = []
+        self.packetLog = PacketLog()
 
     def respond(self, packet: str) -> Sequence[Response]:
         """
         Return the unframed packet data that the server should issue in response
         to the given packet received from the client.
         """
-        self.packetLog.append(packet)
+        self.packetLog.add_received(packet)
         response = self._respond_impl(packet)
         if not isinstance(response, list):
             response = [response]
+        for part in response:
+            if isinstance(part, self.SpecialResponse):
+                continue
+            self.packetLog.add_sent(part)
         return response
 
     def _respond_impl(self, packet) -> Union[Response, List[Response]]:
@@ -529,12 +562,10 @@ class MockGDBServer:
     _receivedData = None
     _receivedDataOffset = None
     _shouldSendAck = True
-    packetLog: list[tuple[Literal["recv"] | Literal["send"], str | bytes]]
 
     def __init__(self, socket):
         self._socket = socket
         self.responder = MockGDBServerResponder()
-        self.packetLog = []
 
     def start(self):
         # Start a thread that waits for a client connection.
@@ -661,13 +692,11 @@ class MockGDBServer:
         # can start on the next packet the next time around
         self._receivedData = data[i:]
         self._receivedDataOffset = 0
-        self.packetLog.append(("recv", packet))
         return packet
 
     def _sendPacket(self, packet: str):
         assert self._socket is not None
         framed_packet = seven.bitcast_to_bytes(frame_packet(packet))
-        self.packetLog.append(("send", framed_packet))
         self._socket.sendall(framed_packet)
 
     def _handlePacket(self, packet):

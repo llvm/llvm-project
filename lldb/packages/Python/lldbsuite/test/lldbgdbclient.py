@@ -60,7 +60,7 @@ class GDBRemoteTestBase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         return process
 
-    def assertPacketLogReceived(self, packets, log=None):
+    def assertPacketLogReceived(self, packets, log: PacketLog = None):
         """
         Assert that the mock server's packet log received the given packets.
 
@@ -72,18 +72,20 @@ class GDBRemoteTestBase(TestBase):
         require that they are ordered in the log as they ordered in the arg.
         """
         if log is None:
-            log = self.server.responder.packetLog
+            received = self.server.responder.packetLog.get_received()
+        else:
+            received = log.get_received()
         i = 0
         j = 0
 
-        while i < len(packets) and j < len(log):
-            if log[j] == packets[i]:
+        while i < len(packets) and j < len(received):
+            if received[j] == packets[i]:
                 i += 1
             j += 1
         if i < len(packets):
             self.fail(
                 "Did not receive: %s\nLast 10 packets:\n\t%s"
-                % (packets[i], "\n\t".join(log))
+                % (packets[i], "\n\t".join(received))
             )
 
 
