@@ -2,277 +2,8 @@
 
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers  -mattr=+fp16,+simd128,+relaxed-simd | FileCheck %s --check-prefix=RELAXED
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers  -mattr=+fp16,+simd128,              | FileCheck %s --check-prefix=STRICT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers  -mattr=+simd128                     | FileCheck %s --check-prefix=NOFP16
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers                                      | FileCheck %s --check-prefix=NOSIMD
 
 target triple = "wasm32"
-
-define half @fadd_fmul_contract_f16(half %a, half %b, half %c) {
-; RELAXED-LABEL: fadd_fmul_contract_f16:
-; RELAXED:         .functype fadd_fmul_contract_f16 (f32, f32, f32) -> (f32)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    call $push0=, __truncsfhf2, $0
-; RELAXED-NEXT:    call $push1=, __extendhfsf2, $pop0
-; RELAXED-NEXT:    call $push2=, __truncsfhf2, $1
-; RELAXED-NEXT:    call $push3=, __extendhfsf2, $pop2
-; RELAXED-NEXT:    f32.mul $push4=, $pop1, $pop3
-; RELAXED-NEXT:    call $push5=, __truncsfhf2, $2
-; RELAXED-NEXT:    call $push6=, __extendhfsf2, $pop5
-; RELAXED-NEXT:    f32.add $push7=, $pop4, $pop6
-; RELAXED-NEXT:    return $pop7
-;
-; STRICT-LABEL: fadd_fmul_contract_f16:
-; STRICT:         .functype fadd_fmul_contract_f16 (f32, f32, f32) -> (f32)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    call $push0=, __truncsfhf2, $0
-; STRICT-NEXT:    call $push1=, __extendhfsf2, $pop0
-; STRICT-NEXT:    call $push2=, __truncsfhf2, $1
-; STRICT-NEXT:    call $push3=, __extendhfsf2, $pop2
-; STRICT-NEXT:    f32.mul $push4=, $pop1, $pop3
-; STRICT-NEXT:    call $push5=, __truncsfhf2, $2
-; STRICT-NEXT:    call $push6=, __extendhfsf2, $pop5
-; STRICT-NEXT:    f32.add $push7=, $pop4, $pop6
-; STRICT-NEXT:    return $pop7
-;
-; NOFP16-LABEL: fadd_fmul_contract_f16:
-; NOFP16:         .functype fadd_fmul_contract_f16 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, __truncsfhf2, $0
-; NOFP16-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOFP16-NEXT:    call $push2=, __truncsfhf2, $1
-; NOFP16-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOFP16-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOFP16-NEXT:    call $push5=, __truncsfhf2, $2
-; NOFP16-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOFP16-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOFP16-NEXT:    return $pop7
-;
-; NOSIMD-LABEL: fadd_fmul_contract_f16:
-; NOSIMD:         .functype fadd_fmul_contract_f16 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, __truncsfhf2, $0
-; NOSIMD-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOSIMD-NEXT:    call $push2=, __truncsfhf2, $1
-; NOSIMD-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOSIMD-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOSIMD-NEXT:    call $push5=, __truncsfhf2, $2
-; NOSIMD-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOSIMD-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOSIMD-NEXT:    return $pop7
-  %mul = fmul contract half %b, %a
-  %add = fadd contract half %mul, %c
-  ret half %add
-}
-
-define half @fmuladd_contract_f16(half %a, half %b, half %c) {
-; RELAXED-LABEL: fmuladd_contract_f16:
-; RELAXED:         .functype fmuladd_contract_f16 (f32, f32, f32) -> (f32)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    call $push0=, __truncsfhf2, $1
-; RELAXED-NEXT:    call $push1=, __extendhfsf2, $pop0
-; RELAXED-NEXT:    call $push2=, __truncsfhf2, $0
-; RELAXED-NEXT:    call $push3=, __extendhfsf2, $pop2
-; RELAXED-NEXT:    f32.mul $push4=, $pop1, $pop3
-; RELAXED-NEXT:    call $push5=, __truncsfhf2, $2
-; RELAXED-NEXT:    call $push6=, __extendhfsf2, $pop5
-; RELAXED-NEXT:    f32.add $push7=, $pop4, $pop6
-; RELAXED-NEXT:    return $pop7
-;
-; STRICT-LABEL: fmuladd_contract_f16:
-; STRICT:         .functype fmuladd_contract_f16 (f32, f32, f32) -> (f32)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    call $push0=, __truncsfhf2, $1
-; STRICT-NEXT:    call $push1=, __extendhfsf2, $pop0
-; STRICT-NEXT:    call $push2=, __truncsfhf2, $0
-; STRICT-NEXT:    call $push3=, __extendhfsf2, $pop2
-; STRICT-NEXT:    f32.mul $push4=, $pop1, $pop3
-; STRICT-NEXT:    call $push5=, __truncsfhf2, $2
-; STRICT-NEXT:    call $push6=, __extendhfsf2, $pop5
-; STRICT-NEXT:    f32.add $push7=, $pop4, $pop6
-; STRICT-NEXT:    return $pop7
-;
-; NOFP16-LABEL: fmuladd_contract_f16:
-; NOFP16:         .functype fmuladd_contract_f16 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, __truncsfhf2, $1
-; NOFP16-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOFP16-NEXT:    call $push2=, __truncsfhf2, $0
-; NOFP16-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOFP16-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOFP16-NEXT:    call $push5=, __truncsfhf2, $2
-; NOFP16-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOFP16-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOFP16-NEXT:    return $pop7
-;
-; NOSIMD-LABEL: fmuladd_contract_f16:
-; NOSIMD:         .functype fmuladd_contract_f16 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, __truncsfhf2, $1
-; NOSIMD-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOSIMD-NEXT:    call $push2=, __truncsfhf2, $0
-; NOSIMD-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOSIMD-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOSIMD-NEXT:    call $push5=, __truncsfhf2, $2
-; NOSIMD-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOSIMD-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOSIMD-NEXT:    return $pop7
-  %fma = call contract half @llvm.fmuladd(half %a, half %b, half %c)
-  ret half %fma
-}
-
-define half @fmuladd_f16(half %a, half %b, half %c) {
-; RELAXED-LABEL: fmuladd_f16:
-; RELAXED:         .functype fmuladd_f16 (f32, f32, f32) -> (f32)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    call $push0=, __truncsfhf2, $1
-; RELAXED-NEXT:    call $push1=, __extendhfsf2, $pop0
-; RELAXED-NEXT:    call $push2=, __truncsfhf2, $0
-; RELAXED-NEXT:    call $push3=, __extendhfsf2, $pop2
-; RELAXED-NEXT:    f32.mul $push4=, $pop1, $pop3
-; RELAXED-NEXT:    call $push5=, __truncsfhf2, $2
-; RELAXED-NEXT:    call $push6=, __extendhfsf2, $pop5
-; RELAXED-NEXT:    f32.add $push7=, $pop4, $pop6
-; RELAXED-NEXT:    return $pop7
-;
-; STRICT-LABEL: fmuladd_f16:
-; STRICT:         .functype fmuladd_f16 (f32, f32, f32) -> (f32)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    call $push0=, __truncsfhf2, $1
-; STRICT-NEXT:    call $push1=, __extendhfsf2, $pop0
-; STRICT-NEXT:    call $push2=, __truncsfhf2, $0
-; STRICT-NEXT:    call $push3=, __extendhfsf2, $pop2
-; STRICT-NEXT:    f32.mul $push4=, $pop1, $pop3
-; STRICT-NEXT:    call $push5=, __truncsfhf2, $2
-; STRICT-NEXT:    call $push6=, __extendhfsf2, $pop5
-; STRICT-NEXT:    f32.add $push7=, $pop4, $pop6
-; STRICT-NEXT:    return $pop7
-;
-; NOFP16-LABEL: fmuladd_f16:
-; NOFP16:         .functype fmuladd_f16 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, __truncsfhf2, $1
-; NOFP16-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOFP16-NEXT:    call $push2=, __truncsfhf2, $0
-; NOFP16-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOFP16-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOFP16-NEXT:    call $push5=, __truncsfhf2, $2
-; NOFP16-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOFP16-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOFP16-NEXT:    return $pop7
-;
-; NOSIMD-LABEL: fmuladd_f16:
-; NOSIMD:         .functype fmuladd_f16 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, __truncsfhf2, $1
-; NOSIMD-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOSIMD-NEXT:    call $push2=, __truncsfhf2, $0
-; NOSIMD-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOSIMD-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOSIMD-NEXT:    call $push5=, __truncsfhf2, $2
-; NOSIMD-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOSIMD-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOSIMD-NEXT:    return $pop7
-  %fma = call half @llvm.fmuladd(half %a, half %b, half %c)
-  ret half %fma
-}
-
-
-define float @fadd_fmul_contract_f32(float %a, float %b, float %c) {
-; RELAXED-LABEL: fadd_fmul_contract_f32:
-; RELAXED:         .functype fadd_fmul_contract_f32 (f32, f32, f32) -> (f32)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32.mul $push0=, $1, $0
-; RELAXED-NEXT:    f32.add $push1=, $pop0, $2
-; RELAXED-NEXT:    return $pop1
-;
-; STRICT-LABEL: fadd_fmul_contract_f32:
-; STRICT:         .functype fadd_fmul_contract_f32 (f32, f32, f32) -> (f32)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f32.mul $push0=, $1, $0
-; STRICT-NEXT:    f32.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fadd_fmul_contract_f32:
-; NOFP16:         .functype fadd_fmul_contract_f32 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32.mul $push0=, $1, $0
-; NOFP16-NEXT:    f32.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fadd_fmul_contract_f32:
-; NOSIMD:         .functype fadd_fmul_contract_f32 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $1, $0
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $2
-; NOSIMD-NEXT:    return $pop1
-  %mul = fmul contract float %b, %a
-  %add = fadd contract float %mul, %c
-  ret float %add
-}
-
-define float @fmuladd_contract_f32(float %a, float %b, float %c) {
-; RELAXED-LABEL: fmuladd_contract_f32:
-; RELAXED:         .functype fmuladd_contract_f32 (f32, f32, f32) -> (f32)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32.mul $push0=, $0, $1
-; RELAXED-NEXT:    f32.add $push1=, $pop0, $2
-; RELAXED-NEXT:    return $pop1
-;
-; STRICT-LABEL: fmuladd_contract_f32:
-; STRICT:         .functype fmuladd_contract_f32 (f32, f32, f32) -> (f32)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f32.mul $push0=, $0, $1
-; STRICT-NEXT:    f32.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_contract_f32:
-; NOFP16:         .functype fmuladd_contract_f32 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32.mul $push0=, $0, $1
-; NOFP16-NEXT:    f32.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_contract_f32:
-; NOSIMD:         .functype fmuladd_contract_f32 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $0, $1
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $2
-; NOSIMD-NEXT:    return $pop1
-  %fma = call contract float @llvm.fmuladd(float %a, float %b, float %c)
-  ret float %fma
-}
-
-define float @fmuladd_f32(float %a, float %b, float %c) {
-; RELAXED-LABEL: fmuladd_f32:
-; RELAXED:         .functype fmuladd_f32 (f32, f32, f32) -> (f32)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32.mul $push0=, $0, $1
-; RELAXED-NEXT:    f32.add $push1=, $pop0, $2
-; RELAXED-NEXT:    return $pop1
-;
-; STRICT-LABEL: fmuladd_f32:
-; STRICT:         .functype fmuladd_f32 (f32, f32, f32) -> (f32)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f32.mul $push0=, $0, $1
-; STRICT-NEXT:    f32.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_f32:
-; NOFP16:         .functype fmuladd_f32 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32.mul $push0=, $0, $1
-; NOFP16-NEXT:    f32.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_f32:
-; NOSIMD:         .functype fmuladd_f32 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $0, $1
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $2
-; NOSIMD-NEXT:    return $pop1
-  %fma = call float @llvm.fmuladd(float %a, float %b, float %c)
-  ret float %fma
-}
 
 define double @fadd_fmul_contract_f64(double %a, double %b, double %c) {
 ; RELAXED-LABEL: fadd_fmul_contract_f64:
@@ -288,94 +19,16 @@ define double @fadd_fmul_contract_f64(double %a, double %b, double %c) {
 ; STRICT-NEXT:    f64.mul $push0=, $1, $0
 ; STRICT-NEXT:    f64.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fadd_fmul_contract_f64:
-; NOFP16:         .functype fadd_fmul_contract_f64 (f64, f64, f64) -> (f64)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64.mul $push0=, $1, $0
-; NOFP16-NEXT:    f64.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fadd_fmul_contract_f64:
-; NOSIMD:         .functype fadd_fmul_contract_f64 (f64, f64, f64) -> (f64)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $1, $0
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $2
-; NOSIMD-NEXT:    return $pop1
   %mul = fmul contract double %b, %a
   %add = fadd contract double %mul, %c
   ret double %add
-}
-
-define double @fmuladd_f64(double %a, double %b, double %c) {
-; RELAXED-LABEL: fmuladd_f64:
-; RELAXED:         .functype fmuladd_f64 (f64, f64, f64) -> (f64)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64.mul $push0=, $0, $1
-; RELAXED-NEXT:    f64.add $push1=, $pop0, $2
-; RELAXED-NEXT:    return $pop1
-;
-; STRICT-LABEL: fmuladd_f64:
-; STRICT:         .functype fmuladd_f64 (f64, f64, f64) -> (f64)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f64.mul $push0=, $0, $1
-; STRICT-NEXT:    f64.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_f64:
-; NOFP16:         .functype fmuladd_f64 (f64, f64, f64) -> (f64)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64.mul $push0=, $0, $1
-; NOFP16-NEXT:    f64.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_f64:
-; NOSIMD:         .functype fmuladd_f64 (f64, f64, f64) -> (f64)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $0, $1
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $2
-; NOSIMD-NEXT:    return $pop1
-  %fma = call double @llvm.fmuladd(double %a, double %b, double %c)
-  ret double %fma
-}
-
-define double @fmuladd_contract_f64(double %a, double %b, double %c) {
-; RELAXED-LABEL: fmuladd_contract_f64:
-; RELAXED:         .functype fmuladd_contract_f64 (f64, f64, f64) -> (f64)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64.mul $push0=, $0, $1
-; RELAXED-NEXT:    f64.add $push1=, $pop0, $2
-; RELAXED-NEXT:    return $pop1
-;
-; STRICT-LABEL: fmuladd_contract_f64:
-; STRICT:         .functype fmuladd_contract_f64 (f64, f64, f64) -> (f64)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f64.mul $push0=, $0, $1
-; STRICT-NEXT:    f64.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_contract_f64:
-; NOFP16:         .functype fmuladd_contract_f64 (f64, f64, f64) -> (f64)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64.mul $push0=, $0, $1
-; NOFP16-NEXT:    f64.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_contract_f64:
-; NOSIMD:         .functype fmuladd_contract_f64 (f64, f64, f64) -> (f64)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $0, $1
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $2
-; NOSIMD-NEXT:    return $pop1
-  %fma = call contract double @llvm.fmuladd(double %a, double %b, double %c)
-  ret double %fma
 }
 
 define <4 x float> @fadd_fmul_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fadd_fmul_contract_4xf32:
 ; RELAXED:         .functype fadd_fmul_contract_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $1, $0, $2
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $2, $1, $0
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_4xf32:
@@ -384,221 +37,30 @@ define <4 x float> @fadd_fmul_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 
 ; STRICT-NEXT:    f32x4.mul $push0=, $1, $0
 ; STRICT-NEXT:    f32x4.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fadd_fmul_contract_4xf32:
-; NOFP16:         .functype fadd_fmul_contract_4xf32 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.mul $push0=, $1, $0
-; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fadd_fmul_contract_4xf32:
-; NOSIMD:         .functype fadd_fmul_contract_4xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $8, $4
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $12
-; NOSIMD-NEXT:    f32.store 12($0), $pop1
-; NOSIMD-NEXT:    f32.mul $push2=, $7, $3
-; NOSIMD-NEXT:    f32.add $push3=, $pop2, $11
-; NOSIMD-NEXT:    f32.store 8($0), $pop3
-; NOSIMD-NEXT:    f32.mul $push4=, $6, $2
-; NOSIMD-NEXT:    f32.add $push5=, $pop4, $10
-; NOSIMD-NEXT:    f32.store 4($0), $pop5
-; NOSIMD-NEXT:    f32.mul $push6=, $5, $1
-; NOSIMD-NEXT:    f32.add $push7=, $pop6, $9
-; NOSIMD-NEXT:    f32.store 0($0), $pop7
-; NOSIMD-NEXT:    return
   %mul = fmul contract <4 x float> %b, %a
   %add = fadd contract <4 x float> %mul, %c
   ret <4 x float> %add
 }
 
+
 define <8 x half> @fadd_fmul_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; RELAXED-LABEL: fadd_fmul_contract_8xf16:
 ; RELAXED:         .functype fadd_fmul_contract_8xf16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.madd $push0=, $1, $0, $2
+; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $2, $1, $0
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_8xf16:
 ; STRICT:         .functype fadd_fmul_contract_8xf16 (v128, v128, v128) -> (v128)
 ; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f16x8.madd $push0=, $1, $0, $2
-; STRICT-NEXT:    return $pop0
-;
-; NOFP16-LABEL: fadd_fmul_contract_8xf16:
-; NOFP16:         .functype fadd_fmul_contract_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, __truncsfhf2, $8
-; NOFP16-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOFP16-NEXT:    call $push2=, __truncsfhf2, $16
-; NOFP16-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOFP16-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOFP16-NEXT:    call $push5=, __truncsfhf2, $24
-; NOFP16-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOFP16-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOFP16-NEXT:    call $push8=, __truncsfhf2, $pop7
-; NOFP16-NEXT:    i32.store16 14($0), $pop8
-; NOFP16-NEXT:    call $push9=, __truncsfhf2, $7
-; NOFP16-NEXT:    call $push10=, __extendhfsf2, $pop9
-; NOFP16-NEXT:    call $push11=, __truncsfhf2, $15
-; NOFP16-NEXT:    call $push12=, __extendhfsf2, $pop11
-; NOFP16-NEXT:    f32.mul $push13=, $pop10, $pop12
-; NOFP16-NEXT:    call $push14=, __truncsfhf2, $23
-; NOFP16-NEXT:    call $push15=, __extendhfsf2, $pop14
-; NOFP16-NEXT:    f32.add $push16=, $pop13, $pop15
-; NOFP16-NEXT:    call $push17=, __truncsfhf2, $pop16
-; NOFP16-NEXT:    i32.store16 12($0), $pop17
-; NOFP16-NEXT:    call $push18=, __truncsfhf2, $6
-; NOFP16-NEXT:    call $push19=, __extendhfsf2, $pop18
-; NOFP16-NEXT:    call $push20=, __truncsfhf2, $14
-; NOFP16-NEXT:    call $push21=, __extendhfsf2, $pop20
-; NOFP16-NEXT:    f32.mul $push22=, $pop19, $pop21
-; NOFP16-NEXT:    call $push23=, __truncsfhf2, $22
-; NOFP16-NEXT:    call $push24=, __extendhfsf2, $pop23
-; NOFP16-NEXT:    f32.add $push25=, $pop22, $pop24
-; NOFP16-NEXT:    call $push26=, __truncsfhf2, $pop25
-; NOFP16-NEXT:    i32.store16 10($0), $pop26
-; NOFP16-NEXT:    call $push27=, __truncsfhf2, $5
-; NOFP16-NEXT:    call $push28=, __extendhfsf2, $pop27
-; NOFP16-NEXT:    call $push29=, __truncsfhf2, $13
-; NOFP16-NEXT:    call $push30=, __extendhfsf2, $pop29
-; NOFP16-NEXT:    f32.mul $push31=, $pop28, $pop30
-; NOFP16-NEXT:    call $push32=, __truncsfhf2, $21
-; NOFP16-NEXT:    call $push33=, __extendhfsf2, $pop32
-; NOFP16-NEXT:    f32.add $push34=, $pop31, $pop33
-; NOFP16-NEXT:    call $push35=, __truncsfhf2, $pop34
-; NOFP16-NEXT:    i32.store16 8($0), $pop35
-; NOFP16-NEXT:    call $push36=, __truncsfhf2, $4
-; NOFP16-NEXT:    call $push37=, __extendhfsf2, $pop36
-; NOFP16-NEXT:    call $push38=, __truncsfhf2, $12
-; NOFP16-NEXT:    call $push39=, __extendhfsf2, $pop38
-; NOFP16-NEXT:    f32.mul $push40=, $pop37, $pop39
-; NOFP16-NEXT:    call $push41=, __truncsfhf2, $20
-; NOFP16-NEXT:    call $push42=, __extendhfsf2, $pop41
-; NOFP16-NEXT:    f32.add $push43=, $pop40, $pop42
-; NOFP16-NEXT:    call $push44=, __truncsfhf2, $pop43
-; NOFP16-NEXT:    i32.store16 6($0), $pop44
-; NOFP16-NEXT:    call $push45=, __truncsfhf2, $3
-; NOFP16-NEXT:    call $push46=, __extendhfsf2, $pop45
-; NOFP16-NEXT:    call $push47=, __truncsfhf2, $11
-; NOFP16-NEXT:    call $push48=, __extendhfsf2, $pop47
-; NOFP16-NEXT:    f32.mul $push49=, $pop46, $pop48
-; NOFP16-NEXT:    call $push50=, __truncsfhf2, $19
-; NOFP16-NEXT:    call $push51=, __extendhfsf2, $pop50
-; NOFP16-NEXT:    f32.add $push52=, $pop49, $pop51
-; NOFP16-NEXT:    call $push53=, __truncsfhf2, $pop52
-; NOFP16-NEXT:    i32.store16 4($0), $pop53
-; NOFP16-NEXT:    call $push54=, __truncsfhf2, $2
-; NOFP16-NEXT:    call $push55=, __extendhfsf2, $pop54
-; NOFP16-NEXT:    call $push56=, __truncsfhf2, $10
-; NOFP16-NEXT:    call $push57=, __extendhfsf2, $pop56
-; NOFP16-NEXT:    f32.mul $push58=, $pop55, $pop57
-; NOFP16-NEXT:    call $push59=, __truncsfhf2, $18
-; NOFP16-NEXT:    call $push60=, __extendhfsf2, $pop59
-; NOFP16-NEXT:    f32.add $push61=, $pop58, $pop60
-; NOFP16-NEXT:    call $push62=, __truncsfhf2, $pop61
-; NOFP16-NEXT:    i32.store16 2($0), $pop62
-; NOFP16-NEXT:    call $push63=, __truncsfhf2, $1
-; NOFP16-NEXT:    call $push64=, __extendhfsf2, $pop63
-; NOFP16-NEXT:    call $push65=, __truncsfhf2, $9
-; NOFP16-NEXT:    call $push66=, __extendhfsf2, $pop65
-; NOFP16-NEXT:    f32.mul $push67=, $pop64, $pop66
-; NOFP16-NEXT:    call $push68=, __truncsfhf2, $17
-; NOFP16-NEXT:    call $push69=, __extendhfsf2, $pop68
-; NOFP16-NEXT:    f32.add $push70=, $pop67, $pop69
-; NOFP16-NEXT:    call $push71=, __truncsfhf2, $pop70
-; NOFP16-NEXT:    i32.store16 0($0), $pop71
-; NOFP16-NEXT:    return
-;
-; NOSIMD-LABEL: fadd_fmul_contract_8xf16:
-; NOSIMD:         .functype fadd_fmul_contract_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, __truncsfhf2, $8
-; NOSIMD-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOSIMD-NEXT:    call $push2=, __truncsfhf2, $16
-; NOSIMD-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOSIMD-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOSIMD-NEXT:    call $push5=, __truncsfhf2, $24
-; NOSIMD-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOSIMD-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOSIMD-NEXT:    call $push8=, __truncsfhf2, $pop7
-; NOSIMD-NEXT:    i32.store16 14($0), $pop8
-; NOSIMD-NEXT:    call $push9=, __truncsfhf2, $7
-; NOSIMD-NEXT:    call $push10=, __extendhfsf2, $pop9
-; NOSIMD-NEXT:    call $push11=, __truncsfhf2, $15
-; NOSIMD-NEXT:    call $push12=, __extendhfsf2, $pop11
-; NOSIMD-NEXT:    f32.mul $push13=, $pop10, $pop12
-; NOSIMD-NEXT:    call $push14=, __truncsfhf2, $23
-; NOSIMD-NEXT:    call $push15=, __extendhfsf2, $pop14
-; NOSIMD-NEXT:    f32.add $push16=, $pop13, $pop15
-; NOSIMD-NEXT:    call $push17=, __truncsfhf2, $pop16
-; NOSIMD-NEXT:    i32.store16 12($0), $pop17
-; NOSIMD-NEXT:    call $push18=, __truncsfhf2, $6
-; NOSIMD-NEXT:    call $push19=, __extendhfsf2, $pop18
-; NOSIMD-NEXT:    call $push20=, __truncsfhf2, $14
-; NOSIMD-NEXT:    call $push21=, __extendhfsf2, $pop20
-; NOSIMD-NEXT:    f32.mul $push22=, $pop19, $pop21
-; NOSIMD-NEXT:    call $push23=, __truncsfhf2, $22
-; NOSIMD-NEXT:    call $push24=, __extendhfsf2, $pop23
-; NOSIMD-NEXT:    f32.add $push25=, $pop22, $pop24
-; NOSIMD-NEXT:    call $push26=, __truncsfhf2, $pop25
-; NOSIMD-NEXT:    i32.store16 10($0), $pop26
-; NOSIMD-NEXT:    call $push27=, __truncsfhf2, $5
-; NOSIMD-NEXT:    call $push28=, __extendhfsf2, $pop27
-; NOSIMD-NEXT:    call $push29=, __truncsfhf2, $13
-; NOSIMD-NEXT:    call $push30=, __extendhfsf2, $pop29
-; NOSIMD-NEXT:    f32.mul $push31=, $pop28, $pop30
-; NOSIMD-NEXT:    call $push32=, __truncsfhf2, $21
-; NOSIMD-NEXT:    call $push33=, __extendhfsf2, $pop32
-; NOSIMD-NEXT:    f32.add $push34=, $pop31, $pop33
-; NOSIMD-NEXT:    call $push35=, __truncsfhf2, $pop34
-; NOSIMD-NEXT:    i32.store16 8($0), $pop35
-; NOSIMD-NEXT:    call $push36=, __truncsfhf2, $4
-; NOSIMD-NEXT:    call $push37=, __extendhfsf2, $pop36
-; NOSIMD-NEXT:    call $push38=, __truncsfhf2, $12
-; NOSIMD-NEXT:    call $push39=, __extendhfsf2, $pop38
-; NOSIMD-NEXT:    f32.mul $push40=, $pop37, $pop39
-; NOSIMD-NEXT:    call $push41=, __truncsfhf2, $20
-; NOSIMD-NEXT:    call $push42=, __extendhfsf2, $pop41
-; NOSIMD-NEXT:    f32.add $push43=, $pop40, $pop42
-; NOSIMD-NEXT:    call $push44=, __truncsfhf2, $pop43
-; NOSIMD-NEXT:    i32.store16 6($0), $pop44
-; NOSIMD-NEXT:    call $push45=, __truncsfhf2, $3
-; NOSIMD-NEXT:    call $push46=, __extendhfsf2, $pop45
-; NOSIMD-NEXT:    call $push47=, __truncsfhf2, $11
-; NOSIMD-NEXT:    call $push48=, __extendhfsf2, $pop47
-; NOSIMD-NEXT:    f32.mul $push49=, $pop46, $pop48
-; NOSIMD-NEXT:    call $push50=, __truncsfhf2, $19
-; NOSIMD-NEXT:    call $push51=, __extendhfsf2, $pop50
-; NOSIMD-NEXT:    f32.add $push52=, $pop49, $pop51
-; NOSIMD-NEXT:    call $push53=, __truncsfhf2, $pop52
-; NOSIMD-NEXT:    i32.store16 4($0), $pop53
-; NOSIMD-NEXT:    call $push54=, __truncsfhf2, $2
-; NOSIMD-NEXT:    call $push55=, __extendhfsf2, $pop54
-; NOSIMD-NEXT:    call $push56=, __truncsfhf2, $10
-; NOSIMD-NEXT:    call $push57=, __extendhfsf2, $pop56
-; NOSIMD-NEXT:    f32.mul $push58=, $pop55, $pop57
-; NOSIMD-NEXT:    call $push59=, __truncsfhf2, $18
-; NOSIMD-NEXT:    call $push60=, __extendhfsf2, $pop59
-; NOSIMD-NEXT:    f32.add $push61=, $pop58, $pop60
-; NOSIMD-NEXT:    call $push62=, __truncsfhf2, $pop61
-; NOSIMD-NEXT:    i32.store16 2($0), $pop62
-; NOSIMD-NEXT:    call $push63=, __truncsfhf2, $1
-; NOSIMD-NEXT:    call $push64=, __extendhfsf2, $pop63
-; NOSIMD-NEXT:    call $push65=, __truncsfhf2, $9
-; NOSIMD-NEXT:    call $push66=, __extendhfsf2, $pop65
-; NOSIMD-NEXT:    f32.mul $push67=, $pop64, $pop66
-; NOSIMD-NEXT:    call $push68=, __truncsfhf2, $17
-; NOSIMD-NEXT:    call $push69=, __extendhfsf2, $pop68
-; NOSIMD-NEXT:    f32.add $push70=, $pop67, $pop69
-; NOSIMD-NEXT:    call $push71=, __truncsfhf2, $pop70
-; NOSIMD-NEXT:    i32.store16 0($0), $pop71
-; NOSIMD-NEXT:    return
+; STRICT-NEXT:    f16x8.mul $push0=, $1, $0
+; STRICT-NEXT:    f16x8.add $push1=, $pop0, $2
+; STRICT-NEXT:    return $pop1
   %mul = fmul contract <8 x half> %b, %a
   %add = fadd contract <8 x half> %mul, %c
   ret <8 x half> %add
 }
+
 
 define <4 x float> @fadd_fmul_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fadd_fmul_4xf32:
@@ -614,412 +76,16 @@ define <4 x float> @fadd_fmul_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> 
 ; STRICT-NEXT:    f32x4.mul $push0=, $1, $0
 ; STRICT-NEXT:    f32x4.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fadd_fmul_4xf32:
-; NOFP16:         .functype fadd_fmul_4xf32 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.mul $push0=, $1, $0
-; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fadd_fmul_4xf32:
-; NOSIMD:         .functype fadd_fmul_4xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $8, $4
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $12
-; NOSIMD-NEXT:    f32.store 12($0), $pop1
-; NOSIMD-NEXT:    f32.mul $push2=, $7, $3
-; NOSIMD-NEXT:    f32.add $push3=, $pop2, $11
-; NOSIMD-NEXT:    f32.store 8($0), $pop3
-; NOSIMD-NEXT:    f32.mul $push4=, $6, $2
-; NOSIMD-NEXT:    f32.add $push5=, $pop4, $10
-; NOSIMD-NEXT:    f32.store 4($0), $pop5
-; NOSIMD-NEXT:    f32.mul $push6=, $5, $1
-; NOSIMD-NEXT:    f32.add $push7=, $pop6, $9
-; NOSIMD-NEXT:    f32.store 0($0), $pop7
-; NOSIMD-NEXT:    return
   %mul = fmul <4 x float> %b, %a
   %add = fadd contract <4 x float> %mul, %c
   ret <4 x float> %add
-}
-
-define <8 x half> @fmuladd_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-; RELAXED-LABEL: fmuladd_contract_8xf16:
-; RELAXED:         .functype fmuladd_contract_8xf16 (v128, v128, v128) -> (v128)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.madd $push0=, $0, $1, $2
-; RELAXED-NEXT:    return $pop0
-;
-; STRICT-LABEL: fmuladd_contract_8xf16:
-; STRICT:         .functype fmuladd_contract_8xf16 (v128, v128, v128) -> (v128)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f16x8.madd $push0=, $0, $1, $2
-; STRICT-NEXT:    return $pop0
-;
-; NOFP16-LABEL: fmuladd_contract_8xf16:
-; NOFP16:         .functype fmuladd_contract_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, __truncsfhf2, $16
-; NOFP16-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOFP16-NEXT:    call $push2=, __truncsfhf2, $8
-; NOFP16-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOFP16-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOFP16-NEXT:    call $push5=, __truncsfhf2, $24
-; NOFP16-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOFP16-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOFP16-NEXT:    call $push8=, __truncsfhf2, $pop7
-; NOFP16-NEXT:    i32.store16 14($0), $pop8
-; NOFP16-NEXT:    call $push9=, __truncsfhf2, $15
-; NOFP16-NEXT:    call $push10=, __extendhfsf2, $pop9
-; NOFP16-NEXT:    call $push11=, __truncsfhf2, $7
-; NOFP16-NEXT:    call $push12=, __extendhfsf2, $pop11
-; NOFP16-NEXT:    f32.mul $push13=, $pop10, $pop12
-; NOFP16-NEXT:    call $push14=, __truncsfhf2, $23
-; NOFP16-NEXT:    call $push15=, __extendhfsf2, $pop14
-; NOFP16-NEXT:    f32.add $push16=, $pop13, $pop15
-; NOFP16-NEXT:    call $push17=, __truncsfhf2, $pop16
-; NOFP16-NEXT:    i32.store16 12($0), $pop17
-; NOFP16-NEXT:    call $push18=, __truncsfhf2, $14
-; NOFP16-NEXT:    call $push19=, __extendhfsf2, $pop18
-; NOFP16-NEXT:    call $push20=, __truncsfhf2, $6
-; NOFP16-NEXT:    call $push21=, __extendhfsf2, $pop20
-; NOFP16-NEXT:    f32.mul $push22=, $pop19, $pop21
-; NOFP16-NEXT:    call $push23=, __truncsfhf2, $22
-; NOFP16-NEXT:    call $push24=, __extendhfsf2, $pop23
-; NOFP16-NEXT:    f32.add $push25=, $pop22, $pop24
-; NOFP16-NEXT:    call $push26=, __truncsfhf2, $pop25
-; NOFP16-NEXT:    i32.store16 10($0), $pop26
-; NOFP16-NEXT:    call $push27=, __truncsfhf2, $13
-; NOFP16-NEXT:    call $push28=, __extendhfsf2, $pop27
-; NOFP16-NEXT:    call $push29=, __truncsfhf2, $5
-; NOFP16-NEXT:    call $push30=, __extendhfsf2, $pop29
-; NOFP16-NEXT:    f32.mul $push31=, $pop28, $pop30
-; NOFP16-NEXT:    call $push32=, __truncsfhf2, $21
-; NOFP16-NEXT:    call $push33=, __extendhfsf2, $pop32
-; NOFP16-NEXT:    f32.add $push34=, $pop31, $pop33
-; NOFP16-NEXT:    call $push35=, __truncsfhf2, $pop34
-; NOFP16-NEXT:    i32.store16 8($0), $pop35
-; NOFP16-NEXT:    call $push36=, __truncsfhf2, $12
-; NOFP16-NEXT:    call $push37=, __extendhfsf2, $pop36
-; NOFP16-NEXT:    call $push38=, __truncsfhf2, $4
-; NOFP16-NEXT:    call $push39=, __extendhfsf2, $pop38
-; NOFP16-NEXT:    f32.mul $push40=, $pop37, $pop39
-; NOFP16-NEXT:    call $push41=, __truncsfhf2, $20
-; NOFP16-NEXT:    call $push42=, __extendhfsf2, $pop41
-; NOFP16-NEXT:    f32.add $push43=, $pop40, $pop42
-; NOFP16-NEXT:    call $push44=, __truncsfhf2, $pop43
-; NOFP16-NEXT:    i32.store16 6($0), $pop44
-; NOFP16-NEXT:    call $push45=, __truncsfhf2, $11
-; NOFP16-NEXT:    call $push46=, __extendhfsf2, $pop45
-; NOFP16-NEXT:    call $push47=, __truncsfhf2, $3
-; NOFP16-NEXT:    call $push48=, __extendhfsf2, $pop47
-; NOFP16-NEXT:    f32.mul $push49=, $pop46, $pop48
-; NOFP16-NEXT:    call $push50=, __truncsfhf2, $19
-; NOFP16-NEXT:    call $push51=, __extendhfsf2, $pop50
-; NOFP16-NEXT:    f32.add $push52=, $pop49, $pop51
-; NOFP16-NEXT:    call $push53=, __truncsfhf2, $pop52
-; NOFP16-NEXT:    i32.store16 4($0), $pop53
-; NOFP16-NEXT:    call $push54=, __truncsfhf2, $10
-; NOFP16-NEXT:    call $push55=, __extendhfsf2, $pop54
-; NOFP16-NEXT:    call $push56=, __truncsfhf2, $2
-; NOFP16-NEXT:    call $push57=, __extendhfsf2, $pop56
-; NOFP16-NEXT:    f32.mul $push58=, $pop55, $pop57
-; NOFP16-NEXT:    call $push59=, __truncsfhf2, $18
-; NOFP16-NEXT:    call $push60=, __extendhfsf2, $pop59
-; NOFP16-NEXT:    f32.add $push61=, $pop58, $pop60
-; NOFP16-NEXT:    call $push62=, __truncsfhf2, $pop61
-; NOFP16-NEXT:    i32.store16 2($0), $pop62
-; NOFP16-NEXT:    call $push63=, __truncsfhf2, $9
-; NOFP16-NEXT:    call $push64=, __extendhfsf2, $pop63
-; NOFP16-NEXT:    call $push65=, __truncsfhf2, $1
-; NOFP16-NEXT:    call $push66=, __extendhfsf2, $pop65
-; NOFP16-NEXT:    f32.mul $push67=, $pop64, $pop66
-; NOFP16-NEXT:    call $push68=, __truncsfhf2, $17
-; NOFP16-NEXT:    call $push69=, __extendhfsf2, $pop68
-; NOFP16-NEXT:    f32.add $push70=, $pop67, $pop69
-; NOFP16-NEXT:    call $push71=, __truncsfhf2, $pop70
-; NOFP16-NEXT:    i32.store16 0($0), $pop71
-; NOFP16-NEXT:    return
-;
-; NOSIMD-LABEL: fmuladd_contract_8xf16:
-; NOSIMD:         .functype fmuladd_contract_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, __truncsfhf2, $16
-; NOSIMD-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOSIMD-NEXT:    call $push2=, __truncsfhf2, $8
-; NOSIMD-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOSIMD-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOSIMD-NEXT:    call $push5=, __truncsfhf2, $24
-; NOSIMD-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOSIMD-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOSIMD-NEXT:    call $push8=, __truncsfhf2, $pop7
-; NOSIMD-NEXT:    i32.store16 14($0), $pop8
-; NOSIMD-NEXT:    call $push9=, __truncsfhf2, $15
-; NOSIMD-NEXT:    call $push10=, __extendhfsf2, $pop9
-; NOSIMD-NEXT:    call $push11=, __truncsfhf2, $7
-; NOSIMD-NEXT:    call $push12=, __extendhfsf2, $pop11
-; NOSIMD-NEXT:    f32.mul $push13=, $pop10, $pop12
-; NOSIMD-NEXT:    call $push14=, __truncsfhf2, $23
-; NOSIMD-NEXT:    call $push15=, __extendhfsf2, $pop14
-; NOSIMD-NEXT:    f32.add $push16=, $pop13, $pop15
-; NOSIMD-NEXT:    call $push17=, __truncsfhf2, $pop16
-; NOSIMD-NEXT:    i32.store16 12($0), $pop17
-; NOSIMD-NEXT:    call $push18=, __truncsfhf2, $14
-; NOSIMD-NEXT:    call $push19=, __extendhfsf2, $pop18
-; NOSIMD-NEXT:    call $push20=, __truncsfhf2, $6
-; NOSIMD-NEXT:    call $push21=, __extendhfsf2, $pop20
-; NOSIMD-NEXT:    f32.mul $push22=, $pop19, $pop21
-; NOSIMD-NEXT:    call $push23=, __truncsfhf2, $22
-; NOSIMD-NEXT:    call $push24=, __extendhfsf2, $pop23
-; NOSIMD-NEXT:    f32.add $push25=, $pop22, $pop24
-; NOSIMD-NEXT:    call $push26=, __truncsfhf2, $pop25
-; NOSIMD-NEXT:    i32.store16 10($0), $pop26
-; NOSIMD-NEXT:    call $push27=, __truncsfhf2, $13
-; NOSIMD-NEXT:    call $push28=, __extendhfsf2, $pop27
-; NOSIMD-NEXT:    call $push29=, __truncsfhf2, $5
-; NOSIMD-NEXT:    call $push30=, __extendhfsf2, $pop29
-; NOSIMD-NEXT:    f32.mul $push31=, $pop28, $pop30
-; NOSIMD-NEXT:    call $push32=, __truncsfhf2, $21
-; NOSIMD-NEXT:    call $push33=, __extendhfsf2, $pop32
-; NOSIMD-NEXT:    f32.add $push34=, $pop31, $pop33
-; NOSIMD-NEXT:    call $push35=, __truncsfhf2, $pop34
-; NOSIMD-NEXT:    i32.store16 8($0), $pop35
-; NOSIMD-NEXT:    call $push36=, __truncsfhf2, $12
-; NOSIMD-NEXT:    call $push37=, __extendhfsf2, $pop36
-; NOSIMD-NEXT:    call $push38=, __truncsfhf2, $4
-; NOSIMD-NEXT:    call $push39=, __extendhfsf2, $pop38
-; NOSIMD-NEXT:    f32.mul $push40=, $pop37, $pop39
-; NOSIMD-NEXT:    call $push41=, __truncsfhf2, $20
-; NOSIMD-NEXT:    call $push42=, __extendhfsf2, $pop41
-; NOSIMD-NEXT:    f32.add $push43=, $pop40, $pop42
-; NOSIMD-NEXT:    call $push44=, __truncsfhf2, $pop43
-; NOSIMD-NEXT:    i32.store16 6($0), $pop44
-; NOSIMD-NEXT:    call $push45=, __truncsfhf2, $11
-; NOSIMD-NEXT:    call $push46=, __extendhfsf2, $pop45
-; NOSIMD-NEXT:    call $push47=, __truncsfhf2, $3
-; NOSIMD-NEXT:    call $push48=, __extendhfsf2, $pop47
-; NOSIMD-NEXT:    f32.mul $push49=, $pop46, $pop48
-; NOSIMD-NEXT:    call $push50=, __truncsfhf2, $19
-; NOSIMD-NEXT:    call $push51=, __extendhfsf2, $pop50
-; NOSIMD-NEXT:    f32.add $push52=, $pop49, $pop51
-; NOSIMD-NEXT:    call $push53=, __truncsfhf2, $pop52
-; NOSIMD-NEXT:    i32.store16 4($0), $pop53
-; NOSIMD-NEXT:    call $push54=, __truncsfhf2, $10
-; NOSIMD-NEXT:    call $push55=, __extendhfsf2, $pop54
-; NOSIMD-NEXT:    call $push56=, __truncsfhf2, $2
-; NOSIMD-NEXT:    call $push57=, __extendhfsf2, $pop56
-; NOSIMD-NEXT:    f32.mul $push58=, $pop55, $pop57
-; NOSIMD-NEXT:    call $push59=, __truncsfhf2, $18
-; NOSIMD-NEXT:    call $push60=, __extendhfsf2, $pop59
-; NOSIMD-NEXT:    f32.add $push61=, $pop58, $pop60
-; NOSIMD-NEXT:    call $push62=, __truncsfhf2, $pop61
-; NOSIMD-NEXT:    i32.store16 2($0), $pop62
-; NOSIMD-NEXT:    call $push63=, __truncsfhf2, $9
-; NOSIMD-NEXT:    call $push64=, __extendhfsf2, $pop63
-; NOSIMD-NEXT:    call $push65=, __truncsfhf2, $1
-; NOSIMD-NEXT:    call $push66=, __extendhfsf2, $pop65
-; NOSIMD-NEXT:    f32.mul $push67=, $pop64, $pop66
-; NOSIMD-NEXT:    call $push68=, __truncsfhf2, $17
-; NOSIMD-NEXT:    call $push69=, __extendhfsf2, $pop68
-; NOSIMD-NEXT:    f32.add $push70=, $pop67, $pop69
-; NOSIMD-NEXT:    call $push71=, __truncsfhf2, $pop70
-; NOSIMD-NEXT:    i32.store16 0($0), $pop71
-; NOSIMD-NEXT:    return
-  %fma = call contract <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %b, <8 x half> %c)
-  ret <8 x half> %fma
-}
-
-define <8 x half> @fmuladd_8xf16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-; RELAXED-LABEL: fmuladd_8xf16:
-; RELAXED:         .functype fmuladd_8xf16 (v128, v128, v128) -> (v128)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.madd $push0=, $0, $1, $2
-; RELAXED-NEXT:    return $pop0
-;
-; STRICT-LABEL: fmuladd_8xf16:
-; STRICT:         .functype fmuladd_8xf16 (v128, v128, v128) -> (v128)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f16x8.madd $push0=, $0, $1, $2
-; STRICT-NEXT:    return $pop0
-;
-; NOFP16-LABEL: fmuladd_8xf16:
-; NOFP16:         .functype fmuladd_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, __truncsfhf2, $16
-; NOFP16-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOFP16-NEXT:    call $push2=, __truncsfhf2, $8
-; NOFP16-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOFP16-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOFP16-NEXT:    call $push5=, __truncsfhf2, $24
-; NOFP16-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOFP16-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOFP16-NEXT:    call $push8=, __truncsfhf2, $pop7
-; NOFP16-NEXT:    i32.store16 14($0), $pop8
-; NOFP16-NEXT:    call $push9=, __truncsfhf2, $15
-; NOFP16-NEXT:    call $push10=, __extendhfsf2, $pop9
-; NOFP16-NEXT:    call $push11=, __truncsfhf2, $7
-; NOFP16-NEXT:    call $push12=, __extendhfsf2, $pop11
-; NOFP16-NEXT:    f32.mul $push13=, $pop10, $pop12
-; NOFP16-NEXT:    call $push14=, __truncsfhf2, $23
-; NOFP16-NEXT:    call $push15=, __extendhfsf2, $pop14
-; NOFP16-NEXT:    f32.add $push16=, $pop13, $pop15
-; NOFP16-NEXT:    call $push17=, __truncsfhf2, $pop16
-; NOFP16-NEXT:    i32.store16 12($0), $pop17
-; NOFP16-NEXT:    call $push18=, __truncsfhf2, $14
-; NOFP16-NEXT:    call $push19=, __extendhfsf2, $pop18
-; NOFP16-NEXT:    call $push20=, __truncsfhf2, $6
-; NOFP16-NEXT:    call $push21=, __extendhfsf2, $pop20
-; NOFP16-NEXT:    f32.mul $push22=, $pop19, $pop21
-; NOFP16-NEXT:    call $push23=, __truncsfhf2, $22
-; NOFP16-NEXT:    call $push24=, __extendhfsf2, $pop23
-; NOFP16-NEXT:    f32.add $push25=, $pop22, $pop24
-; NOFP16-NEXT:    call $push26=, __truncsfhf2, $pop25
-; NOFP16-NEXT:    i32.store16 10($0), $pop26
-; NOFP16-NEXT:    call $push27=, __truncsfhf2, $13
-; NOFP16-NEXT:    call $push28=, __extendhfsf2, $pop27
-; NOFP16-NEXT:    call $push29=, __truncsfhf2, $5
-; NOFP16-NEXT:    call $push30=, __extendhfsf2, $pop29
-; NOFP16-NEXT:    f32.mul $push31=, $pop28, $pop30
-; NOFP16-NEXT:    call $push32=, __truncsfhf2, $21
-; NOFP16-NEXT:    call $push33=, __extendhfsf2, $pop32
-; NOFP16-NEXT:    f32.add $push34=, $pop31, $pop33
-; NOFP16-NEXT:    call $push35=, __truncsfhf2, $pop34
-; NOFP16-NEXT:    i32.store16 8($0), $pop35
-; NOFP16-NEXT:    call $push36=, __truncsfhf2, $12
-; NOFP16-NEXT:    call $push37=, __extendhfsf2, $pop36
-; NOFP16-NEXT:    call $push38=, __truncsfhf2, $4
-; NOFP16-NEXT:    call $push39=, __extendhfsf2, $pop38
-; NOFP16-NEXT:    f32.mul $push40=, $pop37, $pop39
-; NOFP16-NEXT:    call $push41=, __truncsfhf2, $20
-; NOFP16-NEXT:    call $push42=, __extendhfsf2, $pop41
-; NOFP16-NEXT:    f32.add $push43=, $pop40, $pop42
-; NOFP16-NEXT:    call $push44=, __truncsfhf2, $pop43
-; NOFP16-NEXT:    i32.store16 6($0), $pop44
-; NOFP16-NEXT:    call $push45=, __truncsfhf2, $11
-; NOFP16-NEXT:    call $push46=, __extendhfsf2, $pop45
-; NOFP16-NEXT:    call $push47=, __truncsfhf2, $3
-; NOFP16-NEXT:    call $push48=, __extendhfsf2, $pop47
-; NOFP16-NEXT:    f32.mul $push49=, $pop46, $pop48
-; NOFP16-NEXT:    call $push50=, __truncsfhf2, $19
-; NOFP16-NEXT:    call $push51=, __extendhfsf2, $pop50
-; NOFP16-NEXT:    f32.add $push52=, $pop49, $pop51
-; NOFP16-NEXT:    call $push53=, __truncsfhf2, $pop52
-; NOFP16-NEXT:    i32.store16 4($0), $pop53
-; NOFP16-NEXT:    call $push54=, __truncsfhf2, $10
-; NOFP16-NEXT:    call $push55=, __extendhfsf2, $pop54
-; NOFP16-NEXT:    call $push56=, __truncsfhf2, $2
-; NOFP16-NEXT:    call $push57=, __extendhfsf2, $pop56
-; NOFP16-NEXT:    f32.mul $push58=, $pop55, $pop57
-; NOFP16-NEXT:    call $push59=, __truncsfhf2, $18
-; NOFP16-NEXT:    call $push60=, __extendhfsf2, $pop59
-; NOFP16-NEXT:    f32.add $push61=, $pop58, $pop60
-; NOFP16-NEXT:    call $push62=, __truncsfhf2, $pop61
-; NOFP16-NEXT:    i32.store16 2($0), $pop62
-; NOFP16-NEXT:    call $push63=, __truncsfhf2, $9
-; NOFP16-NEXT:    call $push64=, __extendhfsf2, $pop63
-; NOFP16-NEXT:    call $push65=, __truncsfhf2, $1
-; NOFP16-NEXT:    call $push66=, __extendhfsf2, $pop65
-; NOFP16-NEXT:    f32.mul $push67=, $pop64, $pop66
-; NOFP16-NEXT:    call $push68=, __truncsfhf2, $17
-; NOFP16-NEXT:    call $push69=, __extendhfsf2, $pop68
-; NOFP16-NEXT:    f32.add $push70=, $pop67, $pop69
-; NOFP16-NEXT:    call $push71=, __truncsfhf2, $pop70
-; NOFP16-NEXT:    i32.store16 0($0), $pop71
-; NOFP16-NEXT:    return
-;
-; NOSIMD-LABEL: fmuladd_8xf16:
-; NOSIMD:         .functype fmuladd_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, __truncsfhf2, $16
-; NOSIMD-NEXT:    call $push1=, __extendhfsf2, $pop0
-; NOSIMD-NEXT:    call $push2=, __truncsfhf2, $8
-; NOSIMD-NEXT:    call $push3=, __extendhfsf2, $pop2
-; NOSIMD-NEXT:    f32.mul $push4=, $pop1, $pop3
-; NOSIMD-NEXT:    call $push5=, __truncsfhf2, $24
-; NOSIMD-NEXT:    call $push6=, __extendhfsf2, $pop5
-; NOSIMD-NEXT:    f32.add $push7=, $pop4, $pop6
-; NOSIMD-NEXT:    call $push8=, __truncsfhf2, $pop7
-; NOSIMD-NEXT:    i32.store16 14($0), $pop8
-; NOSIMD-NEXT:    call $push9=, __truncsfhf2, $15
-; NOSIMD-NEXT:    call $push10=, __extendhfsf2, $pop9
-; NOSIMD-NEXT:    call $push11=, __truncsfhf2, $7
-; NOSIMD-NEXT:    call $push12=, __extendhfsf2, $pop11
-; NOSIMD-NEXT:    f32.mul $push13=, $pop10, $pop12
-; NOSIMD-NEXT:    call $push14=, __truncsfhf2, $23
-; NOSIMD-NEXT:    call $push15=, __extendhfsf2, $pop14
-; NOSIMD-NEXT:    f32.add $push16=, $pop13, $pop15
-; NOSIMD-NEXT:    call $push17=, __truncsfhf2, $pop16
-; NOSIMD-NEXT:    i32.store16 12($0), $pop17
-; NOSIMD-NEXT:    call $push18=, __truncsfhf2, $14
-; NOSIMD-NEXT:    call $push19=, __extendhfsf2, $pop18
-; NOSIMD-NEXT:    call $push20=, __truncsfhf2, $6
-; NOSIMD-NEXT:    call $push21=, __extendhfsf2, $pop20
-; NOSIMD-NEXT:    f32.mul $push22=, $pop19, $pop21
-; NOSIMD-NEXT:    call $push23=, __truncsfhf2, $22
-; NOSIMD-NEXT:    call $push24=, __extendhfsf2, $pop23
-; NOSIMD-NEXT:    f32.add $push25=, $pop22, $pop24
-; NOSIMD-NEXT:    call $push26=, __truncsfhf2, $pop25
-; NOSIMD-NEXT:    i32.store16 10($0), $pop26
-; NOSIMD-NEXT:    call $push27=, __truncsfhf2, $13
-; NOSIMD-NEXT:    call $push28=, __extendhfsf2, $pop27
-; NOSIMD-NEXT:    call $push29=, __truncsfhf2, $5
-; NOSIMD-NEXT:    call $push30=, __extendhfsf2, $pop29
-; NOSIMD-NEXT:    f32.mul $push31=, $pop28, $pop30
-; NOSIMD-NEXT:    call $push32=, __truncsfhf2, $21
-; NOSIMD-NEXT:    call $push33=, __extendhfsf2, $pop32
-; NOSIMD-NEXT:    f32.add $push34=, $pop31, $pop33
-; NOSIMD-NEXT:    call $push35=, __truncsfhf2, $pop34
-; NOSIMD-NEXT:    i32.store16 8($0), $pop35
-; NOSIMD-NEXT:    call $push36=, __truncsfhf2, $12
-; NOSIMD-NEXT:    call $push37=, __extendhfsf2, $pop36
-; NOSIMD-NEXT:    call $push38=, __truncsfhf2, $4
-; NOSIMD-NEXT:    call $push39=, __extendhfsf2, $pop38
-; NOSIMD-NEXT:    f32.mul $push40=, $pop37, $pop39
-; NOSIMD-NEXT:    call $push41=, __truncsfhf2, $20
-; NOSIMD-NEXT:    call $push42=, __extendhfsf2, $pop41
-; NOSIMD-NEXT:    f32.add $push43=, $pop40, $pop42
-; NOSIMD-NEXT:    call $push44=, __truncsfhf2, $pop43
-; NOSIMD-NEXT:    i32.store16 6($0), $pop44
-; NOSIMD-NEXT:    call $push45=, __truncsfhf2, $11
-; NOSIMD-NEXT:    call $push46=, __extendhfsf2, $pop45
-; NOSIMD-NEXT:    call $push47=, __truncsfhf2, $3
-; NOSIMD-NEXT:    call $push48=, __extendhfsf2, $pop47
-; NOSIMD-NEXT:    f32.mul $push49=, $pop46, $pop48
-; NOSIMD-NEXT:    call $push50=, __truncsfhf2, $19
-; NOSIMD-NEXT:    call $push51=, __extendhfsf2, $pop50
-; NOSIMD-NEXT:    f32.add $push52=, $pop49, $pop51
-; NOSIMD-NEXT:    call $push53=, __truncsfhf2, $pop52
-; NOSIMD-NEXT:    i32.store16 4($0), $pop53
-; NOSIMD-NEXT:    call $push54=, __truncsfhf2, $10
-; NOSIMD-NEXT:    call $push55=, __extendhfsf2, $pop54
-; NOSIMD-NEXT:    call $push56=, __truncsfhf2, $2
-; NOSIMD-NEXT:    call $push57=, __extendhfsf2, $pop56
-; NOSIMD-NEXT:    f32.mul $push58=, $pop55, $pop57
-; NOSIMD-NEXT:    call $push59=, __truncsfhf2, $18
-; NOSIMD-NEXT:    call $push60=, __extendhfsf2, $pop59
-; NOSIMD-NEXT:    f32.add $push61=, $pop58, $pop60
-; NOSIMD-NEXT:    call $push62=, __truncsfhf2, $pop61
-; NOSIMD-NEXT:    i32.store16 2($0), $pop62
-; NOSIMD-NEXT:    call $push63=, __truncsfhf2, $9
-; NOSIMD-NEXT:    call $push64=, __extendhfsf2, $pop63
-; NOSIMD-NEXT:    call $push65=, __truncsfhf2, $1
-; NOSIMD-NEXT:    call $push66=, __extendhfsf2, $pop65
-; NOSIMD-NEXT:    f32.mul $push67=, $pop64, $pop66
-; NOSIMD-NEXT:    call $push68=, __truncsfhf2, $17
-; NOSIMD-NEXT:    call $push69=, __extendhfsf2, $pop68
-; NOSIMD-NEXT:    f32.add $push70=, $pop67, $pop69
-; NOSIMD-NEXT:    call $push71=, __truncsfhf2, $pop70
-; NOSIMD-NEXT:    i32.store16 0($0), $pop71
-; NOSIMD-NEXT:    return
-  %fma = call <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %b, <8 x half> %c)
-  ret <8 x half> %fma
 }
 
 define <4 x float> @fmuladd_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fmuladd_contract_4xf32:
 ; RELAXED:         .functype fmuladd_contract_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $2, $0, $1
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fmuladd_contract_4xf32:
@@ -1028,40 +94,18 @@ define <4 x float> @fmuladd_contract_4xf32(<4 x float> %a, <4 x float> %b, <4 x 
 ; STRICT-NEXT:    f32x4.mul $push0=, $0, $1
 ; STRICT-NEXT:    f32x4.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_contract_4xf32:
-; NOFP16:         .functype fmuladd_contract_4xf32 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.mul $push0=, $0, $1
-; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_contract_4xf32:
-; NOSIMD:         .functype fmuladd_contract_4xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $4, $8
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $12
-; NOSIMD-NEXT:    f32.store 12($0), $pop1
-; NOSIMD-NEXT:    f32.mul $push2=, $3, $7
-; NOSIMD-NEXT:    f32.add $push3=, $pop2, $11
-; NOSIMD-NEXT:    f32.store 8($0), $pop3
-; NOSIMD-NEXT:    f32.mul $push4=, $2, $6
-; NOSIMD-NEXT:    f32.add $push5=, $pop4, $10
-; NOSIMD-NEXT:    f32.store 4($0), $pop5
-; NOSIMD-NEXT:    f32.mul $push6=, $1, $5
-; NOSIMD-NEXT:    f32.add $push7=, $pop6, $9
-; NOSIMD-NEXT:    f32.store 0($0), $pop7
-; NOSIMD-NEXT:    return
   %fma = call contract <4 x float> @llvm.fmuladd(<4 x float> %a, <4 x float> %b, <4 x float> %c)
   ret <4 x float> %fma
 }
 
+; TODO: This should also have relaxed_madd in RELAXED case
 define <4 x float> @fmuladd_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fmuladd_4xf32:
 ; RELAXED:         .functype fmuladd_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $0, $1, $2
-; RELAXED-NEXT:    return $pop0
+; RELAXED-NEXT:    f32x4.mul $push0=, $0, $1
+; RELAXED-NEXT:    f32x4.add $push1=, $pop0, $2
+; RELAXED-NEXT:    return $pop1
 ;
 ; STRICT-LABEL: fmuladd_4xf32:
 ; STRICT:         .functype fmuladd_4xf32 (v128, v128, v128) -> (v128)
@@ -1069,168 +113,8 @@ define <4 x float> @fmuladd_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c
 ; STRICT-NEXT:    f32x4.mul $push0=, $0, $1
 ; STRICT-NEXT:    f32x4.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_4xf32:
-; NOFP16:         .functype fmuladd_4xf32 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.mul $push0=, $0, $1
-; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_4xf32:
-; NOSIMD:         .functype fmuladd_4xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $4, $8
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $12
-; NOSIMD-NEXT:    f32.store 12($0), $pop1
-; NOSIMD-NEXT:    f32.mul $push2=, $3, $7
-; NOSIMD-NEXT:    f32.add $push3=, $pop2, $11
-; NOSIMD-NEXT:    f32.store 8($0), $pop3
-; NOSIMD-NEXT:    f32.mul $push4=, $2, $6
-; NOSIMD-NEXT:    f32.add $push5=, $pop4, $10
-; NOSIMD-NEXT:    f32.store 4($0), $pop5
-; NOSIMD-NEXT:    f32.mul $push6=, $1, $5
-; NOSIMD-NEXT:    f32.add $push7=, $pop6, $9
-; NOSIMD-NEXT:    f32.store 0($0), $pop7
-; NOSIMD-NEXT:    return
   %fma = call <4 x float> @llvm.fmuladd(<4 x float> %a, <4 x float> %b, <4 x float> %c)
   ret <4 x float> %fma
-}
-
-define <8 x float> @fmuladd_8xf32(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
-; RELAXED-LABEL: fmuladd_8xf32:
-; RELAXED:         .functype fmuladd_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.mul $push0=, $2, $4
-; RELAXED-NEXT:    f32x4.add $push1=, $pop0, $6
-; RELAXED-NEXT:    v128.store 16($0), $pop1
-; RELAXED-NEXT:    f32x4.mul $push2=, $1, $3
-; RELAXED-NEXT:    f32x4.add $push3=, $pop2, $5
-; RELAXED-NEXT:    v128.store 0($0), $pop3
-; RELAXED-NEXT:    return
-;
-; STRICT-LABEL: fmuladd_8xf32:
-; STRICT:         .functype fmuladd_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f32x4.mul $push0=, $2, $4
-; STRICT-NEXT:    f32x4.add $push1=, $pop0, $6
-; STRICT-NEXT:    v128.store 16($0), $pop1
-; STRICT-NEXT:    f32x4.mul $push2=, $1, $3
-; STRICT-NEXT:    f32x4.add $push3=, $pop2, $5
-; STRICT-NEXT:    v128.store 0($0), $pop3
-; STRICT-NEXT:    return
-;
-; NOFP16-LABEL: fmuladd_8xf32:
-; NOFP16:         .functype fmuladd_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.mul $push0=, $2, $4
-; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $6
-; NOFP16-NEXT:    v128.store 16($0), $pop1
-; NOFP16-NEXT:    f32x4.mul $push2=, $1, $3
-; NOFP16-NEXT:    f32x4.add $push3=, $pop2, $5
-; NOFP16-NEXT:    v128.store 0($0), $pop3
-; NOFP16-NEXT:    return
-;
-; NOSIMD-LABEL: fmuladd_8xf32:
-; NOSIMD:         .functype fmuladd_8xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $8, $16
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $24
-; NOSIMD-NEXT:    f32.store 28($0), $pop1
-; NOSIMD-NEXT:    f32.mul $push2=, $7, $15
-; NOSIMD-NEXT:    f32.add $push3=, $pop2, $23
-; NOSIMD-NEXT:    f32.store 24($0), $pop3
-; NOSIMD-NEXT:    f32.mul $push4=, $6, $14
-; NOSIMD-NEXT:    f32.add $push5=, $pop4, $22
-; NOSIMD-NEXT:    f32.store 20($0), $pop5
-; NOSIMD-NEXT:    f32.mul $push6=, $5, $13
-; NOSIMD-NEXT:    f32.add $push7=, $pop6, $21
-; NOSIMD-NEXT:    f32.store 16($0), $pop7
-; NOSIMD-NEXT:    f32.mul $push8=, $4, $12
-; NOSIMD-NEXT:    f32.add $push9=, $pop8, $20
-; NOSIMD-NEXT:    f32.store 12($0), $pop9
-; NOSIMD-NEXT:    f32.mul $push10=, $3, $11
-; NOSIMD-NEXT:    f32.add $push11=, $pop10, $19
-; NOSIMD-NEXT:    f32.store 8($0), $pop11
-; NOSIMD-NEXT:    f32.mul $push12=, $2, $10
-; NOSIMD-NEXT:    f32.add $push13=, $pop12, $18
-; NOSIMD-NEXT:    f32.store 4($0), $pop13
-; NOSIMD-NEXT:    f32.mul $push14=, $1, $9
-; NOSIMD-NEXT:    f32.add $push15=, $pop14, $17
-; NOSIMD-NEXT:    f32.store 0($0), $pop15
-; NOSIMD-NEXT:    return
-  %fma = call <8 x float> @llvm.fmuladd(<8 x float> %a, <8 x float> %b, <8 x float> %c)
-  ret <8 x float> %fma
-}
-
-define <2 x double> @fmuladd_contract_2xf64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; RELAXED-LABEL: fmuladd_contract_2xf64:
-; RELAXED:         .functype fmuladd_contract_2xf64 (v128, v128, v128) -> (v128)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64x2.relaxed_madd $push0=, $0, $1, $2
-; RELAXED-NEXT:    return $pop0
-;
-; STRICT-LABEL: fmuladd_contract_2xf64:
-; STRICT:         .functype fmuladd_contract_2xf64 (v128, v128, v128) -> (v128)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f64x2.mul $push0=, $0, $1
-; STRICT-NEXT:    f64x2.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_contract_2xf64:
-; NOFP16:         .functype fmuladd_contract_2xf64 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64x2.mul $push0=, $0, $1
-; NOFP16-NEXT:    f64x2.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_contract_2xf64:
-; NOSIMD:         .functype fmuladd_contract_2xf64 (i32, f64, f64, f64, f64, f64, f64) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $2, $4
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $6
-; NOSIMD-NEXT:    f64.store 8($0), $pop1
-; NOSIMD-NEXT:    f64.mul $push2=, $1, $3
-; NOSIMD-NEXT:    f64.add $push3=, $pop2, $5
-; NOSIMD-NEXT:    f64.store 0($0), $pop3
-; NOSIMD-NEXT:    return
-  %fma = call contract <2 x double> @llvm.fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c)
-  ret <2 x double> %fma
-}
-
-define <2 x double> @fmuladd_2xf64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; RELAXED-LABEL: fmuladd_2xf64:
-; RELAXED:         .functype fmuladd_2xf64 (v128, v128, v128) -> (v128)
-; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64x2.relaxed_madd $push0=, $0, $1, $2
-; RELAXED-NEXT:    return $pop0
-;
-; STRICT-LABEL: fmuladd_2xf64:
-; STRICT:         .functype fmuladd_2xf64 (v128, v128, v128) -> (v128)
-; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f64x2.mul $push0=, $0, $1
-; STRICT-NEXT:    f64x2.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fmuladd_2xf64:
-; NOFP16:         .functype fmuladd_2xf64 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64x2.mul $push0=, $0, $1
-; NOFP16-NEXT:    f64x2.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fmuladd_2xf64:
-; NOSIMD:         .functype fmuladd_2xf64 (i32, f64, f64, f64, f64, f64, f64) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $2, $4
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $6
-; NOSIMD-NEXT:    f64.store 8($0), $pop1
-; NOSIMD-NEXT:    f64.mul $push2=, $1, $3
-; NOSIMD-NEXT:    f64.add $push3=, $pop2, $5
-; NOSIMD-NEXT:    f64.store 0($0), $pop3
-; NOSIMD-NEXT:    return
-  %fma = call <2 x double> @llvm.fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c)
-  ret <2 x double> %fma
 }
 
 define <4 x float> @fma_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
@@ -1283,44 +167,6 @@ define <4 x float> @fma_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; STRICT-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
 ; STRICT-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
 ; STRICT-NEXT:    return $pop19
-;
-; NOFP16-LABEL: fma_4xf32:
-; NOFP16:         .functype fma_4xf32 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.extract_lane $push2=, $0, 0
-; NOFP16-NEXT:    f32x4.extract_lane $push1=, $1, 0
-; NOFP16-NEXT:    f32x4.extract_lane $push0=, $2, 0
-; NOFP16-NEXT:    call $push3=, fmaf, $pop2, $pop1, $pop0
-; NOFP16-NEXT:    f32x4.splat $push4=, $pop3
-; NOFP16-NEXT:    f32x4.extract_lane $push7=, $0, 1
-; NOFP16-NEXT:    f32x4.extract_lane $push6=, $1, 1
-; NOFP16-NEXT:    f32x4.extract_lane $push5=, $2, 1
-; NOFP16-NEXT:    call $push8=, fmaf, $pop7, $pop6, $pop5
-; NOFP16-NEXT:    f32x4.replace_lane $push9=, $pop4, 1, $pop8
-; NOFP16-NEXT:    f32x4.extract_lane $push12=, $0, 2
-; NOFP16-NEXT:    f32x4.extract_lane $push11=, $1, 2
-; NOFP16-NEXT:    f32x4.extract_lane $push10=, $2, 2
-; NOFP16-NEXT:    call $push13=, fmaf, $pop12, $pop11, $pop10
-; NOFP16-NEXT:    f32x4.replace_lane $push14=, $pop9, 2, $pop13
-; NOFP16-NEXT:    f32x4.extract_lane $push17=, $0, 3
-; NOFP16-NEXT:    f32x4.extract_lane $push16=, $1, 3
-; NOFP16-NEXT:    f32x4.extract_lane $push15=, $2, 3
-; NOFP16-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
-; NOFP16-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
-; NOFP16-NEXT:    return $pop19
-;
-; NOSIMD-LABEL: fma_4xf32:
-; NOSIMD:         .functype fma_4xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, fmaf, $4, $8, $12
-; NOSIMD-NEXT:    f32.store 12($0), $pop0
-; NOSIMD-NEXT:    call $push1=, fmaf, $3, $7, $11
-; NOSIMD-NEXT:    f32.store 8($0), $pop1
-; NOSIMD-NEXT:    call $push2=, fmaf, $2, $6, $10
-; NOSIMD-NEXT:    f32.store 4($0), $pop2
-; NOSIMD-NEXT:    call $push3=, fmaf, $1, $5, $9
-; NOSIMD-NEXT:    f32.store 0($0), $pop3
-; NOSIMD-NEXT:    return
   %fma = call <4 x float> @llvm.fma(<4 x float> %a, <4 x float> %b, <4 x float> %c)
   ret <4 x float> %fma
 }
@@ -1330,9 +176,9 @@ define <8 x float> @fadd_fmul_contract_8xf32(<8 x float> %a, <8 x float> %b, <8 
 ; RELAXED-LABEL: fadd_fmul_contract_8xf32:
 ; RELAXED:         .functype fadd_fmul_contract_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $4, $2, $6
+; RELAXED-NEXT:    f32x4.relaxed_madd $push0=, $6, $4, $2
 ; RELAXED-NEXT:    v128.store 16($0), $pop0
-; RELAXED-NEXT:    f32x4.relaxed_madd $push1=, $3, $1, $5
+; RELAXED-NEXT:    f32x4.relaxed_madd $push1=, $5, $3, $1
 ; RELAXED-NEXT:    v128.store 0($0), $pop1
 ; RELAXED-NEXT:    return
 ;
@@ -1346,56 +192,17 @@ define <8 x float> @fadd_fmul_contract_8xf32(<8 x float> %a, <8 x float> %b, <8 
 ; STRICT-NEXT:    f32x4.add $push3=, $pop2, $5
 ; STRICT-NEXT:    v128.store 0($0), $pop3
 ; STRICT-NEXT:    return
-;
-; NOFP16-LABEL: fadd_fmul_contract_8xf32:
-; NOFP16:         .functype fadd_fmul_contract_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.mul $push0=, $4, $2
-; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $6
-; NOFP16-NEXT:    v128.store 16($0), $pop1
-; NOFP16-NEXT:    f32x4.mul $push2=, $3, $1
-; NOFP16-NEXT:    f32x4.add $push3=, $pop2, $5
-; NOFP16-NEXT:    v128.store 0($0), $pop3
-; NOFP16-NEXT:    return
-;
-; NOSIMD-LABEL: fadd_fmul_contract_8xf32:
-; NOSIMD:         .functype fadd_fmul_contract_8xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f32.mul $push0=, $16, $8
-; NOSIMD-NEXT:    f32.add $push1=, $pop0, $24
-; NOSIMD-NEXT:    f32.store 28($0), $pop1
-; NOSIMD-NEXT:    f32.mul $push2=, $15, $7
-; NOSIMD-NEXT:    f32.add $push3=, $pop2, $23
-; NOSIMD-NEXT:    f32.store 24($0), $pop3
-; NOSIMD-NEXT:    f32.mul $push4=, $14, $6
-; NOSIMD-NEXT:    f32.add $push5=, $pop4, $22
-; NOSIMD-NEXT:    f32.store 20($0), $pop5
-; NOSIMD-NEXT:    f32.mul $push6=, $13, $5
-; NOSIMD-NEXT:    f32.add $push7=, $pop6, $21
-; NOSIMD-NEXT:    f32.store 16($0), $pop7
-; NOSIMD-NEXT:    f32.mul $push8=, $12, $4
-; NOSIMD-NEXT:    f32.add $push9=, $pop8, $20
-; NOSIMD-NEXT:    f32.store 12($0), $pop9
-; NOSIMD-NEXT:    f32.mul $push10=, $11, $3
-; NOSIMD-NEXT:    f32.add $push11=, $pop10, $19
-; NOSIMD-NEXT:    f32.store 8($0), $pop11
-; NOSIMD-NEXT:    f32.mul $push12=, $10, $2
-; NOSIMD-NEXT:    f32.add $push13=, $pop12, $18
-; NOSIMD-NEXT:    f32.store 4($0), $pop13
-; NOSIMD-NEXT:    f32.mul $push14=, $9, $1
-; NOSIMD-NEXT:    f32.add $push15=, $pop14, $17
-; NOSIMD-NEXT:    f32.store 0($0), $pop15
-; NOSIMD-NEXT:    return
   %mul = fmul contract <8 x float> %b, %a
   %add = fadd contract <8 x float> %mul, %c
   ret <8 x float> %add
 }
 
+
 define <2 x double> @fadd_fmul_contract_2xf64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; RELAXED-LABEL: fadd_fmul_contract_2xf64:
 ; RELAXED:         .functype fadd_fmul_contract_2xf64 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64x2.relaxed_madd $push0=, $1, $0, $2
+; RELAXED-NEXT:    f64x2.relaxed_madd $push0=, $2, $1, $0
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_2xf64:
@@ -1404,64 +211,28 @@ define <2 x double> @fadd_fmul_contract_2xf64(<2 x double> %a, <2 x double> %b, 
 ; STRICT-NEXT:    f64x2.mul $push0=, $1, $0
 ; STRICT-NEXT:    f64x2.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fadd_fmul_contract_2xf64:
-; NOFP16:         .functype fadd_fmul_contract_2xf64 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64x2.mul $push0=, $1, $0
-; NOFP16-NEXT:    f64x2.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fadd_fmul_contract_2xf64:
-; NOSIMD:         .functype fadd_fmul_contract_2xf64 (i32, f64, f64, f64, f64, f64, f64) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $4, $2
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $6
-; NOSIMD-NEXT:    f64.store 8($0), $pop1
-; NOSIMD-NEXT:    f64.mul $push2=, $3, $1
-; NOSIMD-NEXT:    f64.add $push3=, $pop2, $5
-; NOSIMD-NEXT:    f64.store 0($0), $pop3
-; NOSIMD-NEXT:    return
   %mul = fmul contract <2 x double> %b, %a
   %add = fadd contract <2 x double> %mul, %c
   ret <2 x double> %add
 }
 
-define <2 x double> @fadd_fmul_2xf64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; RELAXED-LABEL: fadd_fmul_2xf64:
-; RELAXED:         .functype fadd_fmul_2xf64 (v128, v128, v128) -> (v128)
+define float @fadd_fmul_contract_f32(float %a, float %b, float %c) {
+; RELAXED-LABEL: fadd_fmul_contract_f32:
+; RELAXED:         .functype fadd_fmul_contract_f32 (f32, f32, f32) -> (f32)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f64x2.mul $push0=, $1, $0
-; RELAXED-NEXT:    f64x2.add $push1=, $pop0, $2
+; RELAXED-NEXT:    f32.mul $push0=, $1, $0
+; RELAXED-NEXT:    f32.add $push1=, $pop0, $2
 ; RELAXED-NEXT:    return $pop1
 ;
-; STRICT-LABEL: fadd_fmul_2xf64:
-; STRICT:         .functype fadd_fmul_2xf64 (v128, v128, v128) -> (v128)
+; STRICT-LABEL: fadd_fmul_contract_f32:
+; STRICT:         .functype fadd_fmul_contract_f32 (f32, f32, f32) -> (f32)
 ; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f64x2.mul $push0=, $1, $0
-; STRICT-NEXT:    f64x2.add $push1=, $pop0, $2
+; STRICT-NEXT:    f32.mul $push0=, $1, $0
+; STRICT-NEXT:    f32.add $push1=, $pop0, $2
 ; STRICT-NEXT:    return $pop1
-;
-; NOFP16-LABEL: fadd_fmul_2xf64:
-; NOFP16:         .functype fadd_fmul_2xf64 (v128, v128, v128) -> (v128)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f64x2.mul $push0=, $1, $0
-; NOFP16-NEXT:    f64x2.add $push1=, $pop0, $2
-; NOFP16-NEXT:    return $pop1
-;
-; NOSIMD-LABEL: fadd_fmul_2xf64:
-; NOSIMD:         .functype fadd_fmul_2xf64 (i32, f64, f64, f64, f64, f64, f64) -> ()
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    f64.mul $push0=, $4, $2
-; NOSIMD-NEXT:    f64.add $push1=, $pop0, $6
-; NOSIMD-NEXT:    f64.store 8($0), $pop1
-; NOSIMD-NEXT:    f64.mul $push2=, $3, $1
-; NOSIMD-NEXT:    f64.add $push3=, $pop2, $5
-; NOSIMD-NEXT:    f64.store 0($0), $pop3
-; NOSIMD-NEXT:    return
-  %mul = fmul <2 x double> %b, %a
-  %add = fadd <2 x double> %mul, %c
-  ret <2 x double> %add
+  %mul = fmul contract float %b, %a
+  %add = fadd contract float %mul, %c
+  ret float %add
 }
 
 define float @fma_f32(float %a, float %b, float %c) {
@@ -1476,18 +247,6 @@ define float @fma_f32(float %a, float %b, float %c) {
 ; STRICT-NEXT:  # %bb.0:
 ; STRICT-NEXT:    call $push0=, fmaf, $0, $1, $2
 ; STRICT-NEXT:    return $pop0
-;
-; NOFP16-LABEL: fma_f32:
-; NOFP16:         .functype fma_f32 (f32, f32, f32) -> (f32)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, fmaf, $0, $1, $2
-; NOFP16-NEXT:    return $pop0
-;
-; NOSIMD-LABEL: fma_f32:
-; NOSIMD:         .functype fma_f32 (f32, f32, f32) -> (f32)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, fmaf, $0, $1, $2
-; NOSIMD-NEXT:    return $pop0
   %fma = call float @llvm.fma(float %a, float %b, float %c)
   ret float %fma
 }
@@ -1504,18 +263,6 @@ define double @fma_f64(double %a, double %b, double %c) {
 ; STRICT-NEXT:  # %bb.0:
 ; STRICT-NEXT:    call $push0=, fma, $0, $1, $2
 ; STRICT-NEXT:    return $pop0
-;
-; NOFP16-LABEL: fma_f64:
-; NOFP16:         .functype fma_f64 (f64, f64, f64) -> (f64)
-; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    call $push0=, fma, $0, $1, $2
-; NOFP16-NEXT:    return $pop0
-;
-; NOSIMD-LABEL: fma_f64:
-; NOSIMD:         .functype fma_f64 (f64, f64, f64) -> (f64)
-; NOSIMD-NEXT:  # %bb.0:
-; NOSIMD-NEXT:    call $push0=, fma, $0, $1, $2
-; NOSIMD-NEXT:    return $pop0
   %fma = call double @llvm.fma(double %a, double %b, double %c)
   ret double %fma
 }

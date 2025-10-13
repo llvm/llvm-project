@@ -514,12 +514,6 @@ enum NodeType {
   /// separately rounded operations.
   FMAD,
 
-  /// FMULADD - Performs a * b + c, with, or without, intermediate rounding.
-  /// It is expected that this will be illegal for most targets, as it usually
-  /// makes sense to split this or use an FMA. But some targets, such as
-  /// WebAssembly, can directly support these semantics.
-  FMULADD,
-
   /// FCOPYSIGN(X, Y) - Return the value of X with the sign of Y.  NOTE: This
   /// DAG node does not require that X and Y have the same type, just that
   /// they are both floating point.  X and the result must have the same type.

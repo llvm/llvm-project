@@ -1188,6 +1188,19 @@ which can be `import`ed  from the main dialect file, i.e.
 `python/mlir/dialects/<dialect-namespace>/passes.py` if it is undesirable to
 make the passes available along with the dialect.
 
+### Other functionality
+
+Dialect functionality other than IR objects or passes, such as helper functions,
+can be exposed to Python similarly to attributes and types. C API is expected to
+exist for this functionality, which can then be wrapped using pybind11 and
+[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h),
+or nanobind and
+[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
+utilities to connect to the rest of Python API. The bindings can be located in a
+separate module or in the same module as attributes and types, and
+loaded along with the dialect.
+
+
 ## Extending MLIR in Python
 
 The MLIR Python bindings provide support for defining custom components in Python,
@@ -1262,17 +1275,6 @@ This frozen set can then be applied to an operation
 using the greedy rewrite pattern driver via `apply_patterns_and_fold_greedily`.
 For further information, see [the PDL dialect documentation](/docs/Dialects/PDLOps/).
 
-### Other functionality
-
-Dialect functionality other than IR objects or passes, such as helper functions,
-can be exposed to Python similarly to attributes and types. C API is expected to
-exist for this functionality, which can then be wrapped using pybind11 and
-[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h),
-or nanobind and
-[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
-utilities to connect to the rest of Python API. The bindings can be located in a
-separate module or in the same module as attributes and types, and
-loaded along with the dialect.
 
 ## Free-threading (No-GIL) support
 
