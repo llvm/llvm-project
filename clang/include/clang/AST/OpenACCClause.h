@@ -1280,13 +1280,31 @@ public:
 // 'main' declaration used for initializaiton, which is fixed. 
 struct OpenACCReductionRecipe {
   VarDecl *AllocaDecl;
-  // TODO: OpenACC: this should eventually have the operations here too.
 
-  OpenACCReductionRecipe(VarDecl *A) : AllocaDecl(A) {}
+  // A combiner recipe is represented by an operation expression.  However, in
+  // order to generate these properly, we have to make up a LHS and a RHS
+  // expression for the purposes of generation.
+  struct CombinerRecipe {
+    VarDecl *LHS;
+    VarDecl *RHS;
+    Expr *Op;
+  };
+
+  // Contains a collection of the recipe elements we need for the combiner:
+  // -For Scalars, there will be 1 element, just the combiner for that scalar.
+  // -For a struct with a valid operator, this will be 1 element, just that
+  //  call.
+  // -For a struct without the operator, this will be 1 element per field, which
+  //  should be the combiner for that element.
+  // -For an array of any of the above, it will be the above for the element.
+  llvm::SmallVector<CombinerRecipe, 1> CombinerRecipes;
+
+  OpenACCReductionRecipe(VarDecl *A, llvm::ArrayRef<CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
 
   bool isSet() const { return AllocaDecl; }
   static OpenACCReductionRecipe Empty() {
-    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr);
+    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr, {});
   }
 };
 
@@ -1307,8 +1325,14 @@ class OpenACCReductionClause final
         Op(Operator) {
           assert(VarList.size() == Recipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-    llvm::uninitialized_copy(Recipes, getTrailingObjects<
-                             OpenACCReductionRecipe > ());
+
+    // Initialize the recipe list.
+    unsigned I = 0;
+    for (const OpenACCReductionRecipe &R : Recipes) {
+      new (&getTrailingObjects<OpenACCReductionRecipe>()[I])
+          OpenACCReductionRecipe(R);
+      ++I;
+    }
   }
 
 public:

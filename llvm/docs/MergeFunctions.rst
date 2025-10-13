@@ -9,13 +9,13 @@ Introduction
 ============
 Sometimes code contains equal functions, or functions that do exactly the same
 thing even though they are non-equal on the IR level (e.g.: multiplication on 2
-and 'shl 1'). It could happen due to several reasons: mainly, the usage of
+and 'shl 1'). This can happen for several reasons: mainly, the usage of
 templates and automatic code generators. Though, sometimes the user itself could
 write the same thing twice :-)
 
 The main purpose of this pass is to recognize such functions and merge them.
 
-This document is the extension to pass comments and describes the pass logic. It
+This document is an extension to pass comments and describes the pass logic. It
 describes the algorithm used to compare functions and
 explains how we could combine equal functions correctly to keep the module
 valid.
@@ -54,7 +54,7 @@ As a good starting point, the Kaleidoscope tutorial can be used:
 
 :doc:`tutorial/index`
 
-It's especially important to understand chapter 3 of tutorial:
+It's especially important to understand Chapter 3 of the tutorial:
 
 :doc:`tutorial/LangImpl03`
 
@@ -314,7 +314,7 @@ list is immaterial. Our walk starts at the entry block for both functions, then
 takes each block from each terminator in order. As an artifact, this also means
 that unreachable blocks are ignored.”
 
-So, using this walk we get BBs from *left* and *right* in the same order, and
+So, using this walk, we get BBs from *left* and *right* in the same order, and
 compare them by “``FunctionComparator::compare(const BasicBlock*, const
 BasicBlock*)``” method.
 
@@ -325,17 +325,17 @@ FunctionComparator::cmpType
 ---------------------------
 Consider how type comparison works.
 
-1. Coerce pointer to integer. If left type is a pointer, try to coerce it to the
+1. Coerce pointer to integer. If the left type is a pointer, try to coerce it to the
 integer type. It could be done if its address space is 0, or if address spaces
 are ignored at all. Do the same thing for the right type.
 
-2. If left and right types are equal, return 0. Otherwise we need to give
+2. If the left and right types are equal, return 0. Otherwise, we need to give
 preference to one of them. So proceed to the next step.
 
-3. If types are of different kind (different type IDs). Return result of type
+3. If the types are of different kind (different type IDs). Return result of type
 IDs comparison, treating them as numbers (use ``cmpNumbers`` operation).
 
-4. If types are vectors or integers, return result of their pointers comparison,
+4. If the types are vectors or integers, return result of their pointers comparison,
 comparing them as numbers.
 
 5. Check whether type ID belongs to the next group (call it equivalent-group):
@@ -391,7 +391,7 @@ equal to the corresponding part of *right* place, and (!) both parts use
 
 So, now our conclusion depends on *Value* instances comparison.
 
-The main purpose of this method is to determine relation between such values.
+The main purpose of this method is to determine the relation between such values.
 
 What can we expect from equal functions? At the same place, in functions
 "*FL*" and "*FR*" we expect to see *equal* values, or values *defined* at
@@ -453,17 +453,17 @@ maps (one for the left side, another one for the right side):
 
 ``map<Value, int> sn_mapL, sn_mapR;``
 
-The key of the map is the *Value* itself, the *value* – is its order (call it
+The key of the map is the *Value* itself; the *value* – is its order (call it
 *serial number*).
 
 To add value *V* we need to perform the next procedure:
 
 ``sn_map.insert(std::make_pair(V, sn_map.size()));``
 
-For the first *Value*, map will return *0*, for the second *Value* map will
+For the first *Value*, the map will return *0*, for the second *Value*, the map will
 return *1*, and so on.
 
-We can then check whether left and right values met at the same time with
+We can then check whether the left and right values met at the same time with
 a simple comparison:
 
 ``cmpNumbers(sn_mapL[Left], sn_mapR[Right]);``
@@ -525,7 +525,7 @@ and finish comparison procedure.
 
 cmpConstants
 ------------
-Performs constants comparison as follows:
+Performs a constant comparison as follows:
 
 1. Compare constant types using ``cmpType`` method. If the result is -1 or 1,
 goto step 2, otherwise proceed to step 3.
@@ -655,10 +655,10 @@ O(N*N) to O(log(N)).
 Merging process, mergeTwoFunctions
 ==================================
 Once *MergeFunctions* detects that current function (*G*) is equal to one that
-were analyzed before (function *F*) it calls ``mergeTwoFunctions(Function*,
+was analyzed before (function *F*) it calls ``mergeTwoFunctions(Function*,
 Function*)``.
 
-Operation affects ``FnTree`` contents with next way: *F* will stay in
+Operation affects ``FnTree`` contents in the following way: *F* will stay in
 ``FnTree``. *G* being equal to *F* will not be added to ``FnTree``. Calls of
 *G* would be replaced with something else. It changes bodies of callers. So,
 functions that calls *G* would be put into ``Deferred`` set and removed from
@@ -692,8 +692,8 @@ ok: we can use alias to *F* instead of *G* or change call instructions itself.
 HasGlobalAliases, removeUsers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 First, consider the case when we have global aliases of one function name to
-another. Our purpose is  make both of them with aliases to the third strong
-function. Though if we keep *F* alive and without major changes we can leave it
+another. Our purpose is to make both of them with aliases to the third strong
+function. However, if we keep *F* alive and without major changes, we can leave it
 in ``FnTree``. Try to combine these two goals.
 
 Do a stub replacement of *F* itself with an alias to *F*.
@@ -701,10 +701,10 @@ Do a stub replacement of *F* itself with an alias to *F*.
 1. Create stub function *H*, with the same name and attributes like function
 *F*. It takes maximum alignment of *F* and *G*.
 
-2. Replace all uses of function *F* with uses of function *H*. It is the two
-steps procedure instead. First of all, we must take into account, all functions
-from whom *F* is called would be changed: since we change the call argument
-(from *F* to *H*). If so we must to review these caller functions again after
+2. Replace all uses of function *F* with uses of function *H*. It is a
+two-step procedure instead. First of all, we must take into account that all functions
+that call *F* would be changed because we change the call argument
+(from *F* to *H*). If so, we must review these caller functions again after
 this procedure. We remove callers from ``FnTree``, method with name
 ``removeUsers(F)`` does that (don't confuse with ``replaceAllUsesWith``):
 
@@ -735,7 +735,7 @@ If “F” could not be overridden, fix it!
 """""""""""""""""""""""""""""""""""""""
 
 We call ``writeThunkOrAlias(Function *F, Function *G)``. Here we try to replace
-*G* with alias to *F* first. The next conditions are essential:
+*G* with an alias to *F* first. The next conditions are essential:
 
 * target should support global aliases,
 * the address itself of  *G* should be not significant, not named and not
@@ -775,7 +775,7 @@ with bitcast(F). Deletes G.”
 In general it does the same as usual when we want to replace callee, except the
 first point:
 
-1. We generate tail call wrapper around *F*, but with interface that allows use
+1. We generate tail call wrapper around *F*, but with an interface that allows using
 it instead of *G*.
 
 2. “As-usual”: ``removeUsers`` and ``replaceAllUsesWith`` then.

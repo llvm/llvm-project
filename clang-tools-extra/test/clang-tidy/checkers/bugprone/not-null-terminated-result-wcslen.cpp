@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-not-null-terminated-result %t -- \
-// RUN: -- -std=c++11 -I %S/Inputs/not-null-terminated-result
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-not-null-terminated-result %t -- \
+// RUN: -- -I %S/Inputs/not-null-terminated-result
 
 // FIXME: Something wrong with the APInt un/signed conversion on Windows:
 // in 'wcsncmp(wcs6, L"string", 7);' it tries to inject '4294967302' as length.
@@ -58,13 +58,13 @@ void good_wmemmove_s_1(wchar_t *dest, const wchar_t *src) {
 int bad_wcsncmp_1(wchar_t *wcs0, const wchar_t *wcs1) {
   return wcsncmp(wcs0, wcs1, (wcslen(wcs0) + 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: wcsncmp(wcs0, wcs1, (wcslen(wcs0)));
+  // CHECK-FIXES: return wcsncmp(wcs0, wcs1, (wcslen(wcs0)));
 }
 
 int bad_wcsncmp_2(wchar_t *wcs2, const wchar_t *wcs3) {
   return wcsncmp(wcs2, wcs3, 1 + wcslen(wcs2));
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: wcsncmp(wcs2, wcs3, wcslen(wcs2));
+  // CHECK-FIXES: return wcsncmp(wcs2, wcs3, wcslen(wcs2));
 }
 
 int good_wcsncmp_1_2(wchar_t *wcs4, const wchar_t *wcs5) {
@@ -74,7 +74,7 @@ int good_wcsncmp_1_2(wchar_t *wcs4, const wchar_t *wcs5) {
 int bad_wcsncmp_3(wchar_t *wcs6) {
   return wcsncmp(wcs6, L"string", 7);
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: wcsncmp(wcs6, L"string", 6);
+  // CHECK-FIXES: return wcsncmp(wcs6, L"string", 6);
 }
 
 int good_wcsncmp_3(wchar_t *wcs7) {
