@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -1316,7 +1317,15 @@ getUntiledProducerFromSliceSource(OpOperand *source,
                                   ArrayRef<LoopLikeOpInterface> loops) {
   std::optional<OpOperand *> destinationIterArg;
   assert(!loops.empty() && "expected non empty loops container");
+
+  // The `extractOp` may not reside within the innermost loop, calculate the
+  // distance between it and the last LoopLikeInterfaceOp. Adding this
+  // `distance` to `loopIt` yields the start of the loop.
   auto loopIt = loops.rbegin();
+  auto parentLoop = source->getOwner()->getParentOfType<LoopLikeOpInterface>();
+  const LoopLikeOpInterface *it = llvm::find(loops, parentLoop);
+  int64_t distance = std::distance(loops.begin(), it);
+  loopIt += (loops.size() - distance - 1);
   while (loopIt != loops.rend() && isa<BlockArgument>(source->get())) {
     auto iterArg = cast<BlockArgument>(source->get());
     auto loop = *loopIt;
@@ -1347,7 +1356,6 @@ mlir::scf::tileAndFuseProducerOfSlice(
 
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(candidateSliceOp);
-
   // 2. Clone the fused producer
   // 2a. Compute the destination operands to use for the cloned operation.
   SmallVector<Value> origDestinationTensors, clonedOpDestinationTensors;
@@ -1748,6 +1756,13 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   if (loops.empty()) {
     return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps, loops,
                                      replacements};
+  }
+
+  // The extract_slice op is created in the innermost loop by default. Using
+  // hoistLoopInvariantSubsets improves the position of the extract_slice op
+  // within the loops, allowing the fuse Op to be created in the correct loop.
+  for (LoopLikeOpInterface loop : loops) {
+    (void)hoistLoopInvariantSubsets(rewriter, loop);
   }
 
   // Since the loop gets potentially replaced during fusion, we need to track
