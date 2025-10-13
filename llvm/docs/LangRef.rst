@@ -20366,18 +20366,19 @@ The argument to this intrinsic must be a vector of floating-point values.
 Vector Partial Reduction Intrinsics
 -----------------------------------
 
-Partial reductions of vectors can be expressed using the following intrinsics.
-Each one reduces the concatenation of the two vector arguments down to the
-number of elements of the result vector type.
+Partial reductions of vectors can be expressed using the intrinsics described in
+this section. Each one reduces the concatenation of the two vector arguments
+down to the number of elements of the result vector type.
 
-Other than the reduction operator (e.g. add, fadd) the way in which the
+Other than the reduction operator (e.g. add, fadd), the way in which the
 concatenated arguments is reduced is entirely unspecified. By their nature these
-intrinsics are not expected to be useful in isolation but instead implement the
-first phase of an overall reduction operation.
+intrinsics are not expected to be useful in isolation but can instead be used to
+implement the first phase of an overall reduction operation.
 
 The typical use case is loop vectorization where reductions are split into an
 in-loop phase, where maintaining an unordered vector result is important for
-performance, and an out-of-loop phase to calculate the final scalar result.
+performance, and an out-of-loop phase is required to calculate the final scalar
+result.
 
 By avoiding the introduction of new ordering constraints, these intrinsics
 enhance the ability to leverage a target's accumulation instructions.
@@ -20429,9 +20430,7 @@ Semantics:
 
 As the way in which the arguments to this floating-point intrinsic are reduced
 is unspecified, this intrinsic will assume floating-point reassociation and
-contraction, which may result in variations to the results due to reordering or
-by lowering to different instructions (including combining multiple instructions
-into a single one).
+contraction, which may result in variations to the results.
 
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
