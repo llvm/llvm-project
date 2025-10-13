@@ -173,17 +173,18 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
   return success();
 }
 
-LogicalResult IsValidStoreMatrixParams(
-    VectorType dataTy, MemDescType mdescTy, UnitAttr subgroup_block_io,
-    MatrixAccessDirectionAttr vecDirection, IntegerAttr vecLength,
-    function_ref<InFlightDiagnostic()> emitError) {
+LogicalResult
+IsValidStoreMatrixParams(VectorType dataTy, MemDescType mdescTy,
+                         UnitAttr subgroup_block_io,
+                         function_ref<InFlightDiagnostic()> emitError) {
 
-  if (!dataTy)
-    if (subgroup_block_io || vecDirection || vecLength)
-      return emitError() << "vec_length, vec_direction and subgroup_block_io "
+  if (!dataTy) {
+    if (subgroup_block_io)
+      return emitError() << "subgroup_block_io "
                             "are only allowed when result is a 1D VectorType.";
     else
       return success();
+  }
 
   if (mdescTy.getRank() != 2)
     return emitError() << "mem_desc must be 2D.";
@@ -192,8 +193,8 @@ LogicalResult IsValidStoreMatrixParams(
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
   if (dataShape.size() == 2) {
-    if (subgroup_block_io || vecDirection || vecLength)
-      return emitError() << "vec_length, vec_direction and subgroup_block_io "
+    if (subgroup_block_io)
+      return emitError() << "subgroup_block_io "
                             "are only allowed when result is a 1D VectorType.";
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
@@ -1097,7 +1098,6 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
   // Call the generated builder with all parameters (including optional ones as
   // nullptr/empty)
   build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
-        /*vec_length=*/nullptr, /*vec_direction=*/nullptr,
         /*subgroup_block_io=*/nullptr, layout);
 }
 
@@ -1105,12 +1105,9 @@ LogicalResult LoadMatrixOp::verify() {
 
   auto resTy = dyn_cast<VectorType>(getRes().getType());
   UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
-  MatrixAccessDirectionAttr vecDirection = getVecDirectionAttr();
-  IntegerAttr vecLength = getVecLengthAttr();
   MemDescType mdescTy = getMemDesc().getType();
 
   return IsValidStoreMatrixParams(resTy, mdescTy, subgroup_block_io,
-                                  vecDirection, vecLength,
                                   [&]() { return emitError(); });
 }
 
@@ -1126,7 +1123,6 @@ void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
   build(builder, state, data, memDesc, dynamicOffsets, staticOffsetsAttr,
-        /*vec_length=*/nullptr, /*vec_direction=*/nullptr,
         /*subgroup_block_io=*/nullptr, layout);
 }
 
@@ -1134,11 +1130,8 @@ LogicalResult StoreMatrixOp::verify() {
 
   auto dataTy = dyn_cast<VectorType>(getData().getType());
   UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
-  MatrixAccessDirectionAttr vecDirection = getVecDirectionAttr();
-  IntegerAttr vecLength = getVecLengthAttr();
   MemDescType mdescTy = getMemDesc().getType();
   return IsValidStoreMatrixParams(dataTy, mdescTy, subgroup_block_io,
-                                  vecDirection, vecLength,
                                   [&]() { return emitError(); });
 }
 

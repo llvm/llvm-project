@@ -871,15 +871,8 @@ func.func @load_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>) {
 }
 
 // -----
-func.func @load_mem_desc_invalid_attr1(%arg0: !xegpu.mem_desc<16x64xf16>) {
-  // expected-error@+1 {{vec_length, vec_direction and subgroup_block_io are only allowed when result is a 1D VectorType.}}
-  %data1 = xegpu.load_matrix %arg0[8, 8]<{vec_length = 8 : i32, vec_direction = #xegpu.matrix_access_direction<col>}>: !xegpu.mem_desc<16x64xf16> -> vector<16x16xf16>
-  return
-}
-
-// -----
 func.func @load_mem_desc_invalid_attr2(%arg0: !xegpu.mem_desc<16x64xf16>) {
-  // expected-error@+1 {{vec_length, vec_direction and subgroup_block_io are only allowed when result is a 1D VectorType.}}
+  // expected-error@+1 {{subgroup_block_io are only allowed when result is a 1D VectorType.}}
   %data2 = xegpu.load_matrix %arg0[8, 8] <{subgroup_block_io}>: !xegpu.mem_desc<16x64xf16> -> vector<16x16xf16>
   return
 }
@@ -908,14 +901,14 @@ func.func @store_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>, %arg1: ve
 
 // -----
 func.func @store_mem_desc_invalid_attr2(%arg0: !xegpu.mem_desc<16x64xf16>, %data: vector<16x16xf16>) {
-  // expected-error@+1 {{vec_length, vec_direction and subgroup_block_io are only allowed when result is a 1D VectorType.}}
+  // expected-error@+1 {{subgroup_block_io are only allowed when result is a 1D VectorType.}}
   xegpu.store_matrix %data,  %arg0[8, 8] <{subgroup_block_io}>: vector<16x16xf16>, !xegpu.mem_desc<16x64xf16>
   return
 }
 
 // -----
 func.func @store_mem_desc_invalid_attr2(%arg0: !xegpu.mem_desc<16x64xf16>, %data: vector<16x16xf16>) {
-  // expected-error@+1 {{vec_length, vec_direction and subgroup_block_io are only allowed when result is a 1D VectorType.}}
+  // expected-error@+1 {{subgroup_block_io are only allowed when result is a 1D VectorType.}}
   xegpu.store_matrix %data,  %arg0[8, 8] <{subgroup_block_io}>: vector<16x16xf16>, !xegpu.mem_desc<16x64xf16>
   return
 }

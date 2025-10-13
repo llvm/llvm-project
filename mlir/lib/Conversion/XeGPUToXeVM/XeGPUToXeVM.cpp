@@ -184,9 +184,9 @@ class CreateNdDescToXeVMPattern
     SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
     // Descriptor shape is expected to be 2D.
     int64_t rank = mixedSizes.size();
-    if (rank != 2) {
+    if (rank != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D shape.");
-    }
+
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
     // If source is a memref, we need to extract the aligned pointer as index.
@@ -658,20 +658,6 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
           return rewriter.notifyMatchFailure(
               op, "The lowering is specific to pvc or bmg.");
         }
-        xegpu::MatrixAccessDirectionAttr vecDirection =
-            op.getVecDirectionAttr();
-        if (vecDirection &&
-            vecDirection.getValue() == xegpu::MatrixAccessDirection::COL &&
-            !mdescTy.isColMajor())
-          return rewriter.notifyMatchFailure(
-              op, "mem_desc should be column major when "
-                  "vec_direction is COLUMN for 1D result.");
-        if (vecDirection &&
-            vecDirection.getValue() == xegpu::MatrixAccessDirection::ROW &&
-            mdescTy.isColMajor())
-          return rewriter.notifyMatchFailure(
-              op, "mem_desc should be row major when "
-                  "vec_direction is ROW for 1D result.");
 
         if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
           Value loadOp =
