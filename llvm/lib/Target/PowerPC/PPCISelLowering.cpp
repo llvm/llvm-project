@@ -19208,6 +19208,44 @@ static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
   return MatPCRel;
 }
 
+static SDValue combineADDToSUB(SDNode *N, SelectionDAG &DAG,
+                               const PPCSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+
+  // Handle v2i64, v4i32, v8i16 and v16i8 types
+  if (!VT.isVector() || VT.getSizeInBits() != 128)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check if RHS is BUILD_VECTOR
+  // To satisfy commutative property a+b = b+a
+  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
+    std::swap(LHS, RHS);
+
+  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // Check if all the elements are 1
+  unsigned NumOfEles = RHS.getNumOperands();
+  for (unsigned i = 0; i < NumOfEles; ++i) {
+    auto *CN = dyn_cast<ConstantSDNode>(RHS.getOperand(i));
+    if (!CN || CN->getSExtValue() != 1)
+      return SDValue();
+  }
+  SDLoc DL(N);
+
+  SDValue MinusOne = DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32);
+  SmallVector<SDValue, 4> Ops(4, MinusOne);
+  SDValue AllOnesVec = DAG.getBuildVector(MVT::v4i32, DL, Ops);
+
+  // Bitcast to the target vector type
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, VT, AllOnesVec);
+
+  return DAG.getNode(ISD::SUB, DL, VT, LHS, Bitcast);
+}
+
 SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToADDZE(N, DCI.DAG, Subtarget))
     return Value;
@@ -19215,6 +19253,8 @@ SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToMAT_PCREL_ADDR(N, DCI.DAG, Subtarget))
     return Value;
 
+  if (auto Value = combineADDToSUB(N, DCI.DAG, Subtarget))
+    return Value;
   return SDValue();
 }
 
