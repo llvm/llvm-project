@@ -126,6 +126,8 @@ AST Dumping Potentially Breaking Changes
 - Pretty-printing of templates with inherited (i.e. specified in a previous
   redeclaration) default arguments has been fixed.
 
+- Default arguments of template template parameters are pretty-printed now.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -134,6 +136,7 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Return ``None`` instead of null cursors from ``Token.cursor``
 - TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
   ElaboratedTypes. The value becomes unused, and all the existing users should
   expect the former underlying type to be reported instead.
@@ -178,10 +181,16 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- No longer triggering ``-Wstatic-in-inline`` in C2y mode; use of a static
+  function or variable within an extern inline function is no longer a
+  constraint per `WG14 N3622 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3622.txt>`_.
 - Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Added ``FLT_SNAN``, ``DBL_SNAN``, and ``LDBL_SNAN`` to Clang's ``<float.h>``
+  header in C23 and later modes. This implements
+  `WG14 N2710 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2710.htm>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -255,10 +264,16 @@ Non-comprehensive list of changes in this release
 
 - Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
+- Introduce support for :doc:`allocation tokens <AllocToken>` to enable
+  allocator-level heap organization strategies. A feature to instrument all
+  allocation functions with a token ID can be enabled via the
+  ``-fsanitize=alloc-token`` flag.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
 
 
 Lanai Support
@@ -349,6 +364,11 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- Closed a loophole in the diagnosis of function pointer conversions changing
+  extended function type information in C mode (#GH41465). Function conversions
+  that were previously incorrectly accepted in case of other irrelevant
+  conditions are now consistently diagnosed, identical to C++ mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -389,6 +409,7 @@ Bug Fixes in This Version
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
+- Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -447,6 +468,7 @@ Bug Fixes to C++ Support
 - Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
+- Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -23,6 +23,16 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO-TRAILING-FENCE %s
 
+; RUN: llc -mtriple=riscv32 -global-isel -mattr=+d,+a,+experimental-zalasr -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZALASR,RV32IA-ZALASR-WMO %s
+; RUN: llc -mtriple=riscv32 -global-isel -mattr=+d,+a,+experimental-zalasr,+ztso -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZALASR,RV32IA-ZALASR-TSO %s
+
+; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+experimental-zalasr -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZALASR,RV64IA-ZALASR-WMO %s
+; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d,+a,+experimental-zalasr,+ztso -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZALASR,RV64IA-ZALASR-TSO %s
+
 
 define float @atomic_load_f32_unordered(ptr %a) nounwind {
 ; RV32I-LABEL: atomic_load_f32_unordered:
@@ -171,6 +181,30 @@ define float @atomic_load_f32_acquire(ptr %a) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    lw a0, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fmv.w.x fa0, a0
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-ZALASR-WMO-LABEL: atomic_load_f32_acquire:
+; RV32IA-ZALASR-WMO:       # %bb.0:
+; RV32IA-ZALASR-WMO-NEXT:    lw.aq a0, (a0)
+; RV32IA-ZALASR-WMO-NEXT:    fmv.w.x fa0, a0
+; RV32IA-ZALASR-WMO-NEXT:    ret
+;
+; RV32IA-ZALASR-TSO-LABEL: atomic_load_f32_acquire:
+; RV32IA-ZALASR-TSO:       # %bb.0:
+; RV32IA-ZALASR-TSO-NEXT:    lw a0, 0(a0)
+; RV32IA-ZALASR-TSO-NEXT:    fmv.w.x fa0, a0
+; RV32IA-ZALASR-TSO-NEXT:    ret
+;
+; RV64IA-ZALASR-WMO-LABEL: atomic_load_f32_acquire:
+; RV64IA-ZALASR-WMO:       # %bb.0:
+; RV64IA-ZALASR-WMO-NEXT:    lw.aq a0, (a0)
+; RV64IA-ZALASR-WMO-NEXT:    fmv.w.x fa0, a0
+; RV64IA-ZALASR-WMO-NEXT:    ret
+;
+; RV64IA-ZALASR-TSO-LABEL: atomic_load_f32_acquire:
+; RV64IA-ZALASR-TSO:       # %bb.0:
+; RV64IA-ZALASR-TSO-NEXT:    lw a0, 0(a0)
+; RV64IA-ZALASR-TSO-NEXT:    fmv.w.x fa0, a0
+; RV64IA-ZALASR-TSO-NEXT:    ret
   %1 = load atomic float, ptr %a acquire, align 4
   ret float %1
 }
@@ -256,6 +290,18 @@ define float @atomic_load_f32_seq_cst(ptr %a) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    lw a0, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fmv.w.x fa0, a0
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-ZALASR-LABEL: atomic_load_f32_seq_cst:
+; RV32IA-ZALASR:       # %bb.0:
+; RV32IA-ZALASR-NEXT:    lw.aq a0, (a0)
+; RV32IA-ZALASR-NEXT:    fmv.w.x fa0, a0
+; RV32IA-ZALASR-NEXT:    ret
+;
+; RV64IA-ZALASR-LABEL: atomic_load_f32_seq_cst:
+; RV64IA-ZALASR:       # %bb.0:
+; RV64IA-ZALASR-NEXT:    lw.aq a0, (a0)
+; RV64IA-ZALASR-NEXT:    fmv.w.x fa0, a0
+; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic float, ptr %a seq_cst, align 4
   ret float %1
 }
@@ -414,6 +460,18 @@ define double @atomic_load_f64_acquire(ptr %a) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld a0, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fmv.d.x fa0, a0
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-ZALASR-WMO-LABEL: atomic_load_f64_acquire:
+; RV64IA-ZALASR-WMO:       # %bb.0:
+; RV64IA-ZALASR-WMO-NEXT:    ld.aq a0, (a0)
+; RV64IA-ZALASR-WMO-NEXT:    fmv.d.x fa0, a0
+; RV64IA-ZALASR-WMO-NEXT:    ret
+;
+; RV64IA-ZALASR-TSO-LABEL: atomic_load_f64_acquire:
+; RV64IA-ZALASR-TSO:       # %bb.0:
+; RV64IA-ZALASR-TSO-NEXT:    ld a0, 0(a0)
+; RV64IA-ZALASR-TSO-NEXT:    fmv.d.x fa0, a0
+; RV64IA-ZALASR-TSO-NEXT:    ret
   %1 = load atomic double, ptr %a acquire, align 8
   ret double %1
 }
@@ -484,6 +542,12 @@ define double @atomic_load_f64_seq_cst(ptr %a) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld a0, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fmv.d.x fa0, a0
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-ZALASR-LABEL: atomic_load_f64_seq_cst:
+; RV64IA-ZALASR:       # %bb.0:
+; RV64IA-ZALASR-NEXT:    ld.aq a0, (a0)
+; RV64IA-ZALASR-NEXT:    fmv.d.x fa0, a0
+; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic double, ptr %a seq_cst, align 8
   ret double %1
 }
@@ -635,6 +699,30 @@ define void @atomic_store_f32_release(ptr %a, float %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fmv.x.w a1, fa0
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sw a1, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-ZALASR-WMO-LABEL: atomic_store_f32_release:
+; RV32IA-ZALASR-WMO:       # %bb.0:
+; RV32IA-ZALASR-WMO-NEXT:    fmv.x.w a1, fa0
+; RV32IA-ZALASR-WMO-NEXT:    sw.rl a1, (a0)
+; RV32IA-ZALASR-WMO-NEXT:    ret
+;
+; RV32IA-ZALASR-TSO-LABEL: atomic_store_f32_release:
+; RV32IA-ZALASR-TSO:       # %bb.0:
+; RV32IA-ZALASR-TSO-NEXT:    fmv.x.w a1, fa0
+; RV32IA-ZALASR-TSO-NEXT:    sw a1, 0(a0)
+; RV32IA-ZALASR-TSO-NEXT:    ret
+;
+; RV64IA-ZALASR-WMO-LABEL: atomic_store_f32_release:
+; RV64IA-ZALASR-WMO:       # %bb.0:
+; RV64IA-ZALASR-WMO-NEXT:    fmv.x.w a1, fa0
+; RV64IA-ZALASR-WMO-NEXT:    sw.rl a1, (a0)
+; RV64IA-ZALASR-WMO-NEXT:    ret
+;
+; RV64IA-ZALASR-TSO-LABEL: atomic_store_f32_release:
+; RV64IA-ZALASR-TSO:       # %bb.0:
+; RV64IA-ZALASR-TSO-NEXT:    fmv.x.w a1, fa0
+; RV64IA-ZALASR-TSO-NEXT:    sw a1, 0(a0)
+; RV64IA-ZALASR-TSO-NEXT:    ret
   store atomic float %b, ptr %a release, align 4
   ret void
 }
@@ -718,6 +806,18 @@ define void @atomic_store_f32_seq_cst(ptr %a, float %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sw a1, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-ZALASR-LABEL: atomic_store_f32_seq_cst:
+; RV32IA-ZALASR:       # %bb.0:
+; RV32IA-ZALASR-NEXT:    fmv.x.w a1, fa0
+; RV32IA-ZALASR-NEXT:    sw.rl a1, (a0)
+; RV32IA-ZALASR-NEXT:    ret
+;
+; RV64IA-ZALASR-LABEL: atomic_store_f32_seq_cst:
+; RV64IA-ZALASR:       # %bb.0:
+; RV64IA-ZALASR-NEXT:    fmv.x.w a1, fa0
+; RV64IA-ZALASR-NEXT:    sw.rl a1, (a0)
+; RV64IA-ZALASR-NEXT:    ret
   store atomic float %b, ptr %a seq_cst, align 4
   ret void
 }
@@ -876,6 +976,18 @@ define void @atomic_store_f64_release(ptr %a, double %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fmv.x.d a1, fa0
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd a1, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-ZALASR-WMO-LABEL: atomic_store_f64_release:
+; RV64IA-ZALASR-WMO:       # %bb.0:
+; RV64IA-ZALASR-WMO-NEXT:    fmv.x.d a1, fa0
+; RV64IA-ZALASR-WMO-NEXT:    sd.rl a1, (a0)
+; RV64IA-ZALASR-WMO-NEXT:    ret
+;
+; RV64IA-ZALASR-TSO-LABEL: atomic_store_f64_release:
+; RV64IA-ZALASR-TSO:       # %bb.0:
+; RV64IA-ZALASR-TSO-NEXT:    fmv.x.d a1, fa0
+; RV64IA-ZALASR-TSO-NEXT:    sd a1, 0(a0)
+; RV64IA-ZALASR-TSO-NEXT:    ret
   store atomic double %b, ptr %a release, align 8
   ret void
 }
@@ -945,6 +1057,12 @@ define void @atomic_store_f64_seq_cst(ptr %a, double %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd a1, 0(a0)
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-ZALASR-LABEL: atomic_store_f64_seq_cst:
+; RV64IA-ZALASR:       # %bb.0:
+; RV64IA-ZALASR-NEXT:    fmv.x.d a1, fa0
+; RV64IA-ZALASR-NEXT:    sd.rl a1, (a0)
+; RV64IA-ZALASR-NEXT:    ret
   store atomic double %b, ptr %a seq_cst, align 8
   ret void
 }
