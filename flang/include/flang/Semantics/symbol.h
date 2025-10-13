@@ -884,7 +884,7 @@ public:
   const Details &details() const { return details_; }
   // Assign the details of the symbol from one of the variants.
   // Only allowed in certain cases.
-  void set_details(Details &&);
+  void set_details(Details &&, bool force = false);
 
   // Can the details of this symbol be replaced with the given details?
   bool CanReplaceDetails(const Details &details) const;

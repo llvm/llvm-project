@@ -145,6 +145,21 @@ void Scope::add_crayPointer(const SourceName &name, Symbol &pointer) {
 
 Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
   if (auto *cb{FindCB(name)}) {
+    if (cb->has<UseDetails>()) {
+      // COMMON blocks could be re-declared. Example:
+      //    module test
+      //      integer :: a
+      //      common /blk/ a
+      //    end module test
+      //    program main
+      //      use test          ! Initially get /blk/ with UseDetails
+      //      integer :: a1
+      //      common /blk/ a1   ! Update with CommonBlockDetails
+      //    end program main
+      // Reset details with real COMMON block details.
+      cb->set_details(CommonBlockDetails{name.empty() ? location : name},
+          /*force*/true);
+    }
     return *cb;
   } else {
     Symbol &symbol{MakeSymbol(
