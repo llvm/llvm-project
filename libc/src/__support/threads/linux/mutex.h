@@ -13,6 +13,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/mutex_common.h"
@@ -30,6 +31,25 @@ class Mutex final : private RawMutex {
   // TLS address may not work across forked processes. Use thread id instead.
   pid_t owner;
   unsigned long long lock_count;
+
+  LIBC_INLINE bool increase_lock_count() {
+    if (__builtin_add_overflow(this->lock_count, 1, &this->lock_count))
+      return false;
+    return true;
+  }
+
+  LIBC_INLINE MutexError recursive_lock() {
+    if (!this->recursive)
+      return MutexError::DEADLOCK;
+    if (increase_lock_count())
+      return MutexError::NONE;
+    return MutexError::MAX_RECURSION;
+  }
+
+  LIBC_INLINE void post_raw_lock() {
+    this->lock_count++;
+    this->owner = internal::gettid();
+  }
 
 public:
   LIBC_INLINE constexpr Mutex(bool is_timed, bool is_recursive, bool is_robust,
@@ -56,29 +76,50 @@ public:
     return MutexError::NONE;
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError lock() {
+    if (this->owner == internal::gettid())
+      return recursive_lock();
     // Since timeout is not specified, we do not need to check the return value.
     this->RawMutex::lock(
         /* timeout=*/cpp::nullopt, this->pshared);
+    post_raw_lock();
     return MutexError::NONE;
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
-    if (this->RawMutex::lock(abs_time, this->pshared))
+    if (this->owner == internal::gettid())
+      return recursive_lock();
+    if (this->RawMutex::lock(abs_time, this->pshared)) {
+      post_raw_lock();
       return MutexError::NONE;
+    }
     return MutexError::TIMEOUT;
   }
 
   LIBC_INLINE MutexError unlock() {
-    if (this->RawMutex::unlock(this->pshared))
+    if (this->owner != internal::gettid())
+      return MutexError::UNLOCK_WITHOUT_LOCK;
+
+    if (this->lock_count > 1) {
+      this->lock_count--;
       return MutexError::NONE;
-    return MutexError::UNLOCK_WITHOUT_LOCK;
+    }
+
+    // no longer holding the lock
+    if (this->RawMutex::unlock(this->pshared)) {
+      this->lock_count--;
+      this->owner = 0;
+      return MutexError::NONE;
+    }
+
+    // memory corrupted
+    return MutexError::BAD_LOCK_STATE;
   }
 
   // TODO: record owner and lock count.
   LIBC_INLINE MutexError try_lock() {
+    if (this->owner == internal::gettid())
+      return recursive_lock();
     if (this->RawMutex::try_lock())
       return MutexError::NONE;
     return MutexError::BUSY;
