@@ -199,11 +199,6 @@ public:
   NestedNameSpecifierLoc getPrefix() const;
 
   /// This returns the position of the type after any elaboration, such as the
-  /// 'struct' keyword, and name qualifiers. This will the 'template' keyword if
-  /// present, or the name location otherwise.
-  SourceLocation getNonPrefixBeginLoc() const;
-
-  /// This returns the position of the type after any elaboration, such as the
   /// 'struct' keyword. This may be the position of the name qualifiers,
   /// 'template' keyword, or the name location otherwise.
   SourceLocation getNonElaboratedBeginLoc() const;

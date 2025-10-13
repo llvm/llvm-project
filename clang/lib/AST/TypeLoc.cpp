@@ -494,39 +494,6 @@ NestedNameSpecifierLoc TypeLoc::getPrefix() const {
   }
 }
 
-SourceLocation TypeLoc::getNonPrefixBeginLoc() const {
-  switch (getTypeLocClass()) {
-  case TypeLoc::TemplateSpecialization: {
-    auto TL = castAs<TemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DeducedTemplateSpecialization: {
-    auto TL = castAs<DeducedTemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DependentName:
-    return castAs<DependentNameTypeLoc>().getNameLoc();
-  case TypeLoc::Enum:
-  case TypeLoc::Record:
-  case TypeLoc::InjectedClassName:
-    return castAs<TagTypeLoc>().getNameLoc();
-  case TypeLoc::Typedef:
-    return castAs<TypedefTypeLoc>().getNameLoc();
-  case TypeLoc::UnresolvedUsing:
-    return castAs<UnresolvedUsingTypeLoc>().getNameLoc();
-  case TypeLoc::Using:
-    return castAs<UsingTypeLoc>().getNameLoc();
-  default:
-    return getBeginLoc();
-  }
-}
-
 SourceLocation TypeLoc::getNonElaboratedBeginLoc() const {
   // For elaborated types (e.g. `struct a::A`) we want the portion after the
   // `struct` but including the namespace qualifier, `a::`.
