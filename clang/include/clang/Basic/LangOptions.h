@@ -184,6 +184,28 @@ public:
     HLSL_202y = 2029,
   };
 
+  /// C language version codes as defined by the standard.
+  enum CLangStd : uint32_t {
+    // FIXME: Use correct value for C2y.
+    C_2y = 202400,
+    C_23 = 202311,
+    C_17 = 201710,
+    C_11 = 201112,
+    C_99 = 199901,
+  };
+
+  /// C++ language version codes as defined by the standard.
+  enum CPlusPlusLangStd : uint32_t {
+    // FIXME: Use correct value for C++26.
+    CPP_26 = 202400,
+    CPP_23 = 202302,
+    CPP_20 = 202002,
+    CPP_17 = 201703,
+    CPP_14 = 201402,
+    CPP_11 = 201103,
+    CPP_03 = 199711,
+  };
+
   /// Clang versions with different platform ABI conformance.
   enum class ClangABI {
 #define ABI_VER_MAJOR_MINOR(Major, Minor) Ver##Major##_##Minor,
@@ -756,6 +778,15 @@ public:
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
+
+  /// Returns the most applicable C standard-compliant language version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<CLangStd> GetCLangStd() const;
+
+  /// Returns the most applicable C++ standard-compliant language
+  /// version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<CPlusPlusLangStd> GetCPlusPlusLangStd() const;
 };
 
 /// Floating point control options

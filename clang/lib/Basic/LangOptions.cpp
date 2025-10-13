@@ -243,3 +243,49 @@ LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
 }
+
+std::optional<clang::LangOptionsBase::CPlusPlusLangStd>
+LangOptions::GetCPlusPlusLangStd() const {
+  if (!CPlusPlus)
+    return std::nullopt;
+
+  if (CPlusPlus26)
+    return clang::LangOptionsBase::CPP_26;
+
+  if (CPlusPlus23)
+    return clang::LangOptionsBase::CPP_23;
+
+  if (CPlusPlus20)
+    return clang::LangOptionsBase::CPP_20;
+
+  if (CPlusPlus17)
+    return clang::LangOptionsBase::CPP_17;
+
+  if (CPlusPlus14)
+    return clang::LangOptionsBase::CPP_14;
+
+  if (CPlusPlus11)
+    return clang::LangOptionsBase::CPP_11;
+
+  return clang::LangOptionsBase::CPP_03;
+}
+
+std::optional<clang::LangOptionsBase::CLangStd>
+LangOptions::GetCLangStd() const {
+  if (C2y)
+    return clang::LangOptionsBase::C_2y;
+
+  if (C23)
+    return clang::LangOptionsBase::C_23;
+
+  if (C17)
+    return clang::LangOptionsBase::C_17;
+
+  if (C11)
+    return clang::LangOptionsBase::C_11;
+
+  if (C99)
+    return clang::LangOptionsBase::C_99;
+
+  return std::nullopt;
+}
