@@ -14,8 +14,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 
-// This is a really long comment that clang-format will decide to make multiple lines to trigger a formatting failure.
-
 using namespace llvm;
 
 namespace {
