@@ -5,7 +5,9 @@ standards:
 merge_yaml_files:
   - stdlib-malloc.yaml
 macros:
-  - macro_name: NULL
+  - macro_name: 'LIBC_HAS_ANNEX_K'
+    macro_header: annex-k-macros.h
+  - macro_name: 'NULL'
     macro_header: null-macro.h
 types:
   - type_name: __atexithandler_t
@@ -14,6 +16,7 @@ types:
   - type_name: __search_compare_t
   - type_name: constraint_handler_t
   - type_name: div_t
+  - type_name: errno_t
   - type_name: ldiv_t
   - type_name: lldiv_t
   - type_name: locale_t
@@ -181,6 +184,15 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: abort_handler_s
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: const char *__restrict
+      - type: void *__restrict
+      - type: errno_t
+    guard: 'LIBC_HAS_ANNEX_K'
   - name: srand
     standards:
       - stdc

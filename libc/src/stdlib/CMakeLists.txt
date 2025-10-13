@@ -648,6 +648,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  abort_handler_s
+  SRCS
+    abort_handler_s.cpp
+  HDRS
+    abort_handler_s.h
+  DEPENDS
+    libc.src.__support.annex_k.abort_handler_s
+)
+
+add_entrypoint_object(
   system
   ALIAS
   DEPENDS
