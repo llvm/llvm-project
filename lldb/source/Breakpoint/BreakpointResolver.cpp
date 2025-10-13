@@ -273,11 +273,19 @@ void BreakpointResolver::SetSCMatchesByLine(
     }
 
     // Sort by file address.
-    llvm::sort(worklist_begin, worklist_end,
-               [](const SymbolContext &a, const SymbolContext &b) {
-                 return a.line_entry.range.GetBaseAddress().GetFileAddress() <
-                        b.line_entry.range.GetBaseAddress().GetFileAddress();
-               });
+    llvm::sort(
+        worklist_begin, worklist_end,
+        [](const SymbolContext &a, const SymbolContext &b) {
+          auto a_addr =
+              a.line_entry.HasValidRange()
+                  ? a.line_entry.GetRange().GetBaseAddress().GetFileAddress()
+                  : LLDB_INVALID_ADDRESS;
+          auto b_addr =
+              b.line_entry.HasValidRange()
+                  ? b.line_entry.GetRange().GetBaseAddress().GetFileAddress()
+                  : LLDB_INVALID_ADDRESS;
+          return a_addr < b_addr;
+        });
 
     // Go through and see if there are line table entries that are
     // contiguous, and if so keep only the first of the contiguous range.
@@ -307,7 +315,9 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
                                      bool skip_prologue,
                                      llvm::StringRef log_ident) {
   Log *log = GetLog(LLDBLog::Breakpoints);
-  Address line_start = sc.line_entry.range.GetBaseAddress();
+  Address line_start = sc.line_entry.HasValidRange()
+                           ? sc.line_entry.GetRange().GetBaseAddress()
+                           : Address();
   if (!line_start.IsValid()) {
     LLDB_LOGF(log,
               "error: Unable to set breakpoint %s at file address "
