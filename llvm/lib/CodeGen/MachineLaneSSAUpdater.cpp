@@ -46,119 +46,6 @@
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
-// SpillCutCollector Implementation
-//===----------------------------------------------------------------------===//
-
-CutEndPoints SpillCutCollector::cut(Register OrigVReg, SlotIndex CutIdx, 
-                                    LaneBitmask LanesToCut) {
-  LLVM_DEBUG(dbgs() << "SpillCutCollector::cut VReg=" << OrigVReg 
-                    << " at " << CutIdx << " lanes=" << PrintLaneMask(LanesToCut) << "\n");
-  
-  assert(OrigVReg.isVirtual() && "Only virtual registers can be cut for spilling");
-  
-  LiveInterval &LI = LIS.getInterval(OrigVReg);
-  SmallVector<LaneBitmask, 4> TouchedLanes;
-  SmallVector<LiveRange::Segment, 4> DebugSegsBefore;
-  SmallVector<SlotIndex, 8> MainEndPoints;
-  DenseMap<LaneBitmask, SmallVector<SlotIndex, 8>> SubrangeEndPoints;
-  
-  // Store debug information before pruning
-  for (const LiveRange::Segment &S : LI.segments) {
-    DebugSegsBefore.push_back(S);
-  }
-  
-  // Use MRI to get the accurate full mask for this register class
-  LaneBitmask RegClassFullMask = MRI.getMaxLaneMaskForVReg(OrigVReg);
-  bool HasSubranges = !LI.subranges().empty();
-  bool IsFullRegSpill = (LanesToCut == RegClassFullMask) || (!HasSubranges && MRI.shouldTrackSubRegLiveness(OrigVReg));
-  
-  LLVM_DEBUG(dbgs() << "  HasSubranges=" << HasSubranges 
-                    << " RegClassFullMask=" << PrintLaneMask(RegClassFullMask)
-                    << " shouldTrackSubRegLiveness=" << MRI.shouldTrackSubRegLiveness(OrigVReg)
-                    << " IsFullRegSpill=" << IsFullRegSpill << "\n");
-  
-  if (IsFullRegSpill) {
-    // Whole-register spill: prune main range only
-  if (LI.liveAt(CutIdx)) {
-      TouchedLanes.push_back(LanesToCut);
-    LIS.pruneValue(LI, CutIdx, &MainEndPoints);
-      LLVM_DEBUG(dbgs() << "  Pruned main range (whole-reg) with " << MainEndPoints.size() 
-                      << " endpoints\n");
-  }
-  } else {
-    // Partial-lane spill: refine-then-operate on subranges
-    LLVM_DEBUG(dbgs() << "  Partial-lane spill: refining subranges for " 
-                      << PrintLaneMask(LanesToCut) << "\n");
-    
-    // Step 1: Collect subranges that need refinement
-    SmallVector<LiveInterval::SubRange *, 4> SubrangesToRefine;
-    SmallVector<LiveInterval::SubRange *, 4> PreciseMatches;
-    
-  for (LiveInterval::SubRange &SR : LI.subranges()) {
-      LaneBitmask Overlap = SR.LaneMask & LanesToCut;
-      if (Overlap.none()) {
-        continue; // No intersection, skip
-      }
-      
-      if (Overlap == SR.LaneMask) {
-        // SR is completely contained in LanesToCut
-        PreciseMatches.push_back(&SR);
-        LLVM_DEBUG(dbgs() << "    Found " << (SR.LaneMask == LanesToCut ? "precise" : "subset") 
-                          << " match: " << PrintLaneMask(SR.LaneMask) << "\n");
-      } else {
-        // Partial overlap: need to refine this subrange
-        SubrangesToRefine.push_back(&SR);
-        LLVM_DEBUG(dbgs() << "    Need to refine: " << PrintLaneMask(SR.LaneMask) 
-                          << " (overlap=" << PrintLaneMask(Overlap) << ")\n");
-      }
-    }
-    
-    // Step 2: Refine overlapping subranges into disjoint ones
-    for (LiveInterval::SubRange *SR : SubrangesToRefine) {
-      LaneBitmask OrigMask = SR->LaneMask;
-      LaneBitmask SpillMask = OrigMask & LanesToCut;
-      LaneBitmask KeepMask = OrigMask & ~LanesToCut;
-      
-      LLVM_DEBUG(dbgs() << "    Refining " << PrintLaneMask(OrigMask) 
-                        << " into Spill=" << PrintLaneMask(SpillMask) 
-                        << " Keep=" << PrintLaneMask(KeepMask) << "\n");
-      
-      // Create new subrange for spilled portion (SpillMask is always non-empty here)
-      LiveInterval::SubRange *SpillSR = LI.createSubRange(LIS.getVNInfoAllocator(), SpillMask);
-      // Copy liveness from original subrange
-      SpillSR->assign(*SR, LIS.getVNInfoAllocator());
-      PreciseMatches.push_back(SpillSR);
-      LLVM_DEBUG(dbgs() << "      Created spill subrange: " << PrintLaneMask(SpillMask) << "\n");
-      
-      // Update original subrange to keep-only portion (KeepMask is always non-empty here)
-      SR->LaneMask = KeepMask;
-      LLVM_DEBUG(dbgs() << "      Updated original to keep: " << PrintLaneMask(KeepMask) << "\n");
-    }
-    
-    // Step 3: Prune only the precise matches for LanesToCut
-    for (LiveInterval::SubRange *SR : PreciseMatches) {
-      if (SR->liveAt(CutIdx) && (SR->LaneMask & LanesToCut).any()) {
-        TouchedLanes.push_back(SR->LaneMask);
-        SmallVector<SlotIndex, 8> SubEndPoints;
-        LIS.pruneValue(*SR, CutIdx, &SubEndPoints);
-        SubrangeEndPoints[SR->LaneMask] = std::move(SubEndPoints);
-        LLVM_DEBUG(dbgs() << "    Pruned subrange " << PrintLaneMask(SR->LaneMask)
-                          << " with " << SubrangeEndPoints[SR->LaneMask].size() << " endpoints\n");
-      }
-    }
-    
-    // Note: Do NOT prune main range for partial spills - subranges are authoritative
-  }
-  
-  LLVM_DEBUG(dbgs() << "  Cut complete: " << TouchedLanes.size() 
-                    << " touched lane masks\n");
-  
-  return CutEndPoints(OrigVReg, CutIdx, std::move(TouchedLanes), 
-                      std::move(MainEndPoints), std::move(SubrangeEndPoints),
-                      std::move(DebugSegsBefore));
-}
-
-//===----------------------------------------------------------------------===//
 // MachineLaneSSAUpdater Implementation
 //===----------------------------------------------------------------------===//
 
@@ -257,72 +144,6 @@ Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
   }
   
   LLVM_DEBUG(dbgs() << "  repairSSAForNewDef complete, returning " << NewSSAVReg << "\n");
-  return NewSSAVReg;
-}
-
-Register MachineLaneSSAUpdater::addDefAndRepairAfterSpill(MachineInstr &ReloadMI,
-                                                           Register OrigVReg,
-                                                           LaneBitmask DefMask,
-                                                           const CutEndPoints &EP) {
-  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::addDefAndRepairAfterSpill VReg=" << OrigVReg
-                    << " DefMask=" << PrintLaneMask(DefMask) << "\n");
-  
-  // Safety checks as specified in the design
-  assert(EP.getOrigVReg() == OrigVReg && 
-         "CutEndPoints OrigVReg mismatch");
-  
-  // Validate that DefMask is a subset of the lanes that were actually spilled
-  // This allows partial reloads (e.g., reload 32-bit subreg from 64-bit spill)
-  LaneBitmask SpilledLanes = LaneBitmask::getNone();
-  for (LaneBitmask TouchedMask : EP.getTouchedLaneMasks()) {
-    SpilledLanes |= TouchedMask;
-  }
-  assert((DefMask & SpilledLanes) == DefMask && 
-         "DefMask must be a subset of the lanes that were spilled");
-  
-  LLVM_DEBUG(dbgs() << "  DefMask=" << PrintLaneMask(DefMask) 
-                    << " is subset of SpilledLanes=" << PrintLaneMask(SpilledLanes) << "\n");
-  
-  // Step 1: Index the reload instruction and get its SlotIndex
-  SlotIndex ReloadIdx = indexNewInstr(ReloadMI);
-  assert(ReloadIdx >= EP.getCutIdx() && 
-         "Reload index must be >= cut index");
-  
-  // Step 2: Extract the new SSA register from the reload instruction
-  // The caller should have already created NewVReg and built ReloadMI with it
-  Register NewSSAVReg = ReloadMI.defs().begin()->getReg();
-  assert(NewSSAVReg.isValid() && NewSSAVReg.isVirtual() &&
-         "ReloadMI should define a valid virtual register");
-  
-  // Step 3: Create and extend NewSSAVReg's LiveInterval using captured EndPoints
-  // The endpoints capture where the original register was live after the spill point
-  // We need to reconstruct this liveness for the new SSA register
-  LiveInterval &NewLI = LIS.createAndComputeVirtRegInterval(NewSSAVReg);
-  
-  // Extend main live range using the captured endpoints
-  if (!EP.getMainEndPoints().empty()) {
-    LIS.extendToIndices(NewLI, EP.getMainEndPoints());
-    LLVM_DEBUG(dbgs() << "  Extended NewSSA main range with " << EP.getMainEndPoints().size() 
-                      << " endpoints\n");
-  }
-  
-  // Extend subranges for lane-aware liveness reconstruction
-  // Create subranges on-demand for each LaneMask that was captured during spill
-  for (const auto &[LaneMask, EndPoints] : EP.getSubrangeEndPoints()) {
-    if (!EndPoints.empty()) {
-      // Always create a new subrange since NewLI.subranges() is initially empty
-      LiveInterval::SubRange *NewSR = NewLI.createSubRange(LIS.getVNInfoAllocator(), LaneMask);
-      
-      LIS.extendToIndices(*NewSR, EndPoints);
-      LLVM_DEBUG(dbgs() << "  Created and extended NewSSA subrange " << PrintLaneMask(LaneMask)
-                        << " with " << EndPoints.size() << " endpoints\n");
-    }
-  }
-  
-  // Step 4: Perform common SSA repair (PHI placement + use rewriting)
-  performSSARepair(NewSSAVReg, OrigVReg, DefMask, ReloadMI.getParent());
-  
-  LLVM_DEBUG(dbgs() << "  SSA repair complete, returning " << NewSSAVReg << "\n");
   return NewSSAVReg;
 }
 
@@ -871,12 +692,6 @@ VNInfo *MachineLaneSSAUpdater::incomingOnEdge(LiveInterval &LI, MachineInstr *Ph
 /// Check if \p DefMI's definition reaches \p UseMI's use operand.
 /// During SSA reconstruction, LiveIntervals may not be complete yet, so we use
 /// dominance-based checking rather than querying LiveInterval reachability.
-///
-/// TODO: This dominance-based approach doesn't handle back edges correctly.
-/// For loop back edges, the definition in the loop body doesn't dominate the
-/// loop header PHI's predecessor, but the value does reach the PHI operand.
-/// We need proper reachability analysis (e.g., checking if there's a path from
-/// DefMI to the predecessor block) to handle loops correctly.
 bool MachineLaneSSAUpdater::defReachesUse(MachineInstr *DefMI,
                                            MachineInstr *UseMI, 
                                            MachineOperand &UseOp) {
@@ -1018,8 +833,6 @@ Register MachineLaneSSAUpdater::buildRSForSuperUse(MachineInstr *UseMI, MachineO
   // Add source for lanes from OldVR (unchanged lanes)
   // Handle both contiguous and non-contiguous lane masks
   // Non-contiguous example: Redefining only sub2 of vreg_128 leaves LanesFromOld = sub0+sub1+sub3
-  // Reference: getCoveringSubRegsForLaneMask from AMDGPUSSARAUtils.h (PR #156049)
-  // See: https://github.com/llvm/llvm-project/pull/156049/files#diff-b52a7e2e5b6c174847c74c25b3b579f8cfbac5d53c3364b9b69c52de71532aec
   if (LanesFromOld.any()) {
     unsigned SubIdx = getSubRegIndexForLaneMask(LanesFromOld, &TRI);
     
