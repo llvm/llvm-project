@@ -5,27 +5,28 @@ define void @test(ptr %nExp, float %0, i1 %cmp, float %1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[NEXP:%.*]], float [[TMP0:%.*]], i1 [[CMP:%.*]], float [[TMP1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0x7FF8000000000000, float poison, float poison>, float [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP0]], i32 3
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[NEXP]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 3, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    [[DIV_1_I_I:%.*]] = fmul float [[TMP4]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float poison>, float [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP10]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[DIV_1_I_I]], i32 0
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x float> [ [[TMP11]], %[[IF_THEN]] ], [ [[TMP3]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi float [ [[TMP1]], %[[IF_THEN]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi float [ 0.000000e+00, %[[IF_THEN]] ], [ [[TMP1]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x float> [ [[TMP8]], %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x float> [ zeroinitializer, %[[IF_THEN]] ], [ <float 0x7FF8000000000000, float 1.000000e+00>, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x float> [ [[TMP7]], %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> <float poison, float 0.000000e+00>, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP17:%.*]] = fmul <2 x float> [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul <2 x float> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> [[TMP14]], <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP9]], i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP10]], i32 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul <4 x float> [[TMP12]], zeroinitializer
 ; CHECK-NEXT:    [[CALL25:%.*]] = load volatile ptr, ptr null, align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = fadd <2 x float> [[TMP18]], [[TMP17]]

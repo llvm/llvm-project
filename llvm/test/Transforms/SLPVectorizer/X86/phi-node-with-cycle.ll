@@ -4,21 +4,22 @@
 define void @test(float %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> <float 0.000000e+00, float poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x float> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    br label %[[BB6:.*]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[BB5:.*]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> zeroinitializer, [[TMP7]]
-; CHECK-NEXT:    br label %[[BB10:.*]]
-; CHECK:       [[BB9:.*]]:
-; CHECK-NEXT:    br label %[[BB10]]
-; CHECK:       [[BB10]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x float> [ [[TMP8]], %[[BB6]] ], [ poison, %[[BB9]] ]
-; CHECK-NEXT:    br label %[[BB12:.*]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[BB9:.*]]
+; CHECK:       [[BB8:.*]]:
+; CHECK-NEXT:    br label %[[BB9]]
+; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x float> [ [[TMP8]], %[[BB5]] ], [ poison, %[[BB8]] ]
+; CHECK-NEXT:    br label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP12]], float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x float> [[TMP11]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP14]], i32 0
