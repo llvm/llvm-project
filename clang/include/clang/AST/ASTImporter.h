@@ -190,6 +190,8 @@ class TypeSourceInfo;
       llvm::SmallDenseMap<Decl *, int, 32> Aux;
     };
 
+    class FunctionReturnTypeDeclCycleDetector;
+
   private:
     std::shared_ptr<ASTImporterSharedState> SharedState = nullptr;
 
@@ -254,7 +256,16 @@ class TypeSourceInfo;
     /// Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
     NonEquivalentDeclSet NonEquivalentDecls;
-    llvm::DenseSet<const Decl *> DeclTypeCycles;
+    // When template function return type is auto and return type is declared as
+    // typename from template params, there could be cycles in function
+    // importing when function decaration is still the need for return type
+    // declaration import. We have code path for nested types inside function
+    // (see hasReturnTypeDeclaredInside): assuming return type as VoidTy and
+    // calculate it later under UsedDifferentProtoType boolean. This class is
+    // reuse of this approach and make logic lazy - detect cycle - calculate
+    // return type later on.
+    std::unique_ptr<FunctionReturnTypeDeclCycleDetector>
+        FunctionReturnTypeCycleDetector;
 
     using FoundDeclsTy = SmallVector<NamedDecl *, 2>;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
