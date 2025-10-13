@@ -3503,12 +3503,11 @@ let isCompare = 1, Defs = [CPSR] in {
      let Inst{11-8} = 0b1111; // Rd
    }
    // register
-   def t2CMNzrr : T2TwoRegCmp<
+   def t2CMNrr : T2TwoRegCmp<
                 (outs), (ins GPRnopc:$Rn, rGPR:$Rm), IIC_iCMPr,
                 "cmn", ".w\t$Rn, $Rm",
-                [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                  GPRnopc:$Rn, rGPR:$Rm))]>,
-                  Sched<[WriteCMP, ReadALU, ReadALU]> {
+                [(set CPSR, (ARMcmn GPRnopc:$Rn, rGPR:$Rm))]>,
+                Sched<[WriteCMP, ReadALU, ReadALU]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = 0b1000;
@@ -3519,12 +3518,11 @@ let isCompare = 1, Defs = [CPSR] in {
      let Inst{5-4} = 0b00; // type
    }
    // shifted register
-   def t2CMNzrs : T2OneRegCmpShiftedReg<
+   def t2CMNrs : T2OneRegCmpShiftedReg<
                 (outs), (ins GPRnopc:$Rn, t2_so_reg:$ShiftedRm), IIC_iCMPsi,
                 "cmn", ".w\t$Rn, $ShiftedRm",
-                [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                  GPRnopc:$Rn, t2_so_reg:$ShiftedRm))]>,
-                  Sched<[WriteCMPsi, ReadALU, ReadALU]> {
+                [(set CPSR, (ARMcmn GPRnopc:$Rn, t2_so_reg:$ShiftedRm))]>,
+                Sched<[WriteCMPsi, ReadALU, ReadALU]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = 0b1000;
@@ -3539,13 +3537,19 @@ let isCompare = 1, Defs = [CPSR] in {
 def : t2InstAlias<"cmn${p} $Rn, $imm",
    (t2CMNri GPRnopc:$Rn, t2_so_imm:$imm, pred:$p)>;
 def : t2InstAlias<"cmn${p} $Rn, $shift",
-   (t2CMNzrs GPRnopc:$Rn, t2_so_reg:$shift, pred:$p)>;
+   (t2CMNrs GPRnopc:$Rn, t2_so_reg:$shift, pred:$p)>;
 
 def : T2Pat<(ARMcmp  GPR:$src, t2_so_imm_neg:$imm),
             (t2CMNri GPR:$src, t2_so_imm_neg:$imm)>;
 
 def : T2Pat<(ARMcmpZ GPRnopc:$src, t2_so_imm_neg:$imm),
             (t2CMNri GPRnopc:$src, t2_so_imm_neg:$imm)>;
+
+// Fold compare-to-zero of a negated register into CMN register forms.
+def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg rGPR:$Rm)),
+            (t2CMNrr GPRnopc:$Rn, rGPR:$Rm)>;
+def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg t2_so_reg:$ShiftedRm)),
+            (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
 
 defm t2TST  : T2I_cmp_irs<0b0000, "tst", rGPR,
                           IIC_iTSTi, IIC_iTSTr, IIC_iTSTsi,
@@ -5106,7 +5110,7 @@ def : t2InstAlias<"subw${p} $Rdn, $imm",
 
 // Alias for compares without the ".w" optional width specifier.
 def : t2InstAlias<"cmn${p} $Rn, $Rm",
-                  (t2CMNzrr GPRnopc:$Rn, rGPR:$Rm, pred:$p)>;
+                  (t2CMNrr GPRnopc:$Rn, rGPR:$Rm, pred:$p)>;
 def : t2InstAlias<"teq${p} $Rn, $Rm",
                   (t2TEQrr rGPR:$Rn, rGPR:$Rm, pred:$p)>;
 def : t2InstAlias<"tst${p} $Rn, $Rm",

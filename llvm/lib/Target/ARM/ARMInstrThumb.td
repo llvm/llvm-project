@@ -1100,7 +1100,8 @@ def tASRrr :                    // A8.6.15
   T1sItDPEncode<0b0100, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                 IIC_iMOVsr,
                 "asr", "\t$Rdn, $Rm",
-                [(set tGPR:$Rdn, (sra tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+                [(set tGPR:$Rdn, (sra tGPR:$Rn, tGPR:$Rm))]>,
+                Sched<[WriteALU]>;
 
 // BIC register
 def tBIC :                      // A8.6.20
@@ -1112,21 +1113,12 @@ def tBIC :                      // A8.6.20
 
 // CMN register
 let isCompare = 1, Defs = [CPSR] in {
-//FIXME: Disable CMN, as CCodes are backwards from compare expectations
-//       Compare-to-zero still works out, just not the relationals
-//def tCMN :                     // A8.6.33
-//  T1pIDPEncode<0b1011, (outs), (ins tGPR:$lhs, tGPR:$rhs),
-//               IIC_iCMPr,
-//               "cmn", "\t$lhs, $rhs",
-//               [(set CPSR, (ARMcmp tGPR:$lhs, (ineg tGPR:$rhs)))]>;
-
-def tCMNz :                     // A8.6.33
+def tCMN :                     // A8.6.33
   T1pIDPEncode<0b1011, (outs), (ins tGPR:$Rn, tGPR:$Rm),
                IIC_iCMPr,
                "cmn", "\t$Rn, $Rm",
-               [(set CPSR, (ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm)))]>,
-  Sched<[WriteCMP]>;
-
+               [(set CPSR, (ARMcmn tGPR:$Rn, tGPR:$Rm))]>,
+               Sched<[WriteCMP]>;
 } // isCompare = 1, Defs = [CPSR]
 
 // CMP immediate
@@ -1580,6 +1572,11 @@ def tInt_WIN_eh_sjlj_longjmp
 // Comparisons
 def : T1Pat<(ARMcmpZ tGPR:$Rn, imm0_255:$imm8),
             (tCMPi8  tGPR:$Rn, imm0_255:$imm8)>;
+
+// Fold compare-equal of a negated register into CMN register form.
+def : T1Pat<(ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm)),
+            (tCMN tGPR:$Rn, tGPR:$Rm)>;
+
 def : T1Pat<(ARMcmpZ tGPR:$Rn, tGPR:$Rm),
             (tCMPr   tGPR:$Rn, tGPR:$Rm)>;
 
