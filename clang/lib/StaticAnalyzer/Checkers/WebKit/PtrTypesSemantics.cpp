@@ -255,7 +255,7 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
     return;
   }
 
-  for (auto *Redecl : RT->getOriginalDecl()->getMostRecentDecl()->redecls()) {
+  for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
         Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
@@ -296,7 +296,7 @@ std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
   auto *Record = PointeeType->getAsStructureType();
   if (!Record)
     return false;
-  auto *Decl = Record->getOriginalDecl();
+  auto *Decl = Record->getDecl();
   if (!Decl)
     return false;
   auto TypeName = Decl->getName();
