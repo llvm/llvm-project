@@ -29,20 +29,10 @@ entry:
 define void @fdot_wide_vl256(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(2,2) {
 ; CHECK-LABEL: fdot_wide_vl256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x2]
-; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1h { z3.s }, p0/z, [x2, #1, mul vl]
-; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
-; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
-; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
-; CHECK-NEXT:    fcvt z3.s, p0/m, z3.h
-; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    fmul z2.s, z2.s, z3.s
-; CHECK-NEXT:    fadd z0.s, z1.s, z0.s
-; CHECK-NEXT:    fadd z0.s, z0.s, z2.s
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    ldr z2, [x2]
+; CHECK-NEXT:    fdot z0.s, z1.h, z2.h
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 entry:
