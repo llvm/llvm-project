@@ -1020,6 +1020,13 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genTMABulkCommitGroup,
      {{}},
      /*isElemental=*/false},
+    {"tma_bulk_g2s",
+     &I::genTMABulkG2S,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nbytes", asValue}}},
+     /*isElemental=*/false},
     {"tma_bulk_wait_group",
      &I::genTMABulkWaitGroup,
      {{}},
@@ -3200,17 +3207,17 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
-static mlir::Value convertBarrierToLLVM(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        mlir::Value barrier) {
+static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value barrier,
+                                         mlir::NVVM::NVVMMemorySpace space) {
   mlir::Value llvmPtr = fir::ConvertOp::create(
       builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
       barrier);
   mlir::Value addrCast = mlir::LLVM::AddrSpaceCastOp::create(
       builder, loc,
-      mlir::LLVM::LLVMPointerType::get(
-          builder.getContext(),
-          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared)),
+      mlir::LLVM::LLVMPointerType::get(builder.getContext(),
+                                       static_cast<unsigned>(space)),
       llvmPtr);
   return addrCast;
 }
@@ -3220,7 +3227,8 @@ mlir::Value
 IntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
-  mlir::Value barrier = convertBarrierToLLVM(builder, loc, args[0]);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveSharedOp::create(builder, loc, resultType,
                                                     barrier)
       .getResult();
@@ -3231,7 +3239,8 @@ mlir::Value
 IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  mlir::Value barrier = convertBarrierToLLVM(builder, loc, args[0]);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
   // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
   // currently just the sink symbol `_`.
@@ -3244,8 +3253,8 @@ IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
 // BARRIER_INIT (CUDA)
 void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value barrier =
-      convertBarrierToLLVM(builder, loc, fir::getBase(args[0]));
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
   mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
                                            fir::getBase(args[1]), {});
   auto kind = mlir::NVVM::ProxyKindAttr::get(
@@ -9202,6 +9211,20 @@ void IntrinsicLibrary::genTMABulkCommitGroup(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 0);
   mlir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
+}
+
+// TMA_BULK_G2S (CUDA)
+void IntrinsicLibrary::genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
+  mlir::Value dst =
+      convertPtrToNVVMSpace(builder, loc, fir::getBase(args[2]),
+                            mlir::NVVM::NVVMMemorySpace::SharedCluster);
+  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
+                                          mlir::NVVM::NVVMMemorySpace::Global);
+  mlir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
+      builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
 }
 
 // TMA_BULK_WAIT_GROUP (CUDA)
