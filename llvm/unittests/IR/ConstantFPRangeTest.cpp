@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFPRange.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "gtest/gtest.h"
@@ -21,6 +22,7 @@ protected:
   static ConstantFPRange Full;
   static ConstantFPRange Empty;
   static ConstantFPRange Finite;
+  static ConstantFPRange NonNaN;
   static ConstantFPRange One;
   static ConstantFPRange PosZero;
   static ConstantFPRange NegZero;
@@ -43,6 +45,8 @@ ConstantFPRange ConstantFPRangeTest::Empty =
     ConstantFPRange::getEmpty(APFloat::IEEEdouble());
 ConstantFPRange ConstantFPRangeTest::Finite =
     ConstantFPRange::getFinite(APFloat::IEEEdouble());
+ConstantFPRange ConstantFPRangeTest::NonNaN =
+    ConstantFPRange::getNonNaN(APFloat::IEEEdouble());
 ConstantFPRange ConstantFPRangeTest::One = ConstantFPRange(APFloat(1.0));
 ConstantFPRange ConstantFPRangeTest::PosZero = ConstantFPRange(
     APFloat::getZero(APFloat::IEEEdouble(), /*Negative=*/false));
@@ -78,15 +82,21 @@ static void strictNext(APFloat &V) {
     V.next(/*nextDown=*/false);
 }
 
+enum class SparseLevel {
+  Dense,
+  SpecialValuesWithAllPowerOfTwos,
+  SpecialValuesOnly,
+};
+
 template <typename Fn>
-static void EnumerateConstantFPRangesImpl(Fn TestFn, bool Exhaustive,
+static void EnumerateConstantFPRangesImpl(Fn TestFn, SparseLevel Level,
                                           bool MayBeQNaN, bool MayBeSNaN) {
   const fltSemantics &Sem = APFloat::Float8E4M3();
   APFloat PosInf = APFloat::getInf(Sem, /*Negative=*/false);
   APFloat NegInf = APFloat::getInf(Sem, /*Negative=*/true);
   TestFn(ConstantFPRange(PosInf, NegInf, MayBeQNaN, MayBeSNaN));
 
-  if (!Exhaustive) {
+  if (Level != SparseLevel::Dense) {
     SmallVector<APFloat, 36> Values;
     Values.push_back(APFloat::getInf(Sem, /*Negative=*/true));
     Values.push_back(APFloat::getLargest(Sem, /*Negative=*/true));
@@ -94,10 +104,13 @@ static void EnumerateConstantFPRangesImpl(Fn TestFn, bool Exhaustive,
     unsigned Exponents = APFloat::semanticsMaxExponent(Sem) -
                          APFloat::semanticsMinExponent(Sem) + 3;
     unsigned MantissaBits = APFloat::semanticsPrecision(Sem) - 1;
-    // Add -2^(max exponent), -2^(max exponent-1), ..., -2^(min exponent)
-    for (unsigned M = Exponents - 2; M != 0; --M)
-      Values.push_back(
-          APFloat(Sem, APInt(BitWidth, (M + Exponents) << MantissaBits)));
+    if (Level == SparseLevel::SpecialValuesWithAllPowerOfTwos) {
+      // Add -2^(max exponent), -2^(max exponent-1), ..., -2^(min exponent)
+      for (unsigned M = Exponents - 2; M != 0; --M)
+        Values.push_back(
+            APFloat(Sem, APInt(BitWidth, (M + Exponents) << MantissaBits)));
+    }
+    Values.push_back(APFloat::getSmallestNormalized(Sem, /*Negative=*/true));
     Values.push_back(APFloat::getSmallest(Sem, /*Negative=*/true));
     Values.push_back(APFloat::getZero(Sem, /*Negative=*/true));
     size_t E = Values.size();
@@ -126,26 +139,30 @@ static void EnumerateConstantFPRangesImpl(Fn TestFn, bool Exhaustive,
 }
 
 template <typename Fn>
-static void EnumerateConstantFPRanges(Fn TestFn, bool Exhaustive) {
-  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/false,
+static void EnumerateConstantFPRanges(Fn TestFn, SparseLevel Level,
+                                      bool IgnoreSNaNs = false) {
+  EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/false,
                                 /*MayBeSNaN=*/false);
-  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/false,
+  EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/true,
+                                /*MayBeSNaN=*/false);
+  if (IgnoreSNaNs)
+    return;
+  EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/false,
                                 /*MayBeSNaN=*/true);
-  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/true,
-                                /*MayBeSNaN=*/false);
-  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/true,
+  EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/true,
                                 /*MayBeSNaN=*/true);
 }
 
 template <typename Fn>
 static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn,
-                                                    bool Exhaustive) {
+                                                    SparseLevel Level) {
   EnumerateConstantFPRanges(
       [&](const ConstantFPRange &CR1) {
         EnumerateConstantFPRanges(
-            [&](const ConstantFPRange &CR2) { TestFn(CR1, CR2); }, Exhaustive);
+            [&](const ConstantFPRange &CR2) { TestFn(CR1, CR2); }, Level,
+            /*IgnoreSNaNs=*/true);
       },
-      Exhaustive);
+      Level, /*IgnoreSNaNs=*/true);
 }
 
 template <typename Fn>
@@ -347,16 +364,25 @@ TEST_F(ConstantFPRangeTest, ExhaustivelyEnumerate) {
   constexpr unsigned Expected = 4 * ((NNaNValues + 1) * NNaNValues / 2 + 1);
   unsigned Count = 0;
   EnumerateConstantFPRanges([&](const ConstantFPRange &) { ++Count; },
-                            /*Exhaustive=*/true);
+                            SparseLevel::Dense);
   EXPECT_EQ(Expected, Count);
 }
 
 TEST_F(ConstantFPRangeTest, Enumerate) {
-  constexpr unsigned NNaNValues = 2 * ((1 << 4) - 2 + 4);
+  constexpr unsigned NNaNValues = 2 * ((1 << 4) - 2 + 5);
   constexpr unsigned Expected = 4 * ((NNaNValues + 1) * NNaNValues / 2 + 1);
   unsigned Count = 0;
   EnumerateConstantFPRanges([&](const ConstantFPRange &) { ++Count; },
-                            /*Exhaustive=*/false);
+                            SparseLevel::SpecialValuesWithAllPowerOfTwos);
+  EXPECT_EQ(Expected, Count);
+}
+
+TEST_F(ConstantFPRangeTest, EnumerateWithSpecialValuesOnly) {
+  constexpr unsigned NNaNValues = 2 * 5;
+  constexpr unsigned Expected = 4 * ((NNaNValues + 1) * NNaNValues / 2 + 1);
+  unsigned Count = 0;
+  EnumerateConstantFPRanges([&](const ConstantFPRange &) { ++Count; },
+                            SparseLevel::SpecialValuesOnly);
   EXPECT_EQ(Expected, Count);
 }
 
@@ -458,7 +484,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
         EXPECT_EQ(SignBit, CR.getSignBit()) << CR;
         EXPECT_EQ(Mask, CR.classify()) << CR;
       },
-      /*Exhaustive=*/true);
+      SparseLevel::Dense);
 #endif
 }
 
@@ -559,7 +585,7 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
               << "Suboptimal result for makeAllowedFCmpRegion(" << Pred << ", "
               << CR << ")";
         },
-        /*Exhaustive=*/false);
+        SparseLevel::SpecialValuesWithAllPowerOfTwos);
   }
 #endif
 }
@@ -670,7 +696,7 @@ TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
                 << ", " << CR << ")";
           }
         },
-        /*Exhaustive=*/false);
+        SparseLevel::SpecialValuesWithAllPowerOfTwos);
   }
 #endif
 }
@@ -765,6 +791,278 @@ TEST_F(ConstantFPRangeTest, makeExactFCmpRegion) {
         },
         /*IgnoreNaNPayload=*/true);
   }
+}
+
+TEST_F(ConstantFPRangeTest, abs) {
+  EXPECT_EQ(Full.abs(),
+            ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/false),
+                            APFloat::getInf(Sem, /*Negative=*/false),
+                            /*MayBeQNaN=*/true,
+                            /*MayBeSNaN=*/true));
+  EXPECT_EQ(Empty.abs(), Empty);
+  EXPECT_EQ(Zero.abs(), PosZero);
+  EXPECT_EQ(PosInf.abs(), PosInf);
+  EXPECT_EQ(NegInf.abs(), PosInf);
+  EXPECT_EQ(Some.abs(), SomePos);
+  EXPECT_EQ(SomeNeg.abs(), SomePos);
+  EXPECT_EQ(NaN.abs(), NaN);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)).abs(),
+            ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(3.0)));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)).abs(),
+            ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(3.0)));
+}
+
+TEST_F(ConstantFPRangeTest, negate) {
+  EXPECT_EQ(Full.negate(), Full);
+  EXPECT_EQ(Empty.negate(), Empty);
+  EXPECT_EQ(Zero.negate(), Zero);
+  EXPECT_EQ(PosInf.negate(), NegInf);
+  EXPECT_EQ(NegInf.negate(), PosInf);
+  EXPECT_EQ(Some.negate(), Some);
+  EXPECT_EQ(SomePos.negate(), SomeNeg);
+  EXPECT_EQ(SomeNeg.negate(), SomePos);
+  EXPECT_EQ(NaN.negate(), NaN);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)).negate(),
+            ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)).negate(),
+            ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)));
+}
+
+TEST_F(ConstantFPRangeTest, getWithout) {
+  EXPECT_EQ(Full.getWithoutNaN(), NonNaN);
+  EXPECT_EQ(NaN.getWithoutNaN(), Empty);
+
+  EXPECT_EQ(NaN.getWithoutInf(), NaN);
+  EXPECT_EQ(PosInf.getWithoutInf(), Empty);
+  EXPECT_EQ(NegInf.getWithoutInf(), Empty);
+  EXPECT_EQ(NonNaN.getWithoutInf(), Finite);
+  EXPECT_EQ(Zero.getWithoutInf(), Zero);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(3.0))
+                .getWithoutInf(),
+            ConstantFPRange::getNonNaN(
+                APFloat::getLargest(Sem, /*Negative=*/true), APFloat(3.0)));
+}
+
+TEST_F(ConstantFPRangeTest, cast) {
+  const fltSemantics &F16Sem = APFloat::IEEEhalf();
+  const fltSemantics &BF16Sem = APFloat::BFloat();
+  const fltSemantics &F32Sem = APFloat::IEEEsingle();
+  const fltSemantics &F8NanOnlySem = APFloat::Float8E4M3FN();
+  // normal -> normal (exact)
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0)).cast(F32Sem),
+            ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(2.0f)));
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(APFloat(-2.0f), APFloat(-1.0f)).cast(Sem),
+      ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(-1.0)));
+  // normal -> normal (inexact)
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(APFloat(3.141592653589793),
+                                 APFloat(6.283185307179586))
+          .cast(F32Sem),
+      ConstantFPRange::getNonNaN(APFloat(3.14159274f), APFloat(6.28318548f)));
+  // normal -> subnormal
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-5e-8), APFloat(5e-8))
+                .cast(F16Sem)
+                .classify(),
+            fcSubnormal | fcZero);
+  // normal -> zero
+  EXPECT_EQ(ConstantFPRange::getNonNaN(
+                APFloat::getSmallestNormalized(Sem, /*Negative=*/true),
+                APFloat::getSmallestNormalized(Sem, /*Negative=*/false))
+                .cast(F32Sem)
+                .classify(),
+            fcZero);
+  // normal -> inf
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-65536.0), APFloat(65536.0))
+                .cast(F16Sem),
+            ConstantFPRange::getNonNaN(F16Sem));
+  // nan -> qnan
+  EXPECT_EQ(
+      ConstantFPRange::getNaNOnly(Sem, /*MayBeQNaN=*/true, /*MayBeSNaN=*/false)
+          .cast(F32Sem),
+      ConstantFPRange::getNaNOnly(F32Sem, /*MayBeQNaN=*/true,
+                                  /*MayBeSNaN=*/false));
+  EXPECT_EQ(
+      ConstantFPRange::getNaNOnly(Sem, /*MayBeQNaN=*/false, /*MayBeSNaN=*/true)
+          .cast(F32Sem),
+      ConstantFPRange::getNaNOnly(F32Sem, /*MayBeQNaN=*/true,
+                                  /*MayBeSNaN=*/false));
+  EXPECT_EQ(
+      ConstantFPRange::getNaNOnly(Sem, /*MayBeQNaN=*/true, /*MayBeSNaN=*/true)
+          .cast(F32Sem),
+      ConstantFPRange::getNaNOnly(F32Sem, /*MayBeQNaN=*/true,
+                                  /*MayBeSNaN=*/false));
+  // For BF16 -> F32, signaling bit is still lost.
+  EXPECT_EQ(ConstantFPRange::getNaNOnly(BF16Sem, /*MayBeQNaN=*/true,
+                                        /*MayBeSNaN=*/true)
+                .cast(F32Sem),
+            ConstantFPRange::getNaNOnly(F32Sem, /*MayBeQNaN=*/true,
+                                        /*MayBeSNaN=*/false));
+  // inf -> nan only (return full set for now)
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat::getInf(Sem, /*Negative=*/false))
+                .cast(F8NanOnlySem),
+            ConstantFPRange::getFull(F8NanOnlySem));
+  // other rounding modes
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/true),
+                                 APFloat::getSmallest(Sem, /*Negative=*/false))
+          .cast(F32Sem, APFloat::rmTowardNegative),
+      ConstantFPRange::getNonNaN(
+          APFloat::getSmallest(F32Sem, /*Negative=*/true),
+          APFloat::getZero(F32Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/true),
+                                 APFloat::getSmallest(Sem, /*Negative=*/false))
+          .cast(F32Sem, APFloat::rmTowardPositive),
+      ConstantFPRange::getNonNaN(
+          APFloat::getZero(F32Sem, /*Negative=*/true),
+          APFloat::getSmallest(F32Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(
+          APFloat::getSmallestNormalized(Sem, /*Negative=*/true),
+          APFloat::getSmallestNormalized(Sem, /*Negative=*/false))
+          .cast(F32Sem, APFloat::rmTowardZero),
+      ConstantFPRange::getNonNaN(APFloat::getZero(F32Sem, /*Negative=*/true),
+                                 APFloat::getZero(F32Sem, /*Negative=*/false)));
+
+  EnumerateValuesInConstantFPRange(
+      ConstantFPRange::getFull(APFloat::Float8E4M3()),
+      [&](const APFloat &V) {
+        bool LosesInfo = false;
+
+        APFloat DoubleV = V;
+        DoubleV.convert(Sem, APFloat::rmNearestTiesToEven, &LosesInfo);
+        ConstantFPRange DoubleCR = ConstantFPRange(V).cast(Sem);
+        EXPECT_TRUE(DoubleCR.contains(DoubleV))
+            << "Casting " << V << " to double failed. " << DoubleCR
+            << " doesn't contain " << DoubleV;
+
+        auto &FP4Sem = APFloat::Float4E2M1FN();
+        APFloat FP4V = V;
+        FP4V.convert(FP4Sem, APFloat::rmNearestTiesToEven, &LosesInfo);
+        ConstantFPRange FP4CR = ConstantFPRange(V).cast(FP4Sem);
+        EXPECT_TRUE(FP4CR.contains(FP4V))
+            << "Casting " << V << " to FP4E2M1FN failed. " << FP4CR
+            << " doesn't contain " << FP4V;
+      },
+      /*IgnoreNaNPayload=*/true);
+}
+
+TEST_F(ConstantFPRangeTest, add) {
+  EXPECT_EQ(Full.add(Full), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(Full.add(Empty), Empty);
+  EXPECT_EQ(Empty.add(Full), Empty);
+  EXPECT_EQ(Empty.add(Empty), Empty);
+  EXPECT_EQ(One.add(One), ConstantFPRange(APFloat(2.0)));
+  EXPECT_EQ(Some.add(Some),
+            ConstantFPRange::getNonNaN(APFloat(-6.0), APFloat(6.0)));
+  EXPECT_EQ(SomePos.add(SomeNeg),
+            ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(3.0)));
+  EXPECT_EQ(PosInf.add(PosInf), PosInf);
+  EXPECT_EQ(NegInf.add(NegInf), NegInf);
+  EXPECT_EQ(PosInf.add(Finite.unionWith(PosInf)), PosInf);
+  EXPECT_EQ(NegInf.add(Finite.unionWith(NegInf)), NegInf);
+  EXPECT_EQ(PosInf.add(Finite.unionWith(NegInf)), PosInf.unionWith(QNaN));
+  EXPECT_EQ(NegInf.add(Finite.unionWith(PosInf)), NegInf.unionWith(QNaN));
+  EXPECT_EQ(PosInf.add(NegInf), QNaN);
+  EXPECT_EQ(NegInf.add(PosInf), QNaN);
+  EXPECT_EQ(PosZero.add(NegZero), PosZero);
+  EXPECT_EQ(PosZero.add(Zero), PosZero);
+  EXPECT_EQ(NegZero.add(NegZero), NegZero);
+  EXPECT_EQ(NegZero.add(Zero), Zero);
+  EXPECT_EQ(NaN.add(NaN), QNaN);
+  EXPECT_EQ(NaN.add(Finite), QNaN);
+  EXPECT_EQ(NonNaN.unionWith(NaN).add(NonNaN), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(PosInf.unionWith(QNaN).add(PosInf), PosInf.unionWith(QNaN));
+  EXPECT_EQ(PosInf.unionWith(NaN).add(ConstantFPRange(APFloat(24.0))),
+            PosInf.unionWith(QNaN));
+
+#if defined(EXPENSIVE_CHECKS)
+  EnumerateTwoInterestingConstantFPRanges(
+      [](const ConstantFPRange &LHS, const ConstantFPRange &RHS) {
+        ConstantFPRange Res = LHS.add(RHS);
+        ConstantFPRange Expected =
+            ConstantFPRange::getEmpty(LHS.getSemantics());
+        EnumerateValuesInConstantFPRange(
+            LHS,
+            [&](const APFloat &LHSC) {
+              EnumerateValuesInConstantFPRange(
+                  RHS,
+                  [&](const APFloat &RHSC) {
+                    APFloat Sum = LHSC + RHSC;
+                    EXPECT_TRUE(Res.contains(Sum))
+                        << "Wrong result for " << LHS << " + " << RHS
+                        << ". The result " << Res << " should contain " << Sum;
+                    if (!Expected.contains(Sum))
+                      Expected = Expected.unionWith(ConstantFPRange(Sum));
+                  },
+                  /*IgnoreNaNPayload=*/true);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for " << LHS << " + " << RHS << ". Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
+#endif
+}
+
+TEST_F(ConstantFPRangeTest, sub) {
+  EXPECT_EQ(Full.sub(Full), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(Full.sub(Empty), Empty);
+  EXPECT_EQ(Empty.sub(Full), Empty);
+  EXPECT_EQ(Empty.sub(Empty), Empty);
+  EXPECT_EQ(One.sub(One), ConstantFPRange(APFloat(0.0)));
+  EXPECT_EQ(Some.sub(Some),
+            ConstantFPRange::getNonNaN(APFloat(-6.0), APFloat(6.0)));
+  EXPECT_EQ(SomePos.sub(SomeNeg),
+            ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(6.0)));
+  EXPECT_EQ(PosInf.sub(NegInf), PosInf);
+  EXPECT_EQ(NegInf.sub(PosInf), NegInf);
+  EXPECT_EQ(PosInf.sub(Finite.unionWith(NegInf)), PosInf);
+  EXPECT_EQ(NegInf.sub(Finite.unionWith(PosInf)), NegInf);
+  EXPECT_EQ(PosInf.sub(Finite.unionWith(PosInf)), PosInf.unionWith(QNaN));
+  EXPECT_EQ(NegInf.sub(Finite.unionWith(NegInf)), NegInf.unionWith(QNaN));
+  EXPECT_EQ(PosInf.sub(PosInf), QNaN);
+  EXPECT_EQ(NegInf.sub(NegInf), QNaN);
+  EXPECT_EQ(PosZero.sub(NegZero), PosZero);
+  EXPECT_EQ(PosZero.sub(Zero), PosZero);
+  EXPECT_EQ(NegZero.sub(NegZero), PosZero);
+  EXPECT_EQ(NegZero.sub(PosZero), NegZero);
+  EXPECT_EQ(NegZero.sub(Zero), Zero);
+  EXPECT_EQ(NaN.sub(NaN), QNaN);
+  EXPECT_EQ(NaN.add(Finite), QNaN);
+
+#if defined(EXPENSIVE_CHECKS)
+  EnumerateTwoInterestingConstantFPRanges(
+      [](const ConstantFPRange &LHS, const ConstantFPRange &RHS) {
+        ConstantFPRange Res = LHS.sub(RHS);
+        ConstantFPRange Expected =
+            ConstantFPRange::getEmpty(LHS.getSemantics());
+        EnumerateValuesInConstantFPRange(
+            LHS,
+            [&](const APFloat &LHSC) {
+              EnumerateValuesInConstantFPRange(
+                  RHS,
+                  [&](const APFloat &RHSC) {
+                    APFloat Diff = LHSC - RHSC;
+                    EXPECT_TRUE(Res.contains(Diff))
+                        << "Wrong result for " << LHS << " - " << RHS
+                        << ". The result " << Res << " should contain " << Diff;
+                    if (!Expected.contains(Diff))
+                      Expected = Expected.unionWith(ConstantFPRange(Diff));
+                  },
+                  /*IgnoreNaNPayload=*/true);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for " << LHS << " - " << RHS << ". Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
+#endif
 }
 
 } // anonymous namespace
