@@ -504,10 +504,9 @@ def err_expected_end_of_enumerator : Error<
 def err_expected_coloncolon_after_super : Error<
   "expected '::' after '__super'">;
 
-def ext_decomp_decl_empty
-    : ExtWarn<
-          "ISO C++17 does not allow a structured binding group to be empty">,
-      InGroup<DiagGroup<"empty-structured-binding">>;
+def ext_decomp_decl_empty : ExtWarn<
+  "ISO C++17 does not allow a structured binding group to be empty">,
+  InGroup<DiagGroup<"empty-structured-binding">>;
 
 def err_function_parameter_limit_exceeded : Error<
   "too many function parameters; subsequent parameters will be ignored">;
