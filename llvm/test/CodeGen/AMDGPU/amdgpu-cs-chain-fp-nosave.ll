@@ -44,7 +44,7 @@ SW_C:                                             ; preds = %.entry
 
 define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) {
 ; GFX12-LABEL: test_alloca_var_uniform:
-; GFX12:       ; %bb.0: ; %.entry
+; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -66,7 +66,7 @@ define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) {
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_alloca_var_uniform:
-; GFX942:       ; %bb.0: ; %.entry
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX942-NEXT:    s_add_i32 s0, s0, 15
@@ -78,10 +78,6 @@ define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) {
 ; GFX942-NEXT:    s_add_i32 s32, s1, s0
 ; GFX942-NEXT:    scratch_store_dword off, v0, s1
 ; GFX942-NEXT:    s_endpgm
-.entry:
-  br label %SW_C
-
-SW_C:                                             ; preds = %.entry
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %v, align 4
   ret void
@@ -89,7 +85,7 @@ SW_C:                                             ; preds = %.entry
 
 define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX12-LABEL: test_alloca_var:
-; GFX12:       ; %bb.0: ; %.entry
+; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -121,7 +117,7 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_alloca_var:
-; GFX942:       ; %bb.0: ; %.entry
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_lshl_add_u32 v0, v8, 2, 15
 ; GFX942-NEXT:    v_and_b32_e32 v1, -16, v0
@@ -143,10 +139,6 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX942-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NEXT:    v_readfirstlane_b32 s32, v1
 ; GFX942-NEXT:    s_endpgm
-.entry:
-  br label %SW_C
-
-SW_C:                                             ; preds = %.entry
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %v, align 4
   ret void
@@ -206,7 +198,7 @@ SW_C:                                             ; preds = %.entry
 
 define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) {
 ; GFX12-LABEL: test_alloca_and_call_var_uniform:
-; GFX12:       ; %bb.0: ; %.entry
+; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -237,7 +229,7 @@ define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) 
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_alloca_and_call_var_uniform:
-; GFX942:       ; %bb.0: ; %.entry
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX942-NEXT:    s_add_i32 s0, s0, 15
@@ -255,10 +247,6 @@ define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) 
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX942-NEXT:    s_endpgm
-.entry:
-  br label %SW_C
-
-SW_C:                                             ; preds = %.entry
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %v, align 4
   call amdgpu_gfx void @foo()
@@ -267,7 +255,7 @@ SW_C:                                             ; preds = %.entry
 
 define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-LABEL: test_alloca_and_call_var:
-; GFX12:       ; %bb.0: ; %.entry
+; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -308,7 +296,7 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_alloca_and_call_var:
-; GFX942:       ; %bb.0: ; %.entry
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_lshl_add_u32 v0, v8, 2, 15
 ; GFX942-NEXT:    v_and_b32_e32 v1, -16, v0
@@ -336,10 +324,6 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX942-NEXT:    s_endpgm
-.entry:
-  br label %SW_C
-
-SW_C:                                             ; preds = %.entry
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %v, align 4
   call amdgpu_gfx void @foo()
@@ -399,7 +383,7 @@ SW_C:                                             ; preds = %.entry
 
 define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) {
 ; GFX12-LABEL: test_call_and_alloca_var_uniform:
-; GFX12:       ; %bb.0: ; %.entry
+; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -430,7 +414,7 @@ define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) 
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_call_and_alloca_var_uniform:
-; GFX942:       ; %bb.0: ; %.entry
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX942-NEXT:    s_add_i32 s0, s0, 15
@@ -448,10 +432,6 @@ define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) 
 ; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX942-NEXT:    scratch_store_dword off, v40, s4
 ; GFX942-NEXT:    s_endpgm
-.entry:
-  br label %SW_C
-
-SW_C:                                             ; preds = %.entry
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   call amdgpu_gfx void @foo()
   store i32 0, ptr addrspace(5) %v, align 4
@@ -460,7 +440,7 @@ SW_C:                                             ; preds = %.entry
 
 define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX12-LABEL: test_call_and_alloca_var:
-; GFX12:       ; %bb.0: ; %.entry
+; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -502,7 +482,7 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_call_and_alloca_var:
-; GFX942:       ; %bb.0: ; %.entry
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_lshl_add_u32 v0, v8, 2, 15
 ; GFX942-NEXT:    v_and_b32_e32 v0, -16, v0
@@ -531,10 +511,6 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX942-NEXT:    scratch_store_dword off, v40, s4
 ; GFX942-NEXT:    s_endpgm
-.entry:
-  br label %SW_C
-
-SW_C:                                             ; preds = %.entry
   %v = alloca i32, i32 %count, align 4, addrspace(5)
   call amdgpu_gfx void @foo()
   store i32 0, ptr addrspace(5) %v, align 4
