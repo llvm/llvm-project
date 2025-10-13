@@ -41,8 +41,8 @@ void f1(void) {
 }
 
 void f2(void) {
-  [[some, attributes]] defer g(); // expected-error {{an attribute list cannot appear here}}
-  __attribute__((some_attribute)) defer g(); // expected-error {{an attribute list cannot appear here}}
-  [[some, attributes]] defer { g(); } // expected-error {{an attribute list cannot appear here}}
-  __attribute__((some_attribute)) defer { g(); } // expected-error {{an attribute list cannot appear here}}
+  [[some, attributes]] defer g(); // expected-warning 2 {{unknown attribute}}
+  __attribute__((some_attribute)) defer g(); // expected-warning {{unknown attribute}}
+  [[some, attributes]] defer { g(); } // expected-warning 2 {{unknown attribute}}
+  __attribute__((some_attribute)) defer { g(); } // expected-warning {{unknown attribute}}
 }

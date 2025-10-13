@@ -314,8 +314,6 @@ Retry:
     SemiError = "co_return";
     break;
   case tok::kw_defer: // C defer TS: defer-statement
-    ProhibitAttributes(GNUAttrs);
-    ProhibitAttributes(CXX11Attrs);
     return ParseDeferStatement(TrailingElseLoc);
 
   case tok::kw_asm: {
