@@ -1624,10 +1624,26 @@ DWARFContext *BinaryContext::getDWOContext() const {
   return &DWOCUs.begin()->second->getContext();
 }
 
+bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
+  // Invalid DWARF unit with a DWOId but lacking a dwo_name.
+  if (DU.getDWOId() && !DU.isDWOUnit() &&
+      !DU.getUnitDIE().find(
+          {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name})) {
+    this->outs() << "BOLT-ERROR: broken DWARF found in CU at offset 0x"
+                 << Twine::utohexstr(DU.getOffset()) << " (DWOId=0x"
+                 << Twine::utohexstr(*(DU.getDWOId()))
+                 << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name)\n";
+    return false;
+  }
+  return true;
+}
+
 /// Handles DWO sections that can either be in .o, .dwo or .dwp files.
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
+    if (!isValidDwarfUnit(*DwarfUnit))
+      continue;
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       std::string DWOName = dwarf::toString(
           DwarfUnit->getUnitDIE().find(
@@ -1646,7 +1662,7 @@ void BinaryContext::preprocessDWODebugInfo() {
                "files.\n";
       }
       // Prevent failures when DWOName is already an absolute path.
-      sys::fs::make_absolute(DWOCompDir, AbsolutePath);
+      sys::path::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
@@ -1888,6 +1904,9 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
     break;
   case MCCFIInstruction::OpGnuArgsSize:
     OS << "OpGnuArgsSize";
+    break;
+  case MCCFIInstruction::OpNegateRAState:
+    OS << "OpNegateRAState";
     break;
   default:
     OS << "Op#" << Operation;

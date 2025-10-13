@@ -162,6 +162,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128_t"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
             GetBasicQualType("__uint128_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
+            GetBasicQualType("unsigned __int128"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeVoid), GetBasicQualType("void"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeBool), GetBasicQualType("bool"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeFloat), GetBasicQualType("float"));

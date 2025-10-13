@@ -1293,6 +1293,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
 bool4 isinf(float4);
 
 //===----------------------------------------------------------------------===//
+// isnan builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T isnan(T x)
+/// \brief Determines if the specified value \a x  is Not a Number.
+/// \param x The specified input value.
+///
+/// Returns a value of the same size as the input, with a value set
+/// to True if the x parameter is NaN or QNaN. Otherwise, False.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool isnan(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool2 isnan(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool3 isnan(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool4 isnan(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool isnan(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool2 isnan(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool3 isnan(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool4 isnan(float4);
+
+//===----------------------------------------------------------------------===//
 // lerp builtins
 //===----------------------------------------------------------------------===//
 

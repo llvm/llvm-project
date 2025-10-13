@@ -54,7 +54,7 @@ void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
                     &STI);
 
   if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    switchSection(Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {

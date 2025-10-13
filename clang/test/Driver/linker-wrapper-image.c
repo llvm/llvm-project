@@ -1,10 +1,11 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
+// REQUIRES: spirv-registered-target
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
 
-// RUN: clang-offload-packager -o %t.out --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -41,7 +42,7 @@
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
 
-// RUN: clang-offload-packager -o %t.out --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -152,7 +153,7 @@
 // CUDA-NEXT:   ret void
 // CUDA-NEXT: }
 
-// RUN: clang-offload-packager -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -263,3 +264,36 @@
 //      HIP: while.end:
 // HIP-NEXT:   ret void
 // HIP-NEXT: }
+
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu -r \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
+
+//      SYCL: %__sycl.tgt_device_image = type { i16, i8, i8, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+// SYCL-NEXT: %__sycl.tgt_bin_desc = type { i16, i16, ptr, ptr, ptr }
+
+//      SYCL: @.sycl_offloading.target.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.opts.compile.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.opts.link.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.0.data = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
+// SYCL-NEXT: @.offloading.entry_name = internal unnamed_addr constant [5 x i8] c"stub\00", section ".llvm.rodata.offloading", align 1
+// SYCL-NEXT: @.offloading.entry.stub = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 8, i32 0, ptr null, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries", align 8
+// SYCL-NEXT: @.sycl_offloading.entries_arr = internal constant [1 x %struct.__tgt_offload_entry] [%struct.__tgt_offload_entry { i64 0, i16 1, i16 8, i32 0, ptr null, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }]
+// SYCL-NEXT: @.sycl_offloading.device_images = internal unnamed_addr constant [1 x %__sycl.tgt_device_image] [%__sycl.tgt_device_image { i16 3, i8 8, i8 0, ptr @.sycl_offloading.target.0, ptr @.sycl_offloading.opts.compile.0, ptr @.sycl_offloading.opts.link.0, ptr @.sycl_offloading.0.data, ptr @.sycl_offloading.0.data, ptr @.sycl_offloading.entries_arr, ptr getelementptr ([1 x %struct.__tgt_offload_entry], ptr @.sycl_offloading.entries_arr, i64 0, i64 1), ptr null, ptr null }]
+// SYCL-NEXT: @.sycl_offloading.descriptor = internal constant %__sycl.tgt_bin_desc { i16 1, i16 1, ptr @.sycl_offloading.device_images, ptr null, ptr null }
+
+//      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
+// SYCL-NEXT: entry:
+// SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.descriptor)
+// SYCL-NEXT:   ret void
+// SYCL-NEXT: }
+
+//      SYCL: define internal void @sycl.descriptor_unreg() section ".text.startup" {
+// SYCL-NEXT: entry:
+// SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.descriptor)
+// SYCL-NEXT:   ret void
+// SYCL-NEXT: }

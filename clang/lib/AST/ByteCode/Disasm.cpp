@@ -323,6 +323,8 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
                         : TerminalColor{llvm::raw_ostream::RED, false});
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
+    if (GP.block()->isDummy())
+      OS << "dummy ";
     Desc->dump(OS);
 
     if (GP.isInitialized() && Desc->IsTemporary) {
