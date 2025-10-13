@@ -340,7 +340,8 @@ func.func @pack_with_non_adjacent_and_non_permuted_inner_dims(%arg0: tensor<8x1x
 // CHECK:         return %[[INSERT]]
 
 // -----
-/// Note "126", which is a non-unit tile-outer-dim. This is not supported.
+
+/// Note "126", which is a non-unit tiled-outer-dim. This is not supported.
 
 func.func @negative_non_unit_tiled_outer_dim(%dest: tensor<1x126x1x1x8xf32>, %src: tensor<1x1x1x1001xf32>, %pad: f32) -> tensor<1x126x1x1x8xf32> {
   %pack = linalg.pack %src
@@ -348,8 +349,8 @@ func.func @negative_non_unit_tiled_outer_dim(%dest: tensor<1x126x1x1x8xf32>, %sr
     outer_dims_perm = [0, 3, 2, 1]
     inner_dims_pos = [3]
     inner_tiles = [8]
-    into %dest : tensor<1x1x1x1001xf32>
-    -> tensor<1x126x1x1x8xf32>
+    into %dest
+    : tensor<1x1x1x1001xf32> -> tensor<1x126x1x1x8xf32>
 
   return %pack : tensor<1x126x1x1x8xf32>
 }

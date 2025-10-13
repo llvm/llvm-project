@@ -1143,15 +1143,18 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
   auto outerDimsPerm = packOp.getOuterDimsPerm();
 
-  // Verify that there are no non-unit un-tiled outer dims that are permuted.
-  // Supporting such cases will require refining the logic to generate the
-  // Transpose Op.
+  // Verify that there are no:
+  //   * non-unit + un-tiled-outer-dims,
+  // that are permuted. Supporting such cases would require refining the logic
+  // that generates the Transpose Op.
   if (!llvm::all_of(outerDimsPerm, [&innerDimsPos, &packOp](int64_t dim) {
         static int prev = 0;
-        // Tiled dims are not relevant here.
+        // Skip tiled dims - these can be permuted.
         if (llvm::is_contained(innerDimsPos, dim))
           return true;
-        // Was this dim permuted? Note, permuting unit dims is fine.
+
+        // Check whether this dim has been permuted. Permuting unit dims is fine
+        // as that's effectively a no-op.
         if (dim < prev && (packOp.getType().getShape()[prev] != 1 ||
                            packOp.getType().getShape()[dim] != 1))
           return false;
@@ -1182,8 +1185,7 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   // Assumptions made:
   //  - All tiled outer dims are 1 - the corresponding transposition order
   //    doesn't matter, but requires all dim indices to be present.
-  //  - Un-tiled outer dims remain un-permuted. (TODO: Fail when this does not
-  //    hold)
+  //  - Un-tiled outer dims remain un-permuted.
 
   // 2.1 Get the permutation for linalg.transpose:
   //   [ untiled-dims, inner-dims-pos ]
@@ -1240,16 +1242,15 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   auto transposedOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
                                                   srcPermForTranspose);
 
-  // 3. Insert the inner tile to the destination:
+  // 3. Insert the inner tile into the destination tensor:
   //  %inserted_tile = tensor.insert_slice(%transposed_tile)
 
   // Compute the sizes attribute:
   //    [ outer-dims, tile-sizes ]
   // Note that the output from the transpose Op excludes the tiled outer dims.
-  // Given the assumptions (all tiled outer dims == 1), we can safely use a
-  // rank-expanding tensor.insert_slice. Rather than manually computing where to
-  // insert new unit dims (resulting from the expansion), use the Pack op
-  // attributes.
+  // However, given the assumption that:
+  //  * all tiled outer dims == 1,
+  // we can just use a rank-expanding tensor.insert_slice.
   SmallVector<OpFoldResult> writeSizes;
   for (auto size : packOp.getAllOuterDims()) {
     writeSizes.push_back(rewriter.getIndexAttr(size));
@@ -1261,10 +1262,11 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     writeSizes.push_back(tileSizeOfr);
   }
 
+  // TODO: Add a constructor for tensor.insert_slice that doesn't require
+  // strides nor offsets.
   SmallVector<OpFoldResult> writeStrides(destRank, oneIdxAttr);
   SmallVector<OpFoldResult> writeOffsets(destRank, zeroIdxAttr);
 
-  // TODO: A constructor that doesn't require strides nor offsets.
   auto insert = tensor::InsertSliceOp::create(
       rewriter, loc, transposedOp.getResult()[0], packOp.getDest(),
       writeOffsets, writeSizes, writeStrides);
