@@ -1273,16 +1273,14 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
     SDValue XorOp, OtherOp;
     APInt XorConst;
 
-    // Check which operand of N0 is XOR(Constant, X)
-    if (sd_match(N00, m_Xor(m_ConstInt(XorConst), m_Value())) &&
-        !XorConst.isAllOnes()) {
-      XorOp = N00;
-      OtherOp = N01;
-    } else if (sd_match(N01, m_Xor(m_ConstInt(XorConst), m_Value())) &&
-               !XorConst.isAllOnes()) {
-      XorOp = N01;
-      OtherOp = N00;
-    } else {
+    // Match AND(XOR(X, Constant), b) in either operand order
+    // Constants are canonicalized to RHS, so we can rely on that
+    // Use m_c_BinOp to handle commutativity of the AND
+    if (!sd_match(N0, m_c_BinOp(ISD::AND,
+                                m_AllOf(m_Xor(m_Value(), m_ConstInt(XorConst)),
+                                        m_Value(XorOp)),
+                                m_Value(OtherOp))) ||
+        XorConst.isAllOnes()) {
       return SDValue();
     }
 
