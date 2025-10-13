@@ -1,7 +1,7 @@
 ## Check that llvm-bolt prints data embedded in code.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
-# RUN: %clang %cflags -fno-PIC -no-pie %t.o -o %t.exe -nostdlib \
+# RUN: %clang %nopie_cflags -fno-PIC %t.o -o %t.exe -nostdlib \
 # RUN:    -fuse-ld=lld -Wl,-q
 
 ## Check disassembly of BOLT input.

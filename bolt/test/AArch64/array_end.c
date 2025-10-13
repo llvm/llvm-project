@@ -3,7 +3,7 @@
 // __init_array_end address would not be owned by any section.
 
 // REQUIRES: system-linux
-// RUN: %clang %cflags -no-pie %s -o %t.exe -Wl,-q \
+// RUN: %clang %nopie_cflags %s -o %t.exe -Wl,-q \
 // RUN:   -Wl,-T %S/Inputs/array_end.lld_script
 // RUN: llvm-bolt %t.exe -o %t.bolt --print-disasm \
 // RUN:  --print-only="callFini" | FileCheck %s

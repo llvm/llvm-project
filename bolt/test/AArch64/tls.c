@@ -24,18 +24,18 @@ int main() {
 }
 
 // REQUIRES: system-linux
-// RUN: %clang %cflags -no-pie %s -o %t.exe -Wl,-q \
+// RUN: %clang %nopie_cflags %s -o %t.exe -Wl,-q \
 // RUN:   -Wl,--unresolved-symbols=ignore-all \
 // RUN:   -fuse-ld=lld \
 // RUN:   -nostdlib
 // RUN: llvm-bolt %t.exe -o %t.bolt
-// RUN: %clang %cflags -fPIC -pie %s -o %t_pie.exe -Wl,-q \
+// RUN: %clang %pie_cflags -fPIC %s -o %t_pie.exe -Wl,-q \
 // RUN:   -Wl,--unresolved-symbols=ignore-all \
 // RUN:   -target aarch64-linux -fuse-ld=lld \
 // RUN:   -nostdlib
 // RUN: llvm-bolt %t_pie.exe -o %t.bolt
 
-// RUN: %clang %cflags -fPIC -shared %s -o %t.so -Wl,-q -fuse-ld=lld
+// RUN: %clang %pie_cflags -fPIC -shared %s -o %t.so -Wl,-q -fuse-ld=lld
 // RUN: llvm-objdump -d -r --disassemble-symbols=main %t.so | FileCheck %s
 // RUN: llvm-bolt %t.so -o %t.bolt.so
 

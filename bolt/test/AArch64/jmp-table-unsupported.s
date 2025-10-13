@@ -14,7 +14,7 @@
 ## Prepare binary (1)
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %t/jt_nop_adr.s \
 # RUN:    -o %t/jt_nop_adr.o
-# RUN: %clang %cflags --target=aarch64-unknown-linux %t/jt_nop_adr.o \
+# RUN: %clang %pie_cflags --target=aarch64-unknown-linux %t/jt_nop_adr.o \
 # RUN:  -Wl,-q -Wl,-z,now, -Wl,-T,%t/within-adr-range.t -o %t/jt_nop_adr.exe
 # RUN: llvm-objdump --no-show-raw-insn -d %t/jt_nop_adr.exe | FileCheck \
 # RUN:    --check-prefix=JT-RELAXED %s
@@ -40,7 +40,7 @@ SECTIONS {
 ## Prepare binary (2)
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %t/jt_sub_ldr.s \
 # RUN:   -o %t/jt_sub_ldr.o
-# RUN: %clang %cflags --target=aarch64-unknown-linux %t/jt_sub_ldr.o \
+# RUN: %clang %pie_cflags --target=aarch64-unknown-linux %t/jt_sub_ldr.o \
 # RUN:  -Wl,-q -Wl,-z,now -o %t/jt_sub_ldr.exe
 # RUN: llvm-objdump --no-show-raw-insn -d %t/jt_sub_ldr.exe | FileCheck \
 # RUN:    --check-prefix=JT-SUB-LDR %s
@@ -56,7 +56,7 @@ SECTIONS {
 ## Prepare binary (3)
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %t/jt_adrp_ldr.s \
 # RUN:    -o %t/jt_adrp_ldr.o
-# RUN: %clang %cflags --target=aarch64-unknown-linux %t/jt_adrp_ldr.o \
+# RUN: %clang %pie_cflags --target=aarch64-unknown-linux %t/jt_adrp_ldr.o \
 # RUN:  -Wl,-q -Wl,-z,now  -Wl,--no-relax -o %t/jt_adrp_ldr.exe
 # RUN: llvm-objdump --no-show-raw-insn -d %t/jt_adrp_ldr.exe | FileCheck \
 # RUN:   --check-prefix=JT-ADRP-LDR %s
@@ -73,7 +73,7 @@ SECTIONS {
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --position-independent %t/jt_pic_with_relative_offset.s \
 # RUN:    -o %t/jt_pic_with_relative_offset.o
-# RUN: %clang %cflags -fPIC -O0  %t/jt_pic_with_relative_offset.o \
+# RUN: %clang %pie_cflags -fPIC -O0  %t/jt_pic_with_relative_offset.o \
 # RUN:    -o %t/jt_pic_with_relative_offset.exe -Wl,-q -Wl,--no-relax
 # RUN: llvm-bolt %t/jt_pic_with_relative_offset.exe \
 # RUN:    -o %t/jt_pic_with_relative_offset.bolt -v 3 2>&1 | FileCheck \
@@ -82,7 +82,7 @@ SECTIONS {
 # JT-BOLT-JT-PIC-OFFSETS: failed to match indirect branch
 
 ## Prepare binary (5)
-# RUN: %clang %cflags %t/jt_fixed_branch.s -Wl,-q -Wl,--no-relax \
+# RUN: %clang %pie_cflags %t/jt_fixed_branch.s -Wl,-q -Wl,--no-relax \
 # RUN:     -o %t/jt_fixed_branch.exe
 
 # RUN: llvm-bolt %t/jt_fixed_branch.exe \
@@ -92,7 +92,7 @@ SECTIONS {
 # JT-BOLT-FIXED-BR: failed to match indirect branch
 
 ## Prepare binary (6)
-# RUN: %clang %cflags -no-pie %t/jt_type_normal.c \
+# RUN: %clang %nopie_cflags %t/jt_type_normal.c \
 # RUN:   -Wl,-q -Wl,-z,now -Wl,--no-relax \
 # RUN:   -o %t/jt_type_normal.exe
 # RUN: llvm-objdump --no-show-raw-insn -d %t/jt_type_normal.exe | FileCheck \
