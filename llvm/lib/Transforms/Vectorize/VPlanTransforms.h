@@ -32,6 +32,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
+extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra

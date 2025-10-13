@@ -249,6 +249,10 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
 
+cl::opt<bool> llvm::EnableWideActiveLaneMask(
+    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+    cl::desc("Enable use of wide get active lane mask instructions"));
+
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -1344,6 +1348,15 @@ public:
     // TODO: check if it is possible to check for None style independent of
     // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
+  }
+
+  bool useWideActiveLaneMask() const {
+    if (!EnableWideActiveLaneMask)
+      return false;
+
+    TailFoldingStyle TF = getTailFoldingStyle();
+    return TF == TailFoldingStyle::DataAndControlFlow ||
+           TF == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
   }
 
   /// Return maximum safe number of elements to be processed per vector
@@ -4518,7 +4531,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  if (!CM.isScalarEpilogueAllowed())
+  if (!CM.isScalarEpilogueAllowed() && !CM.useWideActiveLaneMask())
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
@@ -8995,7 +9008,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
   };
 
   // 4) if the TTI hook indicates this is profitable, request predication.
-  TailFoldingInfo TFI(TLI, &LVL, IAI);
+  TailFoldingInfo TFI(TLI, &LVL, IAI, EnableWideActiveLaneMask);
   if (TTI->preferPredicateOverEpilogue(&TFI))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
