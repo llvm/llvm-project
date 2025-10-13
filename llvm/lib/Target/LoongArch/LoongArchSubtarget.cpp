@@ -22,10 +22,20 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "LoongArchGenSubtargetInfo.inc"
 
+static cl::opt<bool>
+    DisableMISched("loongarch-disable-misched", cl::Hidden,
+                   cl::desc("Disable LoongArch MI Scheduling"));
+
 static cl::opt<bool> UseAA("loongarch-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
 
 void LoongArchSubtarget::anchor() {}
+
+bool LoongArchSubtarget::enableMachineScheduler() const {
+  if (DisableMISched.getNumOccurrences())
+    return !DisableMISched;
+  return true;
+}
 
 // Enable use of alias analysis during code generation (during MI scheduling,
 // DAGCombine, etc.).
