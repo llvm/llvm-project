@@ -69,6 +69,9 @@ Improvements and New Features
 
 - The performance of ``std::find`` has been improved by up to 2x for integral types
 
+- ``std::exception_ptr`` was optimized, allowing the compiler to generate better code especially for empty
+  ``std::exception_ptr`` values.
+
 Deprecations and Removals
 -------------------------
 
