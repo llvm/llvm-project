@@ -158,7 +158,8 @@ Symbol *Scope::FindCommonBlock(const SourceName &name) const {
   if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
     return &*it->second;
   } else if (IsSubmodule()) {
-    const Scope *parent{symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr};
+    const Scope *parent{
+        symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr};
     return parent ? parent->FindCommonBlock(name) : nullptr;
   } else if (!IsTopLevel()) {
     return parent_ ? parent_->FindCommonBlock(name) : nullptr;
