@@ -2568,7 +2568,7 @@
 // CHECK_ARL_M32: #define __POPCNT__ 1
 // CHECK_ARL_M32-NOT: #define __PREFETCHI__ 1
 // CHECK_ARLS_M32-NOT: #define __PREFETCHI__ 1
-// CHECK_PTL_M32: #define __PREFETCHI__ 1
+// CHECK_CWF_M32: #define __PREFETCHI__ 1
 // CHECK_ARL_M32: #define __PRFCHW__ 1
 // CHECK_ARL_M32: #define __PTWRITE__ 1
 // CHECK_ARL_M32-NOT: #define __RAOINT__ 1
@@ -2673,7 +2673,7 @@
 // CHECK_ARL_M64: #define __POPCNT__ 1
 // CHECK_ARL_M64-NOT: #define __PREFETCHI__ 1
 // CHECK_ARLS_M64-NOT: #define __PREFETCHI__ 1
-// CHECK_PTL_M64: #define __PREFETCHI__ 1
+// CHECK_CWF_M64: #define __PREFETCHI__ 1
 // CHECK_ARL_M64: #define __PRFCHW__ 1
 // CHECK_ARL_M64: #define __PTWRITE__ 1
 // CHECK_ARL_M64-NOT: #define __RAOINT__ 1
