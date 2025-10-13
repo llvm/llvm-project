@@ -46,3 +46,23 @@ func.func @not_copy(%input: tensor<8xi32>, %init: tensor<8xi32>) -> tensor<8xi32
   } -> tensor<8xi32>
   return %res : tensor<8xi32>
 }
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+// This tests checks that the pass does not crash when trying to specialize a 
+// contraction-like generic op with no reduction operation in its body.
+// CHECK-LABEL: @test_fake_contraction
+// CHECK: linalg.generic
+func.func @test_fake_contraction(%arg0: tensor<4x4xi32>) -> tensor<4x4xi32> {
+  %0 = tensor.empty() : tensor<4x4xi32>
+  %1 = linalg.generic 
+        {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "reduction"]} 
+        ins(%arg0, %arg0 : tensor<4x4xi32>, tensor<4x4xi32>) outs(%0 : tensor<4x4xi32>) {
+        ^bb0(%in0: i32, %in1: i32, %out: i32):
+           linalg.yield %out : i32
+  } -> tensor<4x4xi32>
+  return %1 : tensor<4x4xi32>
+}
