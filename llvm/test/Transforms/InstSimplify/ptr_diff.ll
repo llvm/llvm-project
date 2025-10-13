@@ -14,11 +14,7 @@ define i64 @ptrdiff(ptr %ptr) {
 
 define i64 @ptrdiff_no_inbounds(ptr %ptr) {
 ; CHECK-LABEL: @ptrdiff_no_inbounds(
-; CHECK-NEXT:    [[LAST:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 42
-; CHECK-NEXT:    [[FIRST_INT:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    [[LAST_INT:%.*]] = ptrtoint ptr [[LAST]] to i64
-; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[LAST_INT]], [[FIRST_INT]]
-; CHECK-NEXT:    ret i64 [[DIFF]]
+; CHECK-NEXT:    ret i64 42
 ;
   %last = getelementptr i8, ptr %ptr, i32 42
   %first.int = ptrtoint ptr %ptr to i64

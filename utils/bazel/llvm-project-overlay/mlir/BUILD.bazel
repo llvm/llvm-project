@@ -475,6 +475,7 @@ mlir_c_api_cc_library(
         ":Pass",
         ":Support",
         ":config",
+        ":Rewrite",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -1657,6 +1658,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":InliningUtils",
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
@@ -3693,6 +3695,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],
@@ -3764,6 +3767,16 @@ cc_library(
         ":TransformUtils",
         ":XeGPUDialect",
         ":XeVMDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUuArch",
+    hdrs = glob(["include/mlir/Dialect/XeGPU/uArch/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
         "//llvm:Support",
     ],
 )
@@ -6297,6 +6310,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferIntRangeInterface",
+        ":InliningUtils",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
@@ -11357,6 +11371,7 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":VectorUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -11631,6 +11646,7 @@ cc_library(
         ":TensorUtils",
         ":TosaDialect",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 

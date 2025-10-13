@@ -5085,7 +5085,7 @@ void OmpStructureChecker::CheckWorkdistributeBlockStmts(
 }
 
 void OmpStructureChecker::CheckIfContiguous(const parser::OmpObject &object) {
-  if (auto contig{IsContiguous(context_, object)}; contig && !*contig) {
+  if (!IsContiguous(context_, object).value_or(true)) { // known discontiguous
     const parser::Name *name{GetObjectName(object)};
     assert(name && "Expecting name component");
     context_.Say(name->source,

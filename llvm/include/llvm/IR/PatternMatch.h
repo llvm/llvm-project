@@ -2184,6 +2184,18 @@ inline PtrToIntSameSize_match<OpTy> m_PtrToIntSameSize(const DataLayout &DL,
   return PtrToIntSameSize_match<OpTy>(DL, Op);
 }
 
+/// Matches PtrToAddr.
+template <typename OpTy>
+inline CastOperator_match<OpTy, Instruction::PtrToAddr>
+m_PtrToAddr(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::PtrToAddr>(Op);
+}
+
+/// Matches PtrToInt or PtrToAddr.
+template <typename OpTy> inline auto m_PtrToIntOrAddr(const OpTy &Op) {
+  return m_CombineOr(m_PtrToInt(Op), m_PtrToAddr(Op));
+}
+
 /// Matches IntToPtr.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::IntToPtr>
