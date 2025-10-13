@@ -165,14 +165,14 @@ static std::string getUSR(const Decl *D) {
 }
 
 void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
-  auto printAsUnsignOpt = [&OS](std::optional<unsigned> U) {
+  auto PrintAsUnsignOpt = [&OS](std::optional<unsigned> U) {
     OS << (U.has_value() ? std::to_string(*U) : "");
   };
-  auto commaIfNeeded = [&OS](const auto &Vec1, const auto &Vec2) {
+  auto CommaIfNeeded = [&OS](const auto &Vec1, const auto &Vec2) {
     if (!Vec1.empty() && !Vec2.empty())
       OS << ",";
   };
-  auto printAsUnsigned = [&OS](unsigned U) { OS << U; };
+  auto PrintAsUnsigned = [&OS](unsigned U) { OS << U; };
 
   OS << '"';
   llvm::printEscapedString(getUSR(EntryPoint), OS);
@@ -181,9 +181,9 @@ void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
   llvm::printEscapedString(
       clang::AnalysisDeclContext::getFunctionName(EntryPoint), OS);
   OS << "\",";
-  llvm::interleave(ExplicitlySetStatValues, OS, printAsUnsignOpt, ",");
-  commaIfNeeded(ExplicitlySetStatValues, MaxOrCountStatValues);
-  llvm::interleave(MaxOrCountStatValues, OS, printAsUnsigned, ",");
+  llvm::interleave(ExplicitlySetStatValues, OS, PrintAsUnsignOpt, ",");
+  CommaIfNeeded(ExplicitlySetStatValues, MaxOrCountStatValues);
+  llvm::interleave(MaxOrCountStatValues, OS, PrintAsUnsigned, ",");
 }
 
 void EntryPointStat::takeSnapshot(const Decl *EntryPoint) {
