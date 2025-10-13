@@ -4371,14 +4371,14 @@ def CIR_TryOp : CIR_Op<"try",[
 
   let regions = (region
     AnyRegion:$try_region,
-    VariadicRegion<MinSizedRegion<1>>:$catch_regions
+    VariadicRegion<MinSizedRegion<1>>:$handlers
   );
 
   let assemblyFormat = [{
     (`synthetic` $synthetic^)?
     (`cleanup` $cleanup^)?
     $try_region
-    custom<CatchRegions>($catch_regions, $catch_types)
+    custom<CatchRegions>($handlers, $catch_types)
     attr-dict
   }];
 

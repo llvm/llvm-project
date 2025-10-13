@@ -2931,8 +2931,8 @@ void cir::TryOp::getSuccessorRegions(
 
   // TODO(CIR): If we know a target function never throws a specific type, we
   // can remove the catch handler.
-  for (mlir::Region &region : this->getCatchRegions())
-    regions.push_back(mlir::RegionSuccessor(&region));
+  for (mlir::Region &handler : this->getHandlers())
+    regions.push_back(mlir::RegionSuccessor(&handler));
 }
 
 static void printCatchRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
