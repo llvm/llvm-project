@@ -5334,7 +5334,7 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   // C99 6.5.2.1p1
   if (!IndexExpr->getType()->isIntegerType() && !IndexExpr->isTypeDependent())
     return ExprError(Diag(LLoc, diag::err_typecheck_subscript_not_integer)
-                     << IndexExpr->getSourceRange());
+                     << /*array*/ 0 << IndexExpr->getSourceRange());
 
   if ((IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
        IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_U)) &&
@@ -16261,7 +16261,7 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
           !Idx->getType()->isIntegerType())
         return ExprError(
             Diag(Idx->getBeginLoc(), diag::err_typecheck_subscript_not_integer)
-            << Idx->getSourceRange());
+            << /*array*/ 0 << Idx->getSourceRange());
 
       // Record this array index.
       Comps.push_back(OffsetOfNode(OC.LocStart, Exprs.size(), OC.LocEnd));
