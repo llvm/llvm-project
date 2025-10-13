@@ -164,6 +164,8 @@ private:
   public:
     LLVM_ABI Matcher(bool UseGlobs, bool RemoveDotSlash);
 
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+
     LLVM_ABI void
     match(StringRef Query,
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
@@ -173,8 +175,6 @@ private:
       match(Query, [&](StringRef, unsigned) { R = true; });
       return R;
     }
-
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
 
     std::variant<RegexMatcher, GlobMatcher> M;
     bool RemoveDotSlash;

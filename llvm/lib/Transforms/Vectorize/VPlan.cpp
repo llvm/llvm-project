@@ -635,9 +635,9 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   const VPRecipeBase *R = &VPBB->back();
   bool IsSwitch = isa<VPInstruction>(R) &&
                   cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
-  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
-                      match(R, m_BranchOnCond(m_VPValue())) ||
-                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
+  bool IsCondBranch =
+      isa<VPBranchOnMaskRecipe>(R) ||
+      match(R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()));
   (void)IsCondBranch;
   (void)IsSwitch;
   if (VPBB->getNumSuccessors() == 2 ||
