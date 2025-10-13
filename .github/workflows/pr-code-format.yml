@@ -27,9 +27,10 @@ jobs:
 
       # We need to set the repo checkout as safe, otherwise tj-actions/changed-files
       # will fail due to the changed ownership inside the container.
+      # TODO(boomanaiden154): We should probably fix this by having the default user
+      # in the container have the same ID as the GHA user on the host.
       - name: Set Safe Directory
         run: |
-          git config --global --add safe.directory '*'
           chown -R root $(pwd)
 
       - name: Get changed files
