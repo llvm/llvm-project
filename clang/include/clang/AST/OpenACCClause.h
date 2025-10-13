@@ -1311,13 +1311,37 @@ struct OpenACCReductionRecipe {
 // the OpenACCReductionClause node has been created.  This one has storage for
 // the CombinerRecipe, since Trailing storage for it doesn't exist yet.
 struct OpenACCReductionRecipeWithStorage : OpenACCReductionRecipe {
+private:
   llvm::SmallVector<CombinerRecipe, 1> CombinerRecipeStorage;
 
+public:
   OpenACCReductionRecipeWithStorage(VarDecl *A,
                                     llvm::ArrayRef<CombinerRecipe> Combiners)
       : OpenACCReductionRecipe(A, {}), CombinerRecipeStorage(Combiners) {
     CombinerRecipes = CombinerRecipeStorage;
   }
+
+  OpenACCReductionRecipeWithStorage(
+      const OpenACCReductionRecipeWithStorage &Other)
+      : OpenACCReductionRecipe(Other),
+        CombinerRecipeStorage(Other.CombinerRecipeStorage) {
+    CombinerRecipes = CombinerRecipeStorage;
+  }
+
+  OpenACCReductionRecipeWithStorage(OpenACCReductionRecipeWithStorage &&Other)
+      : OpenACCReductionRecipe(std::move(Other)),
+        CombinerRecipeStorage(std::move(Other.CombinerRecipeStorage)) {
+    CombinerRecipes = CombinerRecipeStorage;
+  }
+
+  // There is no real problem implementing these, we just have to make sure the
+  // array-ref this inherits from stays in sync. But as we don't need it at the
+  // moment, make sure we don't accidentially call these.
+  OpenACCReductionRecipeWithStorage &
+  operator=(OpenACCReductionRecipeWithStorage &&) = delete;
+  OpenACCReductionRecipeWithStorage &
+  operator=(const OpenACCReductionRecipeWithStorage &) = delete;
+
   static OpenACCReductionRecipeWithStorage Empty() {
     return OpenACCReductionRecipeWithStorage(/*AllocaDecl=*/nullptr, {});
   }
