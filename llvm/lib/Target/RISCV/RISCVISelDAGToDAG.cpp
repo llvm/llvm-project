@@ -3357,7 +3357,8 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
     // if the LHS is equal to the RHS and non-zero otherwise.
     if (isInt<12>(CVal) || CVal == 2048) {
       unsigned Opc = RISCV::ADDI;
-      if (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+      if (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+          cast<VTSDNode>(LHS.getOperand(1))->getVT() == MVT::i32) {
         Opc = RISCV::ADDIW;
         LHS = LHS.getOperand(0);
       }
