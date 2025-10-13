@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__exception/terminate.h>
-
 namespace __cxxabiv1 {
 
 extern "C" {
@@ -44,7 +42,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr current_exception() _NOEXCEPT
 _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE void rethrow_exception(exception_ptr __ptr) {
   __cxxabiv1::__cxa_rethrow_primary_exception(__ptr.__ptr_);
   // if __ptr.__ptr_ is NULL, above returns so we terminate.
-  terminate();
+  _LIBCPP_VERBOSE_ABORT("tried to rethrow an empty exception_ptr\n");
 }
 
 } // namespace std

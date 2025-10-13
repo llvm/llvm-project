@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
-
 _LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrCreate(void*);
 _LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrDestroy(void*);
 _LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrCopy(void*, const void*);

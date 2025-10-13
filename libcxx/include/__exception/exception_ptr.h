@@ -16,6 +16,7 @@
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_pointer.h>
+#include <__verbose_abort> // used by exception_ptr_{unimplemented,cxxabi}.ipp
 #include <cstdlib>
 #include <typeinfo>
 
