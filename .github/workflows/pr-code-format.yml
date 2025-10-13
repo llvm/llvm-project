@@ -29,7 +29,7 @@ jobs:
       # will fail due to the changed ownership inside the container.
       - name: Set Safe Directory
         run: |
-          git config --global --add safe.directory $(pwd)
+          git config --global --add safe.directory '*'
 
       - name: Get changed files
         id: changed-files
