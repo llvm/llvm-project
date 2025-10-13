@@ -337,8 +337,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                                   : (getHeatColor(1));
       if (!Attrs.str().empty())
         Attrs << ",";
-      Attrs << "color=\"" << EdgeColor << "ff\",style=filled," << "fillcolor=\""
-            << Color << "70\"" << "fontname=\"Courier\"";
+      Attrs << "color=\"" << EdgeColor << "ff\", style=filled, "
+            << "fillcolor=\"" << Color << "70\", " << "fontname=\"Courier\"";
     }
 
     return Attrs.str();
