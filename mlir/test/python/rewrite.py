@@ -22,7 +22,7 @@ def testRewritePattern():
         rewriter.replace_op(op, new_op.owner)
 
     def constant_1_to_2(op, rewriter):
-        c = IntegerAttr(op.value).value
+        c = op.value.value
         if c != 1:
             return True  # failed to match
         with rewriter.ip:
