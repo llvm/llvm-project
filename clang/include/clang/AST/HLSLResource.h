@@ -15,9 +15,12 @@
 #define LLVM_CLANG_AST_HLSLRESOURCE_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 
@@ -65,6 +68,24 @@ struct ResourceBindingAttrs {
   unsigned getImplicitOrderID() const {
     assert(hasImplicitOrderID());
     return RegBinding->getImplicitBindingOrderID();
+  }
+
+  void setImplicitOrderID(unsigned Value) const {
+    assert(hasBinding() && !isExplicit() && !hasImplicitOrderID());
+    RegBinding->setImplicitBindingOrderID(Value);
+  }
+  void setCounterImplicitOrderID(unsigned Value) const {
+    assert(hasBinding() && !hasCounterImplicitOrderID());
+    RegBinding->setImplicitCounterBindingOrderID(Value);
+  }
+
+  bool hasCounterImplicitOrderID() const {
+    return RegBinding && RegBinding->hasImplicitCounterBindingOrderID();
+  }
+
+  unsigned getCounterImplicitOrderID() const {
+    assert(hasCounterImplicitOrderID());
+    return RegBinding->getImplicitCounterBindingOrderID();
   }
 };
 

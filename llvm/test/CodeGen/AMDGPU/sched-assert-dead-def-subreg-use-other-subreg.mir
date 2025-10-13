@@ -37,7 +37,7 @@ body:             |
   ; CHECK-NEXT:   dead [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128 = DS_READ_B128_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   undef [[COPY2:%[0-9]+]].sub1:vreg_512 = COPY [[COPY]].sub1
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def dead [[COPY1]], 2031626 /* regdef:VGPR_32 */, def dead [[COPY]].sub1, 2031625 /* reguse:VGPR_32 */, [[COPY1]], 2031625 /* reguse:VGPR_32 */, [[COPY]].sub1
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def dead [[COPY1]], 1835018 /* regdef:VGPR_32 */, def dead [[COPY]].sub1, 1835017 /* reguse:VGPR_32 */, [[COPY1]], 1835017 /* reguse:VGPR_32 */, [[COPY]].sub1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]].sub0:vreg_512 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]].sub3:vreg_512 = COPY [[COPY]].sub3
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]].sub2:vreg_512 = COPY undef [[V_MOV_B32_e32_1]]
@@ -63,7 +63,7 @@ body:             |
     undef %11.sub0:vreg_512 = COPY %4.sub0
     %12:vgpr_32 = COPY %4.sub0
     %11.sub1:vreg_512 = COPY %4.sub1
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def dead %12:vgpr_32, 2031626 /* regdef:VGPR_32 */, def dead %4.sub1:vreg_512, 2031625 /* reguse:VGPR_32 */, %12:vgpr_32, 2031625 /* reguse:VGPR_32 */, %4.sub1:vreg_512
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def dead %12:vgpr_32, 1835018 /* regdef:VGPR_32 */, def dead %4.sub1:vreg_512, 1835017 /* reguse:VGPR_32 */, %12:vgpr_32, 1835017 /* reguse:VGPR_32 */, %4.sub1:vreg_512
     %11.sub2:vreg_512 = COPY undef %1
     %11.sub3:vreg_512 = COPY %4.sub3
     %11.sub5:vreg_512 = COPY undef %1

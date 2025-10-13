@@ -342,6 +342,9 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
+  // If we are on a coroutine, add the coro_end builtin call.
+  assert(!cir::MissingFeatures::coroEndBuiltinCall());
+
   auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
   assert(fn && "emitReturn from non-function");
   if (!fn.getFunctionType().hasVoidReturn()) {
@@ -675,7 +678,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    RunCleanupsScope dtorEpilogue(*this);
+    enterDtorCleanups(dtor, Dtor_Deleting);
+    if (haveInsertPoint()) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+    }
     return;
   }
 
@@ -686,7 +695,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 
   assert(!cir::MissingFeatures::sanitizers());
-  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Enter the epilogue cleanups.
+  RunCleanupsScope dtorEpilogue(*this);
 
   // If this is the complete variant, just invoke the base variant;
   // the epilogue will destruct the virtual bases.  But we can't do
@@ -705,7 +716,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     assert((body || getTarget().getCXXABI().isMicrosoft()) &&
            "can't emit a dtor without a body for non-Microsoft ABIs");
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for virtual bases.
+    enterDtorCleanups(dtor, Dtor_Complete);
 
     if (!isTryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
@@ -720,7 +732,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for fields and non-virtual bases.
+    enterDtorCleanups(dtor, Dtor_Base);
+
     assert(!cir::MissingFeatures::vtableInitialization());
 
     if (isTryBody) {
@@ -738,7 +752,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     break;
   }
 
-  assert(!cir::MissingFeatures::dtorCleanups());
+  // Jump out through the epilogue cleanups.
+  dtorEpilogue.forceCleanup();
 
   // Exit the try if applicable.
   if (isTryBody)
@@ -815,6 +830,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
     return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
@@ -836,6 +853,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   case Expr::CStyleCastExprClass:

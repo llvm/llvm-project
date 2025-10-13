@@ -28,7 +28,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -3634,7 +3633,7 @@ bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
 }
 
 bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -3649,7 +3648,7 @@ bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
     // the fold for non-splats yet.
     return N->getOperand(1) == N->getOperand(0).getOperand(1);
   }
-  return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N, Level);
+  return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N);
 }
 
 bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
@@ -3659,11 +3658,8 @@ bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   if (VT.isVector())
     return false;
 
-  // 64-bit shifts on 32-bit targets produce really bad bloated code.
-  if (VT == MVT::i64 && !Subtarget.is64Bit())
-    return false;
-
-  return true;
+  unsigned MaxWidth = Subtarget.is64Bit() ? 64 : 32;
+  return VT.getScalarSizeInBits() <= MaxWidth;
 }
 
 TargetLowering::ShiftLegalizationStrategy
@@ -13783,10 +13779,12 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // so prevents folding a load into this instruction or making a copy.
     const int UnpackLoMask[] = {0, 0, 1, 1};
     const int UnpackHiMask[] = {2, 2, 3, 3};
-    if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
-      Mask = UnpackLoMask;
-    else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
-      Mask = UnpackHiMask;
+    if (!isSingleElementRepeatedMask(Mask)) {
+      if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
+        Mask = UnpackLoMask;
+      else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
+        Mask = UnpackHiMask;
+    }
 
     return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v4i32, V1,
                        getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
@@ -44615,8 +44613,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
-    // If we just want the sign bit then we don't need to shift it.
-    if (OriginalDemandedBits.isSignMask())
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - OriginalDemandedBits.countr_zero();
+    if (TLO.DAG.ComputeNumSignBits(Op0, OriginalDemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
       return TLO.CombineTo(Op, Op0);
 
     // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
@@ -45169,6 +45170,18 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
     return true;
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS: {
+    APInt DemandedLHS, DemandedRHS;
+    getPackDemandedElts(Op.getSimpleValueType(), DemandedElts, DemandedLHS,
+                        DemandedRHS);
+    return (!DemandedLHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                                 PoisonOnly, Depth + 1)) &&
+           (!DemandedRHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                                 PoisonOnly, Depth + 1));
+  }
   case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
   case X86ISD::PSHUFB:
@@ -45238,6 +45251,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   // SSE blends.
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
+    return false;
+  // SSE packs.
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
     return false;
   // SSE target shuffles.
   case X86ISD::INSERTPS:
@@ -45438,7 +45455,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                                   const SDLoc &DL,
                                   const X86Subtarget &Subtarget) {
   EVT SrcVT = Src.getValueType();
-  if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
+  if (Subtarget.useSoftFloat() || !SrcVT.isSimple() ||
+      SrcVT.getScalarType() != MVT::i1)
     return SDValue();
 
   // Recognize the IR pattern for the movmsk intrinsic under SSE1 before type
@@ -52369,16 +52387,41 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
-        EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+    // If EFLAGS is from a CMP that compares the same operands as the earlier
+    // SUB producing X (i.e. CMP X, Y), we can directly use the carry flag with
+    // SBB/ADC without creating a flipped SUB.
+    if (EFLAGS.getOpcode() == X86ISD::CMP &&
+        EFLAGS.getValueType().isInteger() && X == EFLAGS.getOperand(0)) {
       return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                          DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(0, DL, VT), NewEFLAGS);
+                         DAG.getConstant(0, DL, VT), EFLAGS);
+    }
+
+    if (EFLAGS.getOpcode() == X86ISD::SUB &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      // Only create NewSub if we know one of the folds will succeed to avoid
+      // introducing a temporary node that may persist and affect one-use checks
+      // below.
+      if (EFLAGS.getNode()->hasOneUse()) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
+                           DAG.getVTList(VT, MVT::i32), X,
+                           DAG.getConstant(0, DL, VT), NewEFLAGS);
+      }
+
+      if (IsSub && X == EFLAGS.getValue(0)) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(X86ISD::SBB, DL, DAG.getVTList(VT, MVT::i32),
+                           EFLAGS.getOperand(0), EFLAGS.getOperand(1),
+                           NewEFLAGS);
+      }
     }
   }
 
@@ -58089,6 +58132,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal adds from adds of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Prefer VSHLI to reduce uses, X86FixupInstTunings may revert this depending
+  // on the scheduler model. Limit multiple users to AVX+ targets to prevent
+  // introducing extra register moves.
+  if (Op0 == Op1 && supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL))
+    if (Subtarget.hasAVX() || N->isOnlyUserOf(Op0.getNode()))
+      return getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT.getSimpleVT(),
+                                        Op0, 1, DAG);
 
   // Canonicalize hidden LEA pattern:
   // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)

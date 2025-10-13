@@ -28,7 +28,6 @@ _TOOLS = {
     "llvm-nm": "//llvm:llvm-nm-lib",
     "llvm-objcopy": "//llvm:llvm-objcopy-lib",
     "llvm-objdump": "//llvm:llvm-objdump-lib",
-    "llvm-profdata": "//llvm:llvm-profdata-lib",
     "llvm-rc": "//llvm:llvm-rc-lib",
     "llvm-readobj": "//llvm:llvm-readobj-lib",
     "llvm-size": "//llvm:llvm-size-lib",
