@@ -1546,9 +1546,6 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// True if the intrinsic may have side-effects.
   bool MayHaveSideEffects;
 
-  /// True if the intrinsic is safe to speculatively execute.
-  bool IsSafeToSpeculativelyExecute;
-
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
@@ -1572,7 +1569,6 @@ public:
     MayHaveSideEffects = MayWriteToMemory ||
                          !Attrs.hasAttribute(Attribute::NoUnwind) ||
                          !Attrs.hasAttribute(Attribute::WillReturn);
-    IsSafeToSpeculativelyExecute = Attrs.hasAttribute(Attribute::Speculatable);
   }
 
   ~VPWidenIntrinsicRecipe() override = default;
@@ -1611,11 +1607,6 @@ public:
 
   /// Returns true if the intrinsic may have side-effects.
   bool mayHaveSideEffects() const { return MayHaveSideEffects; }
-
-  /// Returns true if the intrinsic is safe to speculatively execute.
-  bool isSafeToSpeculativelyExecute() const {
-    return IsSafeToSpeculativelyExecute;
-  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
