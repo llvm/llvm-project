@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Perfect shuffle with single input vector. Half of it first needs to be
 ; transposed into the other vector before the generated shuffles can take
@@ -6,9 +6,9 @@
 ; was missing).
 
 ; CHECK-LABEL: f0:
-; CHECK-DAG:  r[[R0:[0-9]+]] = #66
+; CHECK-DAG:  r[[R0:[0-9]+]] = #-62
 ; CHECK-DAG:  r[[R1:[0-9]+]] = #40
-; CHECK-DAG:  r[[R2:[0-9]+]] = #85
+; CHECK-DAG:  r[[R2:[0-9]+]] = #-43
 ; CHECK:      v1:0 = vdeal(v{{[0-9]+}},v0,r[[R0]])
 ; CHECK:      v1:0 = vshuff(v1,v0,r[[R1]])
 ; CHECK:      v1:0 = vshuff(v1,v0,r[[R2]])

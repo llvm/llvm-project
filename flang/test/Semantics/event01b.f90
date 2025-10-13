@@ -10,7 +10,40 @@ program test_event_post
   implicit none
 
   ! event_type variables must be coarrays
+  !ERROR: Variable 'non_coarray' with EVENT_TYPE or LOCK_TYPE must be a coarray
   type(event_type) non_coarray
+
+  ! event_type potential object components must be nested in coarrays
+  type :: has_event
+    type(event_type) event
+  end type
+  type :: bad1
+    type(has_event) component
+  end type
+  type :: bad2
+    type(has_event), allocatable :: component
+  end type
+  type :: good1
+    type(has_event), pointer :: component
+  end type
+  type :: good2
+    type(has_event), allocatable :: component[:]
+  end type
+  !ERROR: Variable 'non_coarray_component1' with EVENT_TYPE or LOCK_TYPE potential component '%event' must be a coarray
+  type(has_event) non_coarray_component1
+  !ERROR: Variable 'non_coarray_component2' with EVENT_TYPE or LOCK_TYPE potential component '%component%event' must be a coarray
+  type(bad1) non_coarray_component2
+  !ERROR: Variable 'non_coarray_component3' with EVENT_TYPE or LOCK_TYPE potential component '%component%event' must be a coarray
+  type(bad2) non_coarray_component3
+  ! these are okay
+  type(has_event) ok_non_coarray_component1[*]
+  type(has_event), pointer :: ok_non_coarray_component2
+  type(bad1) :: ok_non_coarray_component3[*]
+  type(bad1), pointer :: ok_non_coarray_component4
+  type(bad2) :: ok_non_coarray_component5[*]
+  type(bad2), pointer :: ok_non_coarray_component6
+  type(good1) ok_non_coarray_component7
+  type(good2) ok_non_coarray_component8
 
   type(event_type) concert[*], occurrences(2)[*]
   integer non_event[*], sync_status, co_indexed_integer[*], superfluous_stat, non_scalar(1)
@@ -25,15 +58,11 @@ program test_event_post
   !ERROR: The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV
   event post(non_event)
 
-  ! event-variable must be a coarray
-  !ERROR: The event-variable must be a coarray
-  event post(non_coarray)
-
   !ERROR: Must be a scalar value, but is a rank-1 array
   event post(occurrences)
 
   !ERROR: Must be a scalar value, but is a rank-1 array
-  event post(occurrences[1])
+  event post(occurrences(:)[1])
 
   !______ invalid sync-stat-lists: invalid stat= ____________
 

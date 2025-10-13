@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-constraints=z3 -setup-static-analyzer \
+// RUN: %clang_analyze_cc1 -analyzer-constraints=z3 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection %s 2>&1 | FileCheck %s
 //
 // REQUIRES: z3

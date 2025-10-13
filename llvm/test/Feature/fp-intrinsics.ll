@@ -184,12 +184,25 @@ entry:
   ret double %result
 }
 
-; Verify that atan(42.0) isn't simplified when the rounding mode is unknown.
+; Verify that atan(42.0, 23.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: fatan
 ; CHECK: call double @llvm.experimental.constrained.atan
 define double @fatan() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.atan.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that atan2(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: fatan2
+; CHECK: call double @llvm.experimental.constrained.atan2
+define double @fatan2() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.atan2.f64(
+                                              double 42.0,
+                                              double 23.0,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret double %result

@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/target.h"
 #include "flang/Common/template.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/type.h"
 
@@ -17,23 +18,13 @@ Rounding TargetCharacteristics::defaultRounding;
 
 TargetCharacteristics::TargetCharacteristics() {
   auto enableCategoryKinds{[this](TypeCategory category) {
-    for (int kind{0}; kind < maxKind; ++kind) {
+    for (int kind{1}; kind <= maxKind; ++kind) {
       if (CanSupportType(category, kind)) {
-        auto byteSize{static_cast<std::size_t>(kind)};
-        if (category == TypeCategory::Real ||
-            category == TypeCategory::Complex) {
-          if (kind == 3) {
-            // non-IEEE 16-bit format (truncated 32-bit)
-            byteSize = 2;
-          } else if (kind == 10) {
-            // x87 floating-point
-            // Follow gcc precedent for "long double"
-            byteSize = 16;
-          }
-        }
+        auto byteSize{
+            static_cast<std::size_t>(common::TypeSizeInBytes(category, kind))};
         std::size_t align{byteSize};
         if (category == TypeCategory::Complex) {
-          byteSize = 2 * byteSize;
+          align /= 2;
         }
         EnableType(category, kind, byteSize, align);
       }
@@ -44,6 +35,7 @@ TargetCharacteristics::TargetCharacteristics() {
   enableCategoryKinds(TypeCategory::Complex);
   enableCategoryKinds(TypeCategory::Character);
   enableCategoryKinds(TypeCategory::Logical);
+  enableCategoryKinds(TypeCategory::Unsigned);
 
   isBigEndian_ = !isHostLittleEndian;
 
@@ -52,7 +44,7 @@ TargetCharacteristics::TargetCharacteristics() {
 
 bool TargetCharacteristics::CanSupportType(
     TypeCategory category, std::int64_t kind) {
-  return IsValidKindOfIntrinsicType(category, kind);
+  return common::IsValidKindOfIntrinsicType(category, kind);
 }
 
 bool TargetCharacteristics::EnableType(common::TypeCategory category,
@@ -70,14 +62,14 @@ bool TargetCharacteristics::EnableType(common::TypeCategory category,
 
 void TargetCharacteristics::DisableType(
     common::TypeCategory category, std::int64_t kind) {
-  if (kind >= 0 && kind < maxKind) {
+  if (kind > 0 && kind <= maxKind) {
     align_[static_cast<int>(category)][kind] = 0;
   }
 }
 
 std::size_t TargetCharacteristics::GetByteSize(
     common::TypeCategory category, std::int64_t kind) const {
-  if (kind >= 0 && kind < maxKind) {
+  if (kind > 0 && kind <= maxKind) {
     return byteSize_[static_cast<int>(category)][kind];
   } else {
     return 0;
@@ -86,7 +78,7 @@ std::size_t TargetCharacteristics::GetByteSize(
 
 std::size_t TargetCharacteristics::GetAlignment(
     common::TypeCategory category, std::int64_t kind) const {
-  if (kind >= 0 && kind < maxKind) {
+  if (kind > 0 && kind <= maxKind) {
     return align_[static_cast<int>(category)][kind];
   } else {
     return 0;
@@ -103,9 +95,58 @@ void TargetCharacteristics::set_isBigEndian(bool isBig) {
 }
 
 void TargetCharacteristics::set_isPPC(bool isPowerPC) { isPPC_ = isPowerPC; }
+void TargetCharacteristics::set_isSPARC(bool isSPARC) { isSPARC_ = isSPARC; }
 
 void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;
+}
+
+// Check if a given real kind has flushing control.
+bool TargetCharacteristics::hasSubnormalFlushingControl(int kind) const {
+  CHECK(kind > 0 && kind <= maxKind);
+  CHECK(CanSupportType(TypeCategory::Real, kind));
+  return hasSubnormalFlushingControl_[kind];
+}
+
+// Check if any or all real kinds have flushing control.
+bool TargetCharacteristics::hasSubnormalFlushingControl(bool any) const {
+  for (int kind{1}; kind <= maxKind; ++kind) {
+    if (CanSupportType(TypeCategory::Real, kind) &&
+        hasSubnormalFlushingControl_[kind] == any) {
+      return any;
+    }
+  }
+  return !any;
+}
+
+void TargetCharacteristics::set_hasSubnormalFlushingControl(
+    int kind, bool yes) {
+  CHECK(kind > 0 && kind <= maxKind);
+  hasSubnormalFlushingControl_[kind] = yes;
+}
+
+// Check if a given real kind has (nonstandard) ieee_denorm exception control.
+bool TargetCharacteristics::hasSubnormalExceptionSupport(int kind) const {
+  CHECK(kind > 0 && kind <= maxKind);
+  CHECK(CanSupportType(TypeCategory::Real, kind));
+  return hasSubnormalExceptionSupport_[kind];
+}
+
+// Check if all real kinds have support for the ieee_denorm exception.
+bool TargetCharacteristics::hasSubnormalExceptionSupport() const {
+  for (int kind{1}; kind <= maxKind; ++kind) {
+    if (CanSupportType(TypeCategory::Real, kind) &&
+        !hasSubnormalExceptionSupport_[kind]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void TargetCharacteristics::set_hasSubnormalExceptionSupport(
+    int kind, bool yes) {
+  CHECK(kind > 0 && kind <= maxKind);
+  hasSubnormalExceptionSupport_[kind] = yes;
 }
 
 void TargetCharacteristics::set_roundingMode(Rounding rounding) {
@@ -113,6 +154,7 @@ void TargetCharacteristics::set_roundingMode(Rounding rounding) {
 }
 
 // SELECTED_INT_KIND() -- F'2018 16.9.169
+// and SELECTED_UNSIGNED_KIND() extension (same results)
 class SelectedIntKindVisitor {
 public:
   SelectedIntKindVisitor(

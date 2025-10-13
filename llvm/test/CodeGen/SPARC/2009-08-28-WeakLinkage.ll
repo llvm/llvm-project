@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc < %s | grep weak
+; RUN: llc -mtriple=sparc < %s | grep weak
 
 define weak i32 @func() nounwind {
 entry:

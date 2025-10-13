@@ -3,7 +3,7 @@
 
 define i32 @main(i32 %arg, ptr nocapture readnone %arg1) #0 {
 ; CHECK-LABEL: define i32 @main(
-; CHECK-SAME: i32 [[ARG:%.*]], ptr nocapture readnone [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[ARG:%.*]], ptr readnone captures(none) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]

@@ -19,6 +19,7 @@ using namespace llvm;
 #include "llvm/ADT/Twine.h"
 
 #include <set>
+#include <unordered_map>
 
 #include <z3.h>
 
@@ -931,7 +932,8 @@ public:
   };
   unsigned getUnsigned(StringRef Key) const override {
     auto It = UnsignedValues.find(Key.str());
-    assert(It != UnsignedValues.end());
+    if (It == UnsignedValues.end())
+      return 0;
     return It->second;
   };
 
@@ -988,7 +990,9 @@ llvm::SMTSolverRef llvm::CreateZ3Solver() {
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SMTSort::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTExpr::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolver::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolverStatistics::dump() const { print(llvm::errs()); }
+#endif

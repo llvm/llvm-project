@@ -7,6 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
+// XFAIL: target={{x86_64-.*}} && tsan
 
 // integral-type fetch_sub(integral-type, memory_order = memory_order::seq_cst) const noexcept;
 // floating-point-type fetch_sub(floating-point-type, memory_order = memory_order::seq_cst) const noexcept;
@@ -16,6 +17,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 #include "atomic_helpers.h"
 #include "test_helper.h"

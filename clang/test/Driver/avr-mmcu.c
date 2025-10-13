@@ -1,8 +1,7 @@
 // A test for the propagation of the -mmcu option to -cc1 and -cc1as
 
-// RUN: %clang -### --target=avr -mmcu=attiny11 -save-temps %s 2>&1 | FileCheck -check-prefix=CHECK0 %s
-// CHECK0: "-cc1" {{.*}} "-target-cpu" "attiny11"
-// CHECK0: "-cc1as" {{.*}} "-target-cpu" "attiny11"
+// RUN: not %clang -### --target=avr -mmcu=attiny11 %s 2>&1 | FileCheck -check-prefix=CHECK0 %s
+// CHECK0: error: '-mmcu=attiny11' invalid for input of type c/c++
 
 // RUN: %clang -### --target=avr -mmcu=at90s2313 -save-temps %s 2>&1 | FileCheck -check-prefix=CHECK1 %s
 // CHECK1: "-cc1" {{.*}} "-target-cpu" "at90s2313"

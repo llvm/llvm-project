@@ -47,7 +47,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
   // See if we have made this type before and can reuse it.
   CompilerType fields_type =
       type_system->GetTypeForIdentifier<clang::CXXRecordDecl>(
-          register_type_name);
+          type_system->getASTContext(), register_type_name);
 
   if (!fields_type) {
     // In most ABI, a change of field type means a change in storage unit.
@@ -83,7 +83,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
           // may have built this one already.
           CompilerType field_enum_type =
               type_system->GetTypeForIdentifier<clang::EnumDecl>(
-                  enum_type_name);
+                  type_system->getASTContext(), enum_type_name);
 
           if (field_enum_type)
             field_type = field_enum_type;
@@ -116,7 +116,8 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
     type_system->SetIsPacked(fields_type);
 
     // This should be true if RegisterFlags padded correctly.
-    assert(*fields_type.GetByteSize(nullptr) == flags.GetSize());
+    assert(llvm::expectedToOptional(fields_type.GetByteSize(nullptr))
+               .value_or(0) == flags.GetSize());
   }
 
   return fields_type;

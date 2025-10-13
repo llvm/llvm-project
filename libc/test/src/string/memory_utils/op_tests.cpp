@@ -8,6 +8,7 @@
 
 #include "memory_check_utils.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/os.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -71,7 +72,8 @@ void CopyAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
   FnImpl(as_byte(dst), as_byte(src), size);
 }
 template <size_t Size, auto FnImpl>
-void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
+void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src,
+                      [[maybe_unused]] size_t size) {
   FnImpl(as_byte(dst), as_byte(src));
 }
 
@@ -152,7 +154,8 @@ void SetAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
   FnImpl(as_byte(dst), value, size);
 }
 template <size_t Size, auto FnImpl>
-void SetBlockAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
+void SetBlockAdaptor(cpp::span<char> dst, uint8_t value,
+                     [[maybe_unused]] size_t size) {
   FnImpl(as_byte(dst), value);
 }
 
@@ -173,7 +176,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
-      const char value = size % 10;
+      const uint8_t value = size % 10;
       auto dst = DstBuffer.span().subspan(0, size);
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
@@ -184,7 +187,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);
       for (size_t size = kSize; size < 3 * kSize; ++size) {
-        const char value = size % 10;
+        const uint8_t value = size % 10;
         auto dst = DstBuffer.span().subspan(0, size);
         ASSERT_TRUE((CheckMemset<LoopImpl>(dst, value, size)));
       }
@@ -241,7 +244,8 @@ int CmpAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
   return (int)FnImpl(as_byte(p1), as_byte(p2), size);
 }
 template <size_t Size, auto FnImpl>
-int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
+int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2,
+                    [[maybe_unused]] size_t size) {
   return (int)FnImpl(as_byte(p1), as_byte(p2));
 }
 
@@ -294,7 +298,7 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
 using MemcmpImplementations = testing::TypeList<
-#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
 #ifdef __SSE2__
     generic::Memcmp<__m128i>, //
 #endif

@@ -8,7 +8,7 @@ define void @kmovkr_1(i1 %cmp23.not) {
 ; AVX512-NEXT:    kmovw %edi, %k1 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x92,0xcf]
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 {%k1} {z} = [1.0E+0,0.0E+0]
 ; AVX512-NEXT:    # encoding: [0x62,0xf1,0xff,0x89,0x10,0x05,A,A,A,A]
-; AVX512-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; AVX512-NEXT:    vmovsd %xmm0, 0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x04,0x25,0x00,0x00,0x00,0x00]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
 ;
@@ -17,7 +17,7 @@ define void @kmovkr_1(i1 %cmp23.not) {
 ; AVX512BW-NEXT:    kmovd %edi, %k1 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x92,0xcf]
 ; AVX512BW-NEXT:    vmovsd {{.*#+}} xmm0 {%k1} {z} = [1.0E+0,0.0E+0]
 ; AVX512BW-NEXT:    # encoding: [0x62,0xf1,0xff,0x89,0x10,0x05,A,A,A,A]
-; AVX512BW-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; AVX512BW-NEXT:    vmovsd %xmm0, 0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x04,0x25,0x00,0x00,0x00,0x00]
 ; AVX512BW-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -54,7 +54,7 @@ define i32 @kmovrk_1(<4 x ptr> %arg) {
 ; AVX512:       # %bb.0: # %bb
 ; AVX512-NEXT:    vptest %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x17,0xc0]
 ; AVX512-NEXT:    jne .LBB2_1 # encoding: [0x75,A]
-; AVX512-NEXT:    # fixup A - offset: 1, value: .LBB2_1-1, kind: FK_PCRel_1
+; AVX512-NEXT:    # fixup A - offset: 1, value: .LBB2_1, kind: FK_PCRel_1
 ; AVX512-NEXT:  # %bb.2: # %bb3
 ; AVX512-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; AVX512-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -65,7 +65,7 @@ define i32 @kmovrk_1(<4 x ptr> %arg) {
 ; AVX512BW:       # %bb.0: # %bb
 ; AVX512BW-NEXT:    vptest %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x17,0xc0]
 ; AVX512BW-NEXT:    jne .LBB2_1 # encoding: [0x75,A]
-; AVX512BW-NEXT:    # fixup A - offset: 1, value: .LBB2_1-1, kind: FK_PCRel_1
+; AVX512BW-NEXT:    # fixup A - offset: 1, value: .LBB2_1, kind: FK_PCRel_1
 ; AVX512BW-NEXT:  # %bb.2: # %bb3
 ; AVX512BW-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; AVX512BW-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]

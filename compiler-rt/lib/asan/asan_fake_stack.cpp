@@ -27,6 +27,7 @@ static const u64 kAllocaRedzoneMask = 31UL;
 
 // For small size classes inline PoisonShadow for better performance.
 ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
+  CHECK(AddrIsAlignedByGranularity(ptr + size));
   u64 *shadow = reinterpret_cast<u64*>(MemToShadow(ptr));
   if (ASAN_SHADOW_SCALE == 3 && class_id <= 6) {
     // This code expects ASAN_SHADOW_SCALE=3.
@@ -39,6 +40,11 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
     // The size class is too big, it's cheaper to poison only size bytes.
     PoisonShadow(ptr, size, static_cast<u8>(magic));
   }
+
+  if (magic == 0) {
+    uptr redzone_size = FakeStack::BytesInSizeClass(class_id) - size;
+    PoisonShadow(ptr + size, redzone_size, kAsanStackRightRedzoneMagic);
+  }
 }
 
 FakeStack *FakeStack::Create(uptr stack_size_log) {
@@ -48,18 +54,34 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
     stack_size_log = kMinStackSizeLog;
   if (stack_size_log > kMaxStackSizeLog)
     stack_size_log = kMaxStackSizeLog;
+  CHECK_LE(kMaxStackFrameSizeLog, stack_size_log);
   uptr size = RequiredSize(stack_size_log);
+  uptr padded_size = size + kMaxStackFrameSize;
+  void *true_res = reinterpret_cast<void *>(
+      flags()->uar_noreserve ? MmapNoReserveOrDie(padded_size, "FakeStack")
+                             : MmapOrDie(padded_size, "FakeStack"));
+  // GetFrame() requires the property that
+  // (res + kFlagsOffset + SizeRequiredForFlags(stack_size_log)) is aligned to
+  // kMaxStackFrameSize.
+  // We didn't use MmapAlignedOrDieOnFatalError, because it requires that the
+  // *size* is a power of 2, which is an overly strong condition.
+  static_assert(alignof(FakeStack) <= kMaxStackFrameSize);
   FakeStack *res = reinterpret_cast<FakeStack *>(
-      flags()->uar_noreserve ? MmapNoReserveOrDie(size, "FakeStack")
-                             : MmapOrDie(size, "FakeStack"));
+      RoundUpTo(
+          (uptr)true_res + kFlagsOffset + SizeRequiredForFlags(stack_size_log),
+          kMaxStackFrameSize) -
+      kFlagsOffset - SizeRequiredForFlags(stack_size_log));
+  res->true_start = true_res;
   res->stack_size_log_ = stack_size_log;
   u8 *p = reinterpret_cast<u8 *>(res);
   VReport(1,
           "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
-          "mmapped %zdK, noreserve=%d \n",
+          "mmapped %zdK, noreserve=%d, true_start: %p, start of first frame: "
+          "0x%zx\n",
           GetCurrentTidOrInvalid(), (void *)p,
           (void *)(p + FakeStack::RequiredSize(stack_size_log)), stack_size_log,
-          size >> 10, flags()->uar_noreserve);
+          size >> 10, flags()->uar_noreserve, res->true_start,
+          res->GetFrame(stack_size_log, /*class_id*/ 0, /*pos*/ 0));
   return res;
 }
 
@@ -73,8 +95,10 @@ void FakeStack::Destroy(int tid) {
     Report("T%d: FakeStack destroyed: %s\n", tid, str.data());
   }
   uptr size = RequiredSize(stack_size_log_);
-  FlushUnneededASanShadowMemory(reinterpret_cast<uptr>(this), size);
-  UnmapOrDie(this, size);
+  uptr padded_size = size + kMaxStackFrameSize;
+  FlushUnneededASanShadowMemory(reinterpret_cast<uptr>(true_start),
+                                padded_size);
+  UnmapOrDie(true_start, padded_size);
 }
 
 void FakeStack::PoisonAll(u8 magic) {

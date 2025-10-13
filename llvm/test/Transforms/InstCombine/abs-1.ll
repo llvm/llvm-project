@@ -306,7 +306,7 @@ define i32 @nabs_canonical_9(i32 %a, i32 %b) {
 ; CHECK-LABEL: @nabs_canonical_9(
 ; CHECK-NEXT:    [[T1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[T1]], i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[A]], [[TMP1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[B]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -385,7 +385,7 @@ define <2 x i8> @shifty_abs_commute1(<2 x i8> %x) {
 
 define <2 x i8> @shifty_abs_commute2(<2 x i8> %x) {
 ; CHECK-LABEL: @shifty_abs_commute2(
-; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[ABS:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[Y]], i1 false)
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
@@ -417,7 +417,7 @@ declare void @extra_use_i1(i1)
 define i8 @shifty_abs_too_many_uses(i8 %x) {
 ; CHECK-LABEL: @shifty_abs_too_many_uses(
 ; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SIGNBIT]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[SIGNBIT]]
 ; CHECK-NEXT:    [[ABS:%.*]] = xor i8 [[ADD]], [[SIGNBIT]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SIGNBIT]])
 ; CHECK-NEXT:    ret i8 [[ABS]]
@@ -977,4 +977,15 @@ define i32 @abs_diff_signed_slt_no_nsw_swap(i32 %a, i32 %b) {
   %sub_ab = sub i32 %a, %b
   %cond = select i1 %cmp, i32 %sub_ba, i32 %sub_ab
   ret i32 %cond
+}
+
+define <2 x i32> @abs_unary_shuffle_ops(<2 x i32> %x) {
+; CHECK-LABEL: @abs_unary_shuffle_ops(
+; CHECK-NEXT:    [[R2:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[R1:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[R2]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = shufflevector <2 x i32> %x, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x i32> @llvm.abs(<2 x i32> %a, i1 false)
+  ret <2 x i32> %r
 }

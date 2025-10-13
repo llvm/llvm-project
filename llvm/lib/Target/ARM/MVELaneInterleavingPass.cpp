@@ -49,10 +49,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -62,21 +59,18 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include <algorithm>
 #include <cassert>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mve-laneinterleave"
 
-cl::opt<bool> EnableInterleave(
+static cl::opt<bool> EnableInterleave(
     "enable-mve-interleave", cl::Hidden, cl::init(true),
     cl::desc("Enable interleave MVE vector operation lowering"));
 

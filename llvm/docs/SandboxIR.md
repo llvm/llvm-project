@@ -2,6 +2,41 @@
 
 Sandbox IR is an IR layer on top of LLVM IR that allows you to save/restore its state.
 
+# Quick Start Notes
+
+Within your LLVM pass:
+
+``` C++
+// 1. Include the necessary Sandbox IR header files.
+#include "llvm/SandboxIR/Context.h
+#include "llvm/SandboxIR/Function.h
+
+// 2. Create a sandboxir::Context using LLVMContext `LLVMCtx`.
+sandboxir::Context Ctx(LLVMCtx);
+
+// 3. Create a sandboxir::Function using LLVM IR Function `LLVMF`.
+auto *F = Ctx.createFunction(LLVMF);
+
+// ... Use Sandbox IR in `F` as usual, e.g., iterating, modifying it etc. ...
+
+// 4. Save state when needed.
+Ctx.save();
+
+// ... Modify Sandbox IR ...
+
+// 5. Revert to the saved state.
+Ctx.revert();
+```
+
+Make sure you link against `SandboxIR` in `CMakeLists.txt`:
+
+```
+LINK_COMPONENTS
+...
+SandboxIR
+...
+```
+
 # API
 The Sandbox IR API is designed to feel like LLVM, replicating many common API classes and functions to mirror the LLVM API.
 The class hierarchy is similar (but in the `llvm::sandboxir` namespace).
@@ -51,3 +86,24 @@ For example, for `sandboxir::User::setOperand(OpIdx, sandboxir::Value *Op)`:
 - We get the corresponding LLVM User: `llvm::User *LLVMU = cast<llvm::User>(Val)`
 - Next we get the corresponding LLVM Operand: `llvm::Value *LLVMOp = Op->Val`
 - Finally we modify `LLVMU`'s operand: `LLVMU->setOperand(OpIdx, LLVMOp)
+
+## IR Change Tracking
+Sandbox IR's state can be saved and restored.
+This is done with the help of the tracker component that is tightly coupled to the public Sandbox IR API functions.
+Please note that nested saves/restores are currently not supported.
+
+To save the state and enable tracking the user needs to call `sandboxir::Context::save()`.
+From this point on any change made to the Sandbox IR state will automatically create a change object and register it with the tracker, without any intervention from the user.
+The changes are accumulated in a vector within the tracker.
+
+To rollback to the saved state the user needs to call `sandboxir::Context::revert()`.
+Reverting back to the saved state is a matter of going over all the accumulated changes in reverse and undoing each individual change.
+
+To accept the changes made to the IR the user needs to call `sandboxir::Context::accept()`.
+Internally this will go through the changes and run any finalization required.
+
+Please note that after a call to `revert()` or `accept()` tracking will stop.
+To start tracking again, the user needs to call `save()`.
+
+# Users of Sandbox IR
+- [The Sandbox Vectorizer](project:SandboxVectorizer.md)

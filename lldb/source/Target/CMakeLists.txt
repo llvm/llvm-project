@@ -11,6 +11,7 @@ add_lldb_library(lldbTarget
   ABI.cpp
   AssertFrameRecognizer.cpp
   DynamicRegisterInfo.cpp
+  CoreFileMemoryRanges.cpp
   ExecutionContext.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp
@@ -36,6 +37,7 @@ add_lldb_library(lldbTarget
   RegisterFlags.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
+  ScriptedThreadPlan.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
   StackFrame.cpp
@@ -57,8 +59,8 @@ add_lldb_library(lldbTarget
   ThreadPlanCallFunctionUsingABI.cpp
   ThreadPlanCallOnFunctionExit.cpp
   ThreadPlanCallUserExpression.cpp
-  ThreadPlanPython.cpp
   ThreadPlanRunToAddress.cpp
+  ThreadPlanSingleThreadTimeout.cpp
   ThreadPlanShouldStopHere.cpp
   ThreadPlanStepInRange.cpp
   ThreadPlanStepInstruction.cpp
@@ -80,6 +82,11 @@ add_lldb_library(lldbTarget
   UnwindLLDB.cpp
   VerboseTrapFrameRecognizer.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Target
+  LINK_COMPONENTS
+    Support
+    MC
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -88,11 +95,8 @@ add_lldb_library(lldbTarget
     lldbInterpreter
     lldbSymbol
     lldbUtility
+    lldbValueObject
     lldbPluginProcessUtility
-
-  LINK_COMPONENTS
-    Support
-    MC
   )
 
 add_dependencies(lldbTarget

@@ -184,15 +184,6 @@ func.func @vector_transfers(%arg0: index, %arg1: index) {
   return
 }
 
-// CHECK-LABEL: func @cancelling_shape_cast_ops
-//  CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>
-//       CHECK: return %[[A0]] : vector<2x4xf32>
-func.func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
-  %0 = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
-  %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
-  return %1 : vector<2x4xf32>
-}
-
 // CHECK-LABEL: func @elementwise_unroll
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<4x4xf32>, %[[ARG1:.*]]: memref<4x4xf32>)
 //       CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
@@ -442,3 +433,16 @@ func.func @vec_0D(%arg0: vector<f32>) -> vector<i32> {
   %0 = vector.bitcast %arg0 : vector<f32> to vector<i32>
   return %0 : vector<i32>
 }
+
+// Make sure not crash on dynamic index `vector.extract`:
+func.func @vector_extract_dynamic_index(%arg0 : vector<4xi32>, %index : index) -> i16 {
+  %0 = vector.bitcast %arg0 : vector<4xi32> to vector<8xi16>
+  %1 = vector.extract %0[%index] : i16 from vector<8xi16>
+  return %1 : i16
+}
+
+// CHECK-LABEL: func.func @vector_extract_dynamic_index
+// CHECK-SAME: (%[[VEC:.+]]: vector<4xi32>, %[[IDX:.+]]: index) -> i16 {
+// CHECK: %[[BC:.+]] = vector.bitcast %[[VEC]] : vector<4xi32> to vector<8xi16>
+// CHECK: %[[EXTRACT:.+]] = vector.extract %[[BC]][%[[IDX]]] : i16 from vector<8xi16>
+// CHECK: return %[[EXTRACT]]

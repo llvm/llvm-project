@@ -14,11 +14,11 @@ __device__ int CheckSimple() {
   // CHECK: [[BUF:%[a-zA-Z0-9_]+]] = alloca [[SIMPLE_PRINTF_TY]]
   // CHECK: [[FMT:%[0-9]+]] = load{{.*}}%fmt
   const char* fmt = "%d %lld %f";
-  // CHECK: [[PTR0:%[0-9]+]] = getelementptr inbounds [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 0
+  // CHECK: [[PTR0:%[0-9]+]] = getelementptr inbounds nuw [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 0
   // CHECK: store i32 1, ptr [[PTR0]], align 4
-  // CHECK: [[PTR1:%[0-9]+]] = getelementptr inbounds [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 1
+  // CHECK: [[PTR1:%[0-9]+]] = getelementptr inbounds nuw [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 1
   // CHECK: store i64 2, ptr [[PTR1]], align 8
-  // CHECK: [[PTR2:%[0-9]+]] = getelementptr inbounds [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 2
+  // CHECK: [[PTR2:%[0-9]+]] = getelementptr inbounds nuw [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 2
   // CHECK: store double 3.0{{[^,]*}}, ptr [[PTR2]], align 8
   // CHECK: [[RET:%[0-9]+]] = call i32 @vprintf(ptr [[FMT]], ptr [[BUF]])
   // CHECK: ret i32 [[RET]]

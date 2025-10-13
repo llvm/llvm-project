@@ -14,6 +14,7 @@
 
 #include "ARMMCTargetDesc.h"
 #include "ARMUnwindOpAsm.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -27,12 +28,13 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
@@ -48,10 +50,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <climits>
-#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -78,10 +78,11 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitPersonality(const MCSymbol *Personality) override;
   void emitPersonalityIndex(unsigned Index) override;
   void emitHandlerData() override;
-  void emitSetFP(unsigned FpReg, unsigned SpReg, int64_t Offset = 0) override;
-  void emitMovSP(unsigned Reg, int64_t Offset = 0) override;
+  void emitSetFP(MCRegister FpReg, MCRegister SpReg,
+                 int64_t Offset = 0) override;
+  void emitMovSP(MCRegister Reg, int64_t Offset = 0) override;
   void emitPad(int64_t Offset) override;
-  void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                    bool isVector) override;
   void emitUnwindRaw(int64_t Offset,
                      const SmallVectorImpl<uint8_t> &Opcodes) override;
@@ -99,6 +100,10 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void finishAttributeSection() override;
 
   void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void emitSyntaxUnified() override;
+  void emitCode16() override;
+  void emitCode32() override;
+  void emitThumbFunc(MCSymbol *Symbol) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
@@ -114,15 +119,14 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
 
 public:
   ARMTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                       MCInstPrinter &InstPrinter, bool VerboseAsm);
+                       MCInstPrinter &InstPrinter);
 };
 
 ARMTargetAsmStreamer::ARMTargetAsmStreamer(MCStreamer &S,
                                            formatted_raw_ostream &OS,
-                                           MCInstPrinter &InstPrinter,
-                                           bool VerboseAsm)
+                                           MCInstPrinter &InstPrinter)
     : ARMTargetStreamer(S), OS(OS), InstPrinter(InstPrinter),
-      IsVerboseAsm(VerboseAsm) {}
+      IsVerboseAsm(S.isVerboseAsm()) {}
 
 void ARMTargetAsmStreamer::emitFnStart() { OS << "\t.fnstart\n"; }
 void ARMTargetAsmStreamer::emitFnEnd() { OS << "\t.fnend\n"; }
@@ -138,7 +142,7 @@ void ARMTargetAsmStreamer::emitPersonalityIndex(unsigned Index) {
 
 void ARMTargetAsmStreamer::emitHandlerData() { OS << "\t.handlerdata\n"; }
 
-void ARMTargetAsmStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetAsmStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                      int64_t Offset) {
   OS << "\t.setfp\t";
   InstPrinter.printRegName(OS, FpReg);
@@ -149,7 +153,7 @@ void ARMTargetAsmStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
   OS << '\n';
 }
 
-void ARMTargetAsmStreamer::emitMovSP(unsigned Reg, int64_t Offset) {
+void ARMTargetAsmStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {
   assert((Reg != ARM::SP && Reg != ARM::PC) &&
          "the operand of .movsp cannot be either sp or pc");
 
@@ -164,8 +168,8 @@ void ARMTargetAsmStreamer::emitPad(int64_t Offset) {
   OS << "\t.pad\t#" << Offset << '\n';
 }
 
-void ARMTargetAsmStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
-                                       bool isVector) {
+void ARMTargetAsmStreamer::emitRegSave(
+    const SmallVectorImpl<MCRegister> &RegList, bool isVector) {
   assert(RegList.size() && "RegList should not be empty");
   if (isVector)
     OS << "\t.vsave\t{";
@@ -260,13 +264,30 @@ void ARMTargetAsmStreamer::annotateTLSDescriptorSequence(
   OS << "\t.tlsdescseq\t" << S->getSymbol().getName() << "\n";
 }
 
+void ARMTargetAsmStreamer::emitSyntaxUnified() { OS << "\t.syntax\tunified\n"; }
+
+void ARMTargetAsmStreamer::emitCode16() { OS << "\t.code\t16\n"; }
+
+void ARMTargetAsmStreamer::emitCode32() { OS << "\t.code\t32\n"; }
+
+void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
+  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+  OS << "\t.thumb_func";
+  // Only Mach-O hasSubsectionsViaSymbols()
+  if (MAI->hasSubsectionsViaSymbols()) {
+    OS << '\t';
+    Symbol->print(OS, MAI);
+  }
+  OS << '\n';
+}
+
 void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
   const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
 
   OS << "\t.thumb_set\t";
   Symbol->print(OS, MAI);
   OS << ", ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -400,10 +421,11 @@ private:
   void emitPersonality(const MCSymbol *Personality) override;
   void emitPersonalityIndex(unsigned Index) override;
   void emitHandlerData() override;
-  void emitSetFP(unsigned FpReg, unsigned SpReg, int64_t Offset = 0) override;
-  void emitMovSP(unsigned Reg, int64_t Offset = 0) override;
+  void emitSetFP(MCRegister FpReg, MCRegister SpReg,
+                 int64_t Offset = 0) override;
+  void emitMovSP(MCRegister Reg, int64_t Offset = 0) override;
   void emitPad(int64_t Offset) override;
-  void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                    bool isVector) override;
   void emitUnwindRaw(int64_t Offset,
                      const SmallVectorImpl<uint8_t> &Opcodes) override;
@@ -421,6 +443,9 @@ private:
   void emitLabel(MCSymbol *Symbol) override;
 
   void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void emitCode16() override;
+  void emitCode32() override;
+  void emitThumbFunc(MCSymbol *Symbol) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   // Reset state between object emissions
@@ -468,10 +493,10 @@ public:
   void emitPersonality(const MCSymbol *Per);
   void emitPersonalityIndex(unsigned index);
   void emitHandlerData();
-  void emitSetFP(unsigned NewFpReg, unsigned NewSpReg, int64_t Offset = 0);
-  void emitMovSP(unsigned Reg, int64_t Offset = 0);
+  void emitSetFP(MCRegister NewFpReg, MCRegister NewSpReg, int64_t Offset = 0);
+  void emitMovSP(MCRegister Reg, int64_t Offset = 0);
   void emitPad(int64_t Offset);
-  void emitRegSave(const SmallVectorImpl<unsigned> &RegList, bool isVector);
+  void emitRegSave(const SmallVectorImpl<MCRegister> &RegList, bool isVector);
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc) override {
@@ -564,34 +589,15 @@ public:
   /// necessary.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
-      if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_SBREL && !(Size == 4)) {
+      if (SRE->getSpecifier() == ARM::S_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
-      getOrCreateDataFragment();
+      getCurrentFragment();
     }
 
     emitDataMappingSymbol();
     MCELFStreamer::emitValueImpl(Value, Size, Loc);
-  }
-
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override {
-    MCELFStreamer::emitAssemblerFlag(Flag);
-
-    switch (Flag) {
-    case MCAF_SyntaxUnified:
-      return; // no-op here.
-    case MCAF_Code16:
-      IsThumb = true;
-      return; // Change to Thumb mode
-    case MCAF_Code32:
-      IsThumb = false;
-      return; // Change to ARM mode
-    case MCAF_Code64:
-      return;
-    case MCAF_SubsectionsViaSymbols:
-      return;
-    }
   }
 
   /// If a label is defined before the .type directive sets the label's type
@@ -608,13 +614,15 @@ public:
     if (!IsThumb)
       return Val;
 
-    unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+    unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
     if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
         Symbol->isDefined())
       getAssembler().setIsThumbFunc(Symbol);
 
     return Val;
   };
+
+  void setIsThumb(bool Val) { IsThumb = Val; }
 
 private:
   enum ElfMappingSymbol {
@@ -630,7 +638,7 @@ private:
       Offset = 0;
     }
     bool hasInfo() { return F != nullptr; }
-    MCDataFragment *F = nullptr;
+    MCFragment *F = nullptr;
     uint64_t Offset = 0;
     ElfMappingSymbol State = EMS_None;
   };
@@ -642,11 +650,11 @@ private:
       // This is a tentative symbol, it won't really be emitted until it's
       // actually needed.
       ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
-      auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
-      if (!DF)
+      auto *DF = getCurrentFragment();
+      if (DF->getKind() != MCFragment::FT_Data)
         return;
       EMS->F = DF;
-      EMS->Offset = DF->getContents().size();
+      EMS->Offset = DF->getFixedSize();
       LastEMSInfo->State = EMS_Data;
       return;
     }
@@ -671,25 +679,20 @@ private:
   }
 
   void EmitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-        Name + "." + Twine(MappingSymbolCounter++)));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
 
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
   }
 
-  void emitMappingSymbol(StringRef Name, MCDataFragment &F, uint64_t Offset) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-        Name + "." + Twine(MappingSymbolCounter++)));
+  void emitMappingSymbol(StringRef Name, MCFragment &F, uint64_t Offset) {
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabelAtPos(Symbol, SMLoc(), F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
-  }
-
-  void emitThumbFunc(MCSymbol *Func) override {
-    getAssembler().setIsThumbFunc(Func);
-    emitSymbolAttribute(Func, MCSA_ELF_TypeFunction);
   }
 
   // Helper functions for ARM exception handling directives
@@ -707,11 +710,8 @@ private:
   void SwitchToExTabSection(const MCSymbol &FnStart);
   void SwitchToExIdxSection(const MCSymbol &FnStart);
 
-  void EmitFixup(const MCExpr *Expr, MCFixupKind Kind);
-
   bool IsThumb;
   bool IsAndroid;
-  int64_t MappingSymbolCounter = 0;
 
   DenseMap<const MCSection *, std::unique_ptr<ElfMappingSymbolInfo>>
       LastMappingSymbols;
@@ -723,7 +723,7 @@ private:
   MCSymbol *FnStart;
   const MCSymbol *Personality;
   unsigned PersonalityIndex;
-  unsigned FPReg; // Frame pointer register
+  MCRegister FPReg; // Frame pointer register
   int64_t FPOffset; // Offset: (final frame pointer) - (initial $sp)
   int64_t SPOffset; // Offset: (final $sp) - (initial $sp)
   int64_t PendingOffset; // Offset: (final $sp) - (emitted $sp)
@@ -755,12 +755,12 @@ void ARMTargetELFStreamer::emitHandlerData() {
   getStreamer().emitHandlerData();
 }
 
-void ARMTargetELFStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetELFStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                      int64_t Offset) {
   getStreamer().emitSetFP(FpReg, SpReg, Offset);
 }
 
-void ARMTargetELFStreamer::emitMovSP(unsigned Reg, int64_t Offset) {
+void ARMTargetELFStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {
   getStreamer().emitMovSP(Reg, Offset);
 }
 
@@ -768,8 +768,8 @@ void ARMTargetELFStreamer::emitPad(int64_t Offset) {
   getStreamer().emitPad(Offset);
 }
 
-void ARMTargetELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
-                                       bool isVector) {
+void ARMTargetELFStreamer::emitRegSave(
+    const SmallVectorImpl<MCRegister> &RegList, bool isVector) {
   getStreamer().emitRegSave(RegList, isVector);
 }
 
@@ -894,6 +894,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV9_3A:
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
+  case ARM::ArchKind::ARMV9_6A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -903,6 +904,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
 
   case ARM::ArchKind::ARMV8MBaseline:
   case ARM::ArchKind::ARMV8MMainline:
+  case ARM::ArchKind::ARMV8_1MMainline:
     S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false);
     S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
     break;
@@ -994,6 +996,10 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   // uses the FP_ARMV8_D16 build attribute.
   case ARM::FK_FPV5_SP_D16:
   case ARM::FK_FPV5_D16:
+  // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
+  // FPU, but there are two different names for it depending on the CPU.
+  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
+  case ARM::FK_FP_ARMV8_FULLFP16_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
                        /* OverwriteExisting= */ false);
     break;
@@ -1084,14 +1090,23 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     return;
 
   Streamer.getAssembler().registerSymbol(*Symbol);
-  unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+  unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
   if (Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)
-    Streamer.emitThumbFunc(Symbol);
+    emitThumbFunc(Symbol);
 }
 
 void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
-    const MCSymbolRefExpr *S) {
-  getStreamer().EmitFixup(S, FK_Data_4);
+    const MCSymbolRefExpr *Expr) {
+  getStreamer().addFixup(Expr, FK_Data_4);
+}
+
+void ARMTargetELFStreamer::emitCode16() { getStreamer().setIsThumb(true); }
+
+void ARMTargetELFStreamer::emitCode32() { getStreamer().setIsThumb(false); }
+
+void ARMTargetELFStreamer::emitThumbFunc(MCSymbol *Symbol) {
+  getStreamer().getAssembler().setIsThumbFunc(Symbol);
+  getStreamer().emitSymbolAttribute(Symbol, MCSA_ELF_TypeFunction);
 }
 
 void ARMTargetELFStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
@@ -1103,7 +1118,7 @@ void ARMTargetELFStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
     }
   }
 
-  getStreamer().emitThumbFunc(Symbol);
+  emitThumbFunc(Symbol);
   getStreamer().emitAssignment(Symbol, Value);
 }
 
@@ -1116,20 +1131,38 @@ void ARMTargetELFStreamer::reset() { AttributeSection = nullptr; }
 void ARMTargetELFStreamer::finish() {
   ARMTargetStreamer::finish();
   finishAttributeSection();
+
+  // The mix of execute-only and non-execute-only at link time is
+  // non-execute-only. To avoid the empty implicitly created .text
+  // section from making the whole .text section non-execute-only, we
+  // mark it execute-only if it is empty and there is at least one
+  // execute-only section in the object.
+  MCContext &Ctx = getContext();
+  auto &Asm = getStreamer().getAssembler();
+  if (any_of(Asm, [](const MCSection &Sec) {
+        return static_cast<const MCSectionELF &>(Sec).getFlags() &
+               ELF::SHF_ARM_PURECODE;
+      })) {
+    auto *Text =
+        static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
+    for (auto &F : *Text)
+      if (F.getSize())
+        return;
+    Text->setFlags(Text->getFlags() | ELF::SHF_ARM_PURECODE);
+  }
 }
 
 void ARMELFStreamer::reset() {
   MCTargetStreamer &TS = *getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
   ATS.reset();
-  MappingSymbolCounter = 0;
   MCELFStreamer::reset();
   LastMappingSymbols.clear();
   LastEMSInfo.reset();
   // MCELFStreamer clear's the assembler's e_flags. However, for
   // arm we manually set the ABI version on streamer creation, so
   // do the same here
-  getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
+  getWriter().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 }
 
 inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
@@ -1174,12 +1207,6 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
                     SectionKind::getData(), FnStart);
 }
 
-void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
-  MCDataFragment *Frag = getOrCreateDataFragment();
-  Frag->getFixups().push_back(MCFixup::create(Frag->getContents().size(), Expr,
-                                              Kind));
-}
-
 void ARMELFStreamer::EHReset() {
   ExTab = nullptr;
   FnStart = nullptr;
@@ -1221,9 +1248,7 @@ void ARMELFStreamer::emitFnEnd() {
     EmitPersonalityFixup(GetAEABIUnwindPersonalityName(PersonalityIndex));
 
   const MCSymbolRefExpr *FnStartRef =
-    MCSymbolRefExpr::create(FnStart,
-                            MCSymbolRefExpr::VK_ARM_PREL31,
-                            getContext());
+      MCSymbolRefExpr::create(FnStart, ARM::S_PREL31, getContext());
 
   emitValue(FnStartRef, 4);
 
@@ -1232,9 +1257,7 @@ void ARMELFStreamer::emitFnEnd() {
   } else if (ExTab) {
     // Emit a reference to the unwind opcodes in the ".ARM.extab" section.
     const MCSymbolRefExpr *ExTabEntryRef =
-      MCSymbolRefExpr::create(ExTab,
-                              MCSymbolRefExpr::VK_ARM_PREL31,
-                              getContext());
+        MCSymbolRefExpr::create(ExTab, ARM::S_PREL31, getContext());
     emitValue(ExTabEntryRef, 4);
   } else {
     // For the __aeabi_unwind_cpp_pr0, we have to emit the unwind opcodes in
@@ -1263,15 +1286,11 @@ void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }
 // Add the R_ARM_NONE fixup at the same position
 void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
   const MCSymbol *PersonalitySym = getContext().getOrCreateSymbol(Name);
+  visitUsedSymbol(*PersonalitySym);
 
-  const MCSymbolRefExpr *PersonalityRef = MCSymbolRefExpr::create(
-      PersonalitySym, MCSymbolRefExpr::VK_ARM_NONE, getContext());
-
-  visitUsedExpr(*PersonalityRef);
-  MCDataFragment *DF = getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
-                                            PersonalityRef,
-                                            MCFixup::getKindForSize(4, false)));
+  const MCSymbolRefExpr *PersonalityRef =
+      MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
+  addFixup(PersonalityRef, FK_Data_4);
 }
 
 void ARMELFStreamer::FlushPendingOffset() {
@@ -1311,10 +1330,8 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
 
   // Emit personality
   if (Personality) {
-    const MCSymbolRefExpr *PersonalityRef =
-      MCSymbolRefExpr::create(Personality,
-                              MCSymbolRefExpr::VK_ARM_PREL31,
-                              getContext());
+    const MCSymbolRefExpr *PersonalityRef = MCSymbolRefExpr::create(
+        Personality, uint16_t(ARM::S_PREL31), getContext());
 
     emitValue(PersonalityRef, 4);
   }
@@ -1353,7 +1370,7 @@ void ARMELFStreamer::emitPersonalityIndex(unsigned Index) {
   PersonalityIndex = Index;
 }
 
-void ARMELFStreamer::emitSetFP(unsigned NewFPReg, unsigned NewSPReg,
+void ARMELFStreamer::emitSetFP(MCRegister NewFPReg, MCRegister NewSPReg,
                                int64_t Offset) {
   assert((NewSPReg == ARM::SP || NewSPReg == FPReg) &&
          "the operand of .setfp directive should be either $sp or $fp");
@@ -1367,7 +1384,7 @@ void ARMELFStreamer::emitSetFP(unsigned NewFPReg, unsigned NewSPReg,
     FPOffset += Offset;
 }
 
-void ARMELFStreamer::emitMovSP(unsigned Reg, int64_t Offset) {
+void ARMELFStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {
   assert((Reg != ARM::SP && Reg != ARM::PC) &&
          "the operand of .movsp cannot be either sp or pc");
   assert(FPReg == ARM::SP && "current FP must be SP");
@@ -1392,17 +1409,17 @@ void ARMELFStreamer::emitPad(int64_t Offset) {
 
 static std::pair<unsigned, unsigned>
 collectHWRegs(const MCRegisterInfo &MRI, unsigned Idx,
-              const SmallVectorImpl<unsigned> &RegList, bool IsVector,
+              const SmallVectorImpl<MCRegister> &RegList, bool IsVector,
               uint32_t &Mask_) {
   uint32_t Mask = 0;
   unsigned Count = 0;
   while (Idx > 0) {
-    unsigned Reg = RegList[Idx - 1];
+    MCRegister Reg = RegList[Idx - 1];
     if (Reg == ARM::RA_AUTH_CODE)
       break;
-    Reg = MRI.getEncodingValue(Reg);
-    assert(Reg < (IsVector ? 32U : 16U) && "Register out of range");
-    unsigned Bit = (1u << Reg);
+    unsigned RegEnc = MRI.getEncodingValue(Reg);
+    assert(RegEnc < (IsVector ? 32U : 16U) && "Register out of range");
+    unsigned Bit = (1u << RegEnc);
     if ((Mask & Bit) == 0) {
       Mask |= Bit;
       ++Count;
@@ -1414,7 +1431,7 @@ collectHWRegs(const MCRegisterInfo &MRI, unsigned Idx,
   return {Idx, Count};
 }
 
-void ARMELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+void ARMELFStreamer::emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                                  bool IsVector) {
   uint32_t Mask;
   unsigned Idx, Count;
@@ -1462,9 +1479,8 @@ namespace llvm {
 
 MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS,
-                                             MCInstPrinter *InstPrint,
-                                             bool isVerboseAsm) {
-  return new ARMTargetAsmStreamer(S, OS, *InstPrint, isVerboseAsm);
+                                             MCInstPrinter *InstPrint) {
+  return new ARMTargetAsmStreamer(S, OS, *InstPrint);
 }
 
 MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S) {
@@ -1486,7 +1502,7 @@ MCELFStreamer *createARMELFStreamer(MCContext &Context,
   // FIXME: This should eventually end up somewhere else where more
   // intelligent flag decisions can be made. For now we are just maintaining
   // the status quo for ARM and setting EF_ARM_EABI_VER5 as the default.
-  S->getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
+  S->getWriter().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 
   return S;
 }

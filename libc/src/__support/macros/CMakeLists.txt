@@ -4,6 +4,9 @@ add_header_library(
   config
   HDRS
     config.h
+  DEPENDS
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
@@ -26,4 +29,13 @@ add_header_library(
     sanitizer.h
   DEPENDS
     libc.src.__support.macros.properties.compiler
+)
+
+add_header_library(
+  null_check
+  HDRS
+    null_check.h
+  DEPENDS
+    .config
+    .optimization
 )

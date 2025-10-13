@@ -1,23 +1,23 @@
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++23 %s modernize-use-std-print %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: true}}" \
+// RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: true}}" \
 // RUN:   -- -isystem %clang_tidy_headers
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++23 %s modernize-use-std-print %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: false}}" \
+// RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: false}}" \
 // RUN:   -- -isystem %clang_tidy_headers
 
 #include <cstdio>
 #include <string.h>
+#include <string>
 
 namespace absl
 {
-// Use const char * for the format since the real type is hard to mock up.
 template <typename... Args>
-int PrintF(const char *format, const Args&... args);
+int PrintF(const std::string_view &format, const Args&... args);
 
 template <typename... Args>
-int FPrintF(FILE* output, const char *format, const Args&... args);
+int FPrintF(FILE* output, const std::string_view &format, const Args&... args);
 }
 
 void printf_simple() {

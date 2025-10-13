@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -o - %s | FileCheck --check-prefixes=CHECK,CHECK-COMMON %s
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -O -o - %s | FileCheck %s --check-prefixes=CHECK-OPT,CHECK-COMMON
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -fno-strict-return -o - %s | FileCheck %s --check-prefixes=CHECK-NOSTRICT,CHECK-COMMON
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -Wno-error=return-type -o - %s | FileCheck --check-prefixes=CHECK,CHECK-COMMON %s
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -Wno-error=return-type -O -o - %s | FileCheck %s --check-prefixes=CHECK-OPT,CHECK-COMMON
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -fno-strict-return -Wno-error=return-type -o - %s | FileCheck %s --check-prefixes=CHECK-NOSTRICT,CHECK-COMMON
 // RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -fno-strict-return -Wno-return-type -o - %s | FileCheck %s --check-prefixes=CHECK-NOSTRICT,CHECK-COMMON
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -fno-strict-return -O -o - %s | FileCheck %s --check-prefixes=CHECK-NOSTRICT-OPT,CHECK-COMMON
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -fno-strict-return -Wno-error=return-type -O -o - %s | FileCheck %s --check-prefixes=CHECK-NOSTRICT-OPT,CHECK-COMMON
 
 // CHECK-COMMON-LABEL: @_Z9no_return
 int no_return() {

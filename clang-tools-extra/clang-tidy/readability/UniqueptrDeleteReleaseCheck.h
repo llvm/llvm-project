@@ -1,4 +1,4 @@
-//===--- UniqueptrDeleteReleaseCheck.h - clang-tidy--------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,10 +17,13 @@ namespace clang::tidy::readability {
 /// replaces them with: ``<unique_ptr expr> = nullptr;``
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/uniqueptr-delete-release.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/uniqueptr-delete-release.html
 class UniqueptrDeleteReleaseCheck : public ClangTidyCheck {
 public:
   UniqueptrDeleteReleaseCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

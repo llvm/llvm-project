@@ -95,39 +95,6 @@ rm ${OUTDIR}/memprof.cc
 rm ${OUTDIR}/pgo.exe
 rm ${OUTDIR}/memprof_pgo.profraw
 
-# Use musttail to simulate a missing leaf debug frame in the profiled binary.
-# Note we don't currently match onto explicit ::operator new calls, which is
-# why the non-musttail case uses implicit new (which doesn't support musttail).
-# Note that changes in the code below which affect relative line number
-# offsets of calls from their parent function can affect callsite matching in
-# the LLVM IR.
-cat > ${OUTDIR}/memprof_missing_leaf.cc << EOF
-#include <new>
-#ifndef USE_MUSTTAIL
-#define USE_MUSTTAIL 0
-#endif
-
-// clang::musttail requires that the argument signature matches that of the caller.
-void *bar(std::size_t s) {
-#if USE_MUSTTAIL
-  [[clang::musttail]] return ::operator new (s);
-#else
-  return new char[s];
-#endif
-}
-
-int main() {
-  char *a = (char *)bar(1);
-  delete a;
-  return 0;
-}
-EOF
-
-${CLANG} ${COMMON_FLAGS} -fmemory-profile -DUSE_MUSTTAIL=1 ${OUTDIR}/memprof_missing_leaf.cc -o ${OUTDIR}/memprof_missing_leaf.exe
-env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof_missing_leaf.exe > ${OUTDIR}/memprof_missing_leaf.memprofraw
-
-rm ${OUTDIR}/memprof_missing_leaf.cc
-
 cat > ${OUTDIR}/memprof_internal_linkage.cc << EOF
 #include <cstring>
 #include <unistd.h>

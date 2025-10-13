@@ -97,15 +97,15 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
-extern volatile int YAMLGeneratorAnchorSource;
-extern volatile int MDGeneratorAnchorSource;
-extern volatile int HTMLGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED YAMLGeneratorAnchorDest =
     YAMLGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
     MDGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED HTMLGeneratorAnchorDest =
     HTMLGeneratorAnchorSource;
-
+static int LLVM_ATTRIBUTE_UNUSED MHTMLGeneratorAnchorDest =
+    MHTMLGeneratorAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED JSONGeneratorAnchorDest =
+    JSONGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

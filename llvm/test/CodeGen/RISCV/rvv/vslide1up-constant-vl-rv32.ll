@@ -26,7 +26,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl1(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 1)
@@ -51,13 +51,13 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2(<vscal
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 2)
@@ -84,13 +84,13 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl3(<vscal
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl3:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 3)
@@ -117,13 +117,13 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl8(<vscal
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl8:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 8)
@@ -152,13 +152,13 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl9(<vscal
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl9:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 9)
@@ -187,13 +187,13 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl15(<vsca
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl15:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 15)
@@ -213,20 +213,20 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl16(<vsca
 ;
 ; CHECK-512-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl16:
 ; CHECK-512:       # %bb.0: # %entry
-; CHECK-512-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-512-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-512-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-512-NEXT:    ret
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl16:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 16)
@@ -247,20 +247,20 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2047(<vs
 ;
 ; CHECK-512-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2047:
 ; CHECK-512:       # %bb.0: # %entry
-; CHECK-512-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-512-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-512-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-512-NEXT:    ret
 ;
 ; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2047:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
 ; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 2047)
@@ -269,15 +269,29 @@ entry:
 }
 
 define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2048(<vscale x 1 x i64> %0, i64 %1) nounwind {
-; CHECK-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2048:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a1
-; CHECK-NEXT:    vslide1up.vx v8, v9, a0
-; CHECK-NEXT:    ret
+; CHECK-128-65536-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2048:
+; CHECK-128-65536:       # %bb.0: # %entry
+; CHECK-128-65536-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-128-65536-NEXT:    vslide1up.vx v9, v8, a1
+; CHECK-128-65536-NEXT:    vslide1up.vx v8, v9, a0
+; CHECK-128-65536-NEXT:    ret
+;
+; CHECK-512-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2048:
+; CHECK-512:       # %bb.0: # %entry
+; CHECK-512-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
+; CHECK-512-NEXT:    vslide1up.vx v9, v8, a1
+; CHECK-512-NEXT:    vslide1up.vx v8, v9, a0
+; CHECK-512-NEXT:    ret
+;
+; CHECK-64-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64_vl2048:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-64-NEXT:    vslide1up.vx v9, v8, a1
+; CHECK-64-NEXT:    vslide1up.vx v8, v9, a0
+; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 2048)

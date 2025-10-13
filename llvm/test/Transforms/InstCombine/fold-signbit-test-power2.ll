@@ -38,8 +38,8 @@ define i1 @pow2_or_zero_is_negative_commute(i8 %A) {
 
 define <2 x i1> @pow2_or_zero_is_negative_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @pow2_or_zero_is_negative_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp eq <2 x i8> [[X]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], splat (i8 -128)
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp eq <2 x i8> [[X]], splat (i8 -128)
 ; CHECK-NEXT:    call void @use_i1_vec(<2 x i1> [[CMP_2]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -53,8 +53,8 @@ define <2 x i1> @pow2_or_zero_is_negative_vec(<2 x i8> %x) {
 
 define <2 x i1> @pow2_or_zero_is_negative_vec_commute(<2 x i8> %A) {
 ; CHECK-LABEL: @pow2_or_zero_is_negative_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[A:%.*]], <i8 42, i8 42>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[A:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = mul <2 x i8> <i8 42, i8 42>, %A ; thwart complexity-based canonicalization
@@ -94,8 +94,8 @@ define i1 @pow2_or_zero_is_not_negative_commute(i8 %A) {
 
 define <2 x i1> @pow2_or_zero_is_not_negative_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @pow2_or_zero_is_not_negative_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ne <2 x i8> [[X]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X:%.*]], splat (i8 -128)
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ne <2 x i8> [[X]], splat (i8 -128)
 ; CHECK-NEXT:    call void @use_i1_vec(<2 x i1> [[CMP_2]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -109,8 +109,8 @@ define <2 x i1> @pow2_or_zero_is_not_negative_vec(<2 x i8> %x) {
 
 define <2 x i1> @pow2_or_zero_is_not_negative_vec_commute(<2 x i8> %A) {
 ; CHECK-LABEL: @pow2_or_zero_is_not_negative_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[A:%.*]], <i8 42, i8 42>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[A:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = mul <2 x i8> <i8 42, i8 42>, %A ; thwart complexity-based canonicalization
@@ -124,7 +124,7 @@ define i1 @pow2_or_zero_is_negative_extra_use(i8 %x) {
 ; CHECK-LABEL: @pow2_or_zero_is_negative_extra_use(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[NEG]])
-; CHECK-NEXT:    [[POW2_OR_ZERO:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    [[POW2_OR_ZERO:%.*]] = and i8 [[X]], [[NEG]]
 ; CHECK-NEXT:    call void @use(i8 [[POW2_OR_ZERO]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], -128
 ; CHECK-NEXT:    ret i1 [[CMP]]

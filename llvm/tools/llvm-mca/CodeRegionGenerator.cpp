@@ -41,14 +41,13 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // doesn't show up in the llvm-mca output.
   raw_ostream &OSRef = nulls();
   formatted_raw_ostream FOSRef(OSRef);
-  TheTarget.createAsmTargetStreamer(*Str, FOSRef, IP.get(),
-                                    /*IsVerboseAsm=*/true);
+  TheTarget.createAsmTargetStreamer(*Str, FOSRef, IP.get());
 
   // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
   // comments.
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(Regions.getSourceMgr(), Ctx, *Str, MAI));
-  MCAsmLexer &Lexer = Parser->getLexer();
+  AsmLexer &Lexer = Parser->getLexer();
   MCACommentConsumer *CCP = getCommentConsumer();
   Lexer.setCommentConsumer(CCP);
   // Enable support for MASM literal numbers (example: 05h, 101b).

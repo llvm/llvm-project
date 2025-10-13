@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -27,7 +28,7 @@ namespace llvm {
 class MCRegisterInfo;
 class Triple;
 
-class MCInstrAnalysis {
+class LLVM_ABI MCInstrAnalysis {
 protected:
   friend class Target;
 
@@ -80,13 +81,17 @@ public:
     return Info->get(Inst.getOpcode()).isTerminator();
   }
 
+  virtual bool isBarrier(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).isBarrier();
+  }
+
   virtual bool mayAffectControlFlow(const MCInst &Inst,
                                     const MCRegisterInfo &MCRI) const {
     if (isBranch(Inst) || isCall(Inst) || isReturn(Inst) ||
         isIndirectBranch(Inst))
       return true;
-    unsigned PC = MCRI.getProgramCounter();
-    if (PC == 0)
+    MCRegister PC = MCRI.getProgramCounter();
+    if (!PC)
       return false;
     return Info->get(Inst.getOpcode()).hasDefOfPhysReg(Inst, PC, MCRI);
   }
@@ -195,7 +200,7 @@ public:
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const {
+                 const MCSubtargetInfo &STI) const {
     return {};
   }
 };

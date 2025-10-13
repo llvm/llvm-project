@@ -41,12 +41,6 @@ STATISTIC(numIfPatternMatch,        "CFGStructurizer number of if pattern "
 STATISTIC(numClonedBlock,           "CFGStructurizer cloned blocks");
 STATISTIC(numClonedInstr,           "CFGStructurizer cloned instructions");
 
-namespace llvm {
-
-void initializeR600MachineCFGStructurizerPass(PassRegistry &);
-
-} // end namespace llvm
-
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -104,9 +98,7 @@ public:
 
   static char ID;
 
-  R600MachineCFGStructurizer() : MachineFunctionPass(ID) {
-    initializeR600MachineCFGStructurizerPass(*PassRegistry::getPassRegistry());
-  }
+  R600MachineCFGStructurizer() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "AMDGPU Control Flow Graph structurizer Pass";
@@ -129,8 +121,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // FIXME: This pass causes verification failures.
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::FailsVerification);
+    MF.getProperties().setFailsVerification();
 
     TII = MF.getSubtarget<R600Subtarget>().getInstrInfo();
     TRI = &TII->getRegisterInfo();
@@ -598,7 +589,7 @@ MachineInstr *R600MachineCFGStructurizer::getLoopendBlockBranchInstr(
     if (MI) {
       if (isCondBranch(MI) || isUncondBranch(MI))
         return MI;
-      else if (!TII->isMov(MI->getOpcode()))
+      if (!TII->isMov(MI->getOpcode()))
         break;
     }
   }
@@ -669,8 +660,8 @@ void R600MachineCFGStructurizer::wrapup(MachineBasicBlock *MBB) {
    }
 
    //delete continue right before endloop
-   for (unsigned i = 0; i < ContInstr.size(); ++i)
-      ContInstr[i]->eraseFromParent();
+   for (auto *MI : ContInstr)
+     MI->eraseFromParent();
 
    // TODO to fix up jump table so later phase won't be confused.  if
    // (jumpTableInfo->isEmpty() == false) { need to clean the jump table, but
@@ -1013,9 +1004,7 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   // We assume a single ExitBlk
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
-  SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet;
-  for (MachineBasicBlock *MBB : ExitBlks)
-    ExitBlkSet.insert(MBB);
+  SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet(llvm::from_range, ExitBlks);
   assert(ExitBlkSet.size() == 1);
   MachineBasicBlock *ExitBlk = *ExitBlks.begin();
   assert(ExitBlk && "Loop has several exit block");

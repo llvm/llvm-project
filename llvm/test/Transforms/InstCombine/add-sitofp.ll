@@ -99,12 +99,15 @@ define float @test_3(i32 %a, i32 %b) {
   ret float %p
 }
 
+; Don't perform the fold on vector operations, as the integer op may be
+; much more expensive than the float op in that case.
 define <4 x double> @test_4(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @test_4(
-; CHECK-NEXT:    [[A_AND:%.*]] = and <4 x i32> [[A:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[B_AND:%.*]] = and <4 x i32> [[B:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i32> [[A_AND]], [[B_AND]]
-; CHECK-NEXT:    [[RES:%.*]] = uitofp nneg <4 x i32> [[TMP1]] to <4 x double>
+; CHECK-NEXT:    [[A_AND:%.*]] = and <4 x i32> [[A:%.*]], splat (i32 1073741823)
+; CHECK-NEXT:    [[B_AND:%.*]] = and <4 x i32> [[B:%.*]], splat (i32 1073741823)
+; CHECK-NEXT:    [[A_AND_FP:%.*]] = uitofp nneg <4 x i32> [[A_AND]] to <4 x double>
+; CHECK-NEXT:    [[B_AND_FP:%.*]] = uitofp nneg <4 x i32> [[B_AND]] to <4 x double>
+; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x double> [[A_AND_FP]], [[B_AND_FP]]
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   ; Drop two highest bits to guarantee that %a + %b doesn't overflow
@@ -120,8 +123,8 @@ define <4 x double> @test_4(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x float> @test_4_neg(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @test_4_neg(
-; CHECK-NEXT:    [[A_AND:%.*]] = and <4 x i32> [[A:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[B_AND:%.*]] = and <4 x i32> [[B:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
+; CHECK-NEXT:    [[A_AND:%.*]] = and <4 x i32> [[A:%.*]], splat (i32 1073741823)
+; CHECK-NEXT:    [[B_AND:%.*]] = and <4 x i32> [[B:%.*]], splat (i32 1073741823)
 ; CHECK-NEXT:    [[A_AND_FP:%.*]] = uitofp nneg <4 x i32> [[A_AND]] to <4 x float>
 ; CHECK-NEXT:    [[B_AND_FP:%.*]] = uitofp nneg <4 x i32> [[B_AND]] to <4 x float>
 ; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[A_AND_FP]], [[B_AND_FP]]

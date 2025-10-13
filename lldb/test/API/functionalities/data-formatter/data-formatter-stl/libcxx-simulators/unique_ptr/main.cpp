@@ -1,5 +1,7 @@
 #include <libcxx-simulators-common/compressed_pair.h>
 
+#include <stdio.h>
+
 namespace std {
 namespace __lldb {
 template <class _Tp> struct default_delete {
@@ -14,9 +16,14 @@ public:
   typedef _Dp deleter_type;
   typedef _Tp *pointer;
 
+#if COMPRESSED_PAIR_REV == 0
   std::__lldb::__compressed_pair<pointer, deleter_type> __ptr_;
   explicit unique_ptr(pointer __p) noexcept
       : __ptr_(__p, std::__lldb::__value_init_tag()) {}
+#else
+  _LLDB_COMPRESSED_PAIR(pointer, __ptr_, deleter_type, __deleter_);
+  explicit unique_ptr(pointer __p) noexcept : __ptr_(__p), __deleter_() {}
+#endif
 };
 } // namespace __lldb
 } // namespace std

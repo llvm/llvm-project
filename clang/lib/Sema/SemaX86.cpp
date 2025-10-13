@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaX86.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -45,6 +46,14 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvttsh2si64:
   case X86::BI__builtin_ia32_vcvttsh2usi32:
   case X86::BI__builtin_ia32_vcvttsh2usi64:
+  case X86::BI__builtin_ia32_vcvttsd2sis32:
+  case X86::BI__builtin_ia32_vcvttsd2usis32:
+  case X86::BI__builtin_ia32_vcvttss2sis32:
+  case X86::BI__builtin_ia32_vcvttss2usis32:
+  case X86::BI__builtin_ia32_vcvttsd2sis64:
+  case X86::BI__builtin_ia32_vcvttsd2usis64:
+  case X86::BI__builtin_ia32_vcvttss2sis64:
+  case X86::BI__builtin_ia32_vcvttss2usis64:
     ArgNum = 1;
     break;
   case X86::BI__builtin_ia32_maxpd512:
@@ -79,6 +88,10 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcomiss:
   case X86::BI__builtin_ia32_vcomish:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask:
+  case X86::BI__builtin_ia32_vcvttph2ibs512_mask:
+  case X86::BI__builtin_ia32_vcvttph2iubs512_mask:
+  case X86::BI__builtin_ia32_vcvttps2ibs512_mask:
+  case X86::BI__builtin_ia32_vcvttps2iubs512_mask:
     ArgNum = 3;
     break;
   case X86::BI__builtin_ia32_cmppd512_mask:
@@ -130,6 +143,12 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_rndscalesd_round_mask:
   case X86::BI__builtin_ia32_rndscaless_round_mask:
   case X86::BI__builtin_ia32_rndscalesh_round_mask:
+  case X86::BI__builtin_ia32_vminmaxpd512_round_mask:
+  case X86::BI__builtin_ia32_vminmaxps512_round_mask:
+  case X86::BI__builtin_ia32_vminmaxph512_round_mask:
+  case X86::BI__builtin_ia32_vminmaxsd_round_mask:
+  case X86::BI__builtin_ia32_vminmaxsh_round_mask:
+  case X86::BI__builtin_ia32_vminmaxss_round_mask:
     ArgNum = 5;
     break;
   case X86::BI__builtin_ia32_vcvtsd2si64:
@@ -204,6 +223,10 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvtph2uqq512_mask:
   case X86::BI__builtin_ia32_vcvtqq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtph2ibs512_mask:
+  case X86::BI__builtin_ia32_vcvtph2iubs512_mask:
+  case X86::BI__builtin_ia32_vcvtps2ibs512_mask:
+  case X86::BI__builtin_ia32_vcvtps2iubs512_mask:
     ArgNum = 3;
     HasRC = true;
     break;
@@ -280,8 +303,19 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vfmulcph512_mask:
   case X86::BI__builtin_ia32_vfcmulcsh_mask:
   case X86::BI__builtin_ia32_vfcmulcph512_mask:
+  case X86::BI__builtin_ia32_vcvt2ps2phx512_mask:
     ArgNum = 4;
     HasRC = true;
+    break;
+  case X86::BI__builtin_ia32_vcvttpd2dqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2udqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2qqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2uqqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2dqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2udqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2qqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2uqqs512_round_mask:
+    ArgNum = 3;
     break;
   }
 
@@ -451,8 +485,24 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
     return false;
   case X86::BI__builtin_ia32_tileloadd64:
   case X86::BI__builtin_ia32_tileloaddt164:
+  case X86::BI__builtin_ia32_tileloaddrs64:
+  case X86::BI__builtin_ia32_tileloaddrst164:
   case X86::BI__builtin_ia32_tilestored64:
   case X86::BI__builtin_ia32_tilezero:
+  case X86::BI__builtin_ia32_t2rpntlvwz0:
+  case X86::BI__builtin_ia32_t2rpntlvwz0t1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1t1:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rst1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rs:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rst1:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rs:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16h:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16l:
+  case X86::BI__builtin_ia32_tcvtrowps2phh:
+  case X86::BI__builtin_ia32_tcvtrowps2phl:
+  case X86::BI__builtin_ia32_tcvtrowd2ps:
+  case X86::BI__builtin_ia32_tilemovrow:
     return CheckBuiltinTileArgumentsRange(TheCall, 0);
   case X86::BI__builtin_ia32_tdpbssd:
   case X86::BI__builtin_ia32_tdpbsud:
@@ -462,7 +512,21 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tdpfp16ps:
   case X86::BI__builtin_ia32_tcmmimfp16ps:
   case X86::BI__builtin_ia32_tcmmrlfp16ps:
+  case X86::BI__builtin_ia32_tdpbf8ps:
+  case X86::BI__builtin_ia32_tdpbhf8ps:
+  case X86::BI__builtin_ia32_tdphbf8ps:
+  case X86::BI__builtin_ia32_tdphf8ps:
+  case X86::BI__builtin_ia32_ttdpbf16ps:
+  case X86::BI__builtin_ia32_ttdpfp16ps:
+  case X86::BI__builtin_ia32_ttcmmimfp16ps:
+  case X86::BI__builtin_ia32_ttcmmrlfp16ps:
+  case X86::BI__builtin_ia32_tconjtcmmimfp16ps:
+  case X86::BI__builtin_ia32_tmmultf32ps:
+  case X86::BI__builtin_ia32_ttmmultf32ps:
     return CheckBuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
+  case X86::BI__builtin_ia32_ttransposed:
+  case X86::BI__builtin_ia32_tconjtfp16:
+    return CheckBuiltinTileArgumentsRange(TheCall, {0, 1});
   }
 }
 static bool isX86_32Builtin(unsigned BuiltinID) {
@@ -502,7 +566,6 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return false;
-  case X86::BI__builtin_ia32_vec_ext_v2si:
   case X86::BI__builtin_ia32_vec_ext_v2di:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
@@ -715,6 +778,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_rndscaleps_mask:
   case X86::BI__builtin_ia32_rndscalepd_mask:
   case X86::BI__builtin_ia32_rndscaleph_mask:
+  case X86::BI__builtin_ia32_vrndscalebf16_128_mask:
+  case X86::BI__builtin_ia32_vrndscalebf16_256_mask:
+  case X86::BI__builtin_ia32_vrndscalebf16_mask:
   case X86::BI__builtin_ia32_reducepd128_mask:
   case X86::BI__builtin_ia32_reducepd256_mask:
   case X86::BI__builtin_ia32_reducepd512_mask:
@@ -724,6 +790,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_reduceph128_mask:
   case X86::BI__builtin_ia32_reduceph256_mask:
   case X86::BI__builtin_ia32_reduceph512_mask:
+  case X86::BI__builtin_ia32_vreducebf16128_mask:
+  case X86::BI__builtin_ia32_vreducebf16256_mask:
+  case X86::BI__builtin_ia32_vreducebf16512_mask:
   case X86::BI__builtin_ia32_prold512:
   case X86::BI__builtin_ia32_prolq512:
   case X86::BI__builtin_ia32_prold128:
@@ -745,6 +814,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_fpclassph128_mask:
   case X86::BI__builtin_ia32_fpclassph256_mask:
   case X86::BI__builtin_ia32_fpclassph512_mask:
+  case X86::BI__builtin_ia32_vfpclassbf16128_mask:
+  case X86::BI__builtin_ia32_vfpclassbf16256_mask:
+  case X86::BI__builtin_ia32_vfpclassbf16512_mask:
   case X86::BI__builtin_ia32_fpclasssd_mask:
   case X86::BI__builtin_ia32_fpclassss_mask:
   case X86::BI__builtin_ia32_fpclasssh_mask:
@@ -814,6 +886,21 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
+  case X86::BI__builtin_ia32_vminmaxbf16128:
+  case X86::BI__builtin_ia32_vminmaxbf16256:
+  case X86::BI__builtin_ia32_vminmaxbf16512:
+  case X86::BI__builtin_ia32_vminmaxpd128_mask:
+  case X86::BI__builtin_ia32_vminmaxpd256_mask:
+  case X86::BI__builtin_ia32_vminmaxph128_mask:
+  case X86::BI__builtin_ia32_vminmaxph256_mask:
+  case X86::BI__builtin_ia32_vminmaxps128_mask:
+  case X86::BI__builtin_ia32_vminmaxps256_mask:
+  case X86::BI__builtin_ia32_vminmaxpd512_round_mask:
+  case X86::BI__builtin_ia32_vminmaxps512_round_mask:
+  case X86::BI__builtin_ia32_vminmaxph512_round_mask:
+  case X86::BI__builtin_ia32_vminmaxsd_round_mask:
+  case X86::BI__builtin_ia32_vminmaxsh_round_mask:
+  case X86::BI__builtin_ia32_vminmaxss_round_mask:
     i = 2;
     l = 0;
     u = 255;
@@ -866,6 +953,11 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     i = 3;
     l = 0;
     u = 15;
+    break;
+  case X86::BI__builtin_ia32_prefetchi:
+    i = 1;
+    l = 2; // _MM_HINT_T1
+    u = 3; // _MM_HINT_T0
     break;
   }
 
@@ -967,6 +1059,63 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
+}
+
+bool SemaX86::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  bool HasComma = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty() || Param.ends_with(','))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param.contains(','))
+      HasComma = true;
+
+    StringRef LHS;
+    StringRef RHS = Param;
+    do {
+      std::tie(LHS, RHS) = RHS.split(',');
+      LHS = LHS.trim();
+      const SourceLocation &CurLoc =
+          Loc.getLocWithOffset(LHS.data() - Param.data());
+
+      if (LHS.starts_with("arch=")) {
+        if (!getASTContext().getTargetInfo().isValidCPUName(
+                LHS.drop_front(sizeof("arch=") - 1)))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << CPU << LHS.drop_front(sizeof("arch=") - 1)
+                 << TargetClones;
+      } else if (LHS == "default")
+        HasDefault = true;
+      else if (!getASTContext().getTargetInfo().isValidFeatureName(LHS) ||
+               getASTContext().getTargetInfo().getFMVPriority(LHS) == 0)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << LHS << TargetClones;
+
+      if (llvm::is_contained(NewParams, LHS))
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      // Note: Add even if there are duplicates, since it changes name mangling.
+      NewParams.push_back(LHS);
+    } while (!RHS.empty());
+  }
+  if (HasComma && Params.size() > 1)
+    Diag(Locs[0], diag::warn_target_clone_mixed_values);
+
+  if (!HasDefault)
+    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+
+  return false;
 }
 
 } // namespace clang

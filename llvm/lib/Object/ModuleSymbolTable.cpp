@@ -14,7 +14,6 @@
 
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -42,7 +41,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -80,20 +78,19 @@ initializeRecordStreamer(const Module &M,
 
   std::string Err;
   const Triple TT(M.getTargetTriple());
-  const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
+  const Target *T = TargetRegistry::lookupTarget(TT, Err);
   assert(T && T->hasMCAsmParser());
 
-  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT.str()));
+  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT));
   if (!MRI)
     return;
 
   MCTargetOptions MCOptions;
-  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT.str(), MCOptions));
+  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
     return;
 
-  std::unique_ptr<MCSubtargetInfo> STI(
-      T->createMCSubtargetInfo(TT.str(), "", ""));
+  std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(TT, "", ""));
   if (!STI)
     return;
 
@@ -109,7 +106,6 @@ initializeRecordStreamer(const Module &M,
   MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
-  MOFI->setSDKVersion(M.getSDKVersion());
   MCCtx.setObjectFileInfo(MOFI.get());
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);

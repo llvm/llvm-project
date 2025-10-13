@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; RUN: opt -passes=debugify,instcombine -S < %s | FileCheck %s -check-prefix DBGINFO
 
-; RUN: opt -passes=debugify,instcombine -S < %s --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DBGINFO
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32"
 
@@ -73,10 +72,10 @@ define i8 @select2(i1 %cond, i8 %x, i8 %y, i8 %z) {
 ; DBGINFO-NEXT:      #dbg_value(i8 [[Z:%.*]], [[META39:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), [[META45:![0-9]+]])
 ; DBGINFO-NEXT:    [[D:%.*]] = add i8 [[X]], [[Y]], !dbg [[DBG46:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(!DIArgList(i8 [[X]], i8 [[Y]]), [[META40:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_plus, DW_OP_stack_value), [[DBG46]])
-; DBGINFO-NEXT:    [[E:%.*]] = select i1 [[COND:%.*]], i8 [[Z]], i8 [[D]], !dbg [[DBG47:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i32 poison, [[META41:![0-9]+]], !DIExpression(), [[DBG47]])
-; DBGINFO-NEXT:      #dbg_value(i8 [[E]], [[META42:![0-9]+]], !DIExpression(), [[META48:![0-9]+]])
-; DBGINFO-NEXT:    ret i8 [[E]], !dbg [[DBG49:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 poison, [[META41:![0-9]+]], !DIExpression(), [[META47:![0-9]+]])
+; DBGINFO-NEXT:    [[F:%.*]] = select i1 [[COND:%.*]], i8 [[Z]], i8 [[D]], !dbg [[META47]]
+; DBGINFO-NEXT:      #dbg_value(i8 [[F]], [[META42:![0-9]+]], !DIExpression(), [[META48:![0-9]+]])
+; DBGINFO-NEXT:    ret i8 [[F]], !dbg [[DBG49:![0-9]+]]
 ;
   %A = zext i8 %x to i32
   %B = zext i8 %y to i32
@@ -196,7 +195,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    unreachable
@@ -228,7 +227,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:      #dbg_value(i8 [[H]], [[META91:![0-9]+]], !DIExpression(), [[DBG100]])
 ; DBGINFO-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32, !dbg [[DBG101:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(i32 [[CONV]], [[META92:![0-9]+]], !DIExpression(), [[DBG101]])
-; DBGINFO-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]], !dbg [[DBG102:![0-9]+]]
+; DBGINFO-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]], !dbg [[DBG102:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(i1 [[CMP]], [[META93:![0-9]+]], !DIExpression(), [[DBG102]])
 ; DBGINFO-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]], !dbg [[DBG103:![0-9]+]]
 ; DBGINFO:       exit2:

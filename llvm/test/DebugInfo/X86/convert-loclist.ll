@@ -5,6 +5,13 @@
 ; RUN: llc -mtriple=x86_64 -split-dwarf-file=foo.dwo -filetype=asm -dwarf-op-convert=Enable < %s \
 ; RUN:   | FileCheck --check-prefix=ASM %s
 
+; RUN: llc -mtriple=x86_64-mingw -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
+; RUN: llc -mtriple=x86_64-mingw -split-dwarf-file=foo.dwo -filetype=obj -dwarf-op-convert=Enable < %s \
+; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck --check-prefix=SPLIT --check-prefix=CHECK %s
+; RUN: llc -mtriple=x86_64-mingw -split-dwarf-file=foo.dwo -filetype=asm -dwarf-op-convert=Enable < %s \
+; RUN:   | FileCheck --check-prefix=ASM %s
+
 ; A bit of a brittle test - this is testing the specific DWO_id. The
 ; alternative would be to test two files with different DW_OP_convert values &
 ; ensuring the DWO IDs differ when the DW_OP_convert parameter differs.
@@ -13,7 +20,7 @@
 ; often - add another IR file with a different DW_OP_convert that's otherwise
 ; identical and demonstrate that they have different DWO IDs.
 
-; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0x4dbee91db55385db
+; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0x6f8c6730fe6cbff0
 
 ; Regression testing a fairly quirky bug where instead of hashing (see above),
 ; extra bytes would be emitted into the output assembly in no

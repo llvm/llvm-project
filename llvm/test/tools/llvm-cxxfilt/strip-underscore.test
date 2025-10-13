@@ -1,17 +1,23 @@
-## Show the behaviour of --[no-]strip-underscore. This test does not test
-## the platform-specific default behaviour. This is tested elsewhere.
+## Show the behaviour of --[no-]strip-underscore.
 
-RUN: llvm-cxxfilt -_ __ZN2ns1fE _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-STRIPPED
-RUN: llvm-cxxfilt --strip-underscore __ZN2ns1fE _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-STRIPPED
-RUN: llvm-cxxfilt -n __ZN2ns1fE _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-UNSTRIPPED
-RUN: llvm-cxxfilt --no-strip-underscore __ZN2ns1fE _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-UNSTRIPPED
+RUN: llvm-cxxfilt -_ ___ZN2ns1fE _____Z1fi_block_invoke _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-STRIPPED
+RUN: llvm-cxxfilt --strip-underscore __ZN2ns1fE _____Z1fi_block_invoke _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-STRIPPED
+RUN: llvm-cxxfilt -n ___ZN2ns1fE _____Z1fi_block_invoke _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-UNSTRIPPED
+RUN: llvm-cxxfilt --no-strip-underscore ___ZN2ns1fE _____Z1fi_block_invoke _ZSt1f _f _._Z3f.0v | FileCheck %s -check-prefix CHECK-UNSTRIPPED
+RUN: llvm-cxxfilt -n -_ _ZSt1f | FileCheck %s -check-prefix OVERRIDE-STRIPPED
+RUN: llvm-cxxfilt -_ -n _ZSt1f | FileCheck %s -check-prefix OVERRIDE-UNSTRIPPED
 
 CHECK-STRIPPED: ns::f
+CHECK-STRIPPED: invocation function for block in f(int)
 CHECK-STRIPPED: _ZSt1f
 CHECK-STRIPPED: _f
 CHECK-STRIPPED: ._Z3f.0v
 
-CHECK-UNSTRIPPED: __ZN2ns1fE
+CHECK-UNSTRIPPED: ___ZN2ns1fE
+CHECK-UNSTRIPPED: _____Z1fi_block_invoke
 CHECK-UNSTRIPPED: std::f
 CHECK-UNSTRIPPED: _f
 CHECK-UNSTRIPPED: _._Z3f.0v
+
+OVERRIDE-STRIPPED:   _ZSt1f
+OVERRIDE-UNSTRIPPED: std::f

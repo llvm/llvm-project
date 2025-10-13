@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/nanl.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <signal.h>
 
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_LONG_DOUBLE(val, _, __) val
@@ -32,7 +32,7 @@ public:
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanlTest, NCharSeq) {
@@ -70,8 +70,8 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
   run_test("123 ", expected);
 }
 
-#ifndef LIBC_HAVE_ADDRESS_SANITIZER
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST_F(LlvmLibcNanlTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAVE_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

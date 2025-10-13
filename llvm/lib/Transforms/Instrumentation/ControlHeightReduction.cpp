@@ -34,7 +34,6 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -281,8 +280,7 @@ class CHRScope {
 
  private:
    CHRScope(ArrayRef<RegInfo> RegInfosIn, ArrayRef<CHRScope *> SubsIn)
-       : RegInfos(RegInfosIn.begin(), RegInfosIn.end()),
-         Subs(SubsIn.begin(), SubsIn.end()), BranchInsertPoint(nullptr) {}
+       : RegInfos(RegInfosIn), Subs(SubsIn), BranchInsertPoint(nullptr) {}
 };
 
 class CHR {
@@ -564,7 +562,7 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
       if (AllOpsHoisted) {
         CHR_DEBUG(dbgs() << "checkHoistValue " << *I << "\n");
         if (HoistStops)
-          HoistStops->insert(OpsHoistStops.begin(), OpsHoistStops.end());
+          HoistStops->insert_range(OpsHoistStops);
         Visited[I] = true;
         return true;
       }
@@ -883,11 +881,8 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     // Avoid a data dependence from a select or a branch to a(nother)
     // select. Note no instruction can't data-depend on a branch (a branch
     // instruction doesn't produce a value).
-    DenseSet<Instruction *> Unhoistables;
     // Initialize Unhoistables with the selects.
-    for (SelectInst *SI : Selects) {
-      Unhoistables.insert(SI);
-    }
+    DenseSet<Instruction *> Unhoistables(llvm::from_range, Selects);
     // Remove Selects that can't be hoisted.
     for (auto it = Selects.begin(); it != Selects.end(); ) {
       SelectInst *SI = *it;
@@ -1106,8 +1101,7 @@ static bool shouldSplit(Instruction *InsertPoint,
 static void getSelectsInScope(CHRScope *Scope,
                               DenseSet<Instruction *> &Output) {
   for (RegInfo &RI : Scope->RegInfos)
-    for (SelectInst *SI : RI.Selects)
-      Output.insert(SI);
+    Output.insert_range(RI.Selects);
   for (CHRScope *Sub : Scope->Subs)
     getSelectsInScope(Sub, Output);
 }
@@ -1178,8 +1172,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
           // point. Union the bases.
           PrevSplitFromOuter = false;
           PrevConditionValues = *OuterConditionValues;
-          PrevConditionValues.insert(ConditionValues.begin(),
-                                     ConditionValues.end());
+          PrevConditionValues.insert_range(ConditionValues);
           PrevInsertPoint = OuterInsertPoint;
         }
       } else {
@@ -1211,7 +1204,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
         });
       } else {
         // Not splitting. Union the bases. Keep the hoist point.
-        PrevConditionValues.insert(ConditionValues.begin(), ConditionValues.end());
+        PrevConditionValues.insert_range(ConditionValues);
       }
     }
   }
@@ -1373,11 +1366,8 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
   // Put the biased selects in Unhoistables because they should stay where they
   // are and constant-folded after CHR (in case one biased select or a branch
   // can depend on another biased select.)
-  for (RegInfo &RI : Scope->RegInfos) {
-    for (SelectInst *SI : RI.Selects) {
-      Unhoistables.insert(SI);
-    }
-  }
+  for (RegInfo &RI : Scope->RegInfos)
+    Unhoistables.insert_range(RI.Selects);
   Instruction *InsertPoint = OutermostScope->BranchInsertPoint;
   for (RegInfo &RI : Scope->RegInfos) {
     Region *R = RI.R;
@@ -1470,7 +1460,7 @@ static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
     for (Value *Op : I->operands()) {
       hoistValue(Op, HoistPoint, R, HoistStopMap, HoistedSet, TrivialPHIs, DT);
     }
-    I->moveBefore(HoistPoint);
+    I->moveBefore(HoistPoint->getIterator());
     HoistedSet.insert(I);
     CHR_DEBUG(dbgs() << "hoistValue " << *I << "\n");
   }
@@ -1601,13 +1591,30 @@ static void insertTrivialPHIs(CHRScope *Scope,
         }
         TrivialPHIs.insert(PN);
         CHR_DEBUG(dbgs() << "Insert phi " << *PN << "\n");
+        bool FoundLifetimeAnnotation = false;
         for (Instruction *UI : Users) {
+          // If we found a lifetime annotation, remove it, but set a flag
+          // to ensure that we remove all other lifetime annotations attached
+          // to the alloca.
+          if (UI->isLifetimeStartOrEnd()) {
+            UI->eraseFromParent();
+            FoundLifetimeAnnotation = true;
+            continue;
+          }
           for (unsigned J = 0, NumOps = UI->getNumOperands(); J < NumOps; ++J) {
             if (UI->getOperand(J) == &I) {
               UI->setOperand(J, PN);
             }
           }
           CHR_DEBUG(dbgs() << "Updated user " << *UI << "\n");
+        }
+        // Erase any leftover lifetime annotations for a dynamic alloca.
+        if (FoundLifetimeAnnotation) {
+          for (User *U : make_early_inc_range(I.users())) {
+            if (auto *UI = dyn_cast<Instruction>(U))
+              if (UI->isLifetimeStartOrEnd())
+                UI->eraseFromParent();
+          }
         }
       }
     }
@@ -1703,14 +1710,12 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   BasicBlock *ExitBlock = LastRegion->getExit();
   std::optional<uint64_t> ProfileCount = BFI.getBlockProfileCount(EntryBlock);
 
-  if (ExitBlock) {
-    // Insert a trivial phi at the exit block (where the CHR hot path and the
-    // cold path merges) for a value that's defined in the scope but used
-    // outside it (meaning it's alive at the exit block). We will add the
-    // incoming values for the CHR cold paths to it below. Without this, we'd
-    // miss updating phi's for such values unless there happens to already be a
-    // phi for that value there.
-    insertTrivialPHIs(Scope, EntryBlock, ExitBlock, TrivialPHIs);
+  SmallVector<AllocaInst *> StaticAllocas;
+  for (Instruction &I : *EntryBlock) {
+    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+      if (AI->isStaticAlloca())
+        StaticAllocas.push_back(AI);
+    }
   }
 
   // Split the entry block of the first region. The new block becomes the new
@@ -1728,6 +1733,20 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
          "NewEntryBlock's only pred must be EntryBlock");
   FirstRegion->replaceEntryRecursive(NewEntryBlock);
   BasicBlock *PreEntryBlock = EntryBlock;
+
+  // Move static allocas into the pre-entry block so they stay static.
+  for (AllocaInst *AI : StaticAllocas)
+    AI->moveBefore(EntryBlock->begin());
+
+  if (ExitBlock) {
+    // Insert a trivial phi at the exit block (where the CHR hot path and the
+    // cold path merges) for a value that's defined in the scope but used
+    // outside it (meaning it's alive at the exit block). We will add the
+    // incoming values for the CHR cold paths to it below. Without this, we'd
+    // miss updating phi's for such values unless there happens to already be a
+    // phi for that value there.
+    insertTrivialPHIs(Scope, EntryBlock, ExitBlock, TrivialPHIs);
+  }
 
   ValueToValueMapTy VMap;
   // Clone the blocks in the scope (excluding the PreEntryBlock) to split into a
@@ -1864,6 +1883,7 @@ void CHR::fixupBranchesAndSelects(CHRScope *Scope,
       ++NumCHRedBranches;
     }
   }
+  assert(NumCHRedBranches > 0);
   Stats.NumBranchesDelta += NumCHRedBranches - 1;
   Stats.WeightedNumBranchesDelta += (NumCHRedBranches - 1) * ProfileCount;
   ORE.emit([&]() {

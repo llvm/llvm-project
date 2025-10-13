@@ -32,7 +32,7 @@ define i128 @xor128_signbit_used(ptr %p) nounwind {
 ; X86-NEXT:    movl 8(%edi), %edx
 ; X86-NEXT:    movl (%edi), %ebx
 ; X86-NEXT:    movl 4(%edi), %esi
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB1_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %ebx, (%esp)
@@ -94,7 +94,7 @@ define i64 @xor64_signbit_used(ptr %p) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal -2147483648(%edx), %ecx
@@ -171,7 +171,7 @@ define i32 @xor32_not_signbit_used(ptr %p) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB6_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %edx
@@ -184,7 +184,7 @@ define i32 @xor32_not_signbit_used(ptr %p) nounwind {
 ; X64-LABEL: xor32_not_signbit_used:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB6_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movl %eax, %ecx

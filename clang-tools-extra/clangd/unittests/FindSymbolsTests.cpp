@@ -113,7 +113,7 @@ TEST(WorkspaceSymbols, Unnamed) {
 TEST(WorkspaceSymbols, InMainFile) {
   TestTU TU;
   TU.Code = R"cpp(
-      int test() {}
+      int test() { return 0; }
       static void test2() {}
       )cpp";
   EXPECT_THAT(getSymbols(TU, "test"),
@@ -335,6 +335,7 @@ TEST(DocumentSymbols, BasicSymbols) {
         Foo(int a) {}
         void $decl[[f]]();
         friend void f1();
+        friend void f2() {}
         friend class Friend;
         Foo& operator=(const Foo&);
         ~Foo();
@@ -346,7 +347,7 @@ TEST(DocumentSymbols, BasicSymbols) {
       };
 
       void f1();
-      inline void f2() {}
+      void f2();
       static const int KInt = 2;
       const char* kStr = "123";
 
@@ -385,6 +386,8 @@ TEST(DocumentSymbols, BasicSymbols) {
                      AllOf(withName("Foo"), withKind(SymbolKind::Constructor),
                            withDetail("(int)"), children()),
                      AllOf(withName("f"), withKind(SymbolKind::Method),
+                           withDetail("void ()"), children()),
+                     AllOf(withName("f2"), withKind(SymbolKind::Function),
                            withDetail("void ()"), children()),
                      AllOf(withName("operator="), withKind(SymbolKind::Method),
                            withDetail("Foo &(const Foo &)"), children()),
@@ -537,12 +540,14 @@ TEST(DocumentSymbols, InHeaderFile) {
   TestTU TU;
   TU.AdditionalFiles["bar.h"] = R"cpp(
       int foo() {
+        return 0;
       }
       )cpp";
   TU.Code = R"cpp(
       int i; // declaration to finish preamble
       #include "bar.h"
       int test() {
+        return 0;
       }
       )cpp";
   EXPECT_THAT(getSymbols(TU.build()),
@@ -780,7 +785,7 @@ TEST(DocumentSymbols, FuncTemplates) {
   TestTU TU;
   Annotations Source(R"cpp(
     template <class T>
-    T foo() {}
+    T foo() { return T{}; }
 
     auto x = foo<int>();
     auto y = foo<double>();

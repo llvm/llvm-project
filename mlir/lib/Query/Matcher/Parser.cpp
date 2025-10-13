@@ -135,6 +135,18 @@ private:
     case '\'':
       consumeStringLiteral(&result);
       break;
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      consumeNumberLiteral(&result);
+      break;
     default:
       parseIdentifierOrInvalid(&result);
       break;
@@ -142,6 +154,18 @@ private:
 
     result.range.end = currentLocation();
     return result;
+  }
+
+  void consumeNumberLiteral(TokenInfo *result) {
+    StringRef original = code;
+    unsigned value = 0;
+    if (!code.consumeInteger(0, value)) {
+      size_t numConsumed = original.size() - code.size();
+      result->text = original.take_front(numConsumed);
+      result->kind = TokenKind::Literal;
+      result->value = static_cast<int64_t>(value);
+      return;
+    }
   }
 
   // Consume a string literal, handle escape sequences and missing closing
@@ -195,9 +219,22 @@ private:
           break;
         ++tokenLength;
       }
-      result->kind = TokenKind::Ident;
-      result->text = code.substr(0, tokenLength);
+      llvm::StringRef token = code.substr(0, tokenLength);
       code = code.drop_front(tokenLength);
+      // Check if the identifier is a boolean literal
+      if (token == "true") {
+        result->text = "false";
+        result->kind = TokenKind::Literal;
+        result->value = true;
+      } else if (token == "false") {
+        result->text = "false";
+        result->kind = TokenKind::Literal;
+        result->value = false;
+      } else {
+        // Otherwise it is treated as a normal identifier
+        result->kind = TokenKind::Ident;
+        result->text = token;
+      }
     } else {
       result->kind = TokenKind::InvalidChar;
       result->text = code.substr(0, 1);
@@ -257,13 +294,19 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *value) {
 
   if (tokenizer->nextTokenKind() != TokenKind::OpenParen) {
     // Parse as a named value.
-    auto namedValue =
-        namedValues ? namedValues->lookup(nameToken.text) : VariantValue();
+    if (auto namedValue = namedValues ? namedValues->lookup(nameToken.text)
+                                      : VariantValue()) {
 
-    if (!namedValue.isMatcher()) {
-      error->addError(tokenizer->peekNextToken().range,
-                      ErrorType::ParserNotAMatcher);
-      return false;
+      if (tokenizer->nextTokenKind() != TokenKind::Period) {
+        *value = namedValue;
+        return true;
+      }
+
+      if (!namedValue.isMatcher()) {
+        error->addError(tokenizer->peekNextToken().range,
+                        ErrorType::ParserNotAMatcher);
+        return false;
+      }
     }
 
     if (tokenizer->nextTokenKind() == TokenKind::NewLine) {

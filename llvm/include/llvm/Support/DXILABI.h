@@ -17,33 +17,18 @@
 #ifndef LLVM_SUPPORT_DXILABI_H
 #define LLVM_SUPPORT_DXILABI_H
 
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
 
 namespace llvm {
 namespace dxil {
-
-enum class ParameterKind : uint8_t {
-  Invalid = 0,
-  Void,
-  Half,
-  Float,
-  Double,
-  I1,
-  I8,
-  I16,
-  I32,
-  I64,
-  Overload,
-  CBufferRet,
-  ResourceRet,
-  DXILHandle,
-};
 
 enum class ResourceClass : uint8_t {
   SRV = 0,
   UAV,
   CBuffer,
   Sampler,
+  LastEntry = Sampler,
 };
 
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
@@ -113,6 +98,10 @@ enum class SamplerFeedbackType : uint32_t {
   MipRegionUsed = 1,
 };
 
+const unsigned MinWaveSize = 4;
+const unsigned MaxWaveSize = 128;
+
+LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
 } // namespace dxil
 } // namespace llvm
 

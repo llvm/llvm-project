@@ -20,6 +20,7 @@ class SystemZRegWithSubregs<string n, list<Register> subregs>
 }
 
 let Namespace = "SystemZ" in {
+def subreg_h16   : SubRegIndex<16, 16>;
 def subreg_l32   : SubRegIndex<32, 0>;  // Also acts as subreg_hl32.
 def subreg_h32   : SubRegIndex<32, 32>; // Also acts as subreg_hh32.
 def subreg_l64   : SubRegIndex<64, 0>;
@@ -34,7 +35,9 @@ def subreg_ll32  : ComposedSubRegIndex<subreg_l64, subreg_l32>;
 // If the user provides an alternate order list of regs, it will be used for
 // XPLINK. Otherwise, by default, XPLINK will use the regList ordering as well
 multiclass SystemZRegClass<string name, list<ValueType> types, int size,
-                           dag regList, list<dag> altRegList = [regList], bit allocatable = 1> {
+                           dag regList, list<dag> altRegList = [regList],
+                           bit allocatable = 1,
+                           RegInfoByHwMode RI = RegInfoByHwMode<[], []>> {
   def AsmOperand : AsmOperandClass {
     let Name = name;
     let ParserMethod = "parse"#name;
@@ -48,6 +51,7 @@ multiclass SystemZRegClass<string name, list<ValueType> types, int size,
         const SystemZSubtarget &S = MF.getSubtarget<SystemZSubtarget>();
         return S.isTargetXPLINK64();
       }];
+      let RegInfos = RI;
     }
   def "" : RegisterOperand<!cast<RegisterClass>(name#"Bit")> {
     let ParserMatchClass = !cast<AsmOperandClass>(name#"AsmOperand");
@@ -201,9 +205,16 @@ def F27Dwarf : DwarfMapping<81>;
 def F29Dwarf : DwarfMapping<82>;
 def F31Dwarf : DwarfMapping<83>;
 
-// Upper 32 bits of one of the floating-point registers
-class FPR32<bits<16> num, string n> : SystemZReg<n> {
+// Upper 16 bits of one of the floating-point registers
+class FPR16<bits<16> num, string n> : SystemZReg<n> {
   let HWEncoding = num;
+}
+
+// Upper 32 bits of one of the floating-point registers
+class FPR32<bits<16> num, string n, FPR16 high>
+  : SystemZRegWithSubregs<n, [high]> {
+  let HWEncoding = num;
+  let SubRegIndices = [subreg_h16];
 }
 
 // One of the floating-point registers.
@@ -223,12 +234,14 @@ class FPR128<bits<16> num, string n, FPR64 low, FPR64 high>
 
 // Floating-point registers.  Registers 16-31 require the vector facility.
 foreach I = 0-15 in {
-  def F#I#S : FPR32<I, "f"#I>;
+  def F#I#H : FPR16<I, "f"#I>;
+  def F#I#S : FPR32<I, "f"#I, !cast<FPR16>("F"#I#"H")>;
   def F#I#D : FPR64<I, "f"#I, !cast<FPR32>("F"#I#"S")>,
               DwarfRegNum<[!cast<DwarfMapping>("F"#I#"Dwarf").Id]>;
 }
 foreach I = 16-31 in {
-  def F#I#S : FPR32<I, "v"#I>;
+  def F#I#H : FPR16<I, "v"#I>;
+  def F#I#S : FPR32<I, "v"#I, !cast<FPR16>("F"#I#"H")>;
   def F#I#D : FPR64<I, "v"#I, !cast<FPR32>("F"#I#"S")>,
               DwarfRegNum<[!cast<DwarfMapping>("F"#I#"Dwarf").Id]>;
 }
@@ -240,6 +253,11 @@ foreach I = [0, 1, 4, 5, 8, 9, 12, 13] in {
 
 // There's no store-multiple instruction for FPRs, so we're not fussy
 // about the order in which call-saved registers are allocated.
+// Adjust the spill size of f16 to 32 bits in case of no vector support.
+def FP16RI : RegInfoByHwMode<[DefaultMode,       NoVecHwMode],
+                             [RegInfo<16,16,16>, RegInfo<16,32,32>]>;
+defm FP16  : SystemZRegClass<"FP16", [f16], 16, (sequence "F%uH", 0, 15),
+                             [(sequence "F%uH", 0, 15)], 1, FP16RI>;
 defm FP32  : SystemZRegClass<"FP32", [f32], 32, (sequence "F%uS", 0, 15)>;
 defm FP64  : SystemZRegClass<"FP64", [f64], 64, (sequence "F%uD", 0, 15)>;
 defm FP128 : SystemZRegClass<"FP128", [f128], 128,
@@ -261,6 +279,13 @@ foreach I = 0-31 in {
   def V#I : VR128<I, "v"#I, !cast<FPR64>("F"#I#"D")>,
             DwarfRegNum<[!cast<DwarfMapping>("F"#I#"Dwarf").Id]>;
 }
+
+// Class used to store 16-bit fp values in the first element of a vector
+// register.
+defm VR16 : SystemZRegClass<"VR16", [f16], 16,
+                            (add (sequence "F%uH", 0, 7),
+                                 (sequence "F%uH", 16, 31),
+                                 (sequence "F%uH", 8, 15))>;
 
 // Class used to store 32-bit values in the first element of a vector
 // register.  f32 scalars are used for the WLEDB and WLDEB instructions.
@@ -298,6 +323,7 @@ class TypedReg<ValueType vtin, RegisterOperand opin> {
   RegisterOperand op = opin;
 }
 
+def v16hb   : TypedReg<f16,     VR16>;
 def v32f    : TypedReg<i32,     VR32>;
 def v32sb   : TypedReg<f32,     VR32>;
 def v64g    : TypedReg<i64,     VR64>;

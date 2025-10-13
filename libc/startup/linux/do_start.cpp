@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
+#include "config/linux/app.h"
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/link-macros.h"
+#include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
@@ -16,7 +19,6 @@
 
 #include <linux/auxvec.h>
 #include <linux/elf.h>
-#include <stdint.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
@@ -60,6 +62,10 @@ static void call_fini_array_callbacks() {
 }
 
 static ThreadAttributes main_thread_attrib;
+static TLSDescriptor tls;
+// We separate teardown_main_tls from callbacks as callback function themselves
+// may require TLS.
+void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
 
 [[noreturn]] void do_start() {
   auto tid = syscall_impl<long>(SYS_gettid);
@@ -83,17 +89,19 @@ static ThreadAttributes main_thread_attrib;
   // denoted by an AT_NULL entry.
   ElfW(Phdr) *program_hdr_table = nullptr;
   uintptr_t program_hdr_count = 0;
-  app.auxv_ptr = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
-  for (auto *aux_entry = app.auxv_ptr; aux_entry->id != AT_NULL; ++aux_entry) {
-    switch (aux_entry->id) {
+  auxv::Vector::initialize_unsafe(
+      reinterpret_cast<const auxv::Entry *>(env_end_marker + 1));
+  auxv::Vector auxvec;
+  for (const auto &aux_entry : auxvec) {
+    switch (aux_entry.type) {
     case AT_PHDR:
-      program_hdr_table = reinterpret_cast<ElfW(Phdr) *>(aux_entry->value);
+      program_hdr_table = reinterpret_cast<ElfW(Phdr) *>(aux_entry.val);
       break;
     case AT_PHNUM:
-      program_hdr_count = aux_entry->value;
+      program_hdr_count = aux_entry.val;
       break;
     case AT_PAGESZ:
-      app.page_size = aux_entry->value;
+      app.page_size = aux_entry.val;
       break;
     default:
       break; // TODO: Read other useful entries from the aux vector.
@@ -122,7 +130,6 @@ static ThreadAttributes main_thread_attrib;
 
   // This descriptor has to be static since its cleanup function cannot
   // capture the context.
-  static TLSDescriptor tls;
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
@@ -130,10 +137,7 @@ static ThreadAttributes main_thread_attrib;
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
-  // We register the cleanup_tls function to be the last atexit callback to be
-  // invoked. It will tear down the TLS. Other callbacks may depend on TLS (such
-  // as the stack protector canary).
-  atexit([]() { cleanup_tls(tls.tp, tls.size); });
+
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
