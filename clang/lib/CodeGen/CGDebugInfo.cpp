@@ -110,6 +110,34 @@ static bool IsArtificial(VarDecl const *VD) {
                               cast<Decl>(VD->getDeclContext())->isImplicit());
 }
 
+/// If the given source location resides in a macro argument, this function
+/// recursively resolves through macro argument expansions to return a source
+/// location that points to where the argument was spelled in the macro
+/// invocation. This is necessary for generating correct debug information for
+/// code inside macro arguments, as we want to point to user-written code.
+static SourceLocation resolveSpellingLocation(SourceManager &SM,
+                                              SourceLocation Loc) {
+  SourceLocation ParentLoc = Loc;
+
+  while (SM.isMacroArgExpansion(ParentLoc)) {
+    ParentLoc = SM.getImmediateMacroCallerLoc(ParentLoc);
+  }
+
+  if (ParentLoc.isMacroID()) {
+    return ParentLoc;
+  }
+  return SM.getSpellingLoc(Loc);
+}
+
+/// Returns the presumed location for a given source location, resolving
+/// through macro arguments first. This ensures that file, line, and column
+/// information points to where a macro argument was spelled, rather than where
+/// it was expanded.
+static PresumedLoc getPresumedSpellingLoc(SourceManager &SM,
+                                          SourceLocation Loc) {
+  return SM.getPresumedLoc(resolveSpellingLocation(SM, Loc));
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -318,7 +346,8 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(Loc);
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  CurLoc = SM.getExpansionLoc(resolveSpellingLocation(SM, Loc));
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -326,7 +355,6 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (LexicalBlockStack.empty())
     return;
 
-  SourceManager &SM = CGM.getContext().getSourceManager();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
   PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
   if (PCLoc.isInvalid() || Scope->getFile() == getOrCreateFile(CurLoc))
@@ -545,7 +573,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+    PresumedLoc PLoc = getPresumedSpellingLoc(SM, Loc);
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -627,7 +655,7 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(Loc).getLine();
+  return getPresumedSpellingLoc(SM, Loc).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
@@ -639,7 +667,8 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid() ? Loc : CurLoc);
+  PresumedLoc PLoc = Loc.isValid() ? getPresumedSpellingLoc(SM, Loc)
+                                   : SM.getPresumedLoc(CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -6183,7 +6212,8 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
-  PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
+  PresumedLoc PLoc =
+      getPresumedSpellingLoc(CGM.getContext().getSourceManager(), Loc);
   if (!PLoc.isValid())
     return;
 
