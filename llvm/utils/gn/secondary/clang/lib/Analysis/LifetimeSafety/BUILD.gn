@@ -1,0 +1,23 @@
+static_library("LifetimeSafety") {
+  output_name = "clangLifetimeSafety"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/include/clang/AST:StmtDataCollectors",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
+    "//clang/lib/Lex",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "Checker.cpp",
+    "Facts.cpp",
+    "FactsGenerator.cpp",
+    "LifetimeAnnotations.cpp",
+    "LifetimeSafety.cpp",
+    "LiveOrigins.cpp",
+    "LoanPropagation.cpp",
+    "Loans.cpp",
+    "Origins.cpp",
+  ]
+}
