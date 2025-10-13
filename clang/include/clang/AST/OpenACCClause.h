@@ -1277,7 +1277,7 @@ public:
 };
 
 // A structure to stand in for the recipe on a reduction.  RecipeDecl is the
-// 'main' declaration used for initializaiton, which is fixed. 
+// 'main' declaration used for initializaiton, which is fixed.
 struct OpenACCReductionRecipe {
   VarDecl *AllocaDecl;
 
@@ -1297,36 +1297,69 @@ struct OpenACCReductionRecipe {
   // -For a struct without the operator, this will be 1 element per field, which
   //  should be the combiner for that element.
   // -For an array of any of the above, it will be the above for the element.
-  llvm::SmallVector<CombinerRecipe, 1> CombinerRecipes;
+  // Note: These are necessarily stored in either Trailing Storage (when in the
+  // AST), or in a separate collection when being semantically analyzed.
+  llvm::ArrayRef<CombinerRecipe> CombinerRecipes;
 
   OpenACCReductionRecipe(VarDecl *A, llvm::ArrayRef<CombinerRecipe> Combiners)
       : AllocaDecl(A), CombinerRecipes(Combiners) {}
 
   bool isSet() const { return AllocaDecl; }
-  static OpenACCReductionRecipe Empty() {
-    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr, {});
+};
+
+// A version of the above that is used for semantic analysis, at a time before
+// the OpenACCReductionClause node has been created.  This one has storage for
+// the CombinerRecipe, since Trailing storage for it doesn't exist yet.
+struct OpenACCReductionRecipeWithStorage : OpenACCReductionRecipe {
+  llvm::SmallVector<CombinerRecipe, 1> CombinerRecipeStorage;
+
+  OpenACCReductionRecipeWithStorage(VarDecl *A,
+                                    llvm::ArrayRef<CombinerRecipe> Combiners)
+      : OpenACCReductionRecipe(A, {}), CombinerRecipeStorage(Combiners) {
+    CombinerRecipes = CombinerRecipeStorage;
+  }
+  static OpenACCReductionRecipeWithStorage Empty() {
+    return OpenACCReductionRecipeWithStorage(/*AllocaDecl=*/nullptr, {});
   }
 };
 
 class OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCReductionClause, Expr *,
-                                    OpenACCReductionRecipe> {
+                                    OpenACCReductionRecipe,
+                                    OpenACCReductionRecipe::CombinerRecipe> {
   friend TrailingObjects;
   OpenACCReductionOperator Op;
 
   OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          OpenACCReductionOperator Operator,
                          ArrayRef<Expr *> VarList,
-                         ArrayRef<OpenACCReductionRecipe> Recipes,
+                         ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
                          SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Reduction, BeginLoc,
                                  LParenLoc, EndLoc),
         Op(Operator) {
-          assert(VarList.size() == Recipes.size());
+    assert(VarList.size() == Recipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-    llvm::uninitialized_copy(Recipes, getTrailingObjects<
-                             OpenACCReductionRecipe > ());
+
+    // Since we're using trailing storage on this node to store the 'combiner'
+    // recipes of the Reduction Recipes (which have a 1:M relationship), we need
+    // to ensure we get the ArrayRef of each of our combiner 'correct'.
+    OpenACCReductionRecipe::CombinerRecipe *CurCombinerLoc =
+        getTrailingObjects<OpenACCReductionRecipe::CombinerRecipe>();
+    for (const auto &[Idx, R] : llvm::enumerate(Recipes)) {
+
+      // ArrayRef to the 'correct' data location in trailing storage.
+      llvm::MutableArrayRef<OpenACCReductionRecipe::CombinerRecipe>
+          NewCombiners{CurCombinerLoc, R.CombinerRecipes.size()};
+      CurCombinerLoc += R.CombinerRecipes.size();
+
+      llvm::uninitialized_copy(R.CombinerRecipes, NewCombiners.begin());
+
+      // Placement new into the correct location in trailng storage.
+      new (&getTrailingObjects<OpenACCReductionRecipe>()[Idx])
+          OpenACCReductionRecipe(R.AllocaDecl, NewCombiners);
+    }
   }
 
 public:
@@ -1347,11 +1380,15 @@ public:
   static OpenACCReductionClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
-         ArrayRef<OpenACCReductionRecipe> Recipes, SourceLocation EndLoc);
+         ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+         SourceLocation EndLoc);
 
   OpenACCReductionOperator getReductionOp() const { return Op; }
 
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
+  size_t numTrailingObjects(OverloadToken<OpenACCReductionRecipe>) const {
     return getExprs().size();
   }
 };

@@ -12374,7 +12374,7 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
     const OpenACCReductionClause &C) {
   SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());
   SmallVector<Expr *> ValidVars;
-  llvm::SmallVector<OpenACCReductionRecipe> Recipes;
+  llvm::SmallVector<OpenACCReductionRecipeWithStorage> Recipes;
 
   for (const auto [Var, OrigRecipe] :
        llvm::zip(TransformedVars, C.getRecipes())) {
@@ -12384,7 +12384,7 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
       ValidVars.push_back(Res.get());
 
       if (OrigRecipe.isSet())
-        Recipes.push_back(OrigRecipe);
+        Recipes.emplace_back(OrigRecipe.AllocaDecl, OrigRecipe.CombinerRecipes);
       else
         Recipes.push_back(Self.getSema().OpenACC().CreateReductionInitRecipe(
             C.getReductionOp(), Res.get()));
