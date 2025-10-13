@@ -105,6 +105,12 @@ public:
   /// Returns whether the filecache optimization is enabled or not.
   bool readMetadataFromFileCacheEnabled() const;
 
+  /// Set or clear the progress callback.
+  void SetProgressCallback(
+      std::function<void(llvm::StringRef)> progress_callback = {}) {
+    m_progress_callback = progress_callback;
+  }
+
 protected:
   bool readRemoteAddressImpl(swift::remote::RemoteAddress address,
                              swift::remote::RemoteAddress &out,
@@ -166,6 +172,8 @@ private:
   /// The set of modules where we should read memory from the symbol file's
   /// object file instead of the main object file.
   llvm::SmallSet<lldb::ModuleSP, 8> m_modules_with_metadata_in_symbol_obj_file;
+  /// A callback to update a progress event.
+  std::function<void(llvm::StringRef)> m_progress_callback;
 };
 } // namespace lldb_private
 #endif
