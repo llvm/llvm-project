@@ -60,6 +60,37 @@ void StaticDataProfileInfo::addConstantProfileCount(
     OriginalCount = getInstrMaxCountValue();
 }
 
+StaticDataProfileInfo::StaticDataHotness
+StaticDataProfileInfo::getSectionHotnessUsingProfileCount(
+    const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const {
+  // The accummulated counter shows the constant is hot. Return 'hot' whether
+  // this variable is seen by unprofiled functions or not.
+  if (PSI->isHotCount(Count))
+    return StaticDataHotness::Hot;
+  // The constant is not hot, and seen by unprofiled functions. We don't want to
+  // assign it to unlikely sections, even if the counter says 'cold'. So return
+  // an empty prefix before checking whether the counter is cold.
+  if (ConstantWithoutCounts.count(C))
+    return StaticDataHotness::LukewarmOrUnknown;
+  // The accummulated counter shows the constant is cold. Return 'unlikely'.
+  if (PSI->isColdCount(Count))
+    return StaticDataHotness::Cold;
+
+  return StaticDataHotness::LukewarmOrUnknown;
+}
+
+StringRef StaticDataProfileInfo::hotnessToStr(
+    StaticDataProfileInfo::StaticDataHotness Hotness) const {
+  switch (Hotness) {
+  case StaticDataProfileInfo::StaticDataHotness::Cold:
+    return "unlikely";
+  case StaticDataProfileInfo::StaticDataHotness::Hot:
+    return "hot";
+  default:
+    return "";
+  }
+}
+
 std::optional<uint64_t>
 StaticDataProfileInfo::getConstantProfileCount(const Constant *C) const {
   auto I = ConstantProfileCounts.find(C);
@@ -70,23 +101,10 @@ StaticDataProfileInfo::getConstantProfileCount(const Constant *C) const {
 
 StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     const Constant *C, const ProfileSummaryInfo *PSI) const {
-  auto Count = getConstantProfileCount(C);
+  std::optional<uint64_t> Count = getConstantProfileCount(C);
   if (!Count)
     return "";
-  // The accummulated counter shows the constant is hot. Return 'hot' whether
-  // this variable is seen by unprofiled functions or not.
-  if (PSI->isHotCount(*Count))
-    return "hot";
-  // The constant is not hot, and seen by unprofiled functions. We don't want to
-  // assign it to unlikely sections, even if the counter says 'cold'. So return
-  // an empty prefix before checking whether the counter is cold.
-  if (ConstantWithoutCounts.count(C))
-    return "";
-  // The accummulated counter shows the constant is cold. Return 'unlikely'.
-  if (PSI->isColdCount(*Count))
-    return "unlikely";
-  // The counter says lukewarm. Return an empty prefix.
-  return "";
+  return hotnessToStr(getSectionHotnessUsingProfileCount(C, PSI, *Count));
 }
 
 bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {

@@ -32,8 +32,11 @@ bool IsAnnotationOK(const GlobalVariable &GV);
 /// profile information and provides methods to operate on them.
 class StaticDataProfileInfo {
 public:
-  /// Accummulate the profile count of a constant that will be lowered to static
-  /// data sections.
+  /// A constant is tracked only if the following conditions are met.
+  ///   1) It has local (i.e., private or internal) linkage.
+  //    2) Its data kind is one of {.rodata, .data, .bss, .data.rel.ro}.
+  //    3) It's eligible for section prefix annotation. See `AnnotationKind`
+  //       above for ineligible reasons.
   DenseMap<const Constant *, uint64_t> ConstantProfileCounts;
 
   /// Keeps track of the constants that are seen at least once without profile
@@ -43,6 +46,20 @@ public:
   /// If \p C has a count, return it. Otherwise, return std::nullopt.
   LLVM_ABI std::optional<uint64_t>
   getConstantProfileCount(const Constant *C) const;
+
+  enum class StaticDataHotness : uint8_t {
+    Cold = 0,
+    LukewarmOrUnknown = 1,
+    Hot = 2,
+  };
+
+  /// Return the hotness of the constant \p C based on its profile count \p
+  /// Count.
+  LLVM_ABI StaticDataHotness getSectionHotnessUsingProfileCount(
+      const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const;
+
+  /// Return the string representation of the hotness enum \p Hotness.
+  LLVM_ABI StringRef hotnessToStr(StaticDataHotness Hotness) const;
 
 public:
   StaticDataProfileInfo() = default;
