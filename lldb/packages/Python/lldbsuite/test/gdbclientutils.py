@@ -5,8 +5,9 @@ import io
 import threading
 import socket
 import traceback
+from enum import Enum
 from lldbsuite.support import seven
-from typing import Optional, List, Tuple, Literal
+from typing import Optional, List, Tuple, Literal, Union, Sequence
 
 
 def checksum(message):
@@ -90,21 +91,29 @@ class MockGDBServerResponder:
 
     registerCount: int = 40
 
-    class RESPONSE_DISCONNECT:
-        pass
+    class SpecialResponse(Enum):
+        RESPONSE_DISCONNECT = 0
+        RESPONSE_NONE = 1
 
-    class RESPONSE_NONE:
-        pass
+    RESPONSE_DISCONNECT = SpecialResponse.RESPONSE_DISCONNECT
+    RESPONSE_NONE = SpecialResponse.RESPONSE_NONE
+    type Response = Union[str, SpecialResponse]
 
     def __init__(self):
         self.packetLog: List[str] = []
 
-    def respond(self, packet):
+    def respond(self, packet: str) -> Sequence[Response]:
         """
         Return the unframed packet data that the server should issue in response
         to the given packet received from the client.
         """
         self.packetLog.append(packet)
+        response = self._respond_impl(packet)
+        if not isinstance(response, list):
+            response = [response]
+        return response
+
+    def _respond_impl(self, packet) -> Union[Response, List[Response]]:
         if packet is MockGDBServer.PACKET_INTERRUPT:
             return self.interrupt()
         if packet == "c":
@@ -668,17 +677,19 @@ class MockGDBServer:
             # adding validation code to make sure the client only sends ACKs
             # when it's supposed to.
             return
-        response = ""
+        response = [""]
         # We'll handle the ack stuff here since it's not something any of the
         # tests will be concerned about, and it'll get turned off quickly anyway.
         if self._shouldSendAck:
             self._socket.sendall(seven.bitcast_to_bytes("+"))
         if packet == "QStartNoAckMode":
             self._shouldSendAck = False
-            response = "OK"
+            response = ["OK"]
         elif self.responder is not None:
             # Delegate everything else to our responder
             response = self.responder.respond(packet)
+        # MockGDBServerResponder no longer returns non-lists but others like
+        # ReverseTestBase still do
         if not isinstance(response, list):
             response = [response]
         for part in response:
@@ -686,6 +697,8 @@ class MockGDBServer:
                 continue
             if part is MockGDBServerResponder.RESPONSE_DISCONNECT:
                 raise self.TerminateConnectionException()
+            # Should have handled the non-str's above
+            assert isinstance(part, str)
             self._sendPacket(part)
 
     PACKET_ACK = object()
