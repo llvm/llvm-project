@@ -1364,6 +1364,27 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 }
 
+TEST_F(FormatTest, WrapMultipleStatementIfAndElseBraces) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_AllIfsAndElse;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.BeforeElse = true;
+
+  verifyFormat("if (x)\n"
+               "{\n"
+               "  ++x;\n"
+               "  --y;\n"
+               "}\n"
+               "else\n"
+               "{\n"
+               "  --x;\n"
+               "  ++y;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   verifyFormat("while (true)\n"
                "  ;");
@@ -24821,6 +24842,11 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                "  g() ;\\\n"
                " } while (0 )",
                Style);
+
+  Style.OneLineFormatOffRegex = "MACRO_TEST";
+  verifyNoChange(" MACRO_TEST1 ( ) ;\n"
+                 "   MACRO_TEST2( );",
+                 Style);
 
   Style.ColumnLimit = 50;
   Style.OneLineFormatOffRegex = "^LogErrorPrint$";

@@ -49,17 +49,26 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
+  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+  in the 24th release.
+
 - Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
   `StrictMode`, which were documented as deprecated since
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Renamed :program:`clang-tidy`'s option name of check
-  :doc:`bugprone-easily-swappable-parameters
-  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
-  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
-  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
-  correcting a spelling mistake.
+- Renamed a few :program:`clang-tidy` check options, as they
+  were misspelled:
+
+  - `NamePrefixSuffixSilenceDissimilarityTreshold` to
+    `NamePrefixSuffixSilenceDissimilarityThreshold` in
+    :doc:`bugprone-easily-swappable-parameters
+    <clang-tidy/checks/bugprone/easily-swappable-parameters>`
+
+  - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
+    :doc:`bugprone-signed-char-misuse
+    <clang-tidy/checks/bugprone/signed-char-misuse>`
 
 Improvements to clangd
 ----------------------
@@ -158,6 +167,10 @@ Improvements to clang-tidy
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
+- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
+  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+  in the 24th release.
+
 New checks
 ^^^^^^^^^^
 
@@ -253,6 +266,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
 
+- Improved :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` with new
+  `IgnoredEnums` option to ignore specified enums during analysis.
+
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
   false positive from analysis of a conditional expression in C.
@@ -268,6 +285,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
   a crash on ``sizeof`` of an array of dependent type.
+
+- Improved :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone/suspicious-include>` check by adding
+  `IgnoredRegex` option.
 
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
@@ -290,6 +311,10 @@ Changes in existing checks
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
 
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
+  insertion location for function pointers with multiple parameters.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positives on inherited members in class templates.
@@ -308,6 +333,11 @@ Changes in existing checks
     handled correctly.
 
   - ``for`` loops are supported.
+
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check to avoid false
+  positives when pointers is tranferred to non-const references 
+  and avoid false positives of function pointer.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
@@ -328,6 +358,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
+
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
+  on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
+  binary.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
@@ -366,6 +401,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones.
+
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
+  adding parentheses when the inner expression are implicitly converted
+  multiple times.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

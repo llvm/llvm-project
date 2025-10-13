@@ -12,7 +12,7 @@ target triple = "sparcv9-unknown-unknown"
 define i8 @test_cmpxchg_i8(ptr %arg, i8 %old, i8 %new) {
 ; CHECK-LABEL: @test_cmpxchg_i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -45,7 +45,7 @@ define i8 @test_cmpxchg_i8(ptr %arg, i8 %old, i8 %new) {
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } poison, i8 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i8, i1 } [[TMP17]], i1 [[TMP14]], 1
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i8, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
@@ -58,7 +58,7 @@ entry:
 define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 ; CHECK-LABEL: @test_cmpxchg_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -91,7 +91,7 @@ define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } poison, i16 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i16, i1 } [[TMP17]], i1 [[TMP14]], 1
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i16, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
@@ -104,7 +104,7 @@ entry:
 define i16 @test_add_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_add_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -130,7 +130,7 @@ define i16 @test_add_i16(ptr %arg, i16 %val) {
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
@@ -141,7 +141,7 @@ entry:
 define i16 @test_xor_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_xor_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -164,7 +164,7 @@ define i16 @test_xor_i16(ptr %arg, i16 %val) {
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
@@ -175,7 +175,7 @@ entry:
 define i16 @test_or_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_or_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -198,7 +198,7 @@ define i16 @test_or_i16(ptr %arg, i16 %val) {
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
@@ -209,7 +209,7 @@ entry:
 define i16 @test_and_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_and_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -233,7 +233,7 @@ define i16 @test_and_i16(ptr %arg, i16 %val) {
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
@@ -244,7 +244,7 @@ entry:
 define i16 @test_min_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_min_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
@@ -272,7 +272,7 @@ define i16 @test_min_i16(ptr %arg, i16 %val) {
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
 entry:
@@ -282,7 +282,7 @@ entry:
 
 define half @test_atomicrmw_fadd_f16(ptr %ptr, half %value) {
 ; CHECK-LABEL: @test_atomicrmw_fadd_f16(
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -312,7 +312,7 @@ define half @test_atomicrmw_fadd_f16(ptr %ptr, half %value) {
 ; CHECK-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16 [[EXTRACTED3]] to half
-; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret half [[TMP8]]
 ;
   %res = atomicrmw fadd ptr %ptr, half %value seq_cst

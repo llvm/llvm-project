@@ -540,7 +540,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (const auto *IL = dyn_cast<IntegerLiteral>(SubExpr)) {
       if (ToT != PT_IntAP && ToT != PT_IntAPS && FromT != PT_IntAP &&
           FromT != PT_IntAPS && !CE->getType()->isEnumeralType())
-        return this->emitConst(IL->getValue(), CE);
+        return this->emitConst(APSInt(IL->getValue(), !isSignedType(*FromT)),
+                               CE);
       if (!this->emitConst(IL->getValue(), SubExpr))
         return false;
     } else {
@@ -2934,8 +2935,9 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // For everyhing else, use local variables.
   if (SubExprT) {
     bool IsConst = SubExpr->getType().isConstQualified();
-    unsigned LocalIndex =
-        allocateLocalPrimitive(E, *SubExprT, IsConst, E->getExtendingDecl());
+    bool IsVolatile = SubExpr->getType().isVolatileQualified();
+    unsigned LocalIndex = allocateLocalPrimitive(
+        E, *SubExprT, IsConst, IsVolatile, E->getExtendingDecl());
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -4452,6 +4454,9 @@ bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
   if (!this->visit(LHS))
     return false;
 
+  if (LHS->getType().isVolatileQualified())
+    return this->emitInvalidStore(LHS->getType().getTypePtr(), E);
+
   // We don't support assignments in C.
   if (!Ctx.getLangOpts().CPlusPlus && !this->emitInvalid(E))
     return false;
@@ -4537,7 +4542,14 @@ bool Compiler<Emitter>::emitConst(T Value, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
                                   const Expr *E) {
-  return this->emitConst(static_cast<const APInt &>(Value), Ty, E);
+  if (Ty == PT_IntAPS)
+    return this->emitConstIntAPS(Value, E);
+  if (Ty == PT_IntAP)
+    return this->emitConstIntAP(Value, E);
+
+  if (Value.isSigned())
+    return this->emitConst(Value.getSExtValue(), Ty, E);
+  return this->emitConst(Value.getZExtValue(), Ty, E);
 }
 
 template <class Emitter>
@@ -4560,13 +4572,14 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 
 template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(
-    DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl,
-    ScopeKind SC, bool IsConstexprUnknown) {
+    DeclTy &&Src, PrimType Ty, bool IsConst, bool IsVolatile,
+    const ValueDecl *ExtendingDecl, ScopeKind SC, bool IsConstexprUnknown) {
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
-                                     IsConst, isa<const Expr *>(Src));
+                                     IsConst, isa<const Expr *>(Src),
+                                     /*IsMutable=*/false, IsVolatile);
   D->IsConstexprUnknown = IsConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
@@ -4874,7 +4887,8 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
 
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
-        VD, *VarT, VD->getType().isConstQualified(), nullptr, ScopeKind::Block,
+        VD, *VarT, VD->getType().isConstQualified(),
+        VD->getType().isVolatileQualified(), nullptr, ScopeKind::Block,
         IsConstexprUnknown);
     if (Init) {
       // If this is a toplevel declaration, create a scope for the
