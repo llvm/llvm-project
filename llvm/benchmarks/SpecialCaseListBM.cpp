@@ -15,8 +15,9 @@ using namespace llvm;
 
 namespace {
 constexpr int RNG_SEED = 123456;
-constexpr int MAX_LIST_SIZE = 100000;
-constexpr int MAX_LIST_MUL = 1000;
+constexpr int MAX_LIST_MIN = 10;
+constexpr int MAX_LIST_MAX = 1000000;
+constexpr int MAX_LIST_MUL = 10;
 
 std::unique_ptr<SpecialCaseList> makeSpecialCaseList(StringRef List) {
   std::string Error;
@@ -157,50 +158,50 @@ void BM_Neg(
 
 BENCHMARK_CAPTURE(BM_Create, Exact, genFixed)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Create, Start, genStart)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Create, End, genEnd)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Create, Mid, genMid)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Create, EndBoth, genBoth)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
 BENCHMARK_CAPTURE(BM_Pos, Exact, genFixed)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Pos, Start, genStart)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Pos, End, genEnd)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Pos, Mid, genMid)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Pos, Both, genBoth)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
 BENCHMARK_CAPTURE(BM_Neg, Exact, genFixed)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Neg, Start, genStart)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Neg, End, genEnd)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Neg, Mid, genMid)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_Neg, End, genBoth)
     ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(1, MAX_LIST_SIZE);
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
 BENCHMARK_MAIN();
