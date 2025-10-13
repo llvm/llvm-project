@@ -501,8 +501,8 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
       //
       // Just remove conditional branch.
       if (TBB == FBB) {
-        BlockInfo[MBB->getNumber()].Size -= TII->getInstSizeInBytes(MI);
-        MI.eraseFromParent();
+        removeBranch(MBB);
+        insertUncondBranch(MBB, TBB);
         return true;
       }
       // We need to split the basic block here to obtain two long-range
