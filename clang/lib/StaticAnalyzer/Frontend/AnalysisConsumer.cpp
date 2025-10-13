@@ -140,7 +140,7 @@ public:
         Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
 
-    EntryPointStat::lockRegistry(getMainFileName(CI.getInvocation()));
+    EntryPointStat::lockRegistry(getMainFileName(CI.getInvocation()), CI.getASTContext());
     DigestAnalyzerOptions();
 
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||

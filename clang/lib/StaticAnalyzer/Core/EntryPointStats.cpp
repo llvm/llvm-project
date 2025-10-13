@@ -59,6 +59,9 @@ template <typename Callback> void enumerateStatVectors(const Callback &Fn) {
   Fn(StatsRegistry->MaxStats);
   Fn(StatsRegistry->CounterStats);
 }
+
+void clearSnapshots(void*) { StatsRegistry->Snapshots.clear(); }
+
 } // namespace
 
 static void checkStatName(const EntryPointStat *M) {
@@ -78,7 +81,7 @@ static void checkStatName(const EntryPointStat *M) {
   }
 }
 
-void EntryPointStat::lockRegistry(llvm::StringRef CPPFileName) {
+void EntryPointStat::lockRegistry(llvm::StringRef CPPFileName, ASTContext &Ctx) {
   auto CmpByNames = [](const EntryPointStat *L, const EntryPointStat *R) {
     return L->name() < R->name();
   };
@@ -89,6 +92,10 @@ void EntryPointStat::lockRegistry(llvm::StringRef CPPFileName) {
   StatsRegistry->IsLocked = true;
   llvm::raw_string_ostream OS(StatsRegistry->EscapedCPPFileName);
   llvm::printEscapedString(CPPFileName, OS);
+  // Make sure snapshots (that reference function Decl's) do not persist after
+  // the AST is destroyed. This is especially relevant in the context of unit
+  // tests that construct and destruct multiple ASTs in the same process.
+  Ctx.AddDeallocation(clearSnapshots, nullptr);
 }
 
 [[maybe_unused]] static bool isRegistered(llvm::StringLiteral Name) {
