@@ -20,8 +20,6 @@
 using namespace clang;
 using namespace ento;
 
-#define DEBUG_TYPE "UnsignedStatTester"
-
 static UnsignedEPStat DemoStat("DemoStat");
 
 namespace {
