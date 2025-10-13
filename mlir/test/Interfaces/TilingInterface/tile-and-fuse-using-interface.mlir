@@ -703,7 +703,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
        %arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.pooling_ncw_max"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %tiled_pool, %loops0:4 = transform.structured.fuse %0 {tile_sizes = [1, 16, 1, 1], apply_cleanup = true}
+    %a, %b, %c, %d, %e = transform.structured.fuse %0 tile_sizes [1, 16, 1, 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
