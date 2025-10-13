@@ -32,5 +32,6 @@ class TestCase(TestBase):
         self.assertEqual(c.GetType().GetBasicType(), int_basic_type)
         self.assertEqual(d.GetType().GetBasicType(), int_basic_type)
 
+        # Check the size of the chosen basic types.
         self.assertEqual(self.target().FindFirstType("__int128").size, 16)
         self.assertEqual(self.target().FindFirstType("unsigned __int128").size, 16)
