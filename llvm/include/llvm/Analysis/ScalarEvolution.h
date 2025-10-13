@@ -1857,6 +1857,11 @@ private:
   const SCEV *createNodeForSelectOrPHI(Value *V, Value *Cond, Value *TrueVal,
                                        Value *FalseVal);
 
+  /// Provide special handling for phi when BranchInst's one edge does not
+  /// dominate compare operand's use in phi.
+  std::optional<const SCEV *>
+  createNodeForPHIWithEdgeNotDominatesUse(BranchInst *BI, PHINode *PN);
+
   /// Provide the special handling we need to analyze GEP SCEVs.
   const SCEV *createNodeForGEP(GEPOperator *GEP);
 

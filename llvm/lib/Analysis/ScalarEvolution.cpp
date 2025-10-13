@@ -6046,11 +6046,15 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
     auto *BI = dyn_cast<BranchInst>(IDom->getTerminator());
     Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
 
-    if (BI && BI->isConditional() &&
-        BrPHIToSelect(DT, BI, PN, Cond, LHS, RHS) &&
-        properlyDominates(getSCEV(LHS), PN->getParent()) &&
-        properlyDominates(getSCEV(RHS), PN->getParent()))
-      return createNodeForSelectOrPHI(PN, Cond, LHS, RHS);
+    if (BI && BI->isConditional()) {
+      if (BrPHIToSelect(DT, BI, PN, Cond, LHS, RHS) &&
+          properlyDominates(getSCEV(LHS), PN->getParent()) &&
+          properlyDominates(getSCEV(RHS), PN->getParent()))
+        return createNodeForSelectOrPHI(PN, Cond, LHS, RHS);
+      if (std::optional<const SCEV *> S =
+              createNodeForPHIWithEdgeNotDominatesUse(BI, PN))
+        return *S;
+    }
   }
 
   return nullptr;
@@ -6337,6 +6341,66 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Value *V, Value *Cond,
   }
 
   return createNodeForSelectOrPHIViaUMinSeq(V, Cond, TrueVal, FalseVal);
+}
+
+// Recognize PHI of the form: (x == 0 ? C : (Pred ? C : x)) where C is a
+// constant equal to umax(x) + 1. Canonicalize it to: umax(1, x + 1).
+// e.g.
+//   %x = and i32 %a, 31                              ; %x is in [0,31]
+//   %c = icmp eq i32 %x, 0
+//   br i1 %c, label %cmp_true, label %cmp_false
+// cmp_false:
+//   br i1 %p, label %cmp_true, label %merge
+// cmp_true:
+//   br label %merge
+// merge:
+//   %d = phi i32 [32, %cmp_true], [%x, %cmp_false]   ; 32 == umax(%x) + 1
+std::optional<const SCEV *>
+ScalarEvolution::createNodeForPHIWithEdgeNotDominatesUse(BranchInst *BI,
+                                                         PHINode *PN) {
+  auto *Cond = dyn_cast<ICmpInst>(BI->getCondition());
+  if (!Cond)
+    return std::nullopt;
+
+  Value *LHS = Cond->getOperand(0);
+  Value *RHS = Cond->getOperand(1);
+
+  // Match an ICmpInst condition of the form "x == 0".
+  auto *ZeroC = dyn_cast<ConstantInt>(RHS);
+  if (Cond->getPredicate() != ICmpInst::ICMP_EQ || !ZeroC || !ZeroC->isZero())
+    return std::nullopt;
+
+  BasicBlockEdge LeftEdge(BI->getParent(), BI->getSuccessor(0));
+  BasicBlockEdge RightEdge(BI->getParent(), BI->getSuccessor(1));
+
+  if (!LeftEdge.isSingleEdge())
+    return std::nullopt;
+
+  assert(RightEdge.isSingleEdge() && "Follows from LeftEdge.isSingleEdge()");
+
+  Use &LeftUse = PN->getOperandUse(0);
+  Use &RightUse = PN->getOperandUse(1);
+
+  ConstantInt *ConstantVal = nullptr;
+  Value *FalseVal = nullptr;
+  if (!DT.dominates(LeftEdge, LeftUse) && isa<ConstantInt>(LeftUse) &&
+      DT.dominates(RightEdge, RightUse)) {
+    ConstantVal = cast<ConstantInt>(LeftUse);
+    FalseVal = RightUse;
+  }
+
+  if (!ConstantVal || FalseVal != LHS)
+    return std::nullopt;
+
+  Type *Ty = PN->getType();
+  const SCEV *X = getNoopOrZeroExtend(getSCEV(LHS), Ty);
+  APInt MaxRange = getUnsignedRangeMax(X);
+  if (!MaxRange.isMaxValue() && ConstantVal->getValue() == (MaxRange + 1)) {
+    auto *One = getOne(Ty);
+    return getUMaxExpr(One, getAddExpr(X, One));
+  }
+
+  return std::nullopt;
 }
 
 /// Expand GEP instructions into add and multiply operations. This allows them
