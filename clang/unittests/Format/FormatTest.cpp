@@ -19539,6 +19539,15 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
       "int j      = 2;",
       Alignment);
 
+  verifyFormat("int abcdefghijk = 111;\n"
+               "auto lambda     = [] {\n"
+               "  int c = call(1, //\n"
+               "               2, //\n"
+               "               3, //\n"
+               "               4);\n"
+               "};",
+               Alignment);
+
   verifyFormat("template <typename T, typename T_0 = very_long_type_name_0,\n"
                "          typename B   = very_long_type_name_1,\n"
                "          typename T_2 = very_long_type_name_2>\n"
@@ -19605,12 +19614,11 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "           ccc ? aaaaa : bbbbb,\n"
                "           dddddddddddddddddddddddddd);",
                Alignment);
-  // FIXME: https://llvm.org/PR53497
-  // verifyFormat("auto aaaaaaaaaaaa = f();\n"
-  //              "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-  //              "    ccc ? aaaaa : bbbbb,\n"
-  //              "    dddddddddddddddddddddddddd);",
-  //              Alignment);
+  verifyFormat("auto aaaaaaaaaaaa = f();\n"
+               "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "                      ccc ? aaaaa : bbbbb,\n"
+               "                      dddddddddddddddddddddddddd);",
+               Alignment);
 
   // Confirm proper handling of AlignConsecutiveAssignments with
   // BinPackArguments.
