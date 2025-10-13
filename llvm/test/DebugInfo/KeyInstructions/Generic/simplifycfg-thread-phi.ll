@@ -13,6 +13,8 @@
 ; CHECK:   store i32 1{{.*}}, !dbg [[DBG1:!.*]]
 ; CHECK: if.end.1.critedge:
 ; CHECK:   store i32 1{{.*}}, !dbg [[DBG2:!.*]]
+;
+; CHECK: distinct !DISubprogram(name: "bar", {{.*}}keyInstructions: true)
 ; CHECK: [[DBG1]] = !DILocation(line: 1{{.*}}, atomGroup: 1
 ; CHECK: [[DBG2]] = !DILocation(line: 1{{.*}}, atomGroup: 2
 
@@ -56,7 +58,7 @@ declare void @foo()
 !2 = !{i32 15}
 !3 = !{i32 0}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "bar", linkageName: "bar", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = distinct !DISubprogram(name: "bar", linkageName: "bar", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
 !8 = !DILocation(line: 1, column: 1, scope: !5, atomGroup: 1, atomRank: 1)

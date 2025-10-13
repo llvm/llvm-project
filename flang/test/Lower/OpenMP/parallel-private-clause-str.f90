@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenMP parallel Directive with
 ! `PRIVATE` clause present for strings
 
-! REQUIRES: shell
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s
 

@@ -12,9 +12,9 @@ namespace N {
     p = reinterpret_cast<int *>(7);
   }
 
-  [[gsl::suppress]] int x;       // expected-error {{'suppress' attribute takes at least 1 argument}}
-  [[gsl::suppress()]] int y;     // expected-error {{'suppress' attribute takes at least 1 argument}}
-  int [[gsl::suppress("r")]] z;  // expected-error {{'suppress' attribute cannot be applied to types}}
+  [[gsl::suppress]] int x;       // expected-error {{'gsl::suppress' attribute takes at least 1 argument}}
+  [[gsl::suppress()]] int y;     // expected-error {{'gsl::suppress' attribute takes at least 1 argument}}
+  int [[gsl::suppress("r")]] z;  // expected-error {{'gsl::suppress' attribute cannot be applied to types}}
   [[gsl::suppress(f_)]] float f; // expected-error {{expected string literal as argument of 'suppress' attribute}}
 }
 
@@ -48,7 +48,7 @@ namespace N {
   }
 
   int [[clang::suppress("r")]] z;
-  // expected-error@-1 {{'suppress' attribute cannot be applied to types}}
+  // expected-error@-1 {{'clang::suppress' attribute cannot be applied to types}}
   [[clang::suppress(foo)]] float f;
   // expected-error@-1 {{expected string literal as argument of 'suppress' attribute}}
 }
@@ -60,5 +60,5 @@ class [[clang::suppress("type.1")]] V {
 
 // FIXME: There's no good reason why we shouldn't support this case.
 // But it doesn't look like clang generally supports such attributes yet.
-class W : [[clang::suppress]] public V { // expected-error{{'suppress' attribute cannot be applied to a base specifier}}
+class W : [[clang::suppress]] public V { // expected-error{{'clang::suppress' attribute cannot be applied to a base specifier}}
 };

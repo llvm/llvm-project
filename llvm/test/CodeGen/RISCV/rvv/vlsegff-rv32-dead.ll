@@ -14,7 +14,7 @@ define void @test_vlseg2ff_dead_value(ptr %base, i32 %vl, ptr %outvl) {
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i32 %vl, i32 4)
+  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i32 %vl, i32 4)
   %1 = extractvalue {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} %0, 1
   store i32 %1, ptr %outvl
   ret void
@@ -42,7 +42,7 @@ define <vscale x 16 x i16> @test_vlseg2ff_dead_vl(ptr %base, i32 %vl) {
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i32 %vl, i32 4)
+  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i32 %vl, i32 4)
   %1 = extractvalue {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} %0, 0
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %1, i32 1)
   ret <vscale x 16 x i16> %2
@@ -66,19 +66,15 @@ entry:
 define void @test_vlseg2ff_dead_all(ptr %base, i32 %vl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_all:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vlseg2e16ff.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
-  tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i32 %vl, i32 4)
+  tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i32 %vl, i32 4)
   ret void
 }
 
 define void @test_vlseg2ff_mask_dead_all(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, i32 %vl, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg2ff_mask_dead_all:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
-; CHECK-NEXT:    vlseg2e16ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
   tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i1(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, <vscale x 16 x i1> %mask, i32 %vl, i32 1, i32 4)

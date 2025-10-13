@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-freebsd10.0 -emit-llvm < %s | FileCheck -check-prefix=FREEBSD %s
 // RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
+// RUN: %clang_cc1 -triple x86_64-mingw    -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
+// RUN: %clang_cc1 -triple x86_64-cygwin   -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
 // RUN: %clang_cc1 -triple x86_64-uefi -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
 
 struct foo {
@@ -142,7 +144,7 @@ struct i128 {
 };
 
 __attribute__((ms_abi)) struct i128 f7(struct i128 a) {
-  // WIN64: define dso_local void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr noundef %a)
-  // FREEBSD: define{{.*}} win64cc void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr noundef %a)
+  // WIN64: define dso_local void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr dead_on_return noundef %a)
+  // FREEBSD: define{{.*}} win64cc void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr dead_on_return noundef %a)
   return a;
 }

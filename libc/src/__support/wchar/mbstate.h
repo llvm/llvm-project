@@ -9,16 +9,26 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 #define LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/char32_t.h"
-#include <stdint.h>
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 struct mbstate {
-  char32_t partial;
-  uint8_t bits_processed;
-  uint8_t total_bytes;
+  // store a partial codepoint (in UTF-32)
+  char32_t partial = 0;
+
+  /*
+  Progress towards a conversion
+    Increases with each push(...) until it reaches total_bytes
+    Decreases with each pop(...) until it reaches 0
+  */
+  uint8_t bytes_stored = 0;
+
+  // Total number of bytes that will be needed to represent this character
+  uint8_t total_bytes = 0;
 };
 
 } // namespace internal

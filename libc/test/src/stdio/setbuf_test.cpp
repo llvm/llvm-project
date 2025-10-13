@@ -18,7 +18,8 @@
 TEST(LlvmLibcSetbufTest, DefaultBufsize) {
   // The idea in this test is to change the buffer after opening a file and
   // ensure that read and write work as expected.
-  constexpr char FILENAME[] = "testdata/setbuf_test_default_bufsize.test";
+  constexpr char FILENAME[] =
+      APPEND_LIBC_TEST("testdata/setbuf_test_default_bufsize.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   char buffer[BUFSIZ];
@@ -41,7 +42,8 @@ TEST(LlvmLibcSetbufTest, DefaultBufsize) {
 TEST(LlvmLibcSetbufTest, NullBuffer) {
   // The idea in this test is that we set a null buffer and ensure that
   // everything works correctly.
-  constexpr char FILENAME[] = "testdata/setbuf_test_null_buffer.test";
+  constexpr char FILENAME[] =
+      APPEND_LIBC_TEST("testdata/setbuf_test_null_buffer.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   LIBC_NAMESPACE::setbuf(file, nullptr);

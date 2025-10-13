@@ -14,6 +14,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSCOPE_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSCOPE_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSort.h"
@@ -94,6 +95,11 @@ class LLVM_ABI LVScope : public LVElement {
   LVProperties<LVScopeKind> Kinds;
   LVProperties<Property> Properties;
   static LVScopeDispatch Dispatch;
+  // Empty containers used in `getChildren()` in case there is no Types,
+  // Symbols, or Scopes.
+  static const LVTypes EmptyTypes;
+  static const LVSymbols EmptySymbols;
+  static const LVScopes EmptyScopes;
 
   // Size in bits if this scope represents also a compound type.
   uint32_t BitSize = 0;
@@ -127,14 +133,6 @@ protected:
   std::unique_ptr<LVScopes> Scopes;
   std::unique_ptr<LVLines> Lines;
   std::unique_ptr<LVLocations> Ranges;
-
-  // Vector of elements (types, scopes and symbols).
-  // It is the union of (*Types, *Symbols and *Scopes) to be used for
-  // the following reasons:
-  // - Preserve the order the logical elements are read in.
-  // - To have a single container with all the logical elements, when
-  //   the traversal does not require any specific element kind.
-  std::unique_ptr<LVElements> Children;
 
   // Resolve the template parameters/arguments relationship.
   void resolveTemplate();
@@ -213,7 +211,23 @@ public:
   const LVScopes *getScopes() const { return Scopes.get(); }
   const LVSymbols *getSymbols() const { return Symbols.get(); }
   const LVTypes *getTypes() const { return Types.get(); }
-  const LVElements *getChildren() const { return Children.get(); }
+  // Return view over union of child Scopes, Types, and Symbols, in that order.
+  //
+  // Calling `LVScope::sort()` ensures that each of groups is sorted according
+  // to the given criteria (see also `LVOptions::setSortMode()`). Because
+  // `getChildren()` iterates over the concatenation, the result returned by
+  // this function is not necessarily sorted. If order is important, use
+  // `getSortedChildren()`.
+  LVElementsView getChildren() const {
+    return llvm::concat<LVElement *const>(Scopes ? *Scopes : EmptyScopes,
+                                          Types ? *Types : EmptyTypes,
+                                          Symbols ? *Symbols : EmptySymbols);
+  }
+  // Return vector of child Scopes, Types, and Symbols that is sorted using
+  // `SortFunction`. This requires copy + sort; if order is not important,
+  // use `getChildren()` instead.
+  LVElements getSortedChildren(
+      LVSortFunction SortFunction = llvm::logicalview::getSortFunction()) const;
 
   void addElement(LVElement *Element);
   void addElement(LVLine *Line);
@@ -222,7 +236,6 @@ public:
   void addElement(LVType *Type);
   void addObject(LVLocation *Location);
   void addObject(LVAddress LowerAddress, LVAddress UpperAddress);
-  void addToChildren(LVElement *Element);
 
   // Add the missing elements from the given 'Reference', which is the
   // scope associated with any DW_AT_specification, DW_AT_abstract_origin.
@@ -325,10 +338,6 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 // Class to represent a DWARF Union/Structure/Class.
@@ -477,7 +486,7 @@ class LLVM_ABI LVScopeCompileUnit final : public LVScope {
 
   // Record scope sizes indexed by lexical level.
   // Setting an initial size that will cover a very deep nested scopes.
-  const size_t TotalInitialSize = 8;
+  static constexpr size_t TotalInitialSize = 8;
   using LVTotalsEntry = std::pair<unsigned, float>;
   SmallVector<LVTotalsEntry> Totals;
   // Maximum seen lexical level. It is used to control how many entries
@@ -514,7 +523,7 @@ public:
   void addMapping(LVLine *Line, LVSectionIndex SectionIndex);
   LVLineRange lineRange(LVLocation *Location) const;
 
-  LVNameInfo NameNone = {UINT64_MAX, 0};
+  static constexpr LVNameInfo NameNone = {UINT64_MAX, 0};
   void addPublicName(LVScope *Scope, LVAddress LowPC, LVAddress HighPC) {
     PublicNames.emplace(std::piecewise_construct, std::forward_as_tuple(Scope),
                         std::forward_as_tuple(LowPC, HighPC - LowPC));

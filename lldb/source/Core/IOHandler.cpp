@@ -152,15 +152,16 @@ void IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
 
 void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
                                               std::string &line) {
-  if (line.empty()) {
+  const llvm::StringRef input = llvm::StringRef(line).rtrim();
+  if (input.empty()) {
     // User just hit enter, set the response to the default
     m_user_response = m_default_response;
     io_handler.SetIsDone(true);
     return;
   }
 
-  if (line.size() == 1) {
-    switch (line[0]) {
+  if (input.size() == 1) {
+    switch (input[0]) {
     case 'y':
     case 'Y':
       m_user_response = true;
@@ -176,10 +177,10 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
     }
   }
 
-  if (line == "yes" || line == "YES" || line == "Yes") {
+  if (input.equals_insensitive("yes")) {
     m_user_response = true;
     io_handler.SetIsDone(true);
-  } else if (line == "no" || line == "NO" || line == "No") {
+  } else if (input.equals_insensitive("no")) {
     m_user_response = false;
     io_handler.SetIsDone(true);
   }
@@ -442,7 +443,7 @@ void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
 }
 
 void IOHandlerEditline::RedrawCallback() {
-  m_debugger.RedrawStatusline(/*update=*/false);
+  m_debugger.RedrawStatusline(std::nullopt);
 }
 
 #endif
@@ -662,4 +663,11 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
       IOHandler::PrintAsync(prompt, strlen(prompt), is_stdout);
 #endif
   }
+}
+
+void IOHandlerEditline::Refresh() {
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up)
+    m_editline_up->Refresh();
+#endif
 }

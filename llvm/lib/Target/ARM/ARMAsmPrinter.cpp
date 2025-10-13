@@ -18,7 +18,7 @@
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
-#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -40,6 +40,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -52,6 +53,10 @@ ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
+
+const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
+  return static_cast<const ARMBaseTargetMachine &>(TM);
+}
 
 void ARMAsmPrinter::emitFunctionBodyEnd() {
   // Make sure to terminate any constant pools that were at the end
@@ -92,8 +97,7 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
 
   const MCExpr *E = MCSymbolRefExpr::create(
       GetARMGVSymbol(GV, ARMII::MO_NO_FLAG),
-      (Subtarget->isTargetELF() ? ARMMCExpr::VK_TARGET1 : ARMMCExpr::VK_None),
-      OutContext);
+      (Subtarget->isTargetELF() ? ARM::S_TARGET1 : ARM::S_None), OutContext);
 
   OutStreamer->emitValue(E, Size);
 }
@@ -606,22 +610,38 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
 // to appear in the .ARM.attributes section in ELF.
 // Instead of subclassing the MCELFStreamer, we do the work here.
 
- // Returns true if all functions have the same function attribute value.
- // It also returns true when the module has no functions.
+// Returns true if all function definitions have the same function attribute
+// value. It also returns true when the module has no functions.
 static bool checkFunctionsAttributeConsistency(const Module &M, StringRef Attr,
                                                StringRef Value) {
-   return !any_of(M, [&](const Function &F) {
-       return F.getFnAttribute(Attr).getValueAsString() != Value;
-   });
+  return !any_of(M, [&](const Function &F) {
+    if (F.isDeclaration())
+      return false;
+    return F.getFnAttribute(Attr).getValueAsString() != Value;
+  });
 }
-// Returns true if all functions have the same denormal mode.
+// Returns true if all functions definitions have the same denormal mode.
 // It also returns true when the module has no functions.
-static bool checkDenormalAttributeConsistency(const Module &M,
-                                              StringRef Attr,
+static bool checkDenormalAttributeConsistency(const Module &M, StringRef Attr,
                                               DenormalMode Value) {
   return !any_of(M, [&](const Function &F) {
+    if (F.isDeclaration())
+      return false;
     StringRef AttrVal = F.getFnAttribute(Attr).getValueAsString();
     return parseDenormalFPAttribute(AttrVal) != Value;
+  });
+}
+
+// Returns true if all functions have different denormal modes.
+static bool checkDenormalAttributeInconsistency(const Module &M) {
+  auto F = M.functions().begin();
+  auto E = M.functions().end();
+  if (F == E)
+    return false;
+  DenormalMode Value = F->getDenormalModeRaw();
+  ++F;
+  return std::any_of(F, E, [&](const Function &F) {
+    return !F.isDeclaration() && F.getDenormalModeRaw() != Value;
   });
 }
 
@@ -691,7 +711,9 @@ void ARMAsmPrinter::emitAttributes() {
                                              DenormalMode::getPositiveZero()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
-  else if (!TM.Options.UnsafeFPMath)
+  else if (checkDenormalAttributeInconsistency(*MMI->getModule()) ||
+           checkDenormalAttributeConsistency(
+               *MMI->getModule(), "denormal-fp-math", DenormalMode::getIEEE()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
   else {
@@ -726,7 +748,7 @@ void ARMAsmPrinter::emitAttributes() {
       TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
-  else if (!TM.Options.UnsafeFPMath) {
+  else {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, ARMBuildAttrs::Allowed);
 
     // If the user has permitted this code to choose the IEEE 754
@@ -750,7 +772,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (STI.isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
+  if (getTM().isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the
@@ -843,19 +865,19 @@ static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
 static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   switch (Modifier) {
   case ARMCP::no_modifier:
-    return ARMMCExpr::VK_None;
+    return ARM::S_None;
   case ARMCP::TLSGD:
-    return ARMMCExpr::VK_TLSGD;
+    return ARM::S_TLSGD;
   case ARMCP::TPOFF:
-    return ARMMCExpr::VK_TPOFF;
+    return ARM::S_TPOFF;
   case ARMCP::GOTTPOFF:
-    return ARMMCExpr::VK_GOTTPOFF;
+    return ARM::S_GOTTPOFF;
   case ARMCP::SBREL:
-    return ARMMCExpr::VK_SBREL;
+    return ARM::S_SBREL;
   case ARMCP::GOT_PREL:
-    return ARMMCExpr::VK_GOT_PREL;
+    return ARM::S_GOT_PREL;
   case ARMCP::SECREL:
-    return MCSymbolRefExpr::VK_SECREL;
+    return ARM::S_COFF_SECREL;
   }
   llvm_unreachable("Invalid ARMCPModifier!");
 }
@@ -1620,12 +1642,15 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     MI->getOperand(2).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVi16_ga_pcrel) ? 8 : 4;
-    const MCExpr *PCRelExpr =
-      ARMMCExpr::createLower16(MCBinaryExpr::createSub(GVSymExpr,
-                                      MCBinaryExpr::createAdd(LabelSymExpr,
-                                      MCConstantExpr::create(PCAdj, OutContext),
-                                      OutContext), OutContext), OutContext);
-      TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
+    const MCExpr *PCRelExpr = ARM::createLower16(
+        MCBinaryExpr::createSub(
+            GVSymExpr,
+            MCBinaryExpr::createAdd(LabelSymExpr,
+                                    MCConstantExpr::create(PCAdj, OutContext),
+                                    OutContext),
+            OutContext),
+        OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
 
     // Add predicate operands.
     TmpInst.addOperand(MCOperand::createImm(ARMCC::AL));
@@ -1653,12 +1678,15 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     MI->getOperand(3).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVTi16_ga_pcrel) ? 8 : 4;
-    const MCExpr *PCRelExpr =
-        ARMMCExpr::createUpper16(MCBinaryExpr::createSub(GVSymExpr,
-                                   MCBinaryExpr::createAdd(LabelSymExpr,
-                                      MCConstantExpr::create(PCAdj, OutContext),
-                                          OutContext), OutContext), OutContext);
-      TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
+    const MCExpr *PCRelExpr = ARM::createUpper16(
+        MCBinaryExpr::createSub(
+            GVSymExpr,
+            MCBinaryExpr::createAdd(LabelSymExpr,
+                                    MCConstantExpr::create(PCAdj, OutContext),
+                                    OutContext),
+            OutContext),
+        OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
     // Add predicate operands.
     TmpInst.addOperand(MCOperand::createImm(ARMCC::AL));
     TmpInst.addOperand(MCOperand::createReg(0));
@@ -2030,12 +2058,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
     break;
-  }
-  case ARM::TRAPNaCl: {
-    uint32_t Val = 0xe7fedef0UL;
-    OutStreamer->AddComment("trap");
-    ATS.emitInst(Val);
-    return;
   }
   case ARM::tTRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
@@ -2451,7 +2473,8 @@ INITIALIZE_PASS(ARMAsmPrinter, "arm-asm-printer", "ARM Assembly Printer", false,
 //===----------------------------------------------------------------------===//
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeARMAsmPrinter() {
   RegisterAsmPrinter<ARMAsmPrinter> X(getTheARMLETarget());
   RegisterAsmPrinter<ARMAsmPrinter> Y(getTheARMBETarget());
   RegisterAsmPrinter<ARMAsmPrinter> A(getTheThumbLETarget());

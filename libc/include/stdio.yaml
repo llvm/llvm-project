@@ -249,6 +249,12 @@ functions:
       - POSIX
     return_type: int
     arguments: []
+  - name: perror
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: const char *
   - name: printf
     standards:
       - stdc

@@ -295,7 +295,7 @@ Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const std::optional<unsigned> &NumElemsArg) {
-  assert(!(ElemSizeArg == 0 && NumElemsArg && *NumElemsArg == 0) &&
+  assert(!(ElemSizeArg == 0 && NumElemsArg == 0) &&
          "Invalid allocsize arguments -- given allocsize(0, 0)");
   return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
 }
@@ -952,6 +952,19 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C,
   AttrBuilder B(C, *this);
   B.merge(AttrBuilder(C, AS));
   return get(C, B);
+}
+
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         const AttrBuilder &B) const {
+  if (!hasAttributes())
+    return get(C, B);
+
+  if (!B.hasAttributes())
+    return *this;
+
+  AttrBuilder Merged(C, *this);
+  Merged.merge(B);
+  return get(C, Merged);
 }
 
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
@@ -2424,7 +2437,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
           .addAttribute(Attribute::Writable)
           .addAttribute(Attribute::DeadOnUnwind)
           .addAttribute(Attribute::Initializes)
-          .addAttribute(Attribute::Captures);
+          .addAttribute(Attribute::Captures)
+          .addAttribute(Attribute::DeadOnReturn);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)

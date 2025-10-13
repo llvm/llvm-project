@@ -98,6 +98,10 @@ bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
   return mapRaw(Params, "arguments", R.arguments, P);
 }
 
+bool operator==(const Request &a, const Request &b) {
+  return a.seq == b.seq && a.command == b.command && a.arguments == b.arguments;
+}
+
 json::Value toJSON(const Response &R) {
   json::Object Result{{"type", "response"},
                       {"seq", 0},
@@ -177,6 +181,11 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
          mapRaw(Params, "body", R.body, P);
 }
 
+bool operator==(const Response &a, const Response &b) {
+  return a.request_seq == b.request_seq && a.command == b.command &&
+         a.success == b.success && a.message == b.message && a.body == b.body;
+}
+
 json::Value toJSON(const ErrorMessage &EM) {
   json::Object Result{{"id", EM.id}, {"format", EM.format}};
 
@@ -246,6 +255,10 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
   }
 
   return mapRaw(Params, "body", E.body, P);
+}
+
+bool operator==(const Event &a, const Event &b) {
+  return a.event == b.event && a.body == b.body;
 }
 
 bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {

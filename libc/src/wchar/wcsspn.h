@@ -19,4 +19,4 @@ size_t wcsspn(const wchar_t *s1, const wchar_t *s2);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_WCHAR_WCSCHR_H
+#endif // LLVM_LIBC_SRC_WCHAR_WCSSPN_H

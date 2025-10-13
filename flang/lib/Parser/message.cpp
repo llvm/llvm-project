@@ -21,6 +21,10 @@
 
 namespace Fortran::parser {
 
+// The nextCh parser emits this, and Message::GetProvenanceRange() looks for it.
+const MessageFixedText MessageFixedText::endOfFileMessage{
+    "end of file"_err_en_US};
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const MessageFixedText &t) {
   std::size_t n{t.text().size()};
   for (std::size_t j{0}; j < n; ++j) {
@@ -232,7 +236,20 @@ std::optional<ProvenanceRange> Message::GetProvenanceRange(
     const AllCookedSources &allCooked) const {
   return common::visit(
       common::visitors{
-          [&](CharBlock cb) { return allCooked.GetProvenanceRange(cb); },
+          [&](CharBlock cb) -> std::optional<ProvenanceRange> {
+            if (auto pr{allCooked.GetProvenanceRange(cb)}) {
+              return pr;
+            } else if (const auto *fixed{std::get_if<MessageFixedText>(&text_)};
+                fixed &&
+                fixed->text() == MessageFixedText::endOfFileMessage.text() &&
+                cb.begin() && cb.size() == 1) {
+              // Failure from "nextCh" due to reaching EOF.  Back up one byte
+              // to the terminal newline so that the output looks better.
+              return allCooked.GetProvenanceRange(CharBlock{cb.begin() - 1, 1});
+            } else {
+              return std::nullopt;
+            }
+          },
           [](const ProvenanceRange &pr) { return std::make_optional(pr); },
       },
       location_);
@@ -273,14 +290,36 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
   return llvm::raw_ostream::SAVEDCOLOR;
 }
 
+static std::string HintLanguageControlFlag(
+    const common::LanguageFeatureControl *hintFlagPtr,
+    std::optional<common::LanguageFeature> feature,
+    std::optional<common::UsageWarning> warning) {
+  if (hintFlagPtr) {
+    std::string flag;
+    if (warning) {
+      flag = hintFlagPtr->getDefaultCliSpelling(*warning);
+    } else if (feature) {
+      flag = hintFlagPtr->getDefaultCliSpelling(*feature);
+    }
+    if (!flag.empty()) {
+      return " [-W" + flag + "]";
+    }
+  }
+  return "";
+}
+
 static constexpr int MAX_CONTEXTS_EMITTED{2};
 static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLine) const {
+    bool echoSourceLine,
+    const common::LanguageFeatureControl *hintFlagPtr) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
-  sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
+  const std::string text{ToString()};
+  const std::string hint{
+      HintLanguageControlFlag(hintFlagPtr, languageFeature_, usageWarning_)};
+  sources.EmitMessage(o, provenanceRange, text + hint, Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
   // Refers to whether the attachment in the loop below is a context, but can't
   // be declared inside the loop because the previous iteration's
@@ -430,21 +469,47 @@ void Messages::ResolveProvenances(const AllCookedSources &allCooked) {
 }
 
 void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLines) const {
+    bool echoSourceLines, const common::LanguageFeatureControl *hintFlagPtr,
+    std::size_t maxErrorsToEmit, bool warningsAreErrors) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
     sorted.push_back(&msg);
   }
   std::stable_sort(sorted.begin(), sorted.end(),
       [](const Message *x, const Message *y) { return x->SortBefore(*y); });
-  const Message *lastMsg{nullptr};
+  std::vector<const Message *> msgsWithLastLocation;
+  std::size_t errorsEmitted{0};
   for (const Message *msg : sorted) {
-    if (lastMsg && *msg == *lastMsg) {
-      // Don't emit two identical messages for the same location
+    bool shouldSkipMsg{false};
+    // Don't emit two identical messages for the same location.
+    // At the same location, messages are sorted by the order they were
+    // added to the Messages buffer, which is a decent proxy for the
+    // causality of the messages.
+    if (!msgsWithLastLocation.empty()) {
+      if (msgsWithLastLocation[0]->AtSameLocation(*msg)) {
+        for (const Message *msgAtThisLocation : msgsWithLastLocation) {
+          if (*msg == *msgAtThisLocation) {
+            shouldSkipMsg = true; // continue loop over sorted messages
+            break;
+          }
+        }
+      } else {
+        msgsWithLastLocation.clear();
+      }
+    }
+    if (shouldSkipMsg) {
       continue;
     }
-    msg->Emit(o, allCooked, echoSourceLines);
-    lastMsg = msg;
+    msgsWithLastLocation.push_back(msg);
+    msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
+    if (warningsAreErrors || msg->IsFatal()) {
+      ++errorsEmitted;
+    }
+    // If maxErrorsToEmit is 0, emit all errors, otherwise break after
+    // maxErrorsToEmit.
+    if (maxErrorsToEmit > 0 && errorsEmitted >= maxErrorsToEmit) {
+      break;
+    }
   }
 }
 
@@ -459,7 +524,18 @@ void Messages::AttachTo(Message &msg, std::optional<Severity> severity) {
   messages_.clear();
 }
 
-bool Messages::AnyFatalError() const {
+bool Messages::AnyFatalError(bool warningsAreErrors) const {
+  // Short-circuit in the most common case.
+  if (messages_.empty()) {
+    return false;
+  }
+  // If warnings are errors and there are warnings or errors, this is fatal.
+  // This preserves the compiler's current behavior of treating any non-fatal
+  // message as a warning. We may want to refine this in the future.
+  if (warningsAreErrors) {
+    return true;
+  }
+  // Otherwise, check the message buffer for fatal errors.
   for (const auto &msg : messages_) {
     if (msg.IsFatal()) {
       return true;

@@ -14,15 +14,13 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcExp2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -40,7 +38,6 @@ TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp2fTest, Overflow) {
-  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::exp2f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -80,7 +77,6 @@ TEST_F(LlvmLibcExp2fTest, TrickyInputs) {
 }
 
 TEST_F(LlvmLibcExp2fTest, Underflow) {
-  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       0.0f, LIBC_NAMESPACE::exp2f(FPBits(0xff7fffffU).get_val()), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);

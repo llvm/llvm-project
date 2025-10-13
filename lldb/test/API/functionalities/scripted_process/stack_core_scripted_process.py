@@ -204,9 +204,7 @@ class StackCoreScriptedThread(ScriptedThread):
             if self.is_stopped:
                 if "arm64" in self.scripted_process.arch:
                     stop_reason["type"] = lldb.eStopReasonException
-                    stop_reason["data"][
-                        "desc"
-                    ] = self.corefile_thread.GetStopDescription(100)
+                    stop_reason["data"]["desc"] = self.corefile_thread.stop_description
                 elif self.scripted_process.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP

@@ -59,6 +59,8 @@ __cpp_lib_char8_t                                       201907L <atomic> <filesy
 __cpp_lib_chrono                                        201611L <chrono>
 __cpp_lib_chrono_udls                                   201304L <chrono>
 __cpp_lib_clamp                                         201603L <algorithm>
+__cpp_lib_common_reference                              202302L <type_traits>
+__cpp_lib_common_reference_wrapper                      202302L <functional>
 __cpp_lib_complex_udls                                  201309L <complex>
 __cpp_lib_concepts                                      202002L <concepts>
 __cpp_lib_constexpr_algorithms                          202306L <algorithm> <utility>
@@ -71,6 +73,7 @@ __cpp_lib_constexpr_dynamic_alloc                       201907L <memory>
 __cpp_lib_constexpr_forward_list                        202502L <forward_list>
 __cpp_lib_constexpr_functional                          201907L <functional>
 __cpp_lib_constexpr_iterator                            201811L <iterator>
+__cpp_lib_constexpr_list                                202502L <list>
 __cpp_lib_constexpr_memory                              202202L <memory>
                                                         201811L // C++20
 __cpp_lib_constexpr_new                                 202406L <new>
@@ -82,8 +85,8 @@ __cpp_lib_constexpr_tuple                               201811L <tuple>
 __cpp_lib_constexpr_typeinfo                            202106L <typeinfo>
 __cpp_lib_constexpr_utility                             201811L <utility>
 __cpp_lib_constexpr_vector                              201907L <vector>
-__cpp_lib_constrained_equality                          202403L <optional> <tuple> <utility>
-                                                                <variant>
+__cpp_lib_constrained_equality                          202411L <expected> <optional> <tuple>
+                                                                <utility> <variant>
 __cpp_lib_containers_ranges                             202202L <deque> <forward_list> <list>
                                                                 <map> <queue> <set>
                                                                 <stack> <string> <unordered_map>
@@ -202,6 +205,7 @@ __cpp_lib_ranges_chunk_by                               202202L <ranges>
 __cpp_lib_ranges_concat                                 202403L <ranges>
 __cpp_lib_ranges_contains                               202207L <algorithm>
 __cpp_lib_ranges_find_last                              202207L <algorithm>
+__cpp_lib_ranges_indices                                202506L <ranges>
 __cpp_lib_ranges_iota                                   202202L <numeric>
 __cpp_lib_ranges_join_with                              202202L <ranges>
 __cpp_lib_ranges_repeat                                 202207L <ranges>
@@ -242,6 +246,7 @@ __cpp_lib_starts_ends_with                              201711L <string> <string
 __cpp_lib_stdatomic_h                                   202011L <stdatomic.h>
 __cpp_lib_string_contains                               202011L <string> <string_view>
 __cpp_lib_string_resize_and_overwrite                   202110L <string>
+__cpp_lib_string_subview                                202506L <string> <string_view>
 __cpp_lib_string_udls                                   201304L <string>
 __cpp_lib_string_view                                   202403L <string> <string_view>
                                                         201803L // C++20
@@ -330,7 +335,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_clamp                                201603L
 # define __cpp_lib_enable_shared_from_this              201603L
 // # define __cpp_lib_execution                            201603L
-# if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if _LIBCPP_HAS_FILESYSTEM
 #   define __cpp_lib_filesystem                         201703L
 # endif
 # define __cpp_lib_gcd_lcm                              201606L
@@ -388,10 +393,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_atomic_ref                           201806L
 // # define __cpp_lib_atomic_shared_ptr                    201711L
 # define __cpp_lib_atomic_value_initialization          201911L
-# if _LIBCPP_AVAILABILITY_HAS_SYNC
-#   define __cpp_lib_atomic_wait                        201907L
-# endif
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# define __cpp_lib_atomic_wait                          201907L
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_barrier                            201907L
 # endif
 # define __cpp_lib_bind_front                           201907L
@@ -401,6 +404,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if _LIBCPP_HAS_CHAR8_T
 #   define __cpp_lib_char8_t                            201907L
 # endif
+# define __cpp_lib_common_reference                     202302L
+# define __cpp_lib_common_reference_wrapper             202302L
 # define __cpp_lib_concepts                             202002L
 # define __cpp_lib_constexpr_algorithms                 201806L
 # define __cpp_lib_constexpr_complex                    201711L
@@ -434,10 +439,10 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_is_layout_compatible                 201907L
 # define __cpp_lib_is_nothrow_convertible               201806L
 // # define __cpp_lib_is_pointer_interconvertible          201907L
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_jthread                            201911L
 # endif
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_latch                              201907L
 # endif
 # define __cpp_lib_list_remove_return_type              201806L
@@ -450,7 +455,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # endif
 # define __cpp_lib_ranges                               202110L
 # define __cpp_lib_remove_cvref                         201711L
-# if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_semaphore                          201907L
 # endif
 # undef  __cpp_lib_shared_ptr_arrays
@@ -518,7 +523,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_ranges_contains                      202207L
 # define __cpp_lib_ranges_find_last                     202207L
 # define __cpp_lib_ranges_iota                          202202L
-// # define __cpp_lib_ranges_join_with                     202202L
+# define __cpp_lib_ranges_join_with                     202202L
 # define __cpp_lib_ranges_repeat                        202207L
 // # define __cpp_lib_ranges_slide                         202202L
 # define __cpp_lib_ranges_starts_ends_with              202106L
@@ -545,11 +550,12 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_constexpr_algorithms
 # define __cpp_lib_constexpr_algorithms                 202306L
 # define __cpp_lib_constexpr_forward_list               202502L
+# define __cpp_lib_constexpr_list                       202502L
 # if !defined(_LIBCPP_ABI_VCRUNTIME)
 #   define __cpp_lib_constexpr_new                      202406L
 # endif
 # define __cpp_lib_constexpr_queue                      202502L
-// # define __cpp_lib_constrained_equality                 202403L
+# define __cpp_lib_constrained_equality                 202411L
 // # define __cpp_lib_copyable_function                    202306L
 // # define __cpp_lib_debugging                            202311L
 // # define __cpp_lib_default_template_type_for_algorithm_values 202403L
@@ -579,11 +585,12 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_mdspan                               202406L
 # undef  __cpp_lib_not_fn
 # define __cpp_lib_not_fn                               202306L
-// # define __cpp_lib_optional_range_support               202406L
+# define __cpp_lib_optional_range_support               202406L
 # undef  __cpp_lib_out_ptr
 # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_philox_engine                        202406L
 // # define __cpp_lib_ranges_concat                        202403L
+# define __cpp_lib_ranges_indices                       202506L
 # define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
 # define __cpp_lib_reference_wrapper                    202403L
@@ -593,6 +600,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_span_at                              202311L
 # define __cpp_lib_span_initializer_list                202311L
 # define __cpp_lib_sstream_from_string_view             202306L
+# define __cpp_lib_string_subview                       202506L
 # undef  __cpp_lib_string_view
 # define __cpp_lib_string_view                          202403L
 // # define __cpp_lib_submdspan                            202306L

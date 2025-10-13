@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -23,11 +22,9 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/CSE.h"
@@ -40,16 +37,13 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
-
 #define DEBUG_TYPE_MATCHER "transform-matcher"
-#define DBGS_MATCHER() (llvm::dbgs() << "[" DEBUG_TYPE_MATCHER "] ")
-#define DEBUG_MATCHER(x) DEBUG_WITH_TYPE(DEBUG_TYPE_MATCHER, x)
 
 using namespace mlir;
 
@@ -185,8 +179,7 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
       DiagnosedSilenceableFailure result =
           state.applyTransform(cast<TransformOpInterface>(transform));
       if (result.isSilenceableFailure()) {
-        LLVM_DEBUG(DBGS() << "alternative failed: " << result.getMessage()
-                          << "\n");
+        LDBG() << "alternative failed: " << result.getMessage();
         failed = true;
         break;
       }
@@ -623,11 +616,10 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
       if (diag.succeeded()) {
         // Tracking failure is the only failure.
         return trackingFailure;
-      } else {
-        diag.attachNote() << "tracking listener also failed: "
-                          << trackingFailure.getMessage();
-        (void)trackingFailure.silence();
       }
+      diag.attachNote() << "tracking listener also failed: "
+                        << trackingFailure.getMessage();
+      (void)trackingFailure.silence();
     }
 
     if (!diag.succeeded())
@@ -788,46 +780,47 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
   // Obtain a single options-string to pass to the pass(-pipeline) from options
   // passed in as a dictionary of keys mapping to values which are either
   // attributes or param-operands pointing to attributes.
+  OperandRange dynamicOptions = getDynamicOptions();
 
   std::string options;
   llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
 
-  OperandRange dynamicOptions = getDynamicOptions();
-  for (auto [idx, namedAttribute] : llvm::enumerate(getOptions())) {
-    if (idx > 0)
-      optionsStream << " "; // Interleave options separator.
-    optionsStream << namedAttribute.getName().str(); // Append the key.
-    optionsStream << "="; // And the key-value separator.
-
-    Attribute valueAttrToAppend;
-    if (auto paramOperandIndex =
-            dyn_cast<transform::ParamOperandAttr>(namedAttribute.getValue())) {
-      // The corresponding value attribute is passed in via a param.
+  // A helper to convert an option's attribute value into a corresponding
+  // string representation, with the ability to obtain the attr(s) from a param.
+  std::function<void(Attribute)> appendValueAttr = [&](Attribute valueAttr) {
+    if (auto paramOperand = dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
+      // The corresponding value attribute(s) is/are passed in via a param.
       // Obtain the param-operand via its specified index.
-      size_t dynamicOptionIdx = paramOperandIndex.getIndex().getInt();
-      assert(dynamicOptionIdx < dynamicOptions.size() &&
-             "number of dynamic option markers (UnitAttr) in options ArrayAttr "
+      int64_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      assert(dynamicOptionIdx < static_cast<int64_t>(dynamicOptions.size()) &&
+             "the number of ParamOperandAttrs in the options DictionaryAttr"
              "should be the same as the number of options passed as params");
-      ArrayRef<Attribute> dynamicOption =
+      ArrayRef<Attribute> attrsAssociatedToParam =
           state.getParams(dynamicOptions[dynamicOptionIdx]);
-      if (dynamicOption.size() != 1)
-        return emitSilenceableError()
-               << "options passed as a param must have "
-                  "a single value associated, param "
-               << dynamicOptionIdx << " associates " << dynamicOption.size();
-      valueAttrToAppend = dynamicOption[0];
-    } else {
-      // Value is a static attribute.
-      valueAttrToAppend = namedAttribute.getValue();
-    }
-
-    // Append string representation of value attribute.
-    if (auto strAttr = dyn_cast<StringAttr>(valueAttrToAppend)) {
+      // Recursive so as to append all attrs associated to the param.
+      llvm::interleave(attrsAssociatedToParam, optionsStream, appendValueAttr,
+                       ",");
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      // Recursive so as to append all nested attrs of the array.
+      llvm::interleave(arrayAttr, optionsStream, appendValueAttr, ",");
+    } else if (auto strAttr = dyn_cast<StringAttr>(valueAttr)) {
+      // Convert to unquoted string.
       optionsStream << strAttr.getValue().str();
     } else {
-      valueAttrToAppend.print(optionsStream, /*elideType=*/true);
+      // For all other attributes, ask the attr to print itself (without type).
+      valueAttr.print(optionsStream, /*elideType=*/true);
     }
-  }
+  };
+
+  // Convert the options DictionaryAttr into a single string.
+  llvm::interleave(
+      getOptions(), optionsStream,
+      [&](auto namedAttribute) {
+        optionsStream << namedAttribute.getName().str(); // Append the key.
+        optionsStream << "="; // And the key-value separator.
+        appendValueAttr(namedAttribute.getValue()); // And the attr's str repr.
+      },
+      " ");
   optionsStream.flush();
 
   // Get pass or pass pipeline from registry.
@@ -878,23 +871,30 @@ static ParseResult parseApplyRegisteredPassOptions(
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions) {
   // Construct the options DictionaryAttr per a `{ key = value, ... }` syntax.
   SmallVector<NamedAttribute> keyValuePairs;
-
   size_t dynamicOptionsIdx = 0;
-  auto parseKeyValuePair = [&]() -> ParseResult {
-    // Parse items of the form `key = value` where `key` is a bare identifier or
-    // a string and `value` is either an attribute or an operand.
 
-    std::string key;
-    Attribute valueAttr;
-    if (parser.parseOptionalKeywordOrString(&key))
-      return parser.emitError(parser.getCurrentLocation())
-             << "expected key to either be an identifier or a string";
-    if (key.empty())
-      return failure();
+  // Helper for allowing parsing of option values which can be of the form:
+  // - a normal attribute
+  // - an operand (which would be converted to an attr referring to the operand)
+  // - ArrayAttrs containing the foregoing (in correspondence with ListOptions)
+  std::function<ParseResult(Attribute &)> parseValue =
+      [&](Attribute &valueAttr) -> ParseResult {
+    // Allow for array syntax, e.g. `[0 : i64, %param, true, %other_param]`:
+    if (succeeded(parser.parseOptionalLSquare())) {
+      SmallVector<Attribute> attrs;
 
-    if (parser.parseEqual())
-      return parser.emitError(parser.getCurrentLocation())
-             << "expected '=' after key in key-value pair";
+      // Recursively parse the array's elements, which might be operands.
+      if (parser.parseCommaSeparatedList(
+              AsmParser::Delimiter::None,
+              [&]() -> ParseResult { return parseValue(attrs.emplace_back()); },
+              " in options dictionary") ||
+          parser.parseRSquare())
+        return failure(); // NB: Attempted parse should've output error message.
+
+      valueAttr = ArrayAttr::get(parser.getContext(), attrs);
+
+      return success();
+    }
 
     // Parse the value, which can be either an attribute or an operand.
     OptionalParseResult parsedValueAttr =
@@ -903,9 +903,7 @@ static ParseResult parseApplyRegisteredPassOptions(
       OpAsmParser::UnresolvedOperand operand;
       ParseResult parsedOperand = parser.parseOperand(operand);
       if (failed(parsedOperand))
-        return parser.emitError(parser.getCurrentLocation())
-               << "expected a valid attribute or operand as value associated "
-               << "to key '" << key << "'";
+        return failure(); // NB: Attempted parse should've output error message.
       // To make use of the operand, we need to store it in the options dict.
       // As SSA-values cannot occur in attributes, what we do instead is store
       // an attribute in its place that contains the index of the param-operand,
@@ -924,7 +922,30 @@ static ParseResult parseApplyRegisteredPassOptions(
              << "in the generic print format";
     }
 
+    return success();
+  };
+
+  // Helper for `key = value`-pair parsing where `key` is a bare identifier or a
+  // string and `value` looks like either an attribute or an operand-in-an-attr.
+  std::function<ParseResult()> parseKeyValuePair = [&]() -> ParseResult {
+    std::string key;
+    Attribute valueAttr;
+
+    if (failed(parser.parseOptionalKeywordOrString(&key)) || key.empty())
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected key to either be an identifier or a string";
+
+    if (failed(parser.parseEqual()))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected '=' after key in key-value pair";
+
+    if (failed(parseValue(valueAttr)))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected a valid attribute or operand as value associated "
+             << "to key '" << key << "'";
+
     keyValuePairs.push_back(NamedAttribute(key, valueAttr));
+
     return success();
   };
 
@@ -951,16 +972,27 @@ static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
   if (options.empty())
     return;
 
+  std::function<void(Attribute)> printOptionValue = [&](Attribute valueAttr) {
+    if (auto paramOperandAttr =
+            dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
+      // Resolve index of param-operand to its actual SSA-value and print that.
+      printer.printOperand(
+          dynamicOptions[paramOperandAttr.getIndex().getInt()]);
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      // This case is so that ArrayAttr-contained operands are pretty-printed.
+      printer << "[";
+      llvm::interleaveComma(arrayAttr, printer, printOptionValue);
+      printer << "]";
+    } else {
+      printer.printAttribute(valueAttr);
+    }
+  };
+
   printer << "{";
   llvm::interleaveComma(options, printer, [&](NamedAttribute namedAttribute) {
-    printer << namedAttribute.getName() << " = ";
-    Attribute value = namedAttribute.getValue();
-    if (auto indexAttr = dyn_cast<transform::ParamOperandAttr>(value)) {
-      // Resolve index of param-operand to its actual SSA-value and print that.
-      printer.printOperand(dynamicOptions[indexAttr.getIndex().getInt()]);
-    } else {
-      printer.printAttribute(value);
-    }
+    printer << namedAttribute.getName();
+    printer << " = ";
+    printOptionValue(namedAttribute.getValue());
   });
   printer << "}";
 }
@@ -970,11 +1002,14 @@ LogicalResult transform::ApplyRegisteredPassOp::verify() {
   // and references to dynamic options in the options dictionary.
 
   auto dynamicOptions = SmallVector<Value>(getDynamicOptions());
-  for (NamedAttribute namedAttr : getOptions())
-    if (auto paramOperand =
-            dyn_cast<transform::ParamOperandAttr>(namedAttr.getValue())) {
-      size_t dynamicOptionIdx = paramOperand.getIndex().getInt();
-      if (dynamicOptionIdx < 0 || dynamicOptionIdx >= dynamicOptions.size())
+
+  // Helper for option values to mark seen operands as having been seen (once).
+  std::function<LogicalResult(Attribute)> checkOptionValue =
+      [&](Attribute valueAttr) -> LogicalResult {
+    if (auto paramOperand = dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
+      int64_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      if (dynamicOptionIdx < 0 ||
+          dynamicOptionIdx >= static_cast<int64_t>(dynamicOptions.size()))
         return emitOpError()
                << "dynamic option index " << dynamicOptionIdx
                << " is out of bounds for the number of dynamic options: "
@@ -983,8 +1018,20 @@ LogicalResult transform::ApplyRegisteredPassOp::verify() {
         return emitOpError() << "dynamic option index " << dynamicOptionIdx
                              << " is already used in options";
       dynamicOptions[dynamicOptionIdx] = nullptr; // Mark this option as used.
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      // Recurse into ArrayAttrs as they may contain references to operands.
+      for (auto eltAttr : arrayAttr)
+        if (failed(checkOptionValue(eltAttr)))
+          return failure();
     }
+    return success();
+  };
 
+  for (NamedAttribute namedAttr : getOptions())
+    if (failed(checkOptionValue(namedAttr.getValue())))
+      return failure();
+
+  // All dynamicOptions-params seen in the dict will have been set to null.
   for (Value dynamicOption : dynamicOptions)
     if (dynamicOption)
       return emitOpError() << "a param operand does not have a corresponding "
@@ -1103,12 +1150,10 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
   std::optional<DiagnosedSilenceableFailure> maybeFailure;
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      DEBUG_MATCHER({
-        DBGS_MATCHER() << "matching ";
-        op->print(llvm::dbgs(),
-                  OpPrintingFlags().assumeVerified().skipRegions());
-        llvm::dbgs() << " @" << op << "\n";
-      });
+      LDBG(DEBUG_TYPE_MATCHER, 1)
+          << "matching "
+          << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
+          << " @" << op;
 
       // Try matching.
       SmallVector<SmallVector<MappedValue>> mappings;
@@ -1120,8 +1165,8 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
       if (diag.isDefiniteFailure())
         return WalkResult::interrupt();
       if (diag.isSilenceableFailure()) {
-        DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
-                                     << " failed: " << diag.getMessage());
+        LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
+                                    << " failed: " << diag.getMessage();
         return WalkResult::advance();
       }
 
@@ -1252,12 +1297,10 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
       if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
-      DEBUG_MATCHER({
-        DBGS_MATCHER() << "matching ";
-        op->print(llvm::dbgs(),
-                  OpPrintingFlags().assumeVerified().skipRegions());
-        llvm::dbgs() << " @" << op << "\n";
-      });
+      LDBG(DEBUG_TYPE_MATCHER, 1)
+          << "matching "
+          << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
+          << " @" << op;
 
       firstMatchArgument.clear();
       firstMatchArgument.push_back(op);
@@ -1270,8 +1313,8 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
-          DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
-                                       << " failed: " << diag.getMessage());
+          LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
+                                      << " failed: " << diag.getMessage();
           continue;
         }
 
@@ -1590,13 +1633,13 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   // smallest payload in the targets.
   if (withZipShortest) {
     numIterations =
-        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
-                                        const SmallVector<MappedValue> &B) {
-          return A.size() < B.size();
+        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &a,
+                                        const SmallVector<MappedValue> &b) {
+          return a.size() < b.size();
         })->size();
 
-    for (size_t argIdx = 0; argIdx < payloads.size(); argIdx++)
-      payloads[argIdx].resize(numIterations);
+    for (auto &payload : payloads)
+      payload.resize(numIterations);
   }
 
   // As we will be "zipping" over them, check all payloads have the same size.
@@ -2054,17 +2097,11 @@ void transform::IncludeOp::getEffects(
       getOperation(), getTarget());
   if (!callee)
     return defaultEffects();
-  DiagnosedSilenceableFailure earlyVerifierResult =
-      verifyNamedSequenceOp(callee, /*emitWarnings=*/false);
-  if (!earlyVerifierResult.succeeded()) {
-    (void)earlyVerifierResult.silence();
-    return defaultEffects();
-  }
 
   for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
     if (callee.getArgAttr(i, TransformDialect::kArgConsumedAttrName))
       consumesHandle(getOperation()->getOpOperand(i), effects);
-    else
+    else if (callee.getArgAttr(i, TransformDialect::kArgReadOnlyAttrName))
       onlyReadsHandle(getOperation()->getOpOperand(i), effects);
   }
 }
@@ -2121,10 +2158,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp success\n"; });
+    LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp success";
     return DiagnosedSilenceableFailure::success();
   }
-  DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp failure\n"; });
+  LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp failure";
   return emitSilenceableError() << "operation is not empty";
 }
 
@@ -2554,10 +2591,7 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
           .Case([&](TransformParamTypeInterface param) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](Type) {
-            llvm_unreachable("unknown kind of transform dialect type");
-            return 0;
-          });
+          .DefaultUnreachable("unknown kind of transform dialect type");
   results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
@@ -2614,10 +2648,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
           .Case<TransformParamTypeInterface>([&](auto x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](auto x) {
-            llvm_unreachable("unknown transform dialect type interface");
-            return -1;
-          });
+          .DefaultUnreachable("unknown transform dialect type interface");
 
   auto produceNumOpsError = [&]() {
     return emitSilenceableError()

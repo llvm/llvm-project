@@ -16,11 +16,22 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "clang/Basic/AddressSpaces.h"
 
 #include <memory>
 #include <utility>
 
 namespace clang::CIRGen {
+
+/// isEmptyFieldForLayout - Return true if the field is "empty", that is,
+/// either a zero-width bit-field or an isEmptyRecordForLayout.
+bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
+
+/// isEmptyRecordForLayout - Return true if a structure contains only empty
+/// base classes (per  isEmptyRecordForLayout) and fields (per
+/// isEmptyFieldForLayout). Note, C++ record fields are considered empty
+/// if the [[no_unique_address]] attribute would have made them empty.
+bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
 class TargetCIRGenInfo {
   std::unique_ptr<ABIInfo> info;
@@ -32,6 +43,11 @@ public:
 
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
+
+  /// Get the address space for alloca.
+  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
+    return {};
+  }
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic

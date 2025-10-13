@@ -3,7 +3,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -mattr=+ptx60                                                 \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-F16-NOFTZ %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 && ptxas-isa-6.0 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -mattr=+ptx60                                                 \
@@ -14,7 +14,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -denormal-fp-math-f32=preserve-sign -mattr=+ptx60             \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16-FTZ %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 && ptxas-isa-6.0 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -denormal-fp-math-f32=preserve-sign -mattr=+ptx60             \
@@ -25,7 +25,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
 ; RUN:          -verify-machineinstrs -mattr=+ptx60                         \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math   \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
@@ -34,7 +34,7 @@
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
 ; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                               \
+; RUN: %if ptxas-sm_52 %{                                                               \
 ; RUN:   llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
 ; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs         \
 ; RUN:   | %ptxas-verify -arch=sm_52                                              \
@@ -43,8 +43,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: test_ret_const(
-; CHECK:      mov.b16         [[R:%rs[0-9]+]], 0x3C00;
-; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
+; CHECK: st.param.b16    [func_retval0], 0x3C00;
 ; CHECK-NEXT: ret;
 define half @test_ret_const() #0 {
   ret half 1.0
@@ -263,12 +262,7 @@ declare half @test_callee(half %a, half %b) #0
 ; CHECK-DAG:  st.param.b16    [param0], [[A]];
 ; CHECK-DAG:  st.param.b16    [param1], [[B]];
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT:        test_callee,
-; CHECK-NEXT: (
-; CHECK-NEXT:        param0,
-; CHECK-NEXT:        param1
-; CHECK-NEXT: );
+; CHECK:      call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -287,12 +281,7 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-DAG:  st.param.b16    [param0], [[B]];
 ; CHECK-DAG:  st.param.b16    [param1], [[A]];
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT:        test_callee,
-; CHECK-NEXT: (
-; CHECK-NEXT:        param0,
-; CHECK-NEXT:        param1
-; CHECK-NEXT: );
+; CHECK:      call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -311,12 +300,7 @@ define half @test_call_flipped(half %a, half %b) #0 {
 ; CHECK-DAG:  st.param.b16    [param0], [[B]];
 ; CHECK-DAG:  st.param.b16    [param1], [[A]];
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT:        test_callee,
-; CHECK-NEXT: (
-; CHECK-NEXT:        param0,
-; CHECK-NEXT:        param1
-; CHECK-NEXT: );
+; CHECK:      call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -399,7 +383,7 @@ define half @test_select_cc_f16_f32(half %a, half %b, float %c, float %d) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.neu.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_une(half %a, half %b) #0 {
@@ -415,7 +399,7 @@ define i1 @test_fcmp_une(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.equ.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ueq(half %a, half %b) #0 {
@@ -431,7 +415,7 @@ define i1 @test_fcmp_ueq(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.gtu.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ugt(half %a, half %b) #0 {
@@ -447,7 +431,7 @@ define i1 @test_fcmp_ugt(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.geu.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_uge(half %a, half %b) #0 {
@@ -463,7 +447,7 @@ define i1 @test_fcmp_uge(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.ltu.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ult(half %a, half %b) #0 {
@@ -479,7 +463,7 @@ define i1 @test_fcmp_ult(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.leu.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ule(half %a, half %b) #0 {
@@ -496,7 +480,7 @@ define i1 @test_fcmp_ule(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.nan.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_uno(half %a, half %b) #0 {
@@ -512,7 +496,7 @@ define i1 @test_fcmp_uno(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.ne.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_one(half %a, half %b) #0 {
@@ -528,7 +512,7 @@ define i1 @test_fcmp_one(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.eq.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_oeq(half %a, half %b) #0 {
@@ -544,7 +528,7 @@ define i1 @test_fcmp_oeq(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.gt.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ogt(half %a, half %b) #0 {
@@ -560,7 +544,7 @@ define i1 @test_fcmp_ogt(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.ge.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_oge(half %a, half %b) #0 {
@@ -576,7 +560,7 @@ define i1 @test_fcmp_oge(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.lt.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_olt(half %a, half %b) #0 {
@@ -592,7 +576,7 @@ define i1 @test_fcmp_olt(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.le.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ole(half %a, half %b) #0 {
@@ -608,7 +592,7 @@ define i1 @test_fcmp_ole(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%r[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%r[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.num.f32   [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], 1, 0, [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], -1, 0, [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define i1 @test_fcmp_ord(half %a, half %b) #0 {
@@ -650,8 +634,7 @@ else:
 ; CHECK:      ld.b16  [[AB:%rs[0-9]+]], [%[[P1]]];
 ; CHECK:      {
 ; CHECK:      st.param.b64    [param0], %[[P1]];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT: test_dummy
+; CHECK:      call.uni (retval0), test_dummy
 ; CHECK:      }
 ; CHECK:      setp.ne.b32     [[PRED:%p[0-9]+]], %r{{[0-9]+}}, 0;
 ; CHECK:      @[[PRED]] bra   [[LOOP]];
@@ -897,26 +880,28 @@ define half @test_sqrt(half %a) #0 {
 ; CHECK-LABEL: test_sin(
 ; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_sin_param_0];
 ; CHECK-NOFTZ:      cvt.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK-F16-FTZ:      cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK:      sin.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
+; CHECK-NOF16:      sin.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    sin.approx.ftz.f32  [[RF:%r[0-9]+]], [[AF]];
 ; CHECK:      cvt.rn.f16.f32  [[R:%rs[0-9]+]], [[RF]];
 ; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
-define half @test_sin(half %a) #0 #1 {
-  %r = call half @llvm.sin.f16(half %a)
+define half @test_sin(half %a) #0 {
+  %r = call afn half @llvm.sin.f16(half %a)
   ret half %r
 }
 
 ; CHECK-LABEL: test_cos(
 ; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_cos_param_0];
 ; CHECK-NOFTZ:      cvt.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK-F16-FTZ:      cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK:      cos.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
+; CHECK-NOF16:      cos.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    cos.approx.ftz.f32  [[RF:%r[0-9]+]], [[AF]];
 ; CHECK:      cvt.rn.f16.f32  [[R:%rs[0-9]+]], [[RF]];
 ; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
-define half @test_cos(half %a) #0 #1 {
-  %r = call half @llvm.cos.f16(half %a)
+define half @test_cos(half %a) #0 {
+  %r = call afn half @llvm.cos.f16(half %a)
   ret half %r
 }
 
@@ -1198,4 +1183,3 @@ define <2 x half> @test_neg_f16x2(<2 x half> noundef %arg) #0 {
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { "unsafe-fp-math" = "true" }

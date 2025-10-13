@@ -15,6 +15,7 @@
 
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
@@ -23,9 +24,11 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 class SymbolTable;
+class StateStack;
 }
 
 namespace fir {
@@ -104,6 +107,25 @@ public:
   /// Binds the symbol to an fir extended value. The symbol binding will be
   /// added or replaced at the inner-most level of the local symbol map.
   virtual void bindSymbol(SymbolRef sym, const fir::ExtendedValue &exval) = 0;
+
+  /// Binds the symbol's physical storage to a storage descriptor,
+  /// which is the base address of the storage and the offset
+  /// within the storage, where the symbol begins.
+  /// The symbol binding will be added or replaced at the innermost level
+  /// of the local symbol map.
+  virtual void
+  bindSymbolStorage(SymbolRef sym,
+                    Fortran::lower::SymMap::StorageDesc storage) = 0;
+
+  /// Returns the storage descriptor previously bound to this symbol.
+  /// If there is no bound storage, the descriptor will contain
+  /// nullptr base address.
+  virtual Fortran::lower::SymMap::StorageDesc
+  getSymbolStorage(SymbolRef sym) = 0;
+
+  /// Return the Symbol Map used to map semantics::Symbol to their SSA
+  /// values in the generated MLIR.
+  virtual Fortran::lower::SymMap &getSymbolMap() = 0;
 
   /// Override lowering of expression with pre-lowered values.
   /// Associate mlir::Value to evaluate::Expr. All subsequent call to
@@ -253,6 +275,9 @@ public:
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
 
+  /// Check support of Multi-image features if -fcoarray is provided
+  virtual void checkCoarrayEnabled() = 0;
+
   //===--------------------------------------------------------------------===//
   // Types
   //===--------------------------------------------------------------------===//
@@ -266,7 +291,7 @@ public:
   /// Generate the type from a category and kind and length parameters.
   virtual mlir::Type
   genType(Fortran::common::TypeCategory tc, int kind,
-          llvm::ArrayRef<std::int64_t> lenParameters = std::nullopt) = 0;
+          llvm::ArrayRef<std::int64_t> lenParameters = {}) = 0;
   /// Generate the type from a DerivedTypeSpec.
   virtual mlir::Type genType(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Generate the type from a Variable
@@ -360,6 +385,8 @@ public:
   /// always be provided to the builder helper creating globals and
   /// functions in order to be in sync).
   virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
+
+  virtual mlir::StateStack &getStateStack() = 0;
 
 private:
   /// Options controlling lowering behavior.

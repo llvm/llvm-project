@@ -73,14 +73,15 @@ struct SegmentInfo {
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
   bool IsExecutable;          /// Is the executable bit set on the Segment?
+  bool IsWritable;            /// Is the segment writable.
 
   void print(raw_ostream &OS) const {
     OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
        << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
-       << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : "")
+       << (IsWritable ? "w" : "") << " }";
   };
 };
 
@@ -189,6 +190,9 @@ class BinaryContext {
   /// Unique build ID if available for the binary.
   std::optional<std::string> FileBuildID;
 
+  /// GNU property note indicating AArch64 BTI.
+  bool UsesBTI{false};
+
   /// Set of all sections.
   struct CompareSections {
     bool operator()(const BinarySection *A, const BinarySection *B) const {
@@ -287,6 +291,12 @@ public:
   /// overwritten, but it is okay to re-generate debug info for them.
   std::set<const DWARFUnit *> ProcessedCUs;
 
+  /// DWARF-related container to manage lifecycle of groups of rows from line
+  /// tables associated with instructions. Since binary functions can span
+  /// multiple compilation units, instructions may reference debug line
+  /// information from multiple CUs.
+  ClusteredRowsContainer ClusteredRows;
+
   // Setup MCPlus target builder
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
     MIB = std::move(TargetBuilder);
@@ -319,6 +329,9 @@ public:
   /// Returns true if DWARF4 or lower is used.
   bool isDWARFLegacyUsed() const { return ContainsDwarfLegacy; }
 
+  /// Returns true if DWARFUnit is valid.
+  bool isValidDwarfUnit(DWARFUnit &DU) const;
+
   std::map<unsigned, DwarfLineTable> &getDwarfLineTables() {
     return DwarfLineTablesCUMap;
   }
@@ -333,8 +346,13 @@ public:
                                   std::optional<StringRef> Source,
                                   unsigned CUID, unsigned DWARFVersion);
 
+  /// Input file segment info
+  ///
   /// [start memory address] -> [segment info] mapping.
   std::map<uint64_t, SegmentInfo> SegmentMapInfo;
+
+  /// Newly created segments.
+  std::vector<SegmentInfo> NewSegments;
 
   /// Symbols that are expected to be undefined in MCContext during emission.
   std::unordered_set<MCSymbol *> UndefinedSymbols;
@@ -368,6 +386,9 @@ public:
     return std::nullopt;
   }
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
+
+  bool usesBTI() const { return UsesBTI; }
+  void setUsesBTI(bool Value) { UsesBTI = Value; }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }

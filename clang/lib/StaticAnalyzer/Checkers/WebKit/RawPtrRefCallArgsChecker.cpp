@@ -217,15 +217,15 @@ public:
         [&](const clang::Expr *ArgOrigin, bool IsSafe) {
           if (IsSafe)
             return true;
-          if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
-            // foo(nullptr)
+          if (isNullPtr(ArgOrigin))
             return true;
-          }
           if (isa<IntegerLiteral>(ArgOrigin)) {
             // FIXME: Check the value.
-            // foo(NULL)
+            // foo(123)
             return true;
           }
+          if (isa<CXXBoolLiteralExpr>(ArgOrigin))
+            return true;
           if (isa<ObjCStringLiteral>(ArgOrigin))
             return true;
           if (isASafeCallArg(ArgOrigin))
@@ -294,7 +294,7 @@ public:
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
         name == "is" || name == "equal" || name == "hash" || name == "isType" ||
         // FIXME: Most/all of these should be implemented via attributes.
-        name == "equalIgnoringASCIICase" ||
+        name == "CFEqual" || name == "equalIgnoringASCIICase" ||
         name == "equalIgnoringASCIICaseCommon" ||
         name == "equalIgnoringNullity" || name == "toString")
       return true;
@@ -386,7 +386,7 @@ public:
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-    Os << "Reciever is " << ptrKind() << " and unsafe.";
+    Os << "Receiver is " << ptrKind() << " and unsafe.";
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -467,11 +467,11 @@ public:
   }
 
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
 
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
 
   bool isSafeExpr(const Expr *E) const final {

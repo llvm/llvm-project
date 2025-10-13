@@ -14,7 +14,7 @@ DESCRIPTION
 -----------
 :program:`llvm-debuginfo-analyzer` parses debug and text sections in
 binary object files and prints their contents in a logical view, which
-is a human readable representation that closely matches the structure
+is a human-readable representation that closely matches the structure
 of the original user source code. Supported object file formats include
 ELF, Mach-O, WebAssembly, PDB and COFF.
 
@@ -365,6 +365,8 @@ output for a single compilation unit.
 
  .. code-block:: text
 
+   =none: Unsorted output (i.e. as read from input).
+   =id: Sort by unique element ID.
    =kind: Sort by element kind.
    =line: Sort by element line number.
    =name: Sort by element name.
@@ -676,8 +678,7 @@ INTERNAL
  Typically these kind of options are available only in *debug* builds.
 
  :program:`llvm-debuginfo-analyzer` supports these advanced options in
- both *release* and *debug* builds, with the exception of the unique ID
- that is generated only in *debug* builds.
+ both *release* and *debug* builds.
 
 .. option:: --internal=<value[,value,...]>
 

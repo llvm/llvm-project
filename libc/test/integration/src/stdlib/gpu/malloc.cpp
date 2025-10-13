@@ -24,6 +24,7 @@ TEST_MAIN(int, char **, char **) {
   int *divergent = reinterpret_cast<int *>(
       LIBC_NAMESPACE::malloc((gpu::get_thread_id() + 1) * 16));
   EXPECT_NE(divergent, nullptr);
+  EXPECT_TRUE(__builtin_is_aligned(divergent, 16));
   *divergent = 1;
   EXPECT_EQ(*divergent, 1);
   LIBC_NAMESPACE::free(divergent);

@@ -12,7 +12,7 @@ module {
   }
 
   // [1, 0, 1, 0] ? [1, 2, 3, 4] : [5, 6, 7, 8] Will be fold to [1, 6, 3, 8]
-  // CHECK: cir.func @vector_ternary_fold_test() -> !cir.vector<4 x !s32i> {
+  // CHECK: cir.func{{.*}} @vector_ternary_fold_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<6> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
 }

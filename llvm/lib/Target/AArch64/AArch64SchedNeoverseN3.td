@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseN3Model : SchedMachineModel {
-    let IssueWidth            =  10; // Micro-ops dispatched at a time.
+    let IssueWidth            =   5; // Micro-ops dispatched at a time.
     let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer. NOTE: Copied from N2.
     let LoadLatency           =   4; // Optimistic load latency.
     let MispredictPenalty     =  10; // Extra cycles for mispredicted branch. NOTE: Copied from N2.
@@ -1736,13 +1736,13 @@ def : InstRW<[N3Write_16c_16V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                             "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[N3Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[N3Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[N3Write_3c_1V], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[N3Write_2c_1V], (instregex "^DUP_ZI_[BHSD]$",
@@ -1757,7 +1757,7 @@ def : InstRW<[N3Write_2c_1V], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                          "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[N3Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[N3Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]$",
@@ -2082,7 +2082,7 @@ def : InstRW<[N3Write_4c_2V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[N3Write_4c_1V], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[N3Write_5c_1V], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[N3Write_5c_1V], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[N3Write_4c_1V], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;

@@ -80,13 +80,8 @@ struct ParsedStringTable {
 LLVM_ABI Expected<std::unique_ptr<RemarkParser>>
 createRemarkParser(Format ParserFormat, StringRef Buf);
 
-LLVM_ABI Expected<std::unique_ptr<RemarkParser>>
-createRemarkParser(Format ParserFormat, StringRef Buf,
-                   ParsedStringTable StrTab);
-
 LLVM_ABI Expected<std::unique_ptr<RemarkParser>> createRemarkParserFromMeta(
     Format ParserFormat, StringRef Buf,
-    std::optional<ParsedStringTable> StrTab = std::nullopt,
     std::optional<StringRef> ExternalFilePrependPath = std::nullopt);
 
 } // end namespace remarks

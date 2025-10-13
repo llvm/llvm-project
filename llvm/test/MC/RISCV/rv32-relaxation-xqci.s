@@ -160,9 +160,9 @@ EXT_JUMP_NEGATIVE:
 .space 0x1000
 
   jal t1, EXT_JUMP
-# ERROR: [[@LINE-1]]:3: error: fixup value out of range
+# ERROR: [[@LINE-1]]:11: error: fixup value out of range
   jal t1, EXT_JUMP_NEGATIVE
-# ERROR: [[@LINE-1]]:3: error: fixup value out of range
+# ERROR: [[@LINE-1]]:11: error: fixup value out of range
 
 .space 0x1000
 .space 0x100000

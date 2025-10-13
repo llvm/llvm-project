@@ -43,7 +43,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; COUNT: ![[LOOP]] = distinct !{![[LOOP]], ![[FOLLOWUP_ALL]], ![[FOLLOWUP_UNROLLED]]}
 
 
-; EPILOG: br i1 %niter.ncmp.7, label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !llvm.loop ![[LOOP_0:[0-9]+]]
+; EPILOG: br i1 %niter.ncmp.7, label %for.end.loopexit.unr-lcssa, label %for.body, !llvm.loop ![[LOOP_0:[0-9]+]]
 ; EPILOG: br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop ![[LOOP_2:[0-9]+]]
 
 ; EPILOG: ![[LOOP_0]] = distinct !{![[LOOP_0]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOWUP_UNROLLED:[0-9]+]]}

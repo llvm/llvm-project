@@ -43,7 +43,7 @@
 ; OSABI-HSA-ELF:     .sgpr_count:     96
 ; OSABI-HSA-ELF:     .sgpr_spill_count: 0
 ; OSABI-HSA-ELF:     .symbol:         elf_notes.kd
-; OSABI-HSA-ELF:     .vgpr_count:     1
+; OSABI-HSA-ELF:     .vgpr_count:     0
 ; OSABI-HSA-ELF:     .vgpr_spill_count: 0
 ; OSABI-HSA-ELF:     .wavefront_size: 64
 ; OSABI-HSA-ELF: amdhsa.target:   amdgcn-amd-amdhsa--gfx802
@@ -85,7 +85,7 @@ define amdgpu_kernel void @elf_notes() #0 {
   ret void
 }
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

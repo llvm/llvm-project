@@ -35,6 +35,13 @@ Example:
     f(1, 2); // Incorrect - may not invoke the desired qualified function operator
   }
 
+Options
+-------
+
+.. option:: ForwardFunction
+
+   Specify the function used for forwarding. Default is `::std::forward`.
+
 This check implements `F.19
 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_
 from the C++ Core Guidelines.

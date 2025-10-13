@@ -19,11 +19,13 @@
 #g_var_expr = #llvm.di_global_variable_expression<var = #g_var>
 #sp = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #cu, scope = #file,
   name = "test", file = #file, subprogramFlags = "Definition", type = #sp_ty>
-#var_arr = #llvm.di_local_variable<scope = #sp,
+#sp1 = #llvm.di_subprogram<id = distinct[3]<>, compileUnit = #cu, scope = #file,
+  name = "target", file = #file, subprogramFlags = "Definition", type = #sp_ty>
+#var_arr = #llvm.di_local_variable<scope = #sp1,
   name = "arr", file = #file, line = 4, type = #array_ty>
-#var_i = #llvm.di_local_variable<scope = #sp,
+#var_i = #llvm.di_local_variable<scope = #sp1,
   name = "i", file = #file, line = 13, type = #int_ty>
-#var_x = #llvm.di_local_variable<scope = #sp,
+#var_x = #llvm.di_local_variable<scope = #sp1,
  name = "x", file = #file, line = 12, type = #real_ty>
 
 module attributes {omp.is_target_device = false} {
@@ -45,7 +47,7 @@ module attributes {omp.is_target_device = false} {
       llvm.intr.dbg.declare #var_arr = %arg1 : !llvm.ptr
       llvm.intr.dbg.declare #var_i = %arg2 : !llvm.ptr
       omp.terminator
-    }
+    }  loc(#loc5)
     llvm.return
   } loc(#loc3)
   llvm.mlir.global internal @_QFEarr() {addr_space = 0 : i32, dbg_exprs = [#g_var_expr]} : !llvm.array<10 x i32> {
@@ -55,8 +57,9 @@ module attributes {omp.is_target_device = false} {
 #loc2 = loc("target.f90":11:7)
 #loc3 = loc(fused<#sp>[#loc2])
 #loc4 = loc(fused<#g_var>[#loc1])
+#loc5 = loc(fused<#sp1>[#loc2])
 
-// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "__omp_offloading{{.*}}test{{.*}})
+// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "target"{{.*}})
 // CHECK: !DILocalVariable(name: "x", arg: 1, scope: ![[SP]]{{.*}})
 // CHECK: !DILocalVariable(name: "arr", arg: 2, scope: ![[SP]]{{.*}})
 // CHECK: !DILocalVariable(name: "i", arg: 3, scope: ![[SP]]{{.*}})

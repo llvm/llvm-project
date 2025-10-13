@@ -2,7 +2,7 @@
 // RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
 // RUN:              modernize-use-std-format.StrictMode: true,         \
-// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; bad_format_type_strprintf', \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
 // RUN:            }}"                                                  \
@@ -10,7 +10,7 @@
 // RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT                    \
 // RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
-// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; bad_format_type_strprintf', \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
 // RUN:            }}"                                                  \
@@ -56,12 +56,17 @@ std::string A(const std::string &in)
 struct S {
   S(...);
 };
-std::string bad_format_type_strprintf(const S &, ...);
+std::string any_format_type_strprintf(const S &, ...);
 
-std::string unsupported_format_parameter_type()
+void unsupported_format_parameter_types()
 {
   // No fixes here because the format parameter of the function called is not a
   // string.
-  return bad_format_type_strprintf("");
-// CHECK-MESSAGES: [[@LINE-1]]:10: warning: unable to use 'fmt::format' instead of 'bad_format_type_strprintf' because first argument is not a narrow string literal [modernize-use-std-format]
+  auto s1 = any_format_type_strprintf(L"");
+  auto s2 = any_format_type_strprintf(42);
+
+  // But if we do pass a character string then that ought to be acceptable.
+  auto s3 = any_format_type_strprintf("Hello %s", "world");
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'fmt::format' instead of 'any_format_type_strprintf' [modernize-use-std-format]
+  // CHECK-FIXES: auto s3 = fmt::format("Hello {}", "world");
 }

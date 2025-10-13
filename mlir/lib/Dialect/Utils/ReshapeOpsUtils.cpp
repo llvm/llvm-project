@@ -13,7 +13,6 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 #include <optional>
@@ -299,19 +298,17 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   // this utility).
   if (numSourceDims <= numTargetDims)
     return std::nullopt;
-  // Early handling for scalar target types.
+  // Early handling for scalar target types. We should report an invalid
+  // reassociation for non-unit static dimensions - no chance to collapse these
+  // into a scalar.
   if (numTargetDims == 0) {
-    ReassociationIndices allSourceIndices;
-    allSourceIndices.reserve(numSourceDims);
     for (unsigned sourceDimIdx = 0; sourceDimIdx < numSourceDims;
          ++sourceDimIdx) {
       int64_t sourceSize = sourceShape[sourceDimIdx];
-      // All source dimensions must be unit or dynamic.
       if (sourceSize != 1 && sourceSize != ShapedType::kDynamic)
         return std::nullopt;
-      allSourceIndices.push_back(sourceDimIdx);
     }
-    return SmallVector<ReassociationIndices>{allSourceIndices};
+    return SmallVector<ReassociationIndices>{};
   }
 
   // Collect source ranges by iterating over the target shape left-to-right.
@@ -377,11 +374,11 @@ mlir::composeReassociationIndices(
   if (consumerReassociations.empty())
     return composedIndices;
 
-  size_t consumerDims = std::accumulate(
-      consumerReassociations.begin(), consumerReassociations.end(), 0,
-      [](size_t all, ReassociationIndicesRef indices) {
-        return all + indices.size();
-      });
+  size_t consumerDims =
+      llvm::accumulate(consumerReassociations, size_t(0),
+                       [](size_t all, ReassociationIndicesRef indices) {
+                         return all + indices.size();
+                       });
   if (producerReassociations.size() != consumerDims)
     return std::nullopt;
 
@@ -410,7 +407,7 @@ mlir::convertReassociationIndicesToExprs(
 }
 
 template <typename AffineExprTy>
-unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
+static unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   unsigned pos = 0;
   for (const auto &exprs : exprArrays) {
     for (auto expr : exprs) {
@@ -507,7 +504,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
         linearizedStaticShape *= dim.value();
     }
     if (foundDynamicShape) {
-      if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
+      if (ShapedType::isStatic(collapsedShape[map.index()])) {
         return emitError(
             "expected dimension " + Twine(map.index()) +
             " of collapsed type to be dynamic since one or more of the "
