@@ -1325,17 +1325,17 @@ class OpenACCReductionClause final
         Op(Operator) {
           assert(VarList.size() == Recipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-
-    // Initialize the recipe list.
-    unsigned I = 0;
-    for (const OpenACCReductionRecipe &R : Recipes) {
-      new (&getTrailingObjects<OpenACCReductionRecipe>()[I])
-          OpenACCReductionRecipe(R);
-      ++I;
-    }
+    llvm::uninitialized_copy(Recipes,
+                             getTrailingObjects<OpenACCReductionRecipe>());
   }
 
 public:
+  ~OpenACCReductionClause() {
+    for (unsigned I = 0; I < getExprs().size(); ++I) {
+      getTrailingObjects<OpenACCReductionRecipe>()[I].~OpenACCReductionRecipe();
+    }
+  }
+
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::Reduction;
   }
