@@ -281,6 +281,4 @@ def load_info_from_files(build_log_files):
 
 def generate_report_from_files(title, return_code, build_log_files):
     junit_objects, ninja_logs = load_info_from_files(build_log_files)
-    return generate_report(
-        title, return_code, junit_objects, ninja_logs
-    )
+    return generate_report(title, return_code, junit_objects, ninja_logs)
