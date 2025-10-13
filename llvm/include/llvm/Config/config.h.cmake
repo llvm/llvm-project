@@ -10,6 +10,9 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 
+/* Define to 1 if the host is a big endian machine, and to 0 otherwise. */
+#cmakedefine01 LLVM_HOST_IS_BIG_ENDIAN
+
 /* Define to 1 to enable backtraces, and to 0 otherwise. */
 #cmakedefine01 ENABLE_BACKTRACES
 

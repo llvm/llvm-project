@@ -1079,6 +1079,15 @@ if(NOT LLVM_ENABLE_NEW_PASS_MANAGER)
                       " no longer supported.")
 endif()
 
+# Determine host endianness.
+if(CMAKE_CXX_BYTE_ORDER STREQUAL "BIG_ENDIAN")
+  set(LLVM_HOST_IS_BIG_ENDIAN 1)
+elseif(CMAKE_CXX_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
+  set(LLVM_HOST_IS_BIG_ENDIAN 0)
+else()
+  message(FATAL_ERROR "Unsupported CMAKE_CXX_BYTE_ORDER: ${CMAKE_CXX_BYTE_ORDER}")
+endif()
+
 include(HandleLLVMOptions)
 
 ######
