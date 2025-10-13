@@ -13665,6 +13665,11 @@ def warn_acc_var_referenced_lacks_op
               "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
+def err_acc_reduction_recipe_no_op
+    : Error<"variable of type %0 referenced in OpenACC 'reduction' clause does "
+            "not have a valid operation available">;
+def note_acc_reduction_recipe_noop_field
+    : Note<"while forming combiner for compound type %0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

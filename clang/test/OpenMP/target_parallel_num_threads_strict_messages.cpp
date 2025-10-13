@@ -5,6 +5,13 @@
 // RUN: %clang_cc1 -DF3 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host-ppc.bc
 // RUN: %clang_cc1 -DF3 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-ppc.bc -o /dev/null
 
+// RUN: %clang_cc1 -DF1 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o %t-spirv-ppc-host-ppc.bc
+// RUN: %clang_cc1 -DF1 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple spirv64-intel -fopenmp-targets=spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-spirv-ppc-host-ppc.bc -o /dev/null
+// RUN: %clang_cc1 -DF2 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o %t-spirv-ppc-host-ppc.bc
+// RUN: %clang_cc1 -DF2 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple spirv64-intel -fopenmp-targets=spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-spirv-ppc-host-ppc.bc -o /dev/null
+// RUN: %clang_cc1 -DF3 -verify -fopenmp -fopenmp-version=60 -triple x86_64-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o %t-spirv-ppc-host-ppc.bc
+// RUN: %clang_cc1 -DF3 -DTARGET -verify -fopenmp -fopenmp-version=60 -triple spirv64-intel -fopenmp-targets=spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-spirv-ppc-host-ppc.bc -o /dev/null
+
 #ifndef TARGET
 // expected-no-diagnostics
 #endif
