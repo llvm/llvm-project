@@ -574,11 +574,13 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
 
   // Emitter for when we know this is either a non-array or element of an array
   // (which also shouldn't be an array type?). This function should generate the
-  // loop to do this on each individual array or struct element (if necessary).
-  auto emitCombiner = [&](mlir::Value lhsArg, mlir::Value rhsArg, QualType Ty) {
-    if (const auto *RD = Ty->getAsRecordDecl()) {
+  // initialization code for an entire 'array-element'/non-array, including
+  // diving into each element of a struct (if necessary).
+  auto emitCombiner = [&](mlir::Value lhsArg, mlir::Value rhsArg, QualType ty) {
+    assert(!ty->isArrayType() && "Array type shouldn't get here");
+    if (const auto *rd = ty->getAsRecordDecl()) {
       if (combinerRecipes.size() == 1 &&
-          cgf.getContext().hasSameType(Ty, combinerRecipes[0].LHS->getType())) {
+          cgf.getContext().hasSameType(ty, combinerRecipes[0].LHS->getType())) {
         // If this is a 'top level' operator on the type we can just emit this
         // as a simple one.
         emitSingleCombiner(lhsArg, rhsArg, combinerRecipes[0]);
@@ -586,7 +588,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
         // else we have to handle each individual field after after a
         // get-element.
         for (const auto &[field, combiner] :
-             llvm::zip_equal(RD->fields(), combinerRecipes)) {
+             llvm::zip_equal(rd->fields(), combinerRecipes)) {
           mlir::Type fieldType = cgf.convertType(field->getType());
           auto fieldPtr = cir::PointerType::get(fieldType);
 

@@ -1005,7 +1005,7 @@ public:
                       /*temporary=*/nullptr, OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      privateOp, /*reductionCombinerRecipe=*/{});
+                      privateOp, /*reductionCombinerRecipes=*/{});
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
           // probably need to change these here.
