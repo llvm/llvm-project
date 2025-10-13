@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -342,11 +343,7 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
 }
 
 void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
   for (auto &method : interface.getMethods()) {
     os << "template<typename " << valueTemplate << ">\n";
     emitCPPType(method.getReturnType(), os);
@@ -442,18 +439,11 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
                         method.isStatic() ? &ctx : &nonStaticMethodFmt);
     os << "\n}\n";
   }
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
-  os << "namespace detail {\n";
+  auto cppNamespace = (interface.getCppNamespace() + "::detail").str();
+  llvm::NamespaceEmitter ns(os, cppNamespace);
 
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
@@ -504,10 +494,6 @@ void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
-  os << "}// namespace detail\n";
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static void emitInterfaceDeclMethods(const Interface &interface,
@@ -533,10 +519,7 @@ static void emitInterfaceDeclMethods(const Interface &interface,
 }
 
 void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
@@ -545,16 +528,10 @@ void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
 
   StringRef interfaceName = interface.getName();
   os << "class " << interfaceName << ";\n";
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
 
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
@@ -631,9 +608,6 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   }
 
   os << "};\n";
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 bool InterfaceGenerator::emitInterfaceDecls() {

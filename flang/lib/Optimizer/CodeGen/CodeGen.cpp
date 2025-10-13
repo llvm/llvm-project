@@ -3229,6 +3229,10 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAddrSpace(
           static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
 
+    if (global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Constant)
+      TODO(global.getLoc(), "CUDA Fortran CONSTANT variable code generation");
+
     rewriter.eraseOp(global);
     return mlir::success();
   }
