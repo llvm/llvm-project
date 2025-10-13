@@ -1201,7 +1201,8 @@ PyOperationRef PyOperation::parse(PyMlirContextRef contextRef,
   return PyOperation::createDetached(std::move(contextRef), op);
 }
 
-void PyOperation::checkValid() const {
+void PyOperation::checkValid() {
+  nb::ft_lock_guard lock(validFlagMutex);
   if (!valid) {
     throw std::runtime_error("the operation has been invalidated");
   }
