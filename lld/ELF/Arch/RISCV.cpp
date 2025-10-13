@@ -72,10 +72,10 @@ public:
 #define INTERNAL_R_RISCV_GPREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
-#define INTERNAL_R_RISCV_TBJAL   260
+#define INTERNAL_R_RISCV_TBJAL 260
 
 const uint64_t dtpOffset = 0x800;
-const uint32_t jvtAlign  = 64;
+const uint32_t jvtAlign = 64;
 
 namespace {
 enum Op {
@@ -760,9 +760,10 @@ void elf::initSymbolAnchors(Ctx &ctx) {
   }
 }
 
-static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
-                           Relocation &r, uint32_t &remove) {
-  if (!ctx.in.riscvTableJumpSection || !ctx.in.riscvTableJumpSection->isFinalized)
+static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i,
+                           uint64_t loc, Relocation &r, uint32_t &remove) {
+  if (!ctx.in.riscvTableJumpSection ||
+      !ctx.in.riscvTableJumpSection->isFinalized)
     return false;
 
   const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
