@@ -3765,7 +3765,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_phsubsw256:
     return interp_builtin_horizontal_int_binop(
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+          return LHS.ssub_sat(RHS);
         });
   case clang::X86::BI__builtin_ia32_haddpd:
   case clang::X86::BI__builtin_ia32_haddps:
