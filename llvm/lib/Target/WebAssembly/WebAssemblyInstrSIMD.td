@@ -1626,7 +1626,8 @@ defm "" : RelaxedConvert<I32x4, F64x2, int_wasm_relaxed_trunc_unsigned_zero,
 // Relaxed (Negative) Multiply-Add  (madd/nmadd)
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate> reqs> {
+multiclass RELAXED_SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS,
+                            list<Predicate> reqs> {
   defm MADD_#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
            [(set (vec.vt V128:$dst), (int_wasm_relaxed_madd
@@ -1640,16 +1641,46 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
 
-  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
-             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+  def : Pat<(fadd_contract (fmul_contract (vec.vt V128:$a), (vec.vt V128:$b)), (vec.vt V128:$c)),
+            (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
+  def : Pat<(fmuladd (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)),
+             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
 
-  def : Pat<(fsub_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
-             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+  def : Pat<(fsub_contract (vec.vt V128:$c), (fmul_contract (vec.vt V128:$a), (vec.vt V128:$b))),
+            (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
+  def : Pat<(fmuladd (fneg (vec.vt V128:$a)), (vec.vt V128:$b), (vec.vt V128:$c)),
+             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
 }
 
-defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
+defm "" : RELAXED_SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
+defm "" : RELAXED_SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
+
+//===----------------------------------------------------------------------===//
+// FP16 (Negative) Multiply-Add  (madd/nmadd)
+//===----------------------------------------------------------------------===//
+
+multiclass HALF_PRECISION_SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS,
+                                   list<Predicate> reqs> {
+  defm MADD_#vec :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+           [(set (vec.vt V128:$dst), (fma
+             (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+           vec.prefix#".madd\t$dst, $a, $b, $c",
+           vec.prefix#".madd", simdopA, reqs>;
+  defm NMADD_#vec :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+           [(set (vec.vt V128:$dst), (fma
+             (fneg (vec.vt V128:$a)), (vec.vt V128:$b), (vec.vt V128:$c)))],
+           vec.prefix#".nmadd\t$dst, $a, $b, $c",
+           vec.prefix#".nmadd", simdopS, reqs>;
+}
+defm "" : HALF_PRECISION_SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
+
+// TODO: I think separate intrinsics should be introduced for these FP16 operations.
+def : Pat<(v8f16 (int_wasm_relaxed_madd (v8f16 V128:$a), (v8f16 V128:$b), (v8f16 V128:$c))),
+          (MADD_F16x8 V128:$a, V128:$b, V128:$c)>;
+def : Pat<(v8f16 (int_wasm_relaxed_nmadd (v8f16 V128:$a), (v8f16 V128:$b), (v8f16 V128:$c))),
+          (NMADD_F16x8 V128:$a, V128:$b, V128:$c)>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect
