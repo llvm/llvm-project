@@ -111,8 +111,8 @@ def _makeConfigTest(config):
             os.makedirs(supportDir)
 
     # Create a dummy test suite and single dummy test inside it. As part of
-    # the Lit configuration, automatically do the equivalent of 'mkdir %T'
-    # and 'rm -r %T' to avoid cluttering the build directory.
+    # the Lit configuration, automatically do the equivalent of 'mkdir %{temp}'
+    # and 'rm -r %{temp}' to avoid cluttering the build directory.
     suite = lit.Test.TestSuite("__config__", sourceRoot, execRoot, config)
     tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix=".cpp")
     tmp.close()
