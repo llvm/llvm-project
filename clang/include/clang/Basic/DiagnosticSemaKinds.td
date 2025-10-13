@@ -7500,7 +7500,11 @@ def ext_subscript_non_lvalue : Extension<
 def err_typecheck_subscript_value : Error<
   "subscripted value is not an array, pointer, or vector">;
 def err_typecheck_subscript_not_integer : Error<
-  "array subscript is not an integer">;
+  "%select{array|matrix}0 subscript is not an integer">;
+def err_typecheck_subscript_not_in_bounds : Error<
+  "%select{row|column}0 subscript is out of bounds of %select{zero|one}1 based indexing">;
+def err_typecheck_subscript_out_of_bounds : Error<
+  "%select{row|column}0 subscripted is out of bounds">;
 def err_subscript_function_type : Error<
   "subscript of pointer to function type %0">;
 def err_subscript_incomplete_or_sizeless_type : Error<
@@ -12972,6 +12976,7 @@ def err_builtin_matrix_stride_too_small: Error<
   "stride must be greater or equal to the number of rows">;
 def err_builtin_matrix_invalid_dimension: Error<
   "%0 dimension is outside the allowed range [1, %1]">;
+def err_builtin_matrix_invalid_member: Error<"invalid matrix member">;
 
 def warn_mismatched_import : Warning<
   "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "

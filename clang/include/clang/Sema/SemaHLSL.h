@@ -225,6 +225,9 @@ public:
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
   bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
+  ExprResult tryBuildHLSLMatrixElementAccessor(Expr *Base,
+                                               SourceLocation MemberLoc,
+                                               const IdentifierInfo *MemberId);
 
 private:
   // HLSL resource type attributes need to be processed all at once.

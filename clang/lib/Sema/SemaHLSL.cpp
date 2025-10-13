@@ -21,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -31,6 +32,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -4311,6 +4313,101 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   for (unsigned I = 0; I < NewInit->getNumInits(); ++I)
     Init->updateInit(Ctx, I, NewInit->getInit(I));
   return true;
+}
+
+ExprResult SemaHLSL::tryBuildHLSLMatrixElementAccessor(
+    Expr *Base, SourceLocation MemberLoc, const IdentifierInfo *MemberId) {
+  if (!Base)
+    return ExprError();
+
+  QualType T = Base->getType();
+  const ConstantMatrixType *MT = T->getAs<ConstantMatrixType>();
+  if (!MT)
+    return ExprError();
+
+  auto parseHLSLMatrixAccessor =
+      [this, MemberLoc, MemberId](unsigned &Row, unsigned &Col) -> ExprResult {
+    StringRef Name = MemberId->getNameStart();
+    bool IsMaccessor = Name.consume_front("_m");
+    // consume numeric accessor second so if _m exist we don't consume _ to
+    // early.
+    bool IsNumericAccessor = Name.consume_front("_");
+    if (!IsMaccessor && !IsNumericAccessor)
+      return ExprError(
+          Diag(MemberLoc, diag::err_builtin_matrix_invalid_member));
+
+    auto isDigit = [](char c) { return c >= '0' && c <= '9'; };
+    auto isZeroBasedIndex = [](char c) { return c >= '0' && c <= '3'; };
+    auto isOneBasedIndex = [](char c) { return c >= '1' && c <= '4'; };
+    if (Name.empty() || !isDigit(Name[0]) || !isDigit(Name[1])) {
+      return ExprError(
+          Diag(MemberLoc, diag::err_typecheck_subscript_not_integer)
+          << /*matrix*/ 1);
+    }
+
+    Row = Name[0] - '0';
+    Col = Name[1] - '0';
+    bool HasIndexingError = false;
+    if (IsNumericAccessor) {
+      Row--;
+      Col--;
+      // Note: we add diagnostic errors here because otherwise we will return -1
+      if (!isOneBasedIndex(Name[0])) {
+        Diag(MemberLoc, diag::err_typecheck_subscript_not_in_bounds)
+            << /*row*/ 0 << /*one*/ 1;
+        HasIndexingError = true;
+      }
+      if (!isOneBasedIndex(Name[1])) {
+        Diag(MemberLoc, diag::err_typecheck_subscript_not_in_bounds)
+            << /*col*/ 1 << /*one*/ 1;
+        HasIndexingError = true;
+      }
+    } else {
+      if (!isZeroBasedIndex(Name[0])) {
+        Diag(MemberLoc, diag::err_typecheck_subscript_not_in_bounds)
+            << /*row*/ 0 << /*zero*/ 0;
+        HasIndexingError = true;
+      }
+      if (!isZeroBasedIndex(Name[1])) {
+        Diag(MemberLoc, diag::err_typecheck_subscript_not_in_bounds)
+            << /*col*/ 1 << /*zero*/ 0;
+        HasIndexingError = true;
+      }
+    }
+    if (HasIndexingError)
+      return ExprError();
+    return ExprEmpty();
+  };
+  unsigned Row = 0, Col = 0;
+  ExprResult ParseResult = parseHLSLMatrixAccessor(Row, Col);
+  if (ParseResult.isInvalid())
+    return ParseResult;
+
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+  bool HasBoundsError = false;
+  if (Row >= Rows) {
+    Diag(MemberLoc, diag::err_typecheck_subscript_out_of_bounds) << /*Row*/ 0;
+    HasBoundsError = true;
+  }
+  if (Col >= Cols) {
+    Diag(MemberLoc, diag::err_typecheck_subscript_out_of_bounds) << /*Col*/ 1;
+    HasBoundsError = true;
+  }
+  if (HasBoundsError)
+    return ExprError();
+
+  auto mkIdx = [&](unsigned v) -> Expr * {
+    ASTContext &Context = SemaRef.getASTContext();
+    return IntegerLiteral::Create(Context, llvm::APInt(32, v),
+                                  Context.UnsignedIntTy, MemberLoc);
+  };
+  Expr *RowIdx = mkIdx(Row);
+  Expr *ColIdx = mkIdx(Col);
+
+  // Build A[Row][Col], reusing the existing matrix subscript machinery.
+  return SemaRef.CreateBuiltinMatrixSubscriptExpr(Base, RowIdx, ColIdx,
+                                                  MemberLoc);
 }
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
