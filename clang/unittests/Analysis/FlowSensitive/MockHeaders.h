@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines utilities to simplify testing of dataflow analyses.
+// This file defines mock headers for testing of dataflow analyses.
 //
 //===----------------------------------------------------------------------===//
 

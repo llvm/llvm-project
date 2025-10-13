@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines utilities to simplify testing of dataflow analyses.
+// This file defines mock headers for testing of dataflow analyses.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +15,7 @@
 namespace clang {
 namespace dataflow {
 namespace test {
-static constexpr char CSDtdDefHeader[] = R"(
+static constexpr char CStdDefHeader[] = R"(
 #ifndef CSTDDEF_H
 #define CSTDDEF_H
 
@@ -1242,7 +1242,7 @@ constexpr bool operator!=(const T &value, const Optional<U> &opt);
 
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
-  Headers.emplace_back("cstddef.h", CSDtdDefHeader);
+  Headers.emplace_back("cstddef.h", CStdDefHeader);
   Headers.emplace_back("std_initializer_list.h", StdInitializerListHeader);
   Headers.emplace_back("std_string.h", StdStringHeader);
   Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
