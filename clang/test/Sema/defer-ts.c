@@ -155,3 +155,16 @@ void f9() {
   }
   l4:
 }
+
+void f10(int i) {
+  switch (i) {
+    defer case 12: break; // expected-error {{cannot break out of a defer statement}} \
+                             expected-error {{cannot jump from switch statement to this case label}} \
+                             expected-note {{jump enters a defer statement}} \
+                             expected-note {{jump bypasses defer statement}}
+
+    defer default: break; // expected-error {{cannot break out of a defer statement}} \
+                             expected-error {{cannot jump from switch statement to this case label}} \
+                             expected-note {{jump enters a defer statement}}
+  }
+}
