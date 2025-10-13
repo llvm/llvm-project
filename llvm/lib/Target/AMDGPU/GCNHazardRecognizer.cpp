@@ -3405,11 +3405,15 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     }
   };
 
+  const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
+      AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0), 0),
+      0);
   auto UpdateStateFn = [&](StateType &State, const MachineInstr &I) {
     switch (I.getOpcode()) {
     case AMDGPU::S_WAITCNT_DEPCTR:
-      // Record waits within region of instructions free of SGPR reads.
-      if (!HasSGPRRead && I.getParent() == MI->getParent())
+      // Record mergable waits within region of instructions free of SGPR reads.
+      if (!HasSGPRRead && I.getParent() == MI->getParent() && !I.isBundled() &&
+          (I.getOperand(0).getImm() & ConstantMaskBits) == ConstantMaskBits)
         WaitInstrs.push_back(&I);
       break;
     default:
@@ -3459,21 +3463,22 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
              : AMDGPU::DepCtr::encodeFieldSaSdst(0);
 
   // Try to merge previous waits into this one for regions with no SGPR reads.
-  if (WaitInstrs.size()) {
-    const unsigned ConstantBits = AMDGPU::DepCtr::encodeFieldSaSdst(
-        AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0),
-                                          0),
-        0);
-
-    for (const MachineInstr *Instr : WaitInstrs) {
-      // Don't touch bundled waits.
-      if (Instr->isBundled())
+  if (!WaitInstrs.empty()) {
+    // Note: WaitInstrs contains const pointers, so walk backward from MI to
+    // obtain a mutable pointer to each instruction to be merged.
+    // This is expected to be a very short walk within the same block.
+    SmallVector<MachineInstr *> ToErase;
+    unsigned Found = 0;
+    for (MachineBasicBlock::reverse_iterator It = MI->getReverseIterator(),
+                                             End = MI->getParent()->rend();
+         Found < WaitInstrs.size() && It != End; ++It) {
+      MachineInstr *WaitMI = &*It;
+      // Find next wait instruction.
+      if (std::as_const(WaitMI) != WaitInstrs[Found])
         continue;
-      MachineInstr *WaitMI = const_cast<MachineInstr *>(Instr);
+      Found++;
       unsigned WaitMask = WaitMI->getOperand(0).getImm();
-      // Only work with counters related to this hazard.
-      if ((WaitMask & ConstantBits) != ConstantBits)
-        continue;
+      assert((WaitMask & ConstantMaskBits) == ConstantMaskBits);
       DepCtr = AMDGPU::DepCtr::encodeFieldSaSdst(
           DepCtr, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(WaitMask),
                            AMDGPU::DepCtr::decodeFieldSaSdst(DepCtr)));
@@ -3483,8 +3488,11 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
       DepCtr = AMDGPU::DepCtr::encodeFieldVaVcc(
           DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(WaitMask),
                            AMDGPU::DepCtr::decodeFieldVaVcc(DepCtr)));
-      WaitMI->eraseFromParent();
+      ToErase.push_back(WaitMI);
     }
+    assert(Found == WaitInstrs.size());
+    for (MachineInstr *WaitMI : ToErase)
+      WaitMI->eraseFromParent();
   }
 
   // Add s_waitcnt_depctr after SGPR write.
