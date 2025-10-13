@@ -47,7 +47,7 @@ class TestDarwinMTE(TestBase):
         self.expect("memory region ptr", substrs=["memory tagging: enabled"])
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)
-    def test_memory_read_with_tags(self):
+    def test_memory_read_show_tags(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// before free", lldb.SBFileSpec("main.c"), exe_name=exe_name

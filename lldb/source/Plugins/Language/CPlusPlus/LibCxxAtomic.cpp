@@ -142,7 +142,13 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  if (valobj_sp)
+  if (valobj_sp && IsLibCxxAtomic(*valobj_sp))
     return new LibcxxStdAtomicSyntheticFrontEnd(valobj_sp);
   return nullptr;
+}
+
+bool lldb_private::formatters::IsLibCxxAtomic(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("__a_") != nullptr;
+  return false;
 }

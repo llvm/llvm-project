@@ -798,6 +798,7 @@ bool MemProfUsePass::annotateGlobalVariables(
     return false;
 
   if (!DataAccessProf) {
+    M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 0U);
     M.getContext().diagnose(DiagnosticInfoPGOProfile(
         MemoryProfileFileName.data(),
         StringRef("Data access profiles not found in memprof. Ignore "
@@ -805,6 +806,7 @@ bool MemProfUsePass::annotateGlobalVariables(
         DS_Warning));
     return false;
   }
+  M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 1U);
 
   bool Changed = false;
   // Iterate all global variables in the module and annotate them based on
