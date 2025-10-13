@@ -102,6 +102,24 @@ void NormalFunc(int i, float f) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
+#pragma acc loop reduction(|: f)
+  for(int i = 0; i < 5; ++i);
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
+  // CHECK-NEXT: reduction clause Operator: |
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: NullStmt
+
 
 #pragma acc loop reduction(^: i)
   for(int i = 0; i < 5; ++i);
@@ -236,6 +254,25 @@ void TemplFunc() {
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: min
   // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: NullStmt
+
+#pragma acc loop reduction(&: T::SomeFloat)
+  for(int i = 0; i < 5; ++i);
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
+  // CHECK-NEXT: reduction clause Operator: &
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'
@@ -389,6 +426,23 @@ void TemplFunc() {
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: min
   // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: NullStmt
+  //
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
+  // CHECK-NEXT: reduction clause Operator: &
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'
