@@ -1189,7 +1189,8 @@ namespace {
     /// Should we continue evaluation as much as possible after encountering a
     /// construct which can't be reduced to a value?
     bool keepEvaluatingAfterFailure() const override {
-      if (!StepsLeft)
+      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+      if (Limit != 0 && !StepsLeft)
         return false;
 
       switch (EvalMode) {

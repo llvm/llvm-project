@@ -3686,10 +3686,7 @@ inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
 
 inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
   uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
-  if (Limit == 0)
-    return true;
-
-  if (NumElems > Limit) {
+  if (Limit != 0 && NumElems > Limit) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_new_exceeds_limits)
         << NumElems << Limit;
