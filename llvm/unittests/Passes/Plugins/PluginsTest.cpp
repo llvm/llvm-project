@@ -27,27 +27,13 @@
 
 using namespace llvm;
 
-void anchor() {}
-
-static std::string LibPath(const std::string Name = "TestPlugin") {
-  const auto &Argvs = testing::internal::GetArgvs();
-  const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "PluginsTests";
-  void *Ptr = (void *)(intptr_t)anchor;
-  std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
-  llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
-  sys::path::append(Buf, (Name + LLVM_PLUGIN_EXT).c_str());
-  return std::string(Buf.str());
-}
-
 TEST(PluginsTests, LoadPlugin) {
 #if !defined(LLVM_ENABLE_PLUGINS)
   // Skip the test if plugins are disabled.
   GTEST_SKIP();
 #endif
 
-  auto PluginPath = LibPath();
-  ASSERT_NE("", PluginPath);
-
+  auto PluginPath{std::string{"TestPlugin"} + LLVM_PLUGIN_EXT};
   Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
   ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
 
@@ -71,10 +57,8 @@ TEST(PluginsTests, LoadMultiplePlugins) {
   GTEST_SKIP();
 #endif
 
-  auto DoublerPluginPath = LibPath("DoublerPlugin");
-  auto TestPluginPath = LibPath("TestPlugin");
-  ASSERT_NE("", DoublerPluginPath);
-  ASSERT_NE("", TestPluginPath);
+  auto DoublerPluginPath{std::string{"DoublerPlugin"} + LLVM_PLUGIN_EXT};
+  auto TestPluginPath{std::string{"TestPlugin"} + LLVM_PLUGIN_EXT};
 
   Expected<PassPlugin> DoublerPlugin1 = PassPlugin::Load(DoublerPluginPath);
   ASSERT_TRUE(!!DoublerPlugin1)

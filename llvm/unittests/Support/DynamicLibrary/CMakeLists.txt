@@ -33,19 +33,14 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 function(dynlib_add_module NAME)
-  add_library(${NAME} MODULE
+  add_llvm_library(${NAME} MODULE BUILDTREE_ONLY
     PipSqueak.cpp
-    )
+  )
   set_target_properties(${NAME} PROPERTIES FOLDER "LLVM/Tests/Support")
 
   set_output_directory(${NAME}
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}
     LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}
-    )
-
-  set_target_properties(${NAME}
-    PROPERTIES PREFIX ""
-    SUFFIX ${LLVM_PLUGIN_EXT}
     )
 
   add_dependencies(DynamicLibraryTests ${NAME})

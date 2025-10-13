@@ -4,27 +4,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
 
 namespace {
-
-void anchor() {}
-
-static std::string libPath(const std::string Name = "InlineAdvisorPlugin") {
-  const auto &Argvs = testing::internal::GetArgvs();
-  const char *Argv0 =
-      Argvs.size() > 0 ? Argvs[0].c_str() : "PluginInlineAdvisorAnalysisTest";
-  void *Ptr = (void *)(intptr_t)anchor;
-  std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
-  llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
-  sys::path::append(Buf, (Name + LLVM_PLUGIN_EXT).c_str());
-  return std::string(Buf.str());
-}
 
 // Example of a custom InlineAdvisor that only inlines calls to functions called
 // "foo".
@@ -61,8 +46,7 @@ struct CompilerInstance {
 
   // connect the plugin to our compiler instance
   void setupPlugin() {
-    auto PluginPath = libPath();
-    ASSERT_NE("", PluginPath);
+    auto PluginPath{std::string{"InlineAdvisorPlugin"} + LLVM_PLUGIN_EXT};
     Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
     ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
     Plugin->registerPassBuilderCallbacks(PB);
