@@ -330,9 +330,9 @@ def : InstRW<[R52WriteALU_EX1, R52Read_ISS, R52Read_ISS],
       (instregex "ASRr", "RORS?r", "LSR", "LSL")>;
 
 def : InstRW<[R52WriteCC, R52Read_EX1], (instregex "CMPri", "CMNri")>;
-def : InstRW<[R52WriteCC, R52Read_EX1, R52Read_EX1], (instregex "CMPrr", "CMNzrr")>;
-def : InstRW<[R52WriteCC, R52Read_EX1, R52Read_ISS], (instregex "CMPrsi", "CMNzrsi")>;
-def : InstRW<[R52WriteCC, R52Read_EX1, R52Read_ISS, R52Read_ISS], (instregex "CMPrsr", "CMNzrsr")>;
+def : InstRW<[R52WriteCC, R52Read_EX1, R52Read_EX1], (instregex "CMPrr", "CMNrr")>;
+def : InstRW<[R52WriteCC, R52Read_EX1, R52Read_ISS], (instregex "CMPrsi", "CMNrsi")>;
+def : InstRW<[R52WriteCC, R52Read_EX1, R52Read_ISS, R52Read_ISS], (instregex "CMPrsr", "CMNrsr")>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_ISS],
       (instregex "t2LDC", "RBIT", "REV", "REV16", "REVSH", "RRX")>;
