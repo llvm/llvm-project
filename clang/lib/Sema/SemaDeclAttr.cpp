@@ -5206,7 +5206,12 @@ static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
   llvm::Triple Triple = S.getASTContext().getTargetInfo().getTriple();
   const LangOptions &LangOpts = S.getLangOpts();
-
+  // OpenCL has its own error messages.
+  if (!LangOpts.OpenCL && FD && !FD->isExternallyVisible()) {
+    S.Diag(AL.getLoc(), diag::err_hidden_device_kernel) << FD;
+    AL.setInvalid();
+    return;
+  }
   if (Triple.isNVPTX()) {
     handleGlobalAttr(S, D, AL);
   } else {
@@ -5222,17 +5227,7 @@ static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // TODO: isGPU() should probably return true for SPIR.
   bool TargetDeviceEnvironment = Triple.isGPU() || Triple.isSPIR() ||
                                  LangOpts.isTargetDevice() || LangOpts.OpenCL;
-  bool IsAMDGPUMismatch =
-      DeviceKernelAttr::isAMDGPUSpelling(AL) && !Triple.isAMDGPU();
-  bool IsNVPTXMismatch =
-      DeviceKernelAttr::isNVPTXSpelling(AL) && !Triple.isNVPTX();
-  if (IsAMDGPUMismatch || IsNVPTXMismatch || !TargetDeviceEnvironment) {
-    // While both are just different spellings of the same underlying
-    // attribute, it makes more sense to the user if amdgpu_kernel can only
-    // be used on AMDGPU and the equivalent for NVPTX, so warn and ignore
-    // the attribute if there's a mismatch.
-    // Also warn if this is not an environment where a device kernel makes
-    // sense.
+  if (!TargetDeviceEnvironment) {
     S.Diag(AL.getLoc(), diag::warn_cconv_unsupported)
         << AL << (int)Sema::CallingConventionIgnoredReason::ForThisTarget;
     AL.setInvalid();
