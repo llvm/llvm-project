@@ -1051,8 +1051,8 @@ bool SeparateConstOffsetFromGEP::decomposeBasePtr(Value *PtrOp, Value *&NewBase,
   if (!PO || !PO->hasAllConstantIndices())
     return false;
 
-  unsigned BitWidth =
-      DL->getTypeSizeInBits(cast<IntegerType>(PO->indices().begin()->get()->getType()));
+  unsigned BitWidth = DL->getTypeSizeInBits(
+      cast<IntegerType>(PO->indices().begin()->get()->getType()));
   APInt AccumulativeByteOffset(BitWidth, 0);
   gep_type_iterator GTI = gep_type_begin(*PO);
 
