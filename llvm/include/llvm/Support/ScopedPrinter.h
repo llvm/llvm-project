@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -57,8 +58,7 @@ struct HexNumber {
   HexNumber(unsigned long Value) : Value(Value) {}
   HexNumber(unsigned long long Value) : Value(Value) {}
   template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
-  HexNumber(EnumT Value)
-      : HexNumber(static_cast<std::underlying_type_t<EnumT>>(Value)) {}
+  HexNumber(EnumT Value) : HexNumber(llvm::to_underlying(Value)) {}
 
   uint64_t Value;
 };
@@ -84,7 +84,7 @@ struct FlagEntry {
       : Name(Name), Value(Value) {}
   template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
   FlagEntry(StringRef Name, EnumT Value)
-      : FlagEntry(Name, static_cast<std::underlying_type_t<EnumT>>(Value)) {}
+      : FlagEntry(Name, llvm::to_underlying(Value)) {}
 
   StringRef Name;
   uint64_t Value;

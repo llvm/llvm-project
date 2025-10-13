@@ -437,3 +437,14 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_tma()
 ! CHECK: nvvm.cp.async.bulk.commit.group
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+attributes(global) subroutine test_bulk_g2s(c, a, b, n)
+  real(8), device :: a(*)
+  real(8), shared :: tmpa(1024)
+  integer(8), shared :: barrier1
+  integer(4) :: tx_count
+  call tma_bulk_g2s(barrier1, a(j), tmpa, tx_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_bulk_g2s
+! CHECK: nvvm.cp.async.bulk.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : <7>, <1>

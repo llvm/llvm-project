@@ -2416,9 +2416,8 @@ _mm_min_pu8(__m64 __a, __m64 __b) {
 ///    A 64-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bit from each 8-bit element in \a __a,
 ///    written to bits [7:0].
-static __inline__ int __DEFAULT_FN_ATTRS_SSE2
-_mm_movemask_pi8(__m64 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_movemask_pi8(__m64 __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__zext128(__a));
 }
 

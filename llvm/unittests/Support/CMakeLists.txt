@@ -44,6 +44,7 @@ add_llvm_unittest(SupportTests
   ExtensibleRTTITest.cpp
   FileCollectorTest.cpp
   FileOutputBufferTest.cpp
+  Format.cpp
   FormatVariadicTest.cpp
   FSUniqueIDTest.cpp
   GenericDomTreeTest.cpp

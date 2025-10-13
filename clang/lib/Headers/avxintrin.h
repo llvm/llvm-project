@@ -2539,9 +2539,8 @@ _mm256_unpacklo_ps(__m256 __a, __m256 __b) {
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns the ZF flag in the EFLAGS register.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testz_pd(__m128d __a, __m128d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testz_pd(__m128d __a,
+                                                                 __m128d __b) {
   return __builtin_ia32_vtestzpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -2568,9 +2567,8 @@ _mm_testz_pd(__m128d __a, __m128d __b)
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns the CF flag in the EFLAGS register.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testc_pd(__m128d __a, __m128d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testc_pd(__m128d __a,
+                                                                 __m128d __b) {
   return __builtin_ia32_vtestcpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -2598,9 +2596,8 @@ _mm_testc_pd(__m128d __a, __m128d __b)
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testnzc_pd(__m128d __a, __m128d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_testnzc_pd(__m128d __a, __m128d __b) {
   return __builtin_ia32_vtestnzcpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -2627,9 +2624,8 @@ _mm_testnzc_pd(__m128d __a, __m128d __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testz_ps(__m128 __a, __m128 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testz_ps(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_vtestzps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2656,9 +2652,8 @@ _mm_testz_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testc_ps(__m128 __a, __m128 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testc_ps(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_vtestcps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2686,9 +2681,8 @@ _mm_testc_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testnzc_ps(__m128 __a, __m128 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testnzc_ps(__m128 __a,
+                                                                   __m128 __b) {
   return __builtin_ia32_vtestnzcps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2715,9 +2709,8 @@ _mm_testnzc_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double].
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testz_pd(__m256d __a, __m256d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testz_pd(__m256d __a,
+                                                                 __m256d __b) {
   return __builtin_ia32_vtestzpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -2744,9 +2737,8 @@ _mm256_testz_pd(__m256d __a, __m256d __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double].
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testc_pd(__m256d __a, __m256d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testc_pd(__m256d __a,
+                                                                 __m256d __b) {
   return __builtin_ia32_vtestcpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -2774,9 +2766,8 @@ _mm256_testc_pd(__m256d __a, __m256d __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testnzc_pd(__m256d __a, __m256d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testnzc_pd(__m256d __a, __m256d __b) {
   return __builtin_ia32_vtestnzcpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -2803,9 +2794,8 @@ _mm256_testnzc_pd(__m256d __a, __m256d __b)
 /// \param __b
 ///    A 256-bit vector of [8 x float].
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testz_ps(__m256 __a, __m256 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testz_ps(__m256 __a,
+                                                                 __m256 __b) {
   return __builtin_ia32_vtestzps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2832,9 +2822,8 @@ _mm256_testz_ps(__m256 __a, __m256 __b)
 /// \param __b
 ///    A 256-bit vector of [8 x float].
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testc_ps(__m256 __a, __m256 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testc_ps(__m256 __a,
+                                                                 __m256 __b) {
   return __builtin_ia32_vtestcps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2862,9 +2851,8 @@ _mm256_testc_ps(__m256 __a, __m256 __b)
 /// \param __b
 ///    A 256-bit vector of [8 x float].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testnzc_ps(__m256 __a, __m256 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testnzc_ps(__m256 __a,
+                                                                   __m256 __b) {
   return __builtin_ia32_vtestnzcps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2888,9 +2876,8 @@ _mm256_testnzc_ps(__m256 __a, __m256 __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testz_si256(__m256i __a, __m256i __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testz_si256(__m256i __a, __m256i __b) {
   return __builtin_ia32_ptestz256((__v4di)__a, (__v4di)__b);
 }
 
@@ -2914,9 +2901,8 @@ _mm256_testz_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testc_si256(__m256i __a, __m256i __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testc_si256(__m256i __a, __m256i __b) {
   return __builtin_ia32_ptestc256((__v4di)__a, (__v4di)__b);
 }
 
@@ -2941,9 +2927,8 @@ _mm256_testc_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testnzc_si256(__m256i __a, __m256i __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testnzc_si256(__m256i __a, __m256i __b) {
   return __builtin_ia32_ptestnzc256((__v4di)__a, (__v4di)__b);
 }
 

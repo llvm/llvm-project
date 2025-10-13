@@ -447,6 +447,84 @@ bb5:
   ret void
 }
 
+define void @pr46786_c26_char_cmp_ops_swapped(ptr %arg, ptr %arg1, ptr %arg2) {
+; X64-LABEL: 'pr46786_c26_char_cmp_ops_swapped'
+; X64-NEXT:  Classifying expressions for: @pr46786_c26_char_cmp_ops_swapped
+; X64-NEXT:    %i4 = ptrtoint ptr %arg to i64
+; X64-NEXT:    --> (ptrtoint ptr %arg to i64) U: full-set S: full-set
+; X64-NEXT:    %i7 = phi ptr [ %arg, %bb3 ], [ %i14, %bb6 ]
+; X64-NEXT:    --> {%arg,+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64) + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    %i8 = load i8, ptr %i7, align 1
+; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
+; X64-NEXT:    --> {(ptrtoint ptr %arg to i64),+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (ptrtoint ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    %i10 = sub i64 %i9, %i4
+; X64-NEXT:    --> {0,+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
+; X64-NEXT:    --> {%arg2,+,1}<nw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64) + %arg2) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    %i12 = load i8, ptr %i11, align 1
+; X64-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i13 = add i8 %i12, %i8
+; X64-NEXT:    --> (%i12 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i14 = getelementptr inbounds i8, ptr %i7, i64 1
+; X64-NEXT:    --> {(1 + %arg),+,1}<nuw><%bb6> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64) + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_char_cmp_ops_swapped
+; X64-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
+; X64-NEXT:  Loop %bb6: constant max backedge-taken count is i64 -1
+; X64-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
+; X64-NEXT:  Loop %bb6: Trip multiple is 1
+;
+; X32-LABEL: 'pr46786_c26_char_cmp_ops_swapped'
+; X32-NEXT:  Classifying expressions for: @pr46786_c26_char_cmp_ops_swapped
+; X32-NEXT:    %i4 = ptrtoint ptr %arg to i64
+; X32-NEXT:    --> (zext i32 (ptrtoint ptr %arg to i32) to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    %i7 = phi ptr [ %arg, %bb3 ], [ %i14, %bb6 ]
+; X32-NEXT:    --> {%arg,+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    %i8 = load i8, ptr %i7, align 1
+; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i9 = ptrtoint ptr %i7 to i64
+; X32-NEXT:    --> {(zext i32 (ptrtoint ptr %arg to i32) to i64),+,1}<nuw><%bb6> U: [0,8589934591) S: [0,8589934591) Exits: ((zext i32 (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) to i64) + (zext i32 (ptrtoint ptr %arg to i32) to i64)) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    %i10 = sub i64 %i9, %i4
+; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
+; X32-NEXT:    --> {%arg2,+,1}<%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    %i12 = load i8, ptr %i11, align 1
+; X32-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i13 = add i8 %i12, %i8
+; X32-NEXT:    --> (%i12 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i14 = getelementptr inbounds i8, ptr %i7, i64 1
+; X32-NEXT:    --> {(1 + %arg),+,1}<nuw><%bb6> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_char_cmp_ops_swapped
+; X32-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
+; X32-NEXT:  Loop %bb6: constant max backedge-taken count is i32 -1
+; X32-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
+; X32-NEXT:  Loop %bb6: Trip multiple is 1
+;
+  %i = icmp eq ptr %arg1, %arg
+  br i1 %i, label %bb5, label %bb3
+
+bb3:
+  %i4 = ptrtoint ptr %arg to i64
+  br label %bb6
+
+bb6:
+  %i7 = phi ptr [ %arg, %bb3 ], [ %i14, %bb6 ]
+  %i8 = load i8, ptr %i7
+  %i9 = ptrtoint ptr %i7 to i64
+  %i10 = sub i64 %i9, %i4
+  %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
+  %i12 = load i8, ptr %i11
+  %i13 = add i8 %i12, %i8
+  store i8 %i13, ptr %i11
+  %i14 = getelementptr inbounds i8, ptr %i7, i64 1
+  %i15 = icmp eq ptr %i14, %arg1
+  br i1 %i15, label %bb5, label %bb6
+
+bb5:
+  ret void
+}
+
+
 ; void pr46786_c26_int(int* start, int *end, int *other) {
 ;   for (int* cur = start; cur != end; ++cur)
 ;     other[cur - start] += *cur;

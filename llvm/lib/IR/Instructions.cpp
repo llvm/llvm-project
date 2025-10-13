@@ -2965,8 +2965,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // zext, sext -> zext, because sext can't sign extend after zext
       return Instruction::ZExt;
     case 11: {
-      // inttoptr, ptrtoint/ptrtoaddr -> bitcast if SrcSize<=PtrSize/AddrSize
-      // and SrcSize==DstSize
+      // inttoptr, ptrtoint/ptrtoaddr -> integer cast
       if (!DL)
         return 0;
       unsigned MidSize = secondOp == Instruction::PtrToAddr
@@ -2974,10 +2973,15 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
                              : DL->getPointerTypeSizeInBits(MidTy);
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = DstTy->getScalarSizeInBits();
-      // TODO: Could also produce zext or trunc here.
-      if (SrcSize <= MidSize && SrcSize == DstSize)
-        return Instruction::BitCast;
-      return 0;
+      // If the middle size is smaller than both source and destination,
+      // an additional masking operation would be required.
+      if (MidSize < SrcSize && MidSize < DstSize)
+        return 0;
+      if (DstSize < SrcSize)
+        return Instruction::Trunc;
+      if (DstSize > SrcSize)
+        return Instruction::ZExt;
+      return Instruction::BitCast;
     }
     case 12:
       // addrspacecast, addrspacecast -> bitcast,       if SrcAS == DstAS

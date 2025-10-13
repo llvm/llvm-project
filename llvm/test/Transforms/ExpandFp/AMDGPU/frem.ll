@@ -380,9 +380,9 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX1:%.*]] = fpext half [[AX]] to float
 ; CHECK-NEXT:    [[AY2:%.*]] = fpext half [[AY]] to float
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt float [[AX1]], [[AY2]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE19:.*]], label %[[FREM_ELSE20:.*]]
 ; CHECK:       [[BB4:.*]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi half [ [[TMP38:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP29:%.*]], %[[FREM_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi half [ [[TMP58:%.*]], %[[FREM_LOOP_EXIT28:.*]] ], [ [[TMP57:%.*]], %[[FREM_ELSE20]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ueq half [[TMP2]], 0xH0000
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], half 0xH7E00, half [[RET]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
@@ -396,9 +396,9 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX16:%.*]] = fpext half [[AX14]] to float
 ; CHECK-NEXT:    [[AY17:%.*]] = fpext half [[AY15]] to float
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp ogt float [[AX16]], [[AY17]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE19:.*]], label %[[FREM_ELSE20:.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
 ; CHECK:       [[BB14:.*]]:
-; CHECK-NEXT:    [[RET18:%.*]] = phi half [ [[TMP57:%.*]], %[[FREM_LOOP_EXIT28:.*]] ], [ [[TMP48:%.*]], %[[FREM_ELSE20]] ]
+; CHECK-NEXT:    [[RET18:%.*]] = phi half [ [[TMP46:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP38:%.*]], %[[FREM_ELSE]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp ueq half [[TMP12]], 0xH0000
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], half 0xH7E00, half [[RET18]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call half @llvm.fabs.f16(half [[TMP11]])
@@ -408,12 +408,12 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    store <2 x half> [[R2]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FREM_COMPUTE]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX1]])
+; CHECK-NEXT:    [[TMP20:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX16]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { float, i32 } [[TMP20]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { float, i32 } [[TMP20]], 1
 ; CHECK-NEXT:    [[EX:%.*]] = sub i32 [[TMP22]], 1
 ; CHECK-NEXT:    [[AX3:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP21]], i32 11)
-; CHECK-NEXT:    [[TMP23:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY2]])
+; CHECK-NEXT:    [[TMP23:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY17]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { float, i32 } [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { float, i32 } [[TMP23]], 1
 ; CHECK-NEXT:    [[EY:%.*]] = sub i32 [[TMP25]], 1
@@ -423,10 +423,10 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt i32 [[NB]], 11
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[FREM_LOOP_BODY:.*]], label %[[FREM_LOOP_EXIT]]
 ; CHECK:       [[FREM_ELSE]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP1]])
-; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq float [[AX1]], [[AY2]]
-; CHECK-NEXT:    [[TMP29]] = select i1 [[TMP28]], half [[TMP27]], half [[TMP1]]
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP28:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP11]])
+; CHECK-NEXT:    [[TMP29:%.*]] = fcmp oeq float [[AX16]], [[AY17]]
+; CHECK-NEXT:    [[TMP38]] = select i1 [[TMP29]], half [[TMP28]], half [[TMP11]]
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_LOOP_BODY]]:
 ; CHECK-NEXT:    [[NB_IV:%.*]] = phi i32 [ [[NB]], %[[FREM_COMPUTE]] ], [ [[NB_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI:%.*]] = phi float [ [[AX3]], %[[FREM_COMPUTE]] ], [ [[AX_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
@@ -456,15 +456,15 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX12:%.*]] = select i1 [[CLT10]], float [[AXP11]], float [[AX9]]
 ; CHECK-NEXT:    [[AX13:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX12]], i32 [[EY]])
 ; CHECK-NEXT:    [[TMP37:%.*]] = fptrunc float [[AX13]] to half
-; CHECK-NEXT:    [[TMP38]] = call half @llvm.copysign.f16(half [[TMP37]], half [[TMP1]])
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP46]] = call half @llvm.copysign.f16(half [[TMP37]], half [[TMP11]])
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_COMPUTE19]]:
-; CHECK-NEXT:    [[TMP39:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX16]])
+; CHECK-NEXT:    [[TMP39:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX1]])
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractvalue { float, i32 } [[TMP39]], 0
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractvalue { float, i32 } [[TMP39]], 1
 ; CHECK-NEXT:    [[EX21:%.*]] = sub i32 [[TMP41]], 1
 ; CHECK-NEXT:    [[AX22:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP40]], i32 11)
-; CHECK-NEXT:    [[TMP42:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY17]])
+; CHECK-NEXT:    [[TMP42:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY2]])
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractvalue { float, i32 } [[TMP42]], 0
 ; CHECK-NEXT:    [[TMP44:%.*]] = extractvalue { float, i32 } [[TMP42]], 1
 ; CHECK-NEXT:    [[EY23:%.*]] = sub i32 [[TMP44]], 1
@@ -474,10 +474,10 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP45:%.*]] = icmp sgt i32 [[NB25]], 11
 ; CHECK-NEXT:    br i1 [[TMP45]], label %[[FREM_LOOP_BODY27:.*]], label %[[FREM_LOOP_EXIT28]]
 ; CHECK:       [[FREM_ELSE20]]:
-; CHECK-NEXT:    [[TMP46:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP11]])
-; CHECK-NEXT:    [[TMP47:%.*]] = fcmp oeq float [[AX16]], [[AY17]]
-; CHECK-NEXT:    [[TMP48]] = select i1 [[TMP47]], half [[TMP46]], half [[TMP11]]
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP47:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP1]])
+; CHECK-NEXT:    [[TMP48:%.*]] = fcmp oeq float [[AX1]], [[AY2]]
+; CHECK-NEXT:    [[TMP57]] = select i1 [[TMP48]], half [[TMP47]], half [[TMP1]]
+; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[FREM_LOOP_BODY27]]:
 ; CHECK-NEXT:    [[NB_IV29:%.*]] = phi i32 [ [[NB25]], %[[FREM_COMPUTE19]] ], [ [[NB_UPDATE37:%.*]], %[[FREM_LOOP_BODY27]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI30:%.*]] = phi float [ [[AX22]], %[[FREM_COMPUTE19]] ], [ [[AX_UPDATE36:%.*]], %[[FREM_LOOP_BODY27]] ]
@@ -507,8 +507,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX45:%.*]] = select i1 [[CLT43]], float [[AXP44]], float [[AX42]]
 ; CHECK-NEXT:    [[AX46:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX45]], i32 [[EY23]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = fptrunc float [[AX46]] to half
-; CHECK-NEXT:    [[TMP57]] = call half @llvm.copysign.f16(half [[TMP56]], half [[TMP11]])
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP58]] = call half @llvm.copysign.f16(half [[TMP56]], half [[TMP1]])
+; CHECK-NEXT:    br label %[[BB4]]
 ;
   ptr addrspace(1) %in2) {
   %gep2 = getelementptr <2 x half>, ptr addrspace(1) %in2, i32 4
@@ -532,9 +532,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX1:%.*]] = fpext half [[AX]] to float
 ; CHECK-NEXT:    [[AY2:%.*]] = fpext half [[AY]] to float
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt float [[AX1]], [[AY2]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE85:.*]], label %[[FREM_ELSE86:.*]]
 ; CHECK:       [[BB4:.*]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi half [ [[TMP58:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP49:%.*]], %[[FREM_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi half [ [[TMP116:%.*]], %[[FREM_LOOP_EXIT94:.*]] ], [ [[TMP115:%.*]], %[[FREM_ELSE86]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ueq half [[TMP2]], 0xH0000
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], half 0xH7E00, half [[RET]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
@@ -548,9 +548,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX16:%.*]] = fpext half [[AX14]] to float
 ; CHECK-NEXT:    [[AY17:%.*]] = fpext half [[AY15]] to float
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp ogt float [[AX16]], [[AY17]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE19:.*]], label %[[FREM_ELSE20:.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE52:.*]], label %[[FREM_ELSE53:.*]]
 ; CHECK:       [[BB14:.*]]:
-; CHECK-NEXT:    [[RET18:%.*]] = phi half [ [[TMP77:%.*]], %[[FREM_LOOP_EXIT28:.*]] ], [ [[TMP68:%.*]], %[[FREM_ELSE20]] ]
+; CHECK-NEXT:    [[RET18:%.*]] = phi half [ [[TMP104:%.*]], %[[FREM_LOOP_EXIT61:.*]] ], [ [[TMP96:%.*]], %[[FREM_ELSE53]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp ueq half [[TMP12]], 0xH0000
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], half 0xH7E00, half [[RET18]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call half @llvm.fabs.f16(half [[TMP11]])
@@ -564,9 +564,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX49:%.*]] = fpext half [[AX47]] to float
 ; CHECK-NEXT:    [[AY50:%.*]] = fpext half [[AY48]] to float
 ; CHECK-NEXT:    [[TMP23:%.*]] = fcmp ogt float [[AX49]], [[AY50]]
-; CHECK-NEXT:    br i1 [[TMP23]], label %[[FREM_COMPUTE52:.*]], label %[[FREM_ELSE53:.*]]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[FREM_COMPUTE19:.*]], label %[[FREM_ELSE20:.*]]
 ; CHECK:       [[BB24:.*]]:
-; CHECK-NEXT:    [[RET51:%.*]] = phi half [ [[TMP96:%.*]], %[[FREM_LOOP_EXIT61:.*]] ], [ [[TMP87:%.*]], %[[FREM_ELSE53]] ]
+; CHECK-NEXT:    [[RET51:%.*]] = phi half [ [[TMP85:%.*]], %[[FREM_LOOP_EXIT28:.*]] ], [ [[TMP77:%.*]], %[[FREM_ELSE20]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fcmp ueq half [[TMP22]], 0xH0000
 ; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], half 0xH7E00, half [[RET51]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call half @llvm.fabs.f16(half [[TMP21]])
@@ -580,9 +580,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX82:%.*]] = fpext half [[AX80]] to float
 ; CHECK-NEXT:    [[AY83:%.*]] = fpext half [[AY81]] to float
 ; CHECK-NEXT:    [[TMP33:%.*]] = fcmp ogt float [[AX82]], [[AY83]]
-; CHECK-NEXT:    br i1 [[TMP33]], label %[[FREM_COMPUTE85:.*]], label %[[FREM_ELSE86:.*]]
+; CHECK-NEXT:    br i1 [[TMP33]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
 ; CHECK:       [[BB34:.*]]:
-; CHECK-NEXT:    [[RET84:%.*]] = phi half [ [[TMP115:%.*]], %[[FREM_LOOP_EXIT94:.*]] ], [ [[TMP106:%.*]], %[[FREM_ELSE86]] ]
+; CHECK-NEXT:    [[RET84:%.*]] = phi half [ [[TMP66:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP58:%.*]], %[[FREM_ELSE]] ]
 ; CHECK-NEXT:    [[TMP35:%.*]] = fcmp ueq half [[TMP32]], 0xH0000
 ; CHECK-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], half 0xH7E00, half [[RET84]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = call half @llvm.fabs.f16(half [[TMP31]])
@@ -592,12 +592,12 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    store <4 x half> [[R2]], ptr addrspace(1) [[OUT]], align 16
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FREM_COMPUTE]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX1]])
+; CHECK-NEXT:    [[TMP40:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX82]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractvalue { float, i32 } [[TMP40]], 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { float, i32 } [[TMP40]], 1
 ; CHECK-NEXT:    [[EX:%.*]] = sub i32 [[TMP42]], 1
 ; CHECK-NEXT:    [[AX3:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP41]], i32 11)
-; CHECK-NEXT:    [[TMP43:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY2]])
+; CHECK-NEXT:    [[TMP43:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY83]])
 ; CHECK-NEXT:    [[TMP44:%.*]] = extractvalue { float, i32 } [[TMP43]], 0
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractvalue { float, i32 } [[TMP43]], 1
 ; CHECK-NEXT:    [[EY:%.*]] = sub i32 [[TMP45]], 1
@@ -607,10 +607,10 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP46:%.*]] = icmp sgt i32 [[NB]], 11
 ; CHECK-NEXT:    br i1 [[TMP46]], label %[[FREM_LOOP_BODY:.*]], label %[[FREM_LOOP_EXIT]]
 ; CHECK:       [[FREM_ELSE]]:
-; CHECK-NEXT:    [[TMP47:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP1]])
-; CHECK-NEXT:    [[TMP48:%.*]] = fcmp oeq float [[AX1]], [[AY2]]
-; CHECK-NEXT:    [[TMP49]] = select i1 [[TMP48]], half [[TMP47]], half [[TMP1]]
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP48:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP31]])
+; CHECK-NEXT:    [[TMP49:%.*]] = fcmp oeq float [[AX82]], [[AY83]]
+; CHECK-NEXT:    [[TMP58]] = select i1 [[TMP49]], half [[TMP48]], half [[TMP31]]
+; CHECK-NEXT:    br label %[[BB34]]
 ; CHECK:       [[FREM_LOOP_BODY]]:
 ; CHECK-NEXT:    [[NB_IV:%.*]] = phi i32 [ [[NB]], %[[FREM_COMPUTE]] ], [ [[NB_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI:%.*]] = phi float [ [[AX3]], %[[FREM_COMPUTE]] ], [ [[AX_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
@@ -640,15 +640,15 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX12:%.*]] = select i1 [[CLT10]], float [[AXP11]], float [[AX9]]
 ; CHECK-NEXT:    [[AX13:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX12]], i32 [[EY]])
 ; CHECK-NEXT:    [[TMP57:%.*]] = fptrunc float [[AX13]] to half
-; CHECK-NEXT:    [[TMP58]] = call half @llvm.copysign.f16(half [[TMP57]], half [[TMP1]])
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP66]] = call half @llvm.copysign.f16(half [[TMP57]], half [[TMP31]])
+; CHECK-NEXT:    br label %[[BB34]]
 ; CHECK:       [[FREM_COMPUTE19]]:
-; CHECK-NEXT:    [[TMP59:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX16]])
+; CHECK-NEXT:    [[TMP59:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX49]])
 ; CHECK-NEXT:    [[TMP60:%.*]] = extractvalue { float, i32 } [[TMP59]], 0
 ; CHECK-NEXT:    [[TMP61:%.*]] = extractvalue { float, i32 } [[TMP59]], 1
 ; CHECK-NEXT:    [[EX21:%.*]] = sub i32 [[TMP61]], 1
 ; CHECK-NEXT:    [[AX22:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP60]], i32 11)
-; CHECK-NEXT:    [[TMP62:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY17]])
+; CHECK-NEXT:    [[TMP62:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY50]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = extractvalue { float, i32 } [[TMP62]], 0
 ; CHECK-NEXT:    [[TMP64:%.*]] = extractvalue { float, i32 } [[TMP62]], 1
 ; CHECK-NEXT:    [[EY23:%.*]] = sub i32 [[TMP64]], 1
@@ -658,10 +658,10 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP65:%.*]] = icmp sgt i32 [[NB25]], 11
 ; CHECK-NEXT:    br i1 [[TMP65]], label %[[FREM_LOOP_BODY27:.*]], label %[[FREM_LOOP_EXIT28]]
 ; CHECK:       [[FREM_ELSE20]]:
-; CHECK-NEXT:    [[TMP66:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP11]])
-; CHECK-NEXT:    [[TMP67:%.*]] = fcmp oeq float [[AX16]], [[AY17]]
-; CHECK-NEXT:    [[TMP68]] = select i1 [[TMP67]], half [[TMP66]], half [[TMP11]]
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP67:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP21]])
+; CHECK-NEXT:    [[TMP68:%.*]] = fcmp oeq float [[AX49]], [[AY50]]
+; CHECK-NEXT:    [[TMP77]] = select i1 [[TMP68]], half [[TMP67]], half [[TMP21]]
+; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[FREM_LOOP_BODY27]]:
 ; CHECK-NEXT:    [[NB_IV29:%.*]] = phi i32 [ [[NB25]], %[[FREM_COMPUTE19]] ], [ [[NB_UPDATE37:%.*]], %[[FREM_LOOP_BODY27]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI30:%.*]] = phi float [ [[AX22]], %[[FREM_COMPUTE19]] ], [ [[AX_UPDATE36:%.*]], %[[FREM_LOOP_BODY27]] ]
@@ -691,15 +691,15 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX45:%.*]] = select i1 [[CLT43]], float [[AXP44]], float [[AX42]]
 ; CHECK-NEXT:    [[AX46:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX45]], i32 [[EY23]])
 ; CHECK-NEXT:    [[TMP76:%.*]] = fptrunc float [[AX46]] to half
-; CHECK-NEXT:    [[TMP77]] = call half @llvm.copysign.f16(half [[TMP76]], half [[TMP11]])
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP85]] = call half @llvm.copysign.f16(half [[TMP76]], half [[TMP21]])
+; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[FREM_COMPUTE52]]:
-; CHECK-NEXT:    [[TMP78:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX49]])
+; CHECK-NEXT:    [[TMP78:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX16]])
 ; CHECK-NEXT:    [[TMP79:%.*]] = extractvalue { float, i32 } [[TMP78]], 0
 ; CHECK-NEXT:    [[TMP80:%.*]] = extractvalue { float, i32 } [[TMP78]], 1
 ; CHECK-NEXT:    [[EX54:%.*]] = sub i32 [[TMP80]], 1
 ; CHECK-NEXT:    [[AX55:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP79]], i32 11)
-; CHECK-NEXT:    [[TMP81:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY50]])
+; CHECK-NEXT:    [[TMP81:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY17]])
 ; CHECK-NEXT:    [[TMP82:%.*]] = extractvalue { float, i32 } [[TMP81]], 0
 ; CHECK-NEXT:    [[TMP83:%.*]] = extractvalue { float, i32 } [[TMP81]], 1
 ; CHECK-NEXT:    [[EY56:%.*]] = sub i32 [[TMP83]], 1
@@ -709,10 +709,10 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP84:%.*]] = icmp sgt i32 [[NB58]], 11
 ; CHECK-NEXT:    br i1 [[TMP84]], label %[[FREM_LOOP_BODY60:.*]], label %[[FREM_LOOP_EXIT61]]
 ; CHECK:       [[FREM_ELSE53]]:
-; CHECK-NEXT:    [[TMP85:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP21]])
-; CHECK-NEXT:    [[TMP86:%.*]] = fcmp oeq float [[AX49]], [[AY50]]
-; CHECK-NEXT:    [[TMP87]] = select i1 [[TMP86]], half [[TMP85]], half [[TMP21]]
-; CHECK-NEXT:    br label %[[BB24]]
+; CHECK-NEXT:    [[TMP86:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP11]])
+; CHECK-NEXT:    [[TMP87:%.*]] = fcmp oeq float [[AX16]], [[AY17]]
+; CHECK-NEXT:    [[TMP96]] = select i1 [[TMP87]], half [[TMP86]], half [[TMP11]]
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_LOOP_BODY60]]:
 ; CHECK-NEXT:    [[NB_IV62:%.*]] = phi i32 [ [[NB58]], %[[FREM_COMPUTE52]] ], [ [[NB_UPDATE70:%.*]], %[[FREM_LOOP_BODY60]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI63:%.*]] = phi float [ [[AX55]], %[[FREM_COMPUTE52]] ], [ [[AX_UPDATE69:%.*]], %[[FREM_LOOP_BODY60]] ]
@@ -742,15 +742,15 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX78:%.*]] = select i1 [[CLT76]], float [[AXP77]], float [[AX75]]
 ; CHECK-NEXT:    [[AX79:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX78]], i32 [[EY56]])
 ; CHECK-NEXT:    [[TMP95:%.*]] = fptrunc float [[AX79]] to half
-; CHECK-NEXT:    [[TMP96]] = call half @llvm.copysign.f16(half [[TMP95]], half [[TMP21]])
-; CHECK-NEXT:    br label %[[BB24]]
+; CHECK-NEXT:    [[TMP104]] = call half @llvm.copysign.f16(half [[TMP95]], half [[TMP11]])
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_COMPUTE85]]:
-; CHECK-NEXT:    [[TMP97:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX82]])
+; CHECK-NEXT:    [[TMP97:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX1]])
 ; CHECK-NEXT:    [[TMP98:%.*]] = extractvalue { float, i32 } [[TMP97]], 0
 ; CHECK-NEXT:    [[TMP99:%.*]] = extractvalue { float, i32 } [[TMP97]], 1
 ; CHECK-NEXT:    [[EX87:%.*]] = sub i32 [[TMP99]], 1
 ; CHECK-NEXT:    [[AX88:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP98]], i32 11)
-; CHECK-NEXT:    [[TMP100:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY83]])
+; CHECK-NEXT:    [[TMP100:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY2]])
 ; CHECK-NEXT:    [[TMP101:%.*]] = extractvalue { float, i32 } [[TMP100]], 0
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractvalue { float, i32 } [[TMP100]], 1
 ; CHECK-NEXT:    [[EY89:%.*]] = sub i32 [[TMP102]], 1
@@ -760,10 +760,10 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP103:%.*]] = icmp sgt i32 [[NB91]], 11
 ; CHECK-NEXT:    br i1 [[TMP103]], label %[[FREM_LOOP_BODY93:.*]], label %[[FREM_LOOP_EXIT94]]
 ; CHECK:       [[FREM_ELSE86]]:
-; CHECK-NEXT:    [[TMP104:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP31]])
-; CHECK-NEXT:    [[TMP105:%.*]] = fcmp oeq float [[AX82]], [[AY83]]
-; CHECK-NEXT:    [[TMP106]] = select i1 [[TMP105]], half [[TMP104]], half [[TMP31]]
-; CHECK-NEXT:    br label %[[BB34]]
+; CHECK-NEXT:    [[TMP105:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[TMP1]])
+; CHECK-NEXT:    [[TMP106:%.*]] = fcmp oeq float [[AX1]], [[AY2]]
+; CHECK-NEXT:    [[TMP115]] = select i1 [[TMP106]], half [[TMP105]], half [[TMP1]]
+; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[FREM_LOOP_BODY93]]:
 ; CHECK-NEXT:    [[NB_IV95:%.*]] = phi i32 [ [[NB91]], %[[FREM_COMPUTE85]] ], [ [[NB_UPDATE103:%.*]], %[[FREM_LOOP_BODY93]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI96:%.*]] = phi float [ [[AX88]], %[[FREM_COMPUTE85]] ], [ [[AX_UPDATE102:%.*]], %[[FREM_LOOP_BODY93]] ]
@@ -793,8 +793,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX111:%.*]] = select i1 [[CLT109]], float [[AXP110]], float [[AX108]]
 ; CHECK-NEXT:    [[AX112:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX111]], i32 [[EY89]])
 ; CHECK-NEXT:    [[TMP114:%.*]] = fptrunc float [[AX112]] to half
-; CHECK-NEXT:    [[TMP115]] = call half @llvm.copysign.f16(half [[TMP114]], half [[TMP31]])
-; CHECK-NEXT:    br label %[[BB34]]
+; CHECK-NEXT:    [[TMP116]] = call half @llvm.copysign.f16(half [[TMP114]], half [[TMP1]])
+; CHECK-NEXT:    br label %[[BB4]]
 ;
   ptr addrspace(1) %in2) {
   %gep2 = getelementptr <4 x half>, ptr addrspace(1) %in2, i32 4
@@ -816,9 +816,9 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt float [[AX]], [[AY]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE15:.*]], label %[[FREM_ELSE16:.*]]
 ; CHECK:       [[BB4:.*]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[TMP37:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP29:%.*]], %[[FREM_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[TMP56:%.*]], %[[FREM_LOOP_EXIT24:.*]] ], [ [[TMP55:%.*]], %[[FREM_ELSE16]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ueq float [[TMP2]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float 0x7FF8000000000000, float [[RET]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
@@ -830,9 +830,9 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX12:%.*]] = call float @llvm.fabs.f32(float [[TMP11]])
 ; CHECK-NEXT:    [[AY13:%.*]] = call float @llvm.fabs.f32(float [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp ogt float [[AX12]], [[AY13]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE15:.*]], label %[[FREM_ELSE16:.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
 ; CHECK:       [[BB14:.*]]:
-; CHECK-NEXT:    [[RET14:%.*]] = phi float [ [[TMP55:%.*]], %[[FREM_LOOP_EXIT24:.*]] ], [ [[TMP47:%.*]], %[[FREM_ELSE16]] ]
+; CHECK-NEXT:    [[RET14:%.*]] = phi float [ [[TMP45:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP37:%.*]], %[[FREM_ELSE]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp ueq float [[TMP12]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], float 0x7FF8000000000000, float [[RET14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call float @llvm.fabs.f32(float [[TMP11]])
@@ -842,12 +842,12 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    store <2 x float> [[R2]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FREM_COMPUTE]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX]])
+; CHECK-NEXT:    [[TMP20:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX12]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { float, i32 } [[TMP20]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { float, i32 } [[TMP20]], 1
 ; CHECK-NEXT:    [[EX:%.*]] = sub i32 [[TMP22]], 1
 ; CHECK-NEXT:    [[AX1:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP21]], i32 12)
-; CHECK-NEXT:    [[TMP23:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY]])
+; CHECK-NEXT:    [[TMP23:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY13]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { float, i32 } [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { float, i32 } [[TMP23]], 1
 ; CHECK-NEXT:    [[EY:%.*]] = sub i32 [[TMP25]], 1
@@ -857,10 +857,10 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt i32 [[NB]], 12
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[FREM_LOOP_BODY:.*]], label %[[FREM_LOOP_EXIT]]
 ; CHECK:       [[FREM_ELSE]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
-; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq float [[AX]], [[AY]]
-; CHECK-NEXT:    [[TMP29]] = select i1 [[TMP28]], float [[TMP27]], float [[TMP1]]
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP28:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP11]])
+; CHECK-NEXT:    [[TMP29:%.*]] = fcmp oeq float [[AX12]], [[AY13]]
+; CHECK-NEXT:    [[TMP37]] = select i1 [[TMP29]], float [[TMP28]], float [[TMP11]]
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_LOOP_BODY]]:
 ; CHECK-NEXT:    [[NB_IV:%.*]] = phi i32 [ [[NB]], %[[FREM_COMPUTE]] ], [ [[NB_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI:%.*]] = phi float [ [[AX1]], %[[FREM_COMPUTE]] ], [ [[AX_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
@@ -889,15 +889,15 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP9:%.*]] = fadd float [[AX7]], [[AY2]]
 ; CHECK-NEXT:    [[AX10:%.*]] = select i1 [[CLT8]], float [[AXP9]], float [[AX7]]
 ; CHECK-NEXT:    [[AX11:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX10]], i32 [[EY]])
-; CHECK-NEXT:    [[TMP37]] = call float @llvm.copysign.f32(float [[AX11]], float [[TMP1]])
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP45]] = call float @llvm.copysign.f32(float [[AX11]], float [[TMP11]])
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_COMPUTE15]]:
-; CHECK-NEXT:    [[TMP38:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX12]])
+; CHECK-NEXT:    [[TMP38:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractvalue { float, i32 } [[TMP38]], 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractvalue { float, i32 } [[TMP38]], 1
 ; CHECK-NEXT:    [[EX17:%.*]] = sub i32 [[TMP40]], 1
 ; CHECK-NEXT:    [[AX18:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP39]], i32 12)
-; CHECK-NEXT:    [[TMP41:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY13]])
+; CHECK-NEXT:    [[TMP41:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY]])
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { float, i32 } [[TMP41]], 0
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractvalue { float, i32 } [[TMP41]], 1
 ; CHECK-NEXT:    [[EY19:%.*]] = sub i32 [[TMP43]], 1
@@ -907,10 +907,10 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp sgt i32 [[NB21]], 12
 ; CHECK-NEXT:    br i1 [[TMP44]], label %[[FREM_LOOP_BODY23:.*]], label %[[FREM_LOOP_EXIT24]]
 ; CHECK:       [[FREM_ELSE16]]:
-; CHECK-NEXT:    [[TMP45:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP11]])
-; CHECK-NEXT:    [[TMP46:%.*]] = fcmp oeq float [[AX12]], [[AY13]]
-; CHECK-NEXT:    [[TMP47]] = select i1 [[TMP46]], float [[TMP45]], float [[TMP11]]
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP46:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    [[TMP47:%.*]] = fcmp oeq float [[AX]], [[AY]]
+; CHECK-NEXT:    [[TMP55]] = select i1 [[TMP47]], float [[TMP46]], float [[TMP1]]
+; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[FREM_LOOP_BODY23]]:
 ; CHECK-NEXT:    [[NB_IV25:%.*]] = phi i32 [ [[NB21]], %[[FREM_COMPUTE15]] ], [ [[NB_UPDATE33:%.*]], %[[FREM_LOOP_BODY23]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI26:%.*]] = phi float [ [[AX18]], %[[FREM_COMPUTE15]] ], [ [[AX_UPDATE32:%.*]], %[[FREM_LOOP_BODY23]] ]
@@ -939,8 +939,8 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP40:%.*]] = fadd float [[AX38]], [[AY20]]
 ; CHECK-NEXT:    [[AX41:%.*]] = select i1 [[CLT39]], float [[AXP40]], float [[AX38]]
 ; CHECK-NEXT:    [[AX42:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX41]], i32 [[EY19]])
-; CHECK-NEXT:    [[TMP55]] = call float @llvm.copysign.f32(float [[AX42]], float [[TMP11]])
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP56]] = call float @llvm.copysign.f32(float [[AX42]], float [[TMP1]])
+; CHECK-NEXT:    br label %[[BB4]]
 ;
   ptr addrspace(1) %in2) {
   %gep2 = getelementptr <2 x float>, ptr addrspace(1) %in2, i32 4
@@ -962,9 +962,9 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt float [[AX]], [[AY]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE77:.*]], label %[[FREM_ELSE78:.*]]
 ; CHECK:       [[BB4:.*]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[TMP57:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP49:%.*]], %[[FREM_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[TMP112:%.*]], %[[FREM_LOOP_EXIT86:.*]] ], [ [[TMP111:%.*]], %[[FREM_ELSE78]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ueq float [[TMP2]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float 0x7FF8000000000000, float [[RET]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
@@ -976,9 +976,9 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX12:%.*]] = call float @llvm.fabs.f32(float [[TMP11]])
 ; CHECK-NEXT:    [[AY13:%.*]] = call float @llvm.fabs.f32(float [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp ogt float [[AX12]], [[AY13]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE15:.*]], label %[[FREM_ELSE16:.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE46:.*]], label %[[FREM_ELSE47:.*]]
 ; CHECK:       [[BB14:.*]]:
-; CHECK-NEXT:    [[RET14:%.*]] = phi float [ [[TMP75:%.*]], %[[FREM_LOOP_EXIT24:.*]] ], [ [[TMP67:%.*]], %[[FREM_ELSE16]] ]
+; CHECK-NEXT:    [[RET14:%.*]] = phi float [ [[TMP101:%.*]], %[[FREM_LOOP_EXIT55:.*]] ], [ [[TMP93:%.*]], %[[FREM_ELSE47]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp ueq float [[TMP12]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], float 0x7FF8000000000000, float [[RET14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call float @llvm.fabs.f32(float [[TMP11]])
@@ -990,9 +990,9 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX43:%.*]] = call float @llvm.fabs.f32(float [[TMP21]])
 ; CHECK-NEXT:    [[AY44:%.*]] = call float @llvm.fabs.f32(float [[TMP22]])
 ; CHECK-NEXT:    [[TMP23:%.*]] = fcmp ogt float [[AX43]], [[AY44]]
-; CHECK-NEXT:    br i1 [[TMP23]], label %[[FREM_COMPUTE46:.*]], label %[[FREM_ELSE47:.*]]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[FREM_COMPUTE15:.*]], label %[[FREM_ELSE16:.*]]
 ; CHECK:       [[BB24:.*]]:
-; CHECK-NEXT:    [[RET45:%.*]] = phi float [ [[TMP93:%.*]], %[[FREM_LOOP_EXIT55:.*]] ], [ [[TMP85:%.*]], %[[FREM_ELSE47]] ]
+; CHECK-NEXT:    [[RET45:%.*]] = phi float [ [[TMP83:%.*]], %[[FREM_LOOP_EXIT24:.*]] ], [ [[TMP75:%.*]], %[[FREM_ELSE16]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fcmp ueq float [[TMP22]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], float 0x7FF8000000000000, float [[RET45]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call float @llvm.fabs.f32(float [[TMP21]])
@@ -1004,9 +1004,9 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX74:%.*]] = call float @llvm.fabs.f32(float [[TMP31]])
 ; CHECK-NEXT:    [[AY75:%.*]] = call float @llvm.fabs.f32(float [[TMP32]])
 ; CHECK-NEXT:    [[TMP33:%.*]] = fcmp ogt float [[AX74]], [[AY75]]
-; CHECK-NEXT:    br i1 [[TMP33]], label %[[FREM_COMPUTE77:.*]], label %[[FREM_ELSE78:.*]]
+; CHECK-NEXT:    br i1 [[TMP33]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
 ; CHECK:       [[BB34:.*]]:
-; CHECK-NEXT:    [[RET76:%.*]] = phi float [ [[TMP111:%.*]], %[[FREM_LOOP_EXIT86:.*]] ], [ [[TMP103:%.*]], %[[FREM_ELSE78]] ]
+; CHECK-NEXT:    [[RET76:%.*]] = phi float [ [[TMP65:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP57:%.*]], %[[FREM_ELSE]] ]
 ; CHECK-NEXT:    [[TMP35:%.*]] = fcmp ueq float [[TMP32]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], float 0x7FF8000000000000, float [[RET76]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = call float @llvm.fabs.f32(float [[TMP31]])
@@ -1016,12 +1016,12 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    store <4 x float> [[R2]], ptr addrspace(1) [[OUT]], align 16
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FREM_COMPUTE]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX]])
+; CHECK-NEXT:    [[TMP40:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX74]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractvalue { float, i32 } [[TMP40]], 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { float, i32 } [[TMP40]], 1
 ; CHECK-NEXT:    [[EX:%.*]] = sub i32 [[TMP42]], 1
 ; CHECK-NEXT:    [[AX1:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP41]], i32 12)
-; CHECK-NEXT:    [[TMP43:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY]])
+; CHECK-NEXT:    [[TMP43:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY75]])
 ; CHECK-NEXT:    [[TMP44:%.*]] = extractvalue { float, i32 } [[TMP43]], 0
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractvalue { float, i32 } [[TMP43]], 1
 ; CHECK-NEXT:    [[EY:%.*]] = sub i32 [[TMP45]], 1
@@ -1031,10 +1031,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP46:%.*]] = icmp sgt i32 [[NB]], 12
 ; CHECK-NEXT:    br i1 [[TMP46]], label %[[FREM_LOOP_BODY:.*]], label %[[FREM_LOOP_EXIT]]
 ; CHECK:       [[FREM_ELSE]]:
-; CHECK-NEXT:    [[TMP47:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
-; CHECK-NEXT:    [[TMP48:%.*]] = fcmp oeq float [[AX]], [[AY]]
-; CHECK-NEXT:    [[TMP49]] = select i1 [[TMP48]], float [[TMP47]], float [[TMP1]]
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP48:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP31]])
+; CHECK-NEXT:    [[TMP49:%.*]] = fcmp oeq float [[AX74]], [[AY75]]
+; CHECK-NEXT:    [[TMP57]] = select i1 [[TMP49]], float [[TMP48]], float [[TMP31]]
+; CHECK-NEXT:    br label %[[BB34]]
 ; CHECK:       [[FREM_LOOP_BODY]]:
 ; CHECK-NEXT:    [[NB_IV:%.*]] = phi i32 [ [[NB]], %[[FREM_COMPUTE]] ], [ [[NB_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI:%.*]] = phi float [ [[AX1]], %[[FREM_COMPUTE]] ], [ [[AX_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
@@ -1063,15 +1063,15 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP9:%.*]] = fadd float [[AX7]], [[AY2]]
 ; CHECK-NEXT:    [[AX10:%.*]] = select i1 [[CLT8]], float [[AXP9]], float [[AX7]]
 ; CHECK-NEXT:    [[AX11:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX10]], i32 [[EY]])
-; CHECK-NEXT:    [[TMP57]] = call float @llvm.copysign.f32(float [[AX11]], float [[TMP1]])
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP65]] = call float @llvm.copysign.f32(float [[AX11]], float [[TMP31]])
+; CHECK-NEXT:    br label %[[BB34]]
 ; CHECK:       [[FREM_COMPUTE15]]:
-; CHECK-NEXT:    [[TMP58:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX12]])
+; CHECK-NEXT:    [[TMP58:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX43]])
 ; CHECK-NEXT:    [[TMP59:%.*]] = extractvalue { float, i32 } [[TMP58]], 0
 ; CHECK-NEXT:    [[TMP60:%.*]] = extractvalue { float, i32 } [[TMP58]], 1
 ; CHECK-NEXT:    [[EX17:%.*]] = sub i32 [[TMP60]], 1
 ; CHECK-NEXT:    [[AX18:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP59]], i32 12)
-; CHECK-NEXT:    [[TMP61:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY13]])
+; CHECK-NEXT:    [[TMP61:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY44]])
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractvalue { float, i32 } [[TMP61]], 0
 ; CHECK-NEXT:    [[TMP63:%.*]] = extractvalue { float, i32 } [[TMP61]], 1
 ; CHECK-NEXT:    [[EY19:%.*]] = sub i32 [[TMP63]], 1
@@ -1081,10 +1081,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP64:%.*]] = icmp sgt i32 [[NB21]], 12
 ; CHECK-NEXT:    br i1 [[TMP64]], label %[[FREM_LOOP_BODY23:.*]], label %[[FREM_LOOP_EXIT24]]
 ; CHECK:       [[FREM_ELSE16]]:
-; CHECK-NEXT:    [[TMP65:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP11]])
-; CHECK-NEXT:    [[TMP66:%.*]] = fcmp oeq float [[AX12]], [[AY13]]
-; CHECK-NEXT:    [[TMP67]] = select i1 [[TMP66]], float [[TMP65]], float [[TMP11]]
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP66:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP21]])
+; CHECK-NEXT:    [[TMP67:%.*]] = fcmp oeq float [[AX43]], [[AY44]]
+; CHECK-NEXT:    [[TMP75]] = select i1 [[TMP67]], float [[TMP66]], float [[TMP21]]
+; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[FREM_LOOP_BODY23]]:
 ; CHECK-NEXT:    [[NB_IV25:%.*]] = phi i32 [ [[NB21]], %[[FREM_COMPUTE15]] ], [ [[NB_UPDATE33:%.*]], %[[FREM_LOOP_BODY23]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI26:%.*]] = phi float [ [[AX18]], %[[FREM_COMPUTE15]] ], [ [[AX_UPDATE32:%.*]], %[[FREM_LOOP_BODY23]] ]
@@ -1113,15 +1113,15 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP40:%.*]] = fadd float [[AX38]], [[AY20]]
 ; CHECK-NEXT:    [[AX41:%.*]] = select i1 [[CLT39]], float [[AXP40]], float [[AX38]]
 ; CHECK-NEXT:    [[AX42:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX41]], i32 [[EY19]])
-; CHECK-NEXT:    [[TMP75]] = call float @llvm.copysign.f32(float [[AX42]], float [[TMP11]])
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP83]] = call float @llvm.copysign.f32(float [[AX42]], float [[TMP21]])
+; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[FREM_COMPUTE46]]:
-; CHECK-NEXT:    [[TMP76:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX43]])
+; CHECK-NEXT:    [[TMP76:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX12]])
 ; CHECK-NEXT:    [[TMP77:%.*]] = extractvalue { float, i32 } [[TMP76]], 0
 ; CHECK-NEXT:    [[TMP78:%.*]] = extractvalue { float, i32 } [[TMP76]], 1
 ; CHECK-NEXT:    [[EX48:%.*]] = sub i32 [[TMP78]], 1
 ; CHECK-NEXT:    [[AX49:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP77]], i32 12)
-; CHECK-NEXT:    [[TMP79:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY44]])
+; CHECK-NEXT:    [[TMP79:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY13]])
 ; CHECK-NEXT:    [[TMP80:%.*]] = extractvalue { float, i32 } [[TMP79]], 0
 ; CHECK-NEXT:    [[TMP81:%.*]] = extractvalue { float, i32 } [[TMP79]], 1
 ; CHECK-NEXT:    [[EY50:%.*]] = sub i32 [[TMP81]], 1
@@ -1131,10 +1131,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP82:%.*]] = icmp sgt i32 [[NB52]], 12
 ; CHECK-NEXT:    br i1 [[TMP82]], label %[[FREM_LOOP_BODY54:.*]], label %[[FREM_LOOP_EXIT55]]
 ; CHECK:       [[FREM_ELSE47]]:
-; CHECK-NEXT:    [[TMP83:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP21]])
-; CHECK-NEXT:    [[TMP84:%.*]] = fcmp oeq float [[AX43]], [[AY44]]
-; CHECK-NEXT:    [[TMP85]] = select i1 [[TMP84]], float [[TMP83]], float [[TMP21]]
-; CHECK-NEXT:    br label %[[BB24]]
+; CHECK-NEXT:    [[TMP84:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP11]])
+; CHECK-NEXT:    [[TMP85:%.*]] = fcmp oeq float [[AX12]], [[AY13]]
+; CHECK-NEXT:    [[TMP93]] = select i1 [[TMP85]], float [[TMP84]], float [[TMP11]]
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_LOOP_BODY54]]:
 ; CHECK-NEXT:    [[NB_IV56:%.*]] = phi i32 [ [[NB52]], %[[FREM_COMPUTE46]] ], [ [[NB_UPDATE64:%.*]], %[[FREM_LOOP_BODY54]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI57:%.*]] = phi float [ [[AX49]], %[[FREM_COMPUTE46]] ], [ [[AX_UPDATE63:%.*]], %[[FREM_LOOP_BODY54]] ]
@@ -1163,15 +1163,15 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP71:%.*]] = fadd float [[AX69]], [[AY51]]
 ; CHECK-NEXT:    [[AX72:%.*]] = select i1 [[CLT70]], float [[AXP71]], float [[AX69]]
 ; CHECK-NEXT:    [[AX73:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX72]], i32 [[EY50]])
-; CHECK-NEXT:    [[TMP93]] = call float @llvm.copysign.f32(float [[AX73]], float [[TMP21]])
-; CHECK-NEXT:    br label %[[BB24]]
+; CHECK-NEXT:    [[TMP101]] = call float @llvm.copysign.f32(float [[AX73]], float [[TMP11]])
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_COMPUTE77]]:
-; CHECK-NEXT:    [[TMP94:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX74]])
+; CHECK-NEXT:    [[TMP94:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AX]])
 ; CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { float, i32 } [[TMP94]], 0
 ; CHECK-NEXT:    [[TMP96:%.*]] = extractvalue { float, i32 } [[TMP94]], 1
 ; CHECK-NEXT:    [[EX79:%.*]] = sub i32 [[TMP96]], 1
 ; CHECK-NEXT:    [[AX80:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP95]], i32 12)
-; CHECK-NEXT:    [[TMP97:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY75]])
+; CHECK-NEXT:    [[TMP97:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[AY]])
 ; CHECK-NEXT:    [[TMP98:%.*]] = extractvalue { float, i32 } [[TMP97]], 0
 ; CHECK-NEXT:    [[TMP99:%.*]] = extractvalue { float, i32 } [[TMP97]], 1
 ; CHECK-NEXT:    [[EY81:%.*]] = sub i32 [[TMP99]], 1
@@ -1181,10 +1181,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP100:%.*]] = icmp sgt i32 [[NB83]], 12
 ; CHECK-NEXT:    br i1 [[TMP100]], label %[[FREM_LOOP_BODY85:.*]], label %[[FREM_LOOP_EXIT86]]
 ; CHECK:       [[FREM_ELSE78]]:
-; CHECK-NEXT:    [[TMP101:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP31]])
-; CHECK-NEXT:    [[TMP102:%.*]] = fcmp oeq float [[AX74]], [[AY75]]
-; CHECK-NEXT:    [[TMP103]] = select i1 [[TMP102]], float [[TMP101]], float [[TMP31]]
-; CHECK-NEXT:    br label %[[BB34]]
+; CHECK-NEXT:    [[TMP102:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    [[TMP103:%.*]] = fcmp oeq float [[AX]], [[AY]]
+; CHECK-NEXT:    [[TMP111]] = select i1 [[TMP103]], float [[TMP102]], float [[TMP1]]
+; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[FREM_LOOP_BODY85]]:
 ; CHECK-NEXT:    [[NB_IV87:%.*]] = phi i32 [ [[NB83]], %[[FREM_COMPUTE77]] ], [ [[NB_UPDATE95:%.*]], %[[FREM_LOOP_BODY85]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI88:%.*]] = phi float [ [[AX80]], %[[FREM_COMPUTE77]] ], [ [[AX_UPDATE94:%.*]], %[[FREM_LOOP_BODY85]] ]
@@ -1213,8 +1213,8 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP102:%.*]] = fadd float [[AX100]], [[AY82]]
 ; CHECK-NEXT:    [[AX103:%.*]] = select i1 [[CLT101]], float [[AXP102]], float [[AX100]]
 ; CHECK-NEXT:    [[AX104:%.*]] = call float @llvm.ldexp.f32.i32(float [[AX103]], i32 [[EY81]])
-; CHECK-NEXT:    [[TMP111]] = call float @llvm.copysign.f32(float [[AX104]], float [[TMP31]])
-; CHECK-NEXT:    br label %[[BB34]]
+; CHECK-NEXT:    [[TMP112]] = call float @llvm.copysign.f32(float [[AX104]], float [[TMP1]])
+; CHECK-NEXT:    br label %[[BB4]]
 ;
   ptr addrspace(1) %in2) {
   %gep2 = getelementptr <4 x float>, ptr addrspace(1) %in2, i32 4
@@ -1236,9 +1236,9 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX:%.*]] = call double @llvm.fabs.f64(double [[TMP1]])
 ; CHECK-NEXT:    [[AY:%.*]] = call double @llvm.fabs.f64(double [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt double [[AX]], [[AY]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FREM_COMPUTE15:.*]], label %[[FREM_ELSE16:.*]]
 ; CHECK:       [[BB4:.*]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi double [ [[TMP37:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP29:%.*]], %[[FREM_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi double [ [[TMP56:%.*]], %[[FREM_LOOP_EXIT24:.*]] ], [ [[TMP55:%.*]], %[[FREM_ELSE16]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ueq double [[TMP2]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double 0x7FF8000000000000, double [[RET]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call double @llvm.fabs.f64(double [[TMP1]])
@@ -1250,9 +1250,9 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AX12:%.*]] = call double @llvm.fabs.f64(double [[TMP11]])
 ; CHECK-NEXT:    [[AY13:%.*]] = call double @llvm.fabs.f64(double [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp ogt double [[AX12]], [[AY13]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE15:.*]], label %[[FREM_ELSE16:.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[FREM_COMPUTE:.*]], label %[[FREM_ELSE:.*]]
 ; CHECK:       [[BB14:.*]]:
-; CHECK-NEXT:    [[RET14:%.*]] = phi double [ [[TMP55:%.*]], %[[FREM_LOOP_EXIT24:.*]] ], [ [[TMP47:%.*]], %[[FREM_ELSE16]] ]
+; CHECK-NEXT:    [[RET14:%.*]] = phi double [ [[TMP45:%.*]], %[[FREM_LOOP_EXIT:.*]] ], [ [[TMP37:%.*]], %[[FREM_ELSE]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp ueq double [[TMP12]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], double 0x7FF8000000000000, double [[RET14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call double @llvm.fabs.f64(double [[TMP11]])
@@ -1262,12 +1262,12 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    store <2 x double> [[R2]], ptr addrspace(1) [[OUT]], align 16
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FREM_COMPUTE]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AX]])
+; CHECK-NEXT:    [[TMP20:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AX12]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { double, i32 } [[TMP20]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { double, i32 } [[TMP20]], 1
 ; CHECK-NEXT:    [[EX:%.*]] = sub i32 [[TMP22]], 1
 ; CHECK-NEXT:    [[AX1:%.*]] = call double @llvm.ldexp.f64.i32(double [[TMP21]], i32 26)
-; CHECK-NEXT:    [[TMP23:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AY]])
+; CHECK-NEXT:    [[TMP23:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AY13]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { double, i32 } [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { double, i32 } [[TMP23]], 1
 ; CHECK-NEXT:    [[EY:%.*]] = sub i32 [[TMP25]], 1
@@ -1277,10 +1277,10 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt i32 [[NB]], 26
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[FREM_LOOP_BODY:.*]], label %[[FREM_LOOP_EXIT]]
 ; CHECK:       [[FREM_ELSE]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = call double @llvm.copysign.f64(double 0.000000e+00, double [[TMP1]])
-; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq double [[AX]], [[AY]]
-; CHECK-NEXT:    [[TMP29]] = select i1 [[TMP28]], double [[TMP27]], double [[TMP1]]
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP28:%.*]] = call double @llvm.copysign.f64(double 0.000000e+00, double [[TMP11]])
+; CHECK-NEXT:    [[TMP29:%.*]] = fcmp oeq double [[AX12]], [[AY13]]
+; CHECK-NEXT:    [[TMP37]] = select i1 [[TMP29]], double [[TMP28]], double [[TMP11]]
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_LOOP_BODY]]:
 ; CHECK-NEXT:    [[NB_IV:%.*]] = phi i32 [ [[NB]], %[[FREM_COMPUTE]] ], [ [[NB_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI:%.*]] = phi double [ [[AX1]], %[[FREM_COMPUTE]] ], [ [[AX_UPDATE:%.*]], %[[FREM_LOOP_BODY]] ]
@@ -1309,15 +1309,15 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP9:%.*]] = fadd double [[AX7]], [[AY2]]
 ; CHECK-NEXT:    [[AX10:%.*]] = select i1 [[CLT8]], double [[AXP9]], double [[AX7]]
 ; CHECK-NEXT:    [[AX11:%.*]] = call double @llvm.ldexp.f64.i32(double [[AX10]], i32 [[EY]])
-; CHECK-NEXT:    [[TMP37]] = call double @llvm.copysign.f64(double [[AX11]], double [[TMP1]])
-; CHECK-NEXT:    br label %[[BB4]]
+; CHECK-NEXT:    [[TMP45]] = call double @llvm.copysign.f64(double [[AX11]], double [[TMP11]])
+; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[FREM_COMPUTE15]]:
-; CHECK-NEXT:    [[TMP38:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AX12]])
+; CHECK-NEXT:    [[TMP38:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AX]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractvalue { double, i32 } [[TMP38]], 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractvalue { double, i32 } [[TMP38]], 1
 ; CHECK-NEXT:    [[EX17:%.*]] = sub i32 [[TMP40]], 1
 ; CHECK-NEXT:    [[AX18:%.*]] = call double @llvm.ldexp.f64.i32(double [[TMP39]], i32 26)
-; CHECK-NEXT:    [[TMP41:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AY13]])
+; CHECK-NEXT:    [[TMP41:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[AY]])
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { double, i32 } [[TMP41]], 0
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractvalue { double, i32 } [[TMP41]], 1
 ; CHECK-NEXT:    [[EY19:%.*]] = sub i32 [[TMP43]], 1
@@ -1327,10 +1327,10 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp sgt i32 [[NB21]], 26
 ; CHECK-NEXT:    br i1 [[TMP44]], label %[[FREM_LOOP_BODY23:.*]], label %[[FREM_LOOP_EXIT24]]
 ; CHECK:       [[FREM_ELSE16]]:
-; CHECK-NEXT:    [[TMP45:%.*]] = call double @llvm.copysign.f64(double 0.000000e+00, double [[TMP11]])
-; CHECK-NEXT:    [[TMP46:%.*]] = fcmp oeq double [[AX12]], [[AY13]]
-; CHECK-NEXT:    [[TMP47]] = select i1 [[TMP46]], double [[TMP45]], double [[TMP11]]
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP46:%.*]] = call double @llvm.copysign.f64(double 0.000000e+00, double [[TMP1]])
+; CHECK-NEXT:    [[TMP47:%.*]] = fcmp oeq double [[AX]], [[AY]]
+; CHECK-NEXT:    [[TMP55]] = select i1 [[TMP47]], double [[TMP46]], double [[TMP1]]
+; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[FREM_LOOP_BODY23]]:
 ; CHECK-NEXT:    [[NB_IV25:%.*]] = phi i32 [ [[NB21]], %[[FREM_COMPUTE15]] ], [ [[NB_UPDATE33:%.*]], %[[FREM_LOOP_BODY23]] ]
 ; CHECK-NEXT:    [[AX_LOOP_PHI26:%.*]] = phi double [ [[AX18]], %[[FREM_COMPUTE15]] ], [ [[AX_UPDATE32:%.*]], %[[FREM_LOOP_BODY23]] ]
@@ -1359,8 +1359,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[AXP40:%.*]] = fadd double [[AX38]], [[AY20]]
 ; CHECK-NEXT:    [[AX41:%.*]] = select i1 [[CLT39]], double [[AXP40]], double [[AX38]]
 ; CHECK-NEXT:    [[AX42:%.*]] = call double @llvm.ldexp.f64.i32(double [[AX41]], i32 [[EY19]])
-; CHECK-NEXT:    [[TMP55]] = call double @llvm.copysign.f64(double [[AX42]], double [[TMP11]])
-; CHECK-NEXT:    br label %[[BB14]]
+; CHECK-NEXT:    [[TMP56]] = call double @llvm.copysign.f64(double [[AX42]], double [[TMP1]])
+; CHECK-NEXT:    br label %[[BB4]]
 ;
   ptr addrspace(1) %in2) {
   %gep2 = getelementptr <2 x double>, ptr addrspace(1) %in2, i32 4

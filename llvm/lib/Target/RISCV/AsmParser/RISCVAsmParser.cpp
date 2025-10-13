@@ -1688,7 +1688,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 25) - 1);
   // HACK: See comment before `BareSymbolQC_E_LI` in RISCVInstrInfoXqci.td.
   case Match_InvalidBareSymbolQC_E_LI:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   // END HACK
   case Match_InvalidBareSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,

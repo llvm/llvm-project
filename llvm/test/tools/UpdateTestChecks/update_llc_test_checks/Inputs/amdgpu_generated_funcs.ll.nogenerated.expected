@@ -6,8 +6,8 @@
 
 define dso_local i32 @check_boundaries() #0 {
 ; CHECK-LABEL: check_boundaries:
-; CHECK:       check_boundaries$local:
-; CHECK-NEXT:    .type check_boundaries$local,@function
+; CHECK:       .Lcheck_boundaries$local:
+; CHECK-NEXT:    .type .Lcheck_boundaries$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -84,8 +84,8 @@ define dso_local i32 @check_boundaries() #0 {
 
 define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
-; CHECK:       main$local:
-; CHECK-NEXT:    .type main$local,@function
+; CHECK:       .Lmain$local:
+; CHECK-NEXT:    .type .Lmain$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
