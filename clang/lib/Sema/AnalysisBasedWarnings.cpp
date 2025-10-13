@@ -29,7 +29,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
-#include "clang/Analysis/Analyses/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -2603,6 +2603,16 @@ public:
       for (const DebugNote &Note: DebugNotesByVar[Variable])
         S.Diag(Note.first, diag::note_safe_buffer_debug_mode) << Note.second;
 #endif
+  }
+
+  void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                        bool IsRelatedToDecl,
+                                        ASTContext &Ctx) override {
+    SourceLocation Loc;
+
+    Loc = Node.get<Stmt>()->getBeginLoc();
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_unique_ptr_array_access)
+        << Node.getSourceRange();
   }
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {

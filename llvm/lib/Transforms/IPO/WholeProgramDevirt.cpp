@@ -372,9 +372,7 @@ struct VTableSlot {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<VTableSlot> {
+template <> struct llvm::DenseMapInfo<VTableSlot> {
   static VTableSlot getEmptyKey() {
     return {DenseMapInfo<Metadata *>::getEmptyKey(),
             DenseMapInfo<uint64_t>::getEmptyKey()};
@@ -393,7 +391,7 @@ template <> struct DenseMapInfo<VTableSlot> {
   }
 };
 
-template <> struct DenseMapInfo<VTableSlotSummary> {
+template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
   static VTableSlotSummary getEmptyKey() {
     return {DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<uint64_t>::getEmptyKey()};
@@ -411,8 +409,6 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
     return LHS.TypeID == RHS.TypeID && LHS.ByteOffset == RHS.ByteOffset;
   }
 };
-
-} // end namespace llvm
 
 // Returns true if the function must be unreachable based on ValueInfo.
 //
