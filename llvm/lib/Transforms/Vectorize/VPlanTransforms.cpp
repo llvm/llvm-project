@@ -1991,6 +1991,13 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
         })
+        .Case<VPVectorPointerRecipe>([](auto *I) {
+          // For recipes that do not directly map to LLVM IR instructions,
+          // assign opcodes after the last VPInstruction opcode (which is also
+          // after the last IR Instruction opcode), based on the VPDefID.
+          return std::make_pair(false,
+                                VPInstruction::OpsEnd + 1 + I->getVPDefID());
+        })
         .Default([](auto *) { return std::nullopt; });
   }
 
@@ -2014,11 +2021,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool canHandle(const VPSingleDefRecipe *Def) {
     // We can extend the list of handled recipes in the future,
     // provided we account for the data embedded in them while checking for
-    // equality or hashing. We assign VPVectorEndPointerRecipe the GEP opcode,
-    // as it is essentially a GEP with different semantics.
-    auto C = isa<VPVectorPointerRecipe>(Def)
-                 ? std::make_pair(false, Instruction::GetElementPtr)
-                 : getOpcodeOrIntrinsicID(Def);
+    // equality or hashing.
+    auto C = getOpcodeOrIntrinsicID(Def);
 
     // The issue with (Insert|Extract)Value is that the index of the
     // insert/extract is not a proper operand in LLVM IR, and hence also not in
@@ -2057,6 +2061,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||
         !equal(L->operands(), R->operands()))
       return false;
+    assert(getOpcodeOrIntrinsicID(L) && getOpcodeOrIntrinsicID(R) &&
+           "must have valid opcode info for both recipes");
     if (auto *LFlags = dyn_cast<VPRecipeWithIRFlags>(L))
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
