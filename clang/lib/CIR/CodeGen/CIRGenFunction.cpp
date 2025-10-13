@@ -551,6 +551,50 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
+  if (funcDecl->isInlineBuiltinDeclaration()) {
+    // When generating code for a builtin with an inline declaration, use a
+    // mangled name to hold the actual body, while keeping an external
+    // declaration in case the function pointer is referenced somewhere.
+    std::string fdInlineName = fn.getName().str() + ".inline";
+    cir::FuncOp clone =
+        mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
+    if (!clone) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(fn);
+      clone = builder.create<cir::FuncOp>(fn.getLoc(), fdInlineName,
+                                          fn.getFunctionType());
+      clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+          &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
+      clone.setSymVisibility("private");
+      clone.setInlineKindAttr(cir::InlineAttr::get(
+          &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+    }
+    fn.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+        &cgm.getMLIRContext(), cir::GlobalLinkageKind::ExternalLinkage));
+    fn.setSymVisibility("private");
+    fn = clone;
+  } else {
+    // Detect the unusual situation where an inline version is shadowed by a
+    // non-inline version. In that case we should pick the external one
+    // everywhere. That's GCC behavior too.
+    for (const FunctionDecl *pd = funcDecl->getPreviousDecl(); pd;
+         pd = pd->getPreviousDecl()) {
+      if (LLVM_UNLIKELY(pd->isInlineBuiltinDeclaration())) {
+        std::string inlineName = funcDecl->getName().str() + ".inline";
+        if (auto inlineFn = mlir::cast_or_null<cir::FuncOp>(
+                cgm.getGlobalValue(inlineName))) {
+          // Replace all uses of the .inline function with the regular function
+          if (inlineFn
+                  .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
+                  .failed())
+            llvm_unreachable("Failed to replace inline builtin symbol uses");
+          inlineFn.erase();
+        }
+        break;
+      }
+    }
+  }
+
   SourceLocation loc = funcDecl->getLocation();
   Stmt *body = funcDecl->getBody();
   SourceRange bodyRange =
