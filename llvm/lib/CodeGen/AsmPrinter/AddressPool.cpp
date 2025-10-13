@@ -9,7 +9,6 @@
 #include "AddressPool.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"

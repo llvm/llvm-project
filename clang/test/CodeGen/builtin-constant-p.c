@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O2 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O0 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O2 -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O0 -fexperimental-new-constant-interpreter | FileCheck %s
+
 
 int a = 42;
 

@@ -1,3 +1,4 @@
+// XFAIL: target={{.*haiku.*}}
 // RUN: %clang_profgen -o %t -O3 %s
 // RUN: env LLVM_PROFILE_FILE=%t/  %run %t 1 2>&1 | FileCheck %s
 

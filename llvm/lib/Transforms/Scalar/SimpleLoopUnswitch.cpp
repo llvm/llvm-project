@@ -98,6 +98,9 @@ static cl::opt<bool> EnableUnswitchCostMultiplier(
 static cl::opt<int> UnswitchSiblingsToplevelDiv(
     "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
     cl::desc("Toplevel siblings divisor for cost multiplier."));
+static cl::opt<int> UnswitchParentBlocksDiv(
+    "unswitch-parent-blocks-div", cl::init(8), cl::Hidden,
+    cl::desc("Outer loop size divisor for cost multiplier."));
 static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
     "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
     cl::desc("Number of unswitch candidates that are ignored when calculating "
@@ -274,6 +277,7 @@ static void buildPartialUnswitchConditionalBranch(
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
     const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
+  IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
 
   SmallVector<Value *> FrozenInvariants;
   for (Value *Inv : Invariants) {
@@ -297,6 +301,10 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   for (auto *Val : reverse(ToDuplicate)) {
     Instruction *Inst = cast<Instruction>(Val);
     Instruction *NewInst = Inst->clone();
+
+    if (const DebugLoc &DL = Inst->getDebugLoc())
+      mapAtomInstance(DL, VMap);
+
     NewInst->insertInto(&BB, BB.end());
     RemapInstruction(NewInst, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -326,6 +334,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   }
 
   IRBuilder<> IRB(&BB);
+  IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
   Value *Cond = VMap[ToDuplicate[0]];
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
@@ -632,7 +641,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     } else {
       // Create a new unconditional branch that will continue the loop as a new
       // terminator.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(BI.getDebugLoc());
     }
     BI.setSuccessor(LoopExitSuccIdx, UnswitchedBB);
     BI.setSuccessor(1 - LoopExitSuccIdx, NewPH);
@@ -666,10 +676,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // Finish updating dominator tree and memory ssa for full unswitch.
   if (FullUnswitch) {
     if (MSSAU) {
-      // Remove the cloned branch instruction.
-      ParentBB->getTerminator()->eraseFromParent();
-      // Create unconditional branch now.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *Term = ParentBB->getTerminator();
+      // Remove the cloned branch instruction and create unconditional branch
+      // now.
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(Term->getDebugLoc());
+      Term->eraseFromParent();
       MSSAU->removeEdge(ParentBB, LoopExitBB);
     }
     DT.deleteEdge(ParentBB, LoopExitBB);
@@ -767,8 +779,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     // instruction in the block.
     auto *TI = BBToCheck.getTerminator();
     bool isUnreachable = isa<UnreachableInst>(TI);
-    return !isUnreachable ||
-           (isUnreachable && (BBToCheck.getFirstNonPHIOrDbg() != TI));
+    return !isUnreachable || &*BBToCheck.getFirstNonPHIOrDbg() != TI;
   };
 
   SmallVector<int, 4> ExitCaseIndices;
@@ -861,8 +872,11 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
   OldPH->getTerminator()->eraseFromParent();
 
-  // Now add the unswitched switch.
+  // Now add the unswitched switch. This new switch instruction inherits the
+  // debug location of the old switch, because it semantically replace the old
+  // one.
   auto *NewSI = SwitchInst::Create(LoopCond, NewPH, ExitCases.size(), OldPH);
+  NewSI->setDebugLoc(SIW->getDebugLoc());
   SwitchInstProfUpdateWrapper NewSIW(*NewSI);
 
   // Rewrite the IR for the unswitched basic blocks. This requires two steps.
@@ -972,8 +986,9 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                                       /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
+    Instruction *NewBI = BranchInst::Create(CommonSuccBB, BB);
+    NewBI->setDebugLoc(SIW->getDebugLoc());
     SIW.eraseFromParent();
-    BranchInst::Create(CommonSuccBB, BB);
   } else if (DefaultExitBB) {
     assert(SI.getNumCases() > 0 &&
            "If we had no cases we'd have a common successor!");
@@ -1242,8 +1257,9 @@ static BasicBlock *buildClonedLoopBlocks(
       assert(VMap.lookup(&I) == &ClonedI && "Mismatch in the value map!");
 
       // Forget SCEVs based on exit phis in case SCEV looked through the phi.
-      if (SE && isa<PHINode>(I))
-        SE->forgetValue(&I);
+      if (SE)
+        if (auto *PN = dyn_cast<PHINode>(&I))
+          SE->forgetLcssaPhiWithNewPredecessor(&L, PN);
 
       BasicBlock::iterator InsertPt = MergeBB->getFirstInsertionPt();
 
@@ -2358,6 +2374,7 @@ static void unswitchNontrivialInvariants(
         // BI (`dyn_cast<BranchInst>(TI)`) is an in-loop instruction hoisted
         // out of the loop.
         Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI->getIterator());
+        cast<Instruction>(Cond)->setDebugLoc(DebugLoc::getDropped());
       }
       BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
@@ -2755,7 +2772,6 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
 static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
                                        DominatorTree &DT, LoopInfo &LI,
                                        MemorySSAUpdater *MSSAU) {
-  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
   LLVM_DEBUG(dbgs() << "Turning " << *GI << " into a branch.\n");
   BasicBlock *CheckBB = GI->getParent();
 
@@ -2779,7 +2795,7 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   if (MSSAU)
     MSSAU->moveAllAfterSpliceBlocks(CheckBB, GuardedBlock, GI);
 
-  GI->moveBefore(DeoptBlockTerm);
+  GI->moveBefore(DeoptBlockTerm->getIterator());
   GI->setArgOperand(0, ConstantInt::getFalse(GI->getContext()));
 
   if (MSSAU) {
@@ -2796,9 +2812,9 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 }
 
 /// Cost multiplier is a way to limit potentially exponential behavior
-/// of loop-unswitch. Cost is multipied in proportion of 2^number of unswitch
-/// candidates available. Also accounting for the number of "sibling" loops with
-/// the idea to account for previous unswitches that already happened on this
+/// of loop-unswitch. Cost is multiplied in proportion of 2^number of unswitch
+/// candidates available. Also consider the number of "sibling" loops with
+/// the idea of accounting for previous unswitches that already happened on this
 /// cluster of loops. There was an attempt to keep this formula simple,
 /// just enough to limit the worst case behavior. Even if it is not that simple
 /// now it is still not an attempt to provide a detailed heuristic size
@@ -2829,7 +2845,19 @@ static int CalculateUnswitchCostMultiplier(
     return 1;
   }
 
+  // Each invariant non-trivial condition, after being unswitched, is supposed
+  // to have its own specialized sibling loop (the invariant condition has been
+  // hoisted out of the child loop into a newly-cloned loop). When unswitching
+  // conditions in nested loops, the basic block size of the outer loop should
+  // not be altered. If such a size significantly increases across unswitching
+  // invocations, something may be wrong; so adjust the final cost taking this
+  // into account.
   auto *ParentL = L.getParentLoop();
+  int ParentLoopSizeMultiplier = 1;
+  if (ParentL)
+    ParentLoopSizeMultiplier =
+        std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
+
   int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
                                : std::distance(LI.begin(), LI.end()));
   // Count amount of clones that all the candidates might cause during
@@ -2874,14 +2902,16 @@ static int CalculateUnswitchCostMultiplier(
   // at an upper bound.
   int CostMultiplier;
   if (ClonesPower > Log2_32(UnswitchThreshold) ||
-      SiblingsMultiplier > UnswitchThreshold)
+      SiblingsMultiplier > UnswitchThreshold ||
+      ParentLoopSizeMultiplier > UnswitchThreshold)
     CostMultiplier = UnswitchThreshold;
   else
     CostMultiplier = std::min(SiblingsMultiplier * (1 << ClonesPower),
                               (int)UnswitchThreshold);
 
   LLVM_DEBUG(dbgs() << "  Computed multiplier  " << CostMultiplier
-                    << " (siblings " << SiblingsMultiplier << " * clones "
+                    << " (siblings " << SiblingsMultiplier << " * parent size "
+                    << ParentLoopSizeMultiplier << " * clones "
                     << (1 << ClonesPower) << ")"
                     << " for unswitch candidate: " << TI << "\n");
   return CostMultiplier;
@@ -2914,8 +2944,8 @@ static bool collectUnswitchCandidates(
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
-    auto *GuardDecl = L.getHeader()->getParent()->getParent()->getFunction(
-        Intrinsic::getName(Intrinsic::experimental_guard));
+    auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+        L.getHeader()->getParent()->getParent(), Intrinsic::experimental_guard);
     if (GuardDecl && !GuardDecl->use_empty())
       CollectGuards = true;
   }
@@ -2983,9 +3013,11 @@ static bool collectUnswitchCandidates(
 /// into its equivalent where `Pred` is something that we support for injected
 /// invariants (so far it is limited to ult), LHS in canonicalized form is
 /// non-invariant and RHS is an invariant.
-static void canonicalizeForInvariantConditionInjection(
-    ICmpInst::Predicate &Pred, Value *&LHS, Value *&RHS, BasicBlock *&IfTrue,
-    BasicBlock *&IfFalse, const Loop &L) {
+static void canonicalizeForInvariantConditionInjection(CmpPredicate &Pred,
+                                                       Value *&LHS, Value *&RHS,
+                                                       BasicBlock *&IfTrue,
+                                                       BasicBlock *&IfFalse,
+                                                       const Loop &L) {
   if (!L.contains(IfTrue)) {
     Pred = ICmpInst::getInversePredicate(Pred);
     std::swap(IfTrue, IfFalse);
@@ -3228,7 +3260,7 @@ static bool collectUnswitchCandidatesWithInjections(
   // other).
   for (auto *DTN = DT.getNode(Latch); L.contains(DTN->getBlock());
        DTN = DTN->getIDom()) {
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *LHS = nullptr, *RHS = nullptr;
     BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
     auto *BB = DTN->getBlock();
@@ -3294,8 +3326,8 @@ static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
   for (auto *ExitBB : ExitBlocks) {
-    auto *I = ExitBB->getFirstNonPHI();
-    if (isa<CleanupPadInst>(I) || isa<CatchSwitchInst>(I)) {
+    auto It = ExitBB->getFirstNonPHIIt();
+    if (isa<CleanupPadInst>(It) || isa<CatchSwitchInst>(It)) {
       LLVM_DEBUG(dbgs() << "Cannot unswitch because of cleanuppad/catchswitch "
                            "in exit block\n");
       return false;
@@ -3632,14 +3664,12 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     }
     // Next check all loops nested within L.
     SmallVector<const Loop *, 4> Worklist;
-    Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
-                    L->getSubLoops().end());
+    llvm::append_range(Worklist, L->getSubLoops());
     while (!Worklist.empty()) {
       auto *CurLoop = Worklist.pop_back_val();
       if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
         return false;
-      Worklist.insert(Worklist.end(), CurLoop->getSubLoops().begin(),
-                      CurLoop->getSubLoops().end());
+      llvm::append_range(Worklist, CurLoop->getSubLoops());
     }
     return true;
   };

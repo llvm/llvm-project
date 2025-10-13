@@ -40,7 +40,9 @@ namespace __nsan {
 // |                    |
 // |       unused       |
 // |                    |
-// +--------------------+ 0x400000000000 (kUnusedAddr)
+// +--------------------+ 0x440000008000
+// |     allocator      |
+// +--------------------+ 0x400000000000 (kHeapMemBeg)
 // |   shadow memory    |
 // +--------------------+ 0x200000000000 (kShadowAddr)
 // |   shadow types     |
@@ -79,7 +81,7 @@ enum {
 struct Mapping {
   // FIXME: kAppAddr == 0x700000000000 ?
   static const uptr kAppAddr = 0x700000008000;
-  static const uptr kUnusedAddr = 0x400000000000;
+  static const uptr kHeapMemBeg = 0x400000000000;
   static const uptr kShadowAddr = 0x200000000000;
   static const uptr kTypesAddr = 0x100000000000;
   static const uptr kShadowMask = ~0x700000000000;
@@ -90,7 +92,7 @@ struct Mapping {
 
 enum MappingType {
   MAPPING_APP_ADDR,
-  MAPPING_UNUSED_ADDR,
+  MAPPING_ALLOCATOR_ADDR,
   MAPPING_SHADOW_ADDR,
   MAPPING_TYPES_ADDR,
   MAPPING_SHADOW_MASK
@@ -100,8 +102,8 @@ template <typename Mapping, int Type> uptr MappingImpl() {
   switch (Type) {
   case MAPPING_APP_ADDR:
     return Mapping::kAppAddr;
-  case MAPPING_UNUSED_ADDR:
-    return Mapping::kUnusedAddr;
+  case MAPPING_ALLOCATOR_ADDR:
+    return Mapping::kHeapMemBeg;
   case MAPPING_SHADOW_ADDR:
     return Mapping::kShadowAddr;
   case MAPPING_TYPES_ADDR:
@@ -119,7 +121,7 @@ ALWAYS_INLINE
 uptr AppAddr() { return MappingArchImpl<MAPPING_APP_ADDR>(); }
 
 ALWAYS_INLINE
-uptr UnusedAddr() { return MappingArchImpl<MAPPING_UNUSED_ADDR>(); }
+uptr AllocatorAddr() { return MappingArchImpl<MAPPING_ALLOCATOR_ADDR>(); }
 
 ALWAYS_INLINE
 uptr ShadowAddr() { return MappingArchImpl<MAPPING_SHADOW_ADDR>(); }

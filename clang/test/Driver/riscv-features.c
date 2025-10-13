@@ -1,3 +1,4 @@
+
 // RUN: %clang --target=riscv32-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
@@ -28,12 +29,6 @@
 // NO-SAVE-RESTORE: "-target-feature" "-save-restore"
 // DEFAULT-NOT: "-target-feature" "-save-restore"
 // DEFAULT-NOT: "-target-feature" "+save-restore"
-
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mforced-sw-shadow-stack 2>&1 | FileCheck %s -check-prefix=FORCE-SW-SCS
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-forced-sw-shadow-stack 2>&1 | FileCheck %s -check-prefix=NO-FORCE-SW-SCS
-// FORCE-SW-SCS: "-target-feature" "+forced-sw-shadow-stack"
-// NO-FORCE-SW-SCS: "-target-feature" "-forced-sw-shadow-stack"
-// DEFAULT-NOT: "-target-feature" "+forced-sw-shadow-stack"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefixes=FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
@@ -79,3 +74,26 @@
 
 // ERR-SPLIT-DWARF: error: -gsplit-dwarf{{.*}} is unsupported with RISC-V linker relaxation (-mrelax)
 // SPLIT-DWARF:     "-split-dwarf-file"
+
+// RUN: %clang -mabi=lp64d --target=riscv64-unknown-fuchsia -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=FUCHSIA
+// FUCHSIA: "-target-feature" "+m"
+// FUCHSIA-SAME: "-target-feature" "+a"
+// FUCHSIA-SAME: "-target-feature" "+f"
+// FUCHSIA-SAME: "-target-feature" "+d"
+// FUCHSIA-SAME: "-target-feature" "+c"
+// FUCHSIA-SAME: "-target-feature" "+v"
+// FUCHSIA-SAME: "-target-feature" "+zba"
+// FUCHSIA-SAME: "-target-feature" "+zbb"
+// FUCHSIA-SAME: "-target-feature" "+zbs"
+
+
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv32i %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVI
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv64i %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVI
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv32e %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVE
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv64e %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVE
+
+// RVI: "-target-feature" "+i"
+// RVI-SAME: "-target-feature" "-e"
+
+// RVE: "-target-feature" "+e"
+// RVE-SAME: "-target-feature" "-i"

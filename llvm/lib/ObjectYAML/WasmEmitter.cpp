@@ -180,6 +180,14 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       writeStringRef(Needed, SubOS);
     SubSection.done();
   }
+  if (Section.RuntimePath.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_RUNTIME_PATH);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.RuntimePath.size(), SubOS);
+    for (StringRef Path : Section.RuntimePath)
+      writeStringRef(Path, SubOS);
+    SubSection.done();
+  }
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
@@ -497,7 +505,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 
     writeInitExpr(OS, Segment.Offset);
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
       // We only support active function table initializers, for which the elem
       // kind is specified to be written as 0x00 and interpreted to mean
       // "funcref".
@@ -604,7 +612,8 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get()))
       SecName = S->Name;
     if (!Checker.isValidSectionOrder(Sec->Type, SecName)) {
-      reportError("out of order section type: " + Twine(Sec->Type));
+      reportError("out of order section type: " +
+                  wasm::sectionTypeToString(Sec->Type));
       return false;
     }
     encodeULEB128(Sec->Type, OS);
@@ -647,7 +656,7 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     StringStream.flush();
 
     unsigned HeaderSecSizeEncodingLen =
-        Sec->HeaderSecSizeEncodingLen ? *Sec->HeaderSecSizeEncodingLen : 5;
+        Sec->HeaderSecSizeEncodingLen.value_or(5);
     unsigned RequiredLen = getULEB128Size(OutString.size());
     // Wasm spec does not allow LEBs larger than 5 bytes
     assert(RequiredLen <= 5);

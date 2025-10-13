@@ -43,7 +43,7 @@ if (LLVM_TREE_AVAILABLE)
   get_clang_resource_dir(COMPILER_RT_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/..)
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   get_clang_resource_dir(COMPILER_RT_INSTALL_PATH)
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
+  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt tests."
          ${LLVM_INCLUDE_TESTS})
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
          ${LLVM_ENABLE_WERROR})
@@ -70,19 +70,28 @@ else()
     "Path where built compiler-rt executables should be stored.")
   set(COMPILER_RT_INSTALL_PATH "" CACHE PATH
     "Prefix for directories where built compiler-rt artifacts should be installed.")
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests." OFF)
+  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt tests." OFF)
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered" OFF)
   # Use a host compiler to compile/link tests.
   set(COMPILER_RT_TEST_COMPILER ${CMAKE_C_COMPILER} CACHE PATH "Compiler to use for testing")
   set(COMPILER_RT_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE PATH "C++ Compiler to use for testing")
 endif()
 
-if("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang[+]*$")
+get_filename_component(_test_compiler_name "${COMPILER_RT_TEST_COMPILER}" NAME)
+if("${COMPILER_RT_TEST_COMPILER}" STREQUAL "${CMAKE_C_COMPILER}")
+  set(COMPILER_RT_TEST_COMPILER_ID "${CMAKE_C_COMPILER_ID}")
+elseif("${_test_compiler_name}" MATCHES "clang.*")
   set(COMPILER_RT_TEST_COMPILER_ID Clang)
-elseif("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang.*.exe$")
-  set(COMPILER_RT_TEST_COMPILER_ID Clang)
+elseif("${_test_compiler_name}" MATCHES "cl.exe$")
+  set(COMPILER_RT_TEST_COMPILER_ID MSVC)
 else()
+  message(STATUS "Unknown compiler ${COMPILER_RT_TEST_COMPILER}, assuming GNU")
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
+endif()
+
+# AppleClang expects 'Clang' as compiler-rt test compiler ID.
+if ("${COMPILER_RT_TEST_COMPILER_ID}" STREQUAL "AppleClang")
+  set(COMPILER_RT_TEST_COMPILER_ID Clang)
 endif()
 
 if(NOT DEFINED COMPILER_RT_OS_DIR)

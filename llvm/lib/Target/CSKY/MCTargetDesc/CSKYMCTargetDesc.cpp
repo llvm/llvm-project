@@ -15,7 +15,6 @@
 #include "CSKYELFStreamer.h"
 #include "CSKYInstPrinter.h"
 #include "CSKYMCAsmInfo.h"
-#include "CSKYMCCodeEmitter.h"
 #include "CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -95,10 +94,9 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
   return S;
 }
 
-static MCTargetStreamer *createCSKYAsmTargetStreamer(MCStreamer &S,
-                                                     formatted_raw_ostream &OS,
-                                                     MCInstPrinter *InstPrinter,
-                                                     bool isVerboseAsm) {
+static MCTargetStreamer *
+createCSKYAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                            MCInstPrinter *InstPrinter) {
   return new CSKYTargetAsmStreamer(S, OS);
 }
 

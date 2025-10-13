@@ -97,7 +97,7 @@ define void @nocopy(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[ELT]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[INC]] = add <16 x i32> [[TMP4]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[INC]] = add <16 x i32> [[TMP4]], splat (i32 16)
 ; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[RET:%.*]]
 ; CHECK:       ret:
 ; CHECK-NEXT:    ret void

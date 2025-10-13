@@ -202,7 +202,7 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
   if (NewlineOffs == StringRef::npos)
     NewlineOffs = ~(size_t)0;
-  return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs);
+  return {LineNo, Ptr - BufStart - NewlineOffs};
 }
 
 // FIXME: Note that the formatting of source locations is spread between
@@ -382,7 +382,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
                            ArrayRef<SMFixIt> Hints)
     : SM(&sm), Loc(L), Filename(std::string(FN)), LineNo(Line), ColumnNo(Col),
       Kind(Kind), Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
-      FixIts(Hints.begin(), Hints.end()) {
+      FixIts(Hints) {
   llvm::sort(FixIts);
 }
 

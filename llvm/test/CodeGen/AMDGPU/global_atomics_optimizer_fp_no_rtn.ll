@@ -1638,6 +1638,6 @@ define amdgpu_ps void @global_atomic_fadd_double_div_address_div_value_system_sc
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #2 = { strictfp }

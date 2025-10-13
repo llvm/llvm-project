@@ -127,8 +127,7 @@ public:
   AbstractArrayBox() = default;
   AbstractArrayBox(llvm::ArrayRef<mlir::Value> extents,
                    llvm::ArrayRef<mlir::Value> lbounds)
-      : extents{extents.begin(), extents.end()}, lbounds{lbounds.begin(),
-                                                         lbounds.end()} {}
+      : extents{extents}, lbounds{lbounds} {}
 
   // Every array has extents that describe its shape.
   const llvm::SmallVectorImpl<mlir::Value> &getExtents() const {
@@ -237,7 +236,7 @@ public:
     auto ty = getBoxTy().getEleTy();
     if (fir::isa_ref_type(ty))
       return ty;
-    return fir::ReferenceType::get(ty);
+    return fir::ReferenceType::get(ty, fir::isa_volatile_type(getBoxTy()));
   }
 
   /// Get the scalar type related to the described entity
@@ -296,7 +295,7 @@ public:
            llvm::ArrayRef<mlir::Value> explicitParams,
            llvm::ArrayRef<mlir::Value> explicitExtents = {})
       : AbstractIrBox{addr, lbounds, explicitExtents},
-        explicitParams{explicitParams.begin(), explicitParams.end()} {
+        explicitParams{explicitParams} {
     assert(verify());
   }
   // TODO: check contiguous attribute of addr

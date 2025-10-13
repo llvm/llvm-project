@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; Check that we don't generate lots of vinserts (of 0 that should be undef).
 ; CHECK: vinsert

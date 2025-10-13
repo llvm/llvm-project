@@ -161,7 +161,7 @@ define i1 @ror_ne_cst(i8 %x) {
 
 define <2 x i1> @rol_eq_cst_vec(<2 x i5> %x) {
 ; CHECK-LABEL: @rol_eq_cst_vec(
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 8, i5 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], splat (i5 8)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> %x, <2 x i5> %x, <2 x i5> <i5 3, i5 3>)
@@ -171,7 +171,7 @@ define <2 x i1> @rol_eq_cst_vec(<2 x i5> %x) {
 
 define <2 x i1> @rol_eq_cst_undef(<2 x i5> %x) {
 ; CHECK-LABEL: @rol_eq_cst_undef(
-; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> <i5 3, i5 3>)
+; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> splat (i5 3))
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[F]], <i5 2, i5 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -213,7 +213,7 @@ define i1 @amounts_mismatch(i8 %x, i8 %y, i8 %z, i8 %w) {
 ; CHECK-LABEL: @amounts_mismatch(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[Z:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)

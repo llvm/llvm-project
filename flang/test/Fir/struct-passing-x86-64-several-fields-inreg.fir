@@ -1,6 +1,5 @@
 // Test X86-64 passing ABI of struct in registers for the cases where the
 // struct has more than one field.
-// REQUIRES: x86-registered-target
 // RUN: fir-opt -target-rewrite="target=x86_64-unknown-linux-gnu" %s -o - | FileCheck %s
 
 
@@ -14,7 +13,7 @@ func.func @test_call_i8_a16(%0 : !fir.ref<!fir.type<ti8_a16{a:!fir.array<16xi8>}
 // CHECK-LABEL:   func.func @test_call_i8_a16(
 // CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.type<ti8_a16{a:!fir.array<16xi8>}>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.type<ti8_a16{a:!fir.array<16xi8>}>>
-// CHECK:           %[[VAL_2:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK:           %[[VAL_2:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<i64, i64>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<tuple<i64, i64>>) -> !fir.ref<!fir.type<ti8_a16{a:!fir.array<16xi8>}>>
 // CHECK:           fir.store %[[VAL_1]] to %[[VAL_4]] : !fir.ref<!fir.type<ti8_a16{a:!fir.array<16xi8>}>>
@@ -22,7 +21,7 @@ func.func @test_call_i8_a16(%0 : !fir.ref<!fir.type<ti8_a16{a:!fir.array<16xi8>}
 // CHECK:           %[[VAL_6:.*]] = fir.extract_value %[[VAL_5]], [0 : i32] : (tuple<i64, i64>) -> i64
 // CHECK:           %[[VAL_7:.*]] = fir.extract_value %[[VAL_5]], [1 : i32] : (tuple<i64, i64>) -> i64
 // CHECK:           fir.call @test_func_i8_a16(%[[VAL_6]], %[[VAL_7]]) : (i64, i64) -> ()
-// CHECK:           fir.call @llvm.stackrestore.p0(%[[VAL_2]]) : (!fir.ref<i8>) -> ()
+// CHECK:           llvm.intr.stackrestore %[[VAL_2]] : !llvm.ptr
 // CHECK:           return
 
 func.func private @test_func_i8_a16(%0 : !fir.type<ti8_a16{a:!fir.array<16xi8>}>) -> () {

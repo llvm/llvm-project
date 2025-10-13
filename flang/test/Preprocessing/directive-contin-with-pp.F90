@@ -8,10 +8,11 @@
 #define COMMENT !
 #define OMP_START !$omp
 #define OMP_CONT !$omp&
+#define EMPTY
 
 module m
  contains
-  subroutine s(x1, x2, x3, x4, x5, x6, x7)
+  subroutine s1(x1, x2, x3, x4, x5, x6, x7)
 
 !dir$ ignore_tkr x1
 
@@ -50,12 +51,24 @@ OMP_CONT do &
 OMP_CONT reduction(+:x)
     do j3 = 1, n
     end do
+
+EMPTY !$omp parallel &
+EMPTY !$omp do
+    do j4 = 1, n
+    end do
   end
-end
+
+COMMENT &
+  subroutine s2
+  end subroutine
+COMMENT&
+  subroutine s3
+  end subroutine
+end module
 
 !CHECK: MODULE m
 !CHECK: CONTAINS
-!CHECK:  SUBROUTINE s (x1, x2, x3, x4, x5, x6, x7)
+!CHECK:  SUBROUTINE s1 (x1, x2, x3, x4, x5, x6, x7)
 !CHECK:   !DIR$ IGNORE_TKR x1
 !CHECK:   !DIR$ IGNORE_TKR x2
 !CHECK:   !DIR$ IGNORE_TKR x3
@@ -63,14 +76,21 @@ end
 !CHECK:   !DIR$ IGNORE_TKR x5
 !CHECK:   !DIR$ IGNORE_TKR x6
 !CHECK:   STOP 1_4
-!CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
+!CHECK: !$OMP PARALLEL DO  REDUCTION(+: x)
 !CHECK:   DO j1=1_4,n
 !CHECK:   END DO
-!CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
+!CHECK: !$OMP PARALLEL DO  REDUCTION(+: x)
 !CHECK:   DO j2=1_4,n
 !CHECK:   END DO
-!CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
+!CHECK: !$OMP PARALLEL DO  REDUCTION(+: x)
 !CHECK:   DO j3=1_4,n
 !CHECK:   END DO
+!CHECK: !$OMP PARALLEL DO
+!CHECK:   DO j4=1_4,n
+!CHECK:   END DO
+!CHECK:  END SUBROUTINE
+!CHECK:  SUBROUTINE s2
+!CHECK:  END SUBROUTINE
+!CHECK:  SUBROUTINE s3
 !CHECK:  END SUBROUTINE
 !CHECK: END MODULE

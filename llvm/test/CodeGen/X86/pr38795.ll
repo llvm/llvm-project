@@ -30,7 +30,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # kill: killed $al
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_15: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
@@ -49,7 +49,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB0_10
 ; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl %ecx, %eax
@@ -73,7 +73,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    movb %dh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_15
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  # %bb.5: # %for.cond35
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testl %edi, %edi
@@ -98,16 +98,16 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # implicit-def: $dl
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_19
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_7: # %if.end21
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_8
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_19: # %for.cond47
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -131,7 +131,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    jmp .LBB0_15
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_9: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    testb %bl, %bl
@@ -260,11 +260,10 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %ebx, -8
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_7: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %ecx, %edx
@@ -272,28 +271,26 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl %edx, %ebx
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:  .LBB1_1: # %for.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp .LBB1_5
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_3: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB1_4
 ; CHECK-NEXT:  # %bb.9: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    movl $0, %ebx
 ; CHECK-NEXT:    jne .LBB1_8
 ; CHECK-NEXT:    jmp .LBB1_5
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    xorl %ebx, %ebx

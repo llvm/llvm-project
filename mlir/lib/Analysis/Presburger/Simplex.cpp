@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -434,7 +433,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
   normalizeDiv(divCoeffs, divDenom);
 
   domainSimplex.addDivisionVariable(divCoeffs, divDenom);
-  domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
+  (void)domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
 
   // Update `this` to account for the additional symbol we just added.
   appendSymbol();
@@ -1306,7 +1305,7 @@ void SimplexBase::addDivisionVariable(ArrayRef<DynamicAPInt> coeffs,
   assert(denom > 0 && "Denominator must be positive!");
   appendVariable();
 
-  SmallVector<DynamicAPInt, 8> ineq(coeffs.begin(), coeffs.end());
+  SmallVector<DynamicAPInt, 8> ineq(coeffs);
   DynamicAPInt constTerm = ineq.back();
   ineq.back() = -denom;
   ineq.emplace_back(constTerm);
@@ -1507,8 +1506,8 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   auto concat = [](ArrayRef<Unknown> v, ArrayRef<Unknown> w) {
     SmallVector<Unknown, 8> result;
     result.reserve(v.size() + w.size());
-    result.insert(result.end(), v.begin(), v.end());
-    result.insert(result.end(), w.begin(), w.end());
+    llvm::append_range(result, v);
+    llvm::append_range(result, w);
     return result;
   };
   result.con = concat(a.con, b.con);
@@ -1664,7 +1663,7 @@ public:
   /// First pushes a snapshot for the current simplex state to the stack so
   /// that this can be rolled back later.
   void addEqualityForDirection(ArrayRef<DynamicAPInt> dir) {
-    assert(llvm::any_of(dir, [](const DynamicAPInt &x) { return x != 0; }) &&
+    assert(llvm::any_of(dir, [](const DynamicAPInt &X) { return X != 0; }) &&
            "Direction passed is the zero vector!");
     snapshotStack.emplace_back(simplex.getSnapshot());
     simplex.addEquality(getCoeffsForDirection(dir));
@@ -1754,7 +1753,7 @@ private:
   getCoeffsForDirection(ArrayRef<DynamicAPInt> dir) {
     assert(2 * dir.size() == simplex.getNumVariables() &&
            "Direction vector has wrong dimensionality");
-    SmallVector<DynamicAPInt, 8> coeffs(dir.begin(), dir.end());
+    SmallVector<DynamicAPInt, 8> coeffs(dir);
     coeffs.reserve(dir.size() + 1);
     for (const DynamicAPInt &coeff : dir)
       coeffs.emplace_back(-coeff);
@@ -2153,9 +2152,16 @@ void SimplexBase::print(raw_ostream &os) const {
   for (unsigned col = 2, e = getNumColumns(); col < e; ++col)
     os << ", c" << col << ": " << colUnknown[col];
   os << '\n';
-  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row)
     for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col)
-      os << tableau(row, col) << '\t';
+      updatePrintMetrics<DynamicAPInt>(tableau(row, col), ptm);
+  unsigned minSpacing = 1;
+  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
+    for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col) {
+      printWithPrintMetrics<DynamicAPInt>(os, tableau(row, col), minSpacing,
+                                          ptm);
+    }
     os << '\n';
   }
   os << '\n';

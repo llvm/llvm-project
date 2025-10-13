@@ -10,6 +10,7 @@
 #include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IntegerSet.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
@@ -190,6 +191,14 @@ bool mlirAttributeIsAIntegerSet(MlirAttribute attr) {
 
 MlirTypeID mlirIntegerSetAttrGetTypeID(void) {
   return wrap(IntegerSetAttr::getTypeID());
+}
+
+MlirAttribute mlirIntegerSetAttrGet(MlirIntegerSet set) {
+  return wrap(IntegerSetAttr::get(unwrap(set)));
+}
+
+MlirIntegerSet mlirIntegerSetAttrGetValue(MlirAttribute attr) {
+  return wrap(llvm::cast<IntegerSetAttr>(unwrap(attr)).getValue());
 }
 
 //===----------------------------------------------------------------------===//
@@ -747,6 +756,9 @@ int64_t mlirDenseElementsAttrGetInt64Value(MlirAttribute attr, intptr_t pos) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<int64_t>()[pos];
 }
 uint64_t mlirDenseElementsAttrGetUInt64Value(MlirAttribute attr, intptr_t pos) {
+  return llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<uint64_t>()[pos];
+}
+uint64_t mlirDenseElementsAttrGetIndexValue(MlirAttribute attr, intptr_t pos) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<uint64_t>()[pos];
 }
 float mlirDenseElementsAttrGetFloatValue(MlirAttribute attr, intptr_t pos) {

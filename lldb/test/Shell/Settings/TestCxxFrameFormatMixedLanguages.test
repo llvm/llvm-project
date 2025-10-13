@@ -1,0 +1,53 @@
+# UNSUPPORTED: system-windows
+
+# Test the plugin.cplusplus.display.function-name-format setting
+# when interoperating multiple languages.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -x c -c -g %t/lib.c -o %t.clib.o
+# RUN: %clangxx_host -c -g %t/lib.cpp -o %t.cxxlib.o
+# RUN: %clangxx_host %t/main.m %t.cxxlib.o %t.clib.o -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 | FileCheck %s
+
+#--- lib.c
+
+void foo();
+
+void func() {
+  foo();
+}
+
+#--- lib.cpp
+
+namespace ns {
+struct Foo {
+    void method() {}
+};
+}
+
+extern "C" {
+void foo() {
+  ns::Foo{}.method();
+}
+}
+
+#--- main.m
+
+void func();
+
+int main() {
+  func();
+}
+
+#--- commands.input
+settings set plugin.cplusplus.display.function-name-format "this affects C++ only"
+settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
+break set -n method
+
+run
+bt
+
+# CHECK: custom-frame 'this affects C++ only' 
+# CHECK: custom-frame 'this affects C++ only' 
+# CHECK: custom-frame 'func' 
+# CHECK: custom-frame 'main' 

@@ -37,7 +37,7 @@ struct HexagonBlockRanges {
     unsigned Sub;
 
     bool operator<(RegisterRef R) const {
-      return Reg < R.Reg || (Reg == R.Reg && Sub < R.Sub);
+      return std::tie(Reg, Sub) < std::tie(R.Reg, R.Sub);
     }
   };
   using RegisterSet = std::set<RegisterRef>;

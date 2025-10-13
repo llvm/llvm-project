@@ -8,6 +8,7 @@ import lit.Test
 import lit.formats
 import lit.TestingConfig
 import lit.util
+from lit.DiffUpdater import diff_test_updater
 
 # LitConfig must be a new style class for properties to work
 class LitConfig(object):
@@ -35,9 +36,11 @@ class LitConfig(object):
         params,
         config_prefix=None,
         maxIndividualTestTime=0,
+        maxRetriesPerTest=None,
         parallelism_groups={},
         per_test_coverage=False,
         gtest_sharding=True,
+        update_tests=False,
     ):
         # The name of the test runner.
         self.progname = progname
@@ -86,9 +89,12 @@ class LitConfig(object):
             self.valgrindArgs.extend(self.valgrindUserArgs)
 
         self.maxIndividualTestTime = maxIndividualTestTime
+        self.maxRetriesPerTest = maxRetriesPerTest
         self.parallelism_groups = parallelism_groups
         self.per_test_coverage = per_test_coverage
         self.gtest_sharding = bool(gtest_sharding)
+        self.update_tests = update_tests
+        self.test_updaters = [diff_test_updater]
 
     @property
     def maxIndividualTestTime(self):

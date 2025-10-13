@@ -1,5 +1,5 @@
 add_library(
-  libc_diff_test_utils
+  libc_diff_test_utils STATIC
   Timer.cpp
   Timer.h
 )
@@ -92,16 +92,11 @@ function(add_perf_binary target_name)
 endfunction()
 
 add_header_library(
-  single_input_single_output_diff
+  perf_test
   HDRS
-    SingleInputSingleOutputPerf.h
-)
-
-add_header_library(
-  binary_op_single_output_diff
-  HDRS
-    BinaryOpSingleOutputPerf.h
+    PerfTest.h
   DEPENDS
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -110,7 +105,7 @@ add_perf_binary(
   SRCS
     sinf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.sinf
   COMPILE_OPTIONS
     -fno-builtin
@@ -121,7 +116,7 @@ add_perf_binary(
   SRCS
     cosf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.cosf
   COMPILE_OPTIONS
     -fno-builtin
@@ -132,7 +127,7 @@ add_perf_binary(
   SRCS
     expm1f_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.expm1f
   COMPILE_OPTIONS
     -fno-builtin
@@ -143,8 +138,19 @@ add_perf_binary(
   SRCS
     ceilf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.ceilf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  exp10f16_perf
+  SRCS
+    exp10f16_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.exp10f16
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -154,8 +160,19 @@ add_perf_binary(
   SRCS
     exp2f_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.exp2f
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  exp2f16_perf
+  SRCS
+    exp2f16_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.exp2f16
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -165,8 +182,19 @@ add_perf_binary(
   SRCS
     expf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.expf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  expf16_perf
+  SRCS
+    expf16_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.expf16
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -176,7 +204,7 @@ add_perf_binary(
   SRCS
     fabsf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.fabsf
   COMPILE_OPTIONS
     -fno-builtin
@@ -187,7 +215,7 @@ add_perf_binary(
   SRCS
     floorf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.floorf
   COMPILE_OPTIONS
     -fno-builtin
@@ -198,7 +226,7 @@ add_perf_binary(
   SRCS
     log10f_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.log10f
   COMPILE_OPTIONS
     -fno-builtin
@@ -209,7 +237,7 @@ add_perf_binary(
   SRCS
     log1pf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.log1pf
   COMPILE_OPTIONS
     -fno-builtin
@@ -220,7 +248,7 @@ add_perf_binary(
   SRCS
     log2f_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.log2f
   COMPILE_OPTIONS
     -fno-builtin
@@ -231,7 +259,7 @@ add_perf_binary(
   SRCS
     logf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.logf
   COMPILE_OPTIONS
     -fno-builtin
@@ -242,7 +270,7 @@ add_perf_binary(
   SRCS
     logbf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.logbf
   COMPILE_OPTIONS
     -fno-builtin
@@ -253,7 +281,7 @@ add_perf_binary(
   SRCS
     nearbyintf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.nearbyintf
   COMPILE_OPTIONS
     -fno-builtin
@@ -264,7 +292,7 @@ add_perf_binary(
   SRCS
     rintf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.rintf
   COMPILE_OPTIONS
     -fno-builtin
@@ -275,7 +303,7 @@ add_perf_binary(
   SRCS
     roundf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.roundf
   COMPILE_OPTIONS
     -fno-builtin
@@ -286,7 +314,7 @@ add_perf_binary(
   SRCS
     sqrtf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.sqrtf
   COMPILE_OPTIONS
     -fno-builtin
@@ -297,8 +325,20 @@ add_perf_binary(
   SRCS
     truncf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.truncf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  hypotf16_perf
+  SRCS
+    hypotf16_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.hypotf16
+    libc.src.__support.FPUtil.fp_bits
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -308,7 +348,7 @@ add_perf_binary(
   SRCS
     hypotf_perf.cpp
   DEPENDS
-    .binary_op_single_output_diff
+    .perf_test
     libc.src.math.hypotf
   COMPILE_OPTIONS
     -fno-builtin
@@ -319,7 +359,7 @@ add_perf_binary(
   SRCS
     hypot_perf.cpp
   DEPENDS
-    .binary_op_single_output_diff
+    .perf_test
     libc.src.math.hypot
   COMPILE_OPTIONS
     -fno-builtin
@@ -330,7 +370,7 @@ add_perf_binary(
   SRCS
     fmodf_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.fmodf
   COMPILE_OPTIONS
     -fno-builtin
@@ -341,7 +381,7 @@ add_perf_binary(
   SRCS
     fmod_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.fmod
   COMPILE_OPTIONS
     -fno-builtin
@@ -352,7 +392,7 @@ add_perf_binary(
   SRCS
     fmodl_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.fmodl
   COMPILE_OPTIONS
     -fno-builtin
@@ -363,7 +403,7 @@ add_perf_binary(
   SRCS
     fmodf16_perf.cpp
   DEPENDS
-    .binary_op_single_output_diff
+    .perf_test
     libc.src.math.fmodf16
     libc.src.__support.FPUtil.generic.fmod
     libc.src.__support.macros.properties.types
@@ -374,8 +414,9 @@ add_perf_binary(
   SRCS
     fmodf128_perf.cpp
   DEPENDS
-    .single_input_single_output_diff
+    .perf_test
     libc.src.math.fmodf128
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -401,4 +442,73 @@ add_perf_binary(
     -fno-builtin
   LINK_LIBRARIES
     LibcFPTestHelpers
+)
+
+add_perf_binary(
+  misc_basic_ops_perf
+  SRCS
+    misc_basic_ops_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.copysignf
+    libc.src.math.copysignf16
+    libc.src.math.fabsf
+    libc.src.math.fabsf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  max_min_funcs_perf
+  SRCS
+    max_min_funcs_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.fmaxf
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximumf16
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fminf
+    libc.src.math.fminf16
+    libc.src.math.fminimumf
+    libc.src.math.fminimumf16
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  fmul_perf
+  SRCS
+    fmul_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.fmul
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.FPUtil.fp_bits
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  fmull_perf
+  SRCS
+    fmull_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.fmull
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  sqrtf128_perf
+  SRCS
+    sqrtf128_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.sqrtf128
 )

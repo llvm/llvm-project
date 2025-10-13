@@ -21,14 +21,10 @@ body:             |
     ; CHECK-LABEL: name: split_instruction_subranges
     ; CHECK: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %1:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %3:vgpr_32, 4, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: SI_SPILL_V64_SAVE [[GLOBAL_LOAD_DWORDX2_SADDR1]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %5:vgpr_32, 8, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub1:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-    ; CHECK-NEXT: S_NOP 0, implicit [[COPY]].sub1
-    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: S_NOP 0, implicit [[SI_SPILL_V64_RESTORE]].sub0
-    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub1:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
-    ; CHECK-NEXT: S_NOP 0, implicit [[COPY1]].sub1
+    ; CHECK-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+    ; CHECK-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+    ; CHECK-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %4:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     %2:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %5:vgpr_32, 4, 0, implicit $exec :: (load (s64), addrspace 1)
@@ -61,23 +57,13 @@ body:             |
     ; CHECK-LABEL: name: split_instruction_subranges_use_is_subreg_def
     ; CHECK: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %1:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %3:vgpr_32, 4, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: SI_SPILL_V64_SAVE [[GLOBAL_LOAD_DWORDX2_SADDR1]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %5:vgpr_32, 8, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: SI_SPILL_V64_SAVE [[GLOBAL_LOAD_DWORDX2_SADDR2]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: S_NOP 0, implicit-def [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:vreg_64 = COPY [[SI_SPILL_V64_RESTORE]].sub0
-    ; CHECK-NEXT: S_NOP 0, implicit-def [[COPY]].sub1
-    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0:vreg_64 = COPY [[COPY]].sub0
-    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE1:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub1:vreg_64 = COPY [[SI_SPILL_V64_RESTORE1]].sub1
-    ; CHECK-NEXT: S_NOP 0, implicit-def [[COPY2]].sub0
-    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub1:vreg_64 = COPY [[COPY2]].sub1
+    ; CHECK-NEXT: S_NOP 0, implicit-def [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
+    ; CHECK-NEXT: S_NOP 0, implicit-def [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
     ; CHECK-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-    ; CHECK-NEXT: undef [[COPY4:%[0-9]+]].sub0:vreg_64 = COPY [[COPY1]].sub0
-    ; CHECK-NEXT: S_NOP 0, implicit [[COPY4]].sub0
-    ; CHECK-NEXT: undef [[COPY5:%[0-9]+]].sub1:vreg_64 = COPY [[COPY3]].sub1
-    ; CHECK-NEXT: S_NOP 0, implicit [[COPY5]].sub1
+    ; CHECK-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+    ; CHECK-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %4:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     %2:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %5:vgpr_32, 4, 0, implicit $exec :: (load (s64), addrspace 1)

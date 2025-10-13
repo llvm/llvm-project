@@ -32,10 +32,10 @@ cl::opt<bool>
                     "(which is what --hot-text relies on)."),
            cl::cat(BoltOptCategory));
 
-static cl::opt<std::string> RuntimeHugifyLib(
-    "runtime-hugify-lib",
-    cl::desc("specify file name of the runtime hugify library"),
-    cl::init("libbolt_rt_hugify.a"), cl::cat(BoltOptCategory));
+static cl::opt<std::string>
+    RuntimeHugifyLib("runtime-hugify-lib",
+                     cl::desc("specify path of the runtime hugify library"),
+                     cl::init("libbolt_rt_hugify.a"), cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -68,10 +68,11 @@ void HugifyRuntimeLibrary::link(BinaryContext &BC, StringRef ToolPath,
 
   assert(!RuntimeStartAddress &&
          "We don't currently support linking multiple runtime libraries");
-  RuntimeStartAddress = Linker.lookupSymbol("__bolt_hugify_self").value_or(0);
-  if (!RuntimeStartAddress) {
+  auto StartSymInfo = Linker.lookupSymbolInfo("__bolt_hugify_self");
+  if (!StartSymInfo) {
     errs() << "BOLT-ERROR: hugify library does not define __bolt_hugify_self: "
            << LibPath << "\n";
     exit(1);
   }
+  RuntimeStartAddress = StartSymInfo->Address;
 }

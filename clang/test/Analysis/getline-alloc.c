@@ -29,7 +29,7 @@ void test_getline_malloc_buffer() {
 
   ssize_t r = getdelim(&buffer, &n, '\r', F1);
   // ptr may be dangling
-  free(ptr);    // expected-warning {{Attempt to free released memory}}
+  free(ptr);    // expected-warning {{Attempt to release already released memory}}
   free(buffer); // ok
   fclose(F1);
 }
@@ -40,7 +40,7 @@ void test_getline_alloca() {
     return;
   size_t n = 10;
   char *buffer = alloca(n);
-  getline(&buffer, &n, F1); // expected-warning {{Memory allocated by alloca() should not be deallocated}}
+  getline(&buffer, &n, F1); // expected-warning {{Memory allocated by 'alloca()' should not be deallocated}}
   fclose(F1);
 }
 
@@ -50,7 +50,7 @@ void test_getline_invalid_ptr() {
     return;
   size_t n = 10;
   char *buffer = (char*)test_getline_invalid_ptr;
-  getline(&buffer, &n, F1); // expected-warning {{Argument to getline() is the address of the function 'test_getline_invalid_ptr', which is not memory allocated by malloc()}}
+  getline(&buffer, &n, F1); // expected-warning {{Argument to 'getline()' is the address of the function 'test_getline_invalid_ptr', which is not memory allocated by 'malloc()'}}
   fclose(F1);
 }
 
@@ -79,7 +79,7 @@ void test_getline_stack() {
   if (!F1)
     return;
 
-  getline(&ptr, &n, F1); // expected-warning {{Argument to getline() is the address of the local variable 'buffer', which is not memory allocated by malloc()}}
+  getline(&ptr, &n, F1); // expected-warning {{Argument to 'getline()' is the address of the local variable 'buffer', which is not memory allocated by 'malloc()'}}
 }
 
 void test_getline_static() {
@@ -91,5 +91,5 @@ void test_getline_static() {
   if (!F1)
     return;
 
-  getline(&ptr, &n, F1); // expected-warning {{Argument to getline() is the address of the static variable 'buffer', which is not memory allocated by malloc()}}
+  getline(&ptr, &n, F1); // expected-warning {{Argument to 'getline()' is the address of the static variable 'buffer', which is not memory allocated by 'malloc()'}}
 }

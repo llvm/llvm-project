@@ -8,7 +8,7 @@
 
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "GISelMITest.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 
 #define DEBUG_TYPE "legalizer-test"
@@ -27,7 +27,7 @@ namespace {
   MI->print(MISStream, /*IsStandalone=*/true, /*SkipOpers=*/false,
             /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
   return ::testing::AssertionFailure()
-         << "unable to legalize instruction: " << MISStream.str();
+         << "unable to legalize instruction: " << MIBuffer;
 }
 
 DefineLegalizerInfo(ALegalizer, {
@@ -66,10 +66,10 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
 
   ALegalizerInfo LI(MF->getSubtarget());
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
-  GISelKnownBits KB(*MF);
+  GISelValueTracking VT(*MF);
 
   Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
-      *MF, LI, {&LocObserver}, LocObserver, B, &KB);
+      *MF, LI, {&LocObserver}, LocObserver, B, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -78,7 +78,7 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
     CHECK:      %vptr:_(p0) = COPY $x4
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load (s8))
     CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
+    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
     CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load (s8) from unknown-address + 1)
     CHECK-NEXT: %v:_(<2 x s8>) = G_BUILD_VECTOR_TRUNC [[LOAD_0]]:_(s16), [[LOAD_1]]:_(s16)
     CHECK-NEXT: $h4 = COPY %v:_(<2 x s8>)
@@ -104,7 +104,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
 
   ALegalizerInfo LI(MF->getSubtarget());
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
-  GISelKnownBits KB(*MF);
+  GISelValueTracking VT(*MF);
 
   // The events here unfold as follows:
   // 1. First, the function is scanned pre-forming the worklist of artifacts:
@@ -161,7 +161,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   //  the process follows def-use chains, making them shorter at each step, thus
   //  combining everything that can be combined in O(n) time.
   Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
-      *MF, LI, {&LocObserver}, LocObserver, B, &KB);
+      *MF, LI, {&LocObserver}, LocObserver, B, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -198,10 +198,10 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
 
   ALegalizerInfo LI(MF->getSubtarget());
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
-  GISelKnownBits KB(*MF);
+  GISelValueTracking VT(*MF);
 
   Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
-      *MF, LI, {&LocObserver}, LocObserver, B, &KB);
+      *MF, LI, {&LocObserver}, LocObserver, B, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -210,7 +210,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
     CHECK:      %vptr:_(p0) = COPY $x4
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load (s8))
     CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
+    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
     CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load (s8) from unknown-address + 1)
     CHECK-NEXT: [[V0_EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD_0]]:_(s16)
     CHECK-NEXT: [[FF_MASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 255

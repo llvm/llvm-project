@@ -12,12 +12,18 @@
 
 // Make sure that we can hash enumeration values.
 
-#include "test_macros.h"
-
 #include <functional>
 #include <cassert>
-#include <type_traits>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <type_traits>
+
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 11
+#  include "poisoned_hash_helper.h"
+#endif
 
 enum class Colors { red, orange, yellow, green, blue, indigo, violet };
 enum class Cardinals { zero, one, two, three, five=5 };
@@ -31,6 +37,12 @@ template <class T>
 void
 test()
 {
+#if TEST_STD_VER >= 11
+    test_hash_disabled<const T>();
+    test_hash_disabled<volatile T>();
+    test_hash_disabled<const volatile T>();
+#endif
+
     typedef std::hash<T> H;
 #if TEST_STD_VER <= 17
     static_assert((std::is_same<typename H::argument_type, T>::value), "");

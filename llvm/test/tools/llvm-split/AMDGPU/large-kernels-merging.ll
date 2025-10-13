@@ -1,12 +1,11 @@
-; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-function-threshold=1.2 -amdgpu-module-splitting-large-function-merge-overlap=0.5
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
+; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-max-depth=0 -amdgpu-module-splitting-large-threshold=1.2 -amdgpu-module-splitting-merge-threshold=0.5
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
 
-; RUN: llvm-split -o %t.nolarge %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-function-threshold=0
-; RUN: llvm-dis -o - %t.nolarge0 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK0 %s
-; RUN: llvm-dis -o - %t.nolarge1 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK1 %s
-; RUN: llvm-dis -o - %t.nolarge2 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK2 %s
+; RUN: llvm-split -o %t.nolarge %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-threshold=0 -amdgpu-module-splitting-max-depth=0
+; RUN: llvm-dis -o - %t.nolarge0 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t.nolarge1 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK1 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t.nolarge2 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK2 --implicit-check-not=define %s
 
 ; 2 kernels (A/B) are large and share all their dependencies.
 ; They should go in the same partition, the remaining kernel should
@@ -15,27 +14,21 @@
 ; Also check w/o large kernels processing to verify they are indeed handled
 ; differently.
 
-; CHECK0-NOT: define
+; Only 2 partitions for the first command.
 
-; CHECK1-NOT: define
-; CHECK1: define internal void @HelperC()
-; CHECK1: define amdgpu_kernel void @C
-; CHECK1-NOT: define
+; CHECK0: define internal void @HelperC()
+; CHECK0: define amdgpu_kernel void @C
 
-; CHECK2-NOT: define
-; CHECK2: define internal void @large2()
-; CHECK2: define internal void @large1()
-; CHECK2: define internal void @large0()
-; CHECK2: define internal void @HelperA()
-; CHECK2: define internal void @HelperB()
-; CHECK2: define amdgpu_kernel void @A
-; CHECK2: define amdgpu_kernel void @B
-; CHECK2-NOT: define
+; CHECK1: define internal void @large2()
+; CHECK1: define internal void @large1()
+; CHECK1: define internal void @large0()
+; CHECK1: define internal void @HelperA()
+; CHECK1: define internal void @HelperB()
+; CHECK1: define amdgpu_kernel void @A
+; CHECK1: define amdgpu_kernel void @B
 
-; NOLARGEKERNELS-CHECK0-NOT: define
 ; NOLARGEKERNELS-CHECK0: define internal void @HelperC()
 ; NOLARGEKERNELS-CHECK0: define amdgpu_kernel void @C
-; NOLARGEKERNELS-CHECK0-NOT: define
 
 ; NOLARGEKERNELS-CHECK1: define internal void @large2()
 ; NOLARGEKERNELS-CHECK1: define internal void @large1()
@@ -48,6 +41,7 @@
 ; NOLARGEKERNELS-CHECK2: define internal void @large0()
 ; NOLARGEKERNELS-CHECK2: define internal void @HelperA()
 ; NOLARGEKERNELS-CHECK2: define amdgpu_kernel void @A
+
 
 define internal void @large2() {
   store volatile i32 42, ptr null

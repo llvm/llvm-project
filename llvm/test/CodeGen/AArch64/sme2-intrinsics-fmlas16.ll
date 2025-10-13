@@ -459,4 +459,4 @@ define void @test_fmls_bf16_vg4_index(i32 %slice,
   ret void
 }
 
-attributes #0 = { nounwind "target-features"="+sme2p1,+sme-f16f16,+b16b16" }
+attributes #0 = { nounwind "target-features"="+sme2p1,+sme-f16f16,+sme-b16b16" }

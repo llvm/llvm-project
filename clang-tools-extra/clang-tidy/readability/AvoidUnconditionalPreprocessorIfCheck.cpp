@@ -1,4 +1,4 @@
-//===--- AvoidUnconditionalPreprocessorIfCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -84,7 +84,8 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
       return (Tok.getRawIdentifier() == "true" ||
               Tok.getRawIdentifier() == "false");
     default:
-      return Tok.getKind() >= tok::l_square && Tok.getKind() <= tok::caretcaret;
+      return Tok.getKind() >= tok::l_square &&
+             Tok.getKind() <= tok::greatergreatergreater;
     }
   }
 

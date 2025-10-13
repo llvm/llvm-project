@@ -69,21 +69,35 @@ define double @loadfpimm8() {
 }
 
 define double @loadfpimm9() {
-; CHECK-LABEL: loadfpimm9:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm9:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI8_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm9:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    lui a0, 131967
+; RV64DZFA-NEXT:    slli a0, a0, 33
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 255.0
 }
 
 ; Negative test. This is 1 * 2^256.
 define double @loadfpimm10() {
-; CHECK-LABEL: loadfpimm10:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm10:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI9_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm10:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    slli a0, a0, 60
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x1000000000000000
 }
 
@@ -125,11 +139,18 @@ define double @loadfpimm13() {
 
 ; Negative test. This is 2^-1023, a denormal.
 define double @loadfpimm15() {
-; CHECK-LABEL: loadfpimm15:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI13_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm15:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm15:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    slli a0, a0, 51
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x0008000000000000
 }
 
@@ -243,6 +264,17 @@ define double @fround_d_5(double %a) nounwind {
 
 declare double @nearbyint(double) nounwind readnone
 
+define double @fround_d_6(double %a) nounwind {
+; CHECK-LABEL: fround_d_6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fround.d fa0, fa0, rne
+; CHECK-NEXT:    ret
+  %call = tail call double @llvm.roundeven.f64(double %a) nounwind readnone
+  ret double %call
+}
+
+declare double @llvm.roundeven.f64(double) nounwind readnone
+
 
 define double @froundnx_d(double %a) nounwind {
 ; CHECK-LABEL: froundnx_d:
@@ -329,4 +361,73 @@ define double @fmvp_d_x(i64 %a) {
 ; RV64DZFA-NEXT:    ret
   %or = bitcast i64 %a to double
   ret double %or
+}
+
+define double @fadd_neg_0p5(double %x) {
+; CHECK-LABEL: fadd_neg_0p5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fsub.d fa0, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = fadd double %x, -0.5
+  ret double %a
+}
+
+define double @fma_neg_addend(double %x, double %y) nounwind {
+; CHECK-LABEL: fma_neg_addend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fmsub.d fa0, fa0, fa1, fa5
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double %y, double -0.5)
+  ret double %a
+}
+
+define double @fma_neg_multiplicand(double %x, double %y) nounwind {
+; CHECK-LABEL: fma_neg_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.125
+; CHECK-NEXT:    fnmsub.d fa0, fa5, fa0, fa1
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double -0.125, double %y)
+  ret double %a
+}
+
+define double @fma_neg_addend_multiplicand(double %x) nounwind {
+; CHECK-LABEL: fma_neg_addend_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.25
+; CHECK-NEXT:    fli.d fa4, 0.5
+; CHECK-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double -0.5, double -0.25)
+  ret double %a
+}
+
+define double @select_loadfpimm(double %x) nounwind {
+; RV32IDZFA-LABEL: select_loadfpimm:
+; RV32IDZFA:       # %bb.0: # %entry
+; RV32IDZFA-NEXT:    fcvt.d.w fa5, zero
+; RV32IDZFA-NEXT:    fle.d a0, fa5, fa0
+; RV32IDZFA-NEXT:    fli.d fa0, 0.5
+; RV32IDZFA-NEXT:    bnez a0, .LBB36_2
+; RV32IDZFA-NEXT:  # %bb.1:
+; RV32IDZFA-NEXT:    fneg.d fa0, fa0
+; RV32IDZFA-NEXT:  .LBB36_2: # %entry
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: select_loadfpimm:
+; RV64DZFA:       # %bb.0: # %entry
+; RV64DZFA-NEXT:    fmv.d.x fa5, zero
+; RV64DZFA-NEXT:    fle.d a0, fa5, fa0
+; RV64DZFA-NEXT:    fli.d fa0, 0.5
+; RV64DZFA-NEXT:    bnez a0, .LBB36_2
+; RV64DZFA-NEXT:  # %bb.1:
+; RV64DZFA-NEXT:    fneg.d fa0, fa0
+; RV64DZFA-NEXT:  .LBB36_2: # %entry
+; RV64DZFA-NEXT:    ret
+entry:
+  %cmp = fcmp ult double %x, 0.000000e+00
+  %sel = select i1 %cmp, double -5.000000e-01, double 5.000000e-01
+  ret double %sel
 }

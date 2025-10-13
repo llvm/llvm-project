@@ -5,10 +5,10 @@ define i8 @cmov8(i8 %a, i8 %b, i8 %x, ptr %y.ptr) {
 ; CHECK-LABEL: cmov8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb %sil, %dil # encoding: [0x40,0x38,0xf7]
-; CHECK-NEXT:    cmoval %edi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x47,0xd7]
-; CHECK-NEXT:    movzbl (%rcx), %ecx # encoding: [0x0f,0xb6,0x09]
-; CHECK-NEXT:    cmovbel %edx, %ecx # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xca]
-; CHECK-NEXT:    addb %cl, %al # EVEX TO LEGACY Compression encoding: [0x00,0xc8]
+; CHECK-NEXT:    cmovbel %edx, %edi # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xfa]
+; CHECK-NEXT:    movzbl (%rcx), %eax # encoding: [0x0f,0xb6,0x01]
+; CHECK-NEXT:    cmovbel %edx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xc2]
+; CHECK-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %cond = icmp ugt i8 %a, %b
@@ -23,9 +23,9 @@ define i16 @cmov16(i16 %a, i16 %b, i16 %x, ptr %y.ptr) {
 ; CHECK-LABEL: cmov16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpw %si, %di # encoding: [0x66,0x39,0xf7]
-; CHECK-NEXT:    cmoval %edi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x47,0xd7]
-; CHECK-NEXT:    cmovaw (%rcx), %dx, %cx # encoding: [0x62,0xf4,0x75,0x18,0x47,0x11]
-; CHECK-NEXT:    addw %cx, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xc8]
+; CHECK-NEXT:    cmovbel %edx, %edi # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xfa]
+; CHECK-NEXT:    cmovaw (%rcx), %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x47,0x11]
+; CHECK-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %cond = icmp ugt i16 %a, %b
@@ -41,8 +41,8 @@ define i32 @cmov32(i32 %a, i32 %b, i32 %x, ptr %y.ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
 ; CHECK-NEXT:    cmoval %edi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x47,0xd7]
-; CHECK-NEXT:    cmoval (%rcx), %edx, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x47,0x11]
-; CHECK-NEXT:    addl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xc8]
+; CHECK-NEXT:    cmoval (%rcx), %edx # EVEX TO LEGACY Compression encoding: [0x0f,0x47,0x11]
+; CHECK-NEXT:    addl %edx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xd0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %cond = icmp ugt i32 %a, %b
@@ -58,8 +58,8 @@ define i64 @cmov64(i64 %a, i64 %b, i64 %x, ptr %y.ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
 ; CHECK-NEXT:    cmovaq %rdi, %rdx, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x47,0xd7]
-; CHECK-NEXT:    cmovaq (%rcx), %rdx, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x47,0x11]
-; CHECK-NEXT:    addq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xc8]
+; CHECK-NEXT:    cmovaq (%rcx), %rdx # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x47,0x11]
+; CHECK-NEXT:    addq %rdx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xd0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %cond = icmp ugt i64 %a, %b

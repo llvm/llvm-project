@@ -1,14 +1,25 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/use-ranges/
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/
+// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
+// Example: ./check_clang_tidy.py -std=c++20 checkers/modernize/use-ranges.cpp modernize-use-ranges temp.txt -- -- -I ~/llvm-project/clang-tools-extra/test/clang-tidy/checkers/modernize/Inputs/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES-CPP23: #include <numeric>
 // CHECK-FIXES: #include <ranges>
 
-#include "fake_std.h"
+#include "use-ranges/fake_std.h"
+#include "smart-ptr/unique_ptr.h"
 
 void Positives() {
   std::vector<int> I, J;
+  std::vector<std::unique_ptr<int>> K;
+
+  // Expect to have no check messages
+  std::find(K.begin(), K.end(), nullptr);
+
+  std::find(K.begin(), K.end(), std::unique_ptr<int>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(K, std::unique_ptr<int>());
+
   std::find(I.begin(), I.end(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 0);
@@ -57,6 +68,10 @@ void Positives() {
   // CHECK-MESSAGES-CPP23: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES-CPP23: std::ranges::iota(I, 0);
 
+  std::rotate(I.begin(), I.begin() + 2, I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::rotate(I, I.begin() + 2);
+
   using std::find;
   namespace my_std = std;
 
@@ -72,6 +87,15 @@ void Positives() {
 
 void Reverse(){
   std::vector<int> I, J;
+  std::vector<std::unique_ptr<int>> K;
+  
+  // Expect to have no check messages
+  std::find(K.rbegin(), K.rend(), nullptr);
+
+  std::find(K.rbegin(), K.rend(), std::unique_ptr<int>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(K), std::unique_ptr<int>());
+
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(I), 0);
@@ -100,4 +124,11 @@ void Negatives() {
   std::equal(I.begin(), I.end(), J.end(), J.end());
   std::equal(std::rbegin(I), std::rend(I), std::rend(J), std::rbegin(J));
   std::equal(I.begin(), J.end(), I.begin(), I.end());
+
+  // std::rotate expects the full range in the 1st and 3rd argument.
+  // Anyone writing this code has probably written a bug, but this isn't the
+  // purpose of this check.
+  std::rotate(I.begin(), I.end(), I.begin() + 2);
+  // Pathological, but probably shouldn't diagnose this
+  std::rotate(I.begin(), I.end(), I.end() + 0);
 }

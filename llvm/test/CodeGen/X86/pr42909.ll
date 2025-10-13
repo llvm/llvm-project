@@ -4,7 +4,7 @@
 define void @autogen_SD31033(ptr %a0) {
 ; CHECK-LABEL: autogen_SD31033:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %CF
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1

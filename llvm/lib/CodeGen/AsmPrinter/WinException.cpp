@@ -160,10 +160,9 @@ void WinException::endFunction(const MachineFunction *MF) {
     Asm->OutStreamer->popSection();
   }
 
-  if (!MF->getCatchretTargets().empty()) {
-    // Copy the function's catchret targets to a module-level list.
-    EHContTargets.insert(EHContTargets.end(), MF->getCatchretTargets().begin(),
-                         MF->getCatchretTargets().end());
+  if (!MF->getEHContTargets().empty()) {
+    // Copy the function's EH Continuation targets to a module-level list.
+    llvm::append_range(EHContTargets, MF->getEHContTargets());
   }
 }
 
@@ -290,6 +289,11 @@ void WinException::endFuncletImpl() {
       // functions that need it in the end anyway.
     }
 
+    if (!MF->getEHContTargets().empty()) {
+      // Copy the function's EH Continuation targets to a module-level list.
+      llvm::append_range(EHContTargets, MF->getEHContTargets());
+    }
+
     // Switch back to the funclet start .text section now that we are done
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
@@ -304,10 +308,8 @@ void WinException::endFuncletImpl() {
 const MCExpr *WinException::create32bitRef(const MCSymbol *Value) {
   if (!Value)
     return MCConstantExpr::create(0, Asm->OutContext);
-  return MCSymbolRefExpr::create(Value, useImageRel32
-                                            ? MCSymbolRefExpr::VK_COFF_IMGREL32
-                                            : MCSymbolRefExpr::VK_None,
-                                 Asm->OutContext);
+  auto Spec = useImageRel32 ? uint16_t(MCSymbolRefExpr::VK_COFF_IMGREL32) : 0;
+  return MCSymbolRefExpr::create(Value, Spec, Asm->OutContext);
 }
 
 const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
@@ -318,12 +320,6 @@ const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
 
 const MCExpr *WinException::getLabel(const MCSymbol *Label) {
   return MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                 Asm->OutContext);
-}
-
-const MCExpr *WinException::getLabelPlusOne(const MCSymbol *Label) {
-  return MCBinaryExpr::createAdd(getLabel(Label),
-                                 MCConstantExpr::create(1, Asm->OutContext),
                                  Asm->OutContext);
 }
 
@@ -653,7 +649,7 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
     AddComment("LabelStart");
     OS.emitValue(getLabel(BeginLabel), 4);
     AddComment("LabelEnd");
-    OS.emitValue(getLabelPlusOne(EndLabel), 4);
+    OS.emitValue(getLabel(EndLabel), 4);
     AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
                                                              : "CatchAll");
     OS.emitValue(FilterOrFinally, 4);
@@ -928,8 +924,8 @@ void WinException::computeIP2StateTable(
       BaseState = NullState;
       StartLabel = Asm->getFunctionBegin();
     } else {
-      auto *FuncletPad =
-          cast<FuncletPadInst>(FuncletStart->getBasicBlock()->getFirstNonPHI());
+      auto *FuncletPad = cast<FuncletPadInst>(
+          FuncletStart->getBasicBlock()->getFirstNonPHIIt());
       assert(FuncInfo.FuncletBaseStateMap.count(FuncletPad) != 0);
       BaseState = FuncInfo.FuncletBaseStateMap.find(FuncletPad)->second;
       StartLabel = getMCSymbolForMBB(Asm, &*FuncletStart);
@@ -948,13 +944,7 @@ void WinException::computeIP2StateTable(
       if (!ChangeLabel)
         ChangeLabel = StateChange.PreviousEndLabel;
       // Emit an entry indicating that PCs after 'Label' have this EH state.
-      // NOTE: On ARM architectures, the StateFromIp automatically takes into
-      // account that the return address is after the call instruction (whose EH
-      // state we should be using), but on other platforms we need to +1 to the
-      // label so that we are using the correct EH state.
-      const MCExpr *LabelExpression = (isAArch64 || isThumb)
-                                          ? getLabel(ChangeLabel)
-                                          : getLabelPlusOne(ChangeLabel);
+      const MCExpr *LabelExpression = getLabel(ChangeLabel);
       IPToStateTable.push_back(
           std::make_pair(LabelExpression, StateChange.NewState));
       // FIXME: assert that NewState is between CatchLow and CatchHigh.

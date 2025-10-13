@@ -1,15 +1,31 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,TYPE %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,ADDR %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,BOTH %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,TYPE %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,ADDR %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,BOTH %s
@@ -62,6 +78,27 @@ struct authenticated(default_key, default_address_discrimination, custom_discrim
   virtual void g();
 };
 
+// CHECK: @_ZTVN5test19ConstEvalE = external unnamed_addr constant { [3 x ptr] }, align 8
+// CHECK: @_ZN5test12ceE = global %{{.*}} { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test19ConstEvalE, i32 0, i32 0, i32 2), i32 2, i64 0, ptr @_ZN5test12ceE) }, align 8
+// CHECK: @_ZTVN5test116ConstEvalDerivedE = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTIN5test116ConstEvalDerivedE, ptr ptrauth (ptr @_ZN5test19ConstEval1fEv, i32 0, i64 26259, ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2))] },{{.*}}align 8
+// CHECK: @_ZN5test13cedE = global { ptr } { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2), i32 2, i64 0, ptr @_ZN5test13cedE) }, align 8
+
+struct authenticated(default_key, address_discrimination, no_extra_discrimination) ConstEval {
+  consteval ConstEval() {}
+  virtual void f();
+};
+
+// clang used to bail out with error message "could not emit constant value abstractly".
+ConstEval ce;
+
+struct ConstEvalDerived : public ConstEval {
+public:
+  consteval ConstEvalDerived() {}
+};
+
+// clang used to emit an undef initializer.
+ConstEvalDerived ced;
+
 template <typename T>
 struct SubClass : T {
   virtual void g();
@@ -111,7 +148,7 @@ int TVDisc_ExplicitNoExtraDiscrimination = ptrauth_string_discriminator("_ZTVN5t
 int TVDisc_ExplicitTypeDiscrimination = ptrauth_string_discriminator("_ZTVN5test126ExplicitTypeDiscriminationE");
 
 
-// CHECK-LABEL: define void @test_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_default(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -133,7 +170,7 @@ void test_default(NoExplicitAuth *a) {
   a->f();
 }
 
-// CHECK-LABEL: define void @test_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_disabled(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 // CHECK-NOT:     call i64 @llvm.ptrauth.auth
@@ -141,7 +178,7 @@ void test_disabled(ExplicitlyDisableAuth *a) {
   a->f();
 }
 
-// CHECK-LABEL: define void @test_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -166,7 +203,7 @@ void test_addr_disc(ExplicitAddressDiscrimination *a) {
   a->f();
 }
 
-// CHECK-LABEL: define void @test_no_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_no_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -185,7 +222,7 @@ void test_no_addr_disc(ExplicitNoAddressDiscrimination *a) {
   a->f();
 }
 
-// CHECK-LABEL: define void @test_no_extra_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_no_extra_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -206,7 +243,7 @@ void test_no_extra_disc(ExplicitNoExtraDiscrimination *a) {
   a->f();
 }
 
-// CHECK-LABEL: define void @test_type_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_type_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -229,7 +266,7 @@ void test_type_disc(ExplicitTypeDiscrimination *a) {
   a->f();
 }
 
-// CHECK-LABEL: define void @test_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -257,7 +294,7 @@ void test_custom_disc(ExplicitCustomDiscrimination *a) {
 // Codegen should be the same as the simple cases above once we have a vtable.
 //
 
-// CHECK-LABEL: define void @test_subclass_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_default(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -279,7 +316,7 @@ void test_subclass_default(NoExplicitAuth *a) {
   make_subclass(a)->f();
 }
 
-// CHECK-LABEL: define void @test_subclass_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_disabled(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 // CHECK-NOT:     call i64 @llvm.ptrauth.auth
@@ -287,7 +324,7 @@ void test_subclass_disabled(ExplicitlyDisableAuth *a) {
   make_subclass(a)->f();
 }
 
-// CHECK-LABEL: define void @test_subclass_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -312,7 +349,7 @@ void test_subclass_addr_disc(ExplicitAddressDiscrimination *a) {
   make_subclass(a)->f();
 }
 
-// CHECK-LABEL: define void @test_subclass_no_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_no_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -331,7 +368,7 @@ void test_subclass_no_addr_disc(ExplicitNoAddressDiscrimination *a) {
   make_subclass(a)->f();
 }
 
-// CHECK-LABEL: define void @test_subclass_no_extra_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_no_extra_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -352,7 +389,7 @@ void test_subclass_no_extra_disc(ExplicitNoExtraDiscrimination *a) {
   make_subclass(a)->f();
 }
 
-// CHECK-LABEL: define void @test_subclass_type_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_type_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -375,7 +412,7 @@ void test_subclass_type_disc(ExplicitTypeDiscrimination *a) {
   make_subclass(a)->f();
 }
 
-// CHECK-LABEL: define void @test_subclass_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_subclass_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
 //
@@ -404,7 +441,7 @@ void test_subclass_custom_disc(ExplicitCustomDiscrimination *a) {
 // Codegen should be the same as the simple cases above once we have a vtable.
 //
 
-// CHECK-LABEL: define void @test_multiple_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_multiple_default(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[CALL:%.*]] = call noundef ptr @_ZN5test121make_multiple_primary
 // CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
@@ -427,7 +464,7 @@ void test_multiple_default(NoExplicitAuth *a) {
   make_multiple_primary(a)->f();
 }
 
-// CHECK-LABEL: define void @test_multiple_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_multiple_disabled(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[CALL:%.*]] = call noundef ptr @_ZN5test121make_multiple_primary
 // CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
@@ -436,7 +473,7 @@ void test_multiple_disabled(ExplicitlyDisableAuth *a) {
   make_multiple_primary(a)->f();
 }
 
-// CHECK-LABEL: define void @test_multiple_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_multiple_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[CALL:%.*]] = call noundef ptr @_ZN5test121make_multiple_primary
 // CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
 // CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
@@ -466,7 +503,7 @@ void test_multiple_custom_disc(ExplicitCustomDiscrimination *a) {
 // but twice for vtt/vtable.  The names in the vtt version have "VTT" prefixes.
 //
 
-// CHECK-LABEL: define void @test_virtual_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_virtual_default(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTTADDR:%.*]] = call noundef ptr @_ZN5test120make_virtual_primary
 // CHECK:         [[VTTABLE:%.*]] = load ptr, ptr [[VTTADDR]], align 8
 //
@@ -509,13 +546,13 @@ void test_virtual_default(NoExplicitAuth *a) {
   make_virtual_primary(a)->f();
 }
 
-// CHECK-LABEL: define void @test_virtual_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_virtual_disabled(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK-NOT:     call i64 @llvm.ptrauth.auth
 void test_virtual_disabled(ExplicitlyDisableAuth *a) {
   make_virtual_primary(a)->f();
 }
 
-// CHECK-LABEL: define void @test_virtual_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-LABEL: define{{.*}} void @test_virtual_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
 // CHECK:         [[VTTADDR:%.*]] = call noundef ptr @_ZN5test120make_virtual_primary
 // CHECK:         [[VTTABLE:%.*]] = load ptr, ptr [[VTTADDR]], align 8
 //

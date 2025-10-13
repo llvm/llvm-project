@@ -11,5 +11,5 @@
 
 // If file in `@file` is a directory, it is an error.
 //
-// RUN: not %clang @%S/Inputs -### 2>&1 | FileCheck --check-prefix=DIRECTORY %s
-// DIRECTORY: cannot not open file '{{.*}}Inputs': {{[Ii]}}s a directory
+// RUN: not %clang @%S/Inputs -### 2>&1 | FileCheck -DMSG=%errc_EISDIR --check-prefix=DIRECTORY %s
+// DIRECTORY: cannot not open file '{{.*}}Inputs': [[MSG]]

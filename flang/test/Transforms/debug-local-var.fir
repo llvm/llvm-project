@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %0 = fir.alloca i32 {bindc_name = "i4", uniq_name = "_QFEi4"}
     %1 = fircg.ext_declare %0 {uniq_name = "_QFEi4"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
@@ -71,13 +71,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc15 = loc("test.f90":21:24)
 #loc16 = loc("test.f90":22:5)
 
-// CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=8)", sizeInBits = 64, encoding = DW_ATE_signed>
 // CHECK-DAG: #[[INT4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[REAL8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 64, encoding = DW_ATE_float>
-// CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 8, encoding = DW_ATE_boolean>
+// CHECK-DAG: #[[REAL8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=8)", sizeInBits = 64, encoding = DW_ATE_float>
+// CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical(kind=1)", sizeInBits = 8, encoding = DW_ATE_boolean>
 // CHECK-DAG: #[[REAL4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[LOG4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 32, encoding = DW_ATE_boolean>
-// CHECK-DAG: #[[MAIN:.*]] = #llvm.di_subprogram<{{.*}}name = "_QQmain"{{.*}}>
+// CHECK-DAG: #[[MAIN:.*]] = #llvm.di_subprogram<{{.*}}name = "mn"{{.*}}>
 // CHECK-DAG: #[[FN1:.*]] = #llvm.di_subprogram<{{.*}}name = "fn1"{{.*}}>
 // CHECK-DAG: #[[FN2:.*]] = #llvm.di_subprogram<{{.*}}name = "fn2"{{.*}}>
 

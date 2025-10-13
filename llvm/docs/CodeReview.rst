@@ -89,10 +89,10 @@ When Is an RFC Required?
 Some changes are too significant for just a code review. Changes that should
 change the LLVM Language Reference (e.g., adding new target-independent
 intrinsics), adding language extensions in Clang, and so on, require an RFC
-(Request for Comment) email on the project's ``*-dev`` mailing list first. For
-changes that promise significant impact on users and/or downstream code bases,
-reviewers can request an RFC achieving consensus before proceeding with code
-review. That having been said, posting initial patches can help with
+(Request for Comment) topic on the `LLVM Discussion Forums <https://discourse.llvm.org>`_
+first. For changes that promise significant impact on users and/or downstream
+code bases, reviewers can request an RFC achieving consensus before proceeding
+with code review. That having been said, posting initial patches can help with
 discussions on an RFC.
 
 Code-Review Workflow
@@ -125,6 +125,11 @@ commit message).
 If you suggest changes in a code review, but don't wish the suggestion to be
 interpreted this strongly, please state so explicitly.
 
+.. note::
+   After responding to reviewer comments,
+   press `Re-request review <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review#:~:text=After%20your%20pull%20request%20is%20reviewed>`_
+   to bring the Pull Request to the reviewers' attention.
+
 Aim to Make Efficient Use of Everyone's Time
 --------------------------------------------
 
@@ -137,21 +142,33 @@ from specific performance tests), please explain as many of these up front as
 possible. This allows the patch author and reviewers to make the most efficient
 use of their time.
 
+.. _lgtm_how_a_patch_is_accepted:
+
 LGTM - How a Patch Is Accepted
 ------------------------------
 
 A patch is approved to be committed when a reviewer accepts it, and this is
 almost always associated with a message containing the text "LGTM" (which
-stands for Looks Good To Me). Only approval from a single reviewer is required.
+stands for Looks Good To Me).
+
+Only approval from a single reviewer is required, unless the pull request
+has required reviewers. In which case, you must have approval from all of those
+reviewers.
 
 When providing an unqualified LGTM (approval to commit), it is the
-responsibility of the reviewer to have reviewed all of the discussion and
+responsibility of the reviewer to have reviewed all of the prior discussion and
 feedback from all reviewers ensuring that all feedback has been addressed and
 that all other reviewers will almost surely be satisfied with the patch being
 approved. If unsure, the reviewer should provide a qualified approval, (e.g.,
 "LGTM, but please wait for @someone, @someone_else"). You may also do this if
 you are fairly certain that a particular community member will wish to review,
 even if that person hasn't done so yet.
+
+If additional feedback is provided after acceptance (by the same reviewer or
+another), the author should use their best judgement in deciding whether that
+feedback can be incorporated into the change without comment (say a typo) or
+requires further review discussion. More substantial comments (e.g., about the
+design) will usually require further discussion. If unsure, ask the reviewer.
 
 Note that, if a reviewer has requested a particular community member to review,
 and after a week that community member has yet to respond, feel free to ping
@@ -227,9 +244,9 @@ Experts Should Review Code
 --------------------------
 
 If you are an expert in an area of the compiler affected by a proposed patch,
-then you are highly encouraged to review the code. If you are a relevant code
-owner, and no other experts are reviewing a patch, you must either help arrange
-for an expert to review the patch or review it yourself.
+then you are highly encouraged to review the code. If you are a relevant
+maintainer, and no other experts are reviewing a patch, you must either help
+arrange for an expert to review the patch or review it yourself.
 
 Code Reviews, Speed, and Reciprocity
 ------------------------------------
@@ -243,8 +260,8 @@ larger features. Common ways to speed up review times for your patches are:
   get this patch landed and ping it every couple of days. If it is
   not urgent, the common courtesy ping rate is one week. Remember that you're
   asking for valuable time from other professional developers.
-* Ask for help on IRC. Developers on IRC will be able to either help you
-  directly, or tell you who might be a good reviewer.
+* Ask for help on Discord. Developers on Discord will be able to either help
+  you directly, or tell you who might be a good reviewer.
 * Split your patch into multiple smaller patches that build on each other. The
   smaller your patch is, the higher the probability that somebody will take a quick
   look at it. When doing this, it is helpful to add "[N/M]" (for 1 <= N <= M) to
@@ -255,3 +272,21 @@ Developers should participate in code reviews as both reviewers and
 authors. If someone is kind enough to review your code, you should return the
 favor for someone else. Note that anyone is welcome to review and give feedback
 on a patch, but approval of patches should be consistent with the policy above.
+
+Upstreaming Changes to LLVM
+===========================
+
+When upstreaming your own changes from a downstream project to LLVM, simply
+follow the process outlined above.
+
+When upstreaming changes originally written by someone else:  
+
+* Ensure that there are no obstacles to upstreaming the code. In some cases,
+  this simply means checking with the original author(s) to ensure they are
+  aware of and approve the upstreaming. In other cases, licensing
+  considerations may be more complex.
+* Properly attribute the original changes, e.g., by creating a commit with
+  multiple authors (`GitHub guide <https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors>`_).
+* Invite the original author(s) to review the changes, and also include
+  additional reviewers. Specifically, an LGTM from a (co-)author should not be
+  taken as approval to land a change.

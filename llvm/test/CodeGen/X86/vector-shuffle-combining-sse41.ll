@@ -7,6 +7,7 @@
 ; Combine tests involving SSE41 target shuffles (BLEND,INSERTPS,MOVZX)
 
 declare <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
+declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i8)
 
 define <16 x i8> @combine_vpshufb_as_movzx(<16 x i8> %a0) {
 ; SSE-LABEL: combine_vpshufb_as_movzx:
@@ -58,6 +59,22 @@ define <4 x i32> @combine_blend_of_permutes_v4i32(<2 x i64> %a0, <2 x i64> %a1) 
   ret <4 x i32> %r
 }
 
+define <4 x float> @freeze_insertps(<4 x float> %a0, <4 x float> %a1) {
+; SSE-LABEL: freeze_insertps:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: freeze_insertps:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %s0 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 16)
+  %f0 = freeze <4 x float> %s0
+  %s1 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a1, <4 x float> %f0, i8 64)
+  ret <4 x float> %s1
+}
+
 define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-LABEL: PR50049:
 ; SSE:       # %bb.0:
@@ -84,8 +101,8 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-NEXT:    pshufb %xmm8, %xmm1
 ; SSE-NEXT:    por %xmm4, %xmm1
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    pand %xmm1, %xmm3
+; SSE-NEXT:    movdqa %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm0, %xmm4
 ; SSE-NEXT:    pmaddubsw %xmm3, %xmm4
 ; SSE-NEXT:    pand %xmm2, %xmm4
@@ -120,7 +137,7 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm2
 ; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpandn %xmm1, %xmm2, %xmm1

@@ -190,7 +190,15 @@ bool InitShadowWithReExec(bool init_origins) {
               "possibly due to high-entropy ASLR.\n"
               "Re-execing with fixed virtual address space.\n"
               "N.B. reducing ASLR entropy is preferable.\n");
-      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+
+      if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
+        Printf(
+            "FATAL: MemorySanitizer: unable to disable ASLR (perhaps "
+            "sandboxing is enabled?).\n");
+        Printf("FATAL: Please rerun without sandboxing and/or ASLR.\n");
+        Die();
+      }
+
       ReExec();
     }
 #  endif
@@ -302,6 +310,7 @@ void MsanTSDDtor(void *tsd) {
 #  endif
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   // Usually we lock ThreadRegistry, but msan does not have one.
   LockAllocator();
   StackDepotLockBeforeFork();
@@ -313,6 +322,7 @@ static void AfterFork(bool fork_child) {
   StackDepotUnlockAfterFork(fork_child);
   UnlockAllocator();
   // Usually we unlock ThreadRegistry, but msan does not have one.
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {

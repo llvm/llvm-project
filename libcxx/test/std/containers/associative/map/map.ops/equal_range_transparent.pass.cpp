@@ -25,25 +25,17 @@
 struct Comp {
   using is_transparent = void;
 
-  bool operator()(const std::pair<int, int> &lhs,
-                  const std::pair<int, int> &rhs) const {
-    return lhs < rhs;
-  }
+  bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const { return lhs < rhs; }
 
-  bool operator()(const std::pair<int, int> &lhs, int rhs) const {
-    return lhs.first < rhs;
-  }
+  bool operator()(const std::pair<int, int>& lhs, int rhs) const { return lhs.first < rhs; }
 
-  bool operator()(int lhs, const std::pair<int, int> &rhs) const {
-    return lhs < rhs.first;
-  }
+  bool operator()(int lhs, const std::pair<int, int>& rhs) const { return lhs < rhs.first; }
 };
 
 int main(int, char**) {
-  std::map<std::pair<int, int>, int, Comp> s{
-      {{2, 1}, 1}, {{1, 2}, 2}, {{1, 3}, 3}, {{1, 4}, 4}, {{2, 2}, 5}};
+  std::map<std::pair<int, int>, int, Comp> s{{{2, 1}, 1}, {{1, 2}, 2}, {{1, 3}, 3}, {{1, 4}, 4}, {{2, 2}, 5}};
 
-  auto er = s.equal_range(1);
+  auto er   = s.equal_range(1);
   long nels = 0;
 
   for (auto it = er.first; it != er.second; it++) {

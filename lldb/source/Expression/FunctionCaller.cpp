@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -24,9 +22,12 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 using namespace lldb_private;
 
@@ -170,10 +171,8 @@ bool FunctionCaller::WriteFunctionArguments(
     m_wrapper_args_addrs.push_back(args_addr_ref);
   } else {
     // Make sure this is an address that we've already handed out.
-    if (find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-             args_addr_ref) == m_wrapper_args_addrs.end()) {
+    if (!llvm::is_contained(m_wrapper_args_addrs, args_addr_ref))
       return false;
-    }
   }
 
   // TODO: verify fun_addr needs to be a callable address
@@ -324,8 +323,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
 void FunctionCaller::DeallocateFunctionResults(ExecutionContext &exe_ctx,
                                                lldb::addr_t args_addr) {
   std::list<lldb::addr_t>::iterator pos;
-  pos = std::find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-                  args_addr);
+  pos = llvm::find(m_wrapper_args_addrs, args_addr);
   if (pos != m_wrapper_args_addrs.end())
     m_wrapper_args_addrs.erase(pos);
 
@@ -337,6 +335,10 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
     const EvaluateExpressionOptions &options,
     DiagnosticManager &diagnostic_manager, Value &results) {
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
+
+  Debugger *debugger =
+      exe_ctx.GetTargetPtr() ? &exe_ctx.GetTargetPtr()->GetDebugger() : nullptr;
+  Progress progress("Calling function", FunctionName(), {}, debugger);
 
   // FunctionCaller::ExecuteFunction execution is always just to get the
   // result. Unless explicitly asked for, ignore breakpoints and unwind on
@@ -390,8 +392,7 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
       LLDB_LOGF(log,
                 "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
                 "completed abnormally: %s ==",
-                m_name.c_str(),
-                Process::ExecutionResultAsCString(return_value));
+                m_name.c_str(), toString(return_value).c_str());
     } else {
       LLDB_LOGF(log,
                 "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "

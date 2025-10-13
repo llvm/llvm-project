@@ -54,6 +54,9 @@ Options
 
     The value `false` specifies that even initializers for aggregate types with
     only a single element should be checked. The default value is `true`.
+    ``std::array`` initializations are always excluded, as the type is a
+    standard library abstraction and not intended to be initialized with
+    designated initializers.
 
 .. option:: RestrictToPODTypes
 

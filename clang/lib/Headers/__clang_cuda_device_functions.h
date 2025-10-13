@@ -529,6 +529,20 @@ __DEVICE__ void __threadfence(void) { __nvvm_membar_gl(); }
 __DEVICE__ void __threadfence_block(void) { __nvvm_membar_cta(); };
 __DEVICE__ void __threadfence_system(void) { __nvvm_membar_sys(); };
 __DEVICE__ void __trap(void) { __asm__ __volatile__("trap;"); }
+__DEVICE__ unsigned short
+__usAtomicCAS(unsigned short *__p, unsigned short __cmp, unsigned short __v) {
+  return __nvvm_atom_cas_gen_us(__p, __cmp, __v);
+}
+__DEVICE__ unsigned short __usAtomicCAS_block(unsigned short *__p,
+                                              unsigned short __cmp,
+                                              unsigned short __v) {
+  return __nvvm_atom_cta_cas_gen_us(__p, __cmp, __v);
+}
+__DEVICE__ unsigned short __usAtomicCAS_system(unsigned short *__p,
+                                               unsigned short __cmp,
+                                               unsigned short __v) {
+  return __nvvm_atom_sys_cas_gen_us(__p, __cmp, __v);
+}
 __DEVICE__ unsigned int __uAtomicAdd(unsigned int *__p, unsigned int __v) {
   return __nvvm_atom_add_gen_i((int *)__p, __v);
 }

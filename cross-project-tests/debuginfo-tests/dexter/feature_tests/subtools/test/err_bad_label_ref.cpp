@@ -1,7 +1,7 @@
 // Purpose:
 //      Check that referencing an undefined label gives a useful error message.
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s --match-full-lines
 //
 // CHECK: parser error:{{.*}}err_bad_label_ref.cpp(15): Unresolved label: 'label_does_not_exist'

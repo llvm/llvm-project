@@ -19,7 +19,7 @@ unittest("UtilsTests") {
     "CodeExtractorTest.cpp",
     "CodeLayoutTest.cpp",
     "CodeMoverUtilsTest.cpp",
-    "DXILResourceTest.cpp",
+    "DebugSSAUpdaterTest.cpp",
     "DebugifyTest.cpp",
     "FunctionComparatorTest.cpp",
     "IntegerDivisionTest.cpp",

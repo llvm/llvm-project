@@ -55,7 +55,7 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
       break;
 
     case StringExtractorGDBRemote::eServerPacketType_invalid:
-      error.SetErrorString("invalid packet");
+      error = Status::FromErrorString("invalid packet");
       quit = true;
       break;
 
@@ -73,10 +73,10 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
     }
   } else {
     if (!IsConnected()) {
-      error.SetErrorString("lost connection");
+      error = Status::FromErrorString("lost connection");
       quit = true;
     } else {
-      error.SetErrorString("timeout");
+      error = Status::FromErrorString("timeout");
     }
   }
 
@@ -103,13 +103,14 @@ GDBRemoteCommunicationServer::SendErrorResponse(uint8_t err) {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendErrorResponse(const Status &error) {
+  uint8_t code = error.GetType() == eErrorTypePOSIX ? error.GetError() : 0xff;
   if (m_send_error_strings) {
     lldb_private::StreamString packet;
-    packet.Printf("E%2.2x;", static_cast<uint8_t>(error.GetError()));
+    packet.Printf("E%2.2x;", code);
     packet.PutStringAsRawHex8(error.AsCString());
     return SendPacketNoLock(packet.GetString());
-  } else
-    return SendErrorResponse(error.GetError());
+  }
+  return SendErrorResponse(code);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -123,7 +124,7 @@ GDBRemoteCommunicationServer::SendErrorResponse(llvm::Error error) {
       [&](std::unique_ptr<llvm::ErrorInfoBase> E) { EIB = std::move(E); });
 
   if (EIB)
-    return SendErrorResponse(Status(llvm::Error(std::move(EIB))));
+    return SendErrorResponse(Status::FromError(llvm::Error(std::move(EIB))));
   return SendUnimplementedResponse("");
 }
 
@@ -154,7 +155,6 @@ GDBRemoteCommunicationServer::SendJSONResponse(const json::Value &value) {
   std::string json_string;
   raw_string_ostream os(json_string);
   os << value;
-  os.flush();
   StreamGDBRemote escaped_response;
   escaped_response.PutEscapedBytes(json_string.c_str(), json_string.size());
   return SendPacketNoLock(escaped_response.GetString());

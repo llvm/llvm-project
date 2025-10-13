@@ -1447,3 +1447,158 @@ define i1 @eq_i512_load_arg(ptr%p, i512 %b) {
   %r = icmp eq i512 %a, %b
   ret i1 %r
 }
+
+; Tests for any/allbits from memory.
+
+define i1 @anybits_i128_load_arg(ptr %w) {
+; ANY-LABEL: anybits_i128_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq (%rdi), %rax
+; ANY-NEXT:    orq 8(%rdi), %rax
+; ANY-NEXT:    setne %al
+; ANY-NEXT:    retq
+  %ld = load i128, ptr %w
+  %cmp = icmp ne i128 %ld, 0
+  ret i1 %cmp
+}
+
+define i1 @allbits_i128_load_arg(ptr %w) {
+; SSE2-LABEL: allbits_i128_load_arg:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pcmpeqb (%rdi), %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: allbits_i128_load_arg:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa (%rdi), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
+; SSE41-NEXT:    setb %al
+; SSE41-NEXT:    retq
+;
+; AVXANY-LABEL: allbits_i128_load_arg:
+; AVXANY:       # %bb.0:
+; AVXANY-NEXT:    vmovdqa (%rdi), %xmm0
+; AVXANY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVXANY-NEXT:    vptest %xmm1, %xmm0
+; AVXANY-NEXT:    setb %al
+; AVXANY-NEXT:    retq
+  %ld = load i128, ptr %w
+  %cmp = icmp eq i128 %ld, -1
+  ret i1 %cmp
+}
+
+define i1 @anybits_i256_load_arg(ptr %w) {
+; ANY-LABEL: anybits_i256_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq (%rdi), %rax
+; ANY-NEXT:    movq 8(%rdi), %rcx
+; ANY-NEXT:    orq 24(%rdi), %rcx
+; ANY-NEXT:    orq 16(%rdi), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    setne %al
+; ANY-NEXT:    retq
+  %ld = load i256, ptr %w
+  %cmp = icmp ne i256 %ld, 0
+  ret i1 %cmp
+}
+
+define i1 @allbits_i256_load_arg(ptr %w) {
+; SSE-LABEL: allbits_i256_load_arg:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq (%rdi), %rax
+; SSE-NEXT:    movq 8(%rdi), %rcx
+; SSE-NEXT:    andq 24(%rdi), %rcx
+; SSE-NEXT:    andq 16(%rdi), %rax
+; SSE-NEXT:    andq %rcx, %rax
+; SSE-NEXT:    cmpq $-1, %rax
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: allbits_i256_load_arg:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vptest %ymm1, %ymm0
+; AVX1-NEXT:    setb %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: allbits_i256_load_arg:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vptest %ymm1, %ymm0
+; AVX2-NEXT:    setb %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: allbits_i256_load_arg:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ld = load i256, ptr %w
+  %cmp = icmp eq i256 %ld, -1
+  ret i1 %cmp
+}
+
+define i1 @anybits_i512_load_arg(ptr %w) {
+; ANY-LABEL: anybits_i512_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq 16(%rdi), %rax
+; ANY-NEXT:    movq (%rdi), %rcx
+; ANY-NEXT:    movq 8(%rdi), %rdx
+; ANY-NEXT:    movq 24(%rdi), %rsi
+; ANY-NEXT:    orq 56(%rdi), %rsi
+; ANY-NEXT:    orq 40(%rdi), %rdx
+; ANY-NEXT:    orq %rsi, %rdx
+; ANY-NEXT:    orq 48(%rdi), %rax
+; ANY-NEXT:    orq 32(%rdi), %rcx
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    setne %al
+; ANY-NEXT:    retq
+  %ld = load i512, ptr %w
+  %cmp = icmp ne i512 %ld, 0
+  ret i1 %cmp
+}
+
+define i1 @allbits_i512_load_arg(ptr %w) {
+; NO512-LABEL: allbits_i512_load_arg:
+; NO512:       # %bb.0:
+; NO512-NEXT:    movq 16(%rdi), %rax
+; NO512-NEXT:    movq (%rdi), %rcx
+; NO512-NEXT:    movq 8(%rdi), %rdx
+; NO512-NEXT:    movq 24(%rdi), %rsi
+; NO512-NEXT:    andq 56(%rdi), %rsi
+; NO512-NEXT:    andq 40(%rdi), %rdx
+; NO512-NEXT:    andq %rsi, %rdx
+; NO512-NEXT:    andq 48(%rdi), %rax
+; NO512-NEXT:    andq 32(%rdi), %rcx
+; NO512-NEXT:    andq %rax, %rcx
+; NO512-NEXT:    andq %rdx, %rcx
+; NO512-NEXT:    cmpq $-1, %rcx
+; NO512-NEXT:    sete %al
+; NO512-NEXT:    retq
+;
+; AVX512-LABEL: allbits_i512_load_arg:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; AVX512-NEXT:    vpcmpneqd (%rdi), %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ld = load i512, ptr %w
+  %cmp = icmp eq i512 %ld, -1
+  ret i1 %cmp
+}
