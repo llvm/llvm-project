@@ -4,6 +4,8 @@ parameters:
   # Enable install tasks for MicroBuild on Mac and Linux
   # Will be ignored if 'enableMicrobuild' is false or 'Agent.Os' is 'Windows_NT'
   enableMicrobuildForMacAndLinux: false
+  # Enable preview version of MB signing plugin
+  enablePreviewMicrobuild: false
   # Determines whether the ESRP service connection information should be passed to the signing plugin.
   # This overlaps with _SignType to some degree. We only need the service connection for real signing.
   # It's important that the service connection not be passed to the MicroBuildSigningPlugin task in this place.
@@ -14,6 +16,8 @@ parameters:
   # Location of the MicroBuild output folder
   # NOTE: There's something that relies on this being in the "default" source directory for tasks such as Signing to work properly.
   microBuildOutputFolder: '$(Build.SourcesDirectory)'
+  # Microbuild version
+  microbuildPluginVersion: 'latest'
 
   continueOnError: false
 
@@ -51,41 +55,45 @@ steps:
     # YAML expansion, and Windows vs. Linux/Mac uses different service connections. However,
     # we can avoid including the MB install step if not enabled at all. This avoids a bunch of
     # extra pipeline authorizations, since most pipelines do not sign on non-Windows.
-    - task: MicroBuildSigningPlugin@4
-      displayName: Install MicroBuild plugin (Windows)
-      inputs:
-        signType: $(_SignType)
-        zipSources: false
-        feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
-        ${{ if eq(parameters.microbuildUseESRP, true) }}:
-          ConnectedServiceName: 'MicroBuild Signing Task (DevDiv)'
-          ${{ if eq(variables['System.TeamProject'], 'DevDiv') }}:
-            ConnectedPMEServiceName: 6cc74545-d7b9-4050-9dfa-ebefcc8961ea
-          ${{ else }}:
-            ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
-      env:
-        TeamName: $(_TeamName)
-        MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-      continueOnError: ${{ parameters.continueOnError }}
-      condition: and(succeeded(), eq(variables['Agent.Os'], 'Windows_NT'), in(variables['_SignType'], 'real', 'test'))
-
-    - ${{ if eq(parameters.enableMicrobuildForMacAndLinux, true) }}:
-      - task: MicroBuildSigningPlugin@4
-        displayName: Install MicroBuild plugin (non-Windows)
-        inputs:
+    - template: /eng/common/core-templates/steps/install-microbuild-impl.yml@self
+      parameters:
+        enablePreviewMicrobuild: ${{ parameters.enablePreviewMicrobuild }}
+        microbuildTaskInputs:
           signType: $(_SignType)
           zipSources: false
           feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
+          version: ${{ parameters.microbuildPluginVersion }}
           ${{ if eq(parameters.microbuildUseESRP, true) }}:
             ConnectedServiceName: 'MicroBuild Signing Task (DevDiv)'
             ${{ if eq(variables['System.TeamProject'], 'DevDiv') }}:
-              ConnectedPMEServiceName: beb8cb23-b303-4c95-ab26-9e44bc958d39
+              ConnectedPMEServiceName: 6cc74545-d7b9-4050-9dfa-ebefcc8961ea
             ${{ else }}:
-              ConnectedPMEServiceName: c24de2a5-cc7a-493d-95e4-8e5ff5cad2bc
-        env:
+              ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
+        microbuildEnv:
           TeamName: $(_TeamName)
           MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         continueOnError: ${{ parameters.continueOnError }}
-        condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'),  eq(variables['_SignType'], 'real'))
+        condition: and(succeeded(), eq(variables['Agent.Os'], 'Windows_NT'), in(variables['_SignType'], 'real', 'test'))
+
+    - ${{ if eq(parameters.enableMicrobuildForMacAndLinux, true) }}:
+      - template: /eng/common/core-templates/steps/install-microbuild-impl.yml@self
+        parameters:
+          enablePreviewMicrobuild: ${{ parameters.enablePreviewMicrobuild }}
+          microbuildTaskInputs:
+            signType: $(_SignType)
+            zipSources: false
+            feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
+            version: ${{ parameters.microbuildPluginVersion }}
+            ${{ if eq(parameters.microbuildUseESRP, true) }}:
+              ConnectedServiceName: 'MicroBuild Signing Task (DevDiv)'
+              ${{ if eq(variables['System.TeamProject'], 'DevDiv') }}:
+                ConnectedPMEServiceName: beb8cb23-b303-4c95-ab26-9e44bc958d39
+              ${{ else }}:
+                ConnectedPMEServiceName: c24de2a5-cc7a-493d-95e4-8e5ff5cad2bc
+          microbuildEnv:
+            TeamName: $(_TeamName)
+            MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+          continueOnError: ${{ parameters.continueOnError }}
+          condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'),  eq(variables['_SignType'], 'real'))
