@@ -15,7 +15,7 @@
 @hash_map = dso_local local_unnamed_addr constant %struct.key_type zeroinitializer, section ".maps", align 4, !dbg !0
 
 ; CHECK-BTF: [1] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
-; CHECK-BTF-NEXT: [2] STRUCT 'key_type' size=4 vlen=1
+; CHECK-BTF-NEXT: [2] STRUCT '(anon)' size=4 vlen=1
 ; CHECK-BTF-NEXT:         'a1' type_id=1 bits_offset=0
 ; CHECK-BTF-NEXT: [3] CONST '(anon)' type_id=2
 ; CHECK-BTF-NEXT: [4] VAR 'hash_map' type_id=3, linkage=global

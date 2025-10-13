@@ -27,7 +27,7 @@
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   168
 ; CHECK-NEXT:        .long   168
-; CHECK-NEXT:        .long   65
+; CHECK-NEXT:        .long   56
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_PTR(id = 1)
 ; CHECK-NEXT:        .long   33554432                # 0x2000000
 ; CHECK-NEXT:        .long   2
@@ -51,20 +51,20 @@
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   32                      # 0x20
-; CHECK-NEXT:        .long   31                      # BTF_KIND_STRUCT(id = 6)
+; CHECK-NEXT:        .long   0                       # BTF_KIND_STRUCT(id = 6)
 ; CHECK-NEXT:        .long   67108866                # 0x4000002
 ; CHECK-NEXT:        .long   16
-; CHECK-NEXT:        .long   40
+; CHECK-NEXT:        .long   31
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   0                       # 0x0
-; CHECK-NEXT:        .long   44
+; CHECK-NEXT:        .long   35
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   64                      # 0x40
-; CHECK-NEXT:        .long   50                      # BTF_KIND_VAR(id = 7)
+; CHECK-NEXT:        .long   41                      # BTF_KIND_VAR(id = 7)
 ; CHECK-NEXT:        .long   234881024               # 0xe000000
 ; CHECK-NEXT:        .long   6
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   59                      # BTF_KIND_DATASEC(id = 8)
+; CHECK-NEXT:        .long   50                      # BTF_KIND_DATASEC(id = 8)
 ; CHECK-NEXT:        .long   251658241               # 0xf000001
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   7
@@ -81,15 +81,13 @@
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "unsigned int"          # string offset=18
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "map_type"              # string offset=31
+; CHECK-NEXT:        .ascii  "key"                   # string offset=31
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "key"                   # string offset=40
+; CHECK-NEXT:        .ascii  "value"                 # string offset=35
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "value"                 # string offset=44
+; CHECK-NEXT:        .ascii  "hash_map"              # string offset=41
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "hash_map"              # string offset=50
-; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  ".maps"                 # string offset=59
+; CHECK-NEXT:        .ascii  ".maps"                 # string offset=50
 ; CHECK-NEXT:        .byte   0
 
 !llvm.dbg.cu = !{!2}

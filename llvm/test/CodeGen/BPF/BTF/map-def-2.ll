@@ -23,7 +23,7 @@
 ; CHECK-BTF-NEXT: [2] STRUCT 'key_type' size=4 vlen=1
 ; CHECK-BTF-NEXT:         'a1' type_id=3 bits_offset=0
 ; CHECK-BTF-NEXT: [3] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
-; CHECK-BTF-NEXT: [4] STRUCT 'map_type' size=8 vlen=1
+; CHECK-BTF-NEXT: [4] STRUCT '(anon)' size=8 vlen=1
 ; CHECK-BTF-NEXT:         'key' type_id=1 bits_offset=0
 ; CHECK-BTF-NEXT: [5] TYPEDEF '_map_type' type_id=4
 ; CHECK-BTF-NEXT: [6] TYPEDEF '__map_type' type_id=5

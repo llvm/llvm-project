@@ -126,11 +126,12 @@ public:
 class BTFTypeStruct : public BTFTypeBase {
   const DICompositeType *STy;
   bool HasBitField;
+  bool StripName;
   std::vector<struct BTF::BTFMember> Members;
 
 public:
   BTFTypeStruct(const DICompositeType *STy, bool IsStruct, bool HasBitField,
-                uint32_t NumMembers);
+                uint32_t NumMembers, bool StripName);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Members.size() * BTF::BTFMemberSize;
   }
@@ -321,7 +322,7 @@ class BTFDebug : public DebugHandlerBase {
   /// @{
   void visitTypeEntry(const DIType *Ty);
   void visitTypeEntry(const DIType *Ty, uint32_t &TypeId, bool CheckPointer,
-                      bool SeenPointer);
+                      bool SeenPointer, bool StripName);
   void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
   void visitSubroutineType(
       const DISubroutineType *STy, bool ForSubprog,
@@ -329,9 +330,10 @@ class BTFDebug : public DebugHandlerBase {
       uint32_t &TypeId);
   void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
                         uint32_t &TypeId);
-  void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
+  void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId,
+                          bool StripName);
   void visitStructType(const DICompositeType *STy, bool IsStruct,
-                       uint32_t &TypeId);
+                       uint32_t &TypeId, bool StripName);
   void visitArrayType(const DICompositeType *ATy, uint32_t &TypeId);
   void visitEnumType(const DICompositeType *ETy, uint32_t &TypeId);
   void visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
