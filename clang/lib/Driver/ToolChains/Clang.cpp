@@ -1083,12 +1083,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   // If we have a --sysroot, and don't have an explicit -isysroot flag, add an
   // -isysroot to the CC1 invocation.
-  StringRef sysroot = C.getSysRoot();
-  if (sysroot != "") {
-    if (!Args.hasArg(options::OPT_isysroot)) {
-      CmdArgs.push_back("-isysroot");
-      CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
-    }
+  std::string sysroot = std::string(C.getSysRoot());
+  if (sysroot.empty()) {
+    sysroot = getToolChain().computeSysRoot();
+  }
+  if (!Args.hasArg(options::OPT_isysroot)) {
+    CmdArgs.push_back("-isysroot");
+    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
   }
 
   // Parse additional include paths from environment variables.
