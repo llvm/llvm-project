@@ -594,6 +594,7 @@ def testOperationAttributes():
     # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
     print("Dict mapping", d)
 
+    # Check that exceptions are raised as expected.
     try:
         op.attributes["does_not_exist"]
     except KeyError:
