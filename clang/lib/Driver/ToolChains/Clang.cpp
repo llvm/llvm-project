@@ -6442,6 +6442,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back("-fexperimental-call-graph-section");
+
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_size_section,
                     options::OPT_fno_stack_size_section);
 
@@ -7617,6 +7621,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // This needs to run after -Xclang argument forwarding to pick up the target
   // features enabled through -Xclang -target-feature flags.
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
+
+  Args.AddLastArg(CmdArgs, options::OPT_falloc_token_max_EQ);
 
 #if CLANG_ENABLE_CIR
   // Forward -mmlir arguments to to the MLIR option parser.
