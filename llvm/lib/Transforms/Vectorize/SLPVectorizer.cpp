@@ -10657,10 +10657,11 @@ class InstructionsCompatibilityAnalysis {
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
-    return Opcode == Instruction::Add || Opcode == Instruction::LShr ||
-           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
-           Opcode == Instruction::Or || Opcode == Instruction::Xor;
+    return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
+           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::And || Opcode == Instruction::Or ||
+           Opcode == Instruction::Xor;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10678,7 +10679,7 @@ class InstructionsCompatibilityAnalysis {
     };
     // Exclude operands instructions immediately to improve compile time, it
     // will be unable to schedule anyway.
-    SmallDenseSet<Value *, 8> Operands;
+    SmallDenseMap<unsigned, SmallDenseSet<Value *, 8>> Operands;
     SmallMapVector<unsigned, SmallVector<Instruction *>, 4> Candidates;
     bool AnyUndef = false;
     for (Value *V : VL) {
@@ -10692,12 +10693,12 @@ class InstructionsCompatibilityAnalysis {
       if (Candidates.empty()) {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Parent = I->getParent();
-        Operands.insert(I->op_begin(), I->op_end());
+        Operands[I->getOpcode()].insert(I->op_begin(), I->op_end());
         continue;
       }
       if (Parent == I->getParent()) {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
-        Operands.insert(I->op_begin(), I->op_end());
+        Operands[I->getOpcode()].insert(I->op_begin(), I->op_end());
         continue;
       }
       auto *NodeA = DT.getNode(Parent);
@@ -10712,7 +10713,7 @@ class InstructionsCompatibilityAnalysis {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Parent = I->getParent();
         Operands.clear();
-        Operands.insert(I->op_begin(), I->op_end());
+        Operands[I->getOpcode()].insert(I->op_begin(), I->op_end());
       }
     }
     unsigned BestOpcodeNum = 0;
@@ -10720,8 +10721,12 @@ class InstructionsCompatibilityAnalysis {
     for (const auto &P : Candidates) {
       if (P.second.size() < BestOpcodeNum)
         continue;
+      const auto &Ops = Operands.at(P.first);
+      // If have inner dependencies - skip.
+      if (any_of(P.second, [&](Instruction *I) { return Ops.contains(I); }))
+        continue;
       for (Instruction *I : P.second) {
-        if (IsSupportedInstruction(I, AnyUndef) && !Operands.contains(I)) {
+        if (IsSupportedInstruction(I, AnyUndef)) {
           MainOp = I;
           BestOpcodeNum = P.second.size();
           break;
@@ -10981,6 +10986,7 @@ public:
           getWidenedType(S.getMainOp()->getType(), VL.size());
       switch (MainOpcode) {
       case Instruction::Add:
+      case Instruction::Sub:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
