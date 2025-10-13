@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRTransforms
   MLIRLinalgTransforms
   MLIRAffineToStandard
+  MLIRGPUToLLVMSPV
   MLIRGPUToNVVMTransforms
   MLIRIndexToLLVM
   MLIRMathToLLVM
