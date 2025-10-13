@@ -233,7 +233,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // target supports 256-bit loads/stores
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2i8:
   case MVT::v2i64:
   case MVT::v2f64:
@@ -248,7 +248,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // global and the target supports 256-bit loads/stores.
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2i16:  // <1 x i16x2>
   case MVT::v2f16:  // <1 x f16x2>
   case MVT::v2bf16: // <1 x bf16x2>
@@ -270,7 +270,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // target supports 256-bit loads/stores
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2f32: // <1 x f32x2>
   case MVT::v4f32: // <2 x f32x2>
   case MVT::v2i32: // <1 x i32x2>
@@ -6749,7 +6749,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AtomicRMWInst::BinOp::And:
   case AtomicRMWInst::BinOp::Or:
   case AtomicRMWInst::BinOp::Xor:

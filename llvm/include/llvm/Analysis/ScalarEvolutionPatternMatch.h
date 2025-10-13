@@ -182,6 +182,12 @@ m_scev_PtrToInt(const Op0_t &Op0) {
   return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
 }
 
+template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVTruncateExpr, Op0_t>
+m_scev_Trunc(const Op0_t &Op0) {
+  return m_scev_Unary<SCEVTruncateExpr>(Op0);
+}
+
 /// Match a binary SCEV.
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
           SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,

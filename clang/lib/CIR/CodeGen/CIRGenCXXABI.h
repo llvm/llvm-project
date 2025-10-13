@@ -191,6 +191,15 @@ public:
   virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
                                      const CXXRecordDecl *rd) = 0;
 
+  using DeleteOrMemberCallExpr =
+      llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
+
+  virtual mlir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
+                                                const CXXDestructorDecl *dtor,
+                                                CXXDtorType dtorType,
+                                                Address thisAddr,
+                                                DeleteOrMemberCallExpr e) = 0;
+
   /// Emit any tables needed to implement virtual inheritance.  For Itanium,
   /// this emits virtual table tables.
   virtual void emitVirtualInheritanceTables(const CXXRecordDecl *rd) = 0;

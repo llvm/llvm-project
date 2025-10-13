@@ -29,20 +29,17 @@ using namespace mir2vec;
 STATISTIC(MIRVocabMissCounter,
           "Number of lookups to MIR entities not present in the vocabulary");
 
-namespace llvm {
-namespace mir2vec {
-cl::OptionCategory MIR2VecCategory("MIR2Vec Options");
+cl::OptionCategory llvm::mir2vec::MIR2VecCategory("MIR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
     VocabFile("mir2vec-vocab-path", cl::Optional,
               cl::desc("Path to the vocabulary file for MIR2Vec"), cl::init(""),
               cl::cat(MIR2VecCategory));
-cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
-                         cl::desc("Weight for machine opcode embeddings"),
-                         cl::cat(MIR2VecCategory));
-} // namespace mir2vec
-} // namespace llvm
+cl::opt<float>
+    llvm::mir2vec::OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
+                             cl::desc("Weight for machine opcode embeddings"),
+                             cl::cat(MIR2VecCategory));
 
 //===----------------------------------------------------------------------===//
 // Vocabulary Implementation
