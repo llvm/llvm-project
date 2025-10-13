@@ -154,18 +154,33 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
     return symbol;
   }
 }
+
 Symbol *Scope::FindCommonBlock(const SourceName &name) const {
-  if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
-    return &*it->second;
-  } else if (IsSubmodule()) {
-    const Scope *parent{
-        symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr};
-    return parent ? parent->FindCommonBlock(name) : nullptr;
-  } else if (!IsTopLevel()) {
-    return parent_ ? parent_->FindCommonBlock(name) : nullptr;
-  } else {
-    return nullptr;
+  if (auto *cb{FindCB(name)}) {
+    // Ensure this COMMON block is not USE-associated
+    if (cb->has<UseDetails>()) {
+      cb = nullptr;
+    }
+    return cb;
   }
+  return nullptr;
+}
+
+Symbol *Scope::FindCommonBlockInScopes(const SourceName &name) const {
+  if (auto *cb{FindCB(name)}) {
+    return &cb->GetUltimate();
+  } else if (IsSubmodule()) {
+    if (const Scope *parent{symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr}) {
+      if (auto *cb{parent->FindCommonBlockInScopes(name)}) {
+        return &cb->GetUltimate();
+      }
+    }
+  } else if (!IsTopLevel() && parent_) {
+    if (auto *cb{parent_->FindCommonBlockInScopes(name)}) {
+      return &cb->GetUltimate();
+    }
+  }
+  return nullptr;
 }
 
 Scope *Scope::FindSubmodule(const SourceName &name) const {
