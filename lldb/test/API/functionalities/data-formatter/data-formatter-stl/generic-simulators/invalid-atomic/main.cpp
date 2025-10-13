@@ -5,10 +5,10 @@ template <typename T> struct atomic {
 };
 
 namespace __1 {
-  template<typename T> struct atomic {
-    int foo;
-    int bar;
-  };
+template <typename T> struct atomic {
+  int foo;
+  int bar;
+};
 } // namespace __1
 } // namespace std
 
