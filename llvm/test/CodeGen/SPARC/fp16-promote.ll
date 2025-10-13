@@ -268,19 +268,21 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-OPT-LABEL: test_fptrunc_fp128:
 ; V8-OPT:       ! %bb.0:
-; V8-OPT-NEXT:    save %sp, -104, %sp
+; V8-OPT-NEXT:    save %sp, -120, %sp
 ; V8-OPT-NEXT:    ldd [%i0], %f0
 ; V8-OPT-NEXT:    ldd [%i0+8], %f4
-; V8-OPT-NEXT:    std %f4, [%sp+100]
+; V8-OPT-NEXT:    add %fp, -16, %i0
+; V8-OPT-NEXT:    st %i0, [%sp+92]
+; V8-OPT-NEXT:    std %f4, [%fp+-8]
 ; V8-OPT-NEXT:    call __trunctfhf2
-; V8-OPT-NEXT:    std %f0, [%sp+92]
+; V8-OPT-NEXT:    std %f0, [%fp+-16]
 ; V8-OPT-NEXT:    sth %o0, [%i1]
 ; V8-OPT-NEXT:    ret
 ; V8-OPT-NEXT:    restore
 ;
 ; V8-UNOPT-LABEL: test_fptrunc_fp128:
 ; V8-UNOPT:       ! %bb.0:
-; V8-UNOPT-NEXT:    save %sp, -104, %sp
+; V8-UNOPT-NEXT:    save %sp, -120, %sp
 ; V8-UNOPT-NEXT:    ldd [%i0], %f4
 ; V8-UNOPT-NEXT:    ! implicit-def: $q0
 ; V8-UNOPT-NEXT:    fmovs %f4, %f0
@@ -288,24 +290,28 @@ define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-UNOPT-NEXT:    ldd [%i0+8], %f4
 ; V8-UNOPT-NEXT:    fmovs %f4, %f2
 ; V8-UNOPT-NEXT:    fmovs %f5, %f3
+; V8-UNOPT-NEXT:    add %fp, -16, %i0
+; V8-UNOPT-NEXT:    st %i0, [%sp+92]
 ; V8-UNOPT-NEXT:    fmovs %f2, %f4
 ; V8-UNOPT-NEXT:    fmovs %f3, %f5
-; V8-UNOPT-NEXT:    std %f4, [%sp+100]
+; V8-UNOPT-NEXT:    std %f4, [%fp+-8]
 ; V8-UNOPT-NEXT:    ! kill: def $d0 killed $d0 killed $q0
 ; V8-UNOPT-NEXT:    call __trunctfhf2
-; V8-UNOPT-NEXT:    std %f0, [%sp+92]
+; V8-UNOPT-NEXT:    std %f0, [%fp+-16]
 ; V8-UNOPT-NEXT:    sth %o0, [%i1]
 ; V8-UNOPT-NEXT:    ret
 ; V8-UNOPT-NEXT:    restore
 ;
 ; V9-LABEL: test_fptrunc_fp128:
 ; V9:       ! %bb.0:
-; V9-NEXT:    save %sp, -104, %sp
+; V9-NEXT:    save %sp, -120, %sp
 ; V9-NEXT:    ldd [%i0], %f0
 ; V9-NEXT:    ldd [%i0+8], %f4
-; V9-NEXT:    std %f4, [%sp+100]
+; V9-NEXT:    add %fp, -16, %i0
+; V9-NEXT:    st %i0, [%sp+92]
+; V9-NEXT:    std %f4, [%fp+-8]
 ; V9-NEXT:    call __trunctfhf2
-; V9-NEXT:    std %f0, [%sp+92]
+; V9-NEXT:    std %f0, [%fp+-16]
 ; V9-NEXT:    sth %o0, [%i1]
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
