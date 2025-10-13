@@ -30,6 +30,7 @@ jobs:
       - name: Set Safe Directory
         run: |
           git config --global --add safe.directory '*'
+          chown -R root $(pwd)
 
       - name: Get changed files
         id: changed-files
