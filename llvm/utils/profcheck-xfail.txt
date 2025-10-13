@@ -1129,6 +1129,7 @@ Transforms/LowerIFunc/ifunc-alias.ll
 Transforms/LowerIFunc/ifunc-nonsense-resolvers.ll
 Transforms/LowerIFunc/ifunc-program-addrspace.ll
 Transforms/LowerIFunc/lower-ifunc.ll
+Transforms/LowerMatrixIntrinsics/data-layout-multiply-fused.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-dominance.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-loops.ll
