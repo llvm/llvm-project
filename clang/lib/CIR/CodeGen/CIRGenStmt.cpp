@@ -445,8 +445,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
 
   if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
       s.getNRVOCandidate()->isNRVOVariable()) {
-    getCIRGenModule().errorNYI(s.getSourceRange(),
-                               "named return value optimization");
+    assert(!cir::MissingFeatures::openMP());
+    assert(!cir::MissingFeatures::nrvo());
   } else if (!rv) {
     // No return expression. Do nothing.
   } else if (rv->getType()->isVoidType()) {
@@ -471,9 +471,16 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
         builder.CIRBaseBuilderTy::createStore(loc, value, *fnRetAlloca);
       }
       break;
-    default:
+    case cir::TEK_Complex:
       getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "non-scalar function return type");
+                                 "complex function return type");
+      break;
+    case cir::TEK_Aggregate:
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
+                                            AggValueSlot::IsDestructed,
+                                            AggValueSlot::IsNotAliased,
+                                            getOverlapForReturnValue()));
       break;
     }
   }

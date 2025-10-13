@@ -1915,7 +1915,16 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
       else
         llvm_unreachable("unsupported row length");
 
-      Value vdstNew = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      const Value vdst0 = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      const Value vdst1 = LLVM::ExtractValueOp::create(rewriter, loc, res, {1});
+
+      const Value isEqual =
+          rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, vdst0, v);
+
+      // Per `permlane(16|32)` semantics: if the first extracted element equals
+      // 'v', the result is the second element; otherwise it is the first.
+      Value vdstNew =
+          rewriter.create<LLVM::SelectOp>(loc, isEqual, vdst1, vdst0);
       permuted.emplace_back(vdstNew);
     }
 

@@ -1536,6 +1536,40 @@ TEST(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
+TEST(TransferTest, BaseClassInitializerFromSiblingDerivedInstance) {
+  using ast_matchers::cxxConstructorDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::ofClass;
+
+  std::string Code = R"(
+    struct Base {
+      bool BaseField;
+      char UnmodeledField;
+    };
+
+    struct DerivedOne : public Base {
+      int DerivedOneField;
+    };
+
+    struct DerivedTwo : public Base {
+      int DerivedTwoField;
+
+      DerivedTwo(const DerivedOne& d1)
+          : Base(d1), DerivedTwoField(d1.DerivedOneField) {
+          (void)BaseField;
+          }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the base
+        // class initializer from the DerivedToBase-cast `d1`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
+}
+
 TEST(TransferTest, FieldsDontHaveValuesInConstructor) {
   // In a constructor, unlike in regular member functions, we don't want fields
   // to be pre-initialized with values, because doing so is the job of the

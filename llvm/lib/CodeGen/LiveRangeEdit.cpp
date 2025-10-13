@@ -68,16 +68,6 @@ Register LiveRangeEdit::createFrom(Register OldReg) {
   return VReg;
 }
 
-bool LiveRangeEdit::checkRematerializable(VNInfo *VNI,
-                                          const MachineInstr *DefMI) {
-  assert(DefMI && "Missing instruction");
-  ScannedRemattable = true;
-  if (!TII.isTriviallyReMaterializable(*DefMI))
-    return false;
-  Remattable.insert(VNI);
-  return true;
-}
-
 void LiveRangeEdit::scanRemattable() {
   for (VNInfo *VNI : getParent().valnos) {
     if (VNI->isUnused())
@@ -90,7 +80,8 @@ void LiveRangeEdit::scanRemattable() {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (!DefMI)
       continue;
-    checkRematerializable(OrigVNI, DefMI);
+    if (TII.isTriviallyReMaterializable(*DefMI))
+      Remattable.insert(OrigVNI);
   }
   ScannedRemattable = true;
 }

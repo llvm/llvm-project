@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -192,28 +193,28 @@ private:
 
   /// Store symbols and type identifiers used to create callgraph section
   /// entries related to a function.
-  struct FunctionInfo {
+  struct FunctionCallGraphInfo {
     /// Numeric type identifier used in callgraph section for indirect calls
     /// and targets.
     using CGTypeId = uint64_t;
 
-    /// Enumeration of function kinds, and their mapping to function kind values
-    /// stored in callgraph section entries.
-    /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
-    enum class FunctionKind : uint64_t {
-      /// Function cannot be target to indirect calls.
-      NOT_INDIRECT_TARGET = 0,
-
-      /// Function may be target to indirect calls but its type id is unknown.
-      INDIRECT_TARGET_UNKNOWN_TID = 1,
-
-      /// Function may be target to indirect calls and its type id is known.
-      INDIRECT_TARGET_KNOWN_TID = 2,
-    };
-
     /// Map type identifiers to callsite labels. Labels are generated for each
     /// indirect callsite in the function.
     SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+    SmallSet<MCSymbol *, 4> DirectCallees;
+  };
+
+  /// Enumeration of function kinds, and their mapping to function kind values
+  /// stored in callgraph section entries.
+  enum class FunctionKind : uint64_t {
+    /// Function cannot be target to indirect calls.
+    NOT_INDIRECT_TARGET = 0,
+
+    /// Function may be target to indirect calls but its type id is unknown.
+    INDIRECT_TARGET_UNKNOWN_TID = 1,
+
+    /// Function may be target to indirect calls and its type id is known.
+    INDIRECT_TARGET_KNOWN_TID = 2,
   };
 
   enum CallGraphSectionFormatVersion : uint64_t {
@@ -385,10 +386,11 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
-  /// Generate and emit labels for callees of the indirect callsites which will
-  /// be used to populate the .callgraph section.
-  void emitIndirectCalleeLabels(
-      FunctionInfo &FuncInfo,
+  /// Iff MI is an indirect call, generate and emit a label after the callsites
+  /// which will be used to populate the .callgraph section. For direct
+  /// callsites add the callee symbol to direct callsites list of FuncCGInfo.
+  void handleCallsiteForCallgraph(
+      FunctionCallGraphInfo &FuncCGInfo,
       const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
       const MachineInstr &MI);
 
@@ -479,7 +481,8 @@ public:
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
 
-  void emitCallGraphSection(const MachineFunction &MF, FunctionInfo &FuncInfo);
+  void emitCallGraphSection(const MachineFunction &MF,
+                            FunctionCallGraphInfo &FuncCGInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 

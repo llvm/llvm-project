@@ -192,13 +192,11 @@ public:
   void erase(const_iterator CI) { return TheMap.erase(CI.I); }
 
   std::pair<iterator, bool> insert(const ValueT &V) {
-    detail::DenseSetEmpty Empty;
-    return TheMap.try_emplace(V, Empty);
+    return TheMap.try_emplace(V);
   }
 
   std::pair<iterator, bool> insert(ValueT &&V) {
-    detail::DenseSetEmpty Empty;
-    return TheMap.try_emplace(std::move(V), Empty);
+    return TheMap.try_emplace(std::move(V));
   }
 
   /// Alternative version of insert that uses a different (and possibly less
@@ -252,20 +250,24 @@ bool operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
   return !(LHS == RHS);
 }
 
+template <typename ValueT, typename ValueInfoT>
+using DenseSet = DenseSetImpl<
+    ValueT, DenseMap<ValueT, DenseSetEmpty, ValueInfoT, DenseSetPair<ValueT>>,
+    ValueInfoT>;
+
+template <typename ValueT, unsigned InlineBuckets, typename ValueInfoT>
+using SmallDenseSet =
+    DenseSetImpl<ValueT,
+                 SmallDenseMap<ValueT, DenseSetEmpty, InlineBuckets, ValueInfoT,
+                               DenseSetPair<ValueT>>,
+                 ValueInfoT>;
+
 } // end namespace detail
 
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
-class DenseSet : public detail::DenseSetImpl<
-                     ValueT,
-                     DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                              detail::DenseSetPair<ValueT>>,
-                     ValueInfoT> {
-  using BaseT =
-      detail::DenseSetImpl<ValueT,
-                           DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                                    detail::DenseSetPair<ValueT>>,
-                           ValueInfoT>;
+class DenseSet : public detail::DenseSet<ValueT, ValueInfoT> {
+  using BaseT = detail::DenseSet<ValueT, ValueInfoT>;
 
 public:
   using BaseT::BaseT;
@@ -276,16 +278,8 @@ public:
 template <typename ValueT, unsigned InlineBuckets = 4,
           typename ValueInfoT = DenseMapInfo<ValueT>>
 class SmallDenseSet
-    : public detail::DenseSetImpl<
-          ValueT,
-          SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
-                        ValueInfoT, detail::DenseSetPair<ValueT>>,
-          ValueInfoT> {
-  using BaseT = detail::DenseSetImpl<
-      ValueT,
-      SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets, ValueInfoT,
-                    detail::DenseSetPair<ValueT>>,
-      ValueInfoT>;
+    : public detail::SmallDenseSet<ValueT, InlineBuckets, ValueInfoT> {
+  using BaseT = detail::SmallDenseSet<ValueT, InlineBuckets, ValueInfoT>;
 
 public:
   using BaseT::BaseT;

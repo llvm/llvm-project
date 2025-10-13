@@ -270,29 +270,15 @@ entry:
 }
 
 define amdgpu_ps void @cluster_load_async_to_lds_b64_saddr_no_scale_offset(ptr addrspace(1) inreg %gaddr, ptr addrspace(3) %laddr, i32 inreg %mask, i32 %idx) {
-; GFX1250-SDAG-LABEL: cluster_load_async_to_lds_b64_saddr_no_scale_offset:
-; GFX1250-SDAG:       ; %bb.0: ; %entry
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, s[0:1]
-; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b64 v0, v[2:3], off offset:16 th:TH_LOAD_NT
-; GFX1250-SDAG-NEXT:    s_endpgm
-;
-; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b64_saddr_no_scale_offset:
-; GFX1250-GISEL:       ; %bb.0: ; %entry
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v5, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b64 v0, v[2:3], off offset:16 th:TH_LOAD_NT
-; GFX1250-GISEL-NEXT:    s_endpgm
+; GFX1250-LABEL: cluster_load_async_to_lds_b64_saddr_no_scale_offset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1250-NEXT:    s_mov_b32 m0, s2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX1250-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, s[0:1]
+; GFX1250-NEXT:    cluster_load_async_to_lds_b64 v0, v[2:3], off offset:16 th:TH_LOAD_NT
+; GFX1250-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %gep = getelementptr i32, ptr addrspace(1) %gaddr, i64 %idxprom

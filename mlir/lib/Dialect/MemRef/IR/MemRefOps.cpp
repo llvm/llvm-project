@@ -1549,14 +1549,6 @@ LogicalResult GlobalOp::verify() {
     }
   }
 
-  if (std::optional<uint64_t> alignAttr = getAlignment()) {
-    uint64_t alignment = *alignAttr;
-
-    if (!llvm::isPowerOf2_64(alignment))
-      return emitError() << "alignment attribute value " << alignment
-                         << " is not a power of 2";
-  }
-
   // TODO: verify visibility for declarations.
   return success();
 }

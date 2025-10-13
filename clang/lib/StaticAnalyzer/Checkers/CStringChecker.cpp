@@ -163,6 +163,7 @@ public:
       {{CDM::CLibrary, {"strcasecmp"}, 2}, &CStringChecker::evalStrcasecmp},
       {{CDM::CLibrary, {"strncasecmp"}, 3}, &CStringChecker::evalStrncasecmp},
       {{CDM::CLibrary, {"strsep"}, 2}, &CStringChecker::evalStrsep},
+      {{CDM::CLibrary, {"strxfrm"}, 3}, &CStringChecker::evalStrxfrm},
       {{CDM::CLibrary, {"bcopy"}, 3}, &CStringChecker::evalBcopy},
       {{CDM::CLibrary, {"bcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
@@ -210,6 +211,8 @@ public:
   void evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
                         bool ReturnEnd, bool IsBounded, ConcatFnKind appendK,
                         bool returnPtr = true) const;
+
+  void evalStrxfrm(CheckerContext &C, const CallEvent &Call) const;
 
   void evalStrcat(CheckerContext &C, const CallEvent &Call) const;
   void evalStrncat(CheckerContext &C, const CallEvent &Call) const;
@@ -2241,6 +2244,106 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
   // Set the return value.
   state = state->BindExpr(Call.getOriginExpr(), LCtx, Result);
   C.addTransition(state);
+}
+
+void CStringChecker::evalStrxfrm(CheckerContext &C,
+                                 const CallEvent &Call) const {
+  // size_t strxfrm(char *dest, const char *src, size_t n);
+  CurrentFunctionDescription = "locale transformation function";
+
+  ProgramStateRef State = C.getState();
+  const LocationContext *LCtx = C.getLocationContext();
+  SValBuilder &SVB = C.getSValBuilder();
+
+  // Get arguments
+  DestinationArgExpr Dest = {{Call.getArgExpr(0), 0}};
+  SourceArgExpr Source = {{Call.getArgExpr(1), 1}};
+  SizeArgExpr Size = {{Call.getArgExpr(2), 2}};
+
+  // `src` can never be null
+  SVal SrcVal = State->getSVal(Source.Expression, LCtx);
+  State = checkNonNull(C, State, Source, SrcVal);
+  if (!State)
+    return;
+
+  // Buffer must not overlap
+  State = CheckOverlap(C, State, Size, Dest, Source, CK_Regular);
+  if (!State)
+    return;
+
+  // The function returns an implementation-defined length needed for
+  // transformation
+  SVal RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
+
+  auto BindReturnAndTransition = [&RetVal, &Call, LCtx,
+                                  &C](ProgramStateRef State) {
+    if (State) {
+      State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
+      C.addTransition(State);
+    }
+  };
+
+  // Check if size is zero
+  SVal SizeVal = State->getSVal(Size.Expression, LCtx);
+  QualType SizeTy = Size.Expression->getType();
+
+  auto [StateZeroSize, StateSizeNonZero] =
+      assumeZero(C, State, SizeVal, SizeTy);
+
+  // We can't assume anything about size, just bind the return value and be done
+  if (!StateZeroSize && !StateSizeNonZero)
+    return BindReturnAndTransition(State);
+
+  // If `n` is 0, we just return the implementation defined length
+  if (StateZeroSize && !StateSizeNonZero)
+    return BindReturnAndTransition(StateZeroSize);
+
+  // If `n` is not 0, `dest` can not be null.
+  SVal DestVal = StateSizeNonZero->getSVal(Dest.Expression, LCtx);
+  StateSizeNonZero = checkNonNull(C, StateSizeNonZero, Dest, DestVal);
+  if (!StateSizeNonZero)
+    return;
+
+  // Check that we can write to the destination buffer
+  StateSizeNonZero = CheckBufferAccess(C, StateSizeNonZero, Dest, Size,
+                                       AccessKind::write, CK_Regular);
+  if (!StateSizeNonZero)
+    return;
+
+  // Success: return value < `n`
+  // Failure: return value >= `n`
+  auto ComparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, RetVal, SizeVal,
+                                     SVB.getConditionType())
+                           .getAs<DefinedOrUnknownSVal>();
+  if (!ComparisonVal) {
+    // Fallback: invalidate the buffer.
+    StateSizeNonZero = invalidateDestinationBufferBySize(
+        C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), DestVal,
+        SizeVal, Size.Expression->getType());
+    return BindReturnAndTransition(StateSizeNonZero);
+  }
+
+  auto [StateSuccess, StateFailure] = StateSizeNonZero->assume(*ComparisonVal);
+
+  if (StateSuccess) {
+    // The transformation invalidated the buffer.
+    StateSuccess = invalidateDestinationBufferBySize(
+        C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
+        SizeVal, Size.Expression->getType());
+    BindReturnAndTransition(StateSuccess);
+    // Fallthrough: We also want to add a transition to the failure state below.
+  }
+
+  if (StateFailure) {
+    // `dest` buffer content is undefined
+    if (auto DestLoc = DestVal.getAs<loc::MemRegionVal>()) {
+      StateFailure = StateFailure->killBinding(*DestLoc);
+      StateFailure =
+          StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
+    }
+
+    BindReturnAndTransition(StateFailure);
+  }
 }
 
 void CStringChecker::evalStrcmp(CheckerContext &C,

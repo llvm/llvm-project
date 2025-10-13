@@ -17,18 +17,27 @@ from lit.llvm.subst import ToolSubst
 # name: The name of this test suite.
 config.name = "LLVM"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"\| not FileCheck .*", "> /dev/null"),
-        (r"\| FileCheck .*", "> /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
+        (r"not FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
 )
-config.test_format = lit.formats.ShTest(
-    not llvm_config.use_lit_shell, extra_substitutions
-)
+config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -38,6 +47,16 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
+
+# Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+# binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+# commands of the form llvm-reduce --test FileCheck, which explode if we
+# substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+# It's not really possible to exclude these tests from the command substitution,
+# so we just exclude llvm-reduce tests from this config altogether. This should
+# be fine though as profcheck config tests are mostly concerned with opt.
+if config.enable_profcheck:
+    config.excludes = config.excludes + ["llvm-reduce"]
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -137,7 +156,7 @@ if re.search(r"windows-msvc", config.target_triple):
 ld64_cmd = config.ld64_executable
 asan_rtlib = get_asan_rtlib()
 if asan_rtlib:
-    ld64_cmd = "DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
+    ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
 

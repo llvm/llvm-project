@@ -1416,9 +1416,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // At least 1 operand must be a shuffle with 1 use because we are creating 2
   // instructions.
-  if (none_of(II->args(), [](Value *V) {
-        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
-      }))
+  if (none_of(II->args(), match_fn(m_OneUse(m_Shuffle(m_Value(), m_Value())))))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
@@ -1956,7 +1954,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType())) {
+      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType(), DL)) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
@@ -2006,7 +2004,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_SExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType())) {
+      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType(), DL)) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
@@ -3385,12 +3383,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // TODO: apply range metadata for range check patterns?
     }
 
-    // Separate storage assumptions apply to the underlying allocations, not any
-    // particular pointer within them. When evaluating the hints for AA purposes
-    // we getUnderlyingObject them; by precomputing the answers here we can
-    // avoid having to do so repeatedly there.
     for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
       OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+
+      // Separate storage assumptions apply to the underlying allocations, not
+      // any particular pointer within them. When evaluating the hints for AA
+      // purposes we getUnderlyingObject them; by precomputing the answers here
+      // we can avoid having to do so repeatedly there.
       if (OBU.getTagName() == "separate_storage") {
         assert(OBU.Inputs.size() == 2);
         auto MaybeSimplifyHint = [&](const Use &U) {
@@ -3403,6 +3402,32 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(OBU.Inputs[0]);
         MaybeSimplifyHint(OBU.Inputs[1]);
+      }
+
+      // Try to remove redundant alignment assumptions.
+      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
+        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
+            *cast<AssumeInst>(II), II->arg_size() + Idx);
+        if (!RK || RK.AttrKind != Attribute::Alignment ||
+            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
+          continue;
+
+        // Don't try to remove align assumptions for pointers derived from
+        // arguments. We might lose information if the function gets inline and
+        // the align argument attribute disappears.
+        Value *UO = getUnderlyingObject(RK.WasOn);
+        if (!UO || isa<Argument>(UO))
+          continue;
+
+        // Compute known bits for the pointer, passing nullptr as context to
+        // avoid computeKnownBits using the assumption we are about to remove
+        // for reasoning.
+        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(),
+                               Value::MaxAlignmentExponent);
+        if ((1ULL << TZ) < RK.ArgValue)
+          continue;
+        return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
     }
 
@@ -3922,6 +3947,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             1);
         return replaceInstUsesWith(*II, X);
       }
+    }
+    break;
+  }
+  case Intrinsic::get_active_lane_mask: {
+    const APInt *Op0, *Op1;
+    if (match(II->getOperand(0), m_StrictlyPositive(Op0)) &&
+        match(II->getOperand(1), m_APInt(Op1))) {
+      Type *OpTy = II->getOperand(0)->getType();
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(
+                   II->getType(), Intrinsic::get_active_lane_mask,
+                   {Constant::getNullValue(OpTy),
+                    ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
     }
     break;
   }

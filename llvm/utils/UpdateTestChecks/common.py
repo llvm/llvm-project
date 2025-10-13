@@ -28,8 +28,9 @@ Version changelog:
 4: --check-globals now has a third option ('smart'). The others are now called
    'none' and 'all'. 'smart' is the default.
 5: Basic block labels are matched by FileCheck expressions
+6: The semantics of TBAA checks has been incorporated in the check lines.
 """
-DEFAULT_VERSION = 5
+DEFAULT_VERSION = 6
 
 
 SUPPORTED_ANALYSES = {
@@ -622,6 +623,9 @@ SCRUB_TAILING_COMMENT_TOKEN_RE = re.compile(r"(?<=\S)+[ \t]*#$", flags=re.M)
 
 SEPARATOR = "."
 
+METADATA_NODES_RE = re.compile(r"^\s*!(\d+)\s*=\s*!\{(.*)\}", re.M)
+TBAA_TAGS_RE = re.compile(r"!tbaa\s*!([0-9]+)")
+
 
 def error(msg, test_file=None):
     if test_file:
@@ -685,6 +689,63 @@ def get_globals_name_prefix(raw_tool_output):
         return None
     ch = data_layout[idx + 2]
     return "_" if ch == "o" or ch == "x" else None
+
+
+def get_tbaa_records(version, raw_output_tools):
+    if version < 6:
+        return {}
+
+    # Retrieve all unique tbaa tags for the given IR.
+    unique_tbaa_tags = {f"!{n}" for n in TBAA_TAGS_RE.findall(raw_output_tools)}
+    if not unique_tbaa_tags:
+        return {}
+
+    # Small dict of metadata ID and its node content as value.
+    md_nodes = {
+        f"!{m.group(1)}": m.group(2)
+        for m in METADATA_NODES_RE.finditer(raw_output_tools)
+    }
+    assert md_nodes, "Shouldn't have TBAA tags without their type descriptors."
+
+    result = {}
+    for tag in unique_tbaa_tags:
+        type_desc = md_nodes.get(tag)
+        assert type_desc, f"Expected type descriptor for node {tag}."
+
+        # We deal with a tag of kind `(BaseTy, AccessTy, Offset)`.
+        access_ty = type_desc.split(",")[1].strip()
+
+        parent_ty = md_nodes.get(access_ty)
+        assert parent_ty, f"Couldn't find metadata for access type {access_ty}."
+
+        # First operand should be a MDString. If not, likely dealing with
+        # `new-struct-path-tbaa`.
+        # TODO: Support `new-struct-path-tbaa` TBAA format.
+        ty_name_field = parent_ty.split(",")[0]
+        if not (ty_name_field.startswith('!"') and ty_name_field.endswith('"')):
+            return {}
+        ty_name = ty_name_field[2:-1]
+
+        if ty_name.startswith("p"):
+            # Dealing with a pointer here.
+            pointee_ty_name = ty_name.split(maxsplit=1)[1]
+            if pointee_ty_name.startswith("omnipotent"):
+                pointee_ty_name = "char"
+            # TODO: If pointee_ty_name is a C++ name, should it be demangled?
+            pointee_ty_name = pointee_ty_name.replace(" ", "_")
+            tbaa_prefix = f"{pointee_ty_name}ptr"
+        elif ty_name.startswith("any"):
+            tbaa_prefix = "anyptr"
+        elif ty_name.startswith("omnipotent"):
+            tbaa_prefix = "char"
+        else:
+            tbaa_prefix = ty_name.replace(" ", "_")
+
+        # Record tag node and its semantics (e.g., INT_TBAA, INTPTR_TBAA).
+        tbaa_sema = f"{tbaa_prefix.upper()}_TBAA"
+        result[tag] = tbaa_sema
+
+    return result
 
 
 def apply_filters(line, filters):
@@ -1783,6 +1844,7 @@ def generalize_check_lines(
     ginfo: GeneralizerInfo,
     vars_seen,
     global_vars_seen,
+    global_tbaa_records={},
     preserve_names=False,
     original_check_lines=None,
     *,
@@ -1943,14 +2005,29 @@ def generalize_check_lines(
                 else:
                     vars_dict = global_vars_seen
 
+                mapped_name = mapping[value.name]
+
+                # We have computed the name mapping. Now, if possible,
+                # substitute the TBAA value name with its semantics.
+                if ginfo.get_version() >= 6:
+                    if (
+                        value.key == "!"
+                        and global_tbaa_records
+                        and mapped_name.startswith("TBAA")
+                        and mapped_name[4:].isdigit()
+                    ):
+                        tbaa_sema = global_tbaa_records.get(value.text)
+                        assert tbaa_sema, f"Shouldn't miss TBAA name for {value.text}?"
+                        mapped_name = f"{tbaa_sema}{mapped_name[4:]}"
+
                 if key in defs:
                     line += vars_dict[key].get_def(
-                        mapping[value.name], value.prefix, value.suffix
+                        mapped_name, value.prefix, value.suffix
                     )
                     defs.remove(key)
                 else:
                     line += vars_dict[key].get_use(
-                        mapping[value.name], value.prefix, value.suffix
+                        mapped_name, value.prefix, value.suffix
                     )
 
             line += line_template
@@ -1976,6 +2053,7 @@ def add_checks(
     ginfo,
     global_vars_seen_dict,
     is_filtered,
+    global_tbaa_records_for_prefixes={},
     preserve_names=False,
     original_check_lines: Mapping[str, List[str]] = {},
 ):
@@ -2026,6 +2104,14 @@ def add_checks(
                 global_vars_seen_dict[checkprefix] = {}
 
             global_vars_seen_before = [key for key in global_vars_seen.keys()]
+            global_tbaa_records = next(
+                (
+                    val
+                    for key, val in global_tbaa_records_for_prefixes.items()
+                    if checkprefix in key
+                ),
+                None,
+            )
 
             vars_seen = {}
             printed_prefixes.append(checkprefix)
@@ -2049,6 +2135,7 @@ def add_checks(
                     ginfo,
                     vars_seen,
                     global_vars_seen,
+                    global_tbaa_records,
                     preserve_names,
                     original_check_lines=[],
                     no_meta_details=ginfo.no_meta_details(),
@@ -2163,6 +2250,7 @@ def add_checks(
                     ginfo,
                     vars_seen,
                     global_vars_seen,
+                    global_tbaa_records,
                     preserve_names,
                     original_check_lines=original_check_lines.get(checkprefix),
                 )
@@ -2225,6 +2313,7 @@ def add_ir_checks(
     function_sig,
     ginfo: GeneralizerInfo,
     global_vars_seen_dict,
+    global_tbaa_records_for_prefixes,
     is_filtered,
     original_check_lines={},
 ):
@@ -2249,6 +2338,7 @@ def add_ir_checks(
         ginfo,
         global_vars_seen_dict,
         is_filtered,
+        global_tbaa_records_for_prefixes,
         preserve_names,
         original_check_lines=original_check_lines,
     )
@@ -2635,6 +2725,7 @@ def add_global_checks(
     output_lines,
     ginfo: GeneralizerInfo,
     global_vars_seen_dict,
+    global_tbaa_records_for_prefixes,
     preserve_names,
     is_before_functions,
     global_check_setting,
@@ -2667,6 +2758,15 @@ def add_global_checks(
 
                 check_lines = []
                 global_vars_seen_before = [key for key in global_vars_seen.keys()]
+                global_tbaa_records = next(
+                    (
+                        val
+                        for key, val in global_tbaa_records_for_prefixes.items()
+                        if checkprefix in key
+                    ),
+                    None,
+                )
+
                 lines_w_index = glob_val_dict[checkprefix][nameless_value.check_prefix]
                 lines_w_index = filter_globals_according_to_preference(
                     lines_w_index,
@@ -2690,6 +2790,7 @@ def add_global_checks(
                         ginfo,
                         {},
                         global_vars_seen,
+                        global_tbaa_records,
                         preserve_names,
                         unstable_globals_only=True,
                     )

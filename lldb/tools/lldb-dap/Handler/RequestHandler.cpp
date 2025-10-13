@@ -51,6 +51,33 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
+static void
+SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
+                   lldb::SBLaunchInfo &launch_info) {
+  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
+  for (size_t i = 0; i < n; i++) {
+    std::optional<std::string> path;
+    if (stdio.size() < i)
+      path = stdio.back();
+    else
+      path = stdio[i];
+    if (!path)
+      continue;
+    switch (i) {
+    case 0:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      break;
+    case 1:
+    case 2:
+      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      break;
+    default:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      break;
+    }
+  }
+}
+
 static llvm::Error
 RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   if (!dap.clientFeatures.contains(
@@ -176,6 +203,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
       env.Set(kv.first().data(), kv.second.c_str(), true);
     launch_info.SetEnvironment(env, true);
   }
+
+  if (!arguments.stdio.empty() && !arguments.disableSTDIO)
+    SetupIORedirection(arguments.stdio, launch_info);
 
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);

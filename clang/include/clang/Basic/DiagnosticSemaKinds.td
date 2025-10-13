@@ -638,6 +638,9 @@ def err_decomp_decl_std_tuple_element_not_specialized : Error<
 def err_decomp_decl_std_tuple_size_not_constant : Error<
   "cannot decompose this type; 'std::tuple_size<%0>::value' "
   "is not a valid integral constant expression">;
+def err_decomp_decl_std_tuple_size_invalid
+    : Error<"cannot decompose this type; 'std::tuple_size<%0>::value' "
+            "is not a valid size: %1">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
 def err_arg_is_not_destructurable : Error<
@@ -9048,7 +9051,7 @@ def ext_typecheck_convert_incompatible_pointer : ExtWarn<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">,
-  InGroup<IncompatiblePointerTypes>;
+  InGroup<IncompatiblePointerTypes>, DefaultError;
 def err_typecheck_convert_incompatible_pointer : Error<
   "incompatible pointer types "
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
@@ -11708,12 +11711,18 @@ def err_omp_threadprivate_incomplete_type : Error<
   "threadprivate variable with incomplete type %0">;
 def err_omp_no_dsa_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes">;
+def err_omp_groupprivate_incomplete_type : Error<
+  "groupprivate variable with incomplete type %0">;
+def err_omp_groupprivate_with_initializer : Error<
+  "variable %0 with initializer cannot appear in groupprivate directive">;
 def err_omp_defaultmap_no_attr_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes, data mapping attributes, or in an is_device_ptr clause">;
 def note_omp_default_dsa_none : Note<
   "explicit data sharing attribute requested here">;
 def note_omp_defaultmap_attr_none : Note<
   "explicit data sharing attribute, data mapping attribute, or is_device_ptr clause requested here">;
+def err_omp_default_vc : Error<
+  "wrong variable category specified with modifier %0 in the default clause">;
 def err_omp_wrong_dsa : Error<
   "%0 variable cannot be %1">;
 def err_omp_variably_modified_type_not_supported : Error<
@@ -13121,6 +13130,11 @@ def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier 
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
+def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
+def err_hlsl_semantic_output_not_supported
+    : Error<"semantic %0 does not support output">;
+def err_hlsl_semantic_indexing_not_supported
+    : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
@@ -13147,6 +13161,8 @@ def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used on
 def err_hlsl_incorrect_num_initializers: Error<
   "too %select{few|many}0 initializers in list for type %1 "
   "(expected %2 but found %3)">;
+def err_hlsl_rootsignature_entry: Error<
+   "rootsignature specified as target environment but entry, %0, was not defined">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
@@ -13195,6 +13211,9 @@ def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Litera
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
 def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
+def err_hlsl_invalid_mixed_resources: Error< "sampler and non-sampler resource mixed in descriptor table">;
+def err_hlsl_appending_onto_unbound: Error<"offset appends to unbounded descriptor range">;
+def err_hlsl_offset_overflow: Error<"descriptor range offset overflows [%0, %1]">;
 
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
@@ -13204,6 +13223,11 @@ def err_hlsl_resource_range_overlap: Error<
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
+
+def err_hlsl_incomplete_resource_array_in_function_param: Error<
+  "incomplete resource array in a function parameter">;
+def err_hlsl_assign_to_global_resource: Error<
+  "assignment to global resource variable %0 is not allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13609,4 +13633,6 @@ def warn_acc_var_referenced_lacks_op
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 } // end of sema component.

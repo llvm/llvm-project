@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/RemoteJITUtils.h"
-
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
@@ -22,15 +20,24 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
+
+#include <string>
+#include <vector>
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 
@@ -114,25 +121,8 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
           llvm::inconvertibleErrorCode());
   }
 
-  // Out-of-process executors require the ORC runtime.
-  if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
-                                 OOPExecutorConnect.getNumOccurrences())) {
-    llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
-        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
-    llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
-    llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
-    llvm::sys::path::append(BasePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
-                            CLANG_VERSION_MAJOR_STRING);
-    if (SystemTriple.isOSBinFormatELF())
-      OrcRuntimePath =
-          BasePath.str().str() + "/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
-    else if (SystemTriple.isOSBinFormatMachO())
-      OrcRuntimePath = BasePath.str().str() + "/lib/darwin/liborc_rt_osx.a";
-    else
-      return llvm::make_error<llvm::StringError>(
-          "Out-of-process execution is not supported on non-unix platforms",
-          llvm::inconvertibleErrorCode());
-  }
+  // Out-of-process executors require the ORC runtime. ORC Runtime Path
+  // resolution is done in Interpreter.cpp.
 
   // If -oop-executor was used but no value was specified then use a sensible
   // default.
@@ -145,6 +135,30 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   }
 
   return llvm::Error::success();
+}
+
+static llvm::Expected<unsigned> getSlabAllocSize(llvm::StringRef SizeString) {
+  SizeString = SizeString.trim();
+
+  uint64_t Units = 1024;
+
+  if (SizeString.ends_with_insensitive("kb"))
+    SizeString = SizeString.drop_back(2).rtrim();
+  else if (SizeString.ends_with_insensitive("mb")) {
+    Units = 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.ends_with_insensitive("gb")) {
+    Units = 1024 * 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.empty())
+    return 0;
+
+  uint64_t SlabSize = 0;
+  if (SizeString.getAsInteger(10, SlabSize))
+    return llvm::make_error<llvm::StringError>(
+        "Invalid numeric format for slab size", llvm::inconvertibleErrorCode());
+
+  return SlabSize * Units;
 }
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
@@ -186,7 +200,7 @@ struct ReplListCompleter {
   clang::Interpreter &MainInterp;
   ReplListCompleter(clang::IncrementalCompilerBuilder &CB,
                     clang::Interpreter &Interp)
-      : CB(CB), MainInterp(Interp){};
+      : CB(CB), MainInterp(Interp) {};
 
   std::vector<llvm::LineEditor::Completion> operator()(llvm::StringRef Buffer,
                                                        size_t Pos) const;
@@ -285,22 +299,16 @@ int main(int argc, const char **argv) {
 
   ExitOnErr(sanitizeOopArguments(argv[0]));
 
-  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-  if (OOPExecutor.getNumOccurrences()) {
-    // Launch an out-of-process executor locally in a child process.
-    EPC = ExitOnErr(
-        launchExecutor(OOPExecutor, UseSharedMemory, SlabAllocateSizeString));
-  } else if (OOPExecutorConnect.getNumOccurrences()) {
-    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnect, UseSharedMemory,
-                                     SlabAllocateSizeString));
+  clang::Interpreter::JITConfig Config;
+  Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
+  Config.OOPExecutor = OOPExecutor;
+  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
+  if (!SizeOrErr) {
+    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
+    return EXIT_FAILURE;
   }
-
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-  if (EPC) {
-    CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
-    JB = ExitOnErr(
-        clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
-  }
+  Config.SlabAllocateSize = *SizeOrErr;
+  Config.UseSharedMemory = UseSharedMemory;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
@@ -333,11 +341,9 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
-  } else if (JB) {
-    Interp =
-        ExitOnErr(clang::Interpreter::create(std::move(CI), std::move(JB)));
-  } else
-    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
+  } else {
+    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI), Config));
+  }
 
   bool HasError = false;
 

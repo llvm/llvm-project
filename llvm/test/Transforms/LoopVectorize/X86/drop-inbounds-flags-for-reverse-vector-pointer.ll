@@ -8,7 +8,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-LABEL: define i1 @fn(
 ; CHECK-SAME: ptr [[NNO:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -43,7 +43,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY20:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 10, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC35:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 10, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC35:%.*]] ]
 ; CHECK-NEXT:    [[SUM_01:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[SUM_1:%.*]], [[FOR_INC35]] ]
 ; CHECK-NEXT:    [[REM4:%.*]] = and i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i64 [[REM4]], 0
@@ -59,7 +59,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[SUM_1]] = or i32 [[REM27_PN]], [[SUM_01]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[EXIT]], label [[FOR_BODY20]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[EXIT]], label [[FOR_BODY20]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], [[FOR_INC35]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CMP41:%.*]] = icmp eq i32 [[SUM_1_LCSSA]], 0

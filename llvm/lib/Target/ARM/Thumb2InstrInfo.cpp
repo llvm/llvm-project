@@ -46,7 +46,7 @@ PreferNoCSEL("prefer-no-csel", cl::Hidden,
              cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI) {}
+    : ARMBaseInstrInfo(STI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb2InstrInfo::getNop() const {
@@ -564,8 +564,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterClass *RegClass =
-      TII.getRegClass(Desc, FrameRegIdx, TRI, MF);
+  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx, TRI);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)

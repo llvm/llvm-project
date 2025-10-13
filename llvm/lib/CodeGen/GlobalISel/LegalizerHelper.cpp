@@ -487,6 +487,10 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(FMIN_F);
   case TargetOpcode::G_FMAXNUM:
     RTLIBCASE(FMAX_F);
+  case TargetOpcode::G_FMINIMUMNUM:
+    RTLIBCASE(FMINIMUM_NUM_F);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    RTLIBCASE(FMAXIMUM_NUM_F);
   case TargetOpcode::G_FSQRT:
     RTLIBCASE(SQRT_F);
   case TargetOpcode::G_FRINT:
@@ -1307,6 +1311,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
@@ -2916,6 +2922,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_ABDS:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
@@ -2953,6 +2960,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
+  case TargetOpcode::G_ABDU:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
@@ -4447,6 +4455,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
     return lowerSADDO_SSUBO(MI);
+  case TargetOpcode::G_SADDE:
+    return lowerSADDE(MI);
+  case TargetOpcode::G_SSUBE:
+    return lowerSSUBE(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -4742,6 +4754,16 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
+  case G_ABDS:
+  case G_ABDU: {
+    bool IsSigned = MI.getOpcode() == G_ABDS;
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if ((IsSigned && LI.isLegal({G_SMIN, Ty}) && LI.isLegal({G_SMAX, Ty})) ||
+        (!IsSigned && LI.isLegal({G_UMIN, Ty}) && LI.isLegal({G_UMAX, Ty}))) {
+      return lowerAbsDiffToMinMax(MI);
+    }
+    return lowerAbsDiffToSelect(MI);
+  }
   case G_FABS:
     return lowerFAbs(MI);
   case G_SELECT:
@@ -9288,6 +9310,49 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   return Legalized;
 }
 
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+
+  // sum = LHS + RHS + zext(CarryIn)
+  auto Tmp = MIRBuilder.buildAdd(Ty, LHS, RHS);
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto Sum = MIRBuilder.buildAdd(Ty, Tmp, CarryZ);
+  MIRBuilder.buildCopy(Res, Sum);
+
+  // OvOut = icmp slt ((sum ^ lhs) & (sum ^ rhs)), 0
+  auto AX = MIRBuilder.buildXor(Ty, Sum, LHS);
+  auto BX = MIRBuilder.buildXor(Ty, Sum, RHS);
+  auto T = MIRBuilder.buildAnd(Ty, AX, BX);
+
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSSUBE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+
+  // Diff = LHS - (RHS + zext(CarryIn))
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto RHSPlusCI = MIRBuilder.buildAdd(Ty, RHS, CarryZ);
+  auto Diff = MIRBuilder.buildSub(Ty, LHS, RHSPlusCI);
+  MIRBuilder.buildCopy(Res, Diff);
+
+  // ov = msb((LHS ^ RHS) & (LHS ^ Diff))
+  auto X1 = MIRBuilder.buildXor(Ty, LHS, RHS);
+  auto X2 = MIRBuilder.buildXor(Ty, LHS, Diff);
+  auto T = MIRBuilder.buildAnd(Ty, X1, X2);
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerAddSubSatToMinMax(MachineInstr &MI) {
   auto [Res, LHS, RHS] = MI.getFirst3Regs();
@@ -9921,6 +9986,54 @@ LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
   auto Sub = MIRBuilder.buildSub(Ty, Zero, SrcReg).getReg(0);
   auto ICmp = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, IType, SrcReg, Zero);
   MIRBuilder.buildSelect(DestReg, ICmp, SrcReg, Sub);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
+          MI.getOpcode() == TargetOpcode::G_ABDU) &&
+         "Expected G_ABDS or G_ABDU instruction");
+
+  auto [DstReg, LHS, RHS] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(LHS);
+
+  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  Register LHSSub = MIRBuilder.buildSub(Ty, LHS, RHS).getReg(0);
+  Register RHSSub = MIRBuilder.buildSub(Ty, RHS, LHS).getReg(0);
+  CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
+                                ? CmpInst::ICMP_SGT
+                                : CmpInst::ICMP_UGT;
+  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::scalar(1), LHS, RHS);
+  MIRBuilder.buildSelect(DstReg, ICmp, LHSSub, RHSSub);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
+          MI.getOpcode() == TargetOpcode::G_ABDU) &&
+         "Expected G_ABDS or G_ABDU instruction");
+
+  auto [DstReg, LHS, RHS] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(LHS);
+
+  // abds(lhs, rhs) -→ sub(smax(lhs, rhs), smin(lhs, rhs))
+  // abdu(lhs, rhs) -→ sub(umax(lhs, rhs), umin(lhs, rhs))
+  Register MaxReg, MinReg;
+  if (MI.getOpcode() == TargetOpcode::G_ABDS) {
+    MaxReg = MIRBuilder.buildSMax(Ty, LHS, RHS).getReg(0);
+    MinReg = MIRBuilder.buildSMin(Ty, LHS, RHS).getReg(0);
+  } else {
+    MaxReg = MIRBuilder.buildUMax(Ty, LHS, RHS).getReg(0);
+    MinReg = MIRBuilder.buildUMin(Ty, LHS, RHS).getReg(0);
+  }
+  MIRBuilder.buildSub(DstReg, MaxReg, MinReg);
+
   MI.eraseFromParent();
   return Legalized;
 }

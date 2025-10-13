@@ -1127,18 +1127,25 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
-// This is hasSideEffects to allow its use in readcyclecounter selection.
 // FIXME: Need to truncate immediate to 16-bits.
-// FIXME: Should have separate pseudos for known may read MODE and
-// only read MODE.
-def S_GETREG_B32 : SOPK_Pseudo <
+class S_GETREG_B32_Pseudo<list<dag> pattern=[]> : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
-  "$sdst, $simm16",
-  [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
+  "$sdst, $simm16", pattern>;
+
+// This is hasSideEffects to allow its use in readcyclecounter selection.
+// FIXME: Should have separate pseudos for known may read MODE and
+// only read MODE.
+def S_GETREG_B32 : S_GETREG_B32_Pseudo<
+    [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
   let hasSideEffects = 1;
   let Uses = [MODE];
 }
+
+// A version of the pseudo for reading hardware register fields that are
+// known to remain the same during the course of the run. Has no side
+// effects and doesn't read MODE.
+def S_GETREG_B32_const : S_GETREG_B32_Pseudo;
 
 let Defs = [MODE], Uses = [MODE] in {
 
@@ -1653,6 +1660,11 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+
+let SubtargetPredicate = HasWaitXcnt in {
+  def S_WAIT_XCNT_soft : SOPP_Pseudo<"", (ins s16imm:$simm16), "$simm16">;
+}
+
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.
 // Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
 
@@ -1880,6 +1892,21 @@ def : GCNPat <
 def : GCNPat <
   (i16 imm:$imm),
   (S_MOV_B32 imm:$imm)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<and> v2i32:$x, v2i32:$y)),
+  (S_AND_B64 SReg_64:$x, SReg_64:$y)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<or> v2i32:$x, v2i32:$y)),
+  (S_OR_B64 SReg_64:$x, SReg_64:$y)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<xor> v2i32:$x, v2i32:$y)),
+  (S_XOR_B64 SReg_64:$x, SReg_64:$y)
 >;
 
 // Same as a 32-bit inreg

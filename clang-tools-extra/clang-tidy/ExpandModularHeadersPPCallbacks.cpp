@@ -35,7 +35,7 @@ public:
                          const SrcMgr::ContentCache &ContentCache,
                          llvm::vfs::InMemoryFileSystem &InMemoryFs) {
     // Return if we are not interested in the contents of this file.
-    if (!FilesToRecord.count(File))
+    if (!FilesToRecord.contains(File))
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.

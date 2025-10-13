@@ -56,8 +56,9 @@ coro.ret:                                         ; preds = %coro.free, %cleanup
   ret ptr %call2
 }
 
-; check that the frame contains the entire struct, instead of just the struct pointer
-; CHECK: %foo.Frame = type { ptr, ptr, %promise_type, %struct.A, i1 }
+; check that the frame contains the entire struct, instead of just the struct pointer,
+; and that the alignment is taken into account.
+; CHECK: %foo.Frame = type { ptr, ptr, %promise_type, i1, [6 x i8], %struct.A }
 
 ; Function Attrs: argmemonly nounwind readonly
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

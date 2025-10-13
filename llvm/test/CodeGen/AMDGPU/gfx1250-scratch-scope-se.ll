@@ -9,7 +9,7 @@ define void @test_scratch_store(ptr addrspace(5) %ptr, i32 %val) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    scratch_store_b32 v0, v1, off scope:SCOPE_SE
+; GCN-NEXT:    scratch_store_b32 v0, v1, off
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
     store i32 %val, ptr addrspace(5) %ptr
     ret void
@@ -20,7 +20,7 @@ define void @test_unknown_flat_store(ptr %ptr, i32 %val) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
+; GCN-NEXT:    flat_store_b32 v[0:1], v2
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
     store i32 %val, ptr %ptr
@@ -65,7 +65,7 @@ define void @test_flat_store_select(ptr addrspace(1) %a, ptr addrspace(3) %b, i1
 ; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
 ; GCN-SDAG-NEXT:    v_dual_cndmask_b32 v1, v5, v1 :: v_dual_cndmask_b32 v0, v2, v0
-; GCN-SDAG-NEXT:    flat_store_b32 v[0:1], v4 scope:SCOPE_SE
+; GCN-SDAG-NEXT:    flat_store_b32 v[0:1], v4
 ; GCN-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -81,7 +81,7 @@ define void @test_flat_store_select(ptr addrspace(1) %a, ptr addrspace(3) %b, i1
 ; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v3
 ; GCN-GISEL-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v5, v1
-; GCN-GISEL-NEXT:    flat_store_b32 v[0:1], v4 scope:SCOPE_SE
+; GCN-GISEL-NEXT:    flat_store_b32 v[0:1], v4
 ; GCN-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GCN-GISEL-NEXT:    s_set_pc_i64 s[30:31]
     %a.ascast = addrspacecast ptr addrspace(1) %a to ptr

@@ -92,7 +92,8 @@ public:
   void relocateNoSym(uint8_t *loc, RelType type, uint64_t val) const {
     relocate(loc, Relocation{R_NONE, type, 0, 0, nullptr}, val);
   }
-  virtual void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const;
+  virtual void relocateAlloc(InputSection &sec, uint8_t *buf) const;
+  void relocateEh(EhInputSection &sec, uint8_t *buf) const;
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
@@ -326,15 +327,6 @@ inline void write64(Ctx &ctx, void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 
-// Overwrite a ULEB128 value and keep the original length.
-inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
-  while (*bufLoc & 0x80) {
-    *bufLoc++ = 0x80 | (val & 0x7f);
-    val >>= 7;
-  }
-  *bufLoc = val;
-  return val;
-}
 } // namespace elf
 } // namespace lld
 

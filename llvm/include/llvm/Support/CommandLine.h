@@ -69,6 +69,7 @@ namespace cl {
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr,
                                       bool LongOptionsUseDoubleDash = false);
 
@@ -2192,7 +2193,8 @@ class ExpansionContext {
                                  SmallVectorImpl<const char *> &NewArgv);
 
 public:
-  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T);
+  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                            vfs::FileSystem *FS = nullptr);
 
   ExpansionContext &setMarkEOLs(bool X) {
     MarkEOLs = X;

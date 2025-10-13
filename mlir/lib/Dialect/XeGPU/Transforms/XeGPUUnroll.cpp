@@ -711,8 +711,8 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
     SmallVector<Value> newOps;
     layout = layout.dropInstData();
     for (SmallVector<OpFoldResult> offsets : offsetsList) {
-      auto newOp = rewriter.create<xegpu::LoadMatrixOp>(
-          op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
+      auto newOp = xegpu::LoadMatrixOp::create(
+          rewriter, op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
       newOps.push_back(newOp);
     }
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
@@ -750,8 +750,8 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
     }
 
     for (auto [v, offsets] : llvm::zip_equal(convertedValues, offsetsList))
-      rewriter.create<xegpu::StoreMatrixOp>(loc, v, op.getMemDesc(), offsets,
-                                            layout.dropInstData());
+      xegpu::StoreMatrixOp::create(rewriter, loc, v, op.getMemDesc(), offsets,
+                                   layout.dropInstData());
 
     rewriter.eraseOp(op);
     return success();

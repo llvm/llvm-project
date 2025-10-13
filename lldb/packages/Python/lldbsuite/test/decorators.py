@@ -1,4 +1,8 @@
 # System modules
+
+# allow the use of the `list[str]` type hint in Python 3.8
+from __future__ import annotations
+
 from functools import wraps
 from packaging import version
 import ctypes

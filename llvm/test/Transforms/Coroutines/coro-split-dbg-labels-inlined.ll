@@ -1,5 +1,8 @@
 ; RUN: opt %s -passes='cgscc(coro-split)' -S | FileCheck %s
 
+; Verifies that suspend points with inlined locations are handled properly,
+; i.e., that their debug labels point to the correct subprogram.
+
 source_filename = "coro.c"
 
 ; Function Attrs: nounwind uwtable
@@ -96,4 +99,7 @@ attributes #4 = { argmemonly nounwind readonly }
 !41 = !DILocation(line: 17, column: 1, scope: !16)
 
 !100 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !17, scopeLine: 4, isOptimized: true, unit: !0, retainedNodes: !2)
-!101 = !DILocation(line: 12, column: 6, scope: !16)
+!101 = !DILocation(line: 42, column: 6, scope: !102, inlinedAt: !103)
+
+!102 = distinct !DISubprogram(name: "callee_recursive", scope: !1, file: !1, line: 8, type: !17, scopeLine: 4, isOptimized: true, unit: !0, retainedNodes: !2)
+!103 = !DILocation(line: 12, column: 6, scope: !16)

@@ -223,10 +223,9 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
           std::swap(Lo, Hi);
         EVT TotalVT = EVT::getIntegerVT(*DAG.getContext(), NumParts * PartBits);
         Hi = DAG.getNode(ISD::ANY_EXTEND, DL, TotalVT, Hi);
-        Hi = DAG.getNode(ISD::SHL, DL, TotalVT, Hi,
-                         DAG.getConstant(Lo.getValueSizeInBits(), DL,
-                                         TLI.getShiftAmountTy(
-                                             TotalVT, DAG.getDataLayout())));
+        Hi = DAG.getNode(
+            ISD::SHL, DL, TotalVT, Hi,
+            DAG.getShiftAmountConstant(Lo.getValueSizeInBits(), TotalVT, DL));
         Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, TotalVT, Lo);
         Val = DAG.getNode(ISD::OR, DL, TotalVT, Lo, Hi);
       }
@@ -4469,9 +4468,10 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         if (ElementMul != 1) {
           if (ElementMul.isPowerOf2()) {
             unsigned Amt = ElementMul.logBase2();
-            IdxN = DAG.getNode(ISD::SHL, dl, N.getValueType(), IdxN,
-                               DAG.getConstant(Amt, dl, IdxN.getValueType()),
-                               ScaleFlags);
+            IdxN = DAG.getNode(
+                ISD::SHL, dl, N.getValueType(), IdxN,
+                DAG.getShiftAmountConstant(Amt, N.getValueType(), dl),
+                ScaleFlags);
           } else {
             SDValue Scale = DAG.getConstant(ElementMul.getZExtValue(), dl,
                                             IdxN.getValueType());
@@ -5460,10 +5460,8 @@ static SDValue GetExponent(SelectionDAG &DAG, SDValue Op,
                            const TargetLowering &TLI, const SDLoc &dl) {
   SDValue t0 = DAG.getNode(ISD::AND, dl, MVT::i32, Op,
                            DAG.getConstant(0x7f800000, dl, MVT::i32));
-  SDValue t1 = DAG.getNode(
-      ISD::SRL, dl, MVT::i32, t0,
-      DAG.getConstant(23, dl,
-                      TLI.getShiftAmountTy(MVT::i32, DAG.getDataLayout())));
+  SDValue t1 = DAG.getNode(ISD::SRL, dl, MVT::i32, t0,
+                           DAG.getShiftAmountConstant(23, MVT::i32, dl));
   SDValue t2 = DAG.getNode(ISD::SUB, dl, MVT::i32, t1,
                            DAG.getConstant(127, dl, MVT::i32));
   return DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f32, t2);
@@ -5488,11 +5486,8 @@ static SDValue getLimitedPrecisionExp2(SDValue t0, const SDLoc &dl,
   SDValue X = DAG.getNode(ISD::FSUB, dl, MVT::f32, t0, t1);
 
   //   IntegerPartOfX <<= 23;
-  IntegerPartOfX =
-      DAG.getNode(ISD::SHL, dl, MVT::i32, IntegerPartOfX,
-                  DAG.getConstant(23, dl,
-                                  DAG.getTargetLoweringInfo().getShiftAmountTy(
-                                      MVT::i32, DAG.getDataLayout())));
+  IntegerPartOfX = DAG.getNode(ISD::SHL, dl, MVT::i32, IntegerPartOfX,
+                               DAG.getShiftAmountConstant(23, MVT::i32, dl));
 
   SDValue TwoToFractionalPartOfX;
   if (LimitFloatPrecision <= 6) {
@@ -7974,12 +7969,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::amdgcn_call_whole_wave: {
     TargetLowering::ArgListTy Args;
+    bool isTailCall = I.isTailCall();
 
     // The first argument is the callee. Skip it when assembling the call args.
     for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
       TargetLowering::ArgListEntry Arg(getValue(I.getArgOperand(Idx)),
                                        I.getArgOperand(Idx)->getType());
       Arg.setAttributes(&I, Idx);
+
+      // If we have an explicit sret argument that is an Instruction, (i.e., it
+      // might point to function-local memory), we can't meaningfully tail-call.
+      if (Arg.IsSRet && isa<Instruction>(I.getArgOperand(Idx)))
+        isTailCall = false;
+
       Args.push_back(Arg);
     }
 
@@ -7994,7 +7996,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         .setChain(getRoot())
         .setCallee(CallingConv::AMDGPU_Gfx_WholeWave, I.getType(),
                    getValue(I.getArgOperand(0)), std::move(Args))
-        .setTailCall(false)
+        .setTailCall(isTailCall && canTailCall(I))
         .setIsPreallocated(
             I.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
         .setConvergent(I.isConvergent())
@@ -8100,7 +8102,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Trunc);
     return;
   }
-  case Intrinsic::experimental_vector_partial_reduce_add: {
+  case Intrinsic::vector_partial_reduce_add: {
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
@@ -8929,6 +8931,29 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   return Result;
 }
 
+bool SelectionDAGBuilder::canTailCall(const CallBase &CB) const {
+  bool isMustTailCall = CB.isMustTailCall();
+
+  // Avoid emitting tail calls in functions with the disable-tail-calls
+  // attribute.
+  const Function *Caller = CB.getParent()->getParent();
+  if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
+          "true" &&
+      !isMustTailCall)
+    return false;
+
+  // We can't tail call inside a function with a swifterror argument. Lowering
+  // does not support this yet. It would have to move into the swifterror
+  // register before the call.
+  if (DAG.getTargetLoweringInfo().supportSwiftError() &&
+      Caller->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+    return false;
+
+  // Check if target-independent constraints permit a tail call here.
+  // Target-dependent constraints are checked within TLI->LowerCallTo.
+  return isInTailCallPosition(CB, DAG.getTarget());
+}
+
 void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
                                       bool isTailCall, bool isMustTailCall,
                                       const BasicBlock *EHPadBB,
@@ -8943,21 +8968,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   const Value *SwiftErrorVal = nullptr;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (isTailCall) {
-    // Avoid emitting tail calls in functions with the disable-tail-calls
-    // attribute.
-    auto *Caller = CB.getParent()->getParent();
-    if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
-        "true" && !isMustTailCall)
-      isTailCall = false;
-
-    // We can't tail call inside a function with a swifterror argument. Lowering
-    // does not support this yet. It would have to move into the swifterror
-    // register before the call.
-    if (TLI.supportSwiftError() &&
-        Caller->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
-      isTailCall = false;
-  }
+  if (isTailCall)
+    isTailCall = canTailCall(CB);
 
   for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
     const Value *V = *I;
@@ -8996,11 +9008,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     Entry.IsCFGuardTarget = true;
     Args.push_back(Entry);
   }
-
-  // Check if target-independent constraints permit a tail call here.
-  // Target-dependent constraints are checked within TLI->LowerCallTo.
-  if (isTailCall && !isInTailCallPosition(CB, DAG.getTarget()))
-    isTailCall = false;
 
   // Disable tail calls if there is an swifterror argument. Targets have not
   // been updated to support tail calls.
@@ -9323,9 +9330,8 @@ bool SelectionDAGBuilder::visitStrLenCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrlen(DAG, getCurSDLoc(), DAG.getRoot(),
-                                getValue(Arg0), MachinePointerInfo(Arg0));
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrlen(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), &I);
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, false);
     PendingLoads.push_back(Res.second);

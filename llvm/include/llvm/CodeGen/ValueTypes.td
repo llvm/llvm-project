@@ -28,6 +28,7 @@ class ValueType<int size, int value> {
   // Indicates this VT should be included in the
   // [FIRST_VALUETYPE,LAST_VALUETYPE] range.
   bit isNormalValueType = true;
+  bit isCheriCapability = false;
 }
 
 class VTAny<int value> : ValueType<0, value> {
@@ -63,6 +64,10 @@ class VTVecTup<int size, int nf, ValueType dummy_elt, int value>
   let NF = nf;
   let ElementType = dummy_elt;
   let isRISCVVecTuple = true;
+}
+
+class VTCheriCapability<int size, int value> : ValueType<size, value> {
+  let isCheriCapability = true;
 }
 
 defset list<ValueType> ValueTypes = {
@@ -356,6 +361,11 @@ def amdgpuBufferFatPointer : ValueType<160, 251>;
 def amdgpuBufferStridedPointer : ValueType<192, 252>;
 
 def aarch64mfp8 : ValueType<8,  253>;  // 8-bit value in FPR (AArch64)
+
+// CHERI capabilities. Pointer-like values that carry additional metadata
+// for enforcing safety guarantees on CHERI-enabled targets.
+def c64 : VTCheriCapability<64, 254>;   // 64-bit CHERI capability value
+def c128 : VTCheriCapability<128, 255>; // 128-bit CHERI capability value
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy

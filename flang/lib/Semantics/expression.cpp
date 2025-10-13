@@ -3700,7 +3700,10 @@ static MaybeExpr NumericUnaryHelper(ExpressionAnalyzer &context,
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       if (opr == NumericOperator::Add) {
-        return analyzer.MoveExpr(0);
+        // +x -> (x), not a bare x, because the bounds of the argument must
+        // not be exposed to allocatable assignments or structure constructor
+        // components.
+        return Parenthesize(analyzer.MoveExpr(0));
       } else {
         return Negation(context.GetContextualMessages(), analyzer.MoveExpr(0));
       }

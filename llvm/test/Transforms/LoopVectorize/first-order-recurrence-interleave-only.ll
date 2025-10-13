@@ -5,7 +5,7 @@ define float @for_load_interleave_only(ptr %src) {
 ; CHECK-LABEL: define float @for_load_interleave_only(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -22,7 +22,7 @@ define float @for_load_interleave_only(ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -33,7 +33,7 @@ define float @for_load_interleave_only(ptr %src) {
 ; CHECK-NEXT:    [[L]] = load float, ptr [[PTR_IV]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[PTR_IV]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi float [ [[FOR]], %[[LOOP]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[FOR_LCSSA]]
@@ -59,5 +59,4 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.

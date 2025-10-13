@@ -517,17 +517,23 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType fieldType = field->getType();
   switch (getEvaluationKind(fieldType)) {
   case cir::TEK_Scalar:
-    if (lhs.isSimple())
+    if (lhs.isSimple()) {
       emitExprAsInit(init, field, lhs, false);
-    else
-      cgm.errorNYI(field->getSourceRange(),
-                   "emitInitializerForField: non-simple scalar");
+    } else {
+      RValue rhs = RValue::get(emitScalarExpr(init));
+      emitStoreThroughLValue(rhs, lhs);
+    }
     break;
   case cir::TEK_Complex:
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: complex");
+    emitComplexExprIntoLValue(init, lhs, /*isInit=*/true);
     break;
   case cir::TEK_Aggregate: {
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: aggregate");
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    assert(!cir::MissingFeatures::sanitizers());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        lhs, AggValueSlot::IsDestructed, AggValueSlot::IsNotAliased,
+        getOverlapForFieldInit(field), AggValueSlot::IsNotZeroed);
+    emitAggExpr(init, slot);
     break;
   }
   }
@@ -633,12 +639,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
+  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
+  mlir::Type elementType = arrayTy.getElementType();
+
+  // This might be a multi-dimensional array. Find the innermost element type.
+  while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
+    elementType = maybeArrayTy.getElementType();
+  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
+
   // Optimize for a constant count.
   if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
     if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
       // Just skip out if the constant count is zero.
       if (constIntAttr.getUInt() == 0)
         return;
+
+      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
       // Otherwise, emit the check.
     }
 
@@ -648,10 +664,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
   }
-
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
   // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.
@@ -814,15 +826,14 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   if (!cgm.getCXXABI().needsVTTParameter(gd))
     return nullptr;
 
-  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curFuncDecl)->getParent();
+  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curCodeDecl)->getParent();
   const CXXRecordDecl *base = cast<CXXMethodDecl>(gd.getDecl())->getParent();
 
   uint64_t subVTTIndex;
 
   if (delegating) {
-    cgm.errorNYI(rd->getSourceRange(),
-                 "getVTTParameter: delegating constructor");
-    return {};
+    // If this is a delegating constructor call, just load the VTT.
+    return loadCXXVTT();
   } else if (rd == base) {
     // If the record matches the base, this is the complete ctor/dtor
     // variant calling the base variant in a class with virtual bases.

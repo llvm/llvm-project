@@ -125,8 +125,8 @@ define amdgpu_kernel void @v_uextract_bit_32_i64(ptr addrspace(1) %out, ptr addr
 ; GCN-LABEL: v_uextract_bit_32_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -470,8 +470,8 @@ define amdgpu_kernel void @v_uextract_bit_33_i64_trunc_i32(ptr addrspace(1) %out
 ; GCN-LABEL: v_uextract_bit_33_i64_trunc_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -627,8 +627,8 @@ define amdgpu_kernel void @v_uextract_bit_33_36_use_upper_half_shift_i64(ptr add
 ; GCN-LABEL: v_uextract_bit_33_36_use_upper_half_shift_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
-; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[2:3]

@@ -5161,6 +5161,10 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   return field_iterator(decl_iterator(FirstDecl));
 }
 
+RecordDecl::field_iterator RecordDecl::noload_field_begin() const {
+  return field_iterator(decl_iterator(getDefinitionOrSelf()->FirstDecl));
+}
+
 /// completeDefinition - Notes that the definition of this type is now
 /// complete.
 void RecordDecl::completeDefinition() {

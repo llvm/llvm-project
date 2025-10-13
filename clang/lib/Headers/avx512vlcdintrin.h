@@ -16,12 +16,10 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vl,avx512cd,no-evex512"),                   \
-                 __min_vector_width__(128)))
+                 __target__("avx512vl,avx512cd"), __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vl,avx512cd,no-evex512"),                   \
-                 __min_vector_width__(256)))
+                 __target__("avx512vl,avx512cd"), __min_vector_width__(256)))
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
@@ -146,7 +144,7 @@ _mm256_maskz_conflict_epi32 (__mmask8 __U, __m256i __A)
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_lzcnt_epi32(__m128i __A) {
-  return (__m128i)__builtin_elementwise_ctlz((__v4si)__A,
+  return (__m128i)__builtin_elementwise_clzg((__v4si)__A,
                                              (__v4si)_mm_set1_epi32(32));
 }
 
@@ -166,7 +164,7 @@ _mm_maskz_lzcnt_epi32(__mmask8 __U, __m128i __A) {
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_lzcnt_epi32(__m256i __A) {
-  return (__m256i)__builtin_elementwise_ctlz((__v8si)__A,
+  return (__m256i)__builtin_elementwise_clzg((__v8si)__A,
                                              (__v8si)_mm256_set1_epi32(32));
 }
 
@@ -186,7 +184,7 @@ _mm256_maskz_lzcnt_epi32(__mmask8 __U, __m256i __A) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_lzcnt_epi64(__m128i __A) {
-  return (__m128i)__builtin_elementwise_ctlz(
+  return (__m128i)__builtin_elementwise_clzg(
       (__v2di)__A, (__v2di)_mm_set1_epi64x((long long)64));
 }
 
@@ -206,7 +204,7 @@ _mm_maskz_lzcnt_epi64(__mmask8 __U, __m128i __A) {
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_lzcnt_epi64(__m256i __A) {
-  return (__m256i)__builtin_elementwise_ctlz(
+  return (__m256i)__builtin_elementwise_clzg(
       (__v4di)__A, (__v4di)_mm256_set1_epi64x((long long)64));
 }
 

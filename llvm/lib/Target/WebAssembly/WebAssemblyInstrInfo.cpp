@@ -34,7 +34,7 @@ using namespace llvm;
 #include "WebAssemblyGenInstrInfo.inc"
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
-    : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
+    : WebAssemblyGenInstrInfo(STI, WebAssembly::ADJCALLSTACKDOWN,
                               WebAssembly::ADJCALLSTACKUP,
                               WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}

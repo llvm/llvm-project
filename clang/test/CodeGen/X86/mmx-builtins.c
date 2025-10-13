@@ -123,12 +123,14 @@ __m64 test_mm_avg_pu8(__m64 a, __m64 b) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.pavg.b(
   return _mm_avg_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qu(_mm_avg_pu8((__m64)(__v8qu){0, 1, 2, 3, 18, 15, 12, 20}, (__m64)(__v8qu){0, 1, 2, 3, 16, 3, 20, 10}), 0, 1, 2, 3, 17, 9, 16, 15));
 
 __m64 test_mm_avg_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_avg_pu16
   // CHECK: call <8 x i16> @llvm.x86.sse2.pavg.w(
   return _mm_avg_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v4hu(_mm_avg_pu16((__m64)(__v4hu){18, 15, 12, 20}, (__m64)(__v4hu){16, 3, 20, 10}), 17, 9, 16, 15));
 
 __m64 test_mm_cmpeq_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpeq_pi8

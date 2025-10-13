@@ -238,8 +238,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
         StartPtrV, {Attribute::Dereferenceable}, *AC,
         L->getLoopPredecessor()->getTerminator(), DT);
     if (DerefRK) {
-      DerefBytesSCEV = SE.getUMaxExpr(
-          DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
+      DerefBytesSCEV =
+          SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
     }
   }
 
@@ -258,6 +258,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     return false;
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+
+  if (!LoopGuards)
+    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
+  MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
   const SCEV *OffsetAtLastIter =
       mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
@@ -288,11 +292,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (!EndBytes)
       return false;
 
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
-
-    EndBytes = SE.applyLoopGuards(EndBytes, *LoopGuards);
+    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
   }
 
@@ -1231,48 +1231,40 @@ static void findForkedSCEVs(
   }
 }
 
-static SmallVector<PointerIntPair<const SCEV *, 1, bool>>
-findForkedPointer(PredicatedScalarEvolution &PSE,
-                  const DenseMap<Value *, const SCEV *> &StridesMap, Value *Ptr,
-                  const Loop *L) {
-  ScalarEvolution *SE = PSE.getSE();
-  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
-  SmallVector<PointerIntPair<const SCEV *, 1, bool>> Scevs;
-  findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
-
-  // For now, we will only accept a forked pointer with two possible SCEVs
-  // that are either SCEVAddRecExprs or loop invariant.
-  if (Scevs.size() == 2 &&
-      (isa<SCEVAddRecExpr>(get<0>(Scevs[0])) ||
-       SE->isLoopInvariant(get<0>(Scevs[0]), L)) &&
-      (isa<SCEVAddRecExpr>(get<0>(Scevs[1])) ||
-       SE->isLoopInvariant(get<0>(Scevs[1]), L))) {
-    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
-    LLVM_DEBUG(dbgs() << "\t(1) " << *get<0>(Scevs[0]) << "\n");
-    LLVM_DEBUG(dbgs() << "\t(2) " << *get<0>(Scevs[1]) << "\n");
-    return Scevs;
-  }
-
-  return {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
-}
-
 bool AccessAnalysis::createCheckForAccess(
     RuntimePointerChecking &RtCheck, MemAccessInfo Access, Type *AccessTy,
     const DenseMap<Value *, const SCEV *> &StridesMap,
     DenseMap<Value *, unsigned> &DepSetId, Loop *TheLoop,
     unsigned &RunningDepId, unsigned ASId, bool Assume) {
   Value *Ptr = Access.getPointer();
+  ScalarEvolution *SE = PSE.getSE();
+  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
-  SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
-      findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
-  assert(!TranslatedPtrs.empty() && "must have some translated pointers");
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> RTCheckPtrs;
+  findForkedSCEVs(SE, TheLoop, Ptr, RTCheckPtrs, MaxForkedSCEVDepth);
+  assert(!RTCheckPtrs.empty() &&
+         "Must have some runtime-check pointer candidates");
+
+  // RTCheckPtrs must have size 2 if there are forked pointers. Otherwise, there
+  // are no forked pointers; replaceSymbolicStridesSCEV in this case.
+  auto IsLoopInvariantOrAR =
+      [&SE, &TheLoop](const PointerIntPair<const SCEV *, 1, bool> &P) {
+        return SE->isLoopInvariant(P.getPointer(), TheLoop) ||
+               isa<SCEVAddRecExpr>(P.getPointer());
+      };
+  if (RTCheckPtrs.size() == 2 && all_of(RTCheckPtrs, IsLoopInvariantOrAR)) {
+    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n";
+               for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
+               << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
+  } else {
+    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+  }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
-  /// must either be invariant or AddRecs. If ShouldCheckWrap is true, they also
-  /// must not wrap.
-  for (auto &P : TranslatedPtrs) {
+  /// must either be invariant or non-wrapping affine AddRecs.
+  for (auto &P : RTCheckPtrs) {
     // The bounds for loop-invariant pointer is trivial.
-    if (PSE.getSE()->isLoopInvariant(P.getPointer(), TheLoop))
+    if (SE->isLoopInvariant(P.getPointer(), TheLoop))
       continue;
 
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
@@ -1283,21 +1275,18 @@ bool AccessAnalysis::createCheckForAccess(
 
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
-    if (TranslatedPtrs.size() == 1) {
+    if (RTCheckPtrs.size() == 1) {
       AR =
           cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
       P.setPointer(AR);
     }
 
-    // When we run after a failing dependency check we have to make sure
-    // we don't have wrapping pointers.
-    if (!isNoWrap(PSE, AR, TranslatedPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume)) {
+    if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
+                  TheLoop, Assume))
       return false;
-    }
   }
 
-  for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
+  for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
     unsigned DepId;
 
@@ -2101,14 +2090,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
-  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
-  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
-
-  // If store sizes are not the same, set TypeByteSize to zero, so we can check
-  // it in the caller isDependent.
   uint64_t ASz = DL.getTypeAllocSize(ATy);
   uint64_t BSz = DL.getTypeAllocSize(BTy);
-  uint64_t TypeByteSize = (AStoreSz == BStoreSz) ? BSz : 0;
+
+  // Both the source and sink sizes are neeeded in dependence checks, depending
+  // on the use.
+  std::pair<uint64_t, uint64_t> TypeByteSize(ASz, BSz);
 
   uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
   uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
@@ -2130,8 +2117,23 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return Dependence::Unknown;
   }
 
+  // When the distance is possibly zero, we're reading/writing the same memory
+  // location: if the store sizes are not equal, fail with an unknown
+  // dependence.
+  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
+  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
+  if (AStoreSz != BStoreSz && !SE.isKnownNonZero(Dist)) {
+    LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence distance with "
+                         "different type sizes\n");
+    return Dependence::Unknown;
+  }
+
+  // TODO: Remove this.
+  bool HasSameSize = AStoreSz == BStoreSz;
+
   return DepDistanceStrideAndSizeInfo(Dist, MaxStride, CommonStride,
-                                      TypeByteSize, AIsWrite, BIsWrite);
+                                      TypeByteSize, HasSameSize, AIsWrite,
+                                      BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType
@@ -2163,9 +2165,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return std::get<Dependence::DepType>(Res);
   }
 
-  auto &[Dist, MaxStride, CommonStride, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<DepDistanceStrideAndSizeInfo>(Res);
-  bool HasSameSize = TypeByteSize > 0;
+  auto &[Dist, MaxStride, CommonStride, TypeByteSize, HasSameSize, AIsWrite,
+         BIsWrite] = std::get<DepDistanceStrideAndSizeInfo>(Res);
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getDataLayout();
@@ -2191,7 +2192,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
     if (ConstDist > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(ConstDist, *CommonStride, TypeByteSize)) {
+        areStridedAccessesIndependent(ConstDist, *CommonStride,
+                                      TypeByteSize.first)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
@@ -2205,13 +2207,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
-        return Dependence::Forward;
-      }
-      LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
-                           "different type sizes\n");
-      return Dependence::Unknown;
+      // Write to the same location with the same size.
+      assert(HasSameSize && "Accesses must have the same size");
+      return Dependence::Forward;
     }
 
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
@@ -2229,7 +2227,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                                               : Dependence::Unknown;
       }
       if (!HasSameSize ||
-          couldPreventStoreLoadForward(ConstDist, TypeByteSize)) {
+          couldPreventStoreLoadForward(ConstDist, TypeByteSize.first)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2295,7 +2293,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // We know that Dist is positive, but it may not be constant. Use the signed
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
-  uint64_t MinDistanceNeeded = MaxStride * (MinNumIter - 1) + TypeByteSize;
+  uint64_t MinDistanceNeeded =
+      MaxStride * (MinNumIter - 1) + TypeByteSize.first;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
     if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
@@ -2323,14 +2322,15 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
-      couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize.first,
+                                   *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
   uint64_t MaxVF = MinDepDistBytes / MaxStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
 
-  uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+  uint64_t MaxVFInBits = MaxVF * TypeByteSize.first * 8;
   if (!ConstDist && MaxVFInBits < MaxTargetVectorWidthInBits) {
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for

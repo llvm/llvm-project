@@ -270,7 +270,7 @@ add_entrypoint_object(
   HDRS
     ../dsqrtl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.math.dsqrtl
 )
 
 add_entrypoint_object(
@@ -973,7 +973,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-    roundevenbf16
+  roundevenbf16
   SRCS
     roundevenbf16.cpp
   HDRS
@@ -986,6 +986,17 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
+)
+
+add_entrypoint_object(
+  rsqrtf16
+  SRCS
+    rsqrtf16.cpp
+  HDRS
+    ../rsqrtf16.h
+  DEPENDS
+    libc.src.__support.math.rsqrtf16
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -3255,7 +3266,21 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.sqrt
-  )
+)
+
+add_entrypoint_object(
+  sqrtbf16
+  SRCS
+    sqrtbf16.cpp
+  HDRS
+    ../sqrtbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
 
 add_entrypoint_object(
   remquof

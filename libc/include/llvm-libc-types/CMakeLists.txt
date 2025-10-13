@@ -150,9 +150,15 @@ add_header(
   HDR
     cfloat128.h
   DEPENDS
-    libc.include.llvm-libc-macros.float_macros
+    libc.include.llvm-libc-macros.cfloat128_macros
 )
-add_header(cfloat16 HDR cfloat16.h)
+add_header(
+  cfloat16
+  HDR
+    cfloat16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.cfloat16_macros
+)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(

@@ -5,11 +5,7 @@
 
 /// This is a version of test/Sema/const-eval.c with the
 /// tests commented out that the new constant expression interpreter does
-/// not support yet. They are all marked with the NEW_INTERP define:
-///
-///   - builtin_constant_p
-///   - unions
-
+/// not support yet. They are all marked with the NEW_INTERP define.
 
 #define EVAL_EXPR(testno, expr) enum { test##testno = (expr) }; struct check_positive##testno { int a[test##testno]; };
 int x;
@@ -52,9 +48,7 @@ struct s {
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
 
-#ifndef NEW_INTERP
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));
-#endif
 
 EVAL_EXPR(21, (__imag__ 2i) == 2 ? 1 : -1);
 
@@ -112,11 +106,9 @@ int intLvalue[*(int*)((long)&n ?: 1)] = { 1, 2 }; // both-error {{variable lengt
 union u { int a; char b[4]; };
 char c = ((union u)(123456)).b[0]; // both-error {{not a compile-time constant}}
 
-#ifndef NEW_INTERP
 extern const int weak_int __attribute__((weak));
 const int weak_int = 42;
 int weak_int_test = weak_int; // both-error {{not a compile-time constant}}
-#endif
 
 int literalVsNull1 = "foo" == 0;
 int literalVsNull2 = 0 == "foo";
@@ -125,10 +117,8 @@ int literalVsNull2 = 0 == "foo";
 int castViaInt[*(int*)(unsigned long)"test"]; // both-error {{variable length array}}
 
 // PR11391.
-#ifndef NEW_INTERP
 struct PR11391 { _Complex float f; } pr11391;
 EVAL_EXPR(42, __builtin_constant_p(pr11391.f = 1))
-#endif
 
 // PR12043
 float varfloat;
