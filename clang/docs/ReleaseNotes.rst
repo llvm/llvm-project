@@ -136,6 +136,7 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Return ``None`` instead of null cursors from ``Token.cursor``
 - TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
   ElaboratedTypes. The value becomes unused, and all the existing users should
   expect the former underlying type to be reported instead.
