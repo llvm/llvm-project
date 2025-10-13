@@ -43,8 +43,39 @@ static void populateOpPatterns(const LLVMTypeConverter &converter,
                                            f32ApproxFunc, f16Func);
 }
 
+struct ClampFOpConversion final
+    : public ConvertOpToLLVMPattern<math::ClampFOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  ClampFOpConversion(const LLVMTypeConverter &converter,
+                     amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<math::ClampFOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(math::ClampFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // V_MED3_F16/F32 only exists in gfx9+ artchitectures
+    if (chipset.majorVersion < 9) {
+      return rewriter.notifyMatchFailure(
+          op, ("pre-gfx9 (gfx" + std::to_string(chipset.majorVersion) +
+               "): V_MED_F16 / V_MED3_F32 not supported."));
+    }
+    rewriter.replaceOpWithNewOp<ROCDL::FMed3Op>(op, op.getType(), op.getValue(),
+                                                op.getMin(), op.getMax());
+    return success();
+  }
+  amdgpu::Chipset chipset;
+};
+
+static void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
+                                        RewritePatternSet &patterns,
+                                        amdgpu::Chipset chipset) {
+
+  patterns.add<ClampFOpConversion>(converter, chipset);
+}
+
 void mlir::populateMathToROCDLConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    amdgpu::Chipset chipset) {
   // Handled by mathToLLVM: math::AbsIOp
   // Handled by mathToLLVM: math::AbsFOp
   // Handled by mathToLLVM: math::CopySignOp
@@ -119,30 +150,9 @@ void mlir::populateMathToROCDLConversionPatterns(
   // worth creating a separate pass for it.
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__ocml_fmod_f32",
                                     "__ocml_fmod_f64", "__ocml_fmod_f16");
+
+  addChipsetDependentPatterns(converter, patterns, chipset);
 }
-
-struct ClampFOpConversion : public ConvertOpToLLVMPattern<math::ClampFOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
-  ClampFOpConversion(const LLVMTypeConverter &converter,
-                     amdgpu::Chipset chipset)
-      : ConvertOpToLLVMPattern<math::ClampFOp>(converter), chipset(chipset) {}
-
-  LogicalResult
-  matchAndRewrite(math::ClampFOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // V_MED3_F16/F32 only exists in gfx9+ artchitectures
-    if (chipset.majorVersion < 9) {
-      std::string msg =
-          ("pre-gfx9 (gfx" + std::to_string(chipset.majorVersion) +
-           "): V_MED_F16 / V_MED3_F32 not supported.");
-      return rewriter.notifyMatchFailure(op, msg);
-    }
-    rewriter.replaceOpWithNewOp<ROCDL::FMed3Op>(op, op.getType(), op.getValue(),
-                                                op.getMin(), op.getMax());
-    return success();
-  }
-  amdgpu::Chipset chipset;
-};
 
 struct ConvertMathToROCDLPass final
     : impl::ConvertMathToROCDLBase<ConvertMathToROCDLPass> {
@@ -160,8 +170,7 @@ void ConvertMathToROCDLPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
-  patterns.add<ClampFOpConversion>(converter, *maybeChipset);
-  populateMathToROCDLConversionPatterns(converter, patterns);
+  populateMathToROCDLConversionPatterns(converter, patterns, *maybeChipset);
   ConversionTarget target(getContext());
   target
       .addLegalDialect<BuiltinDialect, func::FuncDialect, vector::VectorDialect,
