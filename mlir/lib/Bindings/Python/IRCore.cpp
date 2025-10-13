@@ -2730,8 +2730,7 @@ public:
         operation->get(), toMlirStringRef(name)));
   }
 
-  void
-  forEachAttr(const std::function<void(MlirStringRef, MlirAttribute)> &fn) {
+  void forEachAttr(llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
     intptr_t n = mlirOperationGetNumAttributes(operation->get());
     for (intptr_t i = 0; i < n; ++i) {
       MlirNamedAttribute na = mlirOperationGetAttribute(operation->get(), i);
