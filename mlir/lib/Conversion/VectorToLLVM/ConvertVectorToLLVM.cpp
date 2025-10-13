@@ -1723,11 +1723,12 @@ struct VectorBroadcastScalarToLowRankLowering
       return success();
     }
 
-    // For 1-d vector, we additionally do a `vectorshuffle` if vector width > 1.
     auto v =
         LLVM::InsertElementOp::create(rewriter, broadcast.getLoc(), vectorType,
                                       poison, adaptor.getSource(), zero);
 
+    // For 1-d vector, if vector width > 1, we additionally do a
+    // `vector shuffle`
     int64_t width = cast<VectorType>(broadcast.getType()).getDimSize(0);
     if (width == 1) {
       rewriter.replaceOp(broadcast, v);
