@@ -161,6 +161,8 @@ inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
 
 LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
 
+LLVM_ABI void printXSfmmVType(unsigned VType, raw_ostream &OS);
+
 LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 
 LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL,
