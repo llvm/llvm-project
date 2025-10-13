@@ -3627,10 +3627,10 @@ let TargetPrefix = "aarch64" in {
   }
 
   //
-  // Multi-vector floating point min/max number
+  // Multi-vector floating point min/max number, scale, and multiply
   //
 
-  foreach instr = ["fmaxnm", "fminnm"] in {
+  foreach instr = ["fmaxnm", "fminnm", "fscale", "fmul"] in {
     def int_aarch64_sve_ # instr # _single_x2 : SVE2_VG2_Multi_Single_Intrinsic;
     def int_aarch64_sve_ # instr # _single_x4 : SVE2_VG4_Multi_Single_Intrinsic;
 
