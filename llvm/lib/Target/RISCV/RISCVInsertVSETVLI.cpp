@@ -1899,25 +1899,6 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   }
 }
 
-static void shrinkInterval(MachineOperand &MO, LiveIntervals *LIS,
-                           const TargetInstrInfo *TII) {
-  Register Reg = MO.getReg();
-  MO.setReg(RISCV::NoRegister);
-  MO.setIsKill(false);
-
-  if (!LIS)
-    return;
-
-  LiveInterval &LI = LIS->getInterval(Reg);
-
-  // Erase the AVL operand from the instruction.
-  SmallVector<MachineInstr *> DeadMIs;
-  LIS->shrinkToUses(&LI, &DeadMIs);
-  // TODO: Enable this once needVSETVLIPHI is supported.
-  // SmallVector<LiveInterval *> SplitLIs;
-  // LIS->splitSeparateComponents(LI, SplitLIs);
-}
-
 bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                                        TKTMMode Mode) const {
 
@@ -1960,10 +1941,19 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                      .addImm(Log2_32(CurrInfo.getTWiden()) + 1);
 
     Changed = true;
-    if (LIS)
+    if (LIS) {
       LIS->InsertMachineInstrInMaps(*TmpMI);
+      LiveInterval &LI = LIS->getInterval(Op.getReg());
 
-    shrinkInterval(Op, LIS, TII);
+      // Erase the AVL operand from the instruction.
+      LIS->shrinkToUses(&LI);
+      // TODO: Enable this once needVSETVLIPHI is supported.
+      // SmallVector<LiveInterval *> SplitLIs;
+      // LIS->splitSeparateComponents(LI, SplitLIs);
+    }
+
+    Op.setReg(RISCV::NoRegister);
+    Op.setIsKill(false);
   }
   return Changed;
 }
