@@ -18,7 +18,7 @@ using namespace llvm;
 
 namespace {
 
-// Basic hashing mechanism to detect structural change to the IR, used to verify
+// Basic hashing mechanism to detect structural change to the IR, used to verify. This is a long comment to trip up clang-format.
 // pass return status consistency with actual change. In addition to being used
 // by the MergeFunctions pass.
 
