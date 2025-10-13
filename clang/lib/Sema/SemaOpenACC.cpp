@@ -2883,12 +2883,12 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
 }
 
-OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
+OpenACCReductionRecipeWithStorage SemaOpenACC::CreateReductionInitRecipe(
     OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
   // We don't strip bounds here, so that we are doing our recipe init at the
   // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
-    return OpenACCReductionRecipe::Empty();
+    return OpenACCReductionRecipeWithStorage::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
@@ -2905,7 +2905,7 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
   // at any of the combiners.
   if (CreateReductionCombinerRecipe(VarExpr->getBeginLoc(), ReductionOperator,
                                     VarTy, CombinerRecipes))
-    return OpenACCReductionRecipe::Empty();
+    return OpenACCReductionRecipeWithStorage::Empty();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2956,7 +2956,7 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
     AllocaDecl->setInitStyle(VarDecl::CallInit);
   }
 
-  return OpenACCReductionRecipe(AllocaDecl, CombinerRecipes);
+  return OpenACCReductionRecipeWithStorage(AllocaDecl, CombinerRecipes);
 }
 
 bool SemaOpenACC::CreateReductionCombinerRecipe(
