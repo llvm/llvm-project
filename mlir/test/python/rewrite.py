@@ -17,6 +17,7 @@ def run(f):
 def testRewritePattern():
     def to_muli(op, rewriter):
         with rewriter.ip:
+            assert isinstance(op, arith.AddIOp)
             new_op = arith.muli(op.lhs, op.rhs, loc=op.location)
         rewriter.replace_op(op, new_op.owner)
 
