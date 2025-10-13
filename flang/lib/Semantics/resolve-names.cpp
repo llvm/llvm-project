@@ -3627,6 +3627,17 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
       }
     }
   }
+  // Go through the list of COMMON block symbols in the module scope and add
+  // their USE association to the current scope's COMMON blocks.
+  for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
+    if (auto *localCB{currScope().FindCommonBlockInScopes(name)}; !localCB) {
+      // Make a symbol, but don't add it to the Scope, since it needs to
+      // be added to the COMMON blocks
+      localCB = &currScope().MakeSymbol(
+          name, symbol->attrs(), UseDetails{name, symbol->GetUltimate()});
+      currScope().AddCommonBlock(name, *localCB);
+    }
+  }
   useModuleScope_ = nullptr;
 }
 
@@ -7284,6 +7295,10 @@ void DeclarationVisitor::CheckCommonBlocks() {
   // check for empty common blocks
   for (const auto &pair : currScope().commonBlocks()) {
     const auto &symbol{*pair.second};
+    if (!pair.second->has<CommonBlockDetails>()) {
+      // Skip USE associated COMMON blocks
+      continue;
+    }
     if (symbol.get<CommonBlockDetails>().objects().empty() &&
         symbol.attrs().test(Attr::BIND_C)) {
       Say(symbol.name(),

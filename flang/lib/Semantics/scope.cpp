@@ -144,9 +144,8 @@ void Scope::add_crayPointer(const SourceName &name, Symbol &pointer) {
 }
 
 Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
-  const auto it{commonBlocks_.find(name)};
-  if (it != commonBlocks_.end()) {
-    return *it->second;
+  if (auto *cb{FindCB(name)}) {
+    return *cb;
   } else {
     Symbol &symbol{MakeSymbol(
         name, Attrs{}, CommonBlockDetails{name.empty() ? location : name})};
@@ -191,6 +190,11 @@ Scope *Scope::FindSubmodule(const SourceName &name) const {
     return &*it->second;
   }
 }
+
+bool Scope::AddCommonBlock(const SourceName &name, Symbol &cbSymbol) {
+  return commonBlocks_.emplace(name, cbSymbol).second;
+}
+
 bool Scope::AddSubmodule(const SourceName &name, Scope &submodule) {
   return submodules_.emplace(name, submodule).second;
 }

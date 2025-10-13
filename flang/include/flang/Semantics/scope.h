@@ -189,6 +189,7 @@ public:
   mapType &commonBlocks() { return commonBlocks_; }
   const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(SourceName, SourceName location);
+  bool AddCommonBlock(const SourceName &name, Symbol &cbSymbol);
 
   /// Find COMMON block in the current scope
   Symbol *FindCB(const SourceName &name) const {
