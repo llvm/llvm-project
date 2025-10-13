@@ -251,9 +251,34 @@
 #if __has_embed("") // expected-error {{empty filename}}
 #endif
 
-// expected-error@+4 {{missing ')' after '__has_embed'}} \
-   expected-error@+4 {{expected value in expression}} \
-   expected-error@+4 {{unterminated conditional directive}} \
-   expected-note@+4 {{to match this '('}}
+// expected-error@+9 {{unterminated conditional directive}}
+// expected-error@+13 {{unterminated conditional directive}}
+// expected-error@+17 {{unterminated conditional directive}}
+// expected-error@+21 {{unterminated conditional directive}}
+// expected-error@+25 {{unterminated conditional directive}}
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed (__FILE__  foo limit(1)
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed (__FILE__  foo
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed ("a" foo()
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed ("a" bar() foo
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
 #if __has_embed (__FILE__ limit(1) foo
 int a = __has_embed (__FILE__);
