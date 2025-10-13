@@ -1248,6 +1248,7 @@ def to_muli(op, rewriter):
 
 patterns = RewritePatternSet()
 patterns.add(arith.AddIOp, to_muli)  # Rewrite arith.addi into arith.muli
+patterns.add(...)
 frozen = patterns.freeze()
 
 module = ...
