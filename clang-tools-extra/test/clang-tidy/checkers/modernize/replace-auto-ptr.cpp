@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-replace-auto-ptr %t -- -- -I %S/Inputs/replace-auto-ptr
+// RUN: %check_clang_tidy %s modernize-replace-auto-ptr %t -- -- -I %S/Inputs/replace-auto-ptr
 
 // CHECK-FIXES: #include <utility>
 
@@ -15,7 +15,7 @@ std::auto_ptr<Derived> create_derived_ptr();
 // Test function return values (declaration)
 std::auto_ptr<char> f_5();
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: auto_ptr is deprecated
-// CHECK-FIXES: std::unique_ptr<char> f_5()
+// CHECK-FIXES: std::unique_ptr<char> f_5();
 
 
 // Test function parameters.

@@ -230,6 +230,10 @@ public:
   /// Return a new range representing the possible values resulting
   /// from a subtraction of a value in this range and a value in \p Other.
   LLVM_ABI ConstantFPRange sub(const ConstantFPRange &Other) const;
+
+  /// Flush denormal values to zero according to the specified mode.
+  /// For dynamic mode, we return the union of all possible results.
+  LLVM_ABI void flushDenormals(DenormalMode::DenormalModeKind Mode);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++20 %s modernize-use-integer-sign-comparison %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-integer-sign-comparison %t
 
 // CHECK-FIXES: #include <utility>
 
@@ -91,7 +91,8 @@ int AllComparisons() {
     if (static_cast<unsigned int>(uArray[2]) < static_cast<int>(sArray[2]))
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_less(uArray[2],sArray[2]))
+// CHECK-FIXES: if (std::cmp_less(uArray[2],sArray[2])))
+// FIXME: There should only be 2 closing braces. The fix-it inserts an unbalanced one.
 
     if ((unsigned int)uArray[3] < (int)sArray[3])
         return 0;

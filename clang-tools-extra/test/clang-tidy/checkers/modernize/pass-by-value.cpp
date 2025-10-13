@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-pass-by-value %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s modernize-pass-by-value %t -- -- -fno-delayed-template-parsing
 
 namespace {
 // POD types are trivially move constructible.
@@ -92,7 +92,7 @@ struct H {
 using namespace ns_H;
 H::H(const HMovable &M) : M(M) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: pass by value and use std::move
-// CHECK-FIXES: H(HMovable M) : M(std::move(M)) {}
+// CHECK-FIXES: H::H(HMovable M) : M(std::move(M)) {}
 
 // Try messing up with macros.
 #define MOVABLE_PARAM(Name) const Movable & Name

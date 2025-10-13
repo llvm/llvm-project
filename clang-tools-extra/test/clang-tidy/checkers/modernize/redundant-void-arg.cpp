@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-redundant-void-arg %t
+// RUN: %check_clang_tidy %s modernize-redundant-void-arg %t
 
 #define NULL 0
 
@@ -452,22 +452,22 @@ struct DefinitionWithNoBody {
 #define BODY {}
 #define LAMBDA1 [](void){}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant void argument list in lambda expression [modernize-redundant-void-arg]
-// CHECK-FIXES: LAMBDA1 [](){}
+// CHECK-FIXES: #define LAMBDA1 [](){}
 
 #define LAMBDA2 [](void)BODY
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant void argument list in lambda expression [modernize-redundant-void-arg]
-// CHECK-FIXES: LAMBDA2 []()BODY
+// CHECK-FIXES: #define LAMBDA2 []()BODY
 
 #define LAMBDA3(captures, args, body) captures args body
 #define WRAP(...) __VA_ARGS__
 
 #define LAMBDA4 (void)LAMBDA3([],(void),BODY)
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: redundant void argument list in lambda expression [modernize-redundant-void-arg]
-// CHECK-FIXES: LAMBDA4 (void)LAMBDA3([],(),BODY)
+// CHECK-FIXES: #define LAMBDA4 (void)LAMBDA3([],(),BODY)
 
 #define LAMBDA5 []() -> void (*)(void) {return BODY;}
 // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: redundant void argument list in lambda expression [modernize-redundant-void-arg]
-// CHECK-FIXES: LAMBDA5 []() -> void (*)() {return BODY;}
+// CHECK-FIXES: #define LAMBDA5 []() -> void (*)() {return BODY;}
 void lambda_expression_with_macro_test(){
   (void)LAMBDA1;
   (void)LAMBDA2;

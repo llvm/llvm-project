@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t
 // RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
@@ -490,14 +490,14 @@ int implicitConversionReturnInt()
 {
     return true;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'bool' -> 'int'
-    // CHECK-FIXES: return 1
+    // CHECK-FIXES: return 1;
 }
 
 int implicitConversionReturnIntWithParens()
 {
     return (true);
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'bool' -> 'int'
-    // CHECK-FIXES: return 1
+    // CHECK-FIXES: return 1;
 }
 
 
@@ -505,14 +505,14 @@ bool implicitConversionReturnBool()
 {
     return 1;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
-    // CHECK-FIXES: return true
+    // CHECK-FIXES: return true;
 }
 
 bool implicitConversionReturnBoolWithParens()
 {
     return (1);
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
-    // CHECK-FIXES: return true
+    // CHECK-FIXES: return true;
 }
 
 
