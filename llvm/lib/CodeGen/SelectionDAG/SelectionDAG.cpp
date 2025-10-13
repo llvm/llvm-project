@@ -5786,7 +5786,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FCOPYSIGN:
   case ISD::FMA:
   case ISD::FMAD:
-  case ISD::FMULADD:
   case ISD::FP_EXTEND:
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
@@ -5905,7 +5904,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
   case ISD::FCOSH:
   case ISD::FTANH:
   case ISD::FMA:
-  case ISD::FMULADD:
   case ISD::FMAD: {
     if (SNaN)
       return true;
@@ -7233,7 +7231,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   }
 
   // Handle fma/fmad special cases.
-  if (Opcode == ISD::FMA || Opcode == ISD::FMAD || Opcode == ISD::FMULADD) {
+  if (Opcode == ISD::FMA || Opcode == ISD::FMAD) {
     assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
     assert(Ops[0].getValueType() == VT && Ops[1].getValueType() == VT &&
            Ops[2].getValueType() == VT && "FMA types must match!");
@@ -7244,7 +7242,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       APFloat V1 = C1->getValueAPF();
       const APFloat &V2 = C2->getValueAPF();
       const APFloat &V3 = C3->getValueAPF();
-      if (Opcode == ISD::FMAD || Opcode == ISD::FMULADD) {
+      if (Opcode == ISD::FMAD) {
         V1.multiply(V2, APFloat::rmNearestTiesToEven);
         V1.add(V3, APFloat::rmNearestTiesToEven);
       } else
