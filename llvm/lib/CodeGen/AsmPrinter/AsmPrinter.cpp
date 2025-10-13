@@ -1533,8 +1533,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
            "PGOAnalysisMap only supports version 2 or later");
 
     const BasicBlockSectionsProfileReader *BBSPR = nullptr;
-    if (auto *BBSPRPass =
-            getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
+    if (auto *BBSPRPass = getAnalysisIfAvailable<
+            BasicBlockSectionsProfileReaderWrapperPass>())
       BBSPR = &BBSPRPass->getBBSPR();
 
     const CFGProfile *FuncCFGProfile = nullptr;
@@ -1571,9 +1571,10 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             OutStreamer->AddComment("successor BB ID");
             OutStreamer->emitULEB128IntValue(SuccMBB->getBBID()->BaseID);
             // Emit the numerator of the probability.
-            OutStreamer->AddComment("successor branch probability (from BBSPR)");
-            OutStreamer->emitULEB128IntValue(
-                FuncCFGProfile->getEdgeCount(*MBB.getBBID(), *SuccMBB->getBBID()));
+            OutStreamer->AddComment(
+                "successor branch probability (from BBSPR)");
+            OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
+                *MBB.getBBID(), *SuccMBB->getBBID()));
           }
         }
       }
@@ -1584,9 +1585,10 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
               ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
               : nullptr;
       const MachineBranchProbabilityInfo *MBPI =
-          Features.BrProb ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>()
-                                 .getMBPI()
-                          : nullptr;
+          Features.BrProb
+              ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>()
+                     .getMBPI()
+              : nullptr;
 
       if (Features.BBFreq || Features.BrProb) {
         for (const MachineBasicBlock &MBB : MF) {
