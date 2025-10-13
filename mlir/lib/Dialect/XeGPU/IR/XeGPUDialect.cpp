@@ -776,7 +776,7 @@ SmallVector<OpFoldResult> getBlockedOffsets(OpBuilder &builder, Location loc,
 }
 
 // Get strides as vector of integer for MemDesc.
-SmallVector<int64_t> MemDescType::getStrides() {
+SmallVector<int64_t> MemDescType::getStrideShape() {
 
   SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
 
@@ -786,7 +786,7 @@ SmallVector<int64_t> MemDescType::getStrides() {
     strides.push_back(cast<IntegerAttr>(attr).getInt());
   }
 
-  SmallVector<int64_t> innerBlkShape = getBlockSize();
+  SmallVector<int64_t> innerBlkShape = getBlockShape();
 
   // get perm from FCD to LCD
   // perm[i] = the dim with i-th smallest stride
@@ -837,8 +837,8 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
                                     ArrayRef<OpFoldResult> offsets) {
 
   SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
-  SmallVector<int64_t> blockShape = getBlockSize();
-  SmallVector<int64_t> strides = getStrides();
+  SmallVector<int64_t> blockShape = getBlockShape();
+  SmallVector<int64_t> strides = getStrideShape();
 
   // blockshape equal to matrixshape means no blocking
   if (llvm::equal(blockShape, matrixShape)) {

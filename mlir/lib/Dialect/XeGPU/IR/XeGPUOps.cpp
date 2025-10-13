@@ -201,10 +201,10 @@ IsValidStoreMatrixParams(VectorType dataTy, MemDescType mdescTy,
       return emitError() << "data shape must not exceed mem_desc shape.";
   } else if (dataShape.size() == 1) {
 
-    SmallVector<int64_t> blockSize = mdescTy.getBlockSize();
+    SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
     // if the subgroup_block_io attribute is set,  mdescTy must have block
     // attribute
-    if (subgroup_block_io && !blockSize.size())
+    if (subgroup_block_io && !blockShape.size())
       return emitError() << "mem_desc must have block attribute when "
                             "subgroup_block_io is set.";
     // if the subgroup_block_io attribute is set, the memdesc should be row

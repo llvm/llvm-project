@@ -242,13 +242,21 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
       if (layout && layout.hasAttr("stride")) {
         return layout.getStrides();
       }
-
       // derive and return default strides
       SmallVector<int64_t> defaultStrides;
       llvm::append_range(defaultStrides, getShape().drop_front());
       llvm::append_values(defaultStrides, 1);
       Builder builder(getContext());
       return builder.getI64ArrayAttr(defaultStrides);
+    }
+
+    ArrayAttr getBlockAttr() {
+      auto layout = getMemLayout();
+      if (layout && layout.hasAttr("block")) {
+        return layout.getBlockAttr();
+      }
+      Builder builder(getContext());
+      return builder.getI64ArrayAttr({});
     }
 
     /// Heuristic to determine if the MemDesc uses column-major layout,
@@ -261,16 +269,14 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
     // get the Blocking shape for a MemDescType, Which is represented
     // as an attribute in MemDescType. By default it is the shape
     // of the mdescTy
-    SmallVector<int64_t> getBlockSize() {
+    SmallVector<int64_t> getBlockShape() {
       SmallVector<int64_t> size(getShape());
-      MemLayoutAttr layout = getMemLayout();
-      if (layout && layout.hasAttr("block")) {
-        ArrayAttr attr = layout.getBlockAttr();
+      ArrayAttr blockAttr = getBlockAttr();
+      if (!blockAttr.empty()) {
         size.clear();
-        llvm::for_each(attr, [&](Attribute elem) {
-          if (auto intElem = dyn_cast<IntegerAttr>(elem))
-            size.push_back(intElem.getInt());
-        });
+        for (auto attr : blockAttr.getValue()) {
+          size.push_back(cast<IntegerAttr>(attr).getInt());
+        }
       }
       return size;
     }
@@ -289,7 +295,7 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
     // its memory layout tuple is ([2,32,16,8],[128,256,1,16])
     // for  mem_desc<256x32xf16, @block=[8, 16]> with default @stride[32, 1]
     // its memory layout tuple is ([32,2,8,16],[256,128,16,1])
-    SmallVector<int64_t> getStrides();
+    SmallVector<int64_t> getStrideShape();
     
     /// Generates instructions to compute the linearize offset 
     //  if the memory descriptor is blocked, it returns linearize offset based on the blocked layout
