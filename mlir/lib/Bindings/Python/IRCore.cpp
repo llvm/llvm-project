@@ -2730,8 +2730,8 @@ public:
         operation->get(), toMlirStringRef(name)));
   }
 
-  template <typename F>
-  auto forEachAttr(F fn) {
+  void
+  forEachAttr(const std::function<void(MlirStringRef, MlirAttribute)> &fn) {
     intptr_t n = mlirOperationGetNumAttributes(operation->get());
     for (intptr_t i = 0; i < n; ++i) {
       MlirNamedAttribute na = mlirOperationGetAttribute(operation->get(), i);
