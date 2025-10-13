@@ -8746,9 +8746,6 @@ static SDValue getMemcpyLoadsAndStores(
 
   MachineMemOperand::Flags MMOFlags =
       isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
-  // We assume that the load/store targets are always known dereferenceable
-  // because memcpy issues the loads and stores unconditionally in any case.
-  MMOFlags |= MachineMemOperand::MODereferenceable;
   SmallVector<SDValue, 16> OutLoadChains;
   SmallVector<SDValue, 16> OutStoreChains;
   SmallVector<SDValue, 32> OutChains;
@@ -8803,7 +8800,11 @@ static SDValue getMemcpyLoadsAndStores(
       EVT NVT = TLI.getTypeToTransformTo(C, VT);
       assert(NVT.bitsGE(VT));
 
+       bool isDereferenceable =
+        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
       MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
+      if (isDereferenceable)
+        SrcMMOFlags |= MachineMemOperand::MODereferenceable;
       if (isConstant)
         SrcMMOFlags |= MachineMemOperand::MOInvariant;
 
@@ -8935,7 +8936,6 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
   MachineMemOperand::Flags MMOFlags =
       isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
-  MMOFlags |= MachineMemOperand::MODereferenceable;
   uint64_t SrcOff = 0, DstOff = 0;
   SmallVector<SDValue, 8> LoadValues;
   SmallVector<SDValue, 8> LoadChains;
@@ -8946,10 +8946,16 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     unsigned VTSize = VT.getSizeInBits() / 8;
     SDValue Value;
 
+    bool isDereferenceable =
+      SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+    MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
+    if (isDereferenceable)
+      SrcMMOFlags |= MachineMemOperand::MODereferenceable;
+
     Value = DAG.getLoad(
         VT, dl, Chain,
         DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
-        SrcPtrInfo.getWithOffset(SrcOff), *SrcAlign, MMOFlags, NewAAInfo);
+        SrcPtrInfo.getWithOffset(SrcOff), *SrcAlign, SrcMMOFlags, NewAAInfo);
     LoadValues.push_back(Value);
     LoadChains.push_back(Value.getValue(1));
     SrcOff += VTSize;
@@ -9093,15 +9099,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
         Value = getMemsetValue(Src, VT, DAG, dl);
     }
     assert(Value.getValueType() == VT && "Value with wrong type.");
-    MachineMemOperand::Flags MMOFlags =
-        isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
-    // We assume that the store targets are always known dereferenceable
-    // because memset issues the stores unconditionally in any case
-    MMOFlags |= MachineMemOperand::MODereferenceable;
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-        DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
+        DstPtrInfo.getWithOffset(DstOff), Alignment, isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone, NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VT.getSizeInBits() / 8;
     Size -= VTSize;

@@ -13,10 +13,10 @@
 define i32 @caller() {
   ; 32BIT-LABEL: name: caller
   ; 32BIT: bb.0.entry:
-  ; 32BIT-NEXT:   renamable $r3 = LWZ 28, %stack.0.vs :: (dereferenceable load (s32) from unknown-address + 4)
-  ; 32BIT-NEXT:   STW killed renamable $r3, 60, $r1 :: (dereferenceable store (s32) into unknown-address + 4, basealign 16)
-  ; 32BIT-NEXT:   renamable $r3 = LWZ 24, %stack.0.vs :: (dereferenceable load (s32) from %stack.0.vs + 24, align 8, basealign 16)
-  ; 32BIT-NEXT:   STW killed renamable $r3, 56, $r1 :: (dereferenceable store (s32), align 16)
+  ; 32BIT-NEXT:   renamable $r3 = LWZ 28, %stack.0.vs :: (load (s32) from unknown-address + 4)
+  ; 32BIT-NEXT:   STW killed renamable $r3, 60, $r1 :: (store (s32) into unknown-address + 4, basealign 16)
+  ; 32BIT-NEXT:   renamable $r3 = LWZ 24, %stack.0.vs :: (load (s32) from %stack.0.vs + 24, align 8, basealign 16)
+  ; 32BIT-NEXT:   STW killed renamable $r3, 56, $r1 :: (store (s32), align 16)
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 64, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   renamable $r10 = LWZ 20, %stack.0.vs :: (load (s32) from %stack.0.vs + 20)
   ; 32BIT-NEXT:   renamable $r9 = LWZ 16, %stack.0.vs :: (load (s32) from %stack.0.vs + 16, align 16)

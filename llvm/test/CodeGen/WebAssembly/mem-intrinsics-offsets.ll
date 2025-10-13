@@ -3,7 +3,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @call_memset(ptr dereferenceable(16)) #0 {
+define void @call_memset(ptr) #0 {
 ; CHECK-LABEL: call_memset:
 ; CHECK:         .functype call_memset (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -16,7 +16,7 @@ define void @call_memset(ptr dereferenceable(16)) #0 {
     ret void
 }
 
-define void @call_memcpy(ptr dereferenceable(16) %dst, ptr dereferenceable(16) %src) #0 {
+define void @call_memcpy(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: call_memcpy:
 ; CHECK:         .functype call_memcpy (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -30,7 +30,7 @@ define void @call_memcpy(ptr dereferenceable(16) %dst, ptr dereferenceable(16) %
 }
 
 
-define void @call_memmove(ptr dereferenceable(16) %dst, ptr dereferenceable(16) %src) #0 {
+define void @call_memmove(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: call_memmove:
 ; CHECK:         .functype call_memmove (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:

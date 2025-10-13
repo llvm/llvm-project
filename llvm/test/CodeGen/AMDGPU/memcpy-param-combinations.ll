@@ -637,14 +637,14 @@ define void @memcpy_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:8
-; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:8
+; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3] offset:23
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -690,14 +690,14 @@ define void @memcpy_p0_p4_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:8
-; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:8
+; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3] offset:23
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -743,13 +743,12 @@ define void @memcpy_p0_p4_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:15
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:15
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -761,13 +760,12 @@ define void @memcpy_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:16
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -793,13 +791,12 @@ define void @memcpy_p0_p4_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:15
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:15
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -811,13 +808,12 @@ define void @memcpy_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:16
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1682,14 +1678,14 @@ define void @memcpy_p1_p4_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:8
-; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:8
+; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off offset:23
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1732,14 +1728,14 @@ define void @memcpy_p1_p4_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:8
-; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:8
+; CHECK-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:23
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off offset:23
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1782,13 +1778,12 @@ define void @memcpy_p1_p4_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off offset:15
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:15
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:15
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 31, i1 false)
@@ -1799,13 +1794,12 @@ define void @memcpy_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off offset:16
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:16
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 32, i1 false)
@@ -1829,13 +1823,12 @@ define void @memcpy_p1_p4_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off offset:15
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:15
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:15
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 31, i1 false)
@@ -1846,13 +1839,12 @@ define void @memcpy_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off offset:16
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:16
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)

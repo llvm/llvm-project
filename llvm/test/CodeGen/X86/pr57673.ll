@@ -20,39 +20,39 @@ define void @foo() {
   ; NORMAL: bb.0.bb_entry:
   ; NORMAL-NEXT:   successors: %bb.1(0x80000000)
   ; NORMAL-NEXT: {{  $}}
-  ; NORMAL-NEXT:   [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
-  ; NORMAL-NEXT:   [[DEF1:%[0-9]+]]:gr8 = IMPLICIT_DEF
-  ; NORMAL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; NORMAL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr8 = IMPLICIT_DEF
+  ; NORMAL-NEXT:   [[COPY:%[0-9]+]]:gr8 = IMPLICIT_DEF
+ ; NORMAL-NEXT:    [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; NORMAL-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.1.i, 1, $noreg, 0, $noreg
-  ; NORMAL-NEXT:   [[DEF2:%[0-9]+]]:gr64 = IMPLICIT_DEF
+  ; NORMAL-NEXT:   [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT: bb.1.bb_8:
   ; NORMAL-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; NORMAL-NEXT: {{  $}}
-  ; NORMAL-NEXT:   TEST8rr [[DEF]], [[DEF1]], implicit-def $eflags
+  ; NORMAL-NEXT:   TEST8rr [[MOV32r0_]], [[COPY]], implicit-def $eflags
   ; NORMAL-NEXT:   JCC_1 %bb.3, 5, implicit $eflags
   ; NORMAL-NEXT:   JMP_1 %bb.2
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT: bb.2.bb_mid:
   ; NORMAL-NEXT:   successors: %bb.3(0x80000000)
   ; NORMAL-NEXT: {{  $}}
-  ; NORMAL-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (dereferenceable load (s128) from %ir.i4, align 8)
-  ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (dereferenceable store (s128) into `ptr null`, align 8)
-  ; NORMAL-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i,  debug-location !8
-  ; NORMAL-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (dereferenceable load (s128) from %ir.i6, align 8)
-  ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (dereferenceable store (s128) into `ptr null`, align 8)
+  ; NORMAL-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
+  ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 8)
+  ; NORMAL-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !8
+  ; NORMAL-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
+  ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 8)
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT: bb.3.bb_last:
   ; NORMAL-NEXT:   successors: %bb.1(0x80000000)
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; NORMAL-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32r0_]], %subreg.sub_32bit
+  ; NORMAL-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32r0_1]], %subreg.sub_32bit
   ; NORMAL-NEXT:   $rdi = COPY [[SUBREG_TO_REG]]
   ; NORMAL-NEXT:   $rsi = COPY [[SUBREG_TO_REG]]
   ; NORMAL-NEXT:   $rdx = COPY [[SUBREG_TO_REG]]
-  ; NORMAL-NEXT:   $ecx = COPY [[MOV32r0_]]
+  ; NORMAL-NEXT:   $ecx = COPY [[MOV32r0_1]]
   ; NORMAL-NEXT:   $r8 = COPY [[LEA64r]]
-  ; NORMAL-NEXT:   CALL64r [[DEF2]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $ecx, implicit $r8, implicit-def $rsp, implicit-def $ssp
+  ; NORMAL-NEXT:   CALL64r [[DEF]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $ecx, implicit $r8, implicit-def $rsp, implicit-def $ssp
   ; NORMAL-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; NORMAL-NEXT:   JMP_1 %bb.1
   ;
@@ -60,39 +60,39 @@ define void @foo() {
   ; INSTRREF: bb.0.bb_entry:
   ; INSTRREF-NEXT:   successors: %bb.1(0x80000000)
   ; INSTRREF-NEXT: {{  $}}
-  ; INSTRREF-NEXT:   [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
-  ; INSTRREF-NEXT:   [[DEF1:%[0-9]+]]:gr8 = IMPLICIT_DEF
-  ; INSTRREF-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; INSTRREF-NEXT:   [[MOV32r0_:%[0-9]+]]:gr8 = IMPLICIT_DEF
+  ; INSTRREF-NEXT:   [[COPY:%[0-9]+]]:gr8 = IMPLICIT_DEF
+  ; INSTRREF-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; INSTRREF-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.1.i, 1, $noreg, 0, $noreg
-  ; INSTRREF-NEXT:   [[DEF2:%[0-9]+]]:gr64 = IMPLICIT_DEF
+  ; INSTRREF-NEXT:   [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT: bb.1.bb_8:
   ; INSTRREF-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; INSTRREF-NEXT: {{  $}}
-  ; INSTRREF-NEXT:   TEST8rr [[DEF]], [[DEF1]], implicit-def $eflags
+  ; INSTRREF-NEXT:   TEST8rr [[MOV32r0_]], [[COPY]], implicit-def $eflags
   ; INSTRREF-NEXT:   JCC_1 %bb.3, 5, implicit $eflags
   ; INSTRREF-NEXT:   JMP_1 %bb.2
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT: bb.2.bb_mid:
   ; INSTRREF-NEXT:   successors: %bb.3(0x80000000)
   ; INSTRREF-NEXT: {{  $}}
-  ; INSTRREF-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (dereferenceable load (s128) from %ir.i4, align 8)
-  ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (dereferenceable store (s128) into `ptr null`, align 8)
-  ; INSTRREF-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i,  debug-location !8
-  ; INSTRREF-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (dereferenceable load (s128) from %ir.i6, align 8)
-  ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (dereferenceable store (s128) into `ptr null`, align 8)
+  ; INSTRREF-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
+  ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 8)
+  ; INSTRREF-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !8
+  ; INSTRREF-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
+  ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 8)
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT: bb.3.bb_last:
   ; INSTRREF-NEXT:   successors: %bb.1(0x80000000)
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; INSTRREF-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32r0_]], %subreg.sub_32bit
+  ; INSTRREF-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32r0_1]], %subreg.sub_32bit
   ; INSTRREF-NEXT:   $rdi = COPY [[SUBREG_TO_REG]]
   ; INSTRREF-NEXT:   $rsi = COPY [[SUBREG_TO_REG]]
   ; INSTRREF-NEXT:   $rdx = COPY [[SUBREG_TO_REG]]
-  ; INSTRREF-NEXT:   $ecx = COPY [[MOV32r0_]]
+  ; INSTRREF-NEXT:   $ecx = COPY [[MOV32r0_1]]
   ; INSTRREF-NEXT:   $r8 = COPY [[LEA64r]]
-  ; INSTRREF-NEXT:   CALL64r [[DEF2]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $ecx, implicit $r8, implicit-def $rsp, implicit-def $ssp
+  ; INSTRREF-NEXT:   CALL64r [[DEF]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $ecx, implicit $r8, implicit-def $rsp, implicit-def $ssp
   ; INSTRREF-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; INSTRREF-NEXT:   JMP_1 %bb.1
 bb_entry:
