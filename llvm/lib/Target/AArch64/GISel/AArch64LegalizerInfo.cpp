@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -817,14 +818,31 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
       .libcallFor({{s16, s128}, {s32, s128}, {s64, s128}})
-      .clampNumElements(0, v4s16, v4s16)
-      .clampNumElements(0, v2s32, v2s32)
+      .moreElementsToNextPow2(1)
+      .customIf([](const LegalityQuery &Q) {
+        LLT DstTy = Q.Types[0];
+        LLT SrcTy = Q.Types[1];
+        return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
+               SrcTy.getScalarSizeInBits() == 64 &&
+               DstTy.getScalarSizeInBits() == 16;
+      })
+      // Clamp based on input
+      .clampNumElements(1, v4s32, v4s32)
+      .clampNumElements(1, v2s64, v2s64)
       .scalarize(0);
 
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
+      .moreElementsToNextPow2(0)
+      .customIf([](const LegalityQuery &Q) {
+        LLT DstTy = Q.Types[0];
+        LLT SrcTy = Q.Types[1];
+        return SrcTy.isVector() && DstTy.isVector() &&
+               SrcTy.getScalarSizeInBits() == 16 &&
+               DstTy.getScalarSizeInBits() == 64;
+      })
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);
@@ -1464,6 +1482,12 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizeICMP(MI, MRI, MIRBuilder);
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(MI, Helper);
+  case TargetOpcode::G_FPEXT:
+    // In order to vectorise f16 to f64 properly, we need to use f32 as an
+    // intermediary
+    return legalizeViaF32(MI, MIRBuilder, MRI, TargetOpcode::G_FPEXT);
+  case TargetOpcode::G_FPTRUNC:
+    return legalizeViaF32(MI, MIRBuilder, MRI, TargetOpcode::G_FPTRUNC);
   }
 
   llvm_unreachable("expected switch to return");
@@ -2387,6 +2411,40 @@ bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
   unsigned PrfOp = (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
 
   MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeViaF32(MachineInstr &MI,
+                                          MachineIRBuilder &MIRBuilder,
+                                          MachineRegisterInfo &MRI,
+                                          unsigned Opcode) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  LLT MidTy = LLT::fixed_vector(SrcTy.getNumElements(), LLT::scalar(32));
+
+  MachineInstrBuilder Mid;
+  MachineInstrBuilder Fin;
+  MIRBuilder.setInstrAndDebugLoc(MI);
+  switch (Opcode) {
+  default:
+    return false;
+  case TargetOpcode::G_FPEXT: {
+    Mid = MIRBuilder.buildFPExt(MidTy, Src);
+    Fin = MIRBuilder.buildFPExt(DstTy, Mid.getReg(0));
+    break;
+  }
+  case TargetOpcode::G_FPTRUNC: {
+    Mid = MIRBuilder.buildFPTrunc(MidTy, Src);
+    Fin = MIRBuilder.buildFPTrunc(DstTy, Mid.getReg(0));
+    break;
+  }
+  }
+
+  MRI.replaceRegWith(Dst, Fin.getReg(0));
   MI.eraseFromParent();
   return true;
 }

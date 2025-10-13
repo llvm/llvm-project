@@ -67,6 +67,8 @@ private:
   bool legalizeDynStackAlloc(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizePrefetch(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeBitcast(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizeViaF32(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                      MachineRegisterInfo &MRI, unsigned Opcode) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.
