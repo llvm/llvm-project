@@ -651,5 +651,45 @@ func.func @_QPsub28() {
 // CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DESC]] : (!fir.ref<!fir.box<!fir.logical<8>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: fir.call @_FortranACUFDataTransferCstDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
+func.func @_QPtesti4(%arg0: !fir.ref<i32> {fir.bindc_name = "n1"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n2"}, %arg2: !fir.ref<i32> {fir.bindc_name = "n3"}, %arg3: !fir.ref<i32> {fir.bindc_name = "n4"}) {
+  %true = arith.constant true
+  %c0 = arith.constant 0 : index
+  %c2_i32 = arith.constant 2 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtesti4En1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtesti4En2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtesti4En3"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg3 dummy_scope %0 {uniq_name = "_QFtesti4En4"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5 = fir.load %1#0 : !fir.ref<i32>
+  %6 = arith.divsi %5, %c2_i32 : i32
+  %7 = fir.convert %6 : (i32) -> index
+  %8 = arith.cmpi sgt, %7, %c0 : index
+  %9 = arith.select %8, %7, %c0 : index
+  %10 = fir.load %2#0 : !fir.ref<i32>
+  %11 = arith.divsi %10, %c2_i32 : i32
+  %12 = fir.convert %11 : (i32) -> index
+  %13 = arith.cmpi sgt, %12, %c0 : index
+  %14 = arith.select %13, %12, %c0 : index
+  %15 = fir.load %3#0 : !fir.ref<i32>
+  %16 = arith.divsi %15, %c2_i32 : i32
+  %17 = fir.convert %16 : (i32) -> index
+  %18 = arith.cmpi sgt, %17, %c0 : index
+  %19 = arith.select %18, %17, %c0 : index
+  %20 = fir.load %4#0 : !fir.ref<i32>
+  %21 = arith.divsi %20, %c2_i32 : i32
+  %22 = fir.convert %21 : (i32) -> index
+  %23 = arith.cmpi sgt, %22, %c0 : index
+  %24 = arith.select %23, %22, %c0 : index
+  %25 = cuf.alloc !fir.array<?x?x?x?x!fir.logical<4>>, %9, %14, %19, %24 : index, index, index, index {bindc_name = "lma", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtesti4Elma"} -> !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>
+  %26 = fir.shape %9, %14, %19, %24 : (index, index, index, index) -> !fir.shape<4>
+  %27:2 = hlfir.declare %25(%26) {data_attr = #cuf.cuda<managed>, uniq_name = "_QFtesti4Elma"} : (!fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>, !fir.shape<4>) -> (!fir.box<!fir.array<?x?x?x?x!fir.logical<4>>>, !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>)
+  cuf.data_transfer %true to %27#1, %26 : !fir.shape<4> {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>
+  cuf.free %27#1 : !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>> {data_attr = #cuf.cuda<managed>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtesti4
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc
+
 } // end of module
 
