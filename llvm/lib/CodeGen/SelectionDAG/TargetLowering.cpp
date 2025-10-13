@@ -7462,24 +7462,20 @@ SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   // result.
   if (Mode.Input == DenormalMode::PreserveSign ||
       Mode.Input == DenormalMode::PositiveZero) {
-    // Test = X == 0.0
-    SDValue Test = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
-    // Propagate fast-math flags from fcmp.
-    Test->setFlags(Flags);
-    return Test;
+    // Test = X == 0.0, with fast-math flags from fcmp.
+    return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ, /*Chain=*/{},
+                        /*IsSignaling=*/false, Flags);
   }
 
   // Testing it with denormal inputs to avoid wrong estimate.
   //
-  // Test = fabs(X) < SmallestNormal
+  // Test = fabs(X) < SmallestNormal, with fast-math flags from fcmp.
   const fltSemantics &FltSem = VT.getFltSemantics();
   APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
   SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
   SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op, Flags);
-  SDValue Test = DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
-  // Propagate fast-math flags from fcmp.
-  Test->setFlags(Flags);
-  return Test;
+  return DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT, /*Chain=*/{},
+                      /*IsSignaling=*/false, Flags);
 }
 
 SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,

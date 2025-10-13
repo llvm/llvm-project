@@ -12708,9 +12708,8 @@ SDValue AArch64TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   EVT VT = Op.getValueType();
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
-  SDValue Test = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
-  Test->setFlags(Flags);
-  return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
+  return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ, /*Chain=*/{},
+                      /*IsSignaling=*/false, Flags);
 }
 
 SDValue
