@@ -785,7 +785,6 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   if (IsCallRef) {
     auto FnRef = CallParams.getOperand(0);
     CallParams.removeOperand(0);
-
     CallParams.addOperand(FnRef);
   }
 
@@ -1222,9 +1221,9 @@ APInt WebAssembly::encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
     if (VT == MVT::exnref) {
       return wasm::ValType::EXNREF;
     }
-    LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT
+    LLVM_DEBUG(errs() << "Unhandled type for encodeFunctionSignature: " << VT
                       << "\n");
-    llvm_unreachable("Unhandled type for llvm.wasm.ref.test.func");
+    llvm_unreachable("Unhandled type for encodeFunctionSignature");
   };
   auto NParams = Params.size();
   auto NReturns = Returns.size();
