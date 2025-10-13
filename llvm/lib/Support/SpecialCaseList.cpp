@@ -175,7 +175,7 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
                             std::string &Error) {
-  unsigned long long Version = 2;
+  unsigned long long Version = 3;
 
   StringRef Header = MB->getBuffer();
   if (Header.consume_front("#!special-case-list-v"))
@@ -237,6 +237,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     auto [It, _] = CurrentSection->Entries[Prefix].try_emplace(
         Category, UseGlobs,
         RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
+    if (It->second.RemoveDotSlash) {
+      // FIXME: On Windows remove_leading_dotslash will break escape sequences.
+      Pattern = llvm::sys::path::remove_leading_dotslash(Pattern);
+    }
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
