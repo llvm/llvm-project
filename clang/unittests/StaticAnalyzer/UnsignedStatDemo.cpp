@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -94,9 +95,9 @@ parseCSVColumnMapping(llvm::StringRef CSVContent, llvm::StringRef KeyColumn,
     return Result;
 
   // Parse data rows and extract mappings
-  for (size_t i = 1; i < Lines.size(); ++i) {
+  for (auto Line : llvm::drop_begin(Lines)) {
     llvm::SmallVector<llvm::StringRef, 32> Row;
-    Lines[i].split(Row, ',');
+    Line.split(Row, ',');
     if (Row.size() <= std::max(*KeyIdx, *ValueIdx))
       continue;
 
