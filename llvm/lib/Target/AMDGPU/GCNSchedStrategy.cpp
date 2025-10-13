@@ -1020,7 +1020,7 @@ void GCNScheduleDAGMILive::runSchedStages() {
   }
 
 #ifdef DUMP_MAX_REG_PRESSURE
-  if (PrintMaxRPRegUsageAfterScheduler)  {
+  if (PrintMaxRPRegUsageAfterScheduler) {
     dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
     dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
     LIS->dump();
