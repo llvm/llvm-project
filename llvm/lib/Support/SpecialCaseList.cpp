@@ -57,7 +57,7 @@ Error SpecialCaseList::RegexMatcher::insert(StringRef Pattern,
 
 void SpecialCaseList::RegexMatcher::preprocess(bool BySize) {
   if (BySize) {
-    llvm::sort(RegExes, [](const Reg &A, const Reg &B) {
+    llvm::stable_sort(RegExes, [](const Reg &A, const Reg &B) {
       return A.Name.size() < B.Name.size();
     });
   }
@@ -85,7 +85,7 @@ Error SpecialCaseList::GlobMatcher::insert(StringRef Pattern,
 
 void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
   if (BySize) {
-    llvm::sort(Globs, [](const Glob &A, const Glob &B) {
+    llvm::stable_sort(Globs, [](const Glob &A, const Glob &B) {
       return A.Name.size() < B.Name.size();
     });
   }
