@@ -13,8 +13,6 @@
 #ifndef LIBUNWIND_CONFIG_H
 #define LIBUNWIND_CONFIG_H
 
-#include <assert.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -221,6 +219,41 @@
       if (logDWARF())                                                          \
         fprintf(stderr, __VA_ARGS__);                                          \
     } while (0)
+#endif
+
+#define _LIBUNWIND_TRACING_COMPACT_UNWIND (0)
+#if !_LIBUNWIND_TRACING_COMPACT_UNWIND
+#define _LIBUNWIND_TRACE_COMPACT_UNWIND0(msg)
+#define _LIBUNWIND_TRACE_COMPACT_UNWIND(msg, ...)
+#else
+#define _LIBUNWIND_TRACE_COMPACT_UNWIND0(msg)                                  \
+  do {                                                                         \
+    fprintf(stderr, msg);                                                      \
+  } while (0)
+#define _LIBUNWIND_TRACE_COMPACT_UNWIND(msg, ...)                              \
+  do {                                                                         \
+    fprintf(stderr, msg, __VA_ARGS__);                                         \
+  } while (0)
+#endif
+
+#define _LIBUNWIND_TRACING_DWARF_EVAL (0)
+#if !_LIBUNWIND_TRACING_DWARF_EVAL
+#define _LIBUNWIND_TRACE_DWARF_EVAL0(msg)
+#define _LIBUNWIND_TRACE_DWARF_EVAL(msg, ...)
+#else
+#define _LIBUNWIND_TRACE_DWARF_EVAL0(msg)                                      \
+  do {                                                                         \
+    fprintf(stderr, msg);                                                      \
+  } while (0)
+#define _LIBUNWIND_TRACE_DWARF_EVAL(msg, ...)                                  \
+  do {                                                                         \
+    fprintf(stderr, msg, __VA_ARGS__);                                         \
+  } while (0)
+#endif
+
+#if !defined(NDEBUG) || !defined(_LIBUNWIND_IS_BAREMETAL) ||                   \
+    _LIBUNWIND_TRACING_COMPACT_UNWIND || _LIBUNWIND_TRACING_DWARF_EVAL
+#include <stdio.h>
 #endif
 
 #ifdef __cplusplus
