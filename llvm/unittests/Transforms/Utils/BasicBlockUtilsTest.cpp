@@ -743,5 +743,5 @@ bb0:
     SCheck.clear();
   }
   OS << printBasicBlock(nullptr);
-  EXPECT_EQ(OS.str(), "");
+  EXPECT_EQ(OS.str(), "<nullptr>");
 }
