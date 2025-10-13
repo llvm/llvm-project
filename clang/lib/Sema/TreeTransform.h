@@ -5107,12 +5107,9 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
                                                 TemplateArgument::pack_iterator>
         PackLocIterator;
 
-      TemplateArgumentListInfo *PackOutput = &Outputs;
-      TemplateArgumentListInfo New;
-
       if (TransformTemplateArguments(
               PackLocIterator(*this, In.getArgument().pack_begin()),
-              PackLocIterator(*this, In.getArgument().pack_end()), *PackOutput,
+              PackLocIterator(*this, In.getArgument().pack_end()), Outputs,
               Uneval))
         return true;
 
@@ -7220,7 +7217,10 @@ QualType TreeTransform<Derived>::TransformSubstTemplateTypeParmType(
   // that needs to be transformed. This only tends to occur with default
   // template arguments of template template parameters.
   TemporaryBase Rebase(*this, TL.getNameLoc(), DeclarationName());
-  QualType Replacement = getDerived().TransformType(T->getReplacementType());
+  QualType Replacement =
+      T->getReplacementType()->isDependentType()
+          ? getDerived().TransformType(T->getReplacementType())
+          : T->getReplacementType();
   if (Replacement.isNull())
     return QualType();
 

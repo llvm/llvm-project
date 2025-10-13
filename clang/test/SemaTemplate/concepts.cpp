@@ -1505,3 +1505,37 @@ namespace GH162770 {
   template<typename... Ts> auto comma = (..., Ts());
   auto b = comma<check<e{}>>;
 } // namespace GH162770
+
+namespace GH102353 {
+
+template <typename _Tp, typename>
+concept same_as = true;
+
+template <typename _Lhs>
+concept assignable_from = requires {
+  { 0 } -> same_as<_Lhs>;
+};
+
+template <typename _Iter>
+struct span {
+  _Iter iter;
+};
+
+template <assignable_from _Iter>
+span(_Iter) -> span<_Iter>;
+
+template <class T, T value>
+void doHQScale() {
+  int srcWidth = value; // expected-note 2{{declared here}}
+  // We shouldn't crash with VLA types, which would appear when
+  // substituting constraint expressions, as they are part of the sugars now.
+  int edgeBuf_storage[srcWidth]; // expected-warning 2{{variable length arrays}} \
+                                 // expected-note 2{{read of non-const variable 'srcWidth'}}
+  span s(edgeBuf_storage);
+}
+
+void foo() {
+  doHQScale<int, 42>(); // expected-note {{requested here}}
+}
+
+}
