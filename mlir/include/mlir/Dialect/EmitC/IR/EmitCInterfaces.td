@@ -42,7 +42,7 @@ def CExpressionInterface : OpInterface<"CExpressionInterface"> {
                        /*defaultImplementation=*/[{
         return true;
     }]>,
-       InterfaceMethod<[{
+    InterfaceMethod<[{
       Check whether operation must be inlined into all its users.
 
       By default operation is not marked as always inlined.
@@ -57,8 +57,8 @@ def CExpressionInterface : OpInterface<"CExpressionInterface"> {
       };
       ```
     }],
-                       "bool", "alwaysInline", (ins), /*methodBody=*/[{}],
-                       /*defaultImplementation=*/[{
+    "bool", "alwaysInline", (ins), /*methodBody=*/[{}],
+    /*defaultImplementation=*/[{
         return false;
     }]>,
   ];
