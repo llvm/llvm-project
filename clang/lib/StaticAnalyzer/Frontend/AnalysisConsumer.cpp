@@ -284,7 +284,7 @@ public:
       checkerMgr->runCheckersOnASTDecl(D, *Mgr, *RecVisitorBR);
       if (SyntaxCheckTimer)
         SyntaxCheckTimer->stopTimer();
-      if (ShouldClearTimersToPreventDisplayingThem) {
+      if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
         AnalyzerTimers->clear();
       }
     }
@@ -580,7 +580,7 @@ void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
   if (SyntaxCheckTimer)
     SyntaxCheckTimer->stopTimer();
-  if (ShouldClearTimersToPreventDisplayingThem) {
+  if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
     AnalyzerTimers->clear();
   }
 
@@ -759,7 +759,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
       CheckerEndTime -= CheckerStartTime;
       DisplayTime(CheckerEndTime);
-      if (ShouldClearTimersToPreventDisplayingThem) {
+      if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
         AnalyzerTimers->clear();
       }
     }
@@ -808,7 +808,7 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     PathRunningTime.set(static_cast<unsigned>(
         std::lround(ExprEngineEndTime.getWallTime() * 1000)));
     DisplayTime(ExprEngineEndTime);
-    if (ShouldClearTimersToPreventDisplayingThem) {
+    if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
       AnalyzerTimers->clear();
     }
   }
@@ -821,7 +821,7 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     Eng.ViewGraph(Mgr->options.TrimGraph);
 
   flushReports(BugReporterTimer.get(), Eng.getBugReporter());
-  if (ShouldClearTimersToPreventDisplayingThem) {
+  if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
     AnalyzerTimers->clear();
   }
 }
