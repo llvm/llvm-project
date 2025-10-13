@@ -126,6 +126,7 @@ public:
   std::unique_ptr<llvm::Timer> SyntaxCheckTimer;
   std::unique_ptr<llvm::Timer> ExprEngineTimer;
   std::unique_ptr<llvm::Timer> BugReporterTimer;
+  bool ShouldClearTimersToPreventDisplayingThem;
 
   /// The information about analyzed functions shared throughout the
   /// translation unit.
@@ -154,6 +155,12 @@ public:
           "bugreporter", "Path-sensitive report post-processing time",
           *AnalyzerTimers);
     }
+
+    // Avoid displaying the timers created above in case we only want to record
+    // per-entry-point stats.
+    ShouldClearTimersToPreventDisplayingThem = !Opts.AnalyzerDisplayProgress &&
+                                               !Opts.PrintStats &&
+                                               !Opts.ShouldSerializeStats;
 
     if (Opts.PrintStats || Opts.ShouldSerializeStats) {
       llvm::EnableStatistics(/* DoPrintOnExit= */ false);
@@ -277,6 +284,9 @@ public:
       checkerMgr->runCheckersOnASTDecl(D, *Mgr, *RecVisitorBR);
       if (SyntaxCheckTimer)
         SyntaxCheckTimer->stopTimer();
+      if (ShouldClearTimersToPreventDisplayingThem) {
+        AnalyzerTimers->clear();
+      }
     }
     return true;
   }
@@ -570,6 +580,9 @@ void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
   if (SyntaxCheckTimer)
     SyntaxCheckTimer->stopTimer();
+  if (ShouldClearTimersToPreventDisplayingThem) {
+    AnalyzerTimers->clear();
+  }
 
   // Run the AST-only checks using the order in which functions are defined.
   // If inlining is not turned on, use the simplest function order for path
@@ -746,6 +759,9 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
       CheckerEndTime -= CheckerStartTime;
       DisplayTime(CheckerEndTime);
+      if (ShouldClearTimersToPreventDisplayingThem) {
+        AnalyzerTimers->clear();
+      }
     }
   }
 
@@ -792,6 +808,9 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     PathRunningTime.set(static_cast<unsigned>(
         std::lround(ExprEngineEndTime.getWallTime() * 1000)));
     DisplayTime(ExprEngineEndTime);
+    if (ShouldClearTimersToPreventDisplayingThem) {
+      AnalyzerTimers->clear();
+    }
   }
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())
@@ -802,6 +821,9 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     Eng.ViewGraph(Mgr->options.TrimGraph);
 
   flushReports(BugReporterTimer.get(), Eng.getBugReporter());
+  if (ShouldClearTimersToPreventDisplayingThem) {
+    AnalyzerTimers->clear();
+  }
 }
 
 //===----------------------------------------------------------------------===//
