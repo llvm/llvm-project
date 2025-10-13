@@ -7,12 +7,12 @@
 ;
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all -pgo-analysis-map-use-propeller-cfg | FileCheck %s
 
-define void @foo() nounwind !prof !0 {
+define void @foo(i1 %cond) nounwind !prof !0 {
 entry:
   br label %bb1
 
 bb1:
-  br i1 undef, label %bb2, label %bb3, !prof !1
+  br i1 %cond, label %bb2, label %bb3, !prof !1
 
 bb2:
   br label %bb3
@@ -54,9 +54,9 @@ bb3:
 ; CHECK-NEXT:	.ascii	"\350\007"	# basic block frequency
 ; CHECK-NEXT:	.byte	0		# basic block successor count
 
-define void @bar() nounwind !prof !2 {
+define void @bar(i1 %cond) nounwind !prof !2 {
 entry:
-  br i1 undef, label %bb1, label %bb2, !prof !3
+  br i1 %cond, label %bb1, label %bb2, !prof !3
 
 bb1:
   ret void
