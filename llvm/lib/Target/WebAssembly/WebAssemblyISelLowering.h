@@ -81,8 +81,6 @@ private:
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
-  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
-                                  EVT VT) const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
