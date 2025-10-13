@@ -3316,7 +3316,6 @@ TEST_P(ImportExpr, ImportSubstNonTypeTemplateParmPackExpr) {
              typedefNameDecl(hasName("declToImport")));
 }
 
-
 TEST_P(ImportExpr, ImportCXXParenListInitExpr) {
   MatchVerifier<Decl> Verifier;
   const char *Code = R"(
@@ -3331,6 +3330,43 @@ TEST_P(ImportExpr, ImportCXXParenListInitExpr) {
   )";
   testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
              typedefNameDecl(hasName("declToImport")));
+}
+
+TEST_P(ImportExpr, ImportPseudoObjectExpr) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  namespace std {
+    struct strong_ordering {
+      int n;
+      constexpr operator int() const { return n; }
+      static const strong_ordering less, equal, greater;
+    };
+    constexpr strong_ordering strong_ordering::less{-1},
+        strong_ordering::equal{0}, strong_ordering::greater{1};
+  }
+
+  struct A {
+    std::strong_ordering operator<=>(const A&) const;
+  };
+  struct B {
+    bool operator==(const B&) const;
+    bool operator<(const B&) const;
+  };
+
+  template<typename T> struct Cmp : T {
+    std::strong_ordering operator<=>(const Cmp&) const = default;
+  };
+
+  void use(...);
+  void declToImport() {
+    use(
+      Cmp<A>() <=> Cmp<A>(),
+      Cmp<B>() <=> Cmp<B>()
+    );
+  }
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             functionDecl(hasName("declToImport")));
 }
 
 class ImportImplicitMethods : public ASTImporterOptionSpecificTestBase {
