@@ -5770,8 +5770,10 @@ def err_template_recursion_depth_exceeded : Error<
 def err_constraint_depends_on_self
     : Error<"satisfaction of constraint %0 depends on itself">,
       NoSFINAE;
-def note_template_recursion_depth : Note<
-  "use -ftemplate-depth=N to increase recursive template instantiation depth">;
+def note_template_recursion_depth
+    : Note<"use -ftemplate-depth=N to increase recursive template "
+           "instantiation depth">,
+      NoSFINAE;
 
 def err_template_instantiate_within_definition : Error<
   "%select{implicit|explicit}0 instantiation of template %1 within its"
@@ -6324,11 +6326,14 @@ def warn_internal_linkage_local_storage : Warning<
   InGroup<IgnoredAttributes>;
 
 def ext_internal_in_extern_inline : ExtWarn<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is a C2y extension">, InGroup<StaticInInline>;
 def ext_internal_in_extern_inline_quiet : Extension<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  ext_internal_in_extern_inline.Summary>, InGroup<StaticInInline>;
+def warn_c2y_compat_internal_in_extern_inline : Warning<
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 def warn_static_local_in_extern_inline : Warning<
   "non-constant static local variable in inline function may be different "
   "in different files">, InGroup<StaticLocalInInline>;
@@ -11761,6 +11766,18 @@ def note_omp_implicit_dsa : Note<
   "implicitly determined as %0">;
 def err_omp_loop_var_dsa : Error<
   "loop iteration variable in the associated loop of 'omp %1' directive may not be %0, predetermined as %2">;
+def err_omp_not_a_loop_sequence
+    : Error<"statement after '#pragma omp %0' must be a loop sequence "
+            "containing canonical loops or loop-generating constructs">;
+def err_omp_empty_loop_sequence
+    : Error<"loop sequence after '#pragma omp %0' must contain at least 1 "
+            "canonical loop or loop-generating construct">;
+def err_omp_invalid_looprange
+    : Error<"looprange clause selects loops from %1 to %2 but this exceeds the "
+            "number of loops (%3) in the loop sequence">;
+def warn_omp_redundant_fusion : Warning<"looprange clause selects a single "
+                                        "loop, resulting in redundant fusion">,
+                                InGroup<OpenMPClauses>;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
@@ -13281,6 +13298,8 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 def warn_unsafe_buffer_usage_in_container : Warning<
   "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
@@ -13646,6 +13665,11 @@ def warn_acc_var_referenced_lacks_op
               "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
+def err_acc_reduction_recipe_no_op
+    : Error<"variable of type %0 referenced in OpenACC 'reduction' clause does "
+            "not have a valid operation available">;
+def note_acc_reduction_recipe_noop_field
+    : Note<"while forming combiner for compound type %0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

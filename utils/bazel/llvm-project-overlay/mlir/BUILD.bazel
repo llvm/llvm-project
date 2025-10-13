@@ -475,6 +475,7 @@ mlir_c_api_cc_library(
         ":Pass",
         ":Support",
         ":config",
+        ":Rewrite",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -1657,6 +1658,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":InliningUtils",
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
@@ -3693,6 +3695,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],
@@ -3764,6 +3767,16 @@ cc_library(
         ":TransformUtils",
         ":XeGPUDialect",
         ":XeVMDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUuArch",
+    hdrs = glob(["include/mlir/Dialect/XeGPU/uArch/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
         "//llvm:Support",
     ],
 )
@@ -6091,6 +6104,7 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeInterface",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
@@ -6295,6 +6309,8 @@ cc_library(
         ":BytecodeOpInterface",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeInterface",
+        ":InliningUtils",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
@@ -6685,6 +6701,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":SMTIncGen",
+        ":SideEffectInterfaces",
         ":Support",
         "//llvm:Support",
     ],
@@ -7797,6 +7814,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -9432,6 +9450,7 @@ cc_binary(
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMemRefToLLVMWithTransforms",
         "//mlir/test:TestNVGPU",
+        "//mlir/test:TestOpenACC",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
@@ -9991,6 +10010,7 @@ cc_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
+        ":ArithDialect",
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
         ":BytecodeOpInterface",
@@ -11351,6 +11371,7 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":VectorUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -11625,6 +11646,7 @@ cc_library(
         ":TensorUtils",
         ":TosaDialect",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -11831,6 +11853,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/PDLExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/PDLExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":PDLDialect",
         ":PDLInterpDialect",
@@ -11945,6 +11968,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/IRDLExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IRDLExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":IRDLDialect",
         ":IRDLInterfacesIncGen",
@@ -11986,7 +12010,9 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/DebugExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformDebugExtensionOpsIncGen",
         ":TransformDialect",
@@ -12023,6 +12049,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/LoopExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":LoopLikeInterface",
         ":Rewrite",
@@ -13071,6 +13098,7 @@ cc_library(
         ":MPIOpsIncGen",
         ":MPITypesIncGen",
         ":MemRefDialect",
+        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
 )

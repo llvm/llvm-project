@@ -120,6 +120,8 @@ on support follow.
      ``H``             Assembly Support
      ``M``             Supported
      ``Q``             Assembly Support
+     ``Sdext``         Assembly Support (`See note <#riscv-debug-specification-note>`__)
+     ``Sdtrig``        Assembly Support (`See note <#riscv-debug-specification-note>`__)
      ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -132,6 +134,7 @@ on support follow.
      ``Smcdeleg``      Supported
      ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
+     ``Smctr``         Assembly Support
      ``Smdbltrp``      Supported
      ``Smepmp``        Supported
      ``Smmpm``         Supported
@@ -144,6 +147,7 @@ on support follow.
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscsrind``      Supported
+     ``Ssctr``         Assembly Support
      ``Ssdbltrp``      Supported
      ``Ssnpm``         Supported
      ``Sspm``          Supported
@@ -306,6 +310,10 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
+.. _riscv-debug-specification-note:
+
+``Sdext``, ``Sdtrig`` `The RISC-V Debug Specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0/riscv-debug-specification.pdf>`__.
+
 .. _riscv-zacas-note:
 
 ``Zacas``
@@ -326,7 +334,7 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
 ``experimental-zalasr``
-  LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
+  LLVM implements the `0.9 draft specification <https://github.com/riscv/riscv-zalasr/releases/tag/v0.9>`__.
 
 ``experimental-zibi``
   LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
@@ -336,12 +344,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zvbc32e``, ``experimental-zvkgs``
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
-
-``experimental-sdext``, ``experimental-sdtrig``
-  LLVM implements the `1.0-rc4 specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0.0-rc4/riscv-debug-specification.pdf>`__.
-
-``experimental-smctr``, ``experimental-ssctr``
-  LLVM implements the `1.0-rc3 specification <https://github.com/riscv/riscv-control-transfer-records/releases/tag/v1.0_rc3>`__.
 
 ``experimental-svukte``
   LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.

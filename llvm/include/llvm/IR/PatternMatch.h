@@ -2184,6 +2184,18 @@ inline PtrToIntSameSize_match<OpTy> m_PtrToIntSameSize(const DataLayout &DL,
   return PtrToIntSameSize_match<OpTy>(DL, Op);
 }
 
+/// Matches PtrToAddr.
+template <typename OpTy>
+inline CastOperator_match<OpTy, Instruction::PtrToAddr>
+m_PtrToAddr(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::PtrToAddr>(Op);
+}
+
+/// Matches PtrToInt or PtrToAddr.
+template <typename OpTy> inline auto m_PtrToIntOrAddr(const OpTy &Op) {
+  return m_CombineOr(m_PtrToInt(Op), m_PtrToAddr(Op));
+}
+
 /// Matches IntToPtr.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::IntToPtr>
@@ -2771,6 +2783,14 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
 m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
              const Opnd3 &Op3) {
   return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2, Op3);
+}
+
+/// Matches MaskedStore Intrinsic.
+template <typename Opnd0, typename Opnd1, typename Opnd2, typename Opnd3>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
+m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
+              const Opnd3 &Op3) {
+  return m_Intrinsic<Intrinsic::masked_store>(Op0, Op1, Op2, Op3);
 }
 
 /// Matches MaskedGather Intrinsic.

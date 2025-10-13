@@ -27,7 +27,7 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           fetch-depth: 2
       
@@ -51,14 +51,14 @@ jobs:
       # of a release cycle (x.1.0) or the last version of a release cycle, or
       # if there have been relevant clang-format backports.
       - name: Install clang-tidy
-        uses: aminya/setup-cpp@17c11551771948abc5752bbf3183482567c7caf0 # v1.1.1
+        uses: aminya/setup-cpp@a276e6e3d1db9160db5edc458e99a30d3b109949 # v1.7.1
         with:
           clang-tidy: 21.1.0
       
       - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
-          python-version: '3.12'
+          python-version: '3.13'
 
       - name: Install Python dependencies
         run: python3 -m pip install -r llvm/utils/git/requirements_linting.txt
@@ -107,7 +107,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
       
       - name: Upload results
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: workflow-args

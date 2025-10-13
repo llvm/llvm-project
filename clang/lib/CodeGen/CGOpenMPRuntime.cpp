@@ -1542,15 +1542,14 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     SourceManager &SM = CGM.getContext().getSourceManager();
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
-    llvm::sys::fs::UniqueID ID;
-    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    if (!CGM.getFileSystem()->exists(PLoc.getFilename()))
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
-    }
 
     return std::pair<std::string, uint64_t>(PLoc.getFilename(), PLoc.getLine());
   };
 
-  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack, ParentName);
+  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack,
+                                             *CGM.getFileSystem(), ParentName);
 }
 
 ConstantAddress CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
@@ -1763,8 +1762,11 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
   // access its value.
   llvm::GlobalValue *Addr = GV;
   if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    llvm::PointerType *FnPtrTy = llvm::PointerType::get(
+        CGM.getLLVMContext(),
+        CGM.getModule().getDataLayout().getProgramAddressSpace());
     Addr = new llvm::GlobalVariable(
-        CGM.getModule(), CGM.VoidPtrTy,
+        CGM.getModule(), FnPtrTy,
         /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, GV, Name,
         nullptr, llvm::GlobalValue::NotThreadLocal,
         CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
@@ -2703,7 +2705,8 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
 }
 
 llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
-                                                const Expr *Message) {
+                                                const Expr *Message,
+                                                SourceLocation Loc) {
   if (!Message)
     return llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
   return CGF.EmitScalarExpr(Message);
@@ -2713,11 +2716,13 @@ llvm::Value *
 CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
                                    const OMPMessageClause *MessageClause) {
   return emitMessageClause(
-      CGF, MessageClause ? MessageClause->getMessageString() : nullptr);
+      CGF, MessageClause ? MessageClause->getMessageString() : nullptr,
+      MessageClause->getBeginLoc());
 }
 
 llvm::Value *
-CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
+CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                    SourceLocation Loc) {
   // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
   // as if sev-level is fatal."
   return llvm::ConstantInt::get(CGM.Int32Ty,
@@ -2727,13 +2732,15 @@ CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
 llvm::Value *
 CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
   return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
-                                           : OMPC_SEVERITY_unknown);
+                                           : OMPC_SEVERITY_unknown,
+                            SeverityClause->getBeginLoc());
 }
 
 void CGOpenMPRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
   if (!CGF.HaveInsertPoint())
     return;
   llvm::SmallVector<llvm::Value *, 4> Args(
@@ -2745,8 +2752,8 @@ void CGOpenMPRuntime::emitNumThreadsClause(
   RuntimeFunction FnID = OMPRTL___kmpc_push_num_threads;
   if (Modifier == OMPC_NUMTHREADS_strict) {
     FnID = OMPRTL___kmpc_push_num_threads_strict;
-    Args.push_back(emitSeverityClause(Severity));
-    Args.push_back(emitMessageClause(CGF, Message));
+    Args.push_back(emitSeverityClause(Severity, SeverityLoc));
+    Args.push_back(emitMessageClause(CGF, Message, MessageLoc));
   }
   CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
@@ -6804,12 +6811,13 @@ public:
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
-    const MappableExprsHandler *Handler = nullptr;
+    const MappableExprsHandler &Handler;
     // Cache of previous equality comparison results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
         CachedEqualityComparisons;
 
-    AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
+    AttachPtrExprComparator(const MappableExprsHandler &H) : Handler(H) {}
+    AttachPtrExprComparator() = delete;
 
     // Return true iff LHS is "less than" RHS.
     bool operator()(const Expr *LHS, const Expr *RHS) const {
@@ -6817,15 +6825,15 @@ public:
         return false;
 
       // First, compare by complexity (depth)
-      const auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
-      const auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+      const auto ItLHS = Handler.AttachPtrComponentDepthMap.find(LHS);
+      const auto ItRHS = Handler.AttachPtrComponentDepthMap.find(RHS);
 
       std::optional<size_t> DepthLHS =
-          (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
-                                                               : std::nullopt;
+          (ItLHS != Handler.AttachPtrComponentDepthMap.end()) ? ItLHS->second
+                                                              : std::nullopt;
       std::optional<size_t> DepthRHS =
-          (ItRHS != Handler->AttachPtrComponentDepthMap.end()) ? ItRHS->second
-                                                               : std::nullopt;
+          (ItRHS != Handler.AttachPtrComponentDepthMap.end()) ? ItRHS->second
+                                                              : std::nullopt;
 
       // std::nullopt (no attach pointer) has lowest complexity
       if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
@@ -6873,8 +6881,8 @@ public:
     /// Returns true iff LHS was computed before RHS by
     /// collectAttachPtrExprInfo().
     bool wasComputedBefore(const Expr *LHS, const Expr *RHS) const {
-      const size_t &OrderLHS = Handler->AttachPtrComputationOrderMap.at(LHS);
-      const size_t &OrderRHS = Handler->AttachPtrComputationOrderMap.at(RHS);
+      const size_t &OrderLHS = Handler.AttachPtrComputationOrderMap.at(LHS);
+      const size_t &OrderRHS = Handler.AttachPtrComputationOrderMap.at(RHS);
 
       return OrderLHS < OrderRHS;
     }
@@ -6893,7 +6901,7 @@ public:
       if (!LHS || !RHS)
         return false;
 
-      ASTContext &Ctx = Handler->CGF.getContext();
+      ASTContext &Ctx = Handler.CGF.getContext();
       // Strip away parentheses and no-op casts to get to the core expression
       LHS = LHS->IgnoreParenNoopCasts(Ctx);
       RHS = RHS->IgnoreParenNoopCasts(Ctx);
@@ -7241,6 +7249,10 @@ private:
   /// collectAttachPtrExprInfo().
   llvm::DenseMap<const Expr *, size_t> AttachPtrComputationOrderMap = {
       {nullptr, 0}};
+
+  /// An instance of attach-ptr-expr comparator that can be used throughout the
+  /// lifetime of this handler.
+  AttachPtrExprComparator AttachPtrComparator;
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
@@ -8959,7 +8971,7 @@ private:
 
 public:
   MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
       for (const auto *D : C->varlist())
@@ -9005,7 +9017,7 @@ public:
 
   /// Constructor for the declare mapper directive.
   MappableExprsHandler(const OMPDeclareMapperDecl &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {}
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {}
 
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
@@ -12654,7 +12666,8 @@ llvm::Value *CGOpenMPSIMDRuntime::emitForNext(CodeGenFunction &CGF,
 void CGOpenMPSIMDRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

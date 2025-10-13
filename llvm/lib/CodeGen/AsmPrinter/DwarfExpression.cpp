@@ -587,10 +587,12 @@ bool DwarfExpression::addExpression(
         emitUnsigned(LeftShift);
         emitOp(dwarf::DW_OP_shl);
       }
-      emitOp(dwarf::DW_OP_constu);
-      emitUnsigned(RightShift);
-      emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext ? dwarf::DW_OP_shra
-                                                          : dwarf::DW_OP_shr);
+      if (RightShift) {
+        emitOp(dwarf::DW_OP_constu);
+        emitUnsigned(RightShift);
+        emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext ? dwarf::DW_OP_shra
+                                                            : dwarf::DW_OP_shr);
+      }
 
       // The value is now at the top of the stack, so set the location to
       // implicit so that we get a stack_value at the end.
@@ -618,12 +620,15 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
     case dwarf::DW_OP_gt:
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:

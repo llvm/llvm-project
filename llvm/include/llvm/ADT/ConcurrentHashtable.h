@@ -253,9 +253,8 @@ public:
 
     OS << "\nOverall number of entries = " << OverallNumberOfEntries;
     OS << "\nOverall number of non empty buckets = " << NumberOfNonEmptyBuckets;
-    for (auto &BucketSize : BucketSizesMap)
-      OS << "\n Number of buckets with size " << BucketSize.first << ": "
-         << BucketSize.second;
+    for (auto [Size, Count] : BucketSizesMap)
+      OS << "\n Number of buckets with size " << Size << ": " << Count;
 
     std::stringstream stream;
     stream << std::fixed << std::setprecision(2)

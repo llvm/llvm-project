@@ -331,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup2
     libc.src.unistd.dup3
     libc.src.unistd.execve
+    libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
@@ -785,6 +786,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundevenf16
     libc.src.math.roundf16
+    libc.src.math.rsqrtf
     libc.src.math.rsqrtf16
     libc.src.math.scalblnf16
     libc.src.math.scalbnf16
@@ -1057,6 +1059,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+    libc.src.stdfix.rdivi
   )
 endif()
 

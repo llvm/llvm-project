@@ -3229,6 +3229,10 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAddrSpace(
           static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
 
+    if (global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Constant)
+      TODO(global.getLoc(), "CUDA Fortran CONSTANT variable code generation");
+
     rewriter.eraseOp(global);
     return mlir::success();
   }
@@ -3348,7 +3352,7 @@ struct DoConcurrentSpecifierOpConversion : public fir::FIROpConversion<OpTy> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 #ifdef EXPENSIVE_CHECKS
     auto uses = mlir::SymbolTable::getSymbolUses(
-        specifier, specifier->getParentOfType<mlir::ModuleOp>());
+        specifier, specifier->template getParentOfType<mlir::ModuleOp>());
 
     // `fir.local|fir.declare_reduction` ops are not supposed to have any uses
     // at this point (i.e. during lowering to LLVM). In case of serialization,

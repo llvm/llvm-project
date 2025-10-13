@@ -1730,9 +1730,8 @@ inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression()) {
+  if (S.Current->isBottomFrame())
     return false;
-  }
   S.Stk.push<Pointer>(S.Current->getParamPointer(I));
   return true;
 }
@@ -3184,9 +3183,8 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     if (!CheckLoad(S, OpPC, SP))
       return false;
 
-    const Pointer &DP = DestPtr.atIndex(DestIndex + I);
-    DP.deref<T>() = SP.deref<T>();
-    DP.initialize();
+    DestPtr.elem<T>(DestIndex + I) = SrcPtr.elem<T>(SrcIndex + I);
+    DestPtr.initializeElement(DestIndex + I);
   }
   return true;
 }
@@ -3341,6 +3339,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     return true;
   }
 
+  return false;
+}
+
+inline bool InvalidStore(InterpState &S, CodePtr OpPC, const Type *T) {
+  if (S.getLangOpts().CPlusPlus) {
+    QualType VolatileType = QualType(T, 0).withVolatile();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_volatile_type)
+        << AK_Assign << VolatileType;
+  } else {
+    S.FFDiag(S.Current->getSource(OpPC));
+  }
   return false;
 }
 
@@ -3689,7 +3699,7 @@ inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
 
 inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
   uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
-  if (NumElems > Limit) {
+  if (Limit != 0 && NumElems > Limit) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_new_exceeds_limits)
         << NumElems << Limit;
