@@ -399,18 +399,24 @@ class MapInfoFinalizationPass
                          baseAddrIndex);
   }
 
-  /// Adjust the descriptor's map type such that we ensure the descriptor
-  /// itself is present on device when needed, without changing the user's
-  /// requested data mapping semantics for the underlying data.
-  ///
-  /// We conservatively transform descriptor mappings to `OMP_MAP_TO` (and
-  /// preserve `IMPLICIT`/`ALWAYS` when present) for structured regions. The
-  /// descriptor should live on device for indexing, bounds, etc., but we do
-  /// not require, nor want, additional mapping semantics like `CLOSE` for the
-  /// descriptor entry itself. `CLOSE` (and other user-provided flags) should
-  /// apply to the base data entry that actually carries the pointee, which is
-  /// generated separately as a member map. For `target exit`/`target update`
-  /// we keep the original map type unchanged.
+  /// Adjusts the descriptor's map type. The main alteration that is done
+  /// currently is transforming the map type to `OMP_MAP_TO` where possible.
+  /// This is because we will always need to map the descriptor to device
+  /// (or at the very least it seems to be the case currently with the
+  /// current lowered kernel IR), as without the appropriate descriptor
+  /// information on the device there is a risk of the kernel IR
+  /// requesting for various data that will not have been copied to
+  /// perform things like indexing. This can cause segfaults and
+  /// memory access errors. However, we do not need this data mapped
+  /// back to the host from the device, as per the OpenMP spec we cannot alter
+  /// the data via resizing or deletion on the device. Discarding any
+  /// descriptor alterations via no map back is reasonable (and required
+  /// for certain segments of descriptor data like the type descriptor that are
+  /// global constants). This alteration is only inapplicable to `target exit`
+  /// and `target update` currently, and that's due to `target exit` not
+  /// allowing `to` mappings, and `target update` not allowing both `to` and
+  /// `from` simultaneously. We currently try to maintain the `implicit` flag
+  /// where necessary, although it does not seem strictly required.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
@@ -421,7 +427,6 @@ class MapInfoFinalizationPass
     mapFlags flags = mapFlags::OMP_MAP_TO |
                      (mapFlags(mapTypeFlag) &
                       (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_ALWAYS));
-    
     // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
     // to ensure device-local placement where required by tests relying on USM +
     // close semantics.
