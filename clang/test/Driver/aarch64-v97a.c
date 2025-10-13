@@ -38,6 +38,6 @@
 // RUN: %clang -target aarch64 -march=armv9.7-a+mtetc -### -c %s 2>&1 | FileCheck -check-prefix=V97A-MTETC %s
 // V97A-MTETC: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+mtetc"
 
-// RUN: %clang -target aarch64 -march=armv9.7a+gcie -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-GCIE %s
-// RUN: %clang -target aarch64 -march=armv9.7-a+gcie -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-GCIE %s
-// VFAT-GCIE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+gcie"
+// RUN: %clang -target aarch64 -march=armv9.7a+gcie -### -c %s 2>&1 | FileCheck -check-prefix=V97A-GCIE %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+gcie -### -c %s 2>&1 | FileCheck -check-prefix=V97A-GCIE %s
+// V97A-GCIE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+gcie"
