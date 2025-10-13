@@ -34,6 +34,6 @@
 // RUN: %clang -target aarch64 -march=armv9.7-a+mpamv2 -### -c %s 2>&1 | FileCheck -check-prefix=V97A-MPAMv2 %s
 // V97A-MPAMv2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+mpamv2"
 
-// RUN: %clang -target aarch64 -march=armv9.7a+mtetc -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-MTETC %s
-// RUN: %clang -target aarch64 -march=armv9.7-a+mtetc -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-MTETC %s
-// VFAT-MTETC: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+mtetc"
+// RUN: %clang -target aarch64 -march=armv9.7a+mtetc -### -c %s 2>&1 | FileCheck -check-prefix=V97A-MTETC %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+mtetc -### -c %s 2>&1 | FileCheck -check-prefix=V97A-MTETC %s
+// V97A-MTETC: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+mtetc"
