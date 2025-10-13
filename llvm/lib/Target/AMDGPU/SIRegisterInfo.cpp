@@ -2648,7 +2648,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
               AMDGPU::M0)
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case AMDGPU::SI_SPILL_V16_RESTORE:
     case AMDGPU::SI_SPILL_V32_RESTORE:
