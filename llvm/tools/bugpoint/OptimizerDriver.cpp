@@ -82,7 +82,7 @@ bool BugDriver::writeProgramToFile(const std::string &Filename,
 
 /// This function is used to output the current Program to a file named
 /// "bugpoint-ID.bc".
-void BugDriver::EmitProgressBitcode(const Module &M, const std::string &ID,
+void BugDriver::emitProgressBitcode(const Module &M, const std::string &ID,
                                     bool NoFlyer) const {
   // Output the input to the current pass to a bitcode file, emit a message
   // telling the user how to reproduce it: opt -foo blah.bc
