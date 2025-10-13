@@ -72,6 +72,17 @@
 
 #define ANSI_ESC_START_LEN 2
 
+// OSC (Operating System Commands)
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#define OSC_ESCAPE_START "\033"
+#define OSC_ESCAPE_END "\x07"
+
+// https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
+#define OSC_PROGRESS_REMOVE OSC_ESCAPE_START "]9;4;0;0" OSC_ESCAPE_END
+#define OSC_PROGRESS_SHOW OSC_ESCAPE_START "]9;4;1;%u" OSC_ESCAPE_END
+#define OSC_PROGRESS_ERROR OSC_ESCAPE_START "]9;4;2;%u" OSC_ESCAPE_END
+#define OSC_PROGRESS_INDETERMINATE OSC_ESCAPE_START "]9;4;3;%u" OSC_ESCAPE_END
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
