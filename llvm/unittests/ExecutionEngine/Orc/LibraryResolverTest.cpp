@@ -198,9 +198,7 @@ public:
     EnvReady = true;
   }
 
-  void TearDown() override {
-    sys::fs::remove_directories(DirPath);
-  }
+  void TearDown() override { sys::fs::remove_directories(DirPath); }
 
   std::string getBaseDir() const {
     return std::string(DirPath.begin(), DirPath.end());
