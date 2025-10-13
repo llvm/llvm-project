@@ -1,5 +1,5 @@
 static_library("LifetimeSafety") {
-  output_name = "clangLifetimeSafety"
+  output_name = "clangAnalysisLifetimeSafety"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",
