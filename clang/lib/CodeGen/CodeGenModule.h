@@ -689,6 +689,10 @@ private:
   // The list is sorted for binary-searching.
   std::vector<std::string> MSHotPatchFunctions;
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  llvm::StringMap<llvm::Constant *> CachedGlobalStrings;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -1753,6 +1757,11 @@ public:
   GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
                         const VarDecl *D,
                         ForDefinition_t IsForDefinition = NotForDefinition);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  llvm::Constant *GetOrCreateGlobalStr(StringRef Value, CGBuilderTy &Builder,
+                                       const Twine &Name = "");
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // FIXME: Hardcoding priority here is gross.
   void AddGlobalCtor(llvm::Function *Ctor, int Priority = 65535,

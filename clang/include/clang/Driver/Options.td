@@ -2059,6 +2059,32 @@ def fbounds_safety_debug_trap_reasons_EQ
     NormalizedValues<["None", "Basic", "Detailed"]>,
     MarshallingInfoEnum<CodeGenOpts<"BoundsSafetyDebugTrapReasons">, "Detailed">;
 
+def fbounds_safety_soft_traps_EQ
+  : Joined<["-"], "fbounds-safety-soft-traps=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Enables soft traps which causes the compiler to emit a non-fatal "
+      "instruction sequence when a bounds check fails. After this instruction "
+      "sequence execution resumes as if the bounds check had succeeded."
+      "For `call-with-*` modes see 'bounds_safety_soft_traps.h' for the runtime"
+      " function interface. This option supports the following modes: "
+      "`none` - No soft traps, i.e. use hard traps (default)."
+      "`call-with-str` - Emit a call to a runtime function that receives the "
+      "trap reason as a string."
+      "`call-with-code` - Emit a call to a runtime function that receives an "
+      "integer describing the trap reason. This is better for codesize than "
+      "`call-with-str` but is harder to debug if debug info is missing.">,
+    Values<"none,call-with-str,call-with-code">,
+    NormalizedValuesScope<"CodeGenOptions::BoundsSafetyTrapModeKind">,
+    NormalizedValues<["Hard", "SoftCallWithTrapString", "SoftCallWithTrapCode"]>,
+    MarshallingInfoEnum<CodeGenOpts<"BoundsSafetyTrapMode">, "Hard">;
+
+def fbounds_safety_soft_trap_function_EQ : Joined<["-"],
+  "fbounds-safety-soft-trap-function=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Set the name of the BoundsSafety soft trap function. See the "
+  "'bounds_safety_soft_traps.h' file for the API of this function.">,
+  MarshallingInfoString<CodeGenOpts<"BoundsSafetySoftTrapFuncName">>;
+
 // TO_UPSTREAM(BoundsSafety) OFF
 
 defm lifetime_safety : BoolFOption<

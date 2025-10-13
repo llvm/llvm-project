@@ -7138,6 +7138,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_fbounds_safety_debug_trap_reasons_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fbounds_safety_soft_traps_EQ);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both

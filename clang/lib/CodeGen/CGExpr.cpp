@@ -4658,7 +4658,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::MDBuilder MDHelper(getLLVMContext());
 
   /*TO_UPSTREAM(BoundsSafety) ON*/
-  NoMerge |= CGM.getCodeGenOpts().TrapFuncReturns;
+  NoMerge |= CGM.getCodeGenOpts().TrapFuncReturns ||
+             CGM.getCodeGenOpts().getBoundsSafetyTrapMode() !=
+                 CodeGenOptions::BoundsSafetyTrapModeKind::Hard;
   /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (TrapBB && !NoMerge) {
@@ -4700,7 +4702,45 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     /*TO_UPSTREAM(BoundsSafety) ON*/
     ApplyDebugLocation applyTrapDI(*this, TrapLocation);
     llvm::CallInst *TrapCall = nullptr;
-    if (CGM.getCodeGenOpts().TrapFuncReturns) {
+    if (CGM.getCodeGenOpts().getBoundsSafetyTrapMode() !=
+            CodeGenOptions::BoundsSafetyTrapModeKind::Hard &&
+        CheckHandlerID == SanitizerHandler::BoundsSafety) {
+      // BoundsSafety soft-trap mode. This takes prescendence over
+      // `-ftrap-function-returns`. Note: Make sure to bump
+      // `__CLANG_BOUNDS_SAFETY_SOFT_TRAP_API_VERSION` and adjust the interface
+      // in `bounds_safety_soft_traps.h` if the API is changed.
+      llvm::FunctionType *FnType = nullptr;
+      llvm::Constant *SoftTrapCallArg = nullptr;
+      // Emit calls to one of the interfaces defined in
+      // `bounds_safety_soft_traps.h`
+      switch (CGM.getCodeGenOpts().getBoundsSafetyTrapMode()) {
+      case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallWithTrapCode: {
+        // void __bounds_safety_soft_trap_c(uint16_t);
+        // TODO: Set correct value from the `TrapReason` object
+        // (rdar://162824128).
+        SoftTrapCallArg = llvm::ConstantInt::get(CGM.Int16Ty, 0);
+        break;
+      }
+      case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallWithTrapString: {
+        // void __bounds_safety_soft_trap_s(const char*);
+        if (!TrapMessage.empty()) {
+          SoftTrapCallArg =
+              CGM.GetOrCreateGlobalStr(TrapMessage, Builder, "trap.reason");
+        } else {
+          SoftTrapCallArg = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+        }
+        break;
+      }
+      default:
+        llvm_unreachable("Unhandled BoundsSafetyTrapMode");
+      }
+      FnType = llvm::FunctionType::get(CGM.VoidTy, {SoftTrapCallArg->getType()},
+                                       false);
+      auto TrapFunc = CGM.CreateRuntimeFunction(
+          FnType, CGM.getCodeGenOpts().BoundsSafetySoftTrapFuncName);
+      TrapCall = EmitNounwindRuntimeCall(TrapFunc, {SoftTrapCallArg});
+      Builder.CreateBr(Cont);
+    } else if (CGM.getCodeGenOpts().TrapFuncReturns) {
       auto *TrapID = llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID);
       llvm::FunctionType *FnType =
         llvm::FunctionType::get(CGM.VoidTy, {TrapID->getType()}, false);

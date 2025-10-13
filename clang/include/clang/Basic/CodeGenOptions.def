@@ -339,6 +339,8 @@ CODEGENOPT(BoundsSafetyUniqueTraps, 1, 0, Benign) ///< When true, merging of
                                                   /// prevented.
 
 ENUM_CODEGENOPT(BoundsSafetyDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
+
+ENUM_CODEGENOPT(BoundsSafetyTrapMode, BoundsSafetyTrapModeKind, 2, BoundsSafetyTrapModeKind::Hard, Benign) ///< Control how BoundsSafety traps are emitted
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
 /// Treat loops as finite: language, always, never.
