@@ -18,12 +18,22 @@ import sys
 import subprocess
 import shlex
 import tempfile
-import shutil
 import multiprocessing
+from enum import StrEnum, auto
+from typing import List, Optional
 
 verbose = False
 creduce_cmd = None
 clang_cmd = None
+opt_cmd = None
+llc_cmd = None
+
+
+class FailureType(StrEnum):
+    FrontEnd = auto()
+    MiddleEnd = auto()
+    BackEnd = auto()
+    Unknown = auto()
 
 
 def verbose_print(*args, **kwargs):
@@ -70,6 +80,44 @@ def write_to_script(text, filename):
     os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
 
 
+def extract_opt_level(args_list: List[str]) -> Optional[str]:
+    """
+    Finds the last optimization flag (-O...) from a list of arguments.
+
+    Args:
+      args_list: A list of string arguments passed to the compiler.
+
+    Returns:
+      The last matching optimization flag string if found, otherwise None.
+    """
+    valid_opt_flags = {"-O0", "-O1", "-O2", "-O3", "-Os", "-Oz", "-Og", "-Ofast"}
+
+    # Iterate in reverse to find the last occurrence
+    for arg in reversed(args_list):
+        if arg in valid_opt_flags:
+            return arg
+    return None
+
+
+def remove_first_line(file_path):
+    """
+    Removes the first line from a specified file.
+    """
+    try:
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+
+        # If the file is not empty, write all lines except the first one back.
+        if lines:
+            with open(file_path, "w") as f:
+                f.writelines(lines[1:])
+
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
 class Reduce(object):
     def __init__(self, crash_script, file_to_reduce, creduce_flags):
         crash_script_name, crash_script_ext = os.path.splitext(crash_script)
@@ -85,6 +133,9 @@ class Reduce(object):
         self.expected_output = []
         self.needs_stack_trace = False
         self.creduce_flags = ["--tidy"] + creduce_flags
+        self.opt = opt_cmd
+        self.llc = llc_cmd
+        self.ir_file = "crash.ll"
 
         self.read_clang_args(crash_script, file_to_reduce)
         self.read_expected_output()
@@ -186,22 +237,30 @@ class Reduce(object):
 
         self.expected_output = result
 
-    def check_expected_output(self, args=None, filename=None):
+    def check_expected_output(self, cmd=None, args=None, filename=None):
+        if not cmd:
+            cmd = self.clang
         if not args:
             args = self.clang_args
         if not filename:
             filename = self.file_to_reduce
 
         p = subprocess.Popen(
-            self.get_crash_cmd(args=args, filename=filename),
+            self.get_crash_cmd(cmd=cmd, args=args, filename=filename),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
         crash_output, _ = p.communicate()
         return all(msg in crash_output.decode("utf-8") for msg in self.expected_output)
 
-    def write_interestingness_test(self):
+    def write_interestingness_test(self, cmd=None, use_llvm_reduce=False):
         print("\nCreating the interestingness test...")
+        if not cmd:
+            cmd = self.get_crash_cmd()
+
+        # llvm-reduce interestingness tests take the file as the first argument.
+        # NOTE: this cannot be escaped by quote_cmd(), since it needs expansion.
+        filename = '< "$1"' if use_llvm_reduce else ""
 
         # Disable symbolization if it's not required to avoid slow symbolization.
         disable_symbolization = ""
@@ -210,32 +269,39 @@ class Reduce(object):
 
         output = """#!/bin/bash
 %s
-if %s >& t.log ; then
+if %s %s >& t.log ; then
   exit 1
 fi
 """ % (
             disable_symbolization,
-            quote_cmd(self.get_crash_cmd()),
+            quote_cmd(cmd),
+            filename,
         )
 
         for msg in self.expected_output:
             output += "grep -F %s t.log || exit 1\n" % shlex.quote(msg)
 
         write_to_script(output, self.testfile)
-        self.check_interestingness()
+        self.check_interestingness(cmd, use_llvm_reduce=use_llvm_reduce)
 
-    def check_interestingness(self):
-        testfile = os.path.abspath(self.testfile)
+    def check_interestingness(self, cmd, use_llvm_reduce=False):
+        test_cmd = [os.path.abspath(self.testfile)]
 
+        # llvm-reduce interestingness tests take the file as the first arg.
+        if use_llvm_reduce:
+            test_cmd += [self.ir_file]
         # Check that the test considers the original file interesting
-        returncode = subprocess.call(testfile, stdout=subprocess.DEVNULL)
-        if returncode:
+        result = subprocess.run(args=test_cmd, stdout=subprocess.DEVNULL)
+        if result.returncode:
             sys.exit("The interestingness test does not pass for the original file.")
 
         # Check that an empty file is not interesting
         # Instead of modifying the filename in the test file, just run the command
         with tempfile.NamedTemporaryFile() as empty_file:
-            is_interesting = self.check_expected_output(filename=empty_file.name)
+            new_args = cmd[1:] if use_llvm_reduce else cmd[1:-1]
+            is_interesting = self.check_expected_output(
+                cmd=cmd[0], args=new_args, filename=empty_file.name
+            )
         if is_interesting:
             sys.exit("The interestingness test passes for an empty file.")
 
@@ -424,11 +490,76 @@ fi
             print("\n\nctrl-c detected, killed reduction tool")
             p.kill()
 
+    def run_llvm_reduce(self):
+        full_llvm_reduce_cmd = [
+            llvm_reduce_cmd,
+            f"--test={self.testfile}",
+            self.ir_file,
+        ]
+        print("\nRunning llvm-reduce tool...")
+        verbose_print(quote_cmd(full_llvm_reduce_cmd))
+        try:
+            p = subprocess.Popen(full_llvm_reduce_cmd)
+            p.communicate()
+        except KeyboardInterrupt:
+            # Hack to kill C-Reduce because it jumps into its own pgid
+            print("\n\nctrl-c detected, killed reduction tool")
+            p.kill()
+
+    def classify_crash(self) -> FailureType:
+        print("classifying crash ...")
+        if self.check_expected_output(args=self.clang_args + ["-fsyntax-only"]):
+            print("Found Frontend Crash")
+            return FailureType.FrontEnd
+
+        print("Found Middle/Backend failure")
+        args = self.clang_args + [
+            "-mllvm",
+            "--print-on-crash",
+            "-mllvm",
+            f"--print-on-crash-path={self.ir_file}",
+            "-mllvm",
+            "--print-module-scope",
+        ]
+
+        if not self.check_expected_output(args=args):
+            sys.exit("The interestingness test does not pass with '--print-on-crash'.")
+
+        # The output from --print-on-crash has an invalid first line (pass name).
+        remove_first_line(self.ir_file)
+
+        self.opt_level = extract_opt_level(self.clang_args) or "-O2"
+
+        if self.check_expected_output(
+            cmd=self.opt,
+            args=[self.opt_level, "-disable-output"],
+            filename=self.ir_file,
+        ):
+            print("Found MiddleEnd Crash")
+            return FailureType.MiddleEnd
+        if self.check_expected_output(
+            cmd=self.llc, args=[self.opt_level], filename=self.ir_file
+        ):
+            print("Found BackEnd Crash")
+            return FailureType.BackEnd
+        print("Found Unknow Crash Type. Falling back to creduce")
+        return FailureType.Unknown
+
+    def reduce_ir_crash(self, new_cmd: List[str]):
+        print("Writing interestingness test...")
+        self.write_interestingness_test(cmd=new_cmd, use_llvm_reduce=True)
+        print("Starting llvm-reduce with llc test case")
+        self.run_llvm_reduce()
+        print("Done Reducing IR file.")
+
 
 def main():
     global verbose
     global creduce_cmd
+    global llvm_reduce_cmd
     global clang_cmd
+    global opt_cmd
+    global llc_cmd
 
     parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
     parser.add_argument(
@@ -451,11 +582,38 @@ def main():
         "By default uses the llvm-bin directory.",
     )
     parser.add_argument(
+        "--opt",
+        dest="opt",
+        type=str,
+        help="The path to the `opt` executable. "
+        "By default uses the llvm-bin directory.",
+    )
+    parser.add_argument(
+        "--llc",
+        dest="llc",
+        type=str,
+        help="The path to the `llc` executable. "
+        "By default uses the llvm-bin directory.",
+    )
+    parser.add_argument(
         "--creduce",
         dest="creduce",
         type=str,
         help="The path to the `creduce` or `cvise` executable. "
         "Required if neither `creduce` nor `cvise` are on PATH.",
+    )
+    parser.add_argument(
+        "--llvm-reduce",
+        dest="llvm_reduce",
+        type=str,
+        help="The path to the `llvm-reduce` executable. "
+        "By default uses the llvm-bin directory.",
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Use auto reduction mode, that uses `creduce`/`cvise`"
+        "for frontend crashes and llvm-reduce for middle/backend crashes.",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     args, creduce_flags = parser.parse_known_args()
@@ -463,7 +621,10 @@ def main():
     llvm_bin = os.path.abspath(args.llvm_bin) if args.llvm_bin else None
     creduce_cmd = check_cmd("creduce", None, args.creduce)
     creduce_cmd = check_cmd("cvise", None, args.creduce)
+    llvm_reduce_cmd = check_cmd("llvm-reduce", llvm_bin, args.llvm_reduce)
     clang_cmd = check_cmd("clang", llvm_bin, args.clang)
+    opt_cmd = check_cmd("opt", llvm_bin, args.opt)
+    llc_cmd = check_cmd("llc", llvm_bin, args.llc)
 
     crash_script = check_file(args.crash_script[0])
     file_to_reduce = check_file(args.file_to_reduce[0])
@@ -472,6 +633,22 @@ def main():
         creduce_flags += ["--n", str(max(4, multiprocessing.cpu_count() // 2))]
 
     r = Reduce(crash_script, file_to_reduce, creduce_flags)
+    if args.auto:
+        crash_type = r.classify_crash()
+        match crash_type:
+            case FailureType.FrontEnd | FailureType.Unknown:
+                print("Starting reduction with creduce/cvise")
+                pass
+            case FailureType.MiddleEnd:
+                # TODO: parse the exact pass from the backtrace and set the
+                # pass pipeline directly.
+                new_cmd = [opt_cmd, "-disable-output", r.opt_level]
+                r.reduce_ir_crash(new_cmd)
+                return
+            case FailureType.BackEnd:
+                new_cmd = [llc_cmd, r.opt_level]
+                r.reduce_ir_crash(new_cmd)
+                return
 
     r.simplify_clang_args()
     r.write_interestingness_test()
