@@ -83,6 +83,7 @@ func.func @broadcast_single_elem_vec1d_from_f32(%arg0: f32) -> vector<1xf32> {
 // CHECK-LABEL: @broadcast_single_elem_vec1d_from_f32
 // CHECK-SAME:  %[[A:.*]]: f32)
 // CHECK:       %[[T0:.*]] = llvm.insertelement %[[A]]
+// CHECK-NOT:   llvm.shufflevector
 // CHECK:       return %[[T0]] : vector<1xf32>
 
 // -----
