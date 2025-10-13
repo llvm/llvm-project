@@ -565,7 +565,7 @@ std::optional<MultiLevelTemplateArgumentList>
 ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const NormalizedConstraintWithParamMapping &Constraint,
     MultiLevelTemplateArgumentList MLTAL,
-    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
+    llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
 
   if (!Constraint.hasParameterMapping())
     return std::move(MLTAL);
@@ -606,38 +606,39 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
       Constraint.mappingOccurenceList();
   // The empty MLTAL situation should only occur when evaluating non-dependent
   // constraints.
-  if (!MLTAL.getNumSubstitutedLevels())
-    MLTAL.addOuterTemplateArguments(TD, {}, /*Final=*/false);
-  SubstitutedOuterMost =
-      llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
+  if (MLTAL.getNumSubstitutedLevels())
+    SubstitutedOutermost =
+        llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
     TemplateArgument Arg;
     if (Used[I])
       Arg = S.Context.getCanonicalTemplateArgument(
           CTAI.SugaredConverted[MappedIndex++]);
-    if (I < SubstitutedOuterMost.size()) {
-      SubstitutedOuterMost[I] = Arg;
+    if (I < SubstitutedOutermost.size()) {
+      SubstitutedOutermost[I] = Arg;
       Offset = I + 1;
     } else {
-      SubstitutedOuterMost.push_back(Arg);
-      Offset = SubstitutedOuterMost.size();
+      SubstitutedOutermost.push_back(Arg);
+      Offset = SubstitutedOutermost.size();
     }
   }
-  if (Offset < SubstitutedOuterMost.size())
-    SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
+  if (Offset < SubstitutedOutermost.size())
+    SubstitutedOutermost.erase(SubstitutedOutermost.begin() + Offset);
 
-  MLTAL.replaceOutermostTemplateArguments(TD, SubstitutedOuterMost);
-  return std::move(MLTAL);
+  MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOutermost,
+                                                    /*Final=*/false);
+  return std::move(SubstitutedTemplateArgs);
 }
 
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
@@ -785,13 +786,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                      FoldExpandedConstraint::FoldOperatorKind::And;
   unsigned EffectiveDetailEndIndex = Satisfaction.Details.size();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   // FIXME: Is PackSubstitutionIndex correct?
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
           static_cast<const NormalizedConstraintWithParamMapping &>(Constraint),
-          MLTAL, SubstitutedOuterMost);
+          MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprError();
@@ -879,9 +880,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const MultiLevelTemplateArgumentList &MLTAL, unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
