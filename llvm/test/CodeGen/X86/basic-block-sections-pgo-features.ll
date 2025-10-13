@@ -5,7 +5,7 @@
 ; RUN: echo 'g 0:1000,1:800,2:200 1:800,3:800 2:200,3:200 3:1000' >> %t
 ; RUN: echo 'c 0 1 2' >> %t
 ;
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all | FileCheck %s
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all -pgo-analysis-map-use-propeller-cfg | FileCheck %s
 
 define void @foo() nounwind !prof !0 {
 entry:
