@@ -8,5 +8,10 @@ add_clang_library(clangAnalysisLifetimeSafety
   Loans.cpp
   LoanPropagation.cpp
   Origins.cpp
+
+  LINK_LIBS
+  clangAST
+  clangAnalysis
+  clangBasic
   )
 
