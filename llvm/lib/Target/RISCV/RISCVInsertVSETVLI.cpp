@@ -1945,9 +1945,12 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                      .addImm(Log2_32(CurrInfo.getTWiden()) + 1);
 
     Changed = true;
+    Register Reg = Op.getReg();
+    Op.setReg(Register());
+    Op.setIsKill(false);
     if (LIS) {
       LIS->InsertMachineInstrInMaps(*TmpMI);
-      LiveInterval &LI = LIS->getInterval(Op.getReg());
+      LiveInterval &LI = LIS->getInterval(Reg);
 
       // Erase the AVL operand from the instruction.
       LIS->shrinkToUses(&LI);
@@ -1955,9 +1958,6 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
       // SmallVector<LiveInterval *> SplitLIs;
       // LIS->splitSeparateComponents(LI, SplitLIs);
     }
-
-    Op.setReg(RISCV::NoRegister);
-    Op.setIsKill(false);
   }
   return Changed;
 }
