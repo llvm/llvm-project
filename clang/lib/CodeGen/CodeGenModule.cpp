@@ -3081,7 +3081,6 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
 
 void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                                        llvm::Function *F) {
-
   // Only if we are checking indirect calls.
   if (!LangOpts.Sanitize.has(SanitizerKind::CFIICall))
     return;
