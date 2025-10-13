@@ -2730,6 +2730,16 @@ public:
         operation->get(), toMlirStringRef(name)));
   }
 
+  template <typename F>
+  auto forEachAttr(F fn) {
+    intptr_t n = mlirOperationGetNumAttributes(operation->get());
+    for (intptr_t i = 0; i < n; ++i) {
+      MlirNamedAttribute na = mlirOperationGetAttribute(operation->get(), i);
+      MlirStringRef name = mlirIdentifierStr(na.name);
+      fn(name, na.attribute);
+    }
+  }
+
   static void bind(nb::module_ &m) {
     nb::class_<PyOpAttributeMap>(m, "OpAttributeMap")
         .def("__contains__", &PyOpAttributeMap::dunderContains)
@@ -2737,7 +2747,42 @@ public:
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed)
         .def("__setitem__", &PyOpAttributeMap::dunderSetItem)
-        .def("__delitem__", &PyOpAttributeMap::dunderDelItem);
+        .def("__delitem__", &PyOpAttributeMap::dunderDelItem)
+        .def("__iter__",
+             [](PyOpAttributeMap &self) {
+               nb::list keys;
+               self.forEachAttr([&](MlirStringRef name, MlirAttribute) {
+                 keys.append(nb::str(name.data, name.length));
+               });
+               return nb::iter(keys);
+             })
+        .def("keys",
+             [](PyOpAttributeMap &self) {
+               nb::list out;
+               self.forEachAttr([&](MlirStringRef name, MlirAttribute) {
+                 out.append(nb::str(name.data, name.length));
+               });
+               return out;
+             })
+        .def("values",
+             [](PyOpAttributeMap &self) {
+               nb::list out;
+               self.forEachAttr([&](MlirStringRef, MlirAttribute attr) {
+                 out.append(PyAttribute(self.operation->getContext(), attr)
+                                .maybeDownCast());
+               });
+               return out;
+             })
+        .def("items", [](PyOpAttributeMap &self) {
+          nb::list out;
+          self.forEachAttr([&](MlirStringRef name, MlirAttribute attr) {
+            out.append(
+                nb::make_tuple(nb::str(name.data, name.length),
+                               PyAttribute(self.operation->getContext(), attr)
+                                   .maybeDownCast()));
+          });
+          return out;
+        });
   }
 
 private:
