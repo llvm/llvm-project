@@ -1,12 +1,11 @@
 ; RUN: llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; Verify that llvm.compiler.used is not lowered
-; Currently we do lower it.
+; Verify that llvm.compiler.used is not lowered.
 ; CHECK: OpName %[[UNUSED:[0-9]+]] "unused"
 ; CHECK-NOT: OpName %[[LLVM_COMPILER_USED_NAME:[0-9]+]] "llvm.compiler.used"
 
-; Check that the type of llvm.compiler.used is not emited too
+; Check that the type of llvm.compiler.used is not emitted too.
 ; CHECK-NOT: OpTypeArray
 
 @unused = private addrspace(3) global i32 0
