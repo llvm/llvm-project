@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 
@@ -112,7 +112,7 @@ struct BBValueInfo {
 void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
   DenseMap<BasicBlock *, BBValueInfo> BBInfos;
-  for (auto &R : Rewrites) {
+  for (RewriteInfo &R : Rewrites) {
     BBInfos.clear();
 
     // Compute locations for new phi-nodes.
@@ -145,7 +145,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       BBInfos[BB].LiveOutValue = V;
 
     // We've computed IDF, now insert new phi-nodes there.
-    for (auto *FrontierBB : IDFBlocks) {
+    for (BasicBlock *FrontierBB : IDFBlocks) {
       IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       BBInfos[FrontierBB].LiveInValue = PN;
@@ -156,7 +156,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     // IsLiveOut indicates whether we are computing live-out values (true) or
     // live-in values (false).
     auto ComputeValue = [&](BasicBlock *BB, bool IsLiveOut) -> Value * {
-      auto *BBInfo = &BBInfos[BB];
+      BBValueInfo *BBInfo = &BBInfos[BB];
 
       if (IsLiveOut && BBInfo->LiveOutValue)
         return BBInfo->LiveOutValue;
@@ -187,7 +187,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       if (!V)
         V = UndefValue::get(R.Ty);
 
-      for (auto *BBInfo : Stack)
+      for (BBValueInfo *BBInfo : Stack)
         // Loop above can insert new entries into the BBInfos map: assume the
         // map shouldn't grow due to [1] and BBInfo references are valid.
         BBInfo->LiveInValue = V;
@@ -196,7 +196,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     };
 
     // Fill in arguments of the inserted PHIs.
-    for (auto *BB : IDFBlocks) {
+    for (BasicBlock *BB : IDFBlocks) {
       auto *PHI = cast<PHINode>(&BB->front());
       for (BasicBlock *Pred : PredCache.get(BB))
         PHI->addIncoming(ComputeValue(Pred, /*IsLiveOut=*/true), Pred);
@@ -221,4 +221,98 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       U->set(V);
     }
   }
+}
+
+// Perform a single pass of simplification over the worklist of PHIs.
+// This should be called after RewriteAllUses() because simplifying PHIs
+// immediately after creation would require updating all references to those
+// PHIs in the BBValueInfo structures, which would necessitate additional
+// reference tracking overhead.
+static void simplifyPass(MutableArrayRef<PHINode *> Worklist,
+                         const DataLayout &DL) {
+  for (PHINode *&PHI : Worklist) {
+    if (Value *Simplified = simplifyInstruction(PHI, DL)) {
+      PHI->replaceAllUsesWith(Simplified);
+      PHI->eraseFromParent();
+      PHI = nullptr; // Mark as removed.
+    }
+  }
+}
+
+#ifndef NDEBUG // Should this be under EXPENSIVE_CHECKS?
+// New PHI nodes should not reference one another but they may reference
+// themselves or existing PHI nodes, and existing PHI nodes may reference new
+// PHI nodes.
+static bool
+PHIAreRefEachOther(const iterator_range<BasicBlock::phi_iterator> NewPHIs) {
+  SmallPtrSet<PHINode *, 8> NewPHISet;
+  for (PHINode &PN : NewPHIs)
+    NewPHISet.insert(&PN);
+  for (PHINode &PHI : NewPHIs) {
+    for (Value *V : PHI.incoming_values()) {
+      PHINode *IncPHI = dyn_cast<PHINode>(V);
+      if (IncPHI && IncPHI != &PHI && NewPHISet.contains(IncPHI))
+        return true;
+    }
+  }
+  return false;
+}
+#endif
+
+static bool replaceIfIdentical(PHINode &PHI, PHINode &ReplPHI) {
+  if (!PHI.isIdenticalToWhenDefined(&ReplPHI))
+    return false;
+  PHI.replaceAllUsesWith(&ReplPHI);
+  PHI.eraseFromParent();
+  return true;
+}
+
+bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
+                                   BasicBlock::phi_iterator FirstExistingPN) {
+  auto NewPHIs = make_range(BB->phis().begin(), FirstExistingPN);
+  assert(!PHIAreRefEachOther(NewPHIs));
+
+  // Deduplicate new PHIs first to reduce the number of comparisons on the
+  // following new -> existing pass.
+  bool Changed = false;
+  for (auto I = BB->phis().begin(); I != FirstExistingPN; ++I) {
+    for (auto J = std::next(I); J != FirstExistingPN;) {
+      Changed |= replaceIfIdentical(*J++, *I);
+    }
+  }
+
+  // Iterate over existing PHIs and replace identical new PHIs.
+  for (PHINode &ExistingPHI : make_range(FirstExistingPN, BB->phis().end())) {
+    auto I = BB->phis().begin();
+    assert(I != FirstExistingPN); // Should be at least one new PHI.
+    do {
+      Changed |= replaceIfIdentical(*I++, ExistingPHI);
+    } while (I != FirstExistingPN);
+    if (BB->phis().begin() == FirstExistingPN)
+      return Changed;
+  }
+  return Changed;
+}
+
+static void deduplicatePass(ArrayRef<PHINode *> Worklist) {
+  SmallDenseMap<BasicBlock *, unsigned> BBs;
+  for (PHINode *PHI : Worklist) {
+    if (PHI)
+      ++BBs[PHI->getParent()];
+  }
+
+  for (auto [BB, NumNewPHIs] : BBs) {
+    auto FirstExistingPN = std::next(BB->phis().begin(), NumNewPHIs);
+    EliminateNewDuplicatePHINodes(BB, FirstExistingPN);
+  }
+}
+
+void SSAUpdaterBulk::RewriteAndOptimizeAllUses(DominatorTree &DT) {
+  SmallVector<PHINode *, 4> PHIs;
+  RewriteAllUses(&DT, &PHIs);
+  if (PHIs.empty())
+    return;
+
+  simplifyPass(PHIs, PHIs.front()->getParent()->getDataLayout());
+  deduplicatePass(PHIs);
 }

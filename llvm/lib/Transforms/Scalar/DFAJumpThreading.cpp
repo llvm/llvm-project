@@ -386,22 +386,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   return OS;
 }
 
-/// Helper to get the successor corresponding to a particular case value for
-/// a switch statement.
-static BasicBlock *getNextCaseSuccessor(SwitchInst *Switch,
-                                        const APInt &NextState) {
-  BasicBlock *NextCase = nullptr;
-  for (auto Case : Switch->cases()) {
-    if (Case.getCaseValue()->getValue() == NextState) {
-      NextCase = Case.getCaseSuccessor();
-      break;
-    }
-  }
-  if (!NextCase)
-    NextCase = Switch->getDefaultDest();
-  return NextCase;
-}
-
 namespace {
 /// ThreadingPath is a path in the control flow of a loop that can be threaded
 /// by cloning necessary basic blocks and replacing conditional branches with
@@ -835,19 +819,32 @@ private:
     TPaths = std::move(TempList);
   }
 
+  /// Fast helper to get the successor corresponding to a particular case value
+  /// for a switch statement.
+  BasicBlock *getNextCaseSuccessor(const APInt &NextState) {
+    // Precompute the value => successor mapping
+    if (CaseValToDest.empty()) {
+      for (auto Case : Switch->cases()) {
+        APInt CaseVal = Case.getCaseValue()->getValue();
+        CaseValToDest[CaseVal] = Case.getCaseSuccessor();
+      }
+    }
+
+    auto SuccIt = CaseValToDest.find(NextState);
+    return SuccIt == CaseValToDest.end() ? Switch->getDefaultDest()
+                                         : SuccIt->second;
+  }
+
   // Two states are equivalent if they have the same switch destination.
   // Unify the states in different threading path if the states are equivalent.
   void unifyTPaths() {
-    llvm::SmallDenseMap<BasicBlock *, APInt> DestToState;
+    SmallDenseMap<BasicBlock *, APInt> DestToState;
     for (ThreadingPath &Path : TPaths) {
       APInt NextState = Path.getExitValue();
-      BasicBlock *Dest = getNextCaseSuccessor(Switch, NextState);
-      auto StateIt = DestToState.find(Dest);
-      if (StateIt == DestToState.end()) {
-        DestToState.insert({Dest, NextState});
+      BasicBlock *Dest = getNextCaseSuccessor(NextState);
+      auto [StateIt, Inserted] = DestToState.try_emplace(Dest, NextState);
+      if (Inserted)
         continue;
-      }
-
       if (NextState != StateIt->second) {
         LLVM_DEBUG(dbgs() << "Next state in " << Path << " is equivalent to "
                           << StateIt->second << "\n");
@@ -861,6 +858,7 @@ private:
   BasicBlock *SwitchBlock;
   OptimizationRemarkEmitter *ORE;
   std::vector<ThreadingPath> TPaths;
+  DenseMap<APInt, BasicBlock *> CaseValToDest;
   LoopInfo *LI;
   Loop *SwitchOuterLoop;
 };
@@ -1160,6 +1158,24 @@ private:
     // SSAUpdater handles phi placement and renaming uses with the appropriate
     // value.
     SSAUpdate.RewriteAllUses(&DTU->getDomTree());
+  }
+
+  /// Helper to get the successor corresponding to a particular case value for
+  /// a switch statement.
+  /// TODO: Unify it with SwitchPaths->getNextCaseSuccessor(SwitchInst *Switch)
+  /// by updating cached value => successor mapping during threading.
+  static BasicBlock *getNextCaseSuccessor(SwitchInst *Switch,
+                                          const APInt &NextState) {
+    BasicBlock *NextCase = nullptr;
+    for (auto Case : Switch->cases()) {
+      if (Case.getCaseValue()->getValue() == NextState) {
+        NextCase = Case.getCaseSuccessor();
+        break;
+      }
+    }
+    if (!NextCase)
+      NextCase = Switch->getDefaultDest();
+    return NextCase;
   }
 
   /// Clones a basic block, and adds it to the CFG.
