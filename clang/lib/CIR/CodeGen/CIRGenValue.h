@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 
+#include "CIRGenRecordLayout.h"
 #include "mlir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
@@ -57,6 +58,12 @@ public:
     return value;
   }
 
+  /// Return the value of this complex value.
+  mlir::Value getComplexValue() const {
+    assert(isComplex() && "Not a complex!");
+    return value;
+  }
+
   /// Return the value of the address of the aggregate.
   Address getAggregateAddress() const {
     assert(isAggregate() && "Not an aggregate!");
@@ -88,7 +95,6 @@ public:
     return er;
   }
 
-  // FIXME: Aggregate rvalues need to retain information about whether they are
   // volatile or not.  Remove default to find all places that probably get this
   // wrong.
 
@@ -163,6 +169,7 @@ class LValue {
   mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
+  const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
                   clang::CharUnits alignment, LValueBaseInfo baseInfo) {
@@ -183,9 +190,10 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isVolatile() const { return quals.hasVolatile(); }
 
-  // TODO: Add support for volatile
-  bool isVolatile() const { return false; }
+  bool isVolatileQualified() const { return quals.hasVolatile(); }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
@@ -202,6 +210,14 @@ public:
 
   Address getAddress() const {
     return Address(getPointer(), elementType, getAlignment());
+  }
+
+  void setAddress(Address address) {
+    assert(isSimple());
+    v = address.getPointer();
+    elementType = address.getElementType();
+    alignment = address.getAlignment().getQuantity();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
@@ -246,6 +262,38 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  // bitfield lvalue
+  Address getBitFieldAddress() const {
+    return Address(getBitFieldPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getBitFieldPointer() const {
+    assert(isBitField());
+    return v;
+  }
+
+  const CIRGenBitFieldInfo &getBitFieldInfo() const {
+    assert(isBitField());
+    return *bitFieldInfo;
+  }
+
+  /// Create a new object to represent a bit-field access.
+  ///
+  /// \param Addr - The base address of the bit-field sequence this
+  /// bit-field refers to.
+  /// \param Info - The information describing how to perform the bit-field
+  /// access.
+  static LValue makeBitfield(Address addr, const CIRGenBitFieldInfo &info,
+                             clang::QualType type, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = BitField;
+    r.v = addr.getPointer();
+    r.elementType = addr.getElementType();
+    r.bitFieldInfo = &info;
+    r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
     return r;
   }
 };
@@ -323,6 +371,13 @@ public:
                    mayOverlap, isZeroed);
   }
 
+  IsDestructed_t isExternallyDestructed() const {
+    return IsDestructed_t(destructedFlag);
+  }
+  void setExternallyDestructed(bool destructed = true) {
+    destructedFlag = destructed;
+  }
+
   clang::Qualifiers getQualifiers() const { return quals; }
 
   Address getAddress() const { return addr; }
@@ -330,6 +385,8 @@ public:
   bool isIgnored() const { return !addr.isValid(); }
 
   mlir::Value getPointer() const { return addr.getPointer(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 

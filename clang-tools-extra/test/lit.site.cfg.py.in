@@ -10,6 +10,7 @@ config.python_executable = "@Python3_EXECUTABLE@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.clang_tidy_staticanalyzer = @CLANG_TIDY_ENABLE_STATIC_ANALYZER@
+config.clang_tidy_custom_check = @CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS@
 config.has_plugins = @CLANG_PLUGIN_SUPPORT@
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

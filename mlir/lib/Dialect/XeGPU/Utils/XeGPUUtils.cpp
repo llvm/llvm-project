@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -19,7 +22,6 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -39,7 +41,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
   // It only works for subgroup level layout, which only has lane_layout
   // and lane_data, and is to distribute a SIMD code into SIMT code.
-  if (!layout || !layout.isSgLayout())
+  if (!layout || !layout.isForSubgroup())
     return failure();
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
@@ -50,11 +52,10 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   // compute sgSize by multiply elements of laneLayout
   // e.g. for 2D layout, sgSize = laneLayout[0] * laneLayout[1]
   // e.g. for 1D layout, sgSize = laneLayout[0]
-  auto sgSize = std::accumulate(laneLayout.begin(), laneLayout.end(), 1,
-                                std::multiplies<int64_t>());
+  int64_t sgSize = llvm::product_of(laneLayout);
 
   // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingAsScatterTensorDescAttr();
+  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
   if (scatterAttr) {
     auto chunkSize = scatterAttr.getChunkSize().getInt();
     // Verify if the first dimension of the tensor descriptor shape is
@@ -112,7 +113,7 @@ std::string xegpu::getLayoutName(const OpResult result) {
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
+xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
@@ -124,63 +125,113 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
+    // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
+    if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+      return convertOp.getTargetLayoutAttr();
+
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
-      return getLayoutAttr(loadNd.getTensorDesc());
+      return getDistributeLayoutAttr(loadNd.getTensorDesc());
+
+    // for LoadMatrixOp, the layout is attached to the property of the op
+    if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
+      return loadOp.getLayoutAttr();
+
+    // for StoreMatrixOp, the layout is attached to the property of the op
+    if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
+      return storeOp.getLayoutAttr();
 
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
-      return defOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+      return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      return getLayoutAttr(tiedInit->get());
+      if (tiedInit)
+        return getDistributeLayoutAttr(tiedInit->get());
     }
   }
 
   return nullptr;
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
+xegpu::DistributeLayoutAttr
+xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
+
+  if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
+    return loadOp.getLayoutAttr();
+
+  if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
+    return storeOp.getLayoutAttr();
+
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
-    return op->getAttrOfType<xegpu::LayoutAttr>(layoutName);
-  return getLayoutAttr(opr.get());
+    return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  return getDistributeLayoutAttr(opr.get());
 }
 
 template <typename T, typename>
-void xegpu::setLayoutAttr(const T &operandOrResult, const LayoutAttr layout) {
+void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
+                                    const DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getLayoutName(operandOrResult);
-  if (layout && !owner->hasAttrOfType<LayoutAttr>(name))
+  if (layout && !owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->setAttr(name, layout);
 }
 
 // Explicit instantiation for OpResult
-template void
-xegpu::setLayoutAttr<mlir::OpResult>(const mlir::OpResult &result,
-                                     const mlir::xegpu::LayoutAttr layout);
+template void xegpu::setDistributeLayoutAttr<mlir::OpResult>(
+    const mlir::OpResult &result,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
 // Explicit instantiation for OpOperand
-template void
-xegpu::setLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand,
-                                      const mlir::xegpu::LayoutAttr layout);
+template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
+    const mlir::OpOperand &operand,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
-void xegpu::setLayoutAttrs(Operation *op,
-                           function_ref<LayoutAttr(Value)> getLayoutImpl) {
+void xegpu::setDistributeLayoutAttrs(
+    Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
+    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(nestOp))
+      return;
+
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
-      setLayoutAttr(opr, layout);
+      setDistributeLayoutAttr(opr, layout);
     }
     for (OpResult result : nestOp->getOpResults()) {
       auto layout = getLayoutImpl(result);
-      setLayoutAttr(result, layout);
+      setDistributeLayoutAttr(result, layout);
     }
+  });
+}
+
+template <typename T, typename>
+void xegpu::removeLayoutAttr(const T &operandOrResult) {
+  Operation *owner = operandOrResult.getOwner();
+  std::string name = xegpu::getLayoutName(operandOrResult);
+  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
+    owner->removeAttr(name);
+}
+
+// Explicit instantiation for OpResult
+template void
+xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);
+
+// Explicit instantiation for OpOperand
+template void
+xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
+
+void xegpu::removeLayoutAttrs(Operation *op) {
+  op->walk([&](Operation *nestOp) {
+    for (OpOperand &opr : nestOp->getOpOperands())
+      removeLayoutAttr(opr);
+    for (OpResult result : nestOp->getOpResults())
+      removeLayoutAttr(result);
   });
 }
 
@@ -198,8 +249,8 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets : StaticTileOffsetRange(srcShape, shape)) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result.push_back(builder.create<vector::ExtractStridedSliceOp>(
-        loc, value, offsets, shape, staticStrides));
+    result.push_back(vector::ExtractStridedSliceOp::create(
+        builder, loc, value, offsets, shape, staticStrides));
   }
 
   return result;
@@ -218,14 +269,14 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 
   VectorType resultTy = VectorType::get(shape, elemTy);
   auto zeroAttr = builder.getZeroAttr(elemTy);
-  Value result = builder.create<arith::ConstantOp>(
-      loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
+  Value result = arith::ConstantOp::create(
+      builder, loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
 
   for (auto [src, offsets] :
        llvm::zip_equal(values, StaticTileOffsetRange(shape, tileShape))) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result = builder.create<vector::InsertStridedSliceOp>(
-        loc, src, result, offsets, staticStrides);
+    result = vector::InsertStridedSliceOp::create(builder, loc, src, result,
+                                                  offsets, staticStrides);
   }
   return result;
 }
@@ -236,7 +287,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
   auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
                             Location loc) -> Value {
-    return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
         .getResult(0);
   };
 
@@ -274,7 +325,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
       if (!inputTy || !resultTy)
         return WalkResult::skip();
 
-      xegpu::LayoutAttr layout = xegpu::getLayoutAttr(input);
+      xegpu::DistributeLayoutAttr layout =
+          xegpu::getDistributeLayoutAttr(input);
       if (!layout)
         return WalkResult::skip();
 
@@ -312,7 +364,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
   }
 
   { // perform the conversion from RankedTensorType to VectorType based on the
-    // LayoutAttr
+    // DistributeLayoutAttr
 
     // Handle the UnrealizedConversionCastOp introduced by the first step.
     // For vector->RankedTensorType, it will simply forward the inputs.
@@ -343,8 +395,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
         if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
           SmallVector<Value> values = xegpu::flattenValues(adaptor.getInputs());
-          auto newOp = rewriter.create<UnrealizedConversionCastOp>(
-              op.getLoc(), outputTy, values);
+          auto newOp = UnrealizedConversionCastOp::create(rewriter, op.getLoc(),
+                                                          outputTy, values);
           rewriter.replaceOp(op, newOp);
           return success();
         }
@@ -355,7 +407,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     converter.addSourceMaterialization(materializeCast);
     converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
                                            ValueRange inputs, Location loc) {
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResults();
     });
 
@@ -374,4 +426,60 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
   }
+}
+
+std::optional<std::string> xegpu::getChipStr(Operation *op) {
+  auto gpuModuleOp = op->getParentOfType<gpu::GPUModuleOp>();
+
+  if (!gpuModuleOp)
+    return std::nullopt;
+
+  auto targetAttrs = gpuModuleOp.getTargets();
+  if (targetAttrs) {
+    for (auto &attr : *targetAttrs) {
+      auto xevmAttr = llvm::dyn_cast<xevm::XeVMTargetAttr>(attr);
+      if (xevmAttr)
+        return xevmAttr.getChip().str();
+    }
+  }
+
+  return std::nullopt;
+}
+
+/// Generates element-wise addition ops of two arrays with same length.
+SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
+                                                Location loc,
+                                                ArrayRef<OpFoldResult> lhs,
+                                                ArrayRef<OpFoldResult> rhs) {
+  assert(lhs.size() == rhs.size() && "lhs and rhs must have the same size");
+  SmallVector<OpFoldResult> results;
+  for (auto [l, r] : llvm::zip_equal(lhs, rhs)) {
+    auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
+    auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
+    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
+  }
+  return results;
+}
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult>
+xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
+                           ArrayRef<OpFoldResult> lhs,
+                           ArrayRef<OpFoldResult> rhs) {
+  // ensure a is longer than b
+  ArrayRef<OpFoldResult> a = lhs.size() >= rhs.size() ? lhs : rhs;
+  ArrayRef<OpFoldResult> b = lhs.size() >= rhs.size() ? rhs : lhs;
+  SmallVector<OpFoldResult> results(a.take_front(a.size() - b.size()));
+  a = a.slice(a.size() - b.size());
+  results.append(addElementwise(builder, loc, a, b));
+  return results;
 }

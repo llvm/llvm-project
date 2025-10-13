@@ -53,5 +53,5 @@ bb2:                                              ; preds = %bb1, %bb
   ret i32 %phi
 }
 
-attributes #1 = { minsize nounwind "target-features"="+aes,+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+reserve-lr-for-ra,+sha2,+v8.1a,+v8.2a,+v8.3a,+v8a,+zcm,+zcz" }
+attributes #1 = { minsize nounwind "target-features"="+aes,+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+reserve-lr-for-ra,+sha2,+v8.1a,+v8.2a,+v8.3a,+v8a" }
 

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 extern "C" void acc_loop(int *A, int *B, int *C, int N) {
-  // CHECK: cir.func @acc_loop(%[[ARG_A:.*]]: !cir.ptr<!s32i> loc{{.*}}, %[[ARG_B:.*]]: !cir.ptr<!s32i> loc{{.*}}, %[[ARG_C:.*]]: !cir.ptr<!s32i> loc{{.*}}, %[[ARG_N:.*]]: !s32i loc{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_loop(%[[ARG_A:.*]]: !cir.ptr<!s32i> loc{{.*}}, %[[ARG_B:.*]]: !cir.ptr<!s32i> loc{{.*}}, %[[ARG_C:.*]]: !cir.ptr<!s32i> loc{{.*}}, %[[ARG_N:.*]]: !s32i loc{{.*}}) {
   // CHECK-NEXT: %[[ALLOCA_A:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["A", init]
   // CHECK-NEXT: %[[ALLOCA_B:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["B", init]
   // CHECK-NEXT: %[[ALLOCA_C:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["C", init]

@@ -260,20 +260,6 @@ define void @vector_interleave_store_factor4(<vscale x 2 x i32> %a, <vscale x 2 
   ret void
 }
 
-; TODO: Remove once recursive interleaving support is removed
-define void @vector_interleave_store_factor4_recursive(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, ptr %p) {
-; CHECK-LABEL: vector_interleave_store_factor4_recursive:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v8, (a0)
-; CHECK-NEXT:    ret
-  %v0 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %c)
-  %v1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %b, <vscale x 4 x i32> %d)
-  %v2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v0, <vscale x 8 x i32> %v1)
-  store <vscale x 16 x i32> %v2, ptr %p
-  ret void
-}
-
 define void @vector_interleave_store_factor5(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor5:
 ; CHECK:       # %bb.0:
@@ -318,22 +304,61 @@ define void @vector_interleave_store_factor8(<vscale x 2 x i32> %a, <vscale x 2 
   ret void
 }
 
-; TODO: Remove once recursive interleaving support is removed
-define void @vector_interleave_store_factor8_recursive(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, <vscale x 2 x i32> %h, ptr %p) {
-; CHECK-LABEL: vector_interleave_store_factor8_recursive:
+define void @masked_store_factor3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, ptr %p) {
+; CHECK-LABEL: masked_store_factor3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg8e32.v v8, (a0)
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %e)
-  %v1 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %c, <vscale x 2 x i32> %g)
-  %v2 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1)
+  %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c)
+  call void @llvm.masked.store(<vscale x 6 x i32> %v, ptr %p, i32 4, <vscale x 6 x i1> splat (i1 true))
+  ret void
+}
 
-  %v3 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> %f)
-  %v4 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %d, <vscale x 2 x i32> %h)
-  %v5 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %v3, <vscale x 4 x i32> %v4)
+define void @masked_store_factor3_masked(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-LABEL: masked_store_factor3_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 6 x i1> @llvm.vector.interleave3(<vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m)
+  %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c)
+  call void @llvm.masked.store(<vscale x 6 x i32> %v, ptr %p, i32 4, <vscale x 6 x i1> %interleaved.mask)
+  ret void
+}
 
-  %v6 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v2, <vscale x 8 x i32> %v5)
-  store <vscale x 16 x i32> %v6, ptr %p
+define void @store_factor2_oneactive(<vscale x 2 x i32> %a, ptr %p) {
+; CHECK-LABEL: store_factor2_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.vector.interleave2(<vscale x 2 x i32> %a, <vscale x 2 x i32> poison)
+  store <vscale x 4 x i32> %v, ptr %p
+  ret void
+}
+
+define void @store_factor3_oneactive(<vscale x 2 x i32> %a, ptr %p) {
+; CHECK-LABEL: store_factor3_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
+  store <vscale x 6 x i32> %v, ptr %p
+  ret void
+}
+
+define void @store_factor7_oneactive(<vscale x 2 x i32> %a, ptr %p) {
+; CHECK-LABEL: store_factor7_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 24
+; CHECK-NEXT:    li a1, 28
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %v = call <vscale x 14 x i32> @llvm.vector.interleave7(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> %a)
+  store <vscale x 14 x i32> %v, ptr %p
   ret void
 }

@@ -26,8 +26,21 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 using namespace llvm;
+
+namespace llvm {
+
+// FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
+// here because referencing IR should be feasible from anywhere. Will be
+// removed after the ablation test.
+cl::opt<bool> ProfcheckDisableMetadataFixes(
+    "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Disable metadata propagation fixes discovered through Issue #147390"));
+
+} // end namespace llvm
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()
@@ -543,14 +556,20 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
   CB->removeRetAttrs(UBImplyingAttributes);
 }
 
-void Instruction::dropUBImplyingAttrsAndMetadata() {
-  // !annotation metadata does not impact semantics.
+void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
+  // !annotation and !prof metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
-  unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
-  dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
+  static const unsigned KnownIDs[] = {
+      LLVMContext::MD_annotation, LLVMContext::MD_range,
+      LLVMContext::MD_nonnull, LLVMContext::MD_align, LLVMContext::MD_prof};
+  SmallVector<unsigned> KeepIDs;
+  KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
+  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
+                                                        : drop_end(KnownIDs)));
+  append_range(KeepIDs, Keep);
+  dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
 
 bool Instruction::hasUBImplyingAttrs() const {
@@ -817,6 +836,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case UIToFP:        return "uitofp";
   case SIToFP:        return "sitofp";
   case IntToPtr:      return "inttoptr";
+  case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
   case AddrSpaceCast: return "addrspacecast";
@@ -849,7 +869,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 bool Instruction::hasSameSpecialState(const Instruction *I2,
                                       bool IgnoreAlignment,
                                       bool IntersectAttrs) const {
-  auto I1 = this;
+  const auto *I1 = this;
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
 
@@ -902,6 +922,8 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
            FI->getSyncScopeID() == cast<FenceInst>(I2)->getSyncScopeID();
   if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I1))
     return CXI->isVolatile() == cast<AtomicCmpXchgInst>(I2)->isVolatile() &&
+           (CXI->getAlign() == cast<AtomicCmpXchgInst>(I2)->getAlign() ||
+            IgnoreAlignment) &&
            CXI->isWeak() == cast<AtomicCmpXchgInst>(I2)->isWeak() &&
            CXI->getSuccessOrdering() ==
                cast<AtomicCmpXchgInst>(I2)->getSuccessOrdering() &&
@@ -912,6 +934,8 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
+           (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
+            IgnoreAlignment) &&
            RMWI->getOrdering() == cast<AtomicRMWInst>(I2)->getOrdering() &&
            RMWI->getSyncScopeID() == cast<AtomicRMWInst>(I2)->getSyncScopeID();
   if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I1))
@@ -942,14 +966,13 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
-  if (!std::equal(op_begin(), op_end(), I->op_begin()))
+  if (!equal(operands(), I->operands()))
     return false;
 
   // WARNING: this logic must be kept in sync with EliminateDuplicatePHINodes()!
-  if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
-    const PHINode *otherPHI = cast<PHINode>(I);
-    return std::equal(thisPHI->block_begin(), thisPHI->block_end(),
-                      otherPHI->block_begin());
+  if (const PHINode *Phi = dyn_cast<PHINode>(this)) {
+    const PHINode *OtherPhi = cast<PHINode>(I);
+    return equal(Phi->blocks(), OtherPhi->blocks());
   }
 
   return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
@@ -1235,26 +1258,7 @@ bool Instruction::isDebugOrPseudoInst() const {
   return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
-const Instruction *
-Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
-  for (const Instruction *I = getNextNode(); I; I = I->getNextNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
-      return I;
-  return nullptr;
-}
-
-const Instruction *
-Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
-  for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
-      return I;
-  return nullptr;
-}
-
 const DebugLoc &Instruction::getStableDebugLoc() const {
-  if (isa<DbgInfoIntrinsic>(this))
-    if (const Instruction *Next = getNextNonDebugInstruction())
-      return Next->getDebugLoc();
   return getDebugLoc();
 }
 

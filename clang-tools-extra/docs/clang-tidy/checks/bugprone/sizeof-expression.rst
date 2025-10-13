@@ -266,8 +266,9 @@ This check corresponds to the CERT C Coding Standard rule
 `ARR39-C. Do not add or subtract a scaled integer to a pointer
 <http://wiki.sei.cmu.edu/confluence/display/c/ARR39-C.+Do+not+add+or+subtract+a+scaled+integer+to+a+pointer>`_.
 
+
 Limitations
-"""""""""""
+-----------
 
 Cases where the pointee type has a size of `1` byte (such as, and most
 importantly, ``char``) are excluded.
@@ -316,3 +317,12 @@ Options
    When `true`, the check will warn on pointer arithmetic where the
    element count is obtained from a division with ``sizeof(...)``,
    e.g., ``Ptr + Bytes / sizeof(*T)``. Default is `true`.
+
+.. option:: WarnOnSizeOfInLoopTermination
+
+   When `true`, the check will warn about incorrect use of sizeof expression
+   in loop termination condition. The warning triggers if the ``sizeof``
+   expression appears to be incorrectly used to determine the number of
+   array/buffer elements.
+   e.g, ``long arr[10]; for(int i = 0; i < sizeof(arr); i++) { ... }``. Default
+   is `true`.

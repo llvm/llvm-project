@@ -12,16 +12,19 @@
 
 #include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
+#include <__algorithm/simd_utils.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__bit/countr.h>
 #include <__bit/invert_if.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
@@ -44,39 +47,102 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // generic implementation
 template <class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
-__find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+__find_loop(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
   for (; __first != __last; ++__first)
     if (std::__invoke(__proj, *__first) == __value)
       break;
   return __first;
 }
 
-// trivially equality comparable implementations
-template <class _Tp,
-          class _Up,
-          class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
-                            sizeof(_Tp) == 1,
-                        int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
-  if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
-    return __ret;
-  return __last;
+template <class _Iter, class _Sent, class _Tp, class _Proj>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
+__find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+  return std::__find_loop(std::move(__first), std::move(__last), __value, __proj);
 }
 
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-template <class _Tp,
-          class _Up,
-          class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
-                            sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t),
-                        int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
-  if (auto __ret = std::__constexpr_wmemchr(__first, __value, __last - __first))
-    return __ret;
-  return __last;
+#if _LIBCPP_VECTORIZE_ALGORITHMS
+template <class _Tp, class _Up>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, _Up __value) {
+  if (!__libcpp_is_constant_evaluated()) {
+    constexpr size_t __unroll_count = 4;
+    constexpr size_t __vec_size     = __native_vector_size<_Tp>;
+    using __vec                     = __simd_vector<_Tp, __vec_size>;
+
+    auto __orig_first = __first;
+
+    auto __values = static_cast<__simd_vector<_Tp, __vec_size>>(__value); // broadcast the value
+    while (static_cast<size_t>(__last - __first) >= __unroll_count * __vec_size) [[__unlikely__]] {
+      __vec __lhs[__unroll_count];
+
+      for (size_t __i = 0; __i != __unroll_count; ++__i)
+        __lhs[__i] = std::__load_vector<__vec>(__first + __i * __vec_size);
+
+      for (size_t __i = 0; __i != __unroll_count; ++__i) {
+        if (auto __cmp_res = __lhs[__i] == __values; std::__any_of(__cmp_res)) {
+          auto __offset = __i * __vec_size + std::__find_first_set(__cmp_res);
+          return __first + __offset;
+        }
+      }
+
+      __first += __unroll_count * __vec_size;
+    }
+
+    // check the remaining 0-3 vectors
+    while (static_cast<size_t>(__last - __first) >= __vec_size) {
+      if (auto __cmp_res = std::__load_vector<__vec>(__first) == __values; std::__any_of(__cmp_res)) {
+        return __first + std::__find_first_set(__cmp_res);
+      }
+      __first += __vec_size;
+    }
+
+    if (__last - __first == 0)
+      return __first;
+
+    // Check if we can load elements in front of the current pointer. If that's the case load a vector at
+    // (last - vector_size) to check the remaining elements
+    if (static_cast<size_t>(__first - __orig_first) >= __vec_size) {
+      __first = __last - __vec_size;
+      return __first + std::__find_first_set(std::__load_vector<__vec>(__first) == __values);
+    }
+  }
+
+  __identity __proj;
+  return std::__find_loop(__first, __last, __value, __proj);
 }
-#endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#endif
+
+#ifndef _LIBCPP_CXX03_LANG
+// trivially equality comparable implementations
+template <
+    class _Tp,
+    class _Up,
+    class _Proj,
+    __enable_if_t<__is_identity<_Proj>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
+  if constexpr (sizeof(_Tp) == 1) {
+    if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
+      return __ret;
+    return __last;
+  }
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+  else if constexpr (sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t)) {
+    if (auto __ret = std::__constexpr_wmemchr(__first, __value, __last - __first))
+      return __ret;
+    return __last;
+  }
+#  endif
+#  if _LIBCPP_VECTORIZE_ALGORITHMS
+  else if constexpr (is_integral<_Tp>::value) {
+    return std::__find_vectorized(__first, __last, __value);
+  }
+#  endif
+  else {
+    __identity __proj;
+    return std::__find_loop(__first, __last, __value, __proj);
+  }
+}
+#endif
 
 // TODO: This should also be possible to get right with different signedness
 // cast integral types to allow vectorization
@@ -149,7 +215,7 @@ struct __find_segment;
 template <class _SegmentedIterator,
           class _Tp,
           class _Proj,
-          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
   return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);

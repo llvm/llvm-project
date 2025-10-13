@@ -151,22 +151,26 @@ LogicalResult BranchConditionalOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult FunctionCallOp::verify() {
+  if (getNumResults() > 1) {
+    return emitOpError(
+               "expected callee function to have 0 or 1 result, but provided ")
+           << getNumResults();
+  }
+  return success();
+}
+
+LogicalResult
+FunctionCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto fnName = getCalleeAttr();
 
-  auto funcOp = dyn_cast_or_null<spirv::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom((*this)->getParentOp(), fnName));
+  auto funcOp =
+      symbolTable.lookupNearestSymbolFrom<spirv::FuncOp>(*this, fnName);
   if (!funcOp) {
     return emitOpError("callee function '")
            << fnName.getValue() << "' not found in nearest symbol table";
   }
 
   auto functionType = funcOp.getFunctionType();
-
-  if (getNumResults() > 1) {
-    return emitOpError(
-               "expected callee function to have 0 or 1 result, but provided ")
-           << getNumResults();
-  }
 
   if (functionType.getNumInputs() != getNumOperands()) {
     return emitOpError("has incorrect number of operands for callee: expected ")
@@ -391,7 +395,7 @@ void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
   builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
-  builder.create<spirv::MergeOp>(getLoc());
+  spirv::MergeOp::create(builder, getLoc());
 }
 
 //===----------------------------------------------------------------------===//
@@ -543,7 +547,7 @@ void SelectionOp::addMergeBlock(OpBuilder &builder) {
   builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
-  builder.create<spirv::MergeOp>(getLoc());
+  spirv::MergeOp::create(builder, getLoc());
 }
 
 SelectionOp
@@ -551,7 +555,7 @@ SelectionOp::createIfThen(Location loc, Value condition,
                           function_ref<void(OpBuilder &builder)> thenBody,
                           OpBuilder &builder) {
   auto selectionOp =
-      builder.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
+      spirv::SelectionOp::create(builder, loc, spirv::SelectionControl::None);
 
   selectionOp.addMergeBlock(builder);
   Block *mergeBlock = selectionOp.getMergeBlock();
@@ -562,17 +566,17 @@ SelectionOp::createIfThen(Location loc, Value condition,
     OpBuilder::InsertionGuard guard(builder);
     thenBlock = builder.createBlock(mergeBlock);
     thenBody(builder);
-    builder.create<spirv::BranchOp>(loc, mergeBlock);
+    spirv::BranchOp::create(builder, loc, mergeBlock);
   }
 
   // Build the header block.
   {
     OpBuilder::InsertionGuard guard(builder);
     builder.createBlock(thenBlock);
-    builder.create<spirv::BranchConditionalOp>(
-        loc, condition, thenBlock,
-        /*trueArguments=*/ArrayRef<Value>(), mergeBlock,
-        /*falseArguments=*/ArrayRef<Value>());
+    spirv::BranchConditionalOp::create(builder, loc, condition, thenBlock,
+                                       /*trueArguments=*/ArrayRef<Value>(),
+                                       mergeBlock,
+                                       /*falseArguments=*/ArrayRef<Value>());
   }
 
   return selectionOp;

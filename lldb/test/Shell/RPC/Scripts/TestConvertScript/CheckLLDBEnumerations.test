@@ -13,5 +13,8 @@ CHECK: #define LLDB_RPC_ENUMERATIONS_H
 # Change the namespace to lldb_rpc. Also, the comment that closes the namespace should match the namespace.
 CHECK: namespace lldb_rpc {} // namespace lldb_rpc
 
+# When the lldb namespace is used, the namespace must be replaced with lldb_rpc.
+CHECK: void dummyFunction(lldb_rpc::addr_t) {}
+
 # The comment that closes the include guard should match the guard.
 CHECK: #endif // LLDB_RPC_ENUMERATIONS_H

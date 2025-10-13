@@ -25,7 +25,13 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 mask_trailing_ones() {
   constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
   static_assert(count <= T_BITS && "Invalid bit index");
-  return count == 0 ? 0 : (T(-1) >> (T_BITS - count));
+  // MSVC complains about out of range shifts.
+  if constexpr (count == 0)
+    return 0;
+  else if constexpr (count >= T_BITS)
+    return T(-1);
+  else
+    return T(-1) >> (T_BITS - count);
 }
 
 // Create a bitmask with the count left-most bits set to 1, and all other bits
@@ -55,18 +61,28 @@ mask_leading_zeros() {
 // Returns whether 'a + b' overflows, the result is stored in 'res'.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(a, b, &res);
+#else
+  res = a + b;
+  return (res < a) || (res < b);
+#endif // __builtin_add_overflow
 }
 
 // Returns whether 'a - b' overflows, the result is stored in 'res'.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(a, b, &res);
+#else
+  res = a - b;
+  return (res > a);
+#endif // __builtin_sub_overflow
 }
 
 #define RETURN_IF(TYPE, BUILTIN)                                               \
   if constexpr (cpp::is_same_v<T, TYPE>)                                       \
-    return BUILTIN(a, b, carry_in, carry_out);
+    return BUILTIN(a, b, carry_in, &carry_out);
 
 // Returns the result of 'a + b' taking into account 'carry_in'.
 // The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
@@ -74,7 +90,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 add_with_carry(T a, T b, T carry_in, T &carry_out) {
-  if constexpr (!cpp::is_constant_evaluated()) {
+  if (!cpp::is_constant_evaluated()) {
 #if __has_builtin(__builtin_addcb)
     RETURN_IF(unsigned char, __builtin_addcb)
 #elif __has_builtin(__builtin_addcs)
@@ -100,7 +116,7 @@ add_with_carry(T a, T b, T carry_in, T &carry_out) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 sub_with_borrow(T a, T b, T carry_in, T &carry_out) {
-  if constexpr (!cpp::is_constant_evaluated()) {
+  if (!cpp::is_constant_evaluated()) {
 #if __has_builtin(__builtin_subcb)
     RETURN_IF(unsigned char, __builtin_subcb)
 #elif __has_builtin(__builtin_subcs)

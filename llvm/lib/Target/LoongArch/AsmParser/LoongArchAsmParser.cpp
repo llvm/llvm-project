@@ -9,7 +9,6 @@
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCAsmInfo.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "MCTargetDesc/LoongArchTargetStreamer.h"
@@ -556,7 +555,7 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return LoongArchInstPrinter::getRegisterName(Reg);
@@ -566,7 +565,7 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
@@ -958,8 +957,10 @@ void LoongArchAsmParser::emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc,
                              : Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
+  // To distinguish between la.abs and %abs_hi20, la.abs will generate
+  // R_LARCH_MARK_LA and R_LARCH_ABS_HI20 relocations.
   Insts.push_back(
-      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_ABS_HI20));
+      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_MARK_LA));
   Insts.push_back(
       LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_ABS_LO12));
 

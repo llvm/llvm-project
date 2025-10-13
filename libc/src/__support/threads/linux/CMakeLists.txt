@@ -2,6 +2,8 @@ add_header_library(
   futex_word_type
   HDRS
     futex_word.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
@@ -95,10 +97,8 @@ add_object_library(
                             # value other than 0 is dangerous. We know.
 )
 
-add_object_library(
+add_header_library(
   callonce
-  SRCS
-    callonce.cpp
   HDRS
     ../callonce.h
     callonce.h
@@ -114,10 +114,22 @@ add_object_library(
   HDRS
     ../CndVar.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.linux.futex_word_type
     libc.src.__support.threads.mutex
     libc.src.__support.threads.linux.raw_mutex
     libc.src.__support.CPP.mutex
+)
+
+add_object_library(
+  barrier
+  HDRS
+    barrier.h
+  SRCS
+    barrier.cpp
+  DEPENDS
+    libc.src.__support.threads.CndVar
+    libc.src.__support.threads.mutex
 )

@@ -67,7 +67,7 @@ void SystemZInstPrinterCommon::printUImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   uint64_t Value = static_cast<uint64_t>(MO.getImm());
@@ -80,7 +80,7 @@ void SystemZInstPrinterCommon::printSImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   int64_t Value = MI->getOperand(OpNum).getImm();
@@ -184,8 +184,8 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
   // Output the TLS marker if present.
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {
     const MCOperand &MO = MI->getOperand(OpNum + 1);
-    const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
-    switch (refExp.getSpecifier()) {
+    const MCSymbolRefExpr &RefExp = cast<MCSymbolRefExpr>(*MO.getExpr());
+    switch (RefExp.getSpecifier()) {
     case SystemZ::S_TLSGD:
       O << ":tls_gdcall:";
       break;
@@ -195,7 +195,7 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
     default:
       llvm_unreachable("Unexpected symbol kind");
     }
-    O << refExp.getSymbol().getName();
+    O << RefExp.getSymbol().getName();
   }
 }
 

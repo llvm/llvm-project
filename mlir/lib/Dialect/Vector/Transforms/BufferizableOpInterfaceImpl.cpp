@@ -116,8 +116,8 @@ struct TransferWriteOpInterface
         getBuffer(rewriter, writeOp.getBase(), options, state);
     if (failed(resultBuffer))
       return failure();
-    rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
+    vector::TransferWriteOp::create(
+        rewriter, writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
         writeOp.getIndices(), writeOp.getPermutationMapAttr(),
         writeOp.getMask(), writeOp.getInBoundsAttr());
     replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
@@ -162,7 +162,7 @@ struct GatherOpInterface
       return failure();
     replaceOpWithNewBufferizedOp<vector::GatherOp>(
         rewriter, gatherOp, gatherOp.getVectorType(), *buffer,
-        gatherOp.getIndices(), gatherOp.getIndexVec(), gatherOp.getMask(),
+        gatherOp.getOffsets(), gatherOp.getIndices(), gatherOp.getMask(),
         gatherOp.getPassThru());
     return success();
   }
@@ -241,8 +241,9 @@ struct MaskOpInterface
     // Create a new vector.mask op.
     ValueRange newYieldedValuesRange(newYieldedValues);
     TypeRange newResultTypes(newYieldedValuesRange);
-    auto newOp = rewriter.create<vector::MaskOp>(
-        op->getLoc(), newResultTypes, maskOp.getMask(), maskOp.getPassthru(),
+    auto newOp = vector::MaskOp::create(
+        rewriter, op->getLoc(), newResultTypes, maskOp.getMask(),
+        maskOp.getPassthru(),
         /*maskableOp=*/nullptr,
         /*maskRegionBuilder=*/[](OpBuilder &b, Operation *) {});
     newOp.getRegion().takeBody(maskOp.getMaskRegion());

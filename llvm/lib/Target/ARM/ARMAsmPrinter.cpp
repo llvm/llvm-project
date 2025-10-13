@@ -54,6 +54,10 @@ ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
 
+const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
+  return static_cast<const ARMBaseTargetMachine &>(TM);
+}
+
 void ARMAsmPrinter::emitFunctionBodyEnd() {
   // Make sure to terminate any constant pools that were at the end
   // of the function.
@@ -606,22 +610,38 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
 // to appear in the .ARM.attributes section in ELF.
 // Instead of subclassing the MCELFStreamer, we do the work here.
 
- // Returns true if all functions have the same function attribute value.
- // It also returns true when the module has no functions.
+// Returns true if all function definitions have the same function attribute
+// value. It also returns true when the module has no functions.
 static bool checkFunctionsAttributeConsistency(const Module &M, StringRef Attr,
                                                StringRef Value) {
-   return !any_of(M, [&](const Function &F) {
-       return F.getFnAttribute(Attr).getValueAsString() != Value;
-   });
+  return !any_of(M, [&](const Function &F) {
+    if (F.isDeclaration())
+      return false;
+    return F.getFnAttribute(Attr).getValueAsString() != Value;
+  });
 }
-// Returns true if all functions have the same denormal mode.
+// Returns true if all functions definitions have the same denormal mode.
 // It also returns true when the module has no functions.
-static bool checkDenormalAttributeConsistency(const Module &M,
-                                              StringRef Attr,
+static bool checkDenormalAttributeConsistency(const Module &M, StringRef Attr,
                                               DenormalMode Value) {
   return !any_of(M, [&](const Function &F) {
+    if (F.isDeclaration())
+      return false;
     StringRef AttrVal = F.getFnAttribute(Attr).getValueAsString();
     return parseDenormalFPAttribute(AttrVal) != Value;
+  });
+}
+
+// Returns true if all functions have different denormal modes.
+static bool checkDenormalAttributeInconsistency(const Module &M) {
+  auto F = M.functions().begin();
+  auto E = M.functions().end();
+  if (F == E)
+    return false;
+  DenormalMode Value = F->getDenormalModeRaw();
+  ++F;
+  return std::any_of(F, E, [&](const Function &F) {
+    return !F.isDeclaration() && F.getDenormalModeRaw() != Value;
   });
 }
 
@@ -691,7 +711,9 @@ void ARMAsmPrinter::emitAttributes() {
                                              DenormalMode::getPositiveZero()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
-  else if (!TM.Options.UnsafeFPMath)
+  else if (checkDenormalAttributeInconsistency(*MMI->getModule()) ||
+           checkDenormalAttributeConsistency(
+               *MMI->getModule(), "denormal-fp-math", DenormalMode::getIEEE()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
   else {
@@ -726,7 +748,7 @@ void ARMAsmPrinter::emitAttributes() {
       TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
-  else if (!TM.Options.UnsafeFPMath) {
+  else {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, ARMBuildAttrs::Allowed);
 
     // If the user has permitted this code to choose the IEEE 754
@@ -750,7 +772,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (STI.isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
+  if (getTM().isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the
@@ -855,7 +877,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   case ARMCP::GOT_PREL:
     return ARM::S_GOT_PREL;
   case ARMCP::SECREL:
-    return MCSymbolRefExpr::VK_SECREL;
+    return ARM::S_COFF_SECREL;
   }
   llvm_unreachable("Invalid ARMCPModifier!");
 }
@@ -2036,12 +2058,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
     break;
-  }
-  case ARM::TRAPNaCl: {
-    uint32_t Val = 0xe7fedef0UL;
-    OutStreamer->AddComment("trap");
-    ATS.emitInst(Val);
-    return;
   }
   case ARM::tTRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.

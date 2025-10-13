@@ -341,6 +341,22 @@ Object serializeNames(const APIRecord *Record) {
   serializeArray(Names, "subHeading",
                  serializeDeclarationFragments(Record->SubHeading));
   DeclarationFragments NavigatorFragments;
+  // The +/- prefix for Objective-C methods is important information, and
+  // should be included in the navigator fragment. The entire subheading is
+  // not included as it can contain too much information for other records.
+  switch (Record->getKind()) {
+  case APIRecord::RK_ObjCClassMethod:
+    NavigatorFragments.append("+ ", DeclarationFragments::FragmentKind::Text,
+                              /*PreciseIdentifier*/ "");
+    break;
+  case APIRecord::RK_ObjCInstanceMethod:
+    NavigatorFragments.append("- ", DeclarationFragments::FragmentKind::Text,
+                              /*PreciseIdentifier*/ "");
+    break;
+  default:
+    break;
+  }
+
   NavigatorFragments.append(Record->Name,
                             DeclarationFragments::FragmentKind::Identifier,
                             /*PreciseIdentifier*/ "");

@@ -551,7 +551,7 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_MALLOC_USABLE_SIZE (!SI_MAC && !SI_NETBSD)
 #define SANITIZER_INTERCEPT_MCHECK_MPROBE SI_LINUX_NOT_ANDROID
 #define SANITIZER_INTERCEPT_WCSLEN 1
-#define SANITIZER_INTERCEPT_WCSCAT SI_POSIX
+#define SANITIZER_INTERCEPT_WCSCAT (SI_POSIX || SI_WINDOWS)
 #define SANITIZER_INTERCEPT_WCSDUP SI_POSIX
 #define SANITIZER_INTERCEPT_SIGNAL_AND_SIGACTION (!SI_WINDOWS && SI_NOT_FUCHSIA)
 #define SANITIZER_INTERCEPT_BSD_SIGNAL SI_ANDROID
@@ -662,6 +662,17 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_GETSERVENT_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYNAME_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYPORT_R SI_GLIBC
+
+// Until free_sized and free_aligned_sized are more generally available,
+// we can only unconditionally intercept on ELF-based platforms where it
+// is okay to have undefined weak symbols.
+#ifdef __ELF__
+#  define SANITIZER_INTERCEPT_FREE_SIZED 1
+#  define SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED 1
+#else
+#  define SANITIZER_INTERCEPT_FREE_SIZED 0
+#  define SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED 0
+#endif
 
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have

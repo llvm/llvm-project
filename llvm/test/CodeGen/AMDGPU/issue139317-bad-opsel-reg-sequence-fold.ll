@@ -16,6 +16,7 @@ define amdgpu_kernel void @stepper_test_kernel_DType_I6A6AcB6A6AsA6A6A_68a5362b9
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_mov_b32 s8, 0x47004600
 ; GFX942-NEXT:    s_mov_b32 s9, 0x45004400
+; GFX942-NEXT:    s_mov_b32 s10, 0x42004000
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
@@ -29,7 +30,7 @@ define amdgpu_kernel void @stepper_test_kernel_DType_I6A6AcB6A6AsA6A6A_68a5362b9
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v7, v7, s8
 ; GFX942-NEXT:    v_pk_add_f16 v6, v6, s9
-; GFX942-NEXT:    v_pk_add_f16 v5, v5, 0
+; GFX942-NEXT:    v_pk_add_f16 v5, v5, s10
 ; GFX942-NEXT:    v_pk_add_f16 v4, v4, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX942-NEXT:    global_store_dwordx4 v2, v[4:7], s[0:1]
 ; GFX942-NEXT:    s_add_u32 s0, s0, 16

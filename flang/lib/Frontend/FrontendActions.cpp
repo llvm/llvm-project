@@ -74,10 +74,6 @@
 #include <memory>
 #include <system_error>
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace Fortran::frontend;
 
 constexpr llvm::StringLiteral timingIdParse = "Parse";
@@ -168,8 +164,9 @@ static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   // Add linker options specified by --dependent-lib
   auto builder = mlir::OpBuilder(mlirModule.getRegion());
   for (const std::string &lib : libs) {
-    builder.create<mlir::LLVM::LinkerOptionsOp>(
-        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
+    mlir::LLVM::LinkerOptionsOp::create(
+        builder, mlirModule.getLoc(),
+        builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
 }
 
@@ -280,6 +277,14 @@ bool CodeGenAction::beginSourceFileAction() {
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
+  if (ci.getInvocation().getLangOpts().NoFastRealMod) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              llvm::Twine{"fir.no_fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
   // Create a parse tree and lower it to FIR
   parseAndLowerTree(ci, lb);
 
@@ -301,6 +306,7 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
+  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
 
@@ -332,12 +338,13 @@ bool CodeGenAction::beginSourceFileAction() {
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
       opts.isTargetDevice = offloadMod.getIsTargetDevice();
-
-    // WARNING: This pipeline must be run immediately after the lowering to
-    // ensure that the FIR is correct with respect to OpenMP operations/
-    // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, opts);
   }
+
+  // WARNING: This pipeline must be run immediately after the lowering to
+  // ensure that the FIR is correct with respect to OpenMP operations/
+  // attributes.
+  if (isOpenMPEnabled || isOpenMPSimd)
+    fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
@@ -620,12 +627,14 @@ void CodeGenAction::lowerHLFIRToFIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
+  fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP))
+    enableOpenMP = fir::EnableOpenMP::Full;
+  if (ci.getInvocation().getLangOpts().OpenMPSimd)
+    enableOpenMP = fir::EnableOpenMP::Simd;
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(
-      pm,
-      ci.getInvocation().getFrontendOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::OpenMP),
-      level);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
@@ -737,6 +746,8 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
+  config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);
 
   if (auto vsr = getVScaleRange(ci)) {
@@ -751,8 +762,13 @@ void CodeGenAction::generateLLVMIR() {
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
+  if (ci.getInvocation().getLangOpts().OpenMPSimd)
+    config.EnableOpenMPSimd = true;
+
   if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
     config.NSWOnLoopVarInc = false;
+
+  config.ComplexRange = opts.getComplexRange();
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -890,7 +906,19 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
-  if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
+  std::unique_ptr<llvm::ToolOutputFile> dwoOS;
+  if (!codeGenOpts.SplitDwarfOutput.empty()) {
+    std::error_code ec;
+    dwoOS = std::make_unique<llvm::ToolOutputFile>(codeGenOpts.SplitDwarfOutput,
+                                                   ec, llvm::sys::fs::OF_None);
+    if (ec) {
+      diags.Report(clang::diag::err_fe_unable_to_open_output)
+          << codeGenOpts.SplitDwarfOutput << ec.message();
+      return;
+    }
+  }
+  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
+                             cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -900,6 +928,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
+
+  if (dwoOS)
+    dwoOS->keep();
 
   // Cleanup
   delete tlii;
@@ -928,20 +959,18 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
                                   ? llvm::driver::getDefaultProfileGenName()
                                   : opts.InstrProfileOutput,
-                              "", "", opts.MemoryProfileUsePath, nullptr,
+                              "", "", opts.MemoryProfileUsePath,
                               llvm::PGOOptions::IRInstr,
                               llvm::PGOOptions::NoCSAction,
                               llvm::PGOOptions::ColdFuncOpt::Default, false,
                               /*PseudoProbeForProfiling=*/false, false);
   } else if (opts.hasProfileIRUse()) {
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        llvm::vfs::getRealFileSystem();
     // -fprofile-use.
     auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
                                              : llvm::PGOOptions::NoCSAction;
     pgoOpt = llvm::PGOOptions(
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
-        opts.MemoryProfileUsePath, VFS, llvm::PGOOptions::IRUse, CSAction,
+        opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, false);
   }
 
@@ -952,6 +981,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
   pto.LoopInterchange = opts.InterchangeLoops;
+  pto.LoopFusion = opts.FuseLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;
@@ -989,7 +1019,14 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Create the pass manager.
   llvm::ModulePassManager mpm;
-  if (opts.PrepareForFullLTO)
+  if (opts.PrepareForFatLTO) {
+    // The module summary should be emitted by default for regular LTO
+    // except for ld64 targets.
+    bool emitSummary = opts.PrepareForThinLTO || opts.PrepareForFullLTO ||
+                       triple.getVendor() != llvm::Triple::Apple;
+    mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
+                                        emitSummary);
+  } else if (opts.PrepareForFullLTO)
     mpm = pb.buildLTOPreLinkDefaultPipeline(level);
   else if (opts.PrepareForThinLTO)
     mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
@@ -1308,6 +1345,7 @@ void CodeGenAction::executeAction() {
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
+  targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
@@ -1336,7 +1374,7 @@ void CodeGenAction::executeAction() {
       std::make_unique<BackendRemarkConsumer>(remarkConsumer));
 
   // write optimization-record
-  llvm::Expected<std::unique_ptr<llvm::ToolOutputFile>> optRecordFileOrErr =
+  llvm::Expected<llvm::LLVMRemarkFileHandle> optRecordFileOrErr =
       setupLLVMOptimizationRemarks(
           llvmModule->getContext(), codeGenOpts.OptRecordFile,
           codeGenOpts.OptRecordPasses, codeGenOpts.OptRecordFormat,
@@ -1348,8 +1386,7 @@ void CodeGenAction::executeAction() {
     return;
   }
 
-  std::unique_ptr<llvm::ToolOutputFile> optRecordFile =
-      std::move(*optRecordFileOrErr);
+  llvm::LLVMRemarkFileHandle optRecordFile = std::move(*optRecordFileOrErr);
 
   if (optRecordFile) {
     optRecordFile->keep();

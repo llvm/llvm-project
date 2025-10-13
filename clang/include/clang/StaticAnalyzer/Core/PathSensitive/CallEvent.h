@@ -554,6 +554,8 @@ public:
 
   const FunctionDecl *getDecl() const override;
 
+  RuntimeDefinition getRuntimeDefinition() const override;
+
   unsigned getNumArgs() const override { return getOriginExpr()->getNumArgs(); }
 
   const Expr *getArgExpr(unsigned Index) const override {
@@ -1412,7 +1414,7 @@ class CallEventManager {
   }
 
 public:
-  CallEventManager(llvm::BumpPtrAllocator &alloc) : Alloc(alloc) {}
+  CallEventManager(llvm::BumpPtrAllocator &alloc);
 
   /// Gets an outside caller given a callee context.
   CallEventRef<> getCaller(const StackFrameContext *CalleeCtx,

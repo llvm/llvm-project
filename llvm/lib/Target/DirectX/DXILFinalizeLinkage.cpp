@@ -18,6 +18,18 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
+  bool MadeChange = false;
+
+  // Convert private globals and external globals with no usage to internal
+  // linkage.
+  for (GlobalVariable &GV : M.globals()) {
+    GV.removeDeadConstantUsers();
+    if (GV.hasPrivateLinkage() || (GV.hasExternalLinkage() && GV.use_empty())) {
+      GV.setLinkage(GlobalValue::InternalLinkage);
+      MadeChange = true;
+    }
+  }
+
   SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
@@ -32,13 +44,17 @@ static bool finalizeLinkage(Module &M) {
   }
 
   for (Function *F : Funcs) {
-    if (F->getLinkage() == GlobalValue::ExternalLinkage)
+    if (F->getLinkage() == GlobalValue::ExternalLinkage) {
       F->setLinkage(GlobalValue::InternalLinkage);
-    if (F->isDefTriviallyDead())
+      MadeChange = true;
+    }
+    if (F->isDefTriviallyDead()) {
       M.getFunctionList().erase(F);
+      MadeChange = true;
+    }
   }
 
-  return false;
+  return MadeChange;
 }
 
 PreservedAnalyses DXILFinalizeLinkage::run(Module &M,

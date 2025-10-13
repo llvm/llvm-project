@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Allocator.h"
 
 #include <list>
@@ -217,7 +217,8 @@ private:
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
 
-  void registerUnit(DWARFUnit &DU, bool NeedSort);
+  /// Returns true if DWARFUnit is registered successfully.
+  bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);

@@ -781,7 +781,7 @@ bool MicroMipsSizeReduce::runOnMachineFunction(MachineFunction &MF) {
       Subtarget->hasMips32r6())
     return false;
 
-  MipsII = static_cast<const MipsInstrInfo *>(Subtarget->getInstrInfo());
+  MipsII = Subtarget->getInstrInfo();
 
   bool Modified = false;
   MachineFunction::iterator I = MF.begin(), E = MF.end();

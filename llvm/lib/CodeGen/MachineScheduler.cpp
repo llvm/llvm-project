@@ -771,24 +771,6 @@ static bool isSchedBoundary(MachineBasicBlock::iterator MI,
          MI->isFakeUse();
 }
 
-/// A region of an MBB for scheduling.
-namespace {
-struct SchedRegion {
-  /// RegionBegin is the first instruction in the scheduling region, and
-  /// RegionEnd is either MBB->end() or the scheduling boundary after the
-  /// last instruction in the scheduling region. These iterators cannot refer
-  /// to instructions outside of the identified scheduling region because
-  /// those may be reordered before scheduling this region.
-  MachineBasicBlock::iterator RegionBegin;
-  MachineBasicBlock::iterator RegionEnd;
-  unsigned NumRegionInstrs;
-
-  SchedRegion(MachineBasicBlock::iterator B, MachineBasicBlock::iterator E,
-              unsigned N) :
-    RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
-};
-} // end anonymous namespace
-
 using MBBRegionsVector = SmallVector<SchedRegion, 16>;
 
 static void
@@ -1290,13 +1272,13 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
                    SchedModel.getWriteProcResEnd(SC)));
 
     if (MISchedSortResourcesInTrace)
-      llvm::stable_sort(ResourcesIt,
-                        [](const MCWriteProcResEntry &LHS,
-                           const MCWriteProcResEntry &RHS) -> bool {
-                          return LHS.AcquireAtCycle < RHS.AcquireAtCycle ||
-                                 (LHS.AcquireAtCycle == RHS.AcquireAtCycle &&
-                                  LHS.ReleaseAtCycle < RHS.ReleaseAtCycle);
-                        });
+      llvm::stable_sort(
+          ResourcesIt,
+          [](const MCWriteProcResEntry &LHS,
+             const MCWriteProcResEntry &RHS) -> bool {
+            return std::tie(LHS.AcquireAtCycle, LHS.ReleaseAtCycle) <
+                   std::tie(RHS.AcquireAtCycle, RHS.ReleaseAtCycle);
+          });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
@@ -1371,13 +1353,13 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
                    SchedModel.getWriteProcResEnd(SC)));
 
     if (MISchedSortResourcesInTrace)
-      llvm::stable_sort(ResourcesIt,
-                        [](const MCWriteProcResEntry &LHS,
-                           const MCWriteProcResEntry &RHS) -> bool {
-                          return LHS.AcquireAtCycle < RHS.AcquireAtCycle ||
-                                 (LHS.AcquireAtCycle == RHS.AcquireAtCycle &&
-                                  LHS.ReleaseAtCycle < RHS.ReleaseAtCycle);
-                        });
+      llvm::stable_sort(
+          ResourcesIt,
+          [](const MCWriteProcResEntry &LHS,
+             const MCWriteProcResEntry &RHS) -> bool {
+            return std::tie(LHS.AcquireAtCycle, LHS.ReleaseAtCycle) <
+                   std::tie(RHS.AcquireAtCycle, RHS.ReleaseAtCycle);
+          });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
@@ -3694,8 +3676,8 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
 
-  TopCluster = nullptr;
-  BotCluster = nullptr;
+  TopClusterID = InvalidClusterId;
+  BotClusterID = InvalidClusterId;
 }
 
 /// Initialize the per-region scheduling policy.
@@ -3725,7 +3707,8 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = true;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, NumRegionInstrs);
+  SchedRegion Region(Begin, End, NumRegionInstrs);
+  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
   if (!EnableRegPressure) {
@@ -4005,10 +3988,14 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 
@@ -4170,33 +4157,32 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  do {
-    if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
-      if (!SU) {
-        CandPolicy NoPolicy;
-        TopCand.reset(NoPolicy);
-        pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
-        assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand);
-        SU = TopCand.SU;
-      }
-      IsTopNode = true;
-    } else if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
-      if (!SU) {
-        CandPolicy NoPolicy;
-        BotCand.reset(NoPolicy);
-        pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
-        assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand);
-        SU = BotCand.SU;
-      }
-      IsTopNode = false;
-    } else {
-      SU = pickNodeBidirectional(IsTopNode);
+  if (RegionPolicy.OnlyTopDown) {
+    SU = Top.pickOnlyChoice();
+    if (!SU) {
+      CandPolicy NoPolicy;
+      TopCand.reset(NoPolicy);
+      pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
+      assert(TopCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(TopCand);
+      SU = TopCand.SU;
     }
-  } while (SU->isScheduled);
+    IsTopNode = true;
+  } else if (RegionPolicy.OnlyBottomUp) {
+    SU = Bot.pickOnlyChoice();
+    if (!SU) {
+      CandPolicy NoPolicy;
+      BotCand.reset(NoPolicy);
+      pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
+      assert(BotCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(BotCand);
+      SU = BotCand.SU;
+    }
+    IsTopNode = false;
+  } else {
+    SU = pickNodeBidirectional(IsTopNode);
+  }
+  assert(!SU->isScheduled && "SUnit scheduled twice.");
 
   // If IsTopNode, then SU is in Top.Available and must be removed. Otherwise,
   // if isTopReady(), then SU is in either Top.Available or Top.Pending.
@@ -4268,24 +4254,30 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
 void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   if (IsTopNode) {
     SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
-    TopCluster = DAG->getCluster(SU->ParentClusterIdx);
-    LLVM_DEBUG(if (TopCluster) {
-      dbgs() << "  Top Cluster: ";
-      for (auto *N : *TopCluster)
-        dbgs() << N->NodeNum << '\t';
-      dbgs() << '\n';
+    TopClusterID = SU->ParentClusterIdx;
+    LLVM_DEBUG({
+      if (TopClusterID != InvalidClusterId) {
+        ClusterInfo *TopCluster = DAG->getCluster(TopClusterID);
+        dbgs() << "  Top Cluster: ";
+        for (auto *N : *TopCluster)
+          dbgs() << N->NodeNum << '\t';
+        dbgs() << '\n';
+      }
     });
     Top.bumpNode(SU);
     if (SU->hasPhysRegUses)
       reschedulePhysReg(SU, true);
   } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
-    BotCluster = DAG->getCluster(SU->ParentClusterIdx);
-    LLVM_DEBUG(if (BotCluster) {
-      dbgs() << "  Bot Cluster: ";
-      for (auto *N : *BotCluster)
-        dbgs() << N->NodeNum << '\t';
-      dbgs() << '\n';
+    BotClusterID = SU->ParentClusterIdx;
+    LLVM_DEBUG({
+      if (BotClusterID != InvalidClusterId) {
+        ClusterInfo *BotCluster = DAG->getCluster(BotClusterID);
+        dbgs() << "  Bot Cluster: ";
+        for (auto *N : *BotCluster)
+          dbgs() << N->NodeNum << '\t';
+        dbgs() << '\n';
+      }
     });
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
@@ -4323,8 +4315,8 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   if (!Bot.HazardRec) {
     Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
-  TopCluster = nullptr;
-  BotCluster = nullptr;
+  TopClusterID = InvalidClusterId;
+  BotClusterID = InvalidClusterId;
 }
 
 void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
@@ -4338,7 +4330,8 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = false;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, NumRegionInstrs);
+  SchedRegion Region(Begin, End, NumRegionInstrs);
+  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
   if (PostRADirection == MISched::TopDown) {
@@ -4389,10 +4382,14 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
   // Avoid critical resource consumption and balance the schedule.
@@ -4526,43 +4523,42 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  do {
-    if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
-      if (SU) {
-        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
-      } else {
-        CandPolicy NoPolicy;
-        BotCand.reset(NoPolicy);
-        // Set the bottom-up policy based on the state of the current bottom
-        // zone and the instructions outside the zone, including the top zone.
-        setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
-        pickNodeFromQueue(Bot, BotCand);
-        assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand, /*IsPostRA=*/true);
-        SU = BotCand.SU;
-      }
-      IsTopNode = false;
-    } else if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
-      if (SU) {
-        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
-      } else {
-        CandPolicy NoPolicy;
-        TopCand.reset(NoPolicy);
-        // Set the top-down policy based on the state of the current top zone
-        // and the instructions outside the zone, including the bottom zone.
-        setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
-        pickNodeFromQueue(Top, TopCand);
-        assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand, /*IsPostRA=*/true);
-        SU = TopCand.SU;
-      }
-      IsTopNode = true;
+  if (RegionPolicy.OnlyBottomUp) {
+    SU = Bot.pickOnlyChoice();
+    if (SU) {
+      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
     } else {
-      SU = pickNodeBidirectional(IsTopNode);
+      CandPolicy NoPolicy;
+      BotCand.reset(NoPolicy);
+      // Set the bottom-up policy based on the state of the current bottom
+      // zone and the instructions outside the zone, including the top zone.
+      setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
+      pickNodeFromQueue(Bot, BotCand);
+      assert(BotCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(BotCand, /*IsPostRA=*/true);
+      SU = BotCand.SU;
     }
-  } while (SU->isScheduled);
+    IsTopNode = false;
+  } else if (RegionPolicy.OnlyTopDown) {
+    SU = Top.pickOnlyChoice();
+    if (SU) {
+      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+    } else {
+      CandPolicy NoPolicy;
+      TopCand.reset(NoPolicy);
+      // Set the top-down policy based on the state of the current top zone
+      // and the instructions outside the zone, including the bottom zone.
+      setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
+      pickNodeFromQueue(Top, TopCand);
+      assert(TopCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(TopCand, /*IsPostRA=*/true);
+      SU = TopCand.SU;
+    }
+    IsTopNode = true;
+  } else {
+    SU = pickNodeBidirectional(IsTopNode);
+  }
+  assert(!SU->isScheduled && "SUnit scheduled twice.");
 
   if (SU->isTopReady())
     Top.removeReady(SU);
@@ -4591,11 +4587,11 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
 void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   if (IsTopNode) {
     SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
-    TopCluster = DAG->getCluster(SU->ParentClusterIdx);
+    TopClusterID = SU->ParentClusterIdx;
     Top.bumpNode(SU);
   } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
-    BotCluster = DAG->getCluster(SU->ParentClusterIdx);
+    BotClusterID = SU->ParentClusterIdx;
     Bot.bumpNode(SU);
   }
 }

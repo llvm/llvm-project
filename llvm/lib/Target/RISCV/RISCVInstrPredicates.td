@@ -14,6 +14,10 @@
 // otherwise.
 def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
 
+// This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
+// is enabled.
+def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",
@@ -49,11 +53,14 @@ def isSelectPseudo
                    MCReturnStatement<
                      CheckOpcode<[
                        Select_GPR_Using_CC_GPR,
+                       Select_GPR_Using_CC_Imm5_Zibi,
                        Select_GPR_Using_CC_SImm5_CV,
                        Select_GPRNoX0_Using_CC_SImm5NonZero_QC,
                        Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
                        Select_GPRNoX0_Using_CC_SImm16NonZero_QC,
                        Select_GPRNoX0_Using_CC_UImm16NonZero_QC,
+                       Select_GPR_Using_CC_UImmLog2XLen_NDS,
+                       Select_GPR_Using_CC_UImm7_NDS,
                        Select_FPR16_Using_CC_GPR,
                        Select_FPR16INX_Using_CC_GPR,
                        Select_FPR32_Using_CC_GPR,
@@ -144,6 +151,14 @@ def isNonZeroLoadImmediate
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
+                   ]>>>;
+
+def isLPAD
+    : TIIPredicate<"isLPAD",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[AUIPC]>,
+                     CheckIsRegOperand<0>,
+                     CheckRegOperand<0, X0>,
                    ]>>>;
 
 def ignoresVXRM

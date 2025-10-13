@@ -767,47 +767,47 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Load/Store
-def LD1 : WInst<"vld1", ".(c*!)", "dQdPlQPl">;
-def LD2 : WInst<"vld2", "2(c*!)", "QUlQldQdPlQPl">;
-def LD3 : WInst<"vld3", "3(c*!)", "QUlQldQdPlQPl">;
-def LD4 : WInst<"vld4", "4(c*!)", "QUlQldQdPlQPl">;
-def ST1 : WInst<"vst1", "v*(.!)", "dQdPlQPl">;
-def ST2 : WInst<"vst2", "v*(2!)", "QUlQldQdPlQPl">;
-def ST3 : WInst<"vst3", "v*(3!)", "QUlQldQdPlQPl">;
-def ST4 : WInst<"vst4", "v*(4!)", "QUlQldQdPlQPl">;
+def LD1 : WInst<"vld1", ".(c*!)", "dQdPlQPlmQm">;
+def LD2 : WInst<"vld2", "2(c*!)", "QUlQldQdPlQPlmQm">;
+def LD3 : WInst<"vld3", "3(c*!)", "QUlQldQdPlQPlmQm">;
+def LD4 : WInst<"vld4", "4(c*!)", "QUlQldQdPlQPlmQm">;
+def ST1 : WInst<"vst1", "v*(.!)", "dQdPlQPlmQm">;
+def ST2 : WInst<"vst2", "v*(2!)", "QUlQldQdPlQPlmQm">;
+def ST3 : WInst<"vst3", "v*(3!)", "QUlQldQdPlQPlmQm">;
+def ST4 : WInst<"vst4", "v*(4!)", "QUlQldQdPlQPlmQm">;
 
 def LD1_X2 : WInst<"vld1_x2", "2(c*!)",
-                   "dQdPlQPl">;
+                   "dQdPlQPlmQm">;
 def LD1_X3 : WInst<"vld1_x3", "3(c*!)",
-                   "dQdPlQPl">;
+                   "dQdPlQPlmQm">;
 def LD1_X4 : WInst<"vld1_x4", "4(c*!)",
-                   "dQdPlQPl">;
+                   "dQdPlQPlmQm">;
 
-def ST1_X2 : WInst<"vst1_x2", "v*(2!)", "dQdPlQPl">;
-def ST1_X3 : WInst<"vst1_x3", "v*(3!)", "dQdPlQPl">;
-def ST1_X4 : WInst<"vst1_x4", "v*(4!)", "dQdPlQPl">;
+def ST1_X2 : WInst<"vst1_x2", "v*(2!)", "dQdPlQPlmQm">;
+def ST1_X3 : WInst<"vst1_x3", "v*(3!)", "dQdPlQPlmQm">;
+def ST1_X4 : WInst<"vst1_x4", "v*(4!)", "dQdPlQPlmQm">;
 
-def LD1_LANE : WInst<"vld1_lane", ".(c*!).I", "dQdPlQPl",
+def LD1_LANE : WInst<"vld1_lane", ".(c*!).I", "dQdPlQPlmQm",
                     [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
-def LD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def LD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def LD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def LD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
-def LD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def LD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<6, ImmCheckLaneIndex, 1>]>;
-def ST1_LANE : WInst<"vst1_lane", "v*(.!)I", "dQdPlQPl",
+def ST1_LANE : WInst<"vst1_lane", "v*(.!)I", "dQdPlQPlmQm",
                     [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
-def ST2_LANE : WInst<"vst2_lane", "v*(2!)I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def ST2_LANE : WInst<"vst2_lane", "v*(2!)I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
-def ST3_LANE : WInst<"vst3_lane", "v*(3!)I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def ST3_LANE : WInst<"vst3_lane", "v*(3!)I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def ST4_LANE : WInst<"vst4_lane", "v*(4!)I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def ST4_LANE : WInst<"vst4_lane", "v*(4!)I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 
-def LD1_DUP  : WInst<"vld1_dup", ".(c*!)", "dQdPlQPl">;
-def LD2_DUP  : WInst<"vld2_dup", "2(c*!)", "dQdPlQPl">;
-def LD3_DUP  : WInst<"vld3_dup", "3(c*!)", "dQdPlQPl">;
-def LD4_DUP  : WInst<"vld4_dup", "4(c*!)", "dQdPlQPl">;
+def LD1_DUP  : WInst<"vld1_dup", ".(c*!)", "dQdPlQPlmQm">;
+def LD2_DUP  : WInst<"vld2_dup", "2(c*!)", "dQdPlQPlmQm">;
+def LD3_DUP  : WInst<"vld3_dup", "3(c*!)", "dQdPlQPlmQm">;
+def LD4_DUP  : WInst<"vld4_dup", "4(c*!)", "dQdPlQPlmQm">;
 
 def VLDRQ : WInst<"vldrq", "1(c*!)", "Pk">;
 def VSTRQ : WInst<"vstrq", "v*(1!)", "Pk">;
@@ -964,11 +964,11 @@ def SLI_N : WInst<"vsli_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftLeft, 0>]
 // Right shift narrow high
 def SHRN_HIGH_N    : IOpInst<"vshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QSHRUN_HIGH_N  : SOpInst<"vqshrun_high_n", "<(<q).I",
+def QSHRUN_HIGH_N  : SOpInst<"vqshrun_high_n", "(<U)(<Uq).I",
                              "HsHiHl", OP_NARROW_HI>;
 def RSHRN_HIGH_N   : IOpInst<"vrshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "<(<q).I",
+def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "(<U)(<Uq).I",
                              "HsHiHl", OP_NARROW_HI>;
 def QSHRN_HIGH_N   : SOpInst<"vqshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;

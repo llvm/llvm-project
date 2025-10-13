@@ -678,7 +678,7 @@ class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
   AttributeFactory &Factory;
-  llvm::SmallVector<ParsedAttr *> Attrs;
+  llvm::SmallVector<ParsedAttr *, 2> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
@@ -808,7 +808,7 @@ public:
 
 class ParsedAttributesView {
   friend class AttributePool;
-  using VecTy = llvm::SmallVector<ParsedAttr *>;
+  using VecTy = llvm::SmallVector<ParsedAttr *, 2>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
@@ -856,19 +856,19 @@ public:
     friend class ParsedAttributesView;
   };
 
-  void addAll(iterator B, iterator E) {
+  void prepend(iterator B, iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAll(const_iterator B, const_iterator E) {
+  void prepend(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAllAtEnd(iterator B, iterator E) {
+  void append(iterator B, iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
-  void addAllAtEnd(const_iterator B, const_iterator E) {
+  void append(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
@@ -943,18 +943,18 @@ public:
 
   AttributePool &getPool() const { return pool; }
 
-  void takeAllFrom(ParsedAttributes &Other) {
+  void takeAllPrependingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAll(Other.begin(), Other.end());
+    prepend(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
 
-  void takeAllAtEndFrom(ParsedAttributes &Other) {
+  void takeAllAppendingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAllAtEnd(Other.begin(), Other.end());
+    append(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
@@ -1093,45 +1093,6 @@ enum AttributeDeclKind {
   ExpectedClass,
   ExpectedTypedef,
 };
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr &At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr *At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-/// AttributeCommonInfo has a non-explicit constructor which takes an
-/// SourceRange as its only argument, this constructor has many uses so making
-/// it explicit is hard. This constructor causes ambiguity with
-/// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
-/// We use SFINAE to disable any conversion and remove any ambiguity.
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI &CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI *CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
 
 } // namespace clang
 

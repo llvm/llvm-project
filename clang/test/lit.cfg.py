@@ -92,7 +92,7 @@ tools = [
     "clang-diff",
     "clang-format",
     "clang-repl",
-    "clang-offload-packager",
+    "llvm-offload-binary",
     "clang-tblgen",
     "clang-scan-deps",
     "clang-installapi",
@@ -117,24 +117,52 @@ if config.clang_examples:
     config.available_features.add("examples")
 
 
-def have_host_jit_feature_support(feature_name):
+def have_host_out_of_process_jit_feature_support():
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
     if not clang_repl_exe:
         return False
 
+    testcode = b"\n".join([b"int i = 0;", b"%quit"])
+
+    try:
+        clang_repl_cmd = subprocess.run(
+            [clang_repl_exe, "-orc-runtime", "-oop-executor"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
+        )
+    except OSError:
+        return False
+
+    if clang_repl_cmd.returncode == 0:
+        return True
+
+    return False
+
+
+def run_clang_repl(args):
+    clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return ""
+
     try:
         clang_repl_cmd = subprocess.Popen(
-            [clang_repl_exe, "--host-supports-" + feature_name], stdout=subprocess.PIPE
+            [clang_repl_exe, args], stdout=subprocess.PIPE
         )
     except OSError:
         print("could not exec clang-repl")
-        return False
+        return ""
 
     clang_repl_out = clang_repl_cmd.stdout.read().decode("ascii")
     clang_repl_cmd.wait()
 
-    return "true" in clang_repl_out
+    return clang_repl_out
+
+
+def have_host_jit_feature_support(feature_name):
+    return "true" in run_clang_repl("--host-supports-" + feature_name)
 
 def have_host_clang_repl_cuda():
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
@@ -168,6 +196,11 @@ if have_host_jit_feature_support('jit'):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+    hosttriple = run_clang_repl("--host-jit-triple")
+    config.substitutions.append(("%host-jit-triple", hosttriple.strip()))
+
+    if have_host_out_of_process_jit_feature_support():
+        config.available_features.add("host-supports-out-of-process-jit")
 
 if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
@@ -175,6 +208,8 @@ if config.clang_staticanalyzer:
 
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
+        if config.clang_staticanalyzer_z3_mock:
+            config.available_features.add("z3-mock")
     else:
         config.available_features.add("no-z3")
 
@@ -195,6 +230,10 @@ if config.clang_staticanalyzer:
             '"%s" %s' % (config.python_executable, csv2json_path),
         )
     )
+
+# ClangIR support
+if config.clang_enable_cir:
+    config.available_features.add("cir-support")
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -219,9 +258,6 @@ config.substitutions.append(
         ),
     )
 )
-
-config.substitutions.append(("%host_cc", config.host_cc))
-config.substitutions.append(("%host_cxx", config.host_cxx))
 
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:
@@ -291,7 +327,7 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 
 # [PR8833] LLP64-incompatible tests
 if not re.match(
-    r"^(aarch64|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
+    r"^(aarch64|arm64ec|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
 ):
     config.available_features.add("LP64")
 
@@ -385,3 +421,13 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)

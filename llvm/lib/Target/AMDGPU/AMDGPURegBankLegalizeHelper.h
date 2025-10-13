@@ -11,6 +11,7 @@
 
 #include "AMDGPURegBankLegalizeRules.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
@@ -32,6 +33,7 @@ class RegBankLegalizeHelper {
   const MachineUniformityInfo &MUI;
   const RegisterBankInfo &RBI;
   const RegBankLegalizeRules &RBLRules;
+  const bool IsWave32;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
   const RegisterBank *VccRB;
@@ -106,20 +108,22 @@ private:
   void splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
   void widenLoad(MachineInstr &MI, LLT WideTy, LLT MergeTy = LLT());
+  void widenMMOToS32(GAnyLoad &MI) const;
 
   void lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
 
   void lowerVccExtToSel(MachineInstr &MI);
-  const std::pair<Register, Register> unpackZExt(Register Reg);
-  const std::pair<Register, Register> unpackSExt(Register Reg);
-  const std::pair<Register, Register> unpackAExt(Register Reg);
+  std::pair<Register, Register> unpackZExt(Register Reg);
+  std::pair<Register, Register> unpackSExt(Register Reg);
+  std::pair<Register, Register> unpackAExt(Register Reg);
   void lowerUnpackBitShift(MachineInstr &MI);
   void lowerV_BFE(MachineInstr &MI);
   void lowerS_BFE(MachineInstr &MI);
   void lowerSplitTo32(MachineInstr &MI);
   void lowerSplitTo32Select(MachineInstr &MI);
   void lowerSplitTo32SExtInReg(MachineInstr &MI);
+  void lowerUnpackMinMax(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU

@@ -842,15 +842,15 @@ module attributes { transform.with_named_sequence } {
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
     // expected-remark @below {{single user}}
-    linalg.elemwise_unary {fun = #linalg.unary_fn<negf>} ins(%2 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.negf ins(%2 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     // expected-remark @below {{matched result value}}
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
-    linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.exp ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     // expected-remark @below {{matched result value}}
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
-    linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.exp ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     return
   }
 }

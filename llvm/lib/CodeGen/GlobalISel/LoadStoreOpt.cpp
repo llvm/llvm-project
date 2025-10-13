@@ -458,7 +458,7 @@ bool LoadStoreOpt::processMergeCandidate(StoreMergeCandidate &C) {
     for (auto AliasInfo : reverse(C.PotentialAliases)) {
       MachineInstr *PotentialAliasOp = AliasInfo.first;
       unsigned PreCheckedIdx = AliasInfo.second;
-      if (static_cast<unsigned>(Idx) < PreCheckedIdx) {
+      if (Idx < PreCheckedIdx) {
         // Once our store index is lower than the index associated with the
         // potential alias, we know that we've already checked for this alias
         // and all of the earlier potential aliases too.
@@ -958,7 +958,8 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   for (unsigned Size = 2; Size <= MaxStoreSizeToForm; Size *= 2) {
     LLT Ty = LLT::scalar(Size);
     SmallVector<LegalityQuery::MemDesc, 2> MemDescrs(
-        {{Ty, Ty.getSizeInBits(), AtomicOrdering::NotAtomic}});
+        {{Ty, Ty.getSizeInBits(), AtomicOrdering::NotAtomic,
+          AtomicOrdering::NotAtomic}});
     SmallVector<LLT> StoreTys({Ty, PtrTy});
     LegalityQuery Q(TargetOpcode::G_STORE, StoreTys, MemDescrs);
     LegalizeActionStep ActionStep = LI.getAction(Q);

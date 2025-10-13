@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
@@ -135,13 +137,10 @@ InstCombinerImpl::isEliminableCastPair(const CastInst *CI1,
   Instruction::CastOps secondOp = CI2->getOpcode();
   Type *SrcIntPtrTy =
       SrcTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(SrcTy) : nullptr;
-  Type *MidIntPtrTy =
-      MidTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(MidTy) : nullptr;
   Type *DstIntPtrTy =
       DstTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(DstTy) : nullptr;
   unsigned Res = CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy,
-                                                DstTy, SrcIntPtrTy, MidIntPtrTy,
-                                                DstIntPtrTy);
+                                                DstTy, &DL);
 
   // We don't want to form an inttoptr or ptrtoint that converts to an integer
   // type that differs from the pointer size.
@@ -708,10 +707,14 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
   auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
   if (Shuf && Shuf->hasOneUse() && match(Shuf->getOperand(1), m_Undef()) &&
       all_equal(Shuf->getShuffleMask()) &&
-      Shuf->getType() == Shuf->getOperand(0)->getType()) {
+      ElementCount::isKnownGE(Shuf->getType()->getElementCount(),
+                              cast<VectorType>(Shuf->getOperand(0)->getType())
+                                  ->getElementCount())) {
     // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Poison, SplatMask
     // trunc (shuf X, Poison, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), Trunc.getType());
+    Type *NewTruncTy = Shuf->getOperand(0)->getType()->getWithNewType(
+        Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy);
     return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask());
   }
 
@@ -965,6 +968,31 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     Changed = true;
   }
 
+  const APInt *C1;
+  Value *V1;
+  // OP = { lshr, ashr }
+  // trunc ( OP i8 C1, V1) to i1 -> icmp eq V1, log_2(C1) iff C1 is power of 2
+  if (DestWidth == 1 && match(Src, m_Shr(m_Power2(C1), m_Value(V1)))) {
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
+    return new ICmpInst(ICmpInst::ICMP_EQ, V1, Right);
+  }
+
+  // OP = { lshr, ashr }
+  // trunc ( OP i8 C1, V1) to i1 -> icmp ult V1, log_2(C1 + 1) iff (C1 + 1) is
+  // power of 2
+  if (DestWidth == 1 && match(Src, m_Shr(m_LowBitMask(C1), m_Value(V1)))) {
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_one());
+    return new ICmpInst(ICmpInst::ICMP_ULT, V1, Right);
+  }
+
+  // OP = { lshr, ashr }
+  // trunc ( OP i8 C1, V1) to i1 -> icmp ugt V1, cttz(C1) - 1 iff (C1) is
+  // negative power of 2
+  if (DestWidth == 1 && match(Src, m_Shr(m_NegatedPower2(C1), m_Value(V1)))) {
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
+    return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
+  }
+
   return Changed ? &Trunc : nullptr;
 }
 
@@ -1127,11 +1155,10 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
   case Instruction::Shl: {
     // We can promote shl(x, cst) if we can promote x.  Since shl overwrites the
     // upper bits we can reduce BitsToClear by the shift amount.
-    const APInt *Amt;
-    if (match(I->getOperand(1), m_APInt(Amt))) {
+    uint64_t ShiftAmt;
+    if (match(I->getOperand(1), m_ConstantInt(ShiftAmt))) {
       if (!canEvaluateZExtd(I->getOperand(0), Ty, BitsToClear, IC, CxtI))
         return false;
-      uint64_t ShiftAmt = Amt->getZExtValue();
       BitsToClear = ShiftAmt < BitsToClear ? BitsToClear - ShiftAmt : 0;
       return true;
     }
@@ -1140,11 +1167,11 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
   case Instruction::LShr: {
     // We can promote lshr(x, cst) if we can promote x.  This requires the
     // ultimate 'and' to clear out the high zero bits we're clearing out though.
-    const APInt *Amt;
-    if (match(I->getOperand(1), m_APInt(Amt))) {
+    uint64_t ShiftAmt;
+    if (match(I->getOperand(1), m_ConstantInt(ShiftAmt))) {
       if (!canEvaluateZExtd(I->getOperand(0), Ty, BitsToClear, IC, CxtI))
         return false;
-      BitsToClear += Amt->getZExtValue();
+      BitsToClear += ShiftAmt;
       if (BitsToClear > V->getType()->getScalarSizeInBits())
         BitsToClear = V->getType()->getScalarSizeInBits();
       return true;
@@ -2069,6 +2096,27 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
     return new IntToPtrInst(P, CI.getType());
   }
 
+  // Replace (inttoptr (add (ptrtoint %Base), %Offset)) with
+  // (getelementptr i8, %Base, %Offset) if the pointer is only used as integer
+  // value.
+  Value *Base;
+  Value *Offset;
+  auto UsesPointerAsInt = [](User *U) {
+    if (isa<ICmpInst, PtrToIntInst>(U))
+      return true;
+    if (auto *P = dyn_cast<PHINode>(U))
+      return P->hasOneUse() && isa<ICmpInst, PtrToIntInst>(*P->user_begin());
+    return false;
+  };
+  if (match(CI.getOperand(0),
+            m_OneUse(m_c_Add(m_PtrToIntSameSize(DL, m_Value(Base)),
+                             m_Value(Offset)))) &&
+      CI.getType()->getPointerAddressSpace() ==
+          Base->getType()->getPointerAddressSpace() &&
+      all_of(CI.users(), UsesPointerAsInt)) {
+    return GetElementPtrInst::Create(Builder.getInt8Ty(), Base, Offset);
+  }
+
   if (Instruction *I = commonCastTransforms(CI))
     return I;
 
@@ -2151,6 +2199,11 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     return InsertElementInst::Create(Vec, NewCast, Index);
   }
 
+  return commonCastTransforms(CI);
+}
+
+Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
+  // FIXME: Implement variants of ptrtoint folds.
   return commonCastTransforms(CI);
 }
 

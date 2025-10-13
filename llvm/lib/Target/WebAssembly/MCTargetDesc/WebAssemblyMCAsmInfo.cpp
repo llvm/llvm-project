@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCAsmInfo.h"
-#include "WebAssemblyMCExpr.h"
 #include "WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
@@ -56,14 +55,7 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
 
   SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::None;
 
-  // When compilation is done on a cpp file by clang, the exception model info
-  // is stored in LangOptions, which is later used to set the info in
-  // TargetOptions and then MCAsmInfo in CodeGenTargetMachine::initAsmInfo().
-  // But this process does not happen when compiling bitcode directly with
-  // clang, so we make sure this info is set correctly.
-  if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
-    ExceptionsType = ExceptionHandling::Wasm;
-
-  initializeVariantKinds(atSpecifiers);
+  initializeAtSpecifiers(atSpecifiers);
 }

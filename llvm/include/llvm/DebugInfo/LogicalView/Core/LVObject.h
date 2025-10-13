@@ -82,8 +82,18 @@ using LVScopes = SmallVector<LVScope *, 8>;
 using LVSymbols = SmallVector<LVSymbol *, 8>;
 using LVTypes = SmallVector<LVType *, 8>;
 
+using LVElementsView = detail::concat_range<LVElement *const, const LVScopes &,
+                                            const LVTypes &, const LVSymbols &>;
 using LVOffsets = SmallVector<LVOffset, 8>;
 
+// The following DWARF documents detail the 'tombstone' concept:
+//   https://dwarfstd.org/issues/231013.1.html
+//   https://dwarfstd.org/issues/200609.1.html
+//
+// The value of the largest representable address offset (for example,
+// 0xffffffff when the size of an address is 32 bits).
+//
+// -1 (0xffffffff) => Valid tombstone
 const LVAddress MaxAddress = std::numeric_limits<uint64_t>::max();
 
 enum class LVBinaryType { NONE, ELF, COFF };

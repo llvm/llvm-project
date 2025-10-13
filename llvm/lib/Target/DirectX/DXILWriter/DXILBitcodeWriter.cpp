@@ -1507,7 +1507,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  Record.push_back(N->getSourceLanguage());
+  Record.push_back(N->getSourceLanguage().getUnversionedName());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
@@ -2113,7 +2113,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         }
         break;
       case Instruction::GetElementPtr: {
-        Code = bitc::CST_CODE_CE_GEP;
+        Code = bitc::CST_CODE_CE_GEP_OLD;
         const auto *GO = cast<GEPOperator>(C);
         if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;

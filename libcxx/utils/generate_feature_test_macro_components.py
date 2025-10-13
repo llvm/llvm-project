@@ -213,15 +213,13 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_wait",
             "values": {"c++20": 201907},
             "headers": ["atomic"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC",
-            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_barrier",
             "values": {"c++20": 201907},
             "headers": ["barrier"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_bind_back",
@@ -312,6 +310,16 @@ feature_test_macros = [
             "name": "__cpp_lib_clamp",
             "values": {"c++17": 201603},
             "headers": ["algorithm"],
+        },
+        {
+            "name": "__cpp_lib_common_reference",
+            "values": {"c++20": 202302},
+            "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_common_reference_wrapper",
+            "values": {"c++20": 202302},
+            "headers": ["functional"],
         },
         {
             "name": "__cpp_lib_complex_udls",
@@ -431,9 +439,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constrained_equality",
-            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
-            "headers": ["optional", "tuple", "utility", "variant"],
-            "unimplemented": True,
+            "values": {
+                "c++26": 202411,  # P3379R0: Constrain std::expected equality operators
+            },
+            "headers": ["expected", "optional", "tuple", "utility", "variant"],
         },
         {
             "name": "__cpp_lib_containers_ranges",
@@ -530,8 +539,8 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
-            "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM",
+            "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM",
         },
         {
             "name": "__cpp_lib_flat_map",
@@ -558,7 +567,7 @@ feature_test_macros = [
             "headers": ["format"],
             # Trying to use `std::format` where to_chars floating-point is not
             # available causes compilation errors, even with non floating-point types.
-            # https://github.com/llvm/llvm-project/issues/125353
+            # https://llvm.org/PR125353
             "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
             "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
         },
@@ -857,15 +866,15 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_latch",
             "values": {"c++20": 201907},
             "headers": ["latch"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_launder",
@@ -1001,7 +1010,6 @@ feature_test_macros = [
             "name": "__cpp_lib_optional_range_support",
             "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
             "headers": ["optional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_out_ptr",
@@ -1043,7 +1051,7 @@ feature_test_macros = [
             "headers": ["ostream", "print"],
             # Trying to use `std::print` where to_chars floating-point is not
             # available causes compilation errors, even with non floating-point types.
-            # https://github.com/llvm/llvm-project/issues/125353
+            # https://llvm.org/PR125353
             "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
             "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
         },
@@ -1104,6 +1112,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_indices",
+            "values": {"c++26": 202506},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
@@ -1112,7 +1125,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_join_with",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_repeat",
@@ -1206,8 +1218,8 @@ feature_test_macros = [
             "name": "__cpp_lib_semaphore",
             "values": {"c++20": 201907},
             "headers": ["semaphore"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_senders",
@@ -1324,6 +1336,11 @@ feature_test_macros = [
             "name": "__cpp_lib_string_resize_and_overwrite",
             "values": {"c++23": 202110},
             "headers": ["string"],
+        },
+        {
+            "name": "__cpp_lib_string_subview",
+            "values": {"c++26": 202506},
+            "headers": ["string", "string_view"],
         },
         {
             "name": "__cpp_lib_string_udls",
@@ -1870,7 +1887,6 @@ def produce_tests():
 {cxx_tests}
 
 // clang-format on
-
 """.format(
             script_name=script_name,
             header=h,

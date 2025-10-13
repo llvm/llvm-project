@@ -44,6 +44,10 @@ This removes the ``iterator`` base class from ``back_insert_iterator``, ``front_
 This doesn't directly affect the layout of these types in most cases, but may result in more padding being used when
 they are used in combination, for example ``reverse_iterator<reverse_iterator<T>>``.
 
+``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER``
+-------------------------------------------------
+This removes a second member in ``reverse_iterator`` that is unused after LWG2360.
+
 ``_LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION``
 -------------------------------------------------
 This changes the index type used inside ``variant`` to the smallest required type to reduce the datasize of variants in
@@ -92,7 +96,7 @@ Linking TUs which have been compiled with different flags affecting code gen
 There are a lot of compiler (and library) flags which change the code generated for functions. This includes flags like
 ``-O1``, which are guaranteed by the compiler to not change the observable behaviour of a correct program, as well as
 flags like ``-fexceptions``, which **do** change the observable behaviour. libc++ allows linking of TUs which have been
-compiled whith specific flags only and makes no guarantees for any of the flags not listed below.
+compiled with specific flags only and makes no guarantees for any of the flags not listed below.
 
 The flags allowed (in any combination) are:
 - ``-f[no-]exceptions``
