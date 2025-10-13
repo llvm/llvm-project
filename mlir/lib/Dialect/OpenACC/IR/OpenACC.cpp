@@ -17,6 +17,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1201,6 +1202,14 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
                                    StringRef recipeName, Value var,
                                    StringRef varName, ValueRange bounds) {
 
+  // Check if a symbol with this name already exists in the symbol table.
+  // If it does - don't assume that we can just reuse the existing one.
+  Operation *parentOp = builder.getInsertionBlock()->getParentOp();
+  if (parentOp &&
+      SymbolTable::lookupNearestSymbolFrom(
+          parentOp, mlir::StringAttr::get(builder.getContext(), varName)))
+    return std::nullopt;
+
   Type varType = var.getType();
 
   // First, validate that we can handle this variable type
@@ -1282,6 +1291,14 @@ std::optional<FirstprivateRecipeOp>
 FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
                                         StringRef recipeName, Value var,
                                         StringRef varName, ValueRange bounds) {
+
+  // Check if a symbol with this name already exists in the symbol table.
+  // If it does - don't assume that we can just reuse the existing one.
+  Operation *parentOp = builder.getInsertionBlock()->getParentOp();
+  if (parentOp &&
+      SymbolTable::lookupNearestSymbolFrom(
+          parentOp, mlir::StringAttr::get(builder.getContext(), varName)))
+    return std::nullopt;
 
   Type varType = var.getType();
 
