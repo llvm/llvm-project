@@ -13,8 +13,8 @@
 #include <clc/workitem/clc_get_sub_group_size.h>
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_size() {
-  uint linear_size = __clc_get_local_size(0) * __clc_get_local_size(1) *
-                     __clc_get_local_size(2);
+  size_t linear_size = __clc_get_local_size(0) * __clc_get_local_size(1) *
+                       __clc_get_local_size(2);
   uint remainder = linear_size % __clc_get_max_sub_group_size();
   bool full_sub_group = (remainder == 0) || (__clc_get_sub_group_id() <
                                              __clc_get_num_sub_groups() - 1);
