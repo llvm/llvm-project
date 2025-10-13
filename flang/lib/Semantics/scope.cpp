@@ -158,7 +158,7 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
       //    end program main
       // Reset details with real COMMON block details.
       cb->set_details(CommonBlockDetails{name.empty() ? location : name},
-          /*force*/true);
+          /*force*/ true);
     }
     return *cb;
   } else {
@@ -184,7 +184,8 @@ Symbol *Scope::FindCommonBlockInScopes(const SourceName &name) const {
   if (auto *cb{FindCB(name)}) {
     return &cb->GetUltimate();
   } else if (IsSubmodule()) {
-    if (const Scope *parent{symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr}) {
+    if (const Scope *parent{
+            symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr}) {
       if (auto *cb{parent->FindCommonBlockInScopes(name)}) {
         return &cb->GetUltimate();
       }

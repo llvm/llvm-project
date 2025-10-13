@@ -202,7 +202,8 @@ public:
   /// Find COMMON block that is not USE-associated in the current scope
   Symbol *FindCommonBlock(const SourceName &) const;
 
-  /// Find COMMON block in current and surrounding scopes, follow USE associations
+  /// Find COMMON block in current and surrounding scopes, follow USE
+  /// associations
   Symbol *FindCommonBlockInScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
