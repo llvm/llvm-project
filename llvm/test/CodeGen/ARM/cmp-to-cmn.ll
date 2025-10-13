@@ -1997,17 +1997,15 @@ define i1 @almost_immediate_neg_ugt_64(i64 %x) {
 define i1 @cmn_nsw(i32 %a, i32 %b) {
 ; CHECK-ARM-LABEL: cmn_nsw:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    rsb r2, r1, #0
-; CHECK-ARM-NEXT:    mov r1, #0
-; CHECK-ARM-NEXT:    cmp r0, r2
-; CHECK-ARM-NEXT:    movwgt r1, #1
-; CHECK-ARM-NEXT:    mov r0, r1
+; CHECK-ARM-NEXT:    mov r2, #0
+; CHECK-ARM-NEXT:    cmn r0, r1
+; CHECK-ARM-NEXT:    movwgt r2, #1
+; CHECK-ARM-NEXT:    mov r0, r2
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-T1-LABEL: cmn_nsw:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    rsbs r1, r1, #0
-; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    cmn r0, r1
 ; CHECK-T1-NEXT:    bgt .LBB49_2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    movs r0, #0
@@ -2018,12 +2016,11 @@ define i1 @cmn_nsw(i32 %a, i32 %b) {
 ;
 ; CHECK-T2-LABEL: cmn_nsw:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    rsbs r2, r1, #0
-; CHECK-T2-NEXT:    movs r1, #0
-; CHECK-T2-NEXT:    cmp r0, r2
+; CHECK-T2-NEXT:    movs r2, #0
+; CHECK-T2-NEXT:    cmn r0, r1
 ; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt r1, #1
-; CHECK-T2-NEXT:    mov r0, r1
+; CHECK-T2-NEXT:    movgt r2, #1
+; CHECK-T2-NEXT:    mov r0, r2
 ; CHECK-T2-NEXT:    bx lr
   %sub = sub nsw i32 0, %b
   %cmp = icmp sgt i32 %a, %sub
@@ -2117,18 +2114,16 @@ define i1 @cmn_nsw_neg(i32 %a, i32 %b) {
 define i1 @cmn_swap(i32 %a, i32 %b) {
 ; CHECK-ARM-LABEL: cmn_swap:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    rsb r2, r1, #0
-; CHECK-ARM-NEXT:    mov r1, #0
-; CHECK-ARM-NEXT:    cmp r2, r0
-; CHECK-ARM-NEXT:    movwgt r1, #1
-; CHECK-ARM-NEXT:    mov r0, r1
+; CHECK-ARM-NEXT:    mov r2, #0
+; CHECK-ARM-NEXT:    cmn r1, r0
+; CHECK-ARM-NEXT:    movwlt r2, #1
+; CHECK-ARM-NEXT:    mov r0, r2
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-T1-LABEL: cmn_swap:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    rsbs r1, r1, #0
-; CHECK-T1-NEXT:    cmp r1, r0
-; CHECK-T1-NEXT:    bgt .LBB52_2
+; CHECK-T1-NEXT:    cmn r1, r0
+; CHECK-T1-NEXT:    blt .LBB52_2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    movs r0, #0
 ; CHECK-T1-NEXT:    bx lr
@@ -2138,12 +2133,11 @@ define i1 @cmn_swap(i32 %a, i32 %b) {
 ;
 ; CHECK-T2-LABEL: cmn_swap:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    rsbs r2, r1, #0
-; CHECK-T2-NEXT:    movs r1, #0
-; CHECK-T2-NEXT:    cmp r2, r0
-; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt r1, #1
-; CHECK-T2-NEXT:    mov r0, r1
+; CHECK-T2-NEXT:    movs r2, #0
+; CHECK-T2-NEXT:    cmn r1, r0
+; CHECK-T2-NEXT:    it lt
+; CHECK-T2-NEXT:    movlt r2, #1
+; CHECK-T2-NEXT:    mov r0, r2
 ; CHECK-T2-NEXT:    bx lr
   %sub = sub nsw i32 0, %b
   %cmp = icmp sgt i32 %sub, %a
