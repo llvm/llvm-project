@@ -2116,16 +2116,18 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 // For OpenBSD return its special guard variable. Otherwise return nullptr,
 // so that SelectionDAG handle SSP.
 Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
-  if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
-    Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
-    const DataLayout &DL = M.getDataLayout();
-    PointerType *PtrTy =
-        PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
-    GlobalVariable *G = M.getOrInsertGlobal("__guard_local", PtrTy);
-    G->setVisibility(GlobalValue::HiddenVisibility);
-    return G;
-  }
-  return nullptr;
+  RTLIB::LibcallImpl GuardLocalImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (GuardLocalImpl != RTLIB::impl___guard_local)
+    return nullptr;
+
+  Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
+  const DataLayout &DL = M.getDataLayout();
+  PointerType *PtrTy =
+      PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
+  GlobalVariable *G =
+      M.getOrInsertGlobal(getLibcallImplName(GuardLocalImpl), PtrTy);
+  G->setVisibility(GlobalValue::HiddenVisibility);
+  return G;
 }
 
 // Currently only support "standard" __stack_chk_guard.
