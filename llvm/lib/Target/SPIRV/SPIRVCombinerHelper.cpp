@@ -21,18 +21,6 @@ SPIRVCombinerHelper::SPIRVCombinerHelper(
     const SPIRVSubtarget &STI)
     : CombinerHelper(Observer, B, IsPreLegalize, VT, MDT, LI), STI(STI) {}
 
-static void removeAllUses(Register Reg, MachineRegisterInfo &MRI,
-                          SPIRVGlobalRegistry *GR) {
-  SmallVector<MachineInstr *, 4> UsesToErase(
-      llvm::make_pointer_range(MRI.use_instructions(Reg)));
-
-  // calling eraseFromParent too early invalidates the iterator.
-  for (auto *MIToErase : UsesToErase) {
-    GR->invalidateMachineInstr(MIToErase);
-    MIToErase->eraseFromParent();
-  }
-}
-
 /// This match is part of a combine that
 /// rewrites length(X - Y) to distance(X, Y)
 ///   (f32 (g_intrinsic length
@@ -86,7 +74,7 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
 /// This only works for Vulkan targets.
 ///
 bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
-  if (!MI.getMF()->getSubtarget<SPIRVSubtarget>().isShader())
+  if (!STI.isShader())
     return false;
 
   // Match overall select pattern.
@@ -164,29 +152,12 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
     DotOperand2 = DotInstr->getOperand(3).getReg();
   }
 
-  // Remove the original `select` instruction.
   Register ResultReg = MI.getOperand(0).getReg();
-  DebugLoc DL = MI.getDebugLoc();
-  MachineBasicBlock &MBB = *MI.getParent();
-  MachineBasicBlock::iterator InsertPt = MI.getIterator();
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_faceforward, ResultReg)
+      .addUse(TrueReg)      // N
+      .addUse(DotOperand1)  // I
+      .addUse(DotOperand2); // Ng
 
-  // Build the `spv_faceforward` intrinsic.
-  MachineInstrBuilder NewInstr = BuildMI(
-      MBB, InsertPt, DL, Builder.getTII().get(TargetOpcode::G_INTRINSIC));
-  NewInstr
-      .addDef(ResultReg)                          // Result register
-      .addIntrinsicID(Intrinsic::spv_faceforward) // Intrinsic ID
-      .addUse(TrueReg)                            // Operand N
-      .addUse(DotOperand1)                        // Operand I
-      .addUse(DotOperand2);                       // Operand Ng
-
-  SPIRVGlobalRegistry *GR =
-      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
-  removeAllUses(CondReg, MRI, GR); // Remove all uses of FCMP result
-  MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
-  GR->invalidateMachineInstr(CondInstr);
-  CondInstr->eraseFromParent();   // Remove FCMP instruction
-  removeAllUses(DotReg, MRI, GR); // Remove all uses of dot product result
-  GR->invalidateMachineInstr(DotInstr);
-  DotInstr->eraseFromParent(); // Remove dot product instruction
+  MI.eraseFromParent();
 }
