@@ -445,6 +445,64 @@ bb2:                                              ; preds = %select.unfold
   unreachable
 }
 
+
+define i16 @DTU_update_crash() {
+; CHECK-LABEL: @DTU_update_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY_SELECTBLOCK:%.*]]
+; CHECK:       for.body.selectblock:
+; CHECK-NEXT:    br i1 false, label [[SWITCHBLOCK_JT0:%.*]], label [[SEL_SI_UNFOLD_FALSE_JT0:%.*]]
+; CHECK:       sel.si.unfold.false:
+; CHECK-NEXT:    br label [[SWITCHBLOCK:%.*]]
+; CHECK:       sel.si.unfold.false.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI_JT0:%.*]] = phi i32 [ 0, [[FOR_BODY_SELECTBLOCK]] ]
+; CHECK-NEXT:    br label [[SWITCHBLOCK_JT0]]
+; CHECK:       switchblock:
+; CHECK-NEXT:    [[SWITCHBLOCK_PHI:%.*]] = phi i32 [ poison, [[SEL_SI_UNFOLD_FALSE:%.*]] ]
+; CHECK-NEXT:    [[P_24_ADDR_3:%.*]] = phi i32 [ 0, [[SEL_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    switch i32 [[SWITCHBLOCK_PHI]], label [[CLEANUP:%.*]] [
+; CHECK-NEXT:      i32 0, label [[FOR_INC:%.*]]
+; CHECK-NEXT:      i32 1, label [[CLEANUP]]
+; CHECK-NEXT:      i32 5, label [[FOR_BODY_SELECTBLOCK]]
+; CHECK-NEXT:    ]
+; CHECK:       switchblock.jt0:
+; CHECK-NEXT:    [[SWITCHBLOCK_PHI_JT0:%.*]] = phi i32 [ 0, [[FOR_BODY_SELECTBLOCK]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SEL_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    [[P_24_ADDR_3_JT0:%.*]] = phi i32 [ 0, [[FOR_BODY_SELECTBLOCK]] ], [ 0, [[SEL_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[P_24_ADDR_31:%.*]] = phi i32 [ [[P_24_ADDR_3_JT0]], [[SWITCHBLOCK_JT0]] ], [ [[P_24_ADDR_3]], [[SWITCHBLOCK]] ]
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY_SELECTBLOCK]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[P_24_ADDR_32:%.*]] = phi i32 [ [[P_24_ADDR_31]], [[FOR_INC]] ], [ [[P_24_ADDR_3]], [[SWITCHBLOCK]] ], [ [[P_24_ADDR_3]], [[SWITCHBLOCK]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[P_24_ADDR_32]])
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  br label %for.body.selectblock
+
+for.body.selectblock:                                        ; preds = %for.inc, %switchblock, %entry
+  %sel = select i1 false, i32 0, i32 0
+  br label %switchblock
+
+switchblock:                                       ; preds = %for.body.selectblock
+  %switchblock.phi = phi i32 [ %sel, %for.body.selectblock ]
+  %p_24.addr.3 = phi i32 [ 0, %for.body.selectblock ]
+  switch i32 %switchblock.phi, label %cleanup [
+  i32 0, label %for.inc
+  i32 1, label %cleanup
+  i32 5, label %for.body.selectblock
+  ]
+
+for.inc:                                       ; preds = %switchblock
+  br i1 false, label %for.body.selectblock, label %cleanup
+
+cleanup:                                       ; preds = %for.inc, %switchblock, %switchblock
+  call void (...) @llvm.fake.use(i32 %p_24.addr.3)
+  ret i16 0
+}
+
+declare void @llvm.fake.use(...)
+
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 3, i32 5}
 ;.
