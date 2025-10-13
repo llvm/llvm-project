@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -702,7 +701,11 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   StringRef underlyingToSymFnName = enumInfo.getUnderlyingToSymbolFnName();
   auto enumerants = enumInfo.getAllCases();
 
-  llvm::NamespaceEmitter ns(os, cppNamespace);
+  SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(cppNamespace, namespaces, "::");
+
+  for (auto ns : namespaces)
+    os << "namespace " << ns << " {\n";
 
   // Emit the enum class definition
   emitEnumClass(enumDef, enumName, underlyingType, description, enumerants, os);
@@ -763,7 +766,8 @@ public:
     os << formatv(attrClassDecl, enumName, attrClassName, baseAttrClassName);
   }
 
-  ns.close();
+  for (auto ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 
   // Generate a generic parser and printer for the enum.
   std::string qualName =
@@ -786,8 +790,13 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
+  StringRef cppNamespace = enumInfo.getCppNamespace();
 
-  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
+  SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(cppNamespace, namespaces, "::");
+
+  for (auto ns : namespaces)
+    os << "namespace " << ns << " {\n";
 
   if (enumInfo.isBitEnum()) {
     emitSymToStrFnForBitEnum(enumDef, os);
@@ -801,6 +810,10 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
 
   if (enumInfo.genSpecializedAttr())
     emitSpecializedAttrDef(enumDef, os);
+
+  for (auto ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
+  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
