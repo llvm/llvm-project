@@ -1762,8 +1762,11 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
   // access its value.
   llvm::GlobalValue *Addr = GV;
   if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    llvm::PointerType *FnPtrTy = llvm::PointerType::get(
+        CGM.getLLVMContext(),
+        CGM.getModule().getDataLayout().getProgramAddressSpace());
     Addr = new llvm::GlobalVariable(
-        CGM.getModule(), CGM.VoidPtrTy,
+        CGM.getModule(), FnPtrTy,
         /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, GV, Name,
         nullptr, llvm::GlobalValue::NotThreadLocal,
         CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
