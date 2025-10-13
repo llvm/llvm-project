@@ -1325,14 +1325,8 @@ class OpenACCReductionClause final
         Op(Operator) {
           assert(VarList.size() == Recipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-
-    // Initialize the recipe list.
-    unsigned I = 0;
-    for (const OpenACCReductionRecipe &R : Recipes) {
-      new (&getTrailingObjects<OpenACCReductionRecipe>()[I])
-          OpenACCReductionRecipe(R);
-      ++I;
-    }
+    llvm::uninitialized_copy(Recipes, getTrailingObjects<
+                             OpenACCReductionRecipe > ());
   }
 
 public:
