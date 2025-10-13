@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class TestCortexMExceptionUnwind(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfRemote
     def test_no_fpu(self):
         """Test that we can backtrace correctly through an ARM Cortex-M Exception return stack"""
 
@@ -26,6 +27,9 @@ class TestCortexMExceptionUnwind(TestBase):
 
         core = self.getBuildArtifact("core")
         self.yaml2macho_core("armv7m-nofpu-exception.yaml", core, exe_uuid)
+
+        if self.TraceOn():
+            self.runCmd("log enable lldb unwind")
 
         process = target.LoadCore(core)
         self.assertTrue(process.IsValid())

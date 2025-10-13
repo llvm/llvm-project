@@ -390,7 +390,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_C11:
     return {{DW_LNAME_C, 201112}};
   case DW_LANG_C17:
-    return {{DW_LNAME_C, 201712}};
+    return {{DW_LNAME_C, 201710}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
@@ -500,7 +500,14 @@ toDW_LNAME(SourceLanguage language) {
   return {};
 }
 
+/// Returns a version-independent language name.
 LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName name);
+
+/// Returns a language name corresponding to the specified version.
+/// If the version is not recognized for the specified language, returns
+/// the version-independent name.
+LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName Name,
+                                             uint32_t Version);
 
 inline bool isCPlusPlus(SourceLanguage S) {
   bool result = false;

@@ -8588,13 +8588,14 @@ functions, and contains richer semantic information about the type of the
 allocation. This information is consumed by the ``alloc-token`` pass to
 instrument such calls with allocation token IDs.
 
-The metadata contains a string with the type of an allocation.
+The metadata contains: string with the type of an allocation, and a boolean
+denoting if the type contains a pointer.
 
 .. code-block:: none
 
   call ptr @malloc(i64 64), !alloc_token !0
 
-  !0 = !{!"<type-name>"}
+  !0 = !{!"<type-name>", i1 <contains-pointer>}
 
 Module Flags Metadata
 =====================
