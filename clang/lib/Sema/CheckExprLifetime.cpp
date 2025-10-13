@@ -1265,7 +1265,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       return true;
     case NotGSLPointer:
       IsGslPtrValueFromGslTempOwner = false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Report:
       break;
     }
