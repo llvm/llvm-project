@@ -68,7 +68,7 @@ bb2:
 !2 = !{!"function_entry_count", i64 80}
 !3 = !{!"branch_weights", i32 2, i32 78}
 
-;; Verify that we emit the PGO map for bar although it doesn't have Propeller profile.
+;; Verify that we emit the PGO map for bar which doesn't have Propeller profile.
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.bar
 ; CHECK-NEXT:	.byte	3		# version
