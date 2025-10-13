@@ -1532,14 +1532,27 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     assert(BBAddrMapVersion >= 2 &&
            "PGOAnalysisMap only supports version 2 or later");
 
+    // We will emit the BBSPR profile data if availale. Otherwise, we fall back
+    // to MBFI and MBPI.
     const BasicBlockSectionsProfileReader *BBSPR = nullptr;
     if (auto *BBSPRPass = getAnalysisIfAvailable<
             BasicBlockSectionsProfileReaderWrapperPass>())
       BBSPR = &BBSPRPass->getBBSPR();
 
+
     const CFGProfile *FuncCFGProfile = nullptr;
     if (BBSPR)
       FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
+
+    const MachineBlockFrequencyInfo *MBFI =
+          Features.BBFreq
+              ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+              : nullptr;
+      const MachineBranchProbabilityInfo *MBPI =
+          Features.BrProb
+              ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>()
+                     .getMBPI()
+              : nullptr;
 
     if (Features.FuncEntryCount) {
       OutStreamer->AddComment("function entry count");
@@ -1553,65 +1566,31 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(EntryCount);
     }
 
-    if (FuncCFGProfile) {
+        if (Features.BBFreq || Features.BrProb) {
+        for (const MachineBasicBlock &MBB : MF) {
+
       if (Features.BBFreq) {
-        // Basic Block Frequencies from BBSPR NodeCounts.
-        for (const MachineBasicBlock &MBB : MF) {
-          OutStreamer->AddComment("basic block frequency (from BBSPR)");
-          OutStreamer->emitULEB128IntValue(
-              FuncCFGProfile->getNodeCount(*MBB.getBBID()));
+          OutStreamer->AddComment("basic block frequency");
+          uint64_t BlockFrequency = FuncCFGProfile ? FuncCFGProfile->getNodeCount(*MBB.getBBID()) :  MBFI->getBlockFreq(&MBB).getFrequency();
+          OutStreamer->emitULEB128IntValue(BlockFrequency);
         }
-      }
       if (Features.BrProb) {
-        // Branch Probabilities from BBSPR EdgeCounts.
-        for (const MachineBasicBlock &MBB : MF) {
           OutStreamer->AddComment("basic block successor count");
           OutStreamer->emitULEB128IntValue(MBB.succ_size());
           for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
             OutStreamer->AddComment("successor BB ID");
             OutStreamer->emitULEB128IntValue(SuccMBB->getBBID()->BaseID);
-            // Emit the numerator of the probability.
             OutStreamer->AddComment(
-                "successor branch probability (from BBSPR)");
-            OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
-                *MBB.getBBID(), *SuccMBB->getBBID()));
+                "successor branch probability");
+            // For MPBI, we emit the numerator of the probability. For BBSPR, we
+            // emit the raw edge count.
+            uint64_t EdgeFrequency = FuncCFGProfile ? FuncCFGProfile->getEdgeCount(
+                *MBB.getBBID(), *SuccMBB->getBBID()) : MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator();
+            OutStreamer->emitULEB128IntValue(EdgeFrequency);
           }
-        }
       }
-    } else {
-      // Fallback to MBFI and MBPI if BBSPR data is not available.
-      const MachineBlockFrequencyInfo *MBFI =
-          Features.BBFreq
-              ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
-              : nullptr;
-      const MachineBranchProbabilityInfo *MBPI =
-          Features.BrProb
-              ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>()
-                     .getMBPI()
-              : nullptr;
-
-      if (Features.BBFreq || Features.BrProb) {
-        for (const MachineBasicBlock &MBB : MF) {
-          if (Features.BBFreq) {
-            OutStreamer->AddComment("basic block frequency");
-            OutStreamer->emitULEB128IntValue(
-                MBFI->getBlockFreq(&MBB).getFrequency());
-          }
-          if (Features.BrProb) {
-            unsigned SuccCount = MBB.succ_size();
-            OutStreamer->AddComment("basic block successor count");
-            OutStreamer->emitULEB128IntValue(SuccCount);
-            for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
-              OutStreamer->AddComment("successor BB ID");
-              OutStreamer->emitULEB128IntValue(SuccMBB->getBBID()->BaseID);
-              OutStreamer->AddComment("successor branch probability");
-              OutStreamer->emitULEB128IntValue(
-                  MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
-            }
-          }
-        }
       }
-    }
+        }
   }
 
   OutStreamer->popSection();
