@@ -4035,7 +4035,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
     if (hasReturnTypeDeclaredInside(D) ||
-      Importer.DeclTypeCycles.find(D) != Importer.DeclTypeCycles.end()) {
+        Importer.DeclTypeCycles.find(D) != Importer.DeclTypeCycles.end()) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -4058,13 +4058,11 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Error Err = Error::success();
-  if (!UsedDifferentProtoType) {
+  if (!UsedDifferentProtoType)
     Importer.DeclTypeCycles.insert(D);
-  }
   auto T = importChecked(Err, FromTy);
-  if (!UsedDifferentProtoType) {
+  if (!UsedDifferentProtoType)
     Importer.DeclTypeCycles.erase(D);
-  }
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
   auto ToEndLoc = importChecked(Err, D->getEndLoc());
