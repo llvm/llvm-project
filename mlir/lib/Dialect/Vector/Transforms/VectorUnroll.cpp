@@ -465,24 +465,27 @@ struct UnrollElementwisePattern : public RewritePattern {
     auto targetShape = getTargetShape(options, op);
     if (!targetShape)
       return failure();
+    int64_t targetShapeRank = targetShape->size();
     auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
+    int64_t originalShapeRank = originalSize.size();
 
     Location loc = op->getLoc();
 
     // Handle rank mismatch by adding leading unit dimensions to targetShape
-    SmallVector<int64_t> adjustedTargetShape = *targetShape;
-    if (originalSize.size() > targetShape->size()) {
-      // Add leading unit dimensions to targetShape
-      int64_t rankDiff = originalSize.size() - targetShape->size();
-      adjustedTargetShape.insert(adjustedTargetShape.begin(), rankDiff, 1);
-    }
+    SmallVector<int64_t> adjustedTargetShape(originalShapeRank);
+    int64_t rankDiff = originalShapeRank - targetShapeRank;
+    std::fill(adjustedTargetShape.begin(),
+              adjustedTargetShape.begin() + rankDiff, 1);
+    std::copy(targetShape->begin(), targetShape->end(),
+              adjustedTargetShape.begin() + rankDiff);
 
+    int64_t adjustedTargetShapeRank = adjustedTargetShape.size();
     // Prepare the result vector.
     Value result = arith::ConstantOp::create(rewriter, loc, dstVecType,
                                              rewriter.getZeroAttr(dstVecType));
-    SmallVector<int64_t> strides(adjustedTargetShape.size(), 1);
+    SmallVector<int64_t> strides(adjustedTargetShapeRank, 1);
     VectorType computeVecType =
         VectorType::get(*targetShape, dstVecType.getElementType());
 
@@ -500,7 +503,7 @@ struct UnrollElementwisePattern : public RewritePattern {
             loc, operand.get(), offsets, adjustedTargetShape, strides);
 
         // Reshape to remove leading unit dims if needed
-        if (adjustedTargetShape.size() > targetShape->size()) {
+        if (adjustedTargetShapeRank > targetShapeRank) {
           extracted = rewriter.createOrFold<vector::ShapeCastOp>(
               loc, VectorType::get(*targetShape, vecType.getElementType()),
               extracted);
@@ -515,8 +518,8 @@ struct UnrollElementwisePattern : public RewritePattern {
 
       // Use strides sized to targetShape for proper insertion
       SmallVector<int64_t> insertStrides =
-          (adjustedTargetShape.size() > targetShape->size())
-              ? SmallVector<int64_t>(targetShape->size(), 1)
+          (adjustedTargetShapeRank > targetShapeRank)
+              ? SmallVector<int64_t>(targetShapeRank, 1)
               : strides;
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
