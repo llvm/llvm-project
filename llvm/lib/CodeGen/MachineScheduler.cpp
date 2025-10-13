@@ -176,9 +176,7 @@ STATISTIC(NumNodeOrderPostRA,
 STATISTIC(NumFirstValidPostRA,
           "Number of scheduling units chosen for FirstValid heuristic post-RA");
 
-namespace llvm {
-
-cl::opt<MISched::Direction> PreRADirection(
+cl::opt<MISched::Direction> llvm::PreRADirection(
     "misched-prera-direction", cl::Hidden,
     cl::desc("Pre reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -206,32 +204,30 @@ static cl::opt<bool>
     DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                            cl::desc("Print critical path length to stdout"));
 
-cl::opt<bool> VerifyScheduling(
+cl::opt<bool> llvm::VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
 #ifndef NDEBUG
-cl::opt<bool> ViewMISchedDAGs(
+cl::opt<bool> llvm::ViewMISchedDAGs(
     "view-misched-dags", cl::Hidden,
     cl::desc("Pop up a window to show MISched dags after they are processed"));
-cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
-                        cl::desc("Print schedule DAGs"));
-cl::opt<bool> MISchedDumpReservedCycles(
+cl::opt<bool> llvm::PrintDAGs("misched-print-dags", cl::Hidden,
+                              cl::desc("Print schedule DAGs"));
+static cl::opt<bool> MISchedDumpReservedCycles(
     "misched-dump-reserved-cycles", cl::Hidden, cl::init(false),
     cl::desc("Dump resource usage at schedule boundary."));
-cl::opt<bool> MischedDetailResourceBooking(
+static cl::opt<bool> MischedDetailResourceBooking(
     "misched-detail-resource-booking", cl::Hidden, cl::init(false),
     cl::desc("Show details of invoking getNextResoufceCycle."));
 #else
-const bool ViewMISchedDAGs = false;
-const bool PrintDAGs = false;
-const bool MischedDetailResourceBooking = false;
+const bool llvm::ViewMISchedDAGs = false;
+const bool llvm::PrintDAGs = false;
+static const bool MischedDetailResourceBooking = false;
 #ifdef LLVM_ENABLE_DUMP
-const bool MISchedDumpReservedCycles = false;
+static const bool MISchedDumpReservedCycles = false;
 #endif // LLVM_ENABLE_DUMP
 #endif // NDEBUG
-
-} // end namespace llvm
 
 #ifndef NDEBUG
 /// In some situations a few uninteresting nodes depend on nearly all other
@@ -2053,27 +2049,23 @@ public:
 
 } // end anonymous namespace
 
-namespace llvm {
-
 std::unique_ptr<ScheduleDAGMutation>
-createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI,
-                             bool ReorderWhileClustering) {
+llvm::createLoadClusterDAGMutation(const TargetInstrInfo *TII,
+                                   const TargetRegisterInfo *TRI,
+                                   bool ReorderWhileClustering) {
   return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(
                                   TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
-createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI,
-                              bool ReorderWhileClustering) {
+llvm::createStoreClusterDAGMutation(const TargetInstrInfo *TII,
+                                    const TargetRegisterInfo *TRI,
+                                    bool ReorderWhileClustering) {
   return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(
                                   TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
-
-} // end namespace llvm
 
 // Sorting all the loads/stores first, then for each load/store, checking the
 // following load/store one by one, until reach the first non-dependent one and
@@ -2304,15 +2296,11 @@ protected:
 
 } // end anonymous namespace
 
-namespace llvm {
-
 std::unique_ptr<ScheduleDAGMutation>
-createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
-                               const TargetRegisterInfo *TRI) {
+llvm::createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
+                                     const TargetRegisterInfo *TRI) {
   return std::make_unique<CopyConstrain>(TII, TRI);
 }
-
-} // end namespace llvm
 
 /// constrainLocalCopy handles two possibilities:
 /// 1) Local src:
@@ -3445,14 +3433,13 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
 }
 #endif
 
-namespace llvm {
 /// Return true if this heuristic determines order.
 /// TODO: Consider refactor return type of these functions as integer or enum,
 /// as we may need to differentiate whether TryCand is better than Cand.
-bool tryLess(int TryVal, int CandVal,
-             GenericSchedulerBase::SchedCandidate &TryCand,
-             GenericSchedulerBase::SchedCandidate &Cand,
-             GenericSchedulerBase::CandReason Reason) {
+bool llvm::tryLess(int TryVal, int CandVal,
+                   GenericSchedulerBase::SchedCandidate &TryCand,
+                   GenericSchedulerBase::SchedCandidate &Cand,
+                   GenericSchedulerBase::CandReason Reason) {
   if (TryVal < CandVal) {
     TryCand.Reason = Reason;
     return true;
@@ -3465,10 +3452,10 @@ bool tryLess(int TryVal, int CandVal,
   return false;
 }
 
-bool tryGreater(int TryVal, int CandVal,
-                GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                GenericSchedulerBase::CandReason Reason) {
+bool llvm::tryGreater(int TryVal, int CandVal,
+                      GenericSchedulerBase::SchedCandidate &TryCand,
+                      GenericSchedulerBase::SchedCandidate &Cand,
+                      GenericSchedulerBase::CandReason Reason) {
   if (TryVal > CandVal) {
     TryCand.Reason = Reason;
     return true;
@@ -3481,9 +3468,9 @@ bool tryGreater(int TryVal, int CandVal,
   return false;
 }
 
-bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                SchedBoundary &Zone) {
+bool llvm::tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
+                      GenericSchedulerBase::SchedCandidate &Cand,
+                      SchedBoundary &Zone) {
   if (Zone.isTop()) {
     // Prefer the candidate with the lesser depth, but only if one of them has
     // depth greater than the total latency scheduled so far, otherwise either
@@ -3513,7 +3500,6 @@ bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   }
   return false;
 }
-} // end namespace llvm
 
 static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
                       bool IsPostRA = false) {
@@ -3798,14 +3784,12 @@ void GenericScheduler::registerRoots() {
   }
 }
 
-namespace llvm {
-bool tryPressure(const PressureChange &TryP,
-                 const PressureChange &CandP,
-                 GenericSchedulerBase::SchedCandidate &TryCand,
-                 GenericSchedulerBase::SchedCandidate &Cand,
-                 GenericSchedulerBase::CandReason Reason,
-                 const TargetRegisterInfo *TRI,
-                 const MachineFunction &MF) {
+bool llvm::tryPressure(const PressureChange &TryP, const PressureChange &CandP,
+                       GenericSchedulerBase::SchedCandidate &TryCand,
+                       GenericSchedulerBase::SchedCandidate &Cand,
+                       GenericSchedulerBase::CandReason Reason,
+                       const TargetRegisterInfo *TRI,
+                       const MachineFunction &MF) {
   // If one candidate decreases and the other increases, go with it.
   // Invalid candidates have UnitInc==0.
   if (tryGreater(TryP.getUnitInc() < 0, CandP.getUnitInc() < 0, TryCand, Cand,
@@ -3838,7 +3822,7 @@ bool tryPressure(const PressureChange &TryP,
   return tryGreater(TryRank, CandRank, TryCand, Cand, Reason);
 }
 
-unsigned getWeakLeft(const SUnit *SU, bool isTop) {
+unsigned llvm::getWeakLeft(const SUnit *SU, bool isTop) {
   return (isTop) ? SU->WeakPredsLeft : SU->WeakSuccsLeft;
 }
 
@@ -3849,7 +3833,7 @@ unsigned getWeakLeft(const SUnit *SU, bool isTop) {
 /// copies which can be prescheduled. The rest (e.g. x86 MUL) could be bundled
 /// with the operation that produces or consumes the physreg. We'll do this when
 /// regalloc has support for parallel copies.
-int biasPhysReg(const SUnit *SU, bool isTop) {
+int llvm::biasPhysReg(const SUnit *SU, bool isTop) {
   const MachineInstr *MI = SU->getInstr();
 
   if (MI->isCopy()) {
@@ -3884,7 +3868,6 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
 
   return 0;
 }
-} // end namespace llvm
 
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
@@ -4812,13 +4795,13 @@ static MachineSchedRegistry ShufflerRegistry(
 //===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
-namespace llvm {
 
-template<> struct GraphTraits<
-  ScheduleDAGMI*> : public GraphTraits<ScheduleDAG*> {};
+template <>
+struct llvm::GraphTraits<ScheduleDAGMI *> : public GraphTraits<ScheduleDAG *> {
+};
 
-template<>
-struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
+template <>
+struct llvm::DOTGraphTraits<ScheduleDAGMI *> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const ScheduleDAG *G) {
@@ -4878,7 +4861,6 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
   }
 };
 
-} // end namespace llvm
 #endif // NDEBUG
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG

@@ -1036,6 +1036,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
         continue;
 
       addToWorklist(I, Worklist);
+      Modified = true;
       break;
     }
     default:
