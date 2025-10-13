@@ -154,7 +154,6 @@ export module m:n;
 //--- unexpected_character_in_pp_module_suffix.cpp
 export module m();
 // expected-error@-1 {{module directive must end with a ';'}}
-// expected-error@-2 {{expected unqualified-id}}
 
 //--- semi_in_same_line.cpp
 export module m // OK
@@ -165,7 +164,7 @@ import foo // expected-error {{module 'foo' not found}}
 
 //--- cwg2947_example1.cpp
 export module foo DOT_BAR; // error: expansion of DOT_BAR; does not begin with ; or [
-// expected-error@-1 {{unexpected preprocessing token '.' after module name, only ';' and '[' (start of C++ attribute specifier) are allowed}}
+// expected-error@-1 {{module directive must end with a ';'}}
 
 //--- cwg2947_example2.cpp
 export module M MOD_ATTR ;        // OK
@@ -174,7 +173,7 @@ export module M MOD_ATTR ;        // OK
 //--- cwg2947_example3.cpp
 export module a
   .b;                         // error: preprocessing token after pp-module-name is not ; or [
-// expected-error@-1 {{module directive must end with a ';'}}
+// expected-error@-2 {{module directive must end with a ';'}}
 
 //--- cwg2947_example4.cpp
 export module M [[

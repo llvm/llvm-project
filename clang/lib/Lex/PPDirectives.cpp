@@ -4120,6 +4120,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     Lex(Tok);
     [[fallthrough]];
   case tok::identifier: {
+    unsigned NumToksInDirective = DirToks.size();
     if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path)) {
       if (Tok.isNot(tok::eod))
         CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName(),
@@ -4127,6 +4128,15 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
       EnterModuleSuffixTokenStream(DirToks);
       return;
     }
+
+    // Clean the module-name tokens and replace these tokens with annot_module_name.
+    DirToks.resize(NumToksInDirective);
+    ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+    DirToks.emplace_back();
+    DirToks.back().setKind(tok::annot_module_name);
+    DirToks.back().setAnnotationRange(NameLoc->getRange());
+    DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+    DirToks.push_back(Tok);
 
     bool IsValid =
         (IsPartition && ModuleDeclState.isNamedModule()) || !IsPartition;
@@ -4261,6 +4271,8 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.push_back(Tok);
     break;
   case tok::identifier: {
+    unsigned NumToksInDirective = DirToks.size();
+
     // C++ [cpp.module]p3: Any preprocessing tokens after the module
     // preprocessing token in the module directive are processed just as in
     // normal text.
@@ -4275,10 +4287,19 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
       return;
     }
 
+    ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+    DirToks.resize(NumToksInDirective);
+    DirToks.emplace_back();
+    DirToks.back().setKind(tok::annot_module_name);
+    DirToks.back().setAnnotationRange(NameLoc->getRange());
+    DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+    DirToks.push_back(Tok);
+
     // C++20 [cpp.module]p
     //   The pp-tokens, if any, of a pp-module shall be of the form:
     //     pp-module-name pp-module-partition[opt] pp-tokens[opt]
     if (Tok.is(tok::colon)) {
+      NumToksInDirective = DirToks.size();
       LexUnexpandedToken(Tok);
       if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition,
                                 /*AllowMacroExpansion=*/false,
@@ -4289,6 +4310,14 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
         EnterModuleSuffixTokenStream(DirToks);
         return;
       }
+
+      ModuleNameLoc *PartitionLoc = ModuleNameLoc::Create(*this, Partition);
+       DirToks.resize(NumToksInDirective);
+      DirToks.emplace_back();
+      DirToks.back().setKind(tok::annot_module_name);
+      DirToks.back().setAnnotationRange(NameLoc->getRange());
+      DirToks.back().setAnnotationValue(static_cast<void *>(PartitionLoc));
+      DirToks.push_back(Tok);
     }
 
     // If the current token is a macro definition, put it back to token stream

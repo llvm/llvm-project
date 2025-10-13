@@ -991,6 +991,8 @@ def warn_module_conflict : Warning<
 // C++20 modules
 def err_pp_module_name_is_macro : Error<
   "%select{module|partition}0 name component %1 cannot be a object-like macro">;
+def err_pp_module_expected_ident : Error<
+  "expected %select{identifier after '.' in |}0module name">;
 def err_pp_module_decl_in_header
     : Error<"module declaration must not come from an #include directive">;
 def err_pp_cond_span_module_decl

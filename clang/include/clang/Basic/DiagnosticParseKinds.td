@@ -1784,8 +1784,6 @@ def ext_bit_int : Extension<
 let CategoryName = "Modules Issue" in {
 def err_unexpected_module_or_import_decl : Error<
   "%select{module|import}0 declaration can only appear at the top level">;
-def err_module_expected_ident : Error<
-  "expected %select{identifier after '.' in |}0module name">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_keyword_not_module_attr : Error<

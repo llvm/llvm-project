@@ -19,6 +19,7 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2389,8 +2390,9 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
-                       tok::getKeywordSpelling(tok::kw_module));
+  if (ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                       tok::getKeywordSpelling(tok::kw_module)))
+    SkipUntil(tok::semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
                                  ImportState,
@@ -2495,11 +2497,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
+  bool DontSeeSemi = false;
   if (getLangOpts().CPlusPlusModules)
-    ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
-                         tok::getKeywordSpelling(tok::kw_import));
+    DontSeeSemi =
+        ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                             tok::getKeywordSpelling(tok::kw_import));
   else
-    ExpectAndConsumeSemi(diag::err_module_expected_semi);
+    DontSeeSemi = ExpectAndConsumeSemi(diag::err_module_expected_semi);
+
+  if (DontSeeSemi)
+    SkipUntil(tok::semi);
 
   if (SeenError)
     return nullptr;
@@ -2530,29 +2537,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 bool Parser::ParseModuleName(SourceLocation UseLoc,
                              SmallVectorImpl<IdentifierLoc> &Path,
                              bool IsImport) {
-  // Parse the module path.
-  while (true) {
-    if (!Tok.is(tok::identifier)) {
-      if (Tok.is(tok::code_completion)) {
-        cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
-        return true;
-      }
-
-      Diag(Tok, diag::err_module_expected_ident) << Path.empty();
-      SkipUntil(tok::semi);
-      return true;
-    }
-
-    // Record this part of the module path.
-    Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
-    ConsumeToken();
-
-    if (Tok.isNot(tok::period))
-      return false;
-
-    ConsumeToken();
+  if (Tok.isNot(tok::annot_module_name)) {
+    SkipUntil(tok::semi);
+    return true;
   }
+  ModuleNameLoc *NameLoc =
+      static_cast<ModuleNameLoc *>(Tok.getAnnotationValue());
+  Path.assign(NameLoc->getModuleIdPath().begin(),
+              NameLoc->getModuleIdPath().end());
+  ConsumeAnnotationToken();
+  return false;
 }
 
 bool Parser::parseMisplacedModuleImport() {

@@ -137,6 +137,12 @@ struct CXXStandardLibraryVersionInfo {
   std::uint64_t Version;
 };
 
+/// Record the previous 'export' keyword info.
+//
+// Since P1857R3, the standard introduced several rules to determine whether the
+/// 'module', 'export module', 'import', 'export import' is a valid
+/// directive introducer. This class used to record the previous 'export'
+/// keyword token, and then handle 'export module' and 'export import'.
 class ExportContextualKeywordInfo {
   Token ExportTok;
   bool AtPhysicalStartOfLine = false;
@@ -152,6 +158,40 @@ public:
   void reset() {
     ExportTok.startToken();
     AtPhysicalStartOfLine = false;
+  }
+};
+
+class ModuleNameLoc final
+    : llvm::TrailingObjects<ModuleNameLoc, IdentifierLoc> {
+  friend TrailingObjects;
+  unsigned NumIdentifierLocs;
+  unsigned numTrailingObjects(OverloadToken<IdentifierLoc>) const {
+    return getNumIdentifierLocs();
+  }
+
+  ModuleNameLoc(ModuleIdPath Path) : NumIdentifierLocs(Path.size()) {
+    (void)llvm::copy(Path, getTrailingObjectsNonStrict<IdentifierLoc>());
+  }
+
+public:
+  static ModuleNameLoc *Create(Preprocessor &PP, ModuleIdPath Path);
+  unsigned getNumIdentifierLocs() const { return NumIdentifierLocs; }
+  ModuleIdPath getModuleIdPath() const {
+    return {getTrailingObjectsNonStrict<IdentifierLoc>(),
+            getNumIdentifierLocs()};
+  }
+
+  SourceLocation getBeginLoc() const {
+    return getModuleIdPath().front().getLoc();
+  }
+  SourceLocation getEndLoc() const {
+    auto &Last = getModuleIdPath().back();
+    return Last.getLoc().getLocWithOffset(
+        Last.getIdentifierInfo()->getLength());
+  }
+  SourceRange getRange() const { return {getBeginLoc(), getEndLoc()}; }
+  std::string str() const {
+    return ModuleLoader::getFlatNameFromPath(getModuleIdPath());
   }
 };
 
@@ -591,9 +631,9 @@ private:
         reset();
     }
 
-    void handleIdentifier(IdentifierInfo *Identifier) {
-      if (isModuleCandidate() && Identifier)
-        Name += Identifier->getName().str();
+    void handleModuleName(ModuleNameLoc *NameLoc) {
+      if (isModuleCandidate() && NameLoc)
+        Name += NameLoc->str();
       else if (!isNamedModule())
         reset();
     }
@@ -601,13 +641,6 @@ private:
     void handleColon() {
       if (isModuleCandidate())
         Name += ":";
-      else if (!isNamedModule())
-        reset();
-    }
-
-    void handlePeriod() {
-      if (isModuleCandidate())
-        Name += ".";
       else if (!isNamedModule())
         reset();
     }

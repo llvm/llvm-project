@@ -955,9 +955,6 @@ void Preprocessor::Lex(Token &Result) {
     case tok::colon:
       ModuleDeclState.handleColon();
       break;
-    case tok::period:
-      ModuleDeclState.handlePeriod();
-      break;
     case tok::kw_import:
       if (StdCXXImportSeqState.atTopLevel()) {
         TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
@@ -972,8 +969,9 @@ void Preprocessor::Lex(Token &Result) {
         ModuleDeclState.handleModule();
       }
       break;
-    case tok::identifier:
-      ModuleDeclState.handleIdentifier(Result.getIdentifierInfo());
+    case tok::annot_module_name:
+      ModuleDeclState.handleModuleName(
+          static_cast<ModuleNameLoc *>(Result.getAnnotationValue()));
       if (ModuleDeclState.isModuleCandidate())
         break;
       [[fallthrough]];
@@ -1134,6 +1132,13 @@ std::string ModuleLoader::getFlatNameFromPath(ModuleIdPath Path) {
   return Name;
 }
 
+ModuleNameLoc *ModuleNameLoc::Create(Preprocessor &PP, ModuleIdPath Path) {
+  assert(!Path.empty() && "expect at least one identifier in a module name");
+  void *Mem = PP.getPreprocessorAllocator().Allocate(
+      totalSizeToAlloc<IdentifierLoc>(Path.size()), alignof(ModuleNameLoc));
+  return new (Mem) ModuleNameLoc(Path);
+}
+
 bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                                          SmallVectorImpl<Token> &Suffix,
                                          SmallVectorImpl<IdentifierLoc> &Path,
@@ -1147,10 +1152,17 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
     Suffix.push_back(Tok);
   };
 
-  Suffix.push_back(Tok);
   while (true) {
-    if (Tok.isNot(tok::identifier))
+    if (Tok.isNot(tok::identifier)) {
+      if (Tok.is(tok::code_completion)) {
+        CurLexer->cutOffLexing();
+        CodeComplete->CodeCompleteModuleImport(UseLoc, Path);
+        return true;
+      }
+
+      Diag(Tok, diag::err_pp_module_expected_ident) << Path.empty();
       return true;
+    }
 
     // [cpp.pre]/p2:
     // No identifier in the pp-module-name or pp-module-partition shall
@@ -1317,11 +1329,20 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
     return CollectPPImportSuffixAndEnterStream(Suffix);
 
+  
+  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+  Suffix.clear();
+  Suffix.emplace_back();
+  Suffix.back().setKind(tok::annot_module_name);
+  Suffix.back().setAnnotationRange(NameLoc->getRange());
+  Suffix.back().setAnnotationValue(static_cast<void *>(NameLoc));
+  Suffix.push_back(Result);
+
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
-  SourceLocation SemiLoc = Suffix.back().getLocation();
+  SourceLocation SemiLoc = Result.getLocation();
   if (Suffix.back().isNot(tok::semi)) {
-    if (Result.isNot(tok::eof))
+    if (Suffix.back().isNot(tok::eof))
       CollectPPImportSuffix(Suffix);
     if (Suffix.back().isNot(tok::semi)) {
       // This is not an import after all.

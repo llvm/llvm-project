@@ -13,7 +13,8 @@ struct module { struct inner {}; };
 constexpr int n = 123;
 
 export module m; // #1
-module y = {}; // expected-error {{multiple module declarations}} expected-error 2{{}}
+module y = {}; // expected-error {{multiple module declarations}}
+// expected-error@-1 {{module directive must end with a ';'}}
 // expected-note@#1 {{previous module declaration}}
 
 ::import x = {};
