@@ -829,9 +829,6 @@ struct nullopt_t {
 };
 constexpr nullopt_t nullopt;
 
-struct in_place_t {};
-constexpr in_place_t in_place;
-
 template <typename T>
 class optional;
 
