@@ -29,6 +29,7 @@ add_header(double_t HDR double_t.h)
 add_header(DIR HDR DIR.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(errno_t HDR errno_t.h)
 add_header(ldiv_t HDR ldiv_t.h)
 add_header(lldiv_t HDR lldiv_t.h)
 add_header(FILE HDR FILE.h)
@@ -299,5 +300,3 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
-
-add_header(errno_t HDR errno_t.h)
