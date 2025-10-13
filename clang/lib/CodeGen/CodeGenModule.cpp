@@ -2841,9 +2841,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
   // In the cross-dso CFI mode with canonical jump tables, we want !type
   // attributes on definitions only.
-  if ((CodeGenOpts.SanitizeCfiCrossDso &&
-       CodeGenOpts.SanitizeCfiCanonicalJumpTables) ||
-      CodeGenOpts.CallGraphSection) {
+  if (CodeGenOpts.SanitizeCfiCrossDso &&
+      CodeGenOpts.SanitizeCfiCanonicalJumpTables) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
       // Skip available_externally functions. They won't be codegen'ed in the
       // current module anyway.
@@ -3070,9 +3069,10 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
   // Return if generalized type metadata is already attached.
   if (hasExistingGeneralizedTypeMD(F))
     return;
+
   // All functions which are not internal linkage could be indirect targets.
   // Address taken functions with internal linkage could be indirect targets.
-  if (!F->hasLocalLinkage() &&
+  if (!F->hasLocalLinkage() ||
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
                                        /*IgnoreLLVMUsed=*/false))
@@ -3257,6 +3257,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   if (!CodeGenOpts.SanitizeCfiCrossDso ||
       !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
     createFunctionTypeMetadataForIcall(FD, F);
+
+  if (CodeGenOpts.CallGraphSection)
+    createIndirectFunctionTypeMD(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
