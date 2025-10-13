@@ -61,6 +61,45 @@ void PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
   }
 }
 
+void PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
+                 LPMUpdater &>::eraseIf(function_ref<bool(StringRef)> Pred) {
+  assert(LoopPasses.size() + LoopNestPasses.size() == IsLoopNestPass.size() &&
+         "Wrong precondition!");
+
+  std::vector<char> IsLoopNestPassVec(
+      static_cast<size_t>(IsLoopNestPass.size()));
+  for (unsigned Idx = 0, Sz = IsLoopNestPass.size(); Idx != Sz; ++Idx)
+    IsLoopNestPassVec[Idx] = IsLoopNestPass[Idx];
+
+  auto ILP = LoopPasses.begin();
+  auto ILNP = LoopNestPasses.begin();
+  for (auto I = IsLoopNestPassVec.begin(); I != IsLoopNestPassVec.end();) {
+    if (*I) {
+      if (Pred((*ILNP)->name())) {
+        I = IsLoopNestPassVec.erase(I);
+        ILNP = LoopNestPasses.erase(ILNP);
+        continue;
+      }
+      ++ILNP;
+    } else {
+      if (Pred((*ILP)->name())) {
+        I = IsLoopNestPassVec.erase(I);
+        ILP = LoopPasses.erase(ILP);
+        continue;
+      }
+      ++ILP;
+    }
+    ++I;
+  }
+
+  IsLoopNestPass.clear();
+  for (const auto I : IsLoopNestPassVec)
+    IsLoopNestPass.push_back(I);
+
+  assert(LoopPasses.size() + LoopNestPasses.size() == IsLoopNestPass.size() &&
+         "Wrong postcondition!");
+}
+
 // Run both loop passes and loop-nest passes on top-level loop \p L.
 PreservedAnalyses
 LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,

@@ -219,6 +219,22 @@ public:
 
   static bool isRequired() { return true; }
 
+  /// Erase all passes that satisfy the predicate \p Pred.
+  /// For internal use only!
+  void eraseIf(function_ref<bool(StringRef)> Pred) {
+    for (auto I = Passes.begin(); I != Passes.end();) {
+      auto &P = *I;
+      P->eraseIf(Pred);
+      bool IsSpecial = P->name().ends_with("PassAdaptor") ||
+                       P->name().contains("PassManager");
+      bool PredResult = Pred(P->name());
+      if ((!IsSpecial && PredResult) || (IsSpecial && P->isEmpty()))
+        I = Passes.erase(I);
+      else
+        ++I;
+    }
+  }
+
 protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
@@ -825,6 +841,32 @@ extern template class LLVM_TEMPLATE_ABI
 using ModuleAnalysisManagerFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 
+/// Simple mix-in for pass adaptor. If adaptor contains only a single pass
+/// instance in it, then it can inherit this mix-in to get default `isEmpty()`
+/// and `eraseIf` implementation. This mix-in must have access to the `Pass`
+/// member in adaptor.
+template <typename InternalConceptT> struct PassAdaptorMixin {
+  using PassConceptT = InternalConceptT;
+
+  bool isEmpty() const { return Pass == nullptr; }
+
+  void eraseIf(function_ref<bool(StringRef)> Pred) {
+    StringRef PassName = Pass->name();
+    if (PassName.contains("PassManager") || PassName.ends_with("PassAdaptor")) {
+      Pass->eraseIf(Pred);
+      if (Pass->isEmpty())
+        Pass.reset();
+    } else if (Pred(PassName)) {
+      Pass.reset();
+    }
+  }
+
+protected:
+  PassAdaptorMixin(std::unique_ptr<PassConceptT> Pass)
+      : Pass(std::move(Pass)) {}
+  std::unique_ptr<PassConceptT> Pass;
+};
+
 /// Trivial adaptor that maps from a module to its functions.
 ///
 /// Designed to allow composition of a FunctionPass(Manager) and
@@ -849,13 +891,14 @@ using ModuleAnalysisManagerFunctionProxy =
 /// analyses are not invalidated while the function passes are running, so they
 /// may be stale.  Function analyses will not be stale.
 class ModuleToFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToFunctionPassAdaptor> {
+    : public PassInfoMixin<ModuleToFunctionPassAdaptor>,
+      public PassAdaptorMixin<
+          detail::PassConcept<Function, FunctionAnalysisManager>> {
 public:
-  using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
-
   explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
                                        bool EagerlyInvalidate)
-      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
+      : PassAdaptorMixin(std::move(Pass)),
+        EagerlyInvalidate(EagerlyInvalidate) {}
 
   /// Runs the function pass across every function in the module.
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -866,7 +909,6 @@ public:
   static bool isRequired() { return true; }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
   bool EagerlyInvalidate;
 };
 
