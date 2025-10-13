@@ -3249,7 +3249,8 @@ TEST_P(ImportExpr, CycleInAutoTemplateSpec) {
   }
 )";
   // This test reproduces the StrCatT recursion pattern with concepts and span
-  // that may cause infinite recursion during AST import due to circular dependencies
+  // that may cause infinite recursion during AST import due to circular
+  // dependencies
   testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
              functionTemplateDecl(hasName("declToImport")));
 }
