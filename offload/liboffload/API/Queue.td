@@ -72,7 +72,7 @@ def olGetQueueInfo : Function {
     "required for the given query."
   ];
   let params = [
-    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"const ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
     Param<"ol_queue_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
     TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
@@ -93,7 +93,7 @@ def olGetQueueInfoSize : Function {
   let desc = "Returns the storage size of the given queue query.";
   let details = [];
   let params = [
-    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"const ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
     Param<"ol_queue_info_t", "PropName", "type of the info to query", PARAM_IN>,
     Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];

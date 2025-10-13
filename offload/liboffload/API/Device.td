@@ -95,7 +95,7 @@ def olGetDeviceInfo : Function {
   let desc = "Queries the given property of the device.";
   let details = [];
   let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
+    Param<"const ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
     Param<"ol_device_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
     TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. If PropSize is not equal to or greater than the real "
@@ -118,7 +118,7 @@ def olGetDeviceInfoSize : Function {
   let desc = "Returns the storage size of the given device query.";
   let details = [];
   let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
+    Param<"const ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
     Param<"ol_device_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];
