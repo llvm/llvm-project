@@ -8,6 +8,7 @@
 
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -326,6 +327,8 @@ std::optional<bool> ConstantFPRange::getSignBit() const {
 }
 
 bool ConstantFPRange::operator==(const ConstantFPRange &CR) const {
+  assert(&getSemantics() == &CR.getSemantics() &&
+         "Should only use the same semantics");
   if (MayBeSNaN != CR.MayBeSNaN || MayBeQNaN != CR.MayBeQNaN)
     return false;
   return Lower.bitwiseIsEqual(CR.Lower) && Upper.bitwiseIsEqual(CR.Upper);
@@ -390,4 +393,138 @@ ConstantFPRange ConstantFPRange::unionWith(const ConstantFPRange &CR) const {
          "Should only use the same semantics");
   return ConstantFPRange(minnum(Lower, CR.Lower), maxnum(Upper, CR.Upper),
                          MayBeQNaN | CR.MayBeQNaN, MayBeSNaN | CR.MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::abs() const {
+  if (isNaNOnly())
+    return *this;
+  // Check if the range is all non-negative or all non-positive.
+  if (Lower.isNegative() == Upper.isNegative()) {
+    if (Lower.isNegative())
+      return negate();
+    return *this;
+  }
+  // The range contains both positive and negative values.
+  APFloat NewLower = APFloat::getZero(getSemantics());
+  APFloat NewUpper = maxnum(-Lower, Upper);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper), MayBeQNaN,
+                         MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::negate() const {
+  return ConstantFPRange(-Upper, -Lower, MayBeQNaN, MayBeSNaN);
+}
+
+/// Return true if the finite part is not empty after removing infinities.
+static bool removeInf(APFloat &Lower, APFloat &Upper, bool &HasPosInf,
+                      bool &HasNegInf) {
+  assert(strictCompare(Lower, Upper) != APFloat::cmpGreaterThan &&
+         "Non-NaN part is empty.");
+  auto &Sem = Lower.getSemantics();
+  if (Lower.isNegInfinity()) {
+    Lower = APFloat::getLargest(Sem, /*Negative=*/true);
+    HasNegInf = true;
+  }
+  if (Upper.isPosInfinity()) {
+    Upper = APFloat::getLargest(Sem, /*Negative=*/false);
+    HasPosInf = true;
+  }
+  return strictCompare(Lower, Upper) != APFloat::cmpGreaterThan;
+}
+
+ConstantFPRange ConstantFPRange::getWithoutInf() const {
+  if (isNaNOnly())
+    return *this;
+  APFloat NewLower = Lower;
+  APFloat NewUpper = Upper;
+  bool UnusedFlag;
+  removeInf(NewLower, NewUpper, /*HasPosInf=*/UnusedFlag,
+            /*HasNegInf=*/UnusedFlag);
+  canonicalizeRange(NewLower, NewUpper);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper), MayBeQNaN,
+                         MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::cast(const fltSemantics &DstSem,
+                                      APFloat::roundingMode RM) const {
+  bool LosesInfo;
+  APFloat NewLower = Lower;
+  APFloat NewUpper = Upper;
+  // For conservative, return full range if conversion is invalid.
+  if (NewLower.convert(DstSem, RM, &LosesInfo) == APFloat::opInvalidOp ||
+      NewLower.isNaN())
+    return getFull(DstSem);
+  if (NewUpper.convert(DstSem, RM, &LosesInfo) == APFloat::opInvalidOp ||
+      NewUpper.isNaN())
+    return getFull(DstSem);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper),
+                         /*MayBeQNaNVal=*/MayBeQNaN || MayBeSNaN,
+                         /*MayBeSNaNVal=*/false);
+}
+
+ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
+  bool ResMayBeQNaN = ((MayBeQNaN || MayBeSNaN) && !Other.isEmptySet()) ||
+                      ((Other.MayBeQNaN || Other.MayBeSNaN) && !isEmptySet());
+  if (isNaNOnly() || Other.isNaNOnly())
+    return getNaNOnly(getSemantics(), /*MayBeQNaN=*/ResMayBeQNaN,
+                      /*MayBeSNaN=*/false);
+  bool LHSHasNegInf = false, LHSHasPosInf = false;
+  APFloat LHSLower = Lower, LHSUpper = Upper;
+  bool LHSFiniteIsNonEmpty =
+      removeInf(LHSLower, LHSUpper, LHSHasPosInf, LHSHasNegInf);
+  bool RHSHasNegInf = false, RHSHasPosInf = false;
+  APFloat RHSLower = Other.Lower, RHSUpper = Other.Upper;
+  bool RHSFiniteIsNonEmpty =
+      removeInf(RHSLower, RHSUpper, RHSHasPosInf, RHSHasNegInf);
+  // -inf + +inf = QNaN
+  ResMayBeQNaN |=
+      (LHSHasNegInf && RHSHasPosInf) || (LHSHasPosInf && RHSHasNegInf);
+  // +inf + finite/+inf = +inf, -inf + finite/-inf = -inf
+  bool HasNegInf = (LHSHasNegInf && (RHSFiniteIsNonEmpty || RHSHasNegInf)) ||
+                   (RHSHasNegInf && (LHSFiniteIsNonEmpty || LHSHasNegInf));
+  bool HasPosInf = (LHSHasPosInf && (RHSFiniteIsNonEmpty || RHSHasPosInf)) ||
+                   (RHSHasPosInf && (LHSFiniteIsNonEmpty || LHSHasPosInf));
+  if (LHSFiniteIsNonEmpty && RHSFiniteIsNonEmpty) {
+    APFloat NewLower =
+        HasNegInf ? APFloat::getInf(LHSLower.getSemantics(), /*Negative=*/true)
+                  : LHSLower + RHSLower;
+    APFloat NewUpper =
+        HasPosInf ? APFloat::getInf(LHSUpper.getSemantics(), /*Negative=*/false)
+                  : LHSUpper + RHSUpper;
+    return ConstantFPRange(NewLower, NewUpper, ResMayBeQNaN,
+                           /*MayBeSNaN=*/false);
+  }
+  // If both HasNegInf and HasPosInf are false, the non-NaN part is empty.
+  // We just return the canonical form [+inf, -inf] for the empty non-NaN set.
+  return ConstantFPRange(
+      APFloat::getInf(Lower.getSemantics(), /*Negative=*/HasNegInf),
+      APFloat::getInf(Upper.getSemantics(), /*Negative=*/!HasPosInf),
+      ResMayBeQNaN,
+      /*MayBeSNaN=*/false);
+}
+
+ConstantFPRange ConstantFPRange::sub(const ConstantFPRange &Other) const {
+  // fsub X, Y = fadd X, (fneg Y)
+  return add(Other.negate());
+}
+
+void ConstantFPRange::flushDenormals(DenormalMode::DenormalModeKind Mode) {
+  if (Mode == DenormalMode::IEEE)
+    return;
+  FPClassTest Class = classify();
+  if (!(Class & fcSubnormal))
+    return;
+
+  auto &Sem = getSemantics();
+  // PreserveSign: PosSubnormal -> PosZero, NegSubnormal -> NegZero
+  // PositiveZero: PosSubnormal -> PosZero, NegSubnormal -> PosZero
+  // Dynamic:      PosSubnormal -> PosZero, NegSubnormal -> NegZero/PosZero
+  bool ZeroLowerNegative =
+      Mode != DenormalMode::PositiveZero && (Class & fcNegSubnormal);
+  bool ZeroUpperNegative =
+      Mode == DenormalMode::PreserveSign && !(Class & fcPosSubnormal);
+  assert((ZeroLowerNegative || !ZeroUpperNegative) &&
+         "ZeroLower is greater than ZeroUpper.");
+  Lower = minnum(Lower, APFloat::getZero(Sem, ZeroLowerNegative));
+  Upper = maxnum(Upper, APFloat::getZero(Sem, ZeroUpperNegative));
 }

@@ -135,16 +135,22 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (proc.IsPure()) {
       std::size_t j{0};
       for (const auto &arg : call.arguments()) {
-        if (const auto *dataDummy{j < proc.dummyArguments.size()
-                    ? std::get_if<characteristics::DummyDataObject>(
-                          &proc.dummyArguments[j].u)
-                    : nullptr};
-            dataDummy &&
+        const auto *dataDummy{j < proc.dummyArguments.size()
+                ? std::get_if<characteristics::DummyDataObject>(
+                      &proc.dummyArguments[j].u)
+                : nullptr};
+        if (dataDummy &&
             dataDummy->attrs.test(
                 characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
           // The value of the argument doesn't matter
         } else if (!arg) {
-          return false;
+          if (dataDummy &&
+              dataDummy->attrs.test(
+                  characteristics::DummyDataObject::Attr::Optional)) {
+            // Missing optional arguments are okay.
+          } else {
+            return false;
+          }
         } else if (const auto *expr{arg->UnwrapExpr()};
             !expr || !(*this)(*expr)) {
           return false;
@@ -1298,10 +1304,12 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
 std::optional<bool> IsContiguous(const ActualArgument &actual,
     FoldingContext &fc, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1) {
-  auto *expr{actual.UnwrapExpr()};
-  return expr &&
-      IsContiguous(
-          *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
+  if (auto *expr{actual.UnwrapExpr()}) {
+    return IsContiguous(
+        *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
+  } else {
+    return std::nullopt;
+  }
 }
 
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,

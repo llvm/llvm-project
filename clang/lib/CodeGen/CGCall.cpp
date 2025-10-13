@@ -2012,13 +2012,6 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
-    if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-        LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
-        (LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_Fast ||
-         LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_FastHonorPragmas))
-      FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -3018,8 +3011,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   ArgNo = 0;
   if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
-    llvm::FunctionType *FunctionType = FunctionType =
-        getTypes().GetFunctionType(FI);
+    llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
     for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(),
                                             E = FI.arg_end();
          I != E; ++I, ++ArgNo) {

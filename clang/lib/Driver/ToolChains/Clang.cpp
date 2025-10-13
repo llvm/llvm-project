@@ -41,6 +41,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
@@ -485,19 +486,47 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   }
 
   if (ProfileUseArg) {
+    SmallString<128> UsePathBuf;
+    StringRef UsePath;
     if (ProfileUseArg->getOption().matches(options::OPT_fprofile_instr_use_EQ))
-      CmdArgs.push_back(Args.MakeArgString(
-          Twine("-fprofile-instrument-use-path=") + ProfileUseArg->getValue()));
+      UsePath = ProfileUseArg->getValue();
     else if ((ProfileUseArg->getOption().matches(
                   options::OPT_fprofile_use_EQ) ||
               ProfileUseArg->getOption().matches(
                   options::OPT_fprofile_instr_use))) {
-      SmallString<128> Path(
-          ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
-      if (Path.empty() || llvm::sys::fs::is_directory(Path))
-        llvm::sys::path::append(Path, "default.profdata");
+      UsePathBuf =
+          ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue();
+      if (UsePathBuf.empty() || llvm::sys::fs::is_directory(UsePathBuf))
+        llvm::sys::path::append(UsePathBuf, "default.profdata");
+      UsePath = UsePathBuf;
+    }
+    auto ReaderOrErr =
+        llvm::IndexedInstrProfReader::create(UsePath, D.getVFS());
+    if (auto E = ReaderOrErr.takeError()) {
+      auto DiagID = D.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
+      llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
+        D.Diag(DiagID) << UsePath.str() << EI.message();
+      });
+    } else {
+      std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
+          std::move(ReaderOrErr.get());
+      StringRef UseKind;
+      // Currently memprof profiles are only added at the IR level. Mark the
+      // profile type as IR in that case as well and the subsequent matching
+      // needs to detect which is available (might be one or both).
+      if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
+        if (PGOReader->hasCSIRLevelProfile())
+          UseKind = "csllvm";
+        else
+          UseKind = "llvm";
+      } else
+        UseKind = "clang";
+
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("-fprofile-instrument-use-path=") + Path));
+          Args.MakeArgString("-fprofile-instrument-use=" + UseKind));
+      CmdArgs.push_back(
+          Args.MakeArgString("-fprofile-instrument-use-path=" + UsePath));
     }
   }
 
@@ -6413,6 +6442,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back("-fexperimental-call-graph-section");
+
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_size_section,
                     options::OPT_fno_stack_size_section);
 
@@ -7588,6 +7621,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // This needs to run after -Xclang argument forwarding to pick up the target
   // features enabled through -Xclang -target-feature flags.
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
+
+  Args.AddLastArg(CmdArgs, options::OPT_falloc_token_max_EQ);
 
 #if CLANG_ENABLE_CIR
   // Forward -mmlir arguments to to the MLIR option parser.
@@ -9224,14 +9259,20 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   addOffloadCompressArgs(Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ)) {
-    int NumThreads;
-    if (StringRef(A->getValue()).getAsInteger(10, NumThreads) ||
-        NumThreads <= 0)
-      C.getDriver().Diag(diag::err_drv_invalid_int_value)
-          << A->getAsString(Args) << A->getValue();
-    else
-      CmdArgs.push_back(
-          Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
+    StringRef Val = A->getValue();
+
+    if (Val.equals_insensitive("jobserver"))
+      CmdArgs.push_back(Args.MakeArgString("--wrapper-jobs=jobserver"));
+    else {
+      int NumThreads;
+      if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0) {
+        C.getDriver().Diag(diag::err_drv_invalid_int_value)
+            << A->getAsString(Args) << Val;
+      } else {
+        CmdArgs.push_back(
+            Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
+      }
+    }
   }
 
   const char *Exec =

@@ -111,7 +111,8 @@ public:
   ///
   /// \return
   ///    \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context);
+  bool ShouldStop(StoppointCallbackContext *context,
+                  BreakpointLocationCollection &stopped_bp_locs);
 
   /// Print a description of the breakpoint locations in this list
   /// to the stream \a s.

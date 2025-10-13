@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
@@ -542,8 +544,18 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
                                          Swapped ? OOp : C, "", &SI);
-    if (isa<FPMathOperator>(&SI))
-      cast<Instruction>(NewSel)->setFastMathFlags(FMF);
+    if (isa<FPMathOperator>(&SI)) {
+      FastMathFlags NewSelFMF = FMF;
+      // We cannot propagate ninf from the original select, because OOp may be
+      // inf and the flag only guarantees that FalseVal (op OOp) is never
+      // infinity.
+      // Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
+      // Specifically, if the original select has both ninf and nnan, we can
+      // safely propagate the flag.
+      NewSelFMF.setNoInfs(TVI->hasNoInfs() ||
+                          (NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
+      cast<Instruction>(NewSel)->setFastMathFlags(NewSelFMF);
+    }
     NewSel->takeName(TVI);
     BinaryOperator *BO =
         BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
@@ -1451,10 +1463,16 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return nullptr;
   };
 
-  if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS))
-    return R;
-  if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS))
-    return R;
+  bool CanReplaceCmpLHSWithRHS = canReplacePointersIfEqual(CmpLHS, CmpRHS, DL);
+  if (CanReplaceCmpLHSWithRHS) {
+    if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS))
+      return R;
+  }
+  bool CanReplaceCmpRHSWithLHS = canReplacePointersIfEqual(CmpRHS, CmpLHS, DL);
+  if (CanReplaceCmpRHSWithLHS) {
+    if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS))
+      return R;
+  }
 
   auto *FalseInst = dyn_cast<Instruction>(FalseVal);
   if (!FalseInst)
@@ -1469,12 +1487,14 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
   SmallVector<Instruction *> DropFlags;
-  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
-                             /* AllowRefinement */ false,
-                             &DropFlags) == TrueVal ||
-      simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
-                             /* AllowRefinement */ false,
-                             &DropFlags) == TrueVal) {
+  if ((CanReplaceCmpLHSWithRHS &&
+       simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
+                              /* AllowRefinement */ false,
+                              &DropFlags) == TrueVal) ||
+      (CanReplaceCmpRHSWithLHS &&
+       simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
+                              /* AllowRefinement */ false,
+                              &DropFlags) == TrueVal)) {
     for (Instruction *I : DropFlags) {
       I->dropPoisonGeneratingAnnotations();
       Worklist.add(I);
@@ -3346,7 +3366,10 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
       // (A || B) || C --> A || (B | C)
       return replaceInstUsesWith(
-          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
+          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal), "",
+                                      ProfcheckDisableMetadataFixes
+                                          ? nullptr
+                                          : cast<SelectInst>(CondVal)));
     }
 
     // (A && B) || (C && B) --> (A || C) && B
@@ -3388,7 +3411,10 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
       // (A && B) && C --> A && (B & C)
       return replaceInstUsesWith(
-          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
+          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal), "",
+                                       ProfcheckDisableMetadataFixes
+                                           ? nullptr
+                                           : cast<SelectInst>(CondVal)));
     }
 
     // (A || B) && (C || B) --> (A && C) || B

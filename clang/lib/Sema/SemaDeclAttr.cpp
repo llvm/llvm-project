@@ -5207,19 +5207,7 @@ static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   llvm::Triple Triple = S.getASTContext().getTargetInfo().getTriple();
   const LangOptions &LangOpts = S.getLangOpts();
 
-  if (LangOpts.SYCLIsDevice) {
-    if (!IsFunctionTemplate) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << AL << AL.isRegularKeywordAttribute() << "function templates";
-      AL.setInvalid();
-      return;
-    }
-    S.SYCL().handleKernelAttr(D, AL);
-  } else if (DeviceKernelAttr::isSYCLSpelling(AL)) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-    AL.setInvalid();
-    return;
-  } else if (Triple.isNVPTX()) {
+  if (Triple.isNVPTX()) {
     handleGlobalAttr(S, D, AL);
   } else {
     // OpenCL C++ will throw a more specific error.
@@ -7127,6 +7115,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_EnumExtensibility:
     handleEnumExtensibilityAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_SYCLKernel:
+    S.SYCL().handleKernelAttr(D, AL);
     break;
   case ParsedAttr::AT_SYCLExternal:
     handleSimpleAttribute<SYCLExternalAttr>(S, D, AL);
