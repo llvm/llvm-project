@@ -537,6 +537,7 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
     report_fatal_error("Broken module found, compilation aborted!");
   if (BrokenDebugInfo) {
     emitWarning("Invalid debug info found, debug info will be stripped");
+    emitWarning("Source FileName: " + MergedModule->getSourceFileName());
     StripDebugInfo(*MergedModule);
   }
 }
