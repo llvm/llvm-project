@@ -83,7 +83,9 @@ llvm::Expected<size_t> lldb_private::formatters::
 lldb_private::SyntheticChildrenFrontEnd *
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return new MsvcStlAtomicSyntheticFrontEnd(valobj_sp);
+  if (valobj_sp && IsMsvcStlAtomic(*valobj_sp))
+    return new MsvcStlAtomicSyntheticFrontEnd(valobj_sp);
+  return nullptr;
 }
 
 bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
@@ -98,5 +100,11 @@ bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
     stream << summary;
     return true;
   }
+  return false;
+}
+
+bool lldb_private::formatters::IsMsvcStlAtomic(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Storage") != nullptr;
   return false;
 }
