@@ -636,15 +636,12 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         computeOffsets(rewriter, gatherOp, meta.first, meta.second);
     Value flatMemref = memrefToIndexPtr(gatherOp, rewriter);
 
-    auto numOffsets = gatherOp.getOffsets().size();
     auto layoutRes = xegpu::getDistributeLayoutAttr(gatherOp.getResult());
     auto layoutIndices =
-        xegpu::getDistributeLayoutAttr(gatherOp->getOpOperand(numOffsets + 1));
-    auto layoutMask =
-        xegpu::getDistributeLayoutAttr(gatherOp->getOpOperand(numOffsets + 2));
+        xegpu::getDistributeLayoutAttr(gatherOp.getIndicesMutable());
+    auto layoutMask = xegpu::getDistributeLayoutAttr(gatherOp.getMaskMutable());
     auto layoutPassThru =
-        xegpu::getDistributeLayoutAttr(gatherOp->getOpOperand(numOffsets + 3));
-
+        xegpu::getDistributeLayoutAttr(gatherOp.getPassThruMutable());
     SmallVector<xegpu::CachePolicyAttr, 3> cacheHints =
         getOpCacheHints(gatherOp);
     auto xeGatherOp = xegpu::LoadGatherOp::create(
@@ -654,15 +651,17 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         /*l2_hint=*/cacheHints[1],
         /*l3_hint=*/cacheHints[2]);
     xegpu::setDistributeLayoutAttr(xeGatherOp->getOpResult(0), layoutRes);
-    xegpu::setDistributeLayoutAttr(xeGatherOp->getOpOperand(1), layoutIndices);
-    xegpu::setDistributeLayoutAttr(xeGatherOp->getOpOperand(2), layoutMask);
+    xegpu::setDistributeLayoutAttr(xeGatherOp.getOffsetsMutable()[0],
+                                   layoutIndices);
+    xegpu::setDistributeLayoutAttr(xeGatherOp.getMaskMutable(), layoutMask);
 
     auto selectOp =
         arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
                                 xeGatherOp.getResult(), gatherOp.getPassThru());
-    xegpu::setDistributeLayoutAttr(selectOp->getOpOperand(0), layoutMask);
-    xegpu::setDistributeLayoutAttr(selectOp->getOpOperand(1), layoutRes);
-    xegpu::setDistributeLayoutAttr(selectOp->getOpOperand(2), layoutPassThru);
+    xegpu::setDistributeLayoutAttr(selectOp.getConditionMutable(), layoutMask);
+    xegpu::setDistributeLayoutAttr(selectOp.getTrueValueMutable(), layoutRes);
+    xegpu::setDistributeLayoutAttr(selectOp.getFalseValueMutable(),
+                                   layoutPassThru);
     xegpu::setDistributeLayoutAttr(selectOp->getOpResult(0), layoutRes);
 
     rewriter.replaceOp(gatherOp, selectOp.getResult());
@@ -689,13 +688,12 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
         computeOffsets(rewriter, scatterOp, meta.first, meta.second);
     Value flatMemref = memrefToIndexPtr(scatterOp, rewriter);
 
-    auto numOffsets = scatterOp.getOffsets().size();
     auto layoutIndices =
-        xegpu::getDistributeLayoutAttr(scatterOp->getOpOperand(numOffsets + 1));
+        xegpu::getDistributeLayoutAttr(scatterOp.getIndicesMutable());
     auto layoutMask =
-        xegpu::getDistributeLayoutAttr(scatterOp->getOpOperand(numOffsets + 2));
+        xegpu::getDistributeLayoutAttr(scatterOp.getMaskMutable());
     auto layoutVal =
-        xegpu::getDistributeLayoutAttr(scatterOp->getOpOperand(numOffsets + 3));
+        xegpu::getDistributeLayoutAttr(scatterOp.getValueToStoreMutable());
     SmallVector<xegpu::CachePolicyAttr, 3> cacheHints =
         getOpCacheHints(scatterOp);
     auto storeOp = xegpu::StoreScatterOp::create(
@@ -705,9 +703,10 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
         /*l1_hint=*/cacheHints[0],
         /*l2_hint=*/cacheHints[1],
         /*l3_hint=*/cacheHints[2]);
-    xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(0), layoutVal);
-    xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(2), layoutIndices);
-    xegpu::setDistributeLayoutAttr(storeOp->getOpOperand(3), layoutMask);
+    xegpu::setDistributeLayoutAttr(storeOp.getValueMutable(), layoutVal);
+    xegpu::setDistributeLayoutAttr(storeOp.getOffsetsMutable()[0],
+                                   layoutIndices);
+    xegpu::setDistributeLayoutAttr(storeOp.getMaskMutable(), layoutMask);
     rewriter.eraseOp(scatterOp);
     return success();
   }
