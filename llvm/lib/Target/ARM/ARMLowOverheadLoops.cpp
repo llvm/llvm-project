@@ -955,8 +955,23 @@ bool LowOverheadLoop::ValidateLiveOuts() {
     else if (!isPredicated && retainsOrReduces) {
       LLVM_DEBUG(dbgs() << "  Unpredicated instruction that retainsOrReduces: " << MI);
       return false;
-    } else if (!isPredicated && MI.getOpcode() != ARM::MQPRCopy)
+    } else if (!isPredicated)
       FalseLanesUnknown.insert(&MI);
+    else if (int InactiveIdx = findVPTInactiveOperandIdx(MI);
+             InactiveIdx != -1) {
+      auto MO = MI.getOperand(InactiveIdx);
+      SmallPtrSet<MachineInstr *, 2> Defs;
+      RDI.getGlobalReachingDefs(&MI, MO.getReg(), Defs);
+      for (auto *Def : Defs) {
+        if (Def != &MI && FalseLanesUnknown.count(Def)) {
+          LLVM_DEBUG(dbgs() << "  we think this is FalseLanesUnknown: " << MI);
+          LLVM_DEBUG(dbgs()
+                     << "  because it takes the false lanes of this: " << *Def);
+          FalseLanesUnknown.insert(&MI);
+          break;
+        }
+      }
+    }
   }
 
   LLVM_DEBUG({
