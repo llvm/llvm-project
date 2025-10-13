@@ -9,14 +9,8 @@ define <8 x i16> @relaxed_dot_sext_1(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: relaxed_dot_sext_1:
 ; CHECK:         .functype relaxed_dot_sext_1 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extmul_low_i8x16_s $push6=, $0, $1
-; CHECK-NEXT:    local.tee $push5=, $2=, $pop6
-; CHECK-NEXT:    i16x8.extmul_high_i8x16_s $push4=, $0, $1
-; CHECK-NEXT:    local.tee $push3=, $1=, $pop4
-; CHECK-NEXT:    i8x16.shuffle $push1=, $pop5, $pop3, 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
-; CHECK-NEXT:    i8x16.shuffle $push0=, $2, $1, 2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31
-; CHECK-NEXT:    i16x8.add $push2=, $pop1, $pop0
-; CHECK-NEXT:    return $pop2
+; CHECK-NEXT:    i16x8.relaxed_dot_i8x16_i7x16_s $push0=, $0, $1
+; CHECK-NEXT:    return $pop0
   %sext1 = sext <16 x i8> %a to <16 x i16>
   %sext2 = sext <16 x i8> %b to <16 x i16>
   %mul = mul <16 x i16> %sext1, %sext2
@@ -31,14 +25,8 @@ define <8 x i16> @relaxed_dot_sext_2(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: relaxed_dot_sext_2:
 ; CHECK:         .functype relaxed_dot_sext_2 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extmul_low_i8x16_s $push6=, $0, $1
-; CHECK-NEXT:    local.tee $push5=, $2=, $pop6
-; CHECK-NEXT:    i16x8.extmul_high_i8x16_s $push4=, $0, $1
-; CHECK-NEXT:    local.tee $push3=, $1=, $pop4
-; CHECK-NEXT:    i8x16.shuffle $push1=, $pop5, $pop3, 2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31
-; CHECK-NEXT:    i8x16.shuffle $push0=, $2, $1, 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
-; CHECK-NEXT:    i16x8.add $push2=, $pop1, $pop0
-; CHECK-NEXT:    return $pop2
+; CHECK-NEXT:    i16x8.relaxed_dot_i8x16_i7x16_s $push0=, $0, $1
+; CHECK-NEXT:    return $pop0
   %sext1 = sext <16 x i8> %a to <16 x i16>
   %sext2 = sext <16 x i8> %b to <16 x i16>
   %mul = mul <16 x i16> %sext1, %sext2
@@ -52,14 +40,8 @@ define <8 x i16> @relaxed_dot_sext_self(<16 x i8> %v) {
 ; CHECK-LABEL: relaxed_dot_sext_self:
 ; CHECK:         .functype relaxed_dot_sext_self (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extmul_low_i8x16_s $push6=, $0, $0
-; CHECK-NEXT:    local.tee $push5=, $1=, $pop6
-; CHECK-NEXT:    i16x8.extmul_high_i8x16_s $push4=, $0, $0
-; CHECK-NEXT:    local.tee $push3=, $0=, $pop4
-; CHECK-NEXT:    i8x16.shuffle $push1=, $pop5, $pop3, 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
-; CHECK-NEXT:    i8x16.shuffle $push0=, $1, $0, 2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31
-; CHECK-NEXT:    i16x8.add $push2=, $pop1, $pop0
-; CHECK-NEXT:    return $pop2
+; CHECK-NEXT:    i16x8.relaxed_dot_i8x16_i7x16_s $push0=, $0, $0
+; CHECK-NEXT:    return $pop0
   %sext = sext <16 x i8> %v to <16 x i16>
   %mul = mul <16 x i16> %sext, %sext
   %shuffle1 = shufflevector <16 x i16> %mul, <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -72,10 +54,8 @@ define <4 x i32> @relaxed_dot_add_from_relaxed_dot(<16 x i8> %a, <16 x i8> %b, <
 ; CHECK-LABEL: relaxed_dot_add_from_relaxed_dot:
 ; CHECK:         .functype relaxed_dot_add_from_relaxed_dot (v128, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.relaxed_dot_i8x16_i7x16_s $push0=, $0, $1
-; CHECK-NEXT:    i32x4.extadd_pairwise_i16x8_s $push1=, $pop0
-; CHECK-NEXT:    i32x4.add $push2=, $pop1, $2
-; CHECK-NEXT:    return $pop2
+; CHECK-NEXT:    i32x4.relaxed_dot_i8x16_i7x16_add_s $push0=, $0, $1, $2
+; CHECK-NEXT:    return $pop0
   %relaxed_dot_call = call <8 x i16> @llvm.wasm.relaxed.dot.i8x16.i7x16.signed(<16 x i8> %a, <16 x i8> %b)
   %sext = call <4 x i32> @llvm.wasm.extadd.pairwise.signed.v4i32(<8 x i16> %relaxed_dot_call)
   %res = add <4 x i32> %sext, %c
@@ -102,6 +82,7 @@ define <8 x i16> @relaxed_dot_zext(<16 x i8> %a, <16 x i8> %b) {
   %shuffle2 = shufflevector <16 x i16> %mul, <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %res = add <8 x i16> %shuffle1, %shuffle2
   ret <8 x i16> %res
+
 }
 
 ; INFO: Negative test
