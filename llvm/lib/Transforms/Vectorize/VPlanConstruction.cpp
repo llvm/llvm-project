@@ -433,8 +433,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // We are about to replace the branch to exit the region. Remove the original
   // BranchOnCond, if there is any.
   DebugLoc LatchDL = DL;
-  if (!LatchVPBB->empty() &&
-      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue()))) {
+  if (!LatchVPBB->empty() && match(&LatchVPBB->back(), m_BranchOnCond())) {
     LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
     LatchVPBB->getTerminator()->eraseFromParent();
   }
@@ -875,8 +874,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
            Plan.getVectorLoopRegion()->getEntryBasicBlock())) {
     auto *VPBB = cast<VPBasicBlock>(VPB);
     for (auto &R : *VPBB) {
-      if (R.mayWriteToMemory() &&
-          !match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+      if (R.mayWriteToMemory() && !match(&R, m_BranchOnCount()))
         return false;
     }
   }
