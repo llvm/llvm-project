@@ -741,6 +741,9 @@ struct CUFDataTransferOpConversion
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
+      if (mlir::isa<fir::BaseBoxType>(val.getType()))
+        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+          return loadOp.getMemref();
       return val;
     };
 
