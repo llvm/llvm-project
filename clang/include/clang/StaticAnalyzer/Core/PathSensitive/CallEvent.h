@@ -211,15 +211,14 @@ protected:
   getExtraInvalidatedValues(ValueList &Values,
                             RegionAndSymbolInvalidationTraits *ETraits) const {}
 
-  /// The state in which the call is being evaluated.
-  /// CallEvent instances have a reference to a state object instead of storing
-  /// the argument `SVal`s, the return value (if available), the dynamic type
-  /// information and similar things as separate data members. However, the
-  /// existence of this state object is an implementation detail (and perhaps
-  /// it should be eventually eliminated), so use of this method should be
-  /// avoided if possible. (The checker callbacks can and should access the
-  /// canonical state through the CheckerContext.)
-  const ProgramStateRef &getState() const { return State; }
+  /// A state for looking up relevant Environment entries (arguments, return
+  /// value), dynamic type information and similar "stable" things.
+  /// WARNING: During the evaluation of a function call, several state
+  /// transitions happen, so this state can become partially obsolete!
+  ///
+  /// TODO: Instead of storing a complete state object in the CallEvent, only
+  /// store the relevant parts (argument/return SVals, dynamic type etc.).
+  ProgramStateRef getState() const { return State; }
 
 public:
   CallEvent &operator=(const CallEvent &) = delete;
@@ -241,11 +240,8 @@ public:
   }
   void setForeign(bool B) const { Foreign = B; }
 
-  /// Returns the ASTContext which is (indirectly) associated with this call
-  /// event. This method is exposed for the convenience of a few checkers that
-  /// need the AST context in functions that take a CallEvent as argument. For
-  /// the sake of clarity prefer to get the ASTContext from more "natural"
-  /// sources (e.g. the CheckerContext) instead of using this method!
+  /// NOTE: There are plans for refactoring that would eliminate this method.
+  /// Prefer to use CheckerContext::getASTContext if possible!
   ASTContext &getASTContext() const {
     return getState()->getStateManager().getContext();
   }
