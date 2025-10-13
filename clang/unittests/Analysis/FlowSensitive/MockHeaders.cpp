@@ -30,7 +30,7 @@ using nullptr_t = decltype(nullptr);
 typedef decltype(sizeof(char)) size_t;
 typedef decltype(sizeof(char*)) ptrdiff_t;
 
-#endif // CS
+#endif // CSTDDEF_H
 )";
 
 static constexpr char StdTypeTraitsHeader[] = R"(
