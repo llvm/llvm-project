@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: clang %t/a.ll -o %t/a.out
+; RUN: clang --target=x86_64-linux %t/a.ll -o %t/a.out
 ; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning
 
 ; CHECK: warning: Incomplete DIE for function None:
