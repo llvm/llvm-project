@@ -23,10 +23,7 @@ define i64 @ptrtoaddr_inttoptr_arg(i64 %a) {
 define i32 @ptrtoaddr_inttoptr_arg_addrsize(i32 %a) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_arg_addrsize(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[TOPTR:%.*]] = inttoptr i64 [[TMP1]] to ptr addrspace(1)
-; CHECK-NEXT:    [[TOADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[TOPTR]] to i32
-; CHECK-NEXT:    ret i32 [[TOADDR]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %toptr = inttoptr i32 %a to ptr addrspace(1)
   %toaddr = ptrtoaddr ptr addrspace(1) %toptr to i32
