@@ -21,7 +21,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr [[TMP3]], i32 4, <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP3]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> poison)
 ; CHECK-NEXT:    br i1 [[C]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
 ; CHECK:       pred.sdiv.if:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[WIDE_MASKED_LOAD]], i32 0
@@ -61,7 +61,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; SINK-GATHER-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; SINK-GATHER-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[INDEX]]
-; SINK-GATHER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP3]], i32 4, <8 x i1> [[BROADCAST_SPLAT]], <8 x i32> poison)
+; SINK-GATHER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP3]], <8 x i1> [[BROADCAST_SPLAT]], <8 x i32> poison)
 ; SINK-GATHER-NEXT:    br i1 [[C]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
 ; SINK-GATHER:       pred.sdiv.if:
 ; SINK-GATHER-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[WIDE_MASKED_LOAD]], i32 0

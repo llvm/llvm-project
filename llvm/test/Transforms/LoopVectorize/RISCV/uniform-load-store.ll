@@ -289,8 +289,8 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], splat (i64 10)
 ; FIXEDLEN-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], splat (i64 10)
-; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP1]], <4 x i64> poison)
-; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP2]], <4 x i64> poison)
+; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[BROADCAST_SPLAT]], <4 x i1> [[TMP1]], <4 x i64> poison)
+; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[BROADCAST_SPLAT]], <4 x i1> [[TMP2]], <4 x i64> poison)
 ; FIXEDLEN-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[WIDE_MASKED_GATHER]], <4 x i64> zeroinitializer
 ; FIXEDLEN-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> [[WIDE_MASKED_GATHER1]], <4 x i64> zeroinitializer
 ; FIXEDLEN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
@@ -753,8 +753,8 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], splat (i64 10)
 ; FIXEDLEN-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], splat (i64 10)
-; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]], i32 8, <4 x i1> [[TMP1]])
-; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]], i32 8, <4 x i1> [[TMP2]])
+; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> align 8 [[BROADCAST_SPLAT2]], <4 x i1> [[TMP1]])
+; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> align 8 [[BROADCAST_SPLAT2]], <4 x i1> [[TMP2]])
 ; FIXEDLEN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; FIXEDLEN-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 4
 ; FIXEDLEN-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8

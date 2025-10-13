@@ -338,7 +338,7 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       }
 
       auto *BasePtr = CI->getOperand(0 + OpOffset);
-      Access.MaybeMask = CI->getOperand(2 + OpOffset);
+      Access.MaybeMask = CI->getOperand(1 + OpOffset);
       Access.Addr = BasePtr;
     }
   }

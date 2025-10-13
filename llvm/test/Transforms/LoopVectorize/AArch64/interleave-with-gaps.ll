@@ -69,7 +69,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <vscale x 2 x i64> [ [[TMP22]], %[[VEC_EPILOG_PH]] ], [ [[TMP35:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> align 1 [[TMP28]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
@@ -200,7 +200,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <vscale x 2 x i64> [ [[TMP22]], %[[VEC_EPILOG_PH]] ], [ [[TMP35:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> align 1 [[TMP28]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])

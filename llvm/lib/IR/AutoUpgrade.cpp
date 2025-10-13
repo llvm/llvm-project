@@ -1426,6 +1426,28 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                                 Intrinsic::memset, ParamTypes);
       return true;
     }
+
+    unsigned MaskedID =
+        StringSwitch<unsigned>(Name)
+            .StartsWith("masked.load", Intrinsic::masked_load)
+            .StartsWith("masked.gather", Intrinsic::masked_gather)
+            .StartsWith("masked.store", Intrinsic::masked_store)
+            .StartsWith("masked.scatter", Intrinsic::masked_scatter)
+            .Default(0);
+    if (MaskedID && F->arg_size() == 4) {
+      rename(F);
+      if (MaskedID == Intrinsic::masked_load ||
+          MaskedID == Intrinsic::masked_gather) {
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), MaskedID,
+            {F->getReturnType(), F->getArg(0)->getType()});
+        return true;
+      }
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), MaskedID,
+          {F->getArg(0)->getType(), F->getArg(1)->getType()});
+      return true;
+    }
     break;
   }
   case 'n': {
@@ -5228,6 +5250,54 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     // Memcpy/Memmove also support source alignment.
     if (auto *MTI = dyn_cast<MemTransferInst>(MemCI))
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
+    break;
+  }
+
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather:
+  case Intrinsic::masked_store:
+  case Intrinsic::masked_scatter: {
+    if (CI->arg_size() != 4) {
+      DefaultCase();
+      return;
+    }
+
+    const DataLayout &DL = CI->getDataLayout();
+    switch (NewFn->getIntrinsicID()) {
+    case Intrinsic::masked_load:
+      NewCall = Builder.CreateMaskedLoad(
+          CI->getType(), CI->getArgOperand(0),
+          cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue(),
+          CI->getArgOperand(2), CI->getArgOperand(3));
+      break;
+    case Intrinsic::masked_gather:
+      NewCall = Builder.CreateMaskedGather(
+          CI->getType(), CI->getArgOperand(0),
+          DL.getValueOrABITypeAlignment(
+              cast<ConstantInt>(CI->getArgOperand(1))->getMaybeAlignValue(),
+              CI->getType()->getScalarType()),
+          CI->getArgOperand(2), CI->getArgOperand(3));
+      break;
+    case Intrinsic::masked_store:
+      NewCall = Builder.CreateMaskedStore(
+          CI->getArgOperand(0), CI->getArgOperand(1),
+          cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue(),
+          CI->getArgOperand(3));
+      break;
+    case Intrinsic::masked_scatter:
+      NewCall = Builder.CreateMaskedScatter(
+          CI->getArgOperand(0), CI->getArgOperand(1),
+          DL.getValueOrABITypeAlignment(
+              cast<ConstantInt>(CI->getArgOperand(2))->getMaybeAlignValue(),
+              CI->getArgOperand(0)->getType()->getScalarType()),
+          CI->getArgOperand(3));
+      break;
+    default:
+      llvm_unreachable("Unexpected intrinsic ID");
+    }
+    // Previous metadata is still valid.
+    NewCall->copyMetadata(*CI);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     break;
   }
 

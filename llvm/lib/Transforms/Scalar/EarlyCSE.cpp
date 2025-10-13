@@ -1017,14 +1017,14 @@ private:
     };
     auto MaskOp = [](const IntrinsicInst *II) {
       if (II->getIntrinsicID() == Intrinsic::masked_load)
-        return II->getOperand(2);
+        return II->getOperand(1);
       if (II->getIntrinsicID() == Intrinsic::masked_store)
-        return II->getOperand(3);
+        return II->getOperand(2);
       llvm_unreachable("Unexpected IntrinsicInst");
     };
     auto ThruOp = [](const IntrinsicInst *II) {
       if (II->getIntrinsicID() == Intrinsic::masked_load)
-        return II->getOperand(3);
+        return II->getOperand(2);
       llvm_unreachable("Unexpected IntrinsicInst");
     };
 
