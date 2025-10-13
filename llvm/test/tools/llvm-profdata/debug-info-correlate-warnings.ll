@@ -20,15 +20,17 @@ void no_cfg() {}
 void no_counter() {}
 void no_profc() {}
 void no_func() {}
+
+// NOTE: After generating the IR below, manually remove the follwing pieces
+// 1. Remove "@removed" function and "@__profc_removed" global
+// 2. Remove "Function Name" annotation for "@no_name"
+// 3. Remove "CFG Hash" annotation for "@no_cfg"
+// 4. Remove "Num Counters" annotation for "@no_counter"
+// 5. Remove "@__profc_no_profc"
+// 6. Remove "@no_func"
 ;--- gen
 clang --target=x86_64-linux -fprofile-generate -mllvm -debug-info-correlate -S -emit-llvm -g a.c -o -
-# NOTE: After generating the IR below, manually remove the follwing pieces
-# 1. Remove "@removed" function and "@__profc_removed" global
-# 2. Remove "Function Name" annotation for "@no_name"
-# 3. Remove "CFG Hash" annotation for "@no_cfg"
-# 4. Remove "Num Counters" annotation for "@no_counter"
-# 5. Remove "@__profc_no_profc"
-# 6. Remove "@no_func"
+
 ;--- a.ll
 ; ModuleID = 'a.c'
 source_filename = "a.c"
