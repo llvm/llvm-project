@@ -1188,6 +1188,21 @@ which can be `import`ed  from the main dialect file, i.e.
 `python/mlir/dialects/<dialect-namespace>/passes.py` if it is undesirable to
 make the passes available along with the dialect.
 
+## Extending MLIR in Python
+
+The MLIR Python bindings provide support for defining custom components in Python,
+mainly including dialects, passes, and rewrite patterns.
+The following sections outline how each of these can be implemented.
+
+### Dialects
+
+Dialects can be defined through the IRDL dialect bindings in Python.
+The IRDL bindings offer a `load_dialects` function that
+converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
+For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).
+
+### Passes
+
 Passes can be defined as Python callables via the `PassManager.add` API.
 In such case, the callable is wrapped as an `mlir::Pass` internally and
 executed as part of the pass pipeline when `PassManager.run` is invoked.
@@ -1208,6 +1223,44 @@ pm.add('some-cpp-defined-passes')
 ...
 pm.run(some_op)
 ```
+
+### Rewrite Patterns
+
+Rewrite patterns can be registered via the `add` method
+of `mlir.rewrite.RewritePatternSet` in Python.
+This method takes the operation type to be rewritten
+and a Python callable that defines the *match and rewrite* logic.
+Note that the Python callable should be defined so that
+the rewrite is applied if and only if the match succeeds,
+which corresponds to the return value being castable to `False`.
+
+The `RewritePatternSet` can be converted into
+a `FrozenRewritePatternSet` using the `freeze` method,
+which can be applied to an operation through
+the greedy pattern driver using `apply_patterns_and_fold_greedily`.
+The following example demonstrates the typical usage:
+
+```python
+def to_muli(op, rewriter):
+    with rewriter.ip:
+        new_op = arith.muli(op.lhs, op.rhs, loc=op.location)
+    rewriter.replace_op(op, new_op)
+
+patterns = RewritePatternSet()
+patterns.add(arith.AddIOp, to_muli)  # Rewrite arith.addi into arith.muli
+patterns.add(...)
+frozen = patterns.freeze()
+
+module = ...
+apply_patterns_and_fold_greedily(module, frozen)
+```
+
+The PDL dialect bindings also enable defining and generating rewrite patterns in Python.
+The `mlir.rewrite.PDLModule` class accepts a module containing `pdl.pattern` ops,
+which can be transformed into a `FrozenRewritePatternSet` using the `freeze` method.
+This frozen set can then be applied to an operation
+using the greedy rewrite pattern driver via `apply_patterns_and_fold_greedily`.
+For further information, see [the PDL dialect documentation](/docs/Dialects/PDLOps/).
 
 ### Other functionality
 
