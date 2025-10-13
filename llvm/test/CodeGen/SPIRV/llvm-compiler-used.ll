@@ -4,8 +4,8 @@
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; Verify that llvm.compiler.used is not lowered.
-; CHECK: OpName %[[UNUSED:[0-9]+]] "unused"
-; CHECK-NOT: OpName %[[LLVM_COMPILER_USED_NAME:[0-9]+]] "llvm.compiler.used"
+; CHECK: OpName %{{[0-9]+}} "unused"
+; CHECK-NOT: OpName %{{[0-9]+}} "llvm.compiler.used"
 
 ; Check that the type of llvm.compiler.used is not emitted too.
 ; CHECK-NOT: OpTypeArray
