@@ -1957,9 +1957,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // the FOR phi.
     for (VPUser *U : RecurSplice->users()) {
       if (!match(U, m_VPInstruction<VPInstruction::ExtractLane>(
-                        m_Sub(m_VPInstruction<VPInstruction::FirstActiveLane>(
-                                  m_VPValue()),
-                              m_SpecificInt(1)),
+                        m_VPInstruction<VPInstruction::LastActiveLane>(
+                            m_VPValue()),
                         m_Specific(RecurSplice))))
         continue;
 
@@ -3369,6 +3368,34 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
         Expr->decompose();
         ToRemove.push_back(Expr);
+      }
+
+      // Expand LastActiveLane into Not + FirstActiveLane + Sub.
+      auto *LastActiveL = dyn_cast<VPInstruction>(&R);
+      if (LastActiveL &&
+          LastActiveL->getOpcode() == VPInstruction::LastActiveLane) {
+        // Create Not(Mask) for all operands.
+        SmallVector<VPValue *, 2> NotMasks;
+        for (VPValue *Op : LastActiveL->operands()) {
+          VPValue *NotMask = Builder.createNot(Op, LastActiveL->getDebugLoc());
+          NotMasks.push_back(NotMask);
+        }
+
+        // Create FirstActiveLane on the inverted masks.
+        VPValue *FirstInactiveLane = Builder.createNaryOp(
+            VPInstruction::FirstActiveLane, NotMasks,
+            LastActiveL->getDebugLoc(), "first.inactive.lane");
+
+        // Subtract 1 to get the last active lane.
+        VPValue *One = Plan.getOrAddLiveIn(
+            ConstantInt::get(Type::getInt64Ty(Plan.getContext()), 1));
+        VPValue *LastLane = Builder.createNaryOp(
+            Instruction::Sub, {FirstInactiveLane, One},
+            LastActiveL->getDebugLoc(), "last.active.lane");
+
+        LastActiveL->replaceAllUsesWith(LastLane);
+        ToRemove.push_back(LastActiveL);
+        continue;
       }
 
       VPValue *VectorStep;

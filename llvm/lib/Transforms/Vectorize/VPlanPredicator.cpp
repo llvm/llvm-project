@@ -323,18 +323,11 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
         continue;
 
       if (!LastActiveLane) {
-        // Compute the index of the last active lane by getting the first lane
-        // where the header mask is false (first inactive lane), then
-        // subtracting 1. This gives us the last lane where the mask was true.
+        // Compute the index of the last active lane.
         VPValue *HeaderMask = Predicator.getBlockInMask(
             Plan.getVectorLoopRegion()->getEntryBasicBlock());
-        VPValue *NotHeaderMask = B.createNot(HeaderMask);
-        VPValue *FirstInactiveLane =
-            B.createNaryOp(VPInstruction::FirstActiveLane, {NotHeaderMask});
-        VPValue *One = Plan.getOrAddLiveIn(
-            ConstantInt::get(Type::getInt64Ty(Plan.getContext()), 1));
         LastActiveLane =
-            B.createNaryOp(Instruction::Sub, {FirstInactiveLane, One});
+            B.createNaryOp(VPInstruction::LastActiveLane, {HeaderMask});
       }
       auto *Ext =
           B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});

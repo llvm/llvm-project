@@ -1043,6 +1043,10 @@ public:
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
     FirstActiveLane,
+    // Calculates the last active lane index of the vector predicate operands.
+    // It produces the lane index across all unrolled iterations. Unrolling will
+    // add all copies of its original operand as additional operands.
+    LastActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
     //

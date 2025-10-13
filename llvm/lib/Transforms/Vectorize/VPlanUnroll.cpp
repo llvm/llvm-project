@@ -353,6 +353,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::FirstActiveLane>(
                       m_VPValue(Op1))) ||
+        match(&R,
+              m_VPInstruction<VPInstruction::LastActiveLane>(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
