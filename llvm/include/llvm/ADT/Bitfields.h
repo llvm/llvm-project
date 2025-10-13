@@ -86,70 +86,11 @@
 #include <limits>  // numeric_limits
 #include <type_traits>
 
+#include "llvm/Support/MathExtras.h"
+
 namespace llvm {
 
 namespace bitfields_details {
-
-/// A struct defining useful bit patterns for n-bits integer types.
-template <typename T, unsigned Bits> struct BitPatterns {
-  /// Bit patterns are forged using the equivalent `Unsigned` type because of
-  /// undefined operations over signed types (e.g. Bitwise shift operators).
-  /// Moreover same size casting from unsigned to signed is well defined but not
-  /// the other way around.
-  using Unsigned = std::make_unsigned_t<T>;
-  static_assert(sizeof(Unsigned) == sizeof(T), "Types must have same size");
-
-  static constexpr unsigned TypeBits = sizeof(Unsigned) * CHAR_BIT;
-  static_assert(TypeBits >= Bits, "n-bit must fit in T");
-
-  /// e.g. with TypeBits == 8 and Bits == 6.
-  static constexpr Unsigned AllZeros = Unsigned(0);                  // 00000000
-  static constexpr Unsigned AllOnes = ~Unsigned(0);                  // 11111111
-  static constexpr Unsigned Umin = AllZeros;                         // 00000000
-  static constexpr Unsigned Umax = AllOnes >> (TypeBits - Bits);     // 00111111
-  static constexpr Unsigned SignBitMask = Unsigned(1) << (Bits - 1); // 00100000
-  static constexpr Unsigned Smax = Umax >> 1U;                       // 00011111
-  static constexpr Unsigned Smin = ~Smax;                            // 11100000
-  static constexpr Unsigned SignExtend = Unsigned(Smin << 1U);       // 11000000
-};
-
-/// `Compressor` is used to manipulate the bits of a (possibly signed) integer
-/// type so it can be packed and unpacked into a `bits` sized integer,
-/// `Compressor` is specialized on signed-ness so no runtime cost is incurred.
-/// The `pack` method also checks that the passed in `UserValue` is valid.
-template <typename T, unsigned Bits, bool = std::is_unsigned<T>::value>
-struct Compressor {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-  using BP = BitPatterns<T, Bits>;
-
-  static T pack(T UserValue, T UserMaxValue) {
-    assert(UserValue <= UserMaxValue && "value is too big");
-    assert(UserValue <= BP::Umax && "value is too big");
-    return UserValue;
-  }
-
-  static T unpack(T StorageValue) { return StorageValue; }
-};
-
-template <typename T, unsigned Bits> struct Compressor<T, Bits, false> {
-  static_assert(std::is_signed<T>::value, "T must be signed");
-  using BP = BitPatterns<T, Bits>;
-
-  static T pack(T UserValue, T UserMaxValue) {
-    assert(UserValue <= UserMaxValue && "value is too big");
-    assert(UserValue <= T(BP::Smax) && "value is too big");
-    assert(UserValue >= T(BP::Smin) && "value is too small");
-    if (UserValue < 0)
-      UserValue &= ~BP::SignExtend;
-    return UserValue;
-  }
-
-  static T unpack(T StorageValue) {
-    if (StorageValue >= T(BP::SignBitMask))
-      StorageValue |= BP::SignExtend;
-    return StorageValue;
-  }
-};
 
 /// Impl is where Bifield description and Storage are put together to interact
 /// with values.
@@ -157,18 +98,31 @@ template <typename Bitfield, typename StorageType> struct Impl {
   static_assert(std::is_unsigned<StorageType>::value,
                 "Storage must be unsigned");
   using IntegerType = typename Bitfield::IntegerType;
-  using C = Compressor<IntegerType, Bitfield::Bits>;
-  using BP = BitPatterns<StorageType, Bitfield::Bits>;
 
   static constexpr size_t StorageBits = sizeof(StorageType) * CHAR_BIT;
   static_assert(Bitfield::FirstBit <= StorageBits, "Data must fit in mask");
   static_assert(Bitfield::LastBit <= StorageBits, "Data must fit in mask");
-  static constexpr StorageType Mask = BP::Umax << Bitfield::Shift;
+  static constexpr StorageType LowMask =
+      maskTrailingOnes<StorageType>(Bitfield::Bits);
+  static constexpr StorageType Mask = LowMask << Bitfield::Shift;
+
+  /// Validates that `UserValue` fits within the bitfield's range.
+  static void checkValue(IntegerType UserValue, IntegerType UserMaxValue) {
+    assert(UserValue <= UserMaxValue && "value is too big");
+    if constexpr (std::is_unsigned_v<IntegerType>) {
+      assert(isUInt<Bitfield::Bits>(UserValue) && "value is too big");
+    } else {
+      static_assert(std::is_signed_v<IntegerType>,
+                    "IntegerType must be signed");
+      assert(isInt<Bitfield::Bits>(UserValue) && "value is out of range");
+    }
+  }
 
   /// Checks `UserValue` is within bounds and packs it between `FirstBit` and
   /// `LastBit` of `Packed` leaving the rest unchanged.
   static void update(StorageType &Packed, IntegerType UserValue) {
-    const StorageType StorageValue = C::pack(UserValue, Bitfield::UserMaxValue);
+    checkValue(UserValue, Bitfield::UserMaxValue);
+    const StorageType StorageValue = UserValue & LowMask;
     Packed &= ~Mask;
     Packed |= StorageValue << Bitfield::Shift;
   }
@@ -177,7 +131,9 @@ template <typename Bitfield, typename StorageType> struct Impl {
   /// an`IntegerType`.
   static IntegerType extract(StorageType Packed) {
     const StorageType StorageValue = (Packed & Mask) >> Bitfield::Shift;
-    return C::unpack(StorageValue);
+    if constexpr (std::is_signed_v<IntegerType>)
+      return SignExtend64<Bitfield::Bits>(StorageValue);
+    return StorageValue;
   }
 
   /// Interprets bits between `FirstBit` and `LastBit` of `Packed` as
