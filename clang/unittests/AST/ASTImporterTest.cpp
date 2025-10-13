@@ -3316,6 +3316,23 @@ TEST_P(ImportExpr, ImportSubstNonTypeTemplateParmPackExpr) {
              typedefNameDecl(hasName("declToImport")));
 }
 
+
+TEST_P(ImportExpr, ImportCXXParenListInitExpr) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    struct Node {
+      int val;
+      double d;
+    };
+    template <int N> struct Container {
+      Node* create() { return new Node(N, 3.14); }
+    };
+    using declToImport = Container<42>;
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             typedefNameDecl(hasName("declToImport")));
+}
+
 class ImportImplicitMethods : public ASTImporterOptionSpecificTestBase {
 public:
   static constexpr auto DefaultCode = R"(
