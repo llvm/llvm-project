@@ -3780,12 +3780,11 @@ static CallingConv getCCForDeclaratorChunk(
     }
   }
   for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
-             D.getDeclSpec().getAttributes(), D.getAttributes())) {
-      if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
-        CC = CC_DeviceKernel;
-        break;
-      }
-
+           D.getDeclSpec().getAttributes(), D.getAttributes())) {
+    if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
+      CC = CC_DeviceKernel;
+      break;
+    }
   }
   return CC;
 }
