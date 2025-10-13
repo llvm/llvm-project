@@ -606,12 +606,14 @@ TEST(InstructionTest, ConstrainedTrans) {
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
-  DataLayout DL1("p1:32:32");
+  DataLayout DL1("p1:32:32-p2:64:64:64:32");
 
   Type *Int16Ty = Type::getInt16Ty(C);
+  Type *Int32Ty = Type::getInt32Ty(C);
   Type *Int64Ty = Type::getInt64Ty(C);
   Type *PtrTy64 = PointerType::get(C, 0);
   Type *PtrTy32 = PointerType::get(C, 1);
+  Type *PtrTy64_32 = PointerType::get(C, 2);
 
   // Source and destination pointers have same size -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
@@ -660,6 +662,18 @@ TEST(InstructionsTest, isEliminableCastPair) {
                                            CastInst::PtrToInt, Int64Ty, PtrTy32,
                                            Int16Ty, &DL1),
             CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int64Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Non-truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int32Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::BitCast);
 
   // Test that we don't eliminate bitcasts between different address spaces,
   // or if we don't have available pointer size information.
