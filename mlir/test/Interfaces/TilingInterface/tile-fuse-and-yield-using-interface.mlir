@@ -37,6 +37,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
 //  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[RHS1_TILE:.+]] = tensor.extract_slice %[[RHS1]][0, 0]
 //      CHECK:   %[[RESULT:.+]]:2 = scf.for %[[IV:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG0:[a-zA-Z0-9]+]] = %[[INIT1]], %[[ITERARG1:[a-zA-Z0-9]+]] = %[[INIT0]])
 //  CHECK-DAG:     %[[LHS0_TILE:.+]] = tensor.extract_slice %[[LHS0]][%[[IV]], 0]
@@ -47,7 +48,6 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:     %[[GEMM0_TILE:.+]] = linalg.matmul
 // CHECK-SAME:         ins(%[[LHS0_TILE]], %[[RHS0_TILE]] :
 // CHECK-SAME:         outs(%[[FILL0_TILE]] :
-//  CHECK-DAG:     %[[RHS1_TILE:.+]] = tensor.extract_slice %[[RHS1]][0, 0]
 //  CHECK-DAG:     %[[INIT1_TILE:.+]] = tensor.extract_slice %[[ITERARG0]][%[[IV]], 0]
 //      CHECK:     %[[FILL1_TILE:.+]] = linalg.fill
 // CHECK-SAME:         outs(%[[INIT1_TILE]] :

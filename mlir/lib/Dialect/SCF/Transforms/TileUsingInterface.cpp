@@ -1759,11 +1759,13 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   }
 
   // The extract_slice op is created in the innermost loop by default. Using
-  // hoistLoopInvariantSubsets improves the position of the extract_slice op
-  // within the loops, allowing the fuse Op to be created in the correct loop.
-  for (LoopLikeOpInterface loop : loops) {
+  // `moveLoopInvariantCode` and `hoistLoopInvariantSubsets` improves the
+  // position of the extract_slice op within the loops, allowing the fuse Op to
+  // be created in the correct loop.
+  for (LoopLikeOpInterface loop : loops)
+    (void)moveLoopInvariantCode(loop);
+  for (LoopLikeOpInterface loop : loops)
     (void)hoistLoopInvariantSubsets(rewriter, loop);
-  }
 
   // Since the loop gets potentially replaced during fusion, we need to track
   // the mutation of replacement values. To do this, we attach a listener to

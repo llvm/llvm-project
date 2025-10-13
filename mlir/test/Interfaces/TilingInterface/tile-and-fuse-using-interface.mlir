@@ -28,9 +28,9 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:   %[[INIT:.+]] = tensor.empty
 //      CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG0:.+]] = %[[INIT]])
+//  CHECK-DAG:     %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV0]], 0]
 //      CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
 // CHECK-SAME:         iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
-//  CHECK-DAG:       %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV0]], 0]
 //  CHECK-DAG:       %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]][0, %[[IV1]]]
 //  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[ITERARG1]][%[[IV0]], %[[IV1]]]
 //      CHECK:       %[[FILL_TILE:.+]] = linalg.fill
@@ -141,6 +141,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty(%[[D0]], %[[D1]])
 //  CHECK-DAG:   %[[D2:.+]] = tensor.dim %[[RHS1]], %[[C1]]
 //      CHECK:   %[[INIT1:.+]] = tensor.empty(%[[D0]], %[[D2]])
+//  CHECK-DAG:   %[[RHS1_TILE:.+]] = tensor.extract_slice %[[RHS1]][0, 0]
 //      CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG:.+]] = %[[INIT1]])
 //  CHECK-DAG:     %[[LHS0_TILE:.+]] = tensor.extract_slice %[[LHS0]][%[[IV]], 0]
@@ -151,7 +152,6 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:     %[[GEMM0_TILE:.+]] = linalg.matmul
 // CHECK-SAME:         ins(%[[LHS0_TILE]], %[[RHS0_TILE]] :
 // CHECK-SAME:         outs(%[[FILL0_TILE]] :
-//  CHECK-DAG:     %[[RHS1_TILE:.+]] = tensor.extract_slice %[[RHS1]][0, 0]
 //  CHECK-DAG:     %[[INIT1_TILE:.+]] = tensor.extract_slice %[[ITERARG]][%[[IV]], 0]
 //      CHECK:     %[[FILL1_TILE:.+]] = linalg.fill
 // CHECK-SAME:         outs(%[[INIT1_TILE]] :
@@ -444,6 +444,7 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[M:.+]] = tensor.dim %[[ORIG_GEMM2]], %[[C0]]
 //   CHECK-DAG:   %[[N2:.+]] = tensor.dim %[[ORIG_GEMM2]], %[[C1]]
 //   CHECK-DAG:   %[[N3:.+]] = tensor.dim %[[ARG5]], %[[C1]]
+//   CHECK-DAG:   %[[SLICE_ARG5:.+]] = tensor.extract_slice %[[ARG5]][0, 0] [%[[N2]], %[[N3]]]
 //       CHECK:   %[[R0:.+]] = scf.for %[[IV:[a-zA-Z0-9_]+]] =
 //  CHECK-SAME:       iter_args(%[[ARG8:.+]] = %[[ARG6]]) -> (tensor<?x?xf32>) {
 //   CHECK-DAG:     %[[N1:.+]] = tensor.dim %[[ORIG_GEMM1]], %[[C1]]
@@ -458,7 +459,6 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:     %[[SLICE_ARG4:.+]] = tensor.extract_slice %[[ARG4]][%[[IV]], 0] [%[[TILE_M]], %[[N2]]]
 //   CHECK-DAG:     %[[TILE_GEMM2:.+]] = linalg.matmul ins(%[[TILE_GEMM1]], %[[SLICE_ARG3]] :
 //  CHECK-SAME:         outs(%[[SLICE_ARG4]] :
-//   CHECK-DAG:     %[[SLICE_ARG5:.+]] = tensor.extract_slice %[[ARG5]][0, 0] [%[[N2]], %[[N3]]]
 //   CHECK-DAG:     %[[SLICE_ARG6:.+]] = tensor.extract_slice %[[ARG8]][%[[IV]], 0] [%[[TILE_M]], %[[N3]]]
 //   CHECK-DAG:     %[[TILE_GEMM3:.+]] = linalg.matmul
 //  CHECK-SAME:         ins(%[[TILE_GEMM2]], %[[SLICE_ARG5]] :
@@ -688,3 +688,44 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           }
 // CHECK:         }
 
+// -----
+
+func.func @pooling_ncw_max_fill_fuse(%input: tensor<?x?x?xf32>, %fake: tensor<?xf32>, %init: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  %res = linalg.pooling_ncw_max {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+    ins(%input, %fake: tensor<?x?x?xf32>, tensor<?xf32>)
+    outs(%fill: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %res : tensor<?x?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+       %arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.pooling_ncw_max"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %tiled_pool, %loops0:4 = transform.structured.fuse %0 {tile_sizes = [1, 16, 1, 1], apply_cleanup = true}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @pooling_ncw_max_fill_fuse(
+//  CHECK-SAME:   %[[INPUT:.*]]: tensor<?x?x?xf32>,
+//  CHECK-SAME:   %[[FAKE:.*]]: tensor<?xf32>,
+//  CHECK-SAME:   %[[INIT:.*]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+//       CHECK:   %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:     iter_args(%[[ITERARG0:.+]] = %[[INIT]])
+//       CHECK:   scf.for %[[IV1:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:     iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
+//       CHECK:   scf.for %[[IV2:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:     iter_args(%[[ITERARG2:.+]] = %[[ITERARG1]])
+//       CHECK:     %[[FILL_EXTRACT:.*]] = tensor.extract_slice %[[ITERARG2]]{{\[}}%[[IV0]], %[[IV1]], %[[IV2]]]
+//       CHECK:     %[[TILED_FILL:.*]] = linalg.fill ins(%[[ZERO]] : f32) outs(%[[FILL_EXTRACT]] : tensor<1x?x1xf32>) -> tensor<1x?x1xf32>
+//       CHECK:   scf.for %[[IV3:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:     iter_args(%[[ITERARG3:.*]] = %[[ITERARG2]], %[[ITERARG4:.*]] = %[[TILED_FILL]])
+//       CHECK:     %[[TILED_INPUT:.*]] = tensor.extract_slice %[[INPUT]]{{\[}}%[[IV0]], %[[IV1]]
+//       CHECK:     %[[TILED_FAKE:.*]] = tensor.extract_slice %[[FAKE]]{{\[}}%[[IV3]]]
+//       CHECK:     linalg.pooling_ncw_max
+//  CHECK-SAME:       ins(%[[TILED_INPUT]], %[[TILED_FAKE]] :
+//  CHECK-SAME:       outs(%[[ITERARG4]] :
