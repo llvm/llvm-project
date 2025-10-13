@@ -50,10 +50,10 @@ void UnsignedStatTesterChecker::checkBeginFunction(CheckerContext &C) const {
   // For any other function (e.g., "func_none"), don't set the statistic
 }
 
-void ento::registerUnsignedStatTesterChecker(CheckerManager &mgr) {
-  mgr.registerChecker<UnsignedStatTesterChecker>();
+void ento::registerUnsignedStatTesterChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnsignedStatTesterChecker>();
 }
 
-bool ento::shouldRegisterUnsignedStatTesterChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterUnsignedStatTesterChecker(const CheckerManager &) {
   return true;
 }
