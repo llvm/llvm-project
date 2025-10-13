@@ -26,14 +26,14 @@ namespace orc_rt {
 
 struct SPSSimpleNativeMemoryMapSegment;
 
-/// A SimpleNativeMemoryMap::FinalizeRequest::Segment plus segment content (if
+/// A SimpleNativeMemoryMap::InitializeRequest::Segment plus segment content (if
 /// segment content type is regular).
 struct TestSNMMSegment
-    : public SimpleNativeMemoryMap::FinalizeRequest::Segment {
+    : public SimpleNativeMemoryMap::InitializeRequest::Segment {
 
   TestSNMMSegment(AllocGroup AG, char *Address, size_t Size,
                   std::vector<char> C = {})
-      : SimpleNativeMemoryMap::FinalizeRequest::Segment(
+      : SimpleNativeMemoryMap::InitializeRequest::Segment(
             {AG, Address, Size, {}}),
         OwnedContent(std::move(C)) {
     this->Content = {OwnedContent.data(), OwnedContent.size()};
@@ -60,25 +60,25 @@ public:
   }
 };
 
-struct SPSSimpleNativeMemoryMapFinalizeRequest;
+struct SPSSimpleNativeMemoryMapInitializeRequest;
 
-struct TestSNMMFinalizeRequest {
+struct TestSNMMInitializeRequest {
   std::vector<TestSNMMSegment> Segments;
   std::vector<AllocActionPair> AAPs;
 };
 
 template <>
-class SPSSerializationTraits<SPSSimpleNativeMemoryMapFinalizeRequest,
-                             TestSNMMFinalizeRequest> {
+class SPSSerializationTraits<SPSSimpleNativeMemoryMapInitializeRequest,
+                             TestSNMMInitializeRequest> {
   using SPSType = SPSTuple<SPSSequence<SPSSimpleNativeMemoryMapSegment>,
                            SPSSequence<SPSAllocActionPair>>;
 
 public:
-  static size_t size(const TestSNMMFinalizeRequest &FR) {
+  static size_t size(const TestSNMMInitializeRequest &FR) {
     return SPSType::AsArgList::size(FR.Segments, FR.AAPs);
   }
   static bool serialize(SPSOutputBuffer &OB,
-                        const TestSNMMFinalizeRequest &FR) {
+                        const TestSNMMInitializeRequest &FR) {
     return SPSType::AsArgList::serialize(OB, FR.Segments, FR.AAPs);
   }
 };
@@ -118,24 +118,26 @@ static void snmm_releaseMultiple(OnCompleteFn &&OnComplete,
 }
 
 template <typename OnCompleteFn>
-static void snmm_finalize(OnCompleteFn &&OnComplete,
-                          SimpleNativeMemoryMap *Instance,
-                          TestSNMMFinalizeRequest FR) {
+static void snmm_initialize(OnCompleteFn &&OnComplete,
+                            SimpleNativeMemoryMap *Instance,
+                            TestSNMMInitializeRequest FR) {
   using SPSSig = SPSExpected<SPSExecutorAddr>(
-      SPSExecutorAddr, SPSSimpleNativeMemoryMapFinalizeRequest);
+      SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest);
   SPSWrapperFunction<SPSSig>::call(
-      DirectCaller(nullptr, orc_rt_SimpleNativeMemoryMap_finalize_sps_wrapper),
+      DirectCaller(nullptr,
+                   orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper),
       std::forward<OnCompleteFn>(OnComplete), Instance, std::move(FR));
 }
 
 template <typename OnCompleteFn>
-static void snmm_deallocateMultiple(OnCompleteFn &&OnComplete,
-                                    SimpleNativeMemoryMap *Instance,
-                                    span<void *> Base) {
+static void snmm_deinitializeMultiple(OnCompleteFn &&OnComplete,
+                                      SimpleNativeMemoryMap *Instance,
+                                      span<void *> Base) {
   using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
   SPSWrapperFunction<SPSSig>::call(
-      DirectCaller(nullptr,
-                   orc_rt_SimpleNativeMemoryMap_deallocateMultiple_sps_wrapper),
+      DirectCaller(
+          nullptr,
+          orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper),
       std::forward<OnCompleteFn>(OnComplete), Instance, Base);
 }
 
@@ -180,9 +182,9 @@ read_value_sps_allocaction(const char *ArgData, size_t ArgSize) {
 TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   // Test that we can:
   // 1. reserve some address space.
-  // 2. finalize a range within it as read/write, and that finalize actions
+  // 2. initialize a range within it as read/write, and that finalize actions
   //    are applied as expected.
-  // 3. deallocate the finalized range, with deallocation actions applied as
+  // 3. deinitialize the initialized range, with deallocation actions applied as
   //    expected.
   // 4. release the address range.
 
@@ -191,12 +193,13 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   snmm_reserve(waitFor(ReserveAddr), SNMM.get(), 1024 * 1024 * 1024);
   void *Addr = cantFail(cantFail(ReserveAddr.get()));
 
-  std::future<Expected<Expected<void *>>> FinalizeKey;
-  TestSNMMFinalizeRequest FR;
-  char *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
+  std::future<Expected<Expected<void *>>> InitializeKey;
+  TestSNMMInitializeRequest FR;
+  char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
       reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue1 = 0; // Read from pre-filled content
-  uint64_t SentinelValue2 = 0; // Written in finalize, read back during dealloc.
+  uint64_t SentinelValue2 =
+      0; // Written in initialize, read back during dealloc.
   uint64_t SentinelValue3 = 42; // Read from zero-filled region.
 
   // Build initial content vector.
@@ -205,14 +208,14 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   memcpy(Content.data(), &SentinelValue3, sizeof(uint64_t));
   memcpy(Content.data() + sizeof(uint64_t), &SentinelValue1, sizeof(uint64_t));
 
-  FR.Segments.push_back({MemProt::Read | MemProt::Write, FinalizeBase,
+  FR.Segments.push_back({MemProt::Read | MemProt::Write, InitializeBase,
                          64 * 1024, std::move(Content)});
 
   // Read initial content into Sentinel 1.
   FR.AAPs.push_back({
       *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue1),
-          ExecutorAddr::fromPtr(FinalizeBase)),
+          ExecutorAddr::fromPtr(InitializeBase)),
       {} // No dealloc action.
   });
 
@@ -220,30 +223,30 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   FR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
            write_value_sps_allocaction,
-           ExecutorAddr::fromPtr(FinalizeBase) + sizeof(uint64_t),
+           ExecutorAddr::fromPtr(InitializeBase) + sizeof(uint64_t),
            uint64_t(42)),
        *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue2),
-           ExecutorAddr::fromPtr(FinalizeBase) + sizeof(uint64_t))});
+           ExecutorAddr::fromPtr(InitializeBase) + sizeof(uint64_t))});
 
   // Read first 64 bits of the zero-fill region.
   FR.AAPs.push_back({
       *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue3),
-          ExecutorAddr::fromPtr(FinalizeBase) + sizeof(uint64_t) * 2),
+          ExecutorAddr::fromPtr(InitializeBase) + sizeof(uint64_t) * 2),
       {} // No dealloc action.
   });
 
-  snmm_finalize(waitFor(FinalizeKey), SNMM.get(), std::move(FR));
-  void *FinalizeKeyAddr = cantFail(cantFail(FinalizeKey.get()));
+  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(FR));
+  void *InitializeKeyAddr = cantFail(cantFail(InitializeKey.get()));
 
   EXPECT_EQ(SentinelValue1, 42U);
   EXPECT_EQ(SentinelValue2, 0U);
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Expected<Error>> DeallocResult;
-  snmm_deallocateMultiple(waitFor(DeallocResult), SNMM.get(),
-                          {&FinalizeKeyAddr, 1});
+  snmm_deinitializeMultiple(waitFor(DeallocResult), SNMM.get(),
+                            {&InitializeKeyAddr, 1});
   cantFail(cantFail(DeallocResult.get()));
 
   EXPECT_EQ(SentinelValue1, 42U);
@@ -255,33 +258,33 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   cantFail(cantFail(ReleaseResult.get()));
 }
 
-TEST(SimpleNativeMemoryMap, ReserveFinalizeShutdown) {
-  // Test that memory is deallocated in the case where we reserve and finalize
-  // some memory, then just shut down the memory manager.
+TEST(SimpleNativeMemoryMap, ReserveInitializeShutdown) {
+  // Test that memory is deinitialized in the case where we reserve and
+  // initialize some memory, then just shut down the memory manager.
 
   auto SNMM = std::make_unique<SimpleNativeMemoryMap>();
   std::future<Expected<Expected<void *>>> ReserveAddr;
   snmm_reserve(waitFor(ReserveAddr), SNMM.get(), 1024 * 1024 * 1024);
   void *Addr = cantFail(cantFail(ReserveAddr.get()));
 
-  std::future<Expected<Expected<void *>>> FinalizeKey;
-  TestSNMMFinalizeRequest FR;
-  char *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
+  std::future<Expected<Expected<void *>>> InitializeKey;
+  TestSNMMInitializeRequest FR;
+  char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
       reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
   FR.Segments.push_back(
-      {MemProt::Read | MemProt::Write, FinalizeBase, 64 * 1024});
+      {MemProt::Read | MemProt::Write, InitializeBase, 64 * 1024});
 
   FR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
-           write_value_sps_allocaction, ExecutorAddr::fromPtr(FinalizeBase),
+           write_value_sps_allocaction, ExecutorAddr::fromPtr(InitializeBase),
            uint64_t(42)),
        *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
-           ExecutorAddr::fromPtr(FinalizeBase))});
-  snmm_finalize(waitFor(FinalizeKey), SNMM.get(), std::move(FR));
-  cantFail(cantFail(FinalizeKey.get()));
+           ExecutorAddr::fromPtr(InitializeBase))});
+  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(FR));
+  cantFail(cantFail(InitializeKey.get()));
 
   EXPECT_EQ(SentinelValue, 0U);
 
@@ -292,33 +295,33 @@ TEST(SimpleNativeMemoryMap, ReserveFinalizeShutdown) {
   EXPECT_EQ(SentinelValue, 42);
 }
 
-TEST(SimpleNativeMemoryMap, ReserveFinalizeDetachShutdown) {
-  // Test that memory is deallocated in the case where we reserve and finalize
-  // some memory, then just shut down the memory manager.
+TEST(SimpleNativeMemoryMap, ReserveInitializeDetachShutdown) {
+  // Test that memory is deinitialized in the case where we reserve and
+  // initialize some memory, then just shut down the memory manager.
 
   auto SNMM = std::make_unique<SimpleNativeMemoryMap>();
   std::future<Expected<Expected<void *>>> ReserveAddr;
   snmm_reserve(waitFor(ReserveAddr), SNMM.get(), 1024 * 1024 * 1024);
   void *Addr = cantFail(cantFail(ReserveAddr.get()));
 
-  std::future<Expected<Expected<void *>>> FinalizeKey;
-  TestSNMMFinalizeRequest FR;
-  char *FinalizeBase = // Finalize addr at non-zero (64kb) offset from base.
+  std::future<Expected<Expected<void *>>> InitializeKey;
+  TestSNMMInitializeRequest FR;
+  char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
       reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
   FR.Segments.push_back(
-      {MemProt::Read | MemProt::Write, FinalizeBase, 64 * 1024});
+      {MemProt::Read | MemProt::Write, InitializeBase, 64 * 1024});
 
   FR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
-           write_value_sps_allocaction, ExecutorAddr::fromPtr(FinalizeBase),
+           write_value_sps_allocaction, ExecutorAddr::fromPtr(InitializeBase),
            uint64_t(42)),
        *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
-           ExecutorAddr::fromPtr(FinalizeBase))});
-  snmm_finalize(waitFor(FinalizeKey), SNMM.get(), std::move(FR));
-  cantFail(cantFail(FinalizeKey.get()));
+           ExecutorAddr::fromPtr(InitializeBase))});
+  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(FR));
+  cantFail(cantFail(InitializeKey.get()));
 
   EXPECT_EQ(SentinelValue, 0U);
 
