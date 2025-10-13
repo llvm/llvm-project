@@ -706,13 +706,11 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "   <key>issue_hash_content_of_line_in_context</key>";
     PathDiagnosticLocation UPDLoc = D->getUniqueingLoc();
     FullSourceLoc L(SM.getExpansionLoc(UPDLoc.isValid()
-                                            ? UPDLoc.asLocation()
-                                            : D->getLocation().asLocation()),
+                                           ? UPDLoc.asLocation()
+                                           : D->getLocation().asLocation()),
                     SM);
-    const Decl *DeclWithIssue = D->getDeclWithIssue();
-    EmitString(o, getIssueHash(L, D->getCheckerName(), D->getBugType(),
-                               DeclWithIssue, LangOpts))
-        << '\n';
+
+    EmitString(o, D->getIssueHash(SM, LangOpts)) << '\n';
 
     // Output information about the semantic context where
     // the issue occurred.

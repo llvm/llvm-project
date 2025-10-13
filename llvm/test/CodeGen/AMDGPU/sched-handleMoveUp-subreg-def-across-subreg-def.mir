@@ -40,18 +40,18 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def dead %11
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def dead %11
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %12:vreg_64, [[BUFFER_LOAD_DWORD_OFFEN]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 undef %14:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 3)
-  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %15, 2031626 /* regdef:VGPR_32 */, def %16
+  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %15, 1835018 /* regdef:VGPR_32 */, def %16
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_1]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_2]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_2:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 undef %20:vgpr_32, 0, 0, implicit $exec
-  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %21, 2031626 /* regdef:VGPR_32 */, def %22
+  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %21, 1835018 /* regdef:VGPR_32 */, def %22
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_3:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_2]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def dead [[V_MOV_B32_e32_3]], 2031626 /* regdef:VGPR_32 */, def dead [[V_MOV_B32_e32_4]], 2031625 /* reguse:VGPR_32 */, [[DS_READ_B64_gfx9_]].sub0, 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_3]](tied-def 3), 2147549193 /* reguse tiedto:$1 */, [[V_MOV_B32_e32_4]](tied-def 5), 2031625 /* reguse:VGPR_32 */, %15, 2031625 /* reguse:VGPR_32 */, %16, 2031625 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_1]], 2031625 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_]], 2031625 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_3]], 2031625 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_2]]
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def dead [[V_MOV_B32_e32_3]], 1835018 /* regdef:VGPR_32 */, def dead [[V_MOV_B32_e32_4]], 1835017 /* reguse:VGPR_32 */, [[DS_READ_B64_gfx9_]].sub0, 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_3]](tied-def 3), 2147549193 /* reguse tiedto:$1 */, [[V_MOV_B32_e32_4]](tied-def 5), 1835017 /* reguse:VGPR_32 */, %15, 1835017 /* reguse:VGPR_32 */, %16, 1835017 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_1]], 1835017 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_]], 1835017 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_3]], 1835017 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_2]]
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = COPY [[V_MOV_B32_e32_1]]
   ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %28:vgpr_32, %21, 0, 0, implicit $exec :: (store (s32), addrspace 3)
   ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %29:vgpr_32, %22, 0, 0, implicit $exec :: (store (s32), addrspace 3)
@@ -94,21 +94,21 @@ body:             |
     %10:vgpr_32 = IMPLICIT_DEF
 
   bb.1:
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %11:vgpr_32
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %11:vgpr_32
     GLOBAL_STORE_DWORD undef %12:vreg_64, %1, 0, 0, implicit $exec :: (store (s32), addrspace 1)
     %13:vreg_64 = DS_READ_B64_gfx9 undef %14:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 3)
-    INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %15:vgpr_32, 2031626 /* regdef:VGPR_32 */, def %16:vgpr_32
+    INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %15:vgpr_32, 1835018 /* regdef:VGPR_32 */, def %16:vgpr_32
     %17:vgpr_32 = DS_READ_B32_gfx9 %6, 0, 0, implicit $exec
     %18:vgpr_32 = DS_READ_B32_gfx9 %7, 0, 0, implicit $exec
     %19:vgpr_32 = DS_READ_B32_gfx9 undef %20:vgpr_32, 0, 0, implicit $exec
-    INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %21:vgpr_32, 2031626 /* regdef:VGPR_32 */, def %22:vgpr_32
+    INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %21:vgpr_32, 1835018 /* regdef:VGPR_32 */, def %22:vgpr_32
     %23:vgpr_32 = DS_READ_B32_gfx9 %7, 0, 0, implicit $exec
     %24:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %5.sub1:vreg_64 = COPY %6
     %25:vgpr_32 = V_ADD_U32_e32 1, %10, implicit $exec
     %26:sreg_64_xexec = V_CMP_GT_U32_e64 64, %25, implicit $exec
     %27:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def dead %24:vgpr_32, 2031626 /* regdef:VGPR_32 */, def dead %27:vgpr_32, 2031625 /* reguse:VGPR_32 */, %13.sub0:vreg_64, 2147483657 /* reguse tiedto:$0 */, %24:vgpr_32(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %27:vgpr_32(tied-def 5), 2031625 /* reguse:VGPR_32 */, %15, 2031625 /* reguse:VGPR_32 */, %16, 2031625 /* reguse:VGPR_32 */, %18, 2031625 /* reguse:VGPR_32 */, %17, 2031625 /* reguse:VGPR_32 */, %23, 2031625 /* reguse:VGPR_32 */, %19
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def dead %24:vgpr_32, 1835018 /* regdef:VGPR_32 */, def dead %27:vgpr_32, 1835017 /* reguse:VGPR_32 */, %13.sub0:vreg_64, 2147483657 /* reguse tiedto:$0 */, %24:vgpr_32(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %27:vgpr_32(tied-def 5), 1835017 /* reguse:VGPR_32 */, %15, 1835017 /* reguse:VGPR_32 */, %16, 1835017 /* reguse:VGPR_32 */, %18, 1835017 /* reguse:VGPR_32 */, %17, 1835017 /* reguse:VGPR_32 */, %23, 1835017 /* reguse:VGPR_32 */, %19
     DS_WRITE_B32_gfx9 undef %28:vgpr_32, %21, 0, 0, implicit $exec :: (store (s32), addrspace 3)
     DS_WRITE_B32_gfx9 undef %29:vgpr_32, %22, 0, 0, implicit $exec :: (store (s32), addrspace 3)
     DS_WRITE_B64_gfx9 undef %30:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)

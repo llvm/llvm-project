@@ -26,7 +26,7 @@ def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
 def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
-                     SDTCisVT<3, i64>]>;
+                     SDTCisVT<3, GRLenVT>]>;
 def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
 def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
@@ -158,6 +158,7 @@ def vsplatf32_fpimm_eq_1
   N = N->getOperand(0).getNode();
 
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == 32 &&
          Imm.getBitWidth() == EltTy.getSizeInBits() &&
          Imm == APFloat(+1.0f).bitcastToAPInt();
 }]>;
@@ -1482,7 +1483,7 @@ multiclass VldreplPat<ValueType vt, LAInst Inst, Operand ImmOpnd> {
 }
 
 multiclass VstelmPat<PatFrag StoreOp, ValueType vt, LAInst Inst,
-                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = i64> {
+                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = GRLenVT> {
   def : Pat<(StoreOp(elt(vector_extract vt:$vd, IdxOpnd:$idx)), BaseAddr:$rj),
             (Inst vt:$vd, BaseAddr:$rj, 0, IdxOpnd:$idx)>;
 
@@ -2110,8 +2111,8 @@ def : Pat<(GRLenVT (vector_extract v4i32:$vj, GRLenVT:$rk)),
           (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, GRLenVT:$rk),
                                                  sub_32)),
                             GPR)>;
-def : Pat<(i64 (vector_extract v2i64:$vj, i64:$rk)),
-          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, i64:$rk),
+def : Pat<(GRLenVT (vector_extract v2i64:$vj, GRLenVT:$rk)),
+          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, GRLenVT:$rk),
                                                  sub_64)),
                             GPR)>;
 def : Pat<(f32 (vector_extract v4f32:$vj, GRLenVT:$rk)),
@@ -2153,9 +2154,25 @@ def : Pat<(f32 f32imm_vldi:$in),
 def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
+// abs
+def : Pat<(abs v16i8:$vj), (VMAX_B v16i8:$vj, (VNEG_B v16i8:$vj))>;
+def : Pat<(abs v8i16:$vj), (VMAX_H v8i16:$vj, (VNEG_H v8i16:$vj))>;
+def : Pat<(abs v4i32:$vj), (VMAX_W v4i32:$vj, (VNEG_W v4i32:$vj))>;
+def : Pat<(abs v2i64:$vj), (VMAX_D v2i64:$vj, (VNEG_D v2i64:$vj))>;
+
 // VABSD_{B/H/W/D}[U]
 defm : PatVrVr<abds, "VABSD">;
 defm : PatVrVrU<abdu, "VABSD">;
+
+// VADDA_{B/H/W/D}
+def : Pat<(add (v16i8 (abs v16i8:$vj)), (v16i8 (abs v16i8:$vk))),
+          (VADDA_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(add (v8i16 (abs v8i16:$vj)), (v8i16 (abs v8i16:$vk))),
+          (VADDA_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(add (v4i32 (abs v4i32:$vj)), (v4i32 (abs v4i32:$vk))),
+          (VADDA_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(add (v2i64 (abs v2i64:$vj)), (v2i64 (abs v2i64:$vk))),
+          (VADDA_D v2i64:$vj, v2i64:$vk)>;
 
 // VSADD_{B/H/W/D}[U], VSSUB_{B/H/W/D}[U]
 defm : PatVrVr<saddsat, "VSADD">;

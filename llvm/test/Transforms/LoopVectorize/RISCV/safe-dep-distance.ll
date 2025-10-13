@@ -28,19 +28,7 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 200
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -81,19 +69,7 @@ define void @test_may_clobber(ptr %p) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 100
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -137,19 +113,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 8192
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -193,19 +157,7 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 1024
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

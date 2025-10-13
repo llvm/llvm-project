@@ -2,8 +2,8 @@
 ; RUN: llc < %s -o - -mcpu=sm_100a -march=nvptx64 -mattr=+ptx88 | FileCheck %s
 ; RUN: llc < %s -o - -mcpu=sm_101a -march=nvptx64 -mattr=+ptx88 | FileCheck %s
 ; RUN: llc < %s -o - -mcpu=sm_110a -march=nvptx64 -mattr=+ptx90 | FileCheck %s
-; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_100a | %ptxas-verify -arch=sm_100a %}
-; RUN: %if ptxas-sm_101a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_101a | %ptxas-verify -arch=sm_101a %}
+; RUN: %if ptxas-sm_100a && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_100a | %ptxas-verify -arch=sm_100a %}
+; RUN: %if ptxas-sm_101a && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_101a | %ptxas-verify -arch=sm_101a %}
 ; RUN: %if ptxas-sm_110a && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mattr=+ptx90 -mcpu=sm_110a | %ptxas-verify -arch=sm_110a %}
 
 define void @tcgen05_mma_mxf8f6f4_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {

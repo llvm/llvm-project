@@ -733,12 +733,12 @@ define void @assume(i1 %true) {
 }
 
 ; CHECK-LABEL: @assume_with_opbundles
-; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
-define void @assume_with_opbundles(i1 %true, ptr %p) {
+define void @assume_with_opbundles(ptr %p) {
+  ; CHECK: %[[TRUE:.+]] = llvm.mlir.constant(true) : i1
   ; CHECK: %[[ALIGN:.+]] = llvm.mlir.constant(8 : i32) : i32
   ; CHECK:  llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i32)] : i1
-  call void @llvm.assume(i1 %true) ["align"(ptr %p, i32 8)]
+  call void @llvm.assume(i1 true) ["align"(ptr %p, i32 8)]
   ret void
 }
 

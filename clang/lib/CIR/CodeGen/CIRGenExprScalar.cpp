@@ -676,6 +676,10 @@ public:
   mlir::Value VisitRealImag(const UnaryOperator *e,
                             QualType promotionType = QualType());
 
+  mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
+    return Visit(e->getSubExpr());
+  }
+
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
@@ -686,6 +690,10 @@ public:
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
+  }
+  mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *e) {
+    cgf.emitCXXDeleteExpr(e);
+    return {};
   }
 
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
@@ -1091,15 +1099,17 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          b.create<cir::YieldOp>(loc, cgf.evaluateExprAsBool(e->getRHS()));
+          mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+          lexScope.forceCleanup();
+          cir::YieldOp::create(b, loc, res);
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          auto res = b.create<cir::ConstantOp>(loc, builder.getFalseAttr());
-          b.create<cir::YieldOp>(loc, res.getRes());
+          auto res = cir::ConstantOp::create(b, loc, builder.getFalseAttr());
+          cir::YieldOp::create(b, loc, res.getRes());
         });
     return maybePromoteBoolResult(resOp.getResult(), resTy);
   }
@@ -1135,15 +1145,17 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          auto res = b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
-          b.create<cir::YieldOp>(loc, res.getRes());
+          auto res = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
+          cir::YieldOp::create(b, loc, res.getRes());
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          b.create<cir::YieldOp>(loc, cgf.evaluateExprAsBool(e->getRHS()));
+          mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+          lexScope.forceCleanup();
+          cir::YieldOp::create(b, loc, res);
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
@@ -1274,13 +1286,8 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
   } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
     switch (uo->getOpcode()) {
     case UO_Imag:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary imag");
-      return {};
     case UO_Real:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary real");
-      return {};
+      return VisitRealImag(uo, promotionType);
     case UO_Minus:
       return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
     case UO_Plus:
@@ -1886,7 +1893,34 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
     return v;
   }
+  case CK_IntegralToPointer: {
+    mlir::Type destCIRTy = cgf.convertType(destTy);
+    mlir::Value src = Visit(const_cast<Expr *>(subExpr));
 
+    // Properly resize by casting to an int of the same size as the pointer.
+    // Clang's IntegralToPointer includes 'bool' as the source, but in CIR
+    // 'bool' is not an integral type.  So check the source type to get the
+    // correct CIR conversion.
+    mlir::Type middleTy = cgf.cgm.getDataLayout().getIntPtrType(destCIRTy);
+    mlir::Value middleVal = builder.createCast(
+        subExpr->getType()->isBooleanType() ? cir::CastKind::bool_to_int
+                                            : cir::CastKind::integral,
+        src, middleTy);
+
+    if (cgf.cgm.getCodeGenOpts().StrictVTablePointers) {
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "IntegralToPointer: strict vtable pointers");
+      return {};
+    }
+
+    return builder.createIntToPtr(middleVal, destCIRTy);
+  }
+
+  case CK_Dynamic: {
+    Address v = cgf.emitPointerWithAlignment(subExpr);
+    const auto *dce = cast<CXXDynamicCastExpr>(ce);
+    return cgf.emitDynamicCast(v, dce);
+  }
   case CK_ArrayToPointerDecay:
     return cgf.emitArrayToPointerDecay(subExpr).getPointer();
 
@@ -2087,9 +2121,13 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
   if (e->getType()->isVectorType() &&
       e->getType()->castAs<VectorType>()->getVectorKind() ==
           VectorKind::Generic) {
-    assert(!cir::MissingFeatures::vectorType());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector logical not");
-    return {};
+    mlir::Value oper = Visit(e->getSubExpr());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
+    auto exprVecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+    mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
+    return cir::VecCmpOp::create(builder, loc, exprVecTy, cir::CmpOpKind::eq,
+                                 oper, zeroVec);
   }
 
   // Compare operand to zero.
@@ -2132,6 +2170,9 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
     // this won't work for, e.g. an Obj-C property
     mlir::Value complex = cgf.emitComplexExpr(op);
     if (e->isGLValue() && !promotionTy.isNull()) {
+      promotionTy = promotionTy->isAnyComplexType()
+                        ? promotionTy
+                        : cgf.getContext().getComplexType(promotionTy);
       complex = cgf.emitPromotedValue(complex, promotionTy);
     }
 
@@ -2140,11 +2181,25 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
                : builder.createComplexImag(loc, complex);
   }
 
-  // __real or __imag on a scalar returns zero. Emit the subexpr to ensure side
+  if (e->getOpcode() == UO_Real) {
+    mlir::Value operand = promotionTy.isNull()
+                              ? Visit(op)
+                              : cgf.emitPromotedScalarExpr(op, promotionTy);
+    return builder.createComplexReal(loc, operand);
+  }
+
+  // __imag on a scalar returns zero. Emit the subexpr to ensure side
   // effects are evaluated, but not the actual value.
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   "VisitRealImag __real or __imag on a scalar");
-  return {};
+  mlir::Value operand;
+  if (op->isGLValue()) {
+    operand = cgf.emitLValue(op).getPointer();
+    operand = cir::LoadOp::create(builder, loc, operand);
+  } else if (!promotionTy.isNull()) {
+    operand = cgf.emitPromotedScalarExpr(op, promotionTy);
+  } else {
+    operand = cgf.emitScalarExpr(op);
+  }
+  return builder.createComplexImag(loc, operand);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof
