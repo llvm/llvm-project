@@ -555,11 +555,34 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
       continue;
     }
 
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
+      EVT LocVT = VA.getLocVT();
+      int FI = MF.getFrameInfo().CreateFixedObject(
+          LocVT.getFixedSizeInBits() / 8, Offset, true);
+      SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
+      SDValue ArgValue = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr,
+                                     MachinePointerInfo::getFixedStack(MF, FI));
+      InVals.push_back(ArgValue);
+
+      unsigned ArgIndex = Ins[InIdx].OrigArgIndex;
+      unsigned ArgPartOffset = Ins[InIdx].PartOffset;
+      assert(ArgPartOffset == 0);
+      while (i + 1 != e && Ins[InIdx + 1].OrigArgIndex == ArgIndex) {
+        CCValAssign &PartVA = ArgLocs[i + 1];
+        unsigned PartOffset = Ins[InIdx + 1].PartOffset - ArgPartOffset;
+        SDValue Offset = DAG.getIntPtrConstant(PartOffset, dl);
+        SDValue Address = DAG.getNode(ISD::ADD, dl, PtrVT, ArgValue, Offset);
+        InVals.push_back(DAG.getLoad(PartVA.getValVT(), dl, Chain, Address,
+                                     MachinePointerInfo()));
+        ++i;
+        ++InIdx;
+      }
+      continue;
+    }
+
     int FI;
     if (VA.getValVT() == MVT::i32 || VA.getValVT() == MVT::f32) {
       FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
-    } else if (VA.getValVT() == MVT::f128) {
-      FI = MF.getFrameInfo().CreateFixedObject(16, Offset, false);
     } else {
       // We shouldn't see any other value types here.
       llvm_unreachable("Unexpected ValVT encountered in frame lowering.");
@@ -835,6 +858,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
   MachineFunction &MF = DAG.getMachineFunction();
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT PtrVT = getPointerTy(MF.getDataLayout());
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1027,6 +1052,50 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     }
 
     assert(VA.isMemLoc());
+
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
+      // Store the argument in a stack slot and pass its address.
+      unsigned ArgIndex = Outs[realArgIdx].OrigArgIndex;
+      unsigned ArgPartOffset = Outs[realArgIdx].PartOffset;
+      assert(ArgPartOffset == 0);
+
+      EVT SlotVT;
+      if (i + 1 != e && Outs[realArgIdx + 1].OrigArgIndex == ArgIndex) {
+        Type *OrigArgType = CLI.Args[ArgIndex].Ty;
+        EVT OrigArgVT = getValueType(MF.getDataLayout(), OrigArgType);
+        MVT PartVT =
+            getRegisterTypeForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
+        unsigned N =
+            getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
+        SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
+      } else {
+        SlotVT = Outs[realArgIdx].VT;
+      }
+
+      SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
+      int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+      MemOpChains.push_back(
+          DAG.getStore(Chain, dl, Arg, SpillSlot,
+                       MachinePointerInfo::getFixedStack(MF, FI)));
+      // If the original argument was split (e.g. i128), we need
+      // to store all parts of it here (and pass just one address).
+      while (i + 1 != e && Outs[realArgIdx + 1].OrigArgIndex == ArgIndex) {
+        SDValue PartValue = OutVals[realArgIdx + 1];
+        unsigned PartOffset = Outs[realArgIdx + 1].PartOffset;
+        SDValue Address = DAG.getNode(ISD::ADD, dl, PtrVT, SpillSlot,
+                                      DAG.getIntPtrConstant(PartOffset, dl));
+        MemOpChains.push_back(
+            DAG.getStore(Chain, dl, PartValue, Address,
+                         MachinePointerInfo::getFixedStack(MF, FI)));
+        assert((PartOffset + PartValue.getValueType().getStoreSize() <=
+                SlotVT.getStoreSize()) &&
+               "Not enough space for argument part!");
+        ++i;
+        ++realArgIdx;
+      }
+
+      Arg = SpillSlot;
+    }
 
     // Create a store off the stack pointer for this argument.
     SDValue StackPtr = DAG.getRegister(SP::O6, MVT::i32);
