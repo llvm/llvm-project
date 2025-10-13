@@ -556,6 +556,9 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
                 EnumToString(UsageWarning::NonVolatilePointerToVolatile)),
       "non-volatile-pointer-to-volatile");
+  EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
+                EnumToString(UsageWarning::PassGlobalVariable)),
+      "pass-global-variable");
 }
 
 TEST(FortranFeaturesTest, HintLanguageControlFlag) {
