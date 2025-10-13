@@ -10,7 +10,6 @@ import unittest.mock
 
 import metrics
 
-a = ["a really long string", "a really long string", "a really long string", "a really long string", "a really long string", "a really long string"]
 
 class TestMetrics(unittest.TestCase):
     def test_upload_gauge_metric(self):
