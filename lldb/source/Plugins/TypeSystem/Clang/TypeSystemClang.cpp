@@ -849,8 +849,20 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
       {"unsigned long long int", eBasicTypeUnsignedLongLong},
 
       // "int128"
+      //
+      // The following two lines are here only
+      // for the sake of backward-compatibility.
+      // Neither "__int128_t", nor "__uint128_t" are basic-types.
+      // They are typedefs.
       {"__int128_t", eBasicTypeInt128},
       {"__uint128_t", eBasicTypeUnsignedInt128},
+      // In order to be consistent with:
+      // - gcc's C programming language extension related to 128-bit integers
+      //   https://gcc.gnu.org/onlinedocs/gcc/_005f_005fint128.html
+      // - the "BuiltinType::getName" method in LLVM
+      // the following two lines must be present:
+      {"__int128", eBasicTypeInt128},
+      {"unsigned __int128", eBasicTypeUnsignedInt128},
 
       // "bool"
       {"bool", eBasicTypeBool},
