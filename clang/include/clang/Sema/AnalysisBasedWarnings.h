@@ -14,15 +14,19 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Sema/ScopeInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include <memory>
 
 namespace clang {
 
+class AnalysisDeclContext;
 class Decl;
 class FunctionDecl;
 class QualType;
 class Sema;
+class VarDecl;
 namespace sema {
   class FunctionScopeInfo;
   class SemaPPCallbacks;
@@ -57,9 +61,13 @@ private:
 
   enum VisitFlag { NotVisited = 0, Visited = 1, Pending = 2 };
   llvm::DenseMap<const FunctionDecl*, VisitFlag> VisitedFD;
+  llvm::MapVector<VarDecl *, SmallVector<PossiblyUnreachableDiag, 4>>
+      VarDeclPossiblyUnreachableDiags;
 
   Policy PolicyOverrides;
   void clearOverrides();
+
+  void FlushDiagnostics(SmallVector<clang::sema::PossiblyUnreachableDiag, 4>);
 
   /// \name Statistics
   /// @{
@@ -107,6 +115,10 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
+  void RegisterVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
+
+  void IssueWarningsForRegisteredVarDecl(VarDecl *VD);
+
   // Gets the default policy which is in effect at the given source location.
   Policy getPolicyInEffectAt(SourceLocation Loc);
 
@@ -116,6 +128,10 @@ public:
   Policy &getPolicyOverrides() { return PolicyOverrides; }
 
   void PrintStats() const;
+
+  void
+  EmitPossiblyUnreachableDiags(AnalysisDeclContext &AC,
+                               SmallVector<PossiblyUnreachableDiag, 4> PUDs);
 };
 
 } // namespace sema

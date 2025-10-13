@@ -6201,6 +6201,10 @@ void Sema::InstantiateVariableInitializer(
   currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
       parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
 
+  // Set DeclForInitializer for this variable so DiagIfReachable can properly
+  // suppress runtime diagnostics for constexpr/static member variables
+  currentEvaluationContext().DeclForInitializer = Var;
+
   if (OldVar->getInit()) {
     // Instantiate the initializer.
     ExprResult Init =
@@ -6468,6 +6472,8 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
     PassToConsumerRAII.Var = Var;
     Var->setTemplateSpecializationKind(OldVar->getTemplateSpecializationKind(),
                                        OldVar->getPointOfInstantiation());
+    // Emit any deferred warnings for the variable's initializer
+    AnalysisWarnings.IssueWarningsForRegisteredVarDecl(Var);
   }
 
   // This variable may have local implicit instantiations that need to be
