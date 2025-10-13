@@ -1,12 +1,14 @@
 ; RUN: split-file %s %t
-; RUN: clang --target=x86_64-linux %t/a.ll -o %t/a.out
-; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning
+; RUN: %clang %t/a.ll -o %t/a.out
+; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext --max-debug-info-correlation-warnings=2 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,LIMIT
+; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext --max-debug-info-correlation-warnings=0 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,NOLIMIT
 
 ; CHECK: warning: Incomplete DIE for function None:
 ; CHECK: warning: Incomplete DIE for function no_cfg: CFGHash=None
-; CHECK: warning: Incomplete DIE for function no_counter: {{.*}} NumCounters=None
-; CHECK: warning: Incomplete DIE for function no_profc: {{.*}} CounterPtr=None
-; CHECK: warning: Could not find address of function no_func
+; NOLIMIT: warning: Incomplete DIE for function no_counter: {{.*}} NumCounters=None
+; NOLIMIT: warning: Incomplete DIE for function no_profc: {{.*}} CounterPtr=None
+; NOLIMIT: warning: Could not find address of function no_func
+; LIMIT: warning: Suppressed 3 additional warnings
 
 ;--- a.proftext
 :ir
@@ -29,13 +31,13 @@ void no_func() {}
 // 5. Remove "@__profc_no_profc"
 // 6. Remove "@no_func"
 ;--- gen
-clang --target=x86_64-linux -fprofile-generate -mllvm -debug-info-correlate -S -emit-llvm -g a.c -o -
+clang --target=x86_64-unknown-linux-gnu -fprofile-generate -mllvm -debug-info-correlate -S -emit-llvm -g a.c -o -
 
 ;--- a.ll
 ; ModuleID = 'a.c'
 source_filename = "a.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux"
+target triple = "x86_64-unknown-linux-gnu"
 
 $__llvm_profile_raw_version = comdat any
 
