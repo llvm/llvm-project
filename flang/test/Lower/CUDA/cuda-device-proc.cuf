@@ -438,7 +438,7 @@ end subroutine
 ! CHECK: nvvm.cp.async.bulk.commit.group
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
-attributes(global) subroutine test_bulk_g2s(c, a, b, n)
+attributes(global) subroutine test_bulk_g2s(a)
   real(8), device :: a(*)
   real(8), shared :: tmpa(1024)
   integer(8), shared :: barrier1
@@ -448,3 +448,13 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_bulk_g2s
 ! CHECK: nvvm.cp.async.bulk.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : <7>, <1>
+
+attributes(global) subroutine test_bulk_s2g(a)
+  real(8), device :: a(*)
+  real(8), shared :: tmpa(1024)
+  integer(4) :: tx_count
+  call tma_bulk_s2g(tmpa, a(j), tx_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_bulk_s2g
+! CHECL: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>

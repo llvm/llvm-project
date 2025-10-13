@@ -37,7 +37,8 @@ __cpp_lib_atomic_float                                  201711L <atomic>
 __cpp_lib_atomic_is_always_lock_free                    201603L <atomic>
 __cpp_lib_atomic_lock_free_type_aliases                 201907L <atomic>
 __cpp_lib_atomic_min_max                                202403L <atomic>
-__cpp_lib_atomic_ref                                    201806L <atomic>
+__cpp_lib_atomic_ref                                    202411L <atomic>
+                                                        201806L // C++20
 __cpp_lib_atomic_shared_ptr                             201711L <atomic>
 __cpp_lib_atomic_value_initialization                   201911L <atomic> <memory>
 __cpp_lib_atomic_wait                                   201907L <atomic>
@@ -544,6 +545,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_aligned_accessor                     202411L
 // # define __cpp_lib_associative_heterogeneous_insertion  202306L
 // # define __cpp_lib_atomic_min_max                       202403L
+# undef  __cpp_lib_atomic_ref
+# define __cpp_lib_atomic_ref                           202411L
 # undef  __cpp_lib_bind_front
 # define __cpp_lib_bind_front                           202306L
 # define __cpp_lib_bitset                               202306L

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-stringview-nullptr -std=c++17 %t
+// RUN: %check_clang_tidy %s bugprone-stringview-nullptr -std=c++17 %t
 
 namespace std {
 
@@ -148,7 +148,8 @@ void temporary_construction() /* a */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(std::string_view()) /* a4 */;
 
-    (void)(std::string_view({})) /* a5 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)(std::string_view({})) /* a5 */; 
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(std::string_view()) /* a5 */;
   }
@@ -171,7 +172,8 @@ void temporary_construction() /* a */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(std::string_view{}) /* a9 */;
 
-    (void)(std::string_view{{}}) /* a10 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)(std::string_view{{}}) /* a10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(std::string_view{}) /* a10 */;
   }
@@ -202,7 +204,8 @@ void temporary_construction() /* a */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)((std::string_view){}) /* a16 */;
 
-    (void)((std::string_view){{}}) /* a17 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)((std::string_view){{}}) /* a17 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)((std::string_view){}) /* a17 */;
 
@@ -230,7 +233,8 @@ void temporary_construction() /* a */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)((const std::string_view){}) /* a23 */;
 
-    (void)((const std::string_view){{}}) /* a24 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)((const std::string_view){{}}) /* a24 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)((const std::string_view){}) /* a24 */;
   }
@@ -316,7 +320,8 @@ void stack_construction() /* b */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view b13 = {};
 
-    std::string_view b14 = {{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    std::string_view b14 = {{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view b14 = {};
 
@@ -336,7 +341,8 @@ void stack_construction() /* b */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view b18 = {};
 
-    const std::string_view b19 = {{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    const std::string_view b19 = {{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view b19 = {};
   }
@@ -382,7 +388,8 @@ void stack_construction() /* b */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view b28;
 
-    std::string_view b29({}); // Default `const CharT*`
+    // Default `const CharT*`
+    std::string_view b29({});
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view b29;
 
@@ -402,7 +409,8 @@ void stack_construction() /* b */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view b33;
 
-    const std::string_view b34({}); // Default `const CharT*`
+    // Default `const CharT*`
+    const std::string_view b34({});
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view b34;
   }
@@ -448,7 +456,8 @@ void stack_construction() /* b */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view b43{};
 
-    std::string_view b44{{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    std::string_view b44{{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view b44{};
 
@@ -468,7 +477,8 @@ void stack_construction() /* b */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view b48{};
 
-    const std::string_view b49{{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    const std::string_view b49{{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view b49{};
   }
@@ -557,7 +567,8 @@ void field_construction() /* c */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view c13 = {};
 
-    std::string_view c14 = {{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    std::string_view c14 = {{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view c14 = {};
 
@@ -577,7 +588,8 @@ void field_construction() /* c */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view c18 = {};
 
-    const std::string_view c19 = {{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    const std::string_view c19 = {{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view c19 = {};
   };
@@ -621,7 +633,8 @@ void field_construction() /* c */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view c28{};
 
-    std::string_view c29{{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    std::string_view c29{{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
     // CHECK-FIXES: std::string_view c29{};
 
@@ -641,7 +654,8 @@ void field_construction() /* c */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view c33{};
 
-    const std::string_view c34{{}}; // Default `const CharT*`
+    // Default `const CharT*`
+    const std::string_view c34{{}};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
     // CHECK-FIXES: const std::string_view c34{};
   };
@@ -694,7 +708,8 @@ void field_construction() /* c */ {
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
           // CHECK-FIXES: c43(),
 
-          c44({}) { // Default `const CharT*`
+          // Default `const CharT*`
+          c44({}) {
       // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
       // CHECK-FIXES: c44() {
     }
@@ -754,7 +769,8 @@ void field_construction() /* c */ {
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
           // CHECK-FIXES: c53{},
 
-          c54{{}} { // Default `const CharT*`
+          // Default `const CharT*`
+          c54{{}} {
       // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
       // CHECK-FIXES: c54{} {
     }
@@ -852,7 +868,8 @@ void default_argument_construction() /* d */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
     // CHECK-FIXES: void d13(std::string_view sv = {});
 
-    void d14(std::string_view sv = {{}}); // Default `const CharT*`
+    // Default `const CharT*`
+    void d14(std::string_view sv = {{}});
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
     // CHECK-FIXES: void d14(std::string_view sv = {});
 
@@ -872,7 +889,8 @@ void default_argument_construction() /* d */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
     // CHECK-FIXES: void d18(const std::string_view sv = {});
 
-    void d19(const std::string_view sv = {{}}); // Default `const CharT*`
+    // Default `const CharT*`
+    void d19(const std::string_view sv = {{}});
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
     // CHECK-FIXES: void d19(const std::string_view sv = {});
   }
@@ -920,7 +938,8 @@ void heap_construction() /* e */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new std::string_view()) /* e4 */;
 
-    (void)(new std::string_view({})) /* e5 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)(new std::string_view({})) /* e5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new std::string_view()) /* e5 */;
 
@@ -940,7 +959,8 @@ void heap_construction() /* e */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new const std::string_view()) /* e9 */;
 
-    (void)(new const std::string_view({})) /* e10 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)(new const std::string_view({})) /* e10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new const std::string_view()) /* e10 */;
   }
@@ -986,7 +1006,8 @@ void heap_construction() /* e */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new std::string_view{}) /* e19 */;
 
-    (void)(new std::string_view{{}}) /* e20 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)(new std::string_view{{}}) /* e20 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new std::string_view{}) /* e20 */;
 
@@ -1006,7 +1027,8 @@ void heap_construction() /* e */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new const std::string_view{}) /* e24 */;
 
-    (void)(new const std::string_view{{}}) /* e25 */; // Default `const CharT*`
+    // Default `const CharT*`
+    (void)(new const std::string_view{{}}) /* e25 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(new const std::string_view{}) /* e25 */;
   }
@@ -1054,7 +1076,8 @@ void function_argument_initialization() /* f */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
     // CHECK-FIXES: function("") /* f4 */;
 
-    function({{}}) /* f5 */; // Default `const CharT*`
+    // Default `const CharT*`
+    function({{}}) /* f5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
     // CHECK-FIXES: function("") /* f5 */;
   }
@@ -1102,7 +1125,8 @@ void assignment(std::string_view sv) /* g */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment{{.*}}default
     // CHECK-FIXES: sv = {} /* g4 */;
 
-    sv = {{}} /* g5 */; // Default `const CharT*`
+    // Default `const CharT*`
+    sv = {{}} /* g5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment{{.*}}default
     // CHECK-FIXES: sv = {} /* g5 */;
   }
@@ -1150,7 +1174,8 @@ void pointer_assignment(std::string_view *sv_ptr) /* h */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
     // CHECK-FIXES: *sv_ptr = {} /* h4 */;
 
-    *sv_ptr = {{}} /* h5 */; // Default `const CharT*`
+    // Default `const CharT*`
+    *sv_ptr = {{}} /* h5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
     // CHECK-FIXES: *sv_ptr = {} /* h5 */;
   }
@@ -1566,7 +1591,8 @@ void return_statement() /* q */ {
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
     // CHECK-FIXES: []() -> SV { return {}; } /* q6 */;
 
-    []() -> SV { return {{}}; } /* q7 */; // Default `const CharT*`
+    // Default `const CharT*`
+    []() -> SV { return {{}}; } /* q7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
     // CHECK-FIXES: []() -> SV { return {}; } /* q7 */;
   }
