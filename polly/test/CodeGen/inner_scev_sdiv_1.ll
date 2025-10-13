@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ;
 ; Excerpt from the test-suite's oggenc reduced using bugpoint.
 ;

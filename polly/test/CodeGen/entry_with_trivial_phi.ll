@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; The entry of this scop's simple region (entry.split => for.end) has an trivial
 ; PHI node. LCSSA may create such PHI nodes. This is a breakdown of this case in
@@ -11,10 +11,10 @@ entry:
   br label %entry.split
 
 ; CHECK-LABEL: %polly.split_new_and_old
-; CHECK-NEXT:    store float %a, ptr %b.phiops
+; CHECK-NEXT:    store float %a, ptr %b.phiops, align 4
 
 ; CHECK-LABEL: polly.stmt.entry.split
-; CHECK-NEXT:    %b.phiops.reload = load float, ptr %b.phiops
+; CHECK-NEXT:    %b.phiops.reload = load float, ptr %b.phiops, align 4
 
 entry.split:
   %b = phi float [ %a, %entry ]
