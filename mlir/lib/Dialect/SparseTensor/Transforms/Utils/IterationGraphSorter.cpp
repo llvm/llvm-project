@@ -83,11 +83,10 @@ inline static bool includesDenseOutput(SortMask mask) {
 /// Returns a sparsity rank for loop ordering: lower values indicate
 /// dimensions that should be placed in outer loops.
 /// 0 = Dense, 1 = Compressed, 2 = Singleton, 3 = Other/Unknown
-static unsigned getLoopSparsityRank(unsigned loop,
-                                   ArrayRef<Value> allTensors,
-                                   ArrayRef<AffineMap> allMaps) {
+static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
+                                    ArrayRef<AffineMap> allMaps) {
   unsigned bestRank = 3; // Default: most sparse (unknown/singleton-like)
-  
+
   for (auto [tensor, map] : llvm::zip(allTensors, allMaps)) {
     // Check if this loop accesses this tensor
     bool loopAccessesTensor = false;
@@ -101,7 +100,7 @@ static unsigned getLoopSparsityRank(unsigned loop,
       }
       tensorDim++;
     }
-    
+
     if (loopAccessesTensor) {
       const auto enc = getSparseTensorEncoding(tensor.getType());
       if (!enc) {
@@ -123,7 +122,7 @@ static unsigned getLoopSparsityRank(unsigned loop,
       }
     }
   }
-  
+
   return bestRank;
 }
 
@@ -161,11 +160,11 @@ AffineMap IterationGraphSorter::topoSort() {
       allTensors.push_back(out);
       SmallVector<AffineMap> allMaps = loop2InsLvl;
       allMaps.push_back(loop2OutLvl);
-      
+
       // Find loop with best (lowest) sparsity rank.
       unsigned bestLoop = it[0];
       unsigned bestRank = getLoopSparsityRank(bestLoop, allTensors, allMaps);
-      
+
       for (auto candidateLoop : it) {
         unsigned rank = getLoopSparsityRank(candidateLoop, allTensors, allMaps);
         if (rank < bestRank || (rank == bestRank && candidateLoop < bestLoop)) {
