@@ -11860,15 +11860,16 @@ SDNode *SelectionDAG::getNodeIfExists(unsigned Opcode, SDVTList VTList,
                                       ArrayRef<SDValue> Ops,
                                       const SDNodeFlags Flags,
                                       bool AllowCommute) {
+  if (VTList.VTs[VTList.NumVTs - 1] == MVT::Glue)
+    return nullptr;
+
   auto Lookup = [&](ArrayRef<SDValue> LookupOps) -> SDNode * {
-    if (VTList.VTs[VTList.NumVTs - 1] != MVT::Glue) {
-      FoldingSetNodeID ID;
-      AddNodeIDNode(ID, Opcode, VTList, LookupOps);
-      void *IP = nullptr;
-      if (SDNode *E = FindNodeOrInsertPos(ID, SDLoc(), IP)) {
-        E->intersectFlagsWith(Flags);
-        return E;
-      }
+    FoldingSetNodeID ID;
+    AddNodeIDNode(ID, Opcode, VTList, LookupOps);
+    void *IP = nullptr;
+    if (SDNode *E = FindNodeOrInsertPos(ID, IP)) {
+      E->intersectFlagsWith(Flags);
+      return E;
     }
     return nullptr;
   };
