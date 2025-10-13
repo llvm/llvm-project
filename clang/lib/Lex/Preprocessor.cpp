@@ -1158,7 +1158,7 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
     if (MacroInfo *MI = getMacroInfo(Tok.getIdentifierInfo());
         MI && MI->isObjectLike() && getLangOpts().CPlusPlus20 &&
         !AllowMacroExpansion) {
-      Diag(Tok, diag::err_module_name_is_macro)
+      Diag(Tok, diag::err_pp_module_name_is_macro)
           << IsPartition << Tok.getIdentifierInfo();
       Diag(MI->getDefinitionLoc(), diag::note_macro_here)
           << Tok.getIdentifierInfo();

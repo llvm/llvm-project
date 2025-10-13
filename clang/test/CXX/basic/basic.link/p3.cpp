@@ -45,7 +45,7 @@ constexpr int n = 123;
 
 export module m; // #1
 
-import x = {}; // expected-error {{'import' directive must end with a ';' on the same line}}
+import x = {}; // expected-error {{import directive must end with a ';'}}
                // expected-error@-1 {{module 'x' not found}}
 
 //--- ImportError2.cpp

@@ -4225,7 +4225,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   SourceLocation StartLoc = Introducer.getLocation();
   if (!IncludeMacroStack.empty()) {
     SourceLocation End = DiscardUntilEndOfDirective().getEnd();
-    Diag(StartLoc, diag::err_module_decl_in_header)
+    Diag(StartLoc, diag::err_pp_module_decl_in_header)
         << SourceRange(StartLoc, End);
     return;
   }
@@ -4312,10 +4312,6 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.push_back(Tok);
     break;
   }
-
-  if (!Tok.isOneOf(tok::eod, tok::semi, tok::l_square, tok::kw_private))
-    Diag(Tok, diag::err_unexpected_char_in_module_directive)
-        << getSpelling(Tok);
 
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.

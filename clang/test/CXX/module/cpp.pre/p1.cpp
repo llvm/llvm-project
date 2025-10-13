@@ -31,7 +31,6 @@
 // RUN: %clang_cc1 -std=c++20 %t/object_like_macro_in_module_name.cpp -Dm=x -Dn=y -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/object_like_macro_in_partition_name.cpp -Dm=x -Dn=y -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/unexpected_character_in_pp_module_suffix.cpp -D'm(x)=x' -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/unexpected_id_in_pp_module_suffix.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/semi_in_same_line.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/cwg2947_example1.cpp -D'DOT_BAR=.bar' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/cwg2947_example2.cpp -D'MOD_ATTR=[[vendor::shiny_module]]' -fsyntax-only -verify
@@ -154,49 +153,35 @@ export module m:n;
 
 //--- unexpected_character_in_pp_module_suffix.cpp
 export module m();
-// expected-error@-1 {{unexpected '(' in a C++ module directive}}
-// expected-error@-2 {{'module' directive must end with a ';' on the same line}}
-// expected-error@-3 {{expected unqualified-id}}
-
-//--- unexpected_id_in_pp_module_suffix.cpp
-export module m n;
-// expected-error@-1 {{unexpected 'n' in a C++ module directive}}
-// expected-error@-2 {{'module' directive must end with a ';' on the same line}}
-// expected-error@-3 {{a type specifier is required for all declarations}}
+// expected-error@-1 {{module directive must end with a ';'}}
+// expected-error@-2 {{expected unqualified-id}}
 
 //--- semi_in_same_line.cpp
-export module m // expected-note {{module directive defined here}}
-[[]]; // expected-error {{'module' directive must end with a ';' on the same line}}
+export module m // OK
+[[]];
 
-import foo  // expected-note {{import directive defined here}}
-; // expected-error {{'import' directive must end with a ';' on the same line}}
-// expected-error@-2 {{module 'foo' not found}}
+import foo // expected-error {{module 'foo' not found}}
+;
 
 //--- cwg2947_example1.cpp
 export module foo DOT_BAR; // error: expansion of DOT_BAR; does not begin with ; or [
-// expected-error@-1 {{unexpected '.' in a C++ module directive}}
-// Why -verify cannot catch note@* {{expanded from macro 'DOT_BAR'}}
+// expected-error@-1 {{unexpected preprocessing token '.' after module name, only ';' and '[' (start of C++ attribute specifier) are allowed}}
 
 //--- cwg2947_example2.cpp
 export module M MOD_ATTR ;        // OK
 // expected-warning@-1 {{unknown attribute 'vendor::shiny_module' ignored}}
-// Why -verify cannot catch note@* {{expanded from macro 'MOD_ATTR'}}
 
 //--- cwg2947_example3.cpp
 export module a
   .b;                         // error: preprocessing token after pp-module-name is not ; or [
-// expected-error@-1 {{'module' directive must end with a ';' on the same line}}
-// expected-note@-3 {{module directive defined here}}
+// expected-error@-1 {{module directive must end with a ';'}}
 
 //--- cwg2947_example4.cpp
-// TODO: We don't allow this pattern in current implementation, but this restriction can be easily removed.
 export module M [[
   attr1,
   attr2 ]] ;                 // OK
 // expected-warning@-2 {{unknown attribute 'attr1' ignored}}
 // expected-warning@-2 {{unknown attribute 'attr2' ignored}}
-// expected-error@-3 {{'module' directive must end with a ';' on the same line}}
-// expected-note@-6 {{module directive defined here}}
 
 //--- cwg2947_example5.cpp
 export module M
@@ -204,8 +189,6 @@ export module M
   attr2 ]] ;                 // OK
 // expected-warning@-2 {{unknown attribute 'attr1' ignored}}
 // expected-warning@-2 {{unknown attribute 'attr2' ignored}}
-// expected-error@-3 {{'module' directive must end with a ';' on the same line}}
-// expected-note@-6 {{module directive defined here}}
 
 //--- cwg2947_example6.cpp
 export module M; int // expected-warning {{extra tokens at end of 'module' directive}}

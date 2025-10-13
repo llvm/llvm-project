@@ -989,11 +989,9 @@ def warn_module_conflict : Warning<
   InGroup<ModuleConflict>;
 
 // C++20 modules
-def err_module_name_is_macro : Error<
+def err_pp_module_name_is_macro : Error<
   "%select{module|partition}0 name component %1 cannot be a object-like macro">;
-def err_unexpected_char_in_module_directive : Error<
-  "unexpected '%0' in a C++ module directive">;
-def err_module_decl_in_header
+def err_pp_module_decl_in_header
     : Error<"module declaration must not come from an #include directive">;
 def err_pp_cond_span_module_decl
     : Error<"preprocessor conditionals shall not span a module declaration">;
