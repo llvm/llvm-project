@@ -403,6 +403,11 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
 
+  // Fix fast-math flags for fcmp intrinsic calls.
+  for (auto [CI, FMF] : FCmpIntrinsicFMFs)
+    CI->setFastMathFlags(FMF);
+  FCmpIntrinsicFMFs.clear();
+
   if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
     dropUnknownMetadataReferences();
 
@@ -8446,12 +8451,26 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   CI->setTailCallKind(TCK);
   CI->setCallingConv(CC);
   if (FMF.any()) {
+    bool IsFCmpIntrinsic = false;
     if (!isa<FPMathOperator>(CI)) {
-      CI->deleteValue();
-      return error(CallLoc, "fast-math-flags specified for call without "
-                            "floating-point scalar or vector return type");
+      auto FCmpName = StringRef(CalleeID.StrVal);
+      if (FCmpName.starts_with("llvm.") &&
+          CalleeID.Kind == ValID::t_GlobalName) {
+        unsigned IID = Intrinsic::lookupIntrinsicID(FCmpName);
+        IsFCmpIntrinsic = IID == Intrinsic::vp_fcmp ||
+                          IID == Intrinsic::experimental_constrained_fcmp ||
+                          IID == Intrinsic::experimental_constrained_fcmps;
+      }
+      if (!IsFCmpIntrinsic) {
+        CI->deleteValue();
+        return error(CallLoc, "fast-math-flags specified for call without "
+                              "floating-point scalar or vector return type "
+                              "or callee is not fcmp intrinsic");
+      }
+      FCmpIntrinsicFMFs[CI] = FMF;
     }
-    CI->setFastMathFlags(FMF);
+    if (!IsFCmpIntrinsic)
+      CI->setFastMathFlags(FMF);
   }
 
   if (CalleeID.Kind == ValID::t_GlobalName &&

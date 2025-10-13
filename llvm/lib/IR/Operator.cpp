@@ -67,6 +67,20 @@ bool Operator::hasPoisonGeneratingAnnotations() const {
                I->hasPoisonGeneratingMetadata());
 }
 
+bool FPMathOperator::isFCmpIntrinsic(const Instruction &Inst) {
+  const auto *I = dyn_cast<CallInst>(&Inst);
+  if (!I)
+    return false;
+
+  unsigned IID = Intrinsic::not_intrinsic;
+  if (Function *F = I->getCalledFunction())
+    IID = F->getIntrinsicID();
+
+  return IID == Intrinsic::vp_fcmp ||
+         IID == Intrinsic::experimental_constrained_fcmp ||
+         IID == Intrinsic::experimental_constrained_fcmps;
+}
+
 Type *GEPOperator::getSourceElementType() const {
   if (auto *I = dyn_cast<GetElementPtrInst>(this))
     return I->getSourceElementType();

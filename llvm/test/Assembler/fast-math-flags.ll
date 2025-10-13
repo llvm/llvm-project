@@ -108,6 +108,8 @@ entry:
   %h_vec = fptrunc nnan <3 x float> %vec to <3 x half>
 ; CHECK: %h_scalable = fptrunc nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
   %h_scalable = fptrunc nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
+; CHECK: %i_fcmp_result = call nnan <3 x i1> @llvm.vp.fcmp.v3f32(<3 x float> %vec, <3 x float> %vec, metadata !"oeq", <3 x i1> <i1 false, i1 true, i1 false>, i32 3)
+  %i_fcmp_result = call nnan <3 x i1> @llvm.vp.fcmp.v3f32(<3 x float> %vec, <3 x float> %vec, metadata !"oeq", <3 x i1> <i1 false, i1 true, i1 false>, i32 3)
 ; CHECK:  ret float %f
   ret float %f
 }
