@@ -491,6 +491,13 @@ X86RegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
 }
 
+const uint32_t *
+X86RegisterInfo::getCustomEHPadPreservedMask(const MachineFunction &MF) const {
+  if (MF.getTarget().Options.ExceptionModel == ExceptionHandling::SjLj)
+    return getNoPreservedMask();
+  return TargetRegisterInfo::getCustomEHPadPreservedMask(MF);
+}
+
 const uint32_t *X86RegisterInfo::getDarwinTLSCallPreservedMask() const {
   return CSR_64_TLS_Darwin_RegMask;
 }
