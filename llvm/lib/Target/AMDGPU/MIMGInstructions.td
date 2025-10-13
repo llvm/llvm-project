@@ -262,7 +262,6 @@ class NSAHelper {
 class MIMGNSAHelper<int num_addrs,
                     list<RegisterOperand> addr_types_in=[]>
     : NSAHelper<> {
-  assert !ge(num_addrs, 0), "num_addrs must be > 0";
   list<RegisterOperand> addr_types =
     !if(!empty(addr_types_in), !listsplat(VGPROp_32, num_addrs),
         addr_types_in);
