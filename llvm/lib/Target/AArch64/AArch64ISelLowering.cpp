@@ -2294,6 +2294,13 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
                                 MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
   }
 
+  if (Subtarget->hasSVE2p1()) {
+    if (VT.getVectorElementType() == MVT::f32)
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, VT,
+                                MVT::getVectorVT(MVT::f16, NumElts * 2),
+                                Custom);
+  }
+
   // Lower fixed length vector operations to scalable equivalents.
   setOperationAction(ISD::ABDS, VT, Default);
   setOperationAction(ISD::ABDU, VT, Default);
@@ -7917,6 +7924,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }

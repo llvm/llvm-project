@@ -12095,7 +12095,14 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
         C->isExactlyValue(1.0)) &&
       !(ISD::isConstantSplatVector(MulRHS.getNode(), ConstantOne) &&
         ConstantOne.isOne()))
-    Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+    switch (N->getOpcode()) {
+    case ISD::PARTIAL_REDUCE_FMLA:
+      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+      break;
+    default:
+      Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+      break;
+    };
 
   unsigned Stride = AccVT.getVectorMinNumElements();
   unsigned ScaleFactor = MulOpVT.getVectorMinNumElements() / Stride;
