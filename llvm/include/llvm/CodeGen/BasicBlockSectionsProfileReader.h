@@ -42,18 +42,40 @@ struct BBClusterInfo {
   unsigned PositionInCluster;
 };
 
+// This represents the CFG profile data for a function.
+struct CfgProfile {
+  // Node counts for each basic block.
+  DenseMap<UniqueBBID, uint64_t> NodeCounts;
+  // Edge counts for each edge, stored as a nested map.
+  DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+
+  // Returns the profile count for the given basic block or zero if it does not
+  // exist.
+  uint64_t getBlockCount(const UniqueBBID &BBID) const {
+    return NodeCounts.lookup(BBID);
+  }
+
+  // Returns the profile count for the edge from `SrcBBID` to `SinkBBID` or
+  // zero if it does not exist.
+  uint64_t getEdgeCount(const UniqueBBID &SrcBBID,
+                        const UniqueBBID &SinkBBID) const {
+    auto It = EdgeCounts.find(SrcBBID);
+    if (It == EdgeCounts.end())
+      return 0;
+    return It->second.lookup(SinkBBID);
+  }
+};
+
 // This represents the raw input profile for one function.
-struct FunctionPathAndClusterInfo {
+struct FunctionProfile {
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
   // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
-  // Node counts for each basic block.
-  DenseMap<UniqueBBID, uint64_t> NodeCounts;
-  // Edge counts for each edge, stored as a nested map.
-  DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+  // Cfg profile data (block and edge frequencies).
+  CfgProfile Cfg;
   // Hash for each basic block. The Hashes are stored for every original block
   // (not cloned blocks), hence the map key being unsigned instead of
   // UniqueBBID.
@@ -81,10 +103,14 @@ public:
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  // Returns the profile count for the edge from `SrcBBID` to `SinkBBID` in
-  // function `FuncName` or zero if it does not exist.
-  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
-                        const UniqueBBID &SinkBBID) const;
+  // Returns a pointer to the CfgProfile for the given function.
+  // Returns nullptr if no profile data is available for the function.
+  const CfgProfile *getFunctionCfgProfile(StringRef FuncName) const {
+    auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+    if (It == ProgramPathAndClusterInfo.end())
+      return nullptr;
+    return &It->second.Cfg;
+  }
 
   // Return the complete function path and cluster info for the given function.
   std::pair<bool, FunctionPathAndClusterInfo>
@@ -136,7 +162,7 @@ private:
   // for (all or some of) its basic blocks. The cluster information for every
   // basic block includes its cluster ID along with the position of the basic
   // block in that cluster.
-  StringMap<FunctionPathAndClusterInfo> ProgramPathAndClusterInfo;
+  StringMap<FunctionProfile> ProgramPathAndClusterInfo;
 
   // Some functions have alias names. We use this map to find the main alias
   // name which appears in ProgramPathAndClusterInfo as a key.
