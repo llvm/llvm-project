@@ -1676,6 +1676,12 @@ multiclass HALF_PRECISION_SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS,
 }
 defm "" : HALF_PRECISION_SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
 
+// TODO: I think separate intrinsics should be introduced for these FP16 operations.
+def : Pat<(v8f16 (int_wasm_relaxed_madd (v8f16 V128:$a), (v8f16 V128:$b), (v8f16 V128:$c))),
+          (MADD_F16x8 V128:$a, V128:$b, V128:$c)>;
+def : Pat<(v8f16 (int_wasm_relaxed_nmadd (v8f16 V128:$a), (v8f16 V128:$b), (v8f16 V128:$c))),
+          (NMADD_F16x8 V128:$a, V128:$b, V128:$c)>;
+
 //===----------------------------------------------------------------------===//
 // Laneselect
 //===----------------------------------------------------------------------===//
