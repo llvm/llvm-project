@@ -45,11 +45,23 @@ uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
     (unsigned long)(offset / 4096),
 #  endif
   };
+  // Realtime Sanitizer syscall calls interceptor during initializatio at the
+  // time when inceptors are not even intialized.
+  // We have an option of modifying implementation of  internal_mmap for s390
+  // in sanitizer_linux.cpp.
+  register uptr retval __asm__("r2");
 #  ifdef __s390x__
-  return syscall(__NR_mmap, &params);
+  register long nr asm("r1") = __NR_mmap;
 #  else
-  return syscall(__NR_mmap2, &params);
+  register long nr asm("r1") = __NR_mmap2;
 #  endif
+  register struct s390_mmap_params* args asm("r2") = &params;
+  asm volatile("svc 0\n" : "=r"(retval) : "r"(args), "r"(nr) : "memory", "cc");
+  if (retval >= (uptr)-4095) {
+    errno = -retval;
+    return -1;
+  }
+  return retval;
 }
 
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
