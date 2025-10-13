@@ -47,6 +47,7 @@ struct alignas(32) XRayFileHeader {
   // reading the data in the file.
   bool ConstantTSC : 1;
   bool NonstopTSC : 1;
+  bool HasFunctionMap : 1;
 
   // The frequency by which TSC increases per-second.
   alignas(8) uint64_t CycleFrequency = 0;
@@ -67,7 +68,41 @@ static_assert(sizeof(XRayFileHeader) == 32, "XRayFileHeader != 32 bytes");
 enum RecordTypes {
   NORMAL = 0,
   ARG_PAYLOAD = 1,
+  FUNC_INFO = 2,
+  OBJ_INFO = 3,
+  FILE_MD = 4
 };
+
+struct alignas(32) XRayFunctionMD {
+  uint16_t RecordType = RecordTypes::FUNC_INFO;
+  int32_t FuncId = 0;
+  int32_t Line = 0;
+  int16_t FileMDIdx = 0;
+  int16_t NameLen = 0;
+  // 18 bytes may not be enough to store the full name. In this case, 32 byte
+  // chunks containing the rest of the name are expected to follow this record
+  // as needed.
+  char NameBuffer[18] = {};
+} __attribute__((packed));
+
+struct alignas(32) XRayFileMD {
+  uint16_t RecordType = RecordTypes::FILE_MD;
+  int16_t FilenameLen = 0;
+  // The padding bytes may not be enough to store the full name. In this case, 32 byte blocks
+  // containing the rest of the name are expected to follow this record
+  // as needed.
+  char FilenameBuffer[28] = {};
+} __attribute__((packed));
+
+struct alignas(32) XRayObjectInfoRecord {
+  uint16_t RecordType = RecordTypes::OBJ_INFO;
+  int32_t ObjId = 0;
+  int16_t FilenameLen = 0;
+  // 24 may not be enough to store the full name. In this case, 32 byte blocks
+  // containing the rest of the name are expected to follow this record
+  // as needed.
+  char FilenameBuffer[24] = {};
+} __attribute__((packed));
 
 struct alignas(32) XRayRecord {
   // This is the type of the record being written. We use 16 bits to allow us to
