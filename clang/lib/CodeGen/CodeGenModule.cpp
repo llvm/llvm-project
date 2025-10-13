@@ -2848,7 +2848,16 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       // Skip available_externally functions. They won't be codegen'ed in the
       // current module anyway.
       if (getContext().GetGVALinkageForFunction(FD) != GVA_AvailableExternally)
-        createFunctionTypeMetadataForIcall(FD, F);
+        createFunctionTypeMetadataForIcallForCFI(FD, F);
+    }
+  }
+
+  if (CodeGenOpts.CallGraphSection) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      // Skip available_externally functions. They won't be codegen'ed in the
+      // current module anyway.
+      if (getContext().GetGVALinkageForFunction(FD) != GVA_AvailableExternally)
+        createFunctionTypeMDForIcallForCallGraph(FD, F);
     }
   }
 
@@ -3060,16 +3069,24 @@ static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
   return MD && MD->hasGeneralizedMDString();
 }
 
-void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
-                                                       llvm::Function *F) {
-  if (CodeGenOpts.CallGraphSection && !hasExistingGeneralizedTypeMD(F) &&
+void CodeGenModule::createFunctionTypeMDForIcallForCallGraph(
+    const FunctionDecl *FD, llvm::Function *F) {
+  // Add additional metadata if we are emitting call graph section
+  if (!CodeGenOpts.CallGraphSection)
+    return;
+
+  if (!hasExistingGeneralizedTypeMD(F) &&
       (!F->hasLocalLinkage() ||
        F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                         /*IgnoreAssumeLikeCalls=*/true,
                                         /*IgnoreLLVMUsed=*/false)))
     F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+}
 
-  // Add additional metadata only if we are checking indirect calls with CFI.
+void CodeGenModule::createFunctionTypeMetadataForIcallForCFI(
+    const FunctionDecl *FD, llvm::Function *F) {
+
+  // Only if we are checking indirect calls.
   if (!LangOpts.Sanitize.has(SanitizerKind::CFIICall))
     return;
 
@@ -3243,7 +3260,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // jump table.
   if (!CodeGenOpts.SanitizeCfiCrossDso ||
       !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
-    createFunctionTypeMetadataForIcall(FD, F);
+    createFunctionTypeMetadataForIcallForCFI(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
