@@ -108,11 +108,9 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) nounwind {
 define i1 @usubo_eq_constant1_op1_i32(i32 %x, ptr %p) nounwind {
 ; CHECK-LABEL: usubo_eq_constant1_op1_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    sub w9, w0, #1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    str w9, [x1]
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    subs w8, w0, #1
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %s = add i32 %x, -1
   %ov = icmp eq i32 %x, 0
