@@ -10,7 +10,7 @@
 ; RUN:   < %s 2>&1 | FileCheck %s
 ; CHECK-NOT: LV: We can vectorize this loop
 ; CHECK-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
-; CHECK-NOT: LV: [FIXME] Not vectorizing: loop vect disabled for an unknown reason
+; CHECK-NOT: LV: [BUG] Not vectorizing: loop vect disabled for an unknown reason
 ; CHECK-NOT: LV: Not vectorizing: #pragma vectorize disable
 ; CHECK-NOT: LV: Not vectorizing: Disabled/already vectorized
 ; CHECK-NOT: LV: Not vectorizing: Cannot prove legality

@@ -197,9 +197,8 @@ bool LoopVectorizeHints::allowVectorization(
                << "loop not vectorized: loop transformations are disabled");
     } else {
       // This should be unreachable unless there is a bug.
-      LLVM_DEBUG(
-          dbgs() << "LV: [FIXME] Not vectorizing: loop vect disabled for "
-                    "an unknown reason!\n");
+      LLVM_DEBUG(dbgs() << "LV: [BUG] Not vectorizing: loop vect disabled for "
+                           "an unknown reason!\n");
       ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedUnknown",
                                         TheLoop->getStartLoc(),
                                         TheLoop->getHeader())
