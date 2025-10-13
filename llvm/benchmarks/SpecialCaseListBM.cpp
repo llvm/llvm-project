@@ -110,7 +110,7 @@ std::string genBoth(const std::vector<std::string> &Files) {
   return S;
 }
 
-void BM_Create(
+void BM_Make_(
     benchmark::State &state,
     std::string (*GenerateCaseList)(const std::vector<std::string> &Files)) {
   std::vector<std::string> BigFileList = genFiles(state.range(0));
@@ -120,7 +120,7 @@ void BM_Create(
     benchmark::DoNotOptimize(SCL);
   }
 }
-void BM_Pos(
+void BM_True_(
     benchmark::State &state,
     std::string (*GenerateCaseList)(const std::vector<std::string> &Files)) {
   std::vector<std::string> BigFileList = genFiles(state.range(0));
@@ -137,7 +137,7 @@ void BM_Pos(
   }
 }
 
-void BM_Neg(
+void BM_False(
     benchmark::State &state,
     std::string (*GenerateCaseList)(const std::vector<std::string> &Files)) {
   std::vector<std::string> BigFileList = genFiles(state.range(0));
@@ -156,51 +156,51 @@ void BM_Neg(
 
 } // namespace
 
-BENCHMARK_CAPTURE(BM_Create, Exact, genFixed)
+BENCHMARK_CAPTURE(BM_Make_, None_, genFixed)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Create, Start, genStart)
+BENCHMARK_CAPTURE(BM_Make_, Start, genStart)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Create, End, genEnd)
+BENCHMARK_CAPTURE(BM_Make_, End__, genEnd)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Create, Mid, genMid)
+BENCHMARK_CAPTURE(BM_Make_, Mid__, genMid)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Create, EndBoth, genBoth)
-    ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-
-BENCHMARK_CAPTURE(BM_Pos, Exact, genFixed)
-    ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Pos, Start, genStart)
-    ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Pos, End, genEnd)
-    ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Pos, Mid, genMid)
-    ->RangeMultiplier(MAX_LIST_MUL)
-    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Pos, Both, genBoth)
+BENCHMARK_CAPTURE(BM_Make_, Both_, genBoth)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
-BENCHMARK_CAPTURE(BM_Neg, Exact, genFixed)
+BENCHMARK_CAPTURE(BM_True_, None_, genFixed)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Neg, Start, genStart)
+BENCHMARK_CAPTURE(BM_True_, Start, genStart)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Neg, End, genEnd)
+BENCHMARK_CAPTURE(BM_True_, End__, genEnd)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Neg, Mid, genMid)
+BENCHMARK_CAPTURE(BM_True_, Mid__, genMid)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
-BENCHMARK_CAPTURE(BM_Neg, End, genBoth)
+BENCHMARK_CAPTURE(BM_True_, Both_, genBoth)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+
+BENCHMARK_CAPTURE(BM_False, None_, genFixed)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_False, Start, genStart)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_False, End__, genEnd)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_False, Mid__, genMid)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_False, Both_, genBoth)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
