@@ -1650,8 +1650,12 @@ protected:
 /// Rewrites a linalg::PackOp into a sequence of:
 ///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
 ///     tensor::InsertSliceOp ops.
+/// (InsertSliceOp is rank-expanding).
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::PackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is packed.
+///
+/// In addition, assumes that the un-tiled-outer-dims are not permuted.
 ///
 /// Before:
 /// ```
@@ -1687,10 +1691,13 @@ struct DecomposeOuterUnitDimsPackOpPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
+/// Rewrites a linalg::UnPackOp into a sequence of:
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+/// (ExtractSliceOp is rank-reducing).
 ///
-/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::UnPackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is
+/// unpacked.
 ///
 /// Before:
 /// ```

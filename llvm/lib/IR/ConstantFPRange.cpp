@@ -8,6 +8,7 @@
 
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -505,4 +506,25 @@ ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
 ConstantFPRange ConstantFPRange::sub(const ConstantFPRange &Other) const {
   // fsub X, Y = fadd X, (fneg Y)
   return add(Other.negate());
+}
+
+void ConstantFPRange::flushDenormals(DenormalMode::DenormalModeKind Mode) {
+  if (Mode == DenormalMode::IEEE)
+    return;
+  FPClassTest Class = classify();
+  if (!(Class & fcSubnormal))
+    return;
+
+  auto &Sem = getSemantics();
+  // PreserveSign: PosSubnormal -> PosZero, NegSubnormal -> NegZero
+  // PositiveZero: PosSubnormal -> PosZero, NegSubnormal -> PosZero
+  // Dynamic:      PosSubnormal -> PosZero, NegSubnormal -> NegZero/PosZero
+  bool ZeroLowerNegative =
+      Mode != DenormalMode::PositiveZero && (Class & fcNegSubnormal);
+  bool ZeroUpperNegative =
+      Mode == DenormalMode::PreserveSign && !(Class & fcPosSubnormal);
+  assert((ZeroLowerNegative || !ZeroUpperNegative) &&
+         "ZeroLower is greater than ZeroUpper.");
+  Lower = minnum(Lower, APFloat::getZero(Sem, ZeroLowerNegative));
+  Upper = maxnum(Upper, APFloat::getZero(Sem, ZeroUpperNegative));
 }
