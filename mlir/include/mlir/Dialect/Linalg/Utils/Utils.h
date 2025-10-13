@@ -37,7 +37,8 @@ namespace linalg {
 /// This function uses the helper function `computePackUnPackPerm` to get
 /// the permutation vector. Only major difference between UnPack and Pack is
 /// that packOp uses destination rank whereas unpack Uses source rank.
-SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp);
+SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp,
+                                            PackingMetadata &metadatap);
 
 /// Shell function to compute the Source Permutation of unPackOp.
 /// This function, like the getPackInverseDestPerm uses the helper function

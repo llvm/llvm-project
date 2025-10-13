@@ -285,6 +285,8 @@ module attributes {transform.with_named_sequence} {
 
 ///----------------------------------------------------------------------------------------
 /// Tests for linalg.pack
+///
+/// TODO: Add similar tests for linalg.unpack
 ///----------------------------------------------------------------------------------------
 
 // Note, see a similar test in:
