@@ -833,13 +833,13 @@ struct Parent {
 static_assert(Parent<void>::TakesUnary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesUnary'}}
 // expected-note@#UNARY{{because 'decltype(0ULL)' (aka 'unsigned long long') does not satisfy 'C'}}
-// expected-note@#61777_C{{because 'sizeof(unsigned long long) == 4' (8 == 4) evaluated to false}}
+// expected-note@#61777_C{{because 'sizeof(decltype(0ULL)) == 4' (8 == 4) evaluated to false}}
 static_assert(Parent<void>::TakesUnary<int, 0uLL>::i == 0);
 
 static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesBinary'}}
 // expected-note@#BINARY{{because 'C2<decltype(0ULL), int>' evaluated to false}}
-// expected-note@#61777_C2{{because 'sizeof(unsigned long long) == sizeof(int)' (8 == 4) evaluated to false}}
+// expected-note@#61777_C2{{because 'sizeof(decltype(0ULL)) == sizeof(int)' (8 == 4) evaluated to false}}
 static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
 }
 
@@ -1329,8 +1329,8 @@ static_assert(__cpp17_iterator<not_move_constructible>); \
 // expected-error {{static assertion failed}} \
 // expected-note {{because 'not_move_constructible' does not satisfy '__cpp17_iterator'}} \
 // expected-note@#__cpp17_copy_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_copy_constructible'}} \
-// expected-note@#__cpp17_move_constructible {{because 'parameter_mapping_regressions::case3::not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
-// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
+// expected-note@#__cpp17_move_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
+// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<not_move_constructible>' evaluated to false}}
 }
 
 namespace case4 {
@@ -1401,6 +1401,18 @@ struct std::tuple_size<array<_Tp, _Size>> : integral_constant<_Size> {};
 
 static_assert(std::is_convertible_v<array<int, 3>, span<3>>);
 static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
+
+}
+
+namespace case7 {
+
+template <class _Tp, class _Up>
+concept __same_as_impl = __is_same(_Tp, _Up);
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up>;
+template <typename>
+concept IsEntitySpec =
+  requires { requires same_as<void, void>; };
 
 }
 
@@ -1476,3 +1488,20 @@ static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overl
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
 
 }
+
+namespace GH162770 {
+  enum e {};
+  template<e> struct s {};
+
+  template<typename> struct specialized;
+  template<e x> struct specialized<s<x>> {
+    static auto make(auto) -> s<x>;
+  };
+
+  template<e x> struct check {
+    static constexpr auto m = requires { specialized<s<x>>::make(0); };
+  };
+
+  template<typename... Ts> auto comma = (..., Ts());
+  auto b = comma<check<e{}>>;
+} // namespace GH162770

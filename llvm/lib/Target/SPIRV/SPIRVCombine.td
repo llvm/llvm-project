@@ -11,8 +11,8 @@ include "llvm/Target/GlobalISel/Combine.td"
 def vector_length_sub_to_distance_lowering : GICombineRule <
   (defs root:$root),
   (match (wip_match_opcode G_INTRINSIC):$root,
-          [{ return matchLengthToDistance(*${root}, MRI); }]),
-  (apply [{ applySPIRVDistance(*${root}, MRI, B); }])
+          [{ return Helper.matchLengthToDistance(*${root}); }]),
+  (apply [{ Helper.applySPIRVDistance(*${root}); }])
 >;
 
 def SPIRVPreLegalizerCombiner
