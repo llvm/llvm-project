@@ -87,7 +87,6 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   bool isConsecutiveRegPair(Register First, Register Second);
   void splitLdSdIntoTwo(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator &MBBI, bool IsLoad);
-  int64_t getLoadStoreOffset(const MachineInstr &MI);
 
 private:
   AliasAnalysis *AA;
@@ -427,23 +426,6 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
 //===----------------------------------------------------------------------===//
 // Post reg-alloc zilsd pass implementation
 //===----------------------------------------------------------------------===//
-
-// Helper function to extract offset from load/store operands
-int64_t RISCVLoadStoreOpt::getLoadStoreOffset(const MachineInstr &MI) {
-  const MachineOperand &OffsetOp = MI.getOperand(2);
-
-  // Handle immediate offset
-  if (OffsetOp.isImm())
-    return OffsetOp.getImm();
-
-  // Handle symbolic operands with MO_LO flag (from MergeBaseOffset)
-  if (OffsetOp.getTargetFlags() & RISCVII::MO_LO)
-    if (OffsetOp.isGlobal() || OffsetOp.isCPI() || OffsetOp.isBlockAddress() ||
-        OffsetOp.isSymbol())
-      return OffsetOp.getOffset();
-
-  return 0;
-}
 
 bool RISCVLoadStoreOpt::isConsecutiveRegPair(Register First, Register Second) {
   // Special case: First register can not be zero
