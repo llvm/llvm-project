@@ -1502,10 +1502,6 @@ def TaintTesterChecker : Checker<"TaintTest">,
   HelpText<"Mark tainted symbols as such.">,
   Documentation<NotDocumented>;
 
-def UnsignedStatTesterChecker : Checker<"UnsignedStatTester">,
-  HelpText<"Test checker for demonstrating UnsignedEPStat usage.">,
-  Documentation<NotDocumented>;
-
 // This checker *technically* depends on SteamChecker, but we don't allow
 // dependency checkers to emit diagnostics, and a debug checker isn't worth
 // the chore needed to create a modeling portion on its own. Since this checker
