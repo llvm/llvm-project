@@ -97,7 +97,7 @@ declare i4 @llvm.ctpop.i4(i4) #1
 !8 = !{!"Simple C/C++ TBAA"}
 
 ; Function to lockdown changes for floating point vector comparisons
-define dso_local signext range(i32 0, 5) i32 @cols_needed(ptr noundef readonly captures(none) %colauths) local_unnamed_addr #0 {
+define range(i32 0, 5) i32 @cols_needed(ptr %colauths){
 ; POWERPC_64LE-LABEL: cols_needed:
 ; POWERPC_64LE:       # %bb.0: # %entry
 ; POWERPC_64LE-NEXT:    lxv vs0, 0(r3)
