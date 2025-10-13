@@ -31,13 +31,13 @@ namespace orc_rt {
 ///
 /// Intances can:
 /// 1. Reserve address space.
-/// 2. Finalize memory regions within reserved memory (copying content,
+/// 2. Initialize memory regions within reserved memory (copying content,
 ///    applying permissions, running finalize actions, and recording
 ///    deallocate actions).
-/// 3. Deallocate memory regions within reserved memory (running
+/// 3. Deinitialize memory regions within reserved memory (running
 ///    deallocate actions and making memory available for future
-///    finalize calls (if the system permits this).
-/// 4. Release address space, deallocating any not-yet-deallocated finalized
+///    initialize calls (if the system permits this).
+/// 4. Release address space, deinitializing any remaining initialized
 ///    regions, and returning the address space to the system for reuse (if
 ///    the system permits).
 class SimpleNativeMemoryMap : public ResourceManager {
@@ -58,7 +58,7 @@ public:
   void releaseMultiple(OnReleaseCompleteFn &&OnComplete,
                        std::vector<void *> Addrs);
 
-  struct FinalizeRequest {
+  struct InitializeRequest {
     struct Segment {
       AllocGroup AG;
       char *Address = nullptr;
@@ -72,19 +72,19 @@ public:
 
   /// Writes content into the requested ranges, applies permissions, and
   /// performs allocation actions.
-  using OnFinalizeCompleteFn = move_only_function<void(Expected<void *>)>;
-  void finalize(OnFinalizeCompleteFn &&OnComplete, FinalizeRequest FR);
+  using OnInitializeCompleteFn = move_only_function<void(Expected<void *>)>;
+  void initialize(OnInitializeCompleteFn &&OnComplete, InitializeRequest FR);
 
   /// Runs deallocation actions and resets memory permissions for the requested
   /// memory.
-  using OnDeallocateCompleteFn = move_only_function<void(Error)>;
-  void deallocate(OnDeallocateCompleteFn &&OnComplete, void *Base);
+  using OnDeinitializeCompleteFn = move_only_function<void(Error)>;
+  void deinitialize(OnDeinitializeCompleteFn &&OnComplete, void *Base);
 
-  /// Convenience method to deallocate multiple regions with one call. This can
-  /// be used to save on interprocess communication at the cost of less
+  /// Convenience method to deinitialize multiple regions with one call. This
+  /// can be used to save on interprocess communication at the cost of less
   /// expressive errors.
-  void deallocateMultiple(OnDeallocateCompleteFn &&OnComplete,
-                          std::vector<void *> Bases);
+  void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
+                            std::vector<void *> Bases);
 
   void detach(ResourceManager::OnCompleteFn OnComplete) override;
   void shutdown(ResourceManager::OnCompleteFn OnComplete) override;
@@ -98,8 +98,9 @@ private:
 
   void releaseNext(OnReleaseCompleteFn &&OnComplete, std::vector<void *> Addrs,
                    bool AnyError, Error LastErr);
-  void deallocateNext(OnDeallocateCompleteFn &&OnComplete,
-                      std::vector<void *> Bases, bool AnyError, Error LastErr);
+  void deinitializeNext(OnDeinitializeCompleteFn &&OnComplete,
+                        std::vector<void *> Bases, bool AnyError,
+                        Error LastErr);
   void shutdownNext(OnCompleteFn OnComplete, std::vector<void *> Bases);
   Error makeBadSlabError(void *Base, const char *Op);
   SlabInfo *findSlabInfoFor(void *Base);
@@ -121,12 +122,12 @@ orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_finalize_sps_wrapper(
+ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
 ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_deallocateMultiple_sps_wrapper(
+orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
     orc_rt_SessionRef Session, void *CallCtx,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
