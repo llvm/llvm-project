@@ -946,17 +946,21 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::Complex64:
     return lldb::eBasicTypeDoubleComplex;
   case SimpleTypeKind::Complex32:
+  case SimpleTypeKind::Complex32PartialPrecision:
     return lldb::eBasicTypeFloatComplex;
-  case SimpleTypeKind::Float128:
   case SimpleTypeKind::Float80:
     return lldb::eBasicTypeLongDouble;
+  case SimpleTypeKind::Float128:
+    return lldb::eBasicTypeFloat128;
   case SimpleTypeKind::Float64:
     return lldb::eBasicTypeDouble;
   case SimpleTypeKind::Float32:
+  case SimpleTypeKind::Float32PartialPrecision:
     return lldb::eBasicTypeFloat;
   case SimpleTypeKind::Float16:
     return lldb::eBasicTypeHalf;
   case SimpleTypeKind::Int128:
+  case SimpleTypeKind::Int128Oct:
     return lldb::eBasicTypeInt128;
   case SimpleTypeKind::Int64:
   case SimpleTypeKind::Int64Quad:
@@ -967,6 +971,7 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::Int16Short:
     return lldb::eBasicTypeShort;
   case SimpleTypeKind::UInt128:
+  case SimpleTypeKind::UInt128Oct:
     return lldb::eBasicTypeUnsignedInt128;
   case SimpleTypeKind::UInt64:
   case SimpleTypeKind::UInt64Quad:
@@ -985,6 +990,15 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
     return lldb::eBasicTypeVoid;
   case SimpleTypeKind::WideCharacter:
     return lldb::eBasicTypeWChar;
+
+  case SimpleTypeKind::None:
+  case SimpleTypeKind::NotTranslated:
+
+  // unsupported
+  case SimpleTypeKind::Float48:
+  case SimpleTypeKind::Complex16:
+  case SimpleTypeKind::Complex48:
+  case SimpleTypeKind::Complex128:
   default:
     return lldb::eBasicTypeInvalid;
   }
@@ -993,8 +1007,11 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
 size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
   switch (kind) {
   case SimpleTypeKind::Boolean128:
+  case SimpleTypeKind::Complex128:
   case SimpleTypeKind::Int128:
+  case SimpleTypeKind::Int128Oct:
   case SimpleTypeKind::UInt128:
+  case SimpleTypeKind::UInt128Oct:
   case SimpleTypeKind::Float128:
     return 16;
   case SimpleTypeKind::Complex80:
@@ -1008,10 +1025,15 @@ size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::Int64:
   case SimpleTypeKind::Int64Quad:
     return 8;
+  case SimpleTypeKind::Complex48:
+  case SimpleTypeKind::Float48:
+    return 6;
   case SimpleTypeKind::Boolean32:
   case SimpleTypeKind::Character32:
   case SimpleTypeKind::Complex32:
+  case SimpleTypeKind::Complex32PartialPrecision:
   case SimpleTypeKind::Float32:
+  case SimpleTypeKind::Float32PartialPrecision:
   case SimpleTypeKind::Int32:
   case SimpleTypeKind::Int32Long:
   case SimpleTypeKind::UInt32Long:
@@ -1020,6 +1042,7 @@ size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
     return 4;
   case SimpleTypeKind::Boolean16:
   case SimpleTypeKind::Character16:
+  case SimpleTypeKind::Complex16:
   case SimpleTypeKind::Float16:
   case SimpleTypeKind::Int16:
   case SimpleTypeKind::Int16Short:
@@ -1035,7 +1058,10 @@ size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::SByte:
   case SimpleTypeKind::Character8:
     return 1;
+
   case SimpleTypeKind::Void:
+  case SimpleTypeKind::None:
+  case SimpleTypeKind::NotTranslated:
   default:
     return 0;
   }
