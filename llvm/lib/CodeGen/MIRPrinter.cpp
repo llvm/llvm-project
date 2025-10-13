@@ -107,10 +107,8 @@ struct MFPrintState {
 
 } // end anonymous namespace
 
-namespace llvm::yaml {
-
 /// This struct serializes the LLVM IR module.
-template <> struct BlockScalarTraits<Module> {
+template <> struct yaml::BlockScalarTraits<Module> {
   static void output(const Module &Mod, void *Ctxt, raw_ostream &OS) {
     Mod.print(OS, nullptr);
   }
@@ -120,8 +118,6 @@ template <> struct BlockScalarTraits<Module> {
     return "";
   }
 };
-
-} // end namespace llvm::yaml
 
 static void printRegMIR(Register Reg, yaml::StringValue &Dest,
                         const TargetRegisterInfo *TRI) {
