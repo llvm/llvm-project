@@ -1293,7 +1293,7 @@ public:
   public:
     // Do not track cycles on D == nullptr.
     ScopedReturnTypeImport(FunctionReturnTypeDeclCycleDetector &owner,
-                           const Decl *D)
+                           const FunctionDecl *D)
         : CycleDetector(owner), D(D) {
       if (D)
         CycleDetector.FunctionReturnTypeDeclCycles.insert(D);
@@ -1307,22 +1307,22 @@ public:
 
   private:
     FunctionReturnTypeDeclCycleDetector &CycleDetector;
-    const Decl *D;
+    const FunctionDecl *D;
   };
 
-  ScopedReturnTypeImport DetectImportCycles(const Decl *D) {
+  ScopedReturnTypeImport DetectImportCycles(const FunctionDecl *D) {
     if (!IsCycle(D))
       return ScopedReturnTypeImport(*this, D);
     return ScopedReturnTypeImport(*this, nullptr);
   }
 
-  bool IsCycle(const Decl *D) const {
+  bool IsCycle(const FunctionDecl *D) const {
     return FunctionReturnTypeDeclCycles.find(D) !=
            FunctionReturnTypeDeclCycles.end();
   }
 
 private:
-  llvm::DenseSet<const Decl *> FunctionReturnTypeDeclCycles;
+  llvm::DenseSet<const FunctionDecl *> FunctionReturnTypeDeclCycles;
 };
 
 ExpectedType ASTNodeImporter::VisitType(const Type *T) {
