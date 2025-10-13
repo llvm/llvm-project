@@ -258,10 +258,16 @@ getAllocEffectFor(Value value,
   return success();
 }
 
-static Value getDistinctObjectsOperand(DistinctObjectsInterface op,
-                                       Value value) {
+static Operation *isDistinctObjectsOp(Operation *op) {
+  if (op && op->hasTrait<OpTrait::DistinctObjectsTrait>())
+    return op;
+
+  return nullptr;
+}
+
+static Value getDistinctObjectsOperand(Operation *op, Value value) {
   unsigned argNumber = cast<OpResult>(value).getResultNumber();
-  return op.getDistinctOperands()[argNumber];
+  return op->getOperand(argNumber);
 }
 
 static std::optional<AliasResult> checkDistinctObjects(Value lhs, Value rhs) {
@@ -269,11 +275,11 @@ static std::optional<AliasResult> checkDistinctObjects(Value lhs, Value rhs) {
   assert(lhs != rhs && "lhs and rhs must be different");
 
   // Result and corresponding operand must alias.
-  auto lhsOp = lhs.getDefiningOp<DistinctObjectsInterface>();
+  auto lhsOp = isDistinctObjectsOp(lhs.getDefiningOp());
   if (lhsOp && getDistinctObjectsOperand(lhsOp, lhs) == rhs)
     return AliasResult::MustAlias;
 
-  auto rhsOp = rhs.getDefiningOp<DistinctObjectsInterface>();
+  auto rhsOp = isDistinctObjectsOp(rhs.getDefiningOp());
   if (rhsOp && getDistinctObjectsOperand(rhsOp, rhs) == lhs)
     return AliasResult::MustAlias;
 
