@@ -1339,6 +1339,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> PTLFeatures =
     !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
 
+  // Wildcatlake
+  list<SubtargetFeature> WCLFeatures = PTLFeatures;
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
@@ -1883,6 +1885,8 @@ def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
 def : ProcModel<"pantherlake", AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
+def : ProcModel<"wildcatlake", AlderlakePModel,
+                ProcessorFeatures.WCLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,

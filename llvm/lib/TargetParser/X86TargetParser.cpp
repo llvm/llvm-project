@@ -176,6 +176,7 @@ constexpr FeatureBitset FeaturesArrowlakeS =
     FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
     (FeaturesArrowlakeS ^ FeatureWIDEKL) | FeaturePREFETCHI;
+constexpr FeatureBitset FeaturesWildcatlake = FeaturesPantherlake;
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
@@ -378,6 +379,7 @@ constexpr ProcInfo Processors[] = {
   { {"gracemont"}, CK_Gracemont, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Pantherlake microarchitecture based processors.
   { {"pantherlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
+  { {"wildcatlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesWildcatlake, 'p', false },
   // Sierraforest microarchitecture based processors.
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
