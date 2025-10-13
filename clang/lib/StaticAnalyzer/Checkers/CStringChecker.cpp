@@ -994,7 +994,6 @@ CStringChecker::getStringLiteralFromRegion(const MemRegion *MR) {
   default:
     return nullptr;
   }
-  return nullptr;
 }
 
 SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
@@ -1061,15 +1060,14 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
       return UnknownVal();
     SValBuilder &SVB = C.getSValBuilder();
     NonLoc Idx = ER->getIndex();
+    QualType SizeTy = SVB.getContext().getSizeType();
     NonLoc LengthVal =
-        SVB.makeIntVal(StrLit->getLength(), SVB.getContext().getSizeType())
-            .castAs<NonLoc>();
+        SVB.makeIntVal(StrLit->getLength(), SizeTy).castAs<NonLoc>();
     if (state->assume(SVB.evalBinOpNN(state, BO_LE, Idx, LengthVal,
                                       SVB.getConditionType())
                           .castAs<DefinedOrUnknownSVal>(),
                       true))
-      return SVB.evalBinOp(state, BO_Sub, LengthVal, Idx,
-                           SVB.getContext().getSizeType());
+      return SVB.evalBinOp(state, BO_Sub, LengthVal, Idx, SizeTy);
     return UnknownVal();
   }
   default:
