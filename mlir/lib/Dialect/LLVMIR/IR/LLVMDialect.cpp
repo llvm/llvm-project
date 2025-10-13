@@ -29,6 +29,8 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
 
+#include "LLVMDialectBytecode.h"
+
 #include <numeric>
 #include <optional>
 
@@ -4237,6 +4239,7 @@ void LLVMDialect::initialize() {
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
+  detail::addBytecodeInterface(this);
 }
 
 #define GET_OP_CLASSES
