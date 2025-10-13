@@ -2093,7 +2093,6 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::ExtVector:
   case Type::Vector: {
     const auto *VT = cast<VectorType>(T);
-    QualType Elt = VT->getElementType();
     Width = getVectorElementSize(VT) * VT->getNumElements();
     // Enforce at least byte size and alignment.
     Width = std::max<unsigned>(8, Width);
