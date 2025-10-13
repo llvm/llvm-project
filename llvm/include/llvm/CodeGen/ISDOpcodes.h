@@ -515,6 +515,9 @@ enum NodeType {
   FMAD,
 
   /// FMULADD - Performs a * b + c, with, or without, intermediate rounding.
+  /// It is expected that this will be illegal for most targets, as it usually
+  /// makes sense to split this or use an FMA. But some targets, such as
+  /// WebAssembly, can directly support these semantics.
   FMULADD,
 
   /// FCOPYSIGN(X, Y) - Return the value of X with the sign of Y.  NOTE: This
