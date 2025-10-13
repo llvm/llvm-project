@@ -513,30 +513,30 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   case DW_LNAME_C: {
     if (Version == 0)
       break;
-    if (Version <= 198912)
+    if (Version <= DW_LANG_VERSION_C89)
       return "C89";
-    if (Version <= 199901)
+    if (Version <= DW_LANG_VERSION_C99)
       return "C99";
-    if (Version <= 201112)
+    if (Version <= DW_LANG_VERSION_C11)
       return "C11";
-    if (Version <= 201710)
+    if (Version <= DW_LANG_VERSION_C17)
       return "C17";
   } break;
 
   case DW_LNAME_C_plus_plus: {
     if (Version == 0)
       break;
-    if (Version <= 199711)
+    if (Version <= DW_LANG_VERSION_C_plus_plus_98)
       return "C++98";
     if (Version <= 200310)
       return "C++03";
-    if (Version <= 201103)
+    if (Version <= DW_LANG_VERSION_C_plus_plus_11)
       return "C++11";
-    if (Version <= 201402)
+    if (Version <= DW_LANG_VERSION_C_plus_plus_14)
       return "C++14";
-    if (Version <= 201703)
+    if (Version <= DW_LANG_VERSION_C_plus_plus_17)
       return "C++17";
-    if (Version <= 202002)
+    if (Version <= DW_LANG_VERSION_C_plus_plus_20)
       return "C++20";
   } break;
 

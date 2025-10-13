@@ -66,6 +66,22 @@ enum LLVMConstants : uint32_t {
   DW_ARANGES_VERSION = 2,  ///< Section version number for .debug_aranges.
   /// \}
 
+  /// DWARFv6 DW_AT_language_version constants:
+  /// https://dwarfstd.org/languages-v6.html
+  /// \{
+  DW_LANG_VERSION_C89 = 198912,
+  DW_LANG_VERSION_C99 = 199901,
+  DW_LANG_VERSION_C11 = 201112,
+  DW_LANG_VERSION_C17 = 201710,
+  DW_LANG_VERSION_C23 = 202311,
+  DW_LANG_VERSION_C_plus_plus_98 = 199711,
+  DW_LANG_VERSION_C_plus_plus_11 = 201103,
+  DW_LANG_VERSION_C_plus_plus_14 = 201402,
+  DW_LANG_VERSION_C_plus_plus_17 = 201703,
+  DW_LANG_VERSION_C_plus_plus_20 = 202002,
+  DW_LANG_VERSION_C_plus_plus_23 = 202302,
+  /// \}
+
   /// Identifiers we use to distinguish vendor extensions.
   /// \{
   DWARF_VENDOR_DWARF = 0, ///< Defined in v2 or later of the DWARF standard.
@@ -246,29 +262,29 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
   case DW_LNAME_C: // YYYYMM, K&R 000000
     if (version == 0)
       return DW_LANG_C;
-    if (version <= 198912)
+    if (version <= DW_LANG_VERSION_C89)
       return DW_LANG_C89;
-    if (version <= 199901)
+    if (version <= DW_LANG_VERSION_C99)
       return DW_LANG_C99;
-    if (version <= 201112)
+    if (version <= DW_LANG_VERSION_C11)
       return DW_LANG_C11;
-    if (version <= 201710)
+    if (version <= DW_LANG_VERSION_C17)
       return DW_LANG_C17;
     return {};
   case DW_LNAME_C_plus_plus: // YYYYMM
     if (version == 0)
       return DW_LANG_C_plus_plus;
-    if (version <= 199711)
+    if (version <= DW_LANG_VERSION_C_plus_plus_98)
       return DW_LANG_C_plus_plus;
     if (version <= 200310)
       return DW_LANG_C_plus_plus_03;
-    if (version <= 201103)
+    if (version <= DW_LANG_VERSION_C_plus_plus_11)
       return DW_LANG_C_plus_plus_11;
-    if (version <= 201402)
+    if (version <= DW_LANG_VERSION_C_plus_plus_14)
       return DW_LANG_C_plus_plus_14;
-    if (version <= 201703)
+    if (version <= DW_LANG_VERSION_C_plus_plus_17)
       return DW_LANG_C_plus_plus_17;
-    if (version <= 202002)
+    if (version <= DW_LANG_VERSION_C_plus_plus_20)
       return DW_LANG_C_plus_plus_20;
     return {};
   case DW_LNAME_Cobol: // YYYY
@@ -384,25 +400,25 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_C:
     return {{DW_LNAME_C, 0}};
   case DW_LANG_C89:
-    return {{DW_LNAME_C, 198912}};
+    return {{DW_LNAME_C, DW_LANG_VERSION_C89}};
   case DW_LANG_C99:
-    return {{DW_LNAME_C, 199901}};
+    return {{DW_LNAME_C, DW_LANG_VERSION_C99}};
   case DW_LANG_C11:
-    return {{DW_LNAME_C, 201112}};
+    return {{DW_LNAME_C, DW_LANG_VERSION_C11}};
   case DW_LANG_C17:
-    return {{DW_LNAME_C, 201710}};
+    return {{DW_LNAME_C, DW_LANG_VERSION_C17}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
     return {{DW_LNAME_C_plus_plus, 200310}};
   case DW_LANG_C_plus_plus_11:
-    return {{DW_LNAME_C_plus_plus, 201103}};
+    return {{DW_LNAME_C_plus_plus, DW_LANG_VERSION_C_plus_plus_11}};
   case DW_LANG_C_plus_plus_14:
-    return {{DW_LNAME_C_plus_plus, 201402}};
+    return {{DW_LNAME_C_plus_plus, DW_LANG_VERSION_C_plus_plus_14}};
   case DW_LANG_C_plus_plus_17:
-    return {{DW_LNAME_C_plus_plus, 201703}};
+    return {{DW_LNAME_C_plus_plus, DW_LANG_VERSION_C_plus_plus_17}};
   case DW_LANG_C_plus_plus_20:
-    return {{DW_LNAME_C_plus_plus, 202002}};
+    return {{DW_LNAME_C_plus_plus, DW_LANG_VERSION_C_plus_plus_20}};
   case DW_LANG_Cobol74:
     return {{DW_LNAME_Cobol, 1974}};
   case DW_LANG_Cobol85:
