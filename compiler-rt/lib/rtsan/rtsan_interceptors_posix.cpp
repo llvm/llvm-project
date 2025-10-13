@@ -815,6 +815,16 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
   return REAL(pthread_rwlock_wrlock)(lock);
 }
 
+INTERCEPTOR(int, pthread_detach, pthread_t thread) {
+  __rtsan_notify_intercepted_call("pthread_detach");
+  return REAL(pthread_detach)(thread);
+}
+
+INTERCEPTOR(int, pthread_kill, pthread_t thread, int signal) {
+  __rtsan_notify_intercepted_call("pthread_kill");
+  return REAL(pthread_kill)(thread, signal);
+}
+
 // Sleeping
 
 INTERCEPTOR(unsigned int, sleep, unsigned int s) {
@@ -1676,6 +1686,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_rwlock_rdlock);
   INTERCEPT_FUNCTION(pthread_rwlock_unlock);
   INTERCEPT_FUNCTION(pthread_rwlock_wrlock);
+  INTERCEPT_FUNCTION(pthread_detach);
+  INTERCEPT_FUNCTION(pthread_kill);
 
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);
