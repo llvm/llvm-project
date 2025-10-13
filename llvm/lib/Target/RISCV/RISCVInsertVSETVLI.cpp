@@ -1946,7 +1946,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
 
     Changed = true;
     Register Reg = Op.getReg();
-    Op.setReg(RISCV::NoRegister);
+    Op.setReg(Register());
     Op.setIsKill(false);
     if (LIS) {
       LIS->InsertMachineInstrInMaps(*TmpMI);
