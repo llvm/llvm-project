@@ -6854,14 +6854,15 @@ def note_exits_block_captures_non_trivial_c_struct : Note<
 def note_exits_compound_literal_scope : Note<
   "jump exits lifetime of a compound literal that is non-trivial to destruct">;
 def note_exits_defer_stmt : Note<"jump exits a defer statement">;
-def err_jump_out_of_defer_stmt
-    : Error<"cannot %enum_select<DeferJumpKind>{"
-            "%Break{break out of a}|"
-            "%Continue{continue loop outside of enclosing}|"
-            "%Return{return from a}|"
-            "%SEHLeave{__leave a}"
-            "}0 defer statement">;
-def err_defer_invalid_sjlj : Error<"cannot use %0 inside a defer statement">;
+def err_jump_out_of_defer_stmt : Error<
+  "cannot %enum_select<DeferJumpKind>{"
+  "%Break{break out of a}|"
+  "%Continue{continue loop outside of enclosing}|"
+  "%Return{return from a}|"
+  "%SEHLeave{__leave a}"
+  "}0 defer statement">;
+def err_defer_invalid_sjlj : Error<
+  "cannot use %0 inside a defer statement">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
@@ -10949,8 +10950,8 @@ def warn_empty_while_body : Warning<
   "while loop has empty body">, InGroup<EmptyBody>;
 def warn_empty_switch_body : Warning<
   "switch statement has empty body">, InGroup<EmptyBody>;
-def warn_empty_defer_body : Warning<"defer statement has empty body">,
-                            InGroup<EmptyBody>;
+def warn_empty_defer_body : Warning<
+  "defer statement has empty body">, InGroup<EmptyBody>;
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 

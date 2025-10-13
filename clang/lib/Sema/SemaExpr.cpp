@@ -6876,8 +6876,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     Scope *Block = CurScope->getBlockParent();
     if (DeferParent->Contains(*CurScope) &&
         (!Block || !DeferParent->Contains(*Block)))
-      Diag(Fn->getExprLoc(), diag::err_defer_invalid_sjlj)
-          << FDecl->getDeclName();
+      Diag(Fn->getExprLoc(), diag::err_defer_invalid_sjlj) << FDecl;
   }
 
   // Functions with 'interrupt' attribute cannot be called directly.

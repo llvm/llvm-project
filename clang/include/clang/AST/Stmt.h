@@ -3263,7 +3263,8 @@ public:
     DeferStmtBits.DeferLoc = DeferLoc;
   }
 
-  Stmt *getBody() const { return Body; }
+  Stmt *getBody() { return Body; }
+  const Stmt *getBody() const { return Body; }
   void setBody(Stmt *S) {
     assert(S && "defer body must not be null");
     Body = S;

@@ -2006,7 +2006,7 @@ struct EmitDeferredStatement final : EHScopeStack::Cleanup {
   const DeferStmt &Stmt;
   EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
 
-  void Emit(CodeGenFunction &CGF, Flags flags) override {
+  void Emit(CodeGenFunction &CGF, Flags) override {
     CGF.EmitStmt(Stmt.getBody());
   }
 };

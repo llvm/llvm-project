@@ -4,7 +4,7 @@
 int g(void);
 int h(int x);
 
-void f(void) {
+void f1(void) {
   defer 1; // expected-warning {{expression result unused}}
   defer 1 + 1; // expected-warning {{expression result unused}}
   defer "a"; // expected-warning {{expression result unused}}
@@ -27,8 +27,8 @@ void f(void) {
   defer
     ;
 
-  defer a: g(); // expected-error {{body of 'defer' statement cannot start with a label}}
-  defer b: {} // expected-error {{body of 'defer' statement cannot start with a label}}
+  defer a: g(); // expected-error {{substatement of 'defer' must not be a label}}
+  defer b: {} // expected-error {{substatement of 'defer' must not be a label}}
   defer { c: g(); }
 
   if (g()) defer g();
@@ -38,4 +38,11 @@ void f(void) {
 
   defer int x; // expected-error {{expected expression}}
   defer void q() {} // expected-error {{expected expression}}
+}
+
+void f2(void) {
+  [[some, attributes]] defer g(); // expected-error {{an attribute list cannot appear here}}
+  __attribute__((some_attribute)) defer g(); // expected-error {{an attribute list cannot appear here}}
+  [[some, attributes]] defer { g(); } // expected-error {{an attribute list cannot appear here}}
+  __attribute__((some_attribute)) defer { g(); } // expected-error {{an attribute list cannot appear here}}
 }
