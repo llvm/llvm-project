@@ -34,6 +34,22 @@ private:
   raw_ostream &OS;
 };
 
+// Simple RAII helper for emitting header inclusion guard (i.e,
+// ifndef-define-endif).
+class InclusionGuardEmitter {
+public:
+  InclusionGuardEmitter(raw_ostream &OS, StringRef Name)
+      : Name(Name.str()), OS(OS) {
+    OS << "#ifndef " << Name << "\n"
+       << "#define " << Name << "\n\n";
+  }
+  ~InclusionGuardEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
+
+private:
+  std::string Name;
+  raw_ostream &OS;
+};
+
 // Simple RAII helper for emitting namespace scope. Name can be a single
 // namespace (empty for anonymous namespace) or nested namespace.
 class NamespaceEmitter {
