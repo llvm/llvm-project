@@ -941,10 +941,9 @@ static void scalarize(Instruction *I,
       llvm_unreachable("Unsupported instruction type");
 
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
-    if (auto *ScalarizedI = dyn_cast<Instruction>(NewOp)) {
-      ScalarizedI->copyIRFlags(I, true);
-      Worklist.push_back(ScalarizedI);
-    }
+    Instruction *ScalarizedI = cast<Instruction>(NewOp);
+    ScalarizedI->copyIRFlags(I, true);
+    Worklist.push_back(ScalarizedI);
   }
 
   I->replaceAllUsesWith(Result);
@@ -993,7 +992,6 @@ static void addToWorklist(Instruction &I,
 static bool runImpl(Function &F, const TargetLowering &TLI,
                     AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
-  bool Modified = false;
 
   unsigned MaxLegalFpConvertBitWidth =
       TLI.getMaxLargeFPConvertBitWidthSupported();
@@ -1015,7 +1013,6 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (!targetSupportsFrem(TLI, Ty) &&
           FRemExpander::canExpandType(Ty->getScalarType())) {
         addToWorklist(I, Worklist);
-        Modified = true;
       }
       break;
     case Instruction::FPToUI:
@@ -1025,7 +1022,6 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
         continue;
 
       addToWorklist(I, Worklist);
-      Modified = true;
       break;
     }
     case Instruction::UIToFP:
@@ -1036,7 +1032,6 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
         continue;
 
       addToWorklist(I, Worklist);
-      Modified = true;
       break;
     }
     default:
@@ -1044,6 +1039,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
   }
 
+  bool Modified = !Worklist.empty();
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
     if (I->getOpcode() == Instruction::FRem) {
