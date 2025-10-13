@@ -12400,7 +12400,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned NumElts = SourceLHS.getVectorLength();
     unsigned EltBits = Info.Ctx.getIntWidth(DestEltTy);
     unsigned EltsPerLane = 128 / EltBits;
-    unsigned Lanes = NumElts * EltBits / 128;
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(NumElts);
 
