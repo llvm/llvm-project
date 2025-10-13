@@ -70,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
