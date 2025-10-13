@@ -3751,9 +3751,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_phaddsw128:
   case clang::X86::BI__builtin_ia32_phaddsw256:
     return interp_builtin_horizontal_int_binop(
-        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          return LHS.sadd_sat(RHS);
-        });
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS.sadd_sat(RHS); });
   case clang::X86::BI__builtin_ia32_phsubw128:
   case clang::X86::BI__builtin_ia32_phsubw256:
   case clang::X86::BI__builtin_ia32_phsubd128:
@@ -3764,9 +3763,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_phsubsw128:
   case clang::X86::BI__builtin_ia32_phsubsw256:
     return interp_builtin_horizontal_int_binop(
-        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          return LHS.ssub_sat(RHS);
-        });
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS.ssub_sat(RHS); });
   case clang::X86::BI__builtin_ia32_haddpd:
   case clang::X86::BI__builtin_ia32_haddps:
   case clang::X86::BI__builtin_ia32_haddpd256:
