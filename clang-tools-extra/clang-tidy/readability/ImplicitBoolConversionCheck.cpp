@@ -210,7 +210,7 @@ getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
-      BoolLiteral->getValue() == false) {
+      !BoolLiteral->getValue()) {
     return "0";
   }
 
