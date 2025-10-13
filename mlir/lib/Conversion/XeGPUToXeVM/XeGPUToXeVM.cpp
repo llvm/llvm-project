@@ -882,6 +882,9 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
 
+    // If result type of original op is single element vector and lowered type
+    // is scalar. This materialization cast creates a single element vector by
+    // broadcasting the scalar value.
     auto singleElementVectorMaterializationCast =
         [](OpBuilder &builder, Type type, ValueRange inputs,
            Location loc) -> Value {
