@@ -678,7 +678,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    RunCleanupsScope dtorEpilogue(*this);
+    enterDtorCleanups(dtor, Dtor_Deleting);
+    if (haveInsertPoint()) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+    }
     return;
   }
 

@@ -535,6 +535,7 @@ def fdiv       : SDNode<"ISD::FDIV"       , SDTFPBinOp>;
 def frem       : SDNode<"ISD::FREM"       , SDTFPBinOp>;
 def fma        : SDNode<"ISD::FMA"        , SDTFPTernaryOp, [SDNPCommutative]>;
 def fmad       : SDNode<"ISD::FMAD"       , SDTFPTernaryOp, [SDNPCommutative]>;
+def fmuladd    : SDNode<"ISD::FMULADD"    , SDTFPTernaryOp, [SDNPCommutative]>;
 def fabs       : SDNode<"ISD::FABS"       , SDTFPUnaryOp>;
 def fminnum    : SDNode<"ISD::FMINNUM"    , SDTFPBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;

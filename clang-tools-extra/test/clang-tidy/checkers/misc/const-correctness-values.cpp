@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s misc-const-correctness %t -- \
+// RUN: %check_clang_tidy %s misc-const-correctness %t -- \
 // RUN:   -config="{CheckOptions: {\
 // RUN:     misc-const-correctness.TransformValues: true, \
 // RUN:     misc-const-correctness.WarnPointersAsValues: false, \
@@ -38,7 +38,7 @@ void some_function(double, wchar_t);
 void some_function(double np_arg0, wchar_t np_arg1) {
   int p_local0 = 2;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 2;
 
   int np_local0;
   const int np_local1 = 42;
@@ -60,7 +60,7 @@ void some_function(double np_arg0, wchar_t np_arg1) {
 int function_try_block() try {
   int p_local0 = 0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 0;
   return p_local0;
 } catch (...) {
   return 0;
@@ -69,13 +69,13 @@ int function_try_block() try {
 void nested_scopes() {
   int p_local0 = 2;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 2;
   int np_local0 = 42;
 
   {
     int p_local1 = 42;
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: variable 'p_local1' of type 'int' can be declared 'const'
-    // CHECK-FIXES: int const p_local1
+    // CHECK-FIXES: int const p_local1 = 42;
     np_local0 *= 2;
   }
 }
@@ -89,7 +89,7 @@ void some_lambda_environment_capture_all_by_reference(double np_arg0) {
   int np_local0 = 0;
   int p_local0 = 1;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 1;
 
   int np_local2;
   const int np_local3 = 2;
@@ -99,14 +99,14 @@ void some_lambda_environment_capture_all_by_reference(double np_arg0) {
 
   int p_local1 = 0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local1
+  // CHECK-FIXES: int const p_local1 = 0;
 }
 
 void some_lambda_environment_capture_all_by_value(double np_arg0) {
   int np_local0 = 0;
   int p_local0 = 1;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 1;
 
   int np_local1;
   const int np_local2 = 2;
@@ -139,12 +139,12 @@ void some_pointer_taking(int *out) {
 
   int p_local1 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local1
+  // CHECK-FIXES: int const p_local1 = 42;
   const int *const p0_p_local1 = &p_local1;
 
   int p_local2 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local2
+  // CHECK-FIXES: int const p_local2 = 42;
   function_in_pointer(&p_local2);
 }
 
@@ -163,19 +163,19 @@ void some_reference_taking() {
 
   int p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 42;
   const int &r0_p_local0 = p_local0;
 
   int p_local1 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local1
+  // CHECK-FIXES: int const p_local1 = 42;
   function_in_ref(p_local1);
 }
 
 double *non_const_pointer_return() {
   double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local0
+  // CHECK-FIXES: double const p_local0 = 0.0;
   double np_local0 = 24.4;
 
   return &np_local0;
@@ -184,10 +184,10 @@ double *non_const_pointer_return() {
 const double *const_pointer_return() {
   double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local0
+  // CHECK-FIXES: double const p_local0 = 0.0;
   double p_local1 = 24.4;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local1
+  // CHECK-FIXES: double const p_local1 = 24.4;
   return &p_local1;
 }
 
@@ -195,10 +195,10 @@ const double *const_pointer_return() {
 const double &const_ref_return() {
   double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local0
+  // CHECK-FIXES: double const p_local0 = 0.0;
   double p_local1 = 24.4;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local1
+  // CHECK-FIXES: double const p_local1 = 24.4;
   return p_local1;
 }
 
@@ -237,7 +237,7 @@ void define_locals(T np_arg0, T &np_arg1, int np_arg2) {
   // non-template values are ok still.
   int p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 42;
   np_local4 += p_local0;
 }
 
@@ -306,19 +306,19 @@ void direct_class_access() {
 
   ConstNonConstClass p_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'ConstNonConstClass' can be declared 'const'
-  // CHECK-FIXES: ConstNonConstClass const p_local0
+  // CHECK-FIXES: ConstNonConstClass const p_local0;
   p_local0.constMethod();
 
   ConstNonConstClass p_local1;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'ConstNonConstClass' can be declared 'const'
-  // CHECK-FIXES: ConstNonConstClass const p_local1
+  // CHECK-FIXES: ConstNonConstClass const p_local1;
   double np_local1;
   p_local1.modifyingMethod(np_local1);
 
   double np_local2;
   ConstNonConstClass p_local2(np_local2);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'ConstNonConstClass' can be declared 'const'
-  // CHECK-FIXES: ConstNonConstClass const p_local2(np_local2)
+  // CHECK-FIXES: ConstNonConstClass const p_local2(np_local2);
 
   ConstNonConstClass np_local3;
   np_local3.NonConstMember = 42.;
@@ -328,14 +328,14 @@ void direct_class_access() {
 
   ConstNonConstClass p_local3;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'ConstNonConstClass' can be declared 'const'
-  // CHECK-FIXES: ConstNonConstClass const p_local3
+  // CHECK-FIXES: ConstNonConstClass const p_local3;
   const double val0 = p_local3.NonConstMember;
   const double val1 = p_local3.NonConstMemberRef;
   const double val2 = *p_local3.NonConstMemberPtr;
 
   ConstNonConstClass p_local4;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local4' of type 'ConstNonConstClass' can be declared 'const'
-  // CHECK-FIXES: ConstNonConstClass const p_local4
+  // CHECK-FIXES: ConstNonConstClass const p_local4;
   *np_local4.NonConstMemberPtr = 42.;
 }
 
@@ -347,7 +347,7 @@ void class_access_array() {
 
   ConstNonConstClass p_local0[2];
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'ConstNonConstClass[2]' can be declared 'const'
-  // CHECK-FIXES: ConstNonConstClass const p_local0[2]
+  // CHECK-FIXES: ConstNonConstClass const p_local0[2];
   p_local0[0].constMethod();
   np_local0[1].constMethod();
 }
@@ -367,10 +367,10 @@ void internal_operator_calls() {
   OperatorsAsConstAsPossible np_local1;
   OperatorsAsConstAsPossible p_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'OperatorsAsConstAsPossible' can be declared 'const'
-  // CHECK-FIXES: OperatorsAsConstAsPossible const p_local0
+  // CHECK-FIXES: OperatorsAsConstAsPossible const p_local0;
   OperatorsAsConstAsPossible p_local1;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'OperatorsAsConstAsPossible' can be declared 'const'
-  // CHECK-FIXES: OperatorsAsConstAsPossible const p_local1
+  // CHECK-FIXES: OperatorsAsConstAsPossible const p_local1;
 
   np_local0 += p_local0;
   np_local1 = p_local0 + p_local1;
@@ -383,10 +383,10 @@ void internal_operator_calls() {
 
   NonConstOperators p_local2;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'NonConstOperators' can be declared 'const'
-  // CHECK-FIXES: NonConstOperators const p_local2
+  // CHECK-FIXES: NonConstOperators const p_local2;
   NonConstOperators p_local3 = p_local2 - p_local2;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'NonConstOperators' can be declared 'const'
-  // CHECK-FIXES: NonConstOperators const p_local3
+  // CHECK-FIXES: NonConstOperators const p_local3 = p_local2 - p_local2;
 }
 
 struct MyVector {
@@ -411,17 +411,17 @@ void vector_usage() {
 
   double p_local0[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double[10]' can be declared 'const'
-  // CHECK-FIXES: double const p_local0[10]
+  // CHECK-FIXES: double const p_local0[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   double p_local1 = p_local0[5];
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local1
+  // CHECK-FIXES: double const p_local1 = p_local0[5];
 
-  // The following subscript calls suprisingly choose the non-const operator
+  // The following subscript calls surprisingly choose the non-const operator
   // version.
   MyVector np_local2;
   double p_local2 = np_local2[42];
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local2
+  // CHECK-FIXES: double const p_local2 = np_local2[42];
 
   MyVector np_local3;
   const double np_local4 = np_local3[42];
@@ -430,7 +430,7 @@ void vector_usage() {
   const MyVector np_local5{};
   double p_local3 = np_local5[42];
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local3
+  // CHECK-FIXES: double const p_local3 = np_local5[42];
 }
 
 void const_handle(const double &np_local0);
@@ -460,27 +460,27 @@ void handle_from_array() {
   // Constant handles are ok
   double p_local1[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double[10]' can be declared 'const'
-  // CHECK-FIXES: double const p_local1[10]
+  // CHECK-FIXES: double const p_local1[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   const double *p_local2 = &p_local1[2]; // Could be `const double *const`, but warning deactivated by default
 
   double p_local3[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'double[10]' can be declared 'const'
-  // CHECK-FIXES: double const p_local3[10]
+  // CHECK-FIXES: double const p_local3[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   const double &const_ref = p_local3[2];
 
   double p_local4[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local4' of type 'double[10]' can be declared 'const'
-  // CHECK-FIXES: double const p_local4[10]
+  // CHECK-FIXES: double const p_local4[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   const double *const_ptr;
   const_ptr = &p_local4[2];
 
   double p_local5[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local5' of type 'double[10]' can be declared 'const'
-  // CHECK-FIXES: double const p_local5[10]
+  // CHECK-FIXES: double const p_local5[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   const_handle(p_local5[2]);
   double p_local6[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local6' of type 'double[10]' can be declared 'const'
-  // CHECK-FIXES: double const p_local6[10]
+  // CHECK-FIXES: double const p_local6[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   const_handle(&p_local6[2]);
 }
 
@@ -513,15 +513,15 @@ void range_for() {
 
   int p_local0[2] = {1, 2};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int[2]' can be declared 'const'
-  // CHECK-FIXES: int const p_local0[2]
+  // CHECK-FIXES: int const p_local0[2] = {1, 2};
   for (int value : p_local0) {
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'value' of type 'int' can be declared 'const'
-    // CHECK-FIXES: int const value
+    // CHECK-FIXES: for (int const value : p_local0) {
   }
 
   int p_local1[2] = {1, 2};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int[2]' can be declared 'const'
-  // CHECK-FIXES: int const p_local1[2]
+  // CHECK-FIXES: int const p_local1[2] = {1, 2};
   for (const int &const_ref : p_local1) {
   }
 }
@@ -552,7 +552,7 @@ void conversion_operators() {
   ModifyingConversion np_local0;
   NonModifyingConversion p_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'NonModifyingConversion' can be declared 'const'
-  // CHECK-FIXES: NonModifyingConversion const p_local0
+  // CHECK-FIXES: NonModifyingConversion const p_local0;
 
   int np_local1 = np_local0;
   np_local1 = p_local0;
@@ -561,16 +561,16 @@ void conversion_operators() {
 void casts() {
   decltype(sizeof(void *)) p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'decltype(sizeof(void *))'
-  // CHECK-FIXES: decltype(sizeof(void *)) const p_local0
+  // CHECK-FIXES: decltype(sizeof(void *)) const p_local0 = 42;
   auto np_local0 = reinterpret_cast<void *>(p_local0);
   np_local0 = nullptr;
 
   int p_local1 = 43;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local1
+  // CHECK-FIXES: int const p_local1 = 43;
   short p_local2 = static_cast<short>(p_local1);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'short' can be declared 'const'
-  // CHECK-FIXES: short const p_local2
+  // CHECK-FIXES: short const p_local2 = static_cast<short>(p_local1);
 
   int np_local1 = p_local2;
   int &np_local2 = static_cast<int &>(np_local1);
@@ -584,7 +584,7 @@ void ternary_operator() {
 
   int p_local0 = 3, np_local3 = 5;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-NOT-FIXES: int const p_local0 = 3
+  // CHECK-NOT-FIXES: int const p_local0 = 3, np_local3 = 5;
   const int &np_local4 = true ? p_local0 : ++np_local3;
 
   int np_local5[3] = {1, 2, 3};
@@ -636,13 +636,13 @@ struct TMPClass {
 void meta_type() {
   TMPClass<int> p_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'TMPClass<int>' can be declared 'const'
-  // CHECK-FIXES: TMPClass<int> const p_local0
+  // CHECK-FIXES: TMPClass<int> const p_local0;
   p_local0.alwaysConst();
   p_local0.sometimesConst();
 
   TMPClass<double> p_local1;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'TMPClass<double>' can be declared 'const'
-  // CHECK-FIXES: TMPClass<double> const p_local1
+  // CHECK-FIXES: TMPClass<double> const p_local1;
   p_local1.alwaysConst();
 
   TMPClass<double> np_local0;
@@ -659,7 +659,7 @@ template <typename T>
 void placement_new_in_unique_ptr() {
   int p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 42;
   int np_local0 = p_local0;
   new to_construct<T>(np_local0);
 }
@@ -696,7 +696,7 @@ void TestRegisters() {
 
   HardwareRegister p_reg1{3, 22};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_reg1' of type 'HardwareRegister' can be declared 'const'
-  // CHECK-FIXES: HardwareRegister const p_reg1
+  // CHECK-FIXES: HardwareRegister const p_reg1{3, 22};
   const unsigned p_val = p_reg1.another;
 }
 
@@ -745,7 +745,7 @@ struct A {
 void f() {
   int p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 42;
   int np_local0 = 42;
   f_signature action = my_alloc;
   action(np_local0);
@@ -795,7 +795,7 @@ void for_bad_iterators() {
   non_const_iterator np_local3;
   for (int p_local0 : np_local3)
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'p_local0' of type 'int' can be declared 'const'
-    // CHECK-FIXES: int const p_local0
+    // CHECK-FIXES: for (int const p_local0 : np_local3)
     ;
 
   // Horrible code constructs...
@@ -805,21 +805,21 @@ void for_bad_iterators() {
     non_const_iterator np_local5;
     for (int p_local1 : np_local4, np_local5)
       // CHECK-MESSAGES: [[@LINE-1]]:10: warning: variable 'p_local1' of type 'int' can be declared 'const'
-      // CHECK-FIXES: int const p_local1
+      // CHECK-FIXES: for (int const p_local1 : np_local4, np_local5)
       ;
 
     non_const_iterator np_local6;
     non_const_iterator np_local7;
     for (int p_local2 : 1 > 2 ? np_local6 : np_local7)
       // CHECK-MESSAGES: [[@LINE-1]]:10: warning: variable 'p_local2' of type 'int' can be declared 'const'
-      // CHECK-FIXES: int const p_local2
+      // CHECK-FIXES: for (int const p_local2 : 1 > 2 ? np_local6 : np_local7)
       ;
 
     non_const_iterator np_local8;
     non_const_iterator np_local9;
     for (int p_local3 : 2 > 1 ? np_local8 : (np_local8, np_local9))
       // CHECK-MESSAGES: [[@LINE-1]]:10: warning: variable 'p_local3' of type 'int' can be declared 'const'
-      // CHECK-FIXES: int const p_local3
+      // CHECK-FIXES: for (int const p_local3 : 2 > 1 ? np_local8 : (np_local8, np_local9))
       ;
   }
 }
@@ -836,23 +836,23 @@ struct good_iterator {
 void good_iterators() {
   good_iterator p_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'good_iterator' can be declared 'const'
-  // CHECK-FIXES: good_iterator const p_local0
+  // CHECK-FIXES: good_iterator const p_local0;
   good_iterator &p_local1 = p_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'good_iterator &' can be declared 'const'
-  // CHECK-FIXES: good_iterator  const&p_local1
+  // CHECK-FIXES: good_iterator  const&p_local1 = p_local0;
 
   for (int p_local2 : p_local1) {
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'p_local2' of type 'int' can be declared 'const'
-    // CHECK-FIXES: int const p_local2
+    // CHECK-FIXES: for (int const p_local2 : p_local1) {
     (void)p_local2;
   }
 
   good_iterator p_local3;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'good_iterator' can be declared 'const'
-  // CHECK-FIXES: good_iterator const p_local3
+  // CHECK-FIXES: good_iterator const p_local3;
   for (int p_local4 : p_local3)
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'p_local4' of type 'int' can be declared 'const'
-    // CHECK-FIXES: int const p_local4
+    // CHECK-FIXES: for (int const p_local4 : p_local3)
     ;
   good_iterator np_local1;
   for (int &np_local2 : np_local1)
@@ -871,11 +871,11 @@ void for_ok_iterators_array() {
   int np_local0[42];
   int(&p_local0)[42] = np_local0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int (&)[42]' can be declared 'const'
-  // CHECK-FIXES: int const(&p_local0)[42]
+  // CHECK-FIXES: int const(&p_local0)[42] = np_local0;
 
   for (int p_local1 : p_local0) {
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'p_local1' of type 'int' can be declared 'const'
-    // CHECK-FIXES: int const p_local1
+    // CHECK-FIXES: for (int const p_local1 : p_local0) {
     (void)p_local1;
   }
 }
@@ -891,7 +891,7 @@ void complex_usage() {
   int np_local0 = 42;
   int p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
+  // CHECK-FIXES: int const p_local0 = 42;
   int np_local1 = 42;
   (np_local0 == p_local0 ? np_local0 : (p_local0, np_local1))++;
 }
@@ -920,7 +920,7 @@ void create_false_positive() {
   int np_local0 = 42;
   list_init p_local0 = {np_local0};
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'p_local0' of type 'list_init' can be declared 'const'
-  // CHECK-FIXES: list_init const p_local0
+  // CHECK-FIXES: list_init const p_local0 = {np_local0};
 }
 struct list_init_derived {
   base &member;
@@ -929,7 +929,7 @@ void list_init_derived_func() {
   derived np_local0;
   list_init_derived p_local0 = {np_local0};
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'p_local0' of type 'list_init_derived' can be declared 'const'
-  // CHECK-FIXES: list_init_derived const p_local0
+  // CHECK-FIXES: list_init_derived const p_local0 = {np_local0};
 }
 template <typename L, typename R>
 struct ref_pair {
@@ -945,7 +945,7 @@ void cast_in_class_hierarchy() {
   derived np_local0;
   base p_local1 = static_cast<base &>(np_local0);
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'p_local1' of type 'base' can be declared 'const'
-  // CHECK-FIXES: base const p_local1
+  // CHECK-FIXES: base const p_local1 = static_cast<base &>(np_local0);
 }
 
 void function_ref_target(int);
