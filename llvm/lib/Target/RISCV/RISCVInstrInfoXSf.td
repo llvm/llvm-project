@@ -438,8 +438,10 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPList in {
     foreach m = f.MxList in {
-    defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
-    defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in {
+        defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
+        defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      }
     }
   }
   foreach m = MxListW in {
@@ -449,7 +451,8 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPListW in {
     foreach m = f.MxList in
-    defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in
+        defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
   }
 }
 

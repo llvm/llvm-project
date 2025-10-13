@@ -1551,14 +1551,10 @@ LLVM_DUMP_METHOD void ILPValue::dump() const {
   dbgs() << *this << '\n';
 }
 
-namespace llvm {
-
 LLVM_ATTRIBUTE_UNUSED
-raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const ILPValue &Val) {
   Val.print(OS);
   return OS;
 }
-
-} // end namespace llvm
 
 #endif

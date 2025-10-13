@@ -17,8 +17,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/XRay/XRayRecord.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 struct YAMLXRayFileHeader {
   uint16_t Version;
@@ -46,13 +45,12 @@ struct YAMLXRayTrace {
   std::vector<YAMLXRayRecord> Records;
 };
 
-} // namespace xray
+} // namespace llvm::xray
 
-namespace yaml {
-
+namespace llvm {
 // YAML Traits
 // -----------
-template <> struct ScalarEnumerationTraits<xray::RecordTypes> {
+template <> struct yaml::ScalarEnumerationTraits<xray::RecordTypes> {
   static void enumeration(IO &IO, xray::RecordTypes &Type) {
     IO.enumCase(Type, "function-enter", xray::RecordTypes::ENTER);
     IO.enumCase(Type, "function-exit", xray::RecordTypes::EXIT);
@@ -63,7 +61,7 @@ template <> struct ScalarEnumerationTraits<xray::RecordTypes> {
   }
 };
 
-template <> struct MappingTraits<xray::YAMLXRayFileHeader> {
+template <> struct yaml::MappingTraits<xray::YAMLXRayFileHeader> {
   static void mapping(IO &IO, xray::YAMLXRayFileHeader &Header) {
     IO.mapRequired("version", Header.Version);
     IO.mapRequired("type", Header.Type);
@@ -73,7 +71,7 @@ template <> struct MappingTraits<xray::YAMLXRayFileHeader> {
   }
 };
 
-template <> struct MappingTraits<xray::YAMLXRayRecord> {
+template <> struct yaml::MappingTraits<xray::YAMLXRayRecord> {
   static void mapping(IO &IO, xray::YAMLXRayRecord &Record) {
     IO.mapRequired("type", Record.RecordType);
     IO.mapOptional("func-id", Record.FuncId);
@@ -90,7 +88,7 @@ template <> struct MappingTraits<xray::YAMLXRayRecord> {
   static constexpr bool flow = true;
 };
 
-template <> struct MappingTraits<xray::YAMLXRayTrace> {
+template <> struct yaml::MappingTraits<llvm::xray::YAMLXRayTrace> {
   static void mapping(IO &IO, xray::YAMLXRayTrace &Trace) {
     // A trace file contains two parts, the header and the list of all the
     // trace records.
@@ -98,8 +96,6 @@ template <> struct MappingTraits<xray::YAMLXRayTrace> {
     IO.mapRequired("records", Trace.Records);
   }
 };
-
-} // namespace yaml
 } // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRayRecord)

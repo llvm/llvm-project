@@ -236,7 +236,7 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
 
   const ReportDesc *current_report;
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
   bool in_internal_write_call;
 #endif
 
