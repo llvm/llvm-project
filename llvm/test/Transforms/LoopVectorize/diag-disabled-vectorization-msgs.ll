@@ -18,7 +18,7 @@
 ; CHECK-SAME: loop not vectorized: vectorization is explicitly disabled
 ; CHECK: LV: Loop hints prevent vectorization
 
-define dso_local noundef nofpclass(nan inf) double @_Z15CompareDistmatsPKdS0_(ptr noundef readonly captures(none) %distmat1, ptr noundef readonly captures(none) %distmat2) local_unnamed_addr {
+define double @CompareDistmats(ptr %distmat1, ptr %distmat2){
 entry:
   br label %for.body
 
