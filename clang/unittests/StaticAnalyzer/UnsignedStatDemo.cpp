@@ -32,10 +32,10 @@ namespace {
 class UnsignedStatTesterChecker : public Checker<check::BeginFunction> {
 public:
   void checkBeginFunction(CheckerContext &C) const {
-    std::string Name;
+    StringRef Name;
     if (const Decl *D = C.getLocationContext()->getDecl())
       if (const FunctionDecl *F = D->getAsFunction())
-        Name = F->getNameAsString();
+        Name = F->getName();
 
     // Conditionally set the statistic based on the function name (leaving it
     // undefined for all other functions)
