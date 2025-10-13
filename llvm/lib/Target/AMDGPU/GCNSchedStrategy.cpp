@@ -976,13 +976,11 @@ void GCNScheduleDAGMILive::runSchedStages() {
   }
 
 #ifdef DUMP_MAX_REG_PRESSURE
-  auto dumpRegUsage = [this]() {
+  if (PrintMaxRPRegUsageBeforeScheduler) {
     dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
     dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
     LIS->dump();
-  };
-  if (PrintMaxRPRegUsageBeforeScheduler)
-    dumpRegUsage();
+  }
 #endif
 
   GCNSchedStrategy &S = static_cast<GCNSchedStrategy &>(*SchedImpl);
@@ -1022,8 +1020,11 @@ void GCNScheduleDAGMILive::runSchedStages() {
   }
 
 #ifdef DUMP_MAX_REG_PRESSURE
-  if (PrintMaxRPRegUsageAfterScheduler)
-    dumpRegUsage();
+  if (PrintMaxRPRegUsageAfterScheduler)  {
+    dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
+    dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
+    LIS->dump();
+  }
 #endif
 }
 
