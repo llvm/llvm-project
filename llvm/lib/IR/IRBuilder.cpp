@@ -25,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1000,6 +1001,18 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   CallInst *C = CreateCall(Callee, UseArgs, Name);
   setConstrainedFPCallAttr(C);
   return C;
+}
+
+Value *IRBuilderBase::CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                     Value *False,
+                                                     StringRef PassName,
+                                                     const Twine &Name) {
+  Value *Ret = CreateSelectFMF(C, True, False, {}, Name);
+  if (auto *SI = dyn_cast<SelectInst>(Ret)) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(
+        *SI, *SI->getParent()->getParent(), PassName);
+  }
+  return Ret;
 }
 
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
