@@ -40,6 +40,7 @@ void buildCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes
   pm.addPass(createCSEPass());
+  pm.addPass(createConvertVectorToSCFPass());
   {
     GpuXeVMAttachTargetOptions xevmTargetOptions;
     xevmTargetOptions.moduleMatcher = options.xevmModuleMatcher;
@@ -49,6 +50,8 @@ void buildCommonPassPipeline(
     xevmTargetOptions.cmdOptions = options.cmdOptions;
     pm.addPass(createGpuXeVMAttachTarget(xevmTargetOptions));
   }
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
+  pm.addNestedPass<func::FuncOp>(createGpuAsyncRegionPass());
 }
 
 //===----------------------------------------------------------------------===//
@@ -59,7 +62,6 @@ void buildGpuPassPipeline(OpPassManager &pm,
   if (options.xegpuOpLevel == "workgroup") {
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-    pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
@@ -90,21 +92,17 @@ void buildGpuPassPipeline(OpPassManager &pm,
 //===----------------------------------------------------------------------===//
 void buildHostPostPipeline(OpPassManager &pm,
                            const mlir::gpu::GPUToXeVMPipelineOptions &options) {
-  pm.addNestedPass<func::FuncOp>(LLVM::createLLVMRequestCWrappersPass());
-  pm.addNestedPass<func::FuncOp>(createGpuAsyncRegionPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
-  pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   {
     GpuToLLVMConversionPassOptions gpuToLLVMOptions;
     gpuToLLVMOptions.hostBarePtrCallConv = options.hostBarePtrCallConv;
     gpuToLLVMOptions.kernelBarePtrCallConv = options.kernelBarePtrCallConv;
     pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMOptions));
   }
-  pm.addPass(createConvertToLLVMPass());
   pm.addPass(createLowerAffinePass());
+  pm.addPass(createConvertToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // gpu-module-to-binary
   {

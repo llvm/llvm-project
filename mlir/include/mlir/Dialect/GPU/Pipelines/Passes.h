@@ -1,4 +1,4 @@
-//===- Passes.h - GPU NVVM/XeVM pipeline entry points----------------------===//
+//===- Passes.h - GPU pipeline entry points----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -63,7 +63,6 @@ struct GPUToNVVMPipelineOptions
 // Options for the gpu to xevm pipeline.
 struct GPUToXeVMPipelineOptions
     : public PassPipelineOptions<GPUToXeVMPipelineOptions> {
-  // XeGPU op granularity selection: workgroup | subgroup | lane
   PassOptions::Option<std::string> xegpuOpLevel{
       *this, "xegpu-op-level",
       llvm::cl::desc("Granularity of XeGPU operations to target: workgroup | "
@@ -123,7 +122,7 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
 void buildLowerToXeVMPassPipeline(OpPassManager &pm,
                                   const GPUToXeVMPipelineOptions &options);
 
-/// Register all pipeleines for the `gpu` dialect.
+/// Register all pipelines for the `gpu` dialect.
 void registerGPUToNVVMPipeline();
 void registerGPUToXeVMPipeline();
 
