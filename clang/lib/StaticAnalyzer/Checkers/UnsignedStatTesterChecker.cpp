@@ -42,8 +42,6 @@ void UnsignedStatTesterChecker::checkBeginFunction(CheckerContext &C) const {
     DemoStat.set(1);
   } else if (Name == "func_two") {
     DemoStat.set(2);
-  } else if (Name == "func_three") {
-    DemoStat.set(3);
   }
   // For any other function (e.g., "func_none"), don't set the statistic
 }
