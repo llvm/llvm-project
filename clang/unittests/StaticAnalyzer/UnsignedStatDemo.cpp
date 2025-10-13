@@ -69,23 +69,13 @@ findColumnIndex(llvm::ArrayRef<llvm::StringRef> Header,
   return std::nullopt;
 }
 
-// Extract function name from a DebugName column value.
-// E.g., "func_one()" -> "func_one", "main(int, char **)" -> "main"
-static llvm::StringRef extractFunctionName(llvm::StringRef DebugName) {
-  size_t ParenPos = DebugName.find('(');
-  if (ParenPos != llvm::StringRef::npos)
-    return DebugName.substr(0, ParenPos);
-  return DebugName;
-}
-
 // Parse CSV content and extract a mapping from one column to another.
 // KeyColumn is used as the map key (e.g., "DebugName").
 // ValueColumn is used as the map value (e.g., "DemoStat").
-// If KeyTransform is true, extracts function name from key (strips parameters).
 // Returns a map from key column values to value column values.
 static llvm::StringMap<std::string>
 parseCSVColumnMapping(llvm::StringRef CSVContent, llvm::StringRef KeyColumn,
-                      llvm::StringRef ValueColumn, bool KeyTransform = false) {
+                      llvm::StringRef ValueColumn) {
   llvm::StringMap<std::string> Result;
 
   // Parse CSV: first line is header, subsequent lines are data
@@ -112,10 +102,6 @@ parseCSVColumnMapping(llvm::StringRef CSVContent, llvm::StringRef KeyColumn,
 
     llvm::StringRef KeyVal = Row[*KeyIdx].trim().trim('"');
     llvm::StringRef ValueVal = Row[*ValueIdx].trim().trim('"');
-
-    // Apply transformation to key if requested (e.g., extract function name)
-    if (KeyTransform)
-      KeyVal = extractFunctionName(KeyVal);
 
     if (!KeyVal.empty())
       Result[KeyVal] = ValueVal.str();
