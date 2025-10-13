@@ -512,39 +512,111 @@ void CheckHelper::Check(const Symbol &symbol) {
 }
 
 void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
-  auto restorer{messages_.SetLocation(symbol.name())};
   CheckGlobalName(symbol);
-  if (symbol.attrs().test(Attr::BIND_C)) {
+  const auto &common{symbol.get<CommonBlockDetails>()};
+  SourceName location{symbol.name()};
+  if (location.empty()) {
+    location = common.sourceLocation();
+  }
+  bool isBindCCommon{symbol.attrs().test(Attr::BIND_C)};
+  if (isBindCCommon) {
     CheckBindC(symbol);
-    for (auto ref : symbol.get<CommonBlockDetails>().objects()) {
-      if (ref->has<ObjectEntityDetails>()) {
-        if (auto msgs{WhyNotInteroperableObject(*ref,
-                /*allowInteroperableType=*/false, /*forCommonBlock=*/true)};
-            !msgs.empty()) {
-          parser::Message &reason{msgs.messages().front()};
-          parser::Message *msg{nullptr};
-          if (reason.IsFatal()) {
-            msg = messages_.Say(symbol.name(),
-                "'%s' may not be a member of BIND(C) COMMON block /%s/"_err_en_US,
-                ref->name(), symbol.name());
-          } else {
-            msg = messages_.Say(symbol.name(),
-                "'%s' should not be a member of BIND(C) COMMON block /%s/"_warn_en_US,
-                ref->name(), symbol.name());
-          }
-          if (msg) {
-            msg->Attach(
-                std::move(reason.set_severity(parser::Severity::Because)));
-          }
-        }
-      }
-    }
   }
   for (auto ref : symbol.get<CommonBlockDetails>().objects()) {
+    auto restorer{
+        messages_.SetLocation(location.empty() ? ref->name() : location)};
+    if (isBindCCommon && ref->has<ObjectEntityDetails>()) {
+      if (auto msgs{WhyNotInteroperableObject(*ref,
+              /*allowInteroperableType=*/false, /*forCommonBlock=*/true)};
+          !msgs.empty()) {
+        parser::Message &reason{msgs.messages().front()};
+        parser::Message *msg{nullptr};
+        if (reason.IsFatal()) {
+          msg = messages_.Say(
+              "'%s' may not be a member of BIND(C) COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name());
+        } else {
+          msg = messages_.Say(
+              "'%s' should not be a member of BIND(C) COMMON block /%s/"_warn_en_US,
+              ref->name(), symbol.name());
+        }
+        if (msg) {
+          msg = &msg->Attach(
+              std::move(reason.set_severity(parser::Severity::Because)));
+        }
+        evaluate::AttachDeclaration(msg, *ref);
+      }
+    }
     if (ref->test(Symbol::Flag::CrayPointee)) {
-      messages_.Say(ref->name(),
-          "Cray pointee '%s' may not be a member of a COMMON block"_err_en_US,
-          ref->name());
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "Cray pointee '%s' may not be a member of COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (IsAllocatable(*ref)) {
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "ALLOCATABLE object '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (ref->attrs().test(Attr::BIND_C)) {
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "BIND(C) object '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (IsNamedConstant(*ref)) {
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "Named constant '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (IsDummy(*ref)) {
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "Dummy argument '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (ref->IsFuncResult()) {
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "Function result '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (const auto *type{ref->GetType()}) {
+      if (type->category() == DeclTypeSpec::ClassStar) {
+        evaluate::AttachDeclaration(
+            messages_.Say(
+                "Unlimited polymorphic pointer '%s' may not appear in COMMON block /%s/"_err_en_US,
+                ref->name(), symbol.name()),
+            *ref);
+      } else if (const auto *derived{type->AsDerived()}) {
+        if (!IsSequenceOrBindCType(derived)) {
+          evaluate::AttachDeclaration(
+              evaluate::AttachDeclaration(
+                  messages_.Say(
+                      "Object '%s' whose derived type '%s' is neither SEQUENCE nor BIND(C) may not appear in COMMON block /%s/"_err_en_US,
+                      ref->name(), derived->name(), symbol.name()),
+                  derived->typeSymbol()),
+              *ref);
+        } else if (auto componentPath{
+                       derived->ComponentWithDefaultInitialization()}) {
+          evaluate::AttachDeclaration(
+              evaluate::AttachDeclaration(
+                  messages_.Say(
+                      "COMMON block /%s/ may not have the member '%s' whose derived type '%s' has a component '%s' that is ALLOCATABLE or has default initialization"_err_en_US,
+                      symbol.name(), ref->name(), derived->name(),
+                      *componentPath),
+                  derived->typeSymbol()),
+              *ref);
+        }
+      }
     }
   }
 }
@@ -1912,9 +1984,8 @@ bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
   const Procedure *p1{Characterize(f1)};
   const Procedure *p2{Characterize(f2)};
   if (p1 && p2) {
-    std::optional<bool> areDistinct{characteristics::Distinguishable(
-        context_.languageFeatures(), *p1, *p2)};
-    if (areDistinct.value_or(false)) {
+    if (characteristics::Distinguishable(context_.languageFeatures(), *p1, *p2)
+            .value_or(false)) {
       return true;
     }
     if (auto *msg{messages_.Say(f1Name,
@@ -2976,14 +3047,6 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
   return std::nullopt;
 }
 
-static bool IsSameSymbolFromHermeticModule(
-    const Symbol &symbol, const Symbol &other) {
-  return symbol.name() == other.name() && symbol.owner().IsModule() &&
-      other.owner().IsModule() && symbol.owner() != other.owner() &&
-      symbol.owner().GetName() &&
-      symbol.owner().GetName() == other.owner().GetName();
-}
-
 // 19.2 p2
 void CheckHelper::CheckGlobalName(const Symbol &symbol) {
   if (auto global{DefinesGlobalName(symbol)}) {
@@ -3001,7 +3064,7 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
           (!IsExternalProcedureDefinition(symbol) ||
               !IsExternalProcedureDefinition(other))) {
         // both are procedures/BLOCK DATA, not both definitions
-      } else if (IsSameSymbolFromHermeticModule(symbol, other)) {
+      } else if (AreSameModuleSymbol(symbol, other)) {
         // Both symbols are the same thing.
       } else if (symbol.has<ModuleDetails>()) {
         Warn(common::LanguageFeature::BenignNameClash, symbol.name(),

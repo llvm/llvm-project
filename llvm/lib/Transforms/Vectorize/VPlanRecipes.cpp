@@ -1154,7 +1154,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
-  LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -1230,6 +1230,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ActiveLaneMask:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -2777,7 +2778,7 @@ VPExpressionRecipe::VPExpressionRecipe(
   // Recipes in the expression, except the last one, must only be used by
   // (other) recipes inside the expression. If there are other users, external
   // to the expression, use a clone of the recipe for external users.
-  for (VPSingleDefRecipe *R : ExpressionRecipes) {
+  for (VPSingleDefRecipe *R : reverse(ExpressionRecipes)) {
     if (R != ExpressionRecipes.back() &&
         any_of(R->users(), [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
           return !ExpressionRecipesAsSetOfUsers.contains(U);
@@ -2854,7 +2855,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
   case ExpressionTypes::ExtNegatedMulAccReduction:
     assert(Opcode == Instruction::Add && "Unexpected opcode");
     Opcode = Instruction::Sub;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ExpressionTypes::ExtMulAccReduction: {
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
@@ -3142,7 +3143,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
   while (!WorkList.empty()) {
     auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
-    if (!Cur || !Seen.insert(Cur).second)
+    if (!Cur || !Seen.insert(Cur).second || isa<VPBlendRecipe>(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {
@@ -3174,6 +3175,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
+
+  if (VF.isScalable() && !isSingleScalar())
+    return InstructionCost::getInvalid();
 
   switch (UI->getOpcode()) {
   case Instruction::GetElementPtr:
@@ -3221,9 +3225,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                  ElementCount::getFixed(1), Ctx));
       return ScalarCallCost;
     }
-
-    if (VF.isScalable())
-      return InstructionCost::getInvalid();
 
     return ScalarCallCost * VF.getFixedValue() +
            Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
@@ -3275,9 +3276,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    if (VF.isScalable() && !isSingleScalar())
-      return InstructionCost::getInvalid();
-
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
     const VPRegionBlock *ParentRegion = getParent()->getParent();
@@ -3286,6 +3284,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
+    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
+      break;
+
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
     Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
     const Align Alignment = getLoadStoreAlignment(UI);
@@ -3296,12 +3298,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
 
-    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
-    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
-      break;
+    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
+    bool UsedByLoadStoreAddress =
+        !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                              PtrTy, &Ctx.SE, PtrSCEV, Ctx.CostKind);
+                              PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
+                              PtrSCEV, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
@@ -3311,8 +3314,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // don't assign scalarization overhead in general, if the target prefers
     // vectorized addressing or the loaded value is used as part of an address
     // of another load or store.
-    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
-    if (PreferVectorizedAddressing || !isUsedByLoadStoreAddress(this)) {
+    if (!UsedByLoadStoreAddress) {
       bool EfficientVectorLoadStore =
           Ctx.TTI.supportsEfficientVectorElementLoadStore();
       if (!(IsLoad && !PreferVectorizedAddressing) &&

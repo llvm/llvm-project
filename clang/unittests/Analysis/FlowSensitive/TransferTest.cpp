@@ -3709,6 +3709,83 @@ TEST(TransferTest, StaticCastBaseToDerived) {
       });
 }
 
+TEST(TransferTest, MultipleConstructionsFromStaticCastsBaseToDerived) {
+  std::string Code = R"cc(
+ struct Base {};
+
+struct DerivedOne : public Base {
+  // Need a field in one of the derived siblings that the other doesn't have.
+  int I;
+};
+
+struct DerivedTwo : public Base {};
+
+int getInt();
+
+void target(Base* B) {
+  // Need something to cause modeling of I.
+  DerivedOne D1;
+  (void)D1.I;
+
+  // Switch cases are a reasonable pattern where the same variable might be
+  // safely cast to two different derived types within the same function
+  // without resetting the value of the variable. getInt is a stand-in for what
+  // is usually a function indicating the dynamic derived type.
+  switch (getInt()) {
+    case 1:
+      // Need a CXXConstructExpr or copy/move CXXOperatorCallExpr from each of
+      // the casts to derived types, cast from the same base variable, to
+      // trigger the copyRecord behavior.
+      (void)new DerivedOne(*static_cast<DerivedOne*>(B));
+      break;
+    case 2:
+      (void)new DerivedTwo(*static_cast<DerivedTwo*>(B));
+      break;
+  };
+}
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // This is a crash repro. We used to crash when transferring the
+        // construction of DerivedTwo because B's StorageLocation had a child
+        // for the field I, but DerivedTwo doesn't. Now, we should only copy the
+        // fields from B that are present in DerivedTwo.
+      });
+}
+
+TEST(TransferTest, CopyConstructionOfBaseAfterStaticCastsBaseToDerived) {
+  std::string Code = R"cc(
+ struct Base {};
+
+struct Derived : public Base {
+// Need a field in Derived that is not in Base.
+  char C;
+};
+
+void target(Base* B, Base* OtherB) {
+  Derived* D = static_cast<Derived*>(B);
+  *B = *OtherB;
+  // Need something to cause modeling of C.
+  (void)D->C;
+}
+
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // This is a crash repro. We used to crash when transferring the
+        // copy construction of B from OtherB because B's StorageLocation had a
+        // child for the field C, but Base doesn't (so OtherB doesn't, since
+        // it's never been cast to any other type), and we tried to copy from
+        // the source (OtherB) all the fields present in the destination (B).
+        // Now, we should only try to copy the fields from OtherB that are
+        // present in Base.
+      });
+}
+
 TEST(TransferTest, ExplicitDerivedToBaseCast) {
   std::string Code = R"cc(
     struct Base {};
@@ -5320,7 +5397,7 @@ TEST(TransferTest, UnsupportedValueEquality) {
       A,
       B
     };
-  
+
     void target() {
       EC ec = EC::A;
 

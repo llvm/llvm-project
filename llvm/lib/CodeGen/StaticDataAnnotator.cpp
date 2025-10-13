@@ -75,7 +75,7 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
 
   bool Changed = false;
   for (auto &GV : M.globals()) {
-    if (GV.isDeclarationForLinker())
+    if (!llvm::memprof::IsAnnotationOK(GV))
       continue;
 
     // The implementation below assumes prior passes don't set section prefixes,

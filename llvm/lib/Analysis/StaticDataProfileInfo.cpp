@@ -6,6 +6,46 @@
 #include "llvm/ProfileData/InstrProf.h"
 
 using namespace llvm;
+
+namespace llvm {
+namespace memprof {
+// Returns true iff the global variable has custom section either by
+// __attribute__((section("name")))
+// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
+// or #pragma clang section directives
+// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
+static bool hasExplicitSectionName(const GlobalVariable &GVar) {
+  if (GVar.hasSection())
+    return true;
+
+  auto Attrs = GVar.getAttributes();
+  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
+      Attrs.hasAttribute("relro-section") ||
+      Attrs.hasAttribute("rodata-section"))
+    return true;
+  return false;
+}
+
+AnnotationKind getAnnotationKind(const GlobalVariable &GV) {
+  if (GV.isDeclarationForLinker())
+    return AnnotationKind::DeclForLinker;
+  // Skip 'llvm.'-prefixed global variables conservatively because they are
+  // often handled specially,
+  StringRef Name = GV.getName();
+  if (Name.starts_with("llvm."))
+    return AnnotationKind::ReservedName;
+  // Respect user-specified custom data sections.
+  if (hasExplicitSectionName(GV))
+    return AnnotationKind::ExplicitSection;
+  return AnnotationKind::AnnotationOK;
+}
+
+bool IsAnnotationOK(const GlobalVariable &GV) {
+  return getAnnotationKind(GV) == AnnotationKind::AnnotationOK;
+}
+} // namespace memprof
+} // namespace llvm
+
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
   if (!Count) {
