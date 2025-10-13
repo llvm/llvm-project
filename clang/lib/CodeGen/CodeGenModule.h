@@ -1641,13 +1641,12 @@ public:
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
-  void createFunctionTypeMetadataForIcallForCFI(const FunctionDecl *FD,
-                                                llvm::Function *F);
+  void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+                                          llvm::Function *F);
 
   /// Create and attach type metadata if the function is a potential indirect
   /// call target to support call graph section.
-  void createFunctionTypeMDForIcallForCallGraph(const FunctionDecl *FD,
-                                                llvm::Function *F);
+  void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
 
   /// Create and attach type metadata to the given call.
   void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);

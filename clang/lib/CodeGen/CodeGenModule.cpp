@@ -2848,17 +2848,13 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       // Skip available_externally functions. They won't be codegen'ed in the
       // current module anyway.
       if (getContext().GetGVALinkageForFunction(FD) != GVA_AvailableExternally)
-        createFunctionTypeMetadataForIcallForCFI(FD, F);
+        createFunctionTypeMetadataForIcall(FD, F);
     }
   }
 
   if (CodeGenOpts.CallGraphSection) {
-    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-      // Skip available_externally functions. They won't be codegen'ed in the
-      // current module anyway.
-      if (getContext().GetGVALinkageForFunction(FD) != GVA_AvailableExternally)
-        createFunctionTypeMDForIcallForCallGraph(FD, F);
-    }
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      createIndirectFunctionTypeMD(FD, F);
   }
 
   // Emit type metadata on member functions for member function pointer checks.
@@ -3069,22 +3065,22 @@ static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
   return MD && MD->hasGeneralizedMDString();
 }
 
-void CodeGenModule::createFunctionTypeMDForIcallForCallGraph(
-    const FunctionDecl *FD, llvm::Function *F) {
-  // Add additional metadata if we are emitting call graph section
-  if (!CodeGenOpts.CallGraphSection)
+void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
+                                                 llvm::Function *F) {
+  // Return if generalized type metadata is already attached.
+  if (hasExistingGeneralizedTypeMD(F))
     return;
-
-  if (!hasExistingGeneralizedTypeMD(F) &&
-      (!F->hasLocalLinkage() ||
-       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
-                                        /*IgnoreAssumeLikeCalls=*/true,
-                                        /*IgnoreLLVMUsed=*/false)))
+  // All functions which are not internal linkage could be indirect targets.
+  // Address taken functions with internal linkage could be indirect targets.
+  if (!F->hasLocalLinkage() &&
+      F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
+                                       /*IgnoreAssumeLikeCalls=*/true,
+                                       /*IgnoreLLVMUsed=*/false))
     F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
 }
 
-void CodeGenModule::createFunctionTypeMetadataForIcallForCFI(
-    const FunctionDecl *FD, llvm::Function *F) {
+void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+                                                       llvm::Function *F) {
 
   // Only if we are checking indirect calls.
   if (!LangOpts.Sanitize.has(SanitizerKind::CFIICall))
@@ -3260,7 +3256,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // jump table.
   if (!CodeGenOpts.SanitizeCfiCrossDso ||
       !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
-    createFunctionTypeMetadataForIcallForCFI(FD, F);
+    createFunctionTypeMetadataForIcall(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
