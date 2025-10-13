@@ -128,6 +128,9 @@ defvar TAIL_AGNOSTIC = 1;
 defvar TU_MU = 0;
 defvar TA_MU = 1;
 defvar TA_MA = 3;
+defvar DONT_CARE_ALTFMT = 0;
+defvar IS_NOT_ALTFMT = 1;
+defvar IS_ALTFMT = 2;
 
 //===----------------------------------------------------------------------===//
 // Utilities.
@@ -159,7 +162,8 @@ class PseudoToVInst<string PseudoInst> {
                         ["_M4", ""],
                         ["_M8", ""],
                         ["_SE", ""],
-                        ["_RM", ""]
+                        ["_RM", ""],
+                        ["_ALT", ""]
                        ];
   string VInst = !foldl(PseudoInst, AffixSubsts, Acc, AffixSubst,
                         !subst(AffixSubst[0], AffixSubst[1], Acc));
@@ -6396,7 +6400,7 @@ let Defs = [VXSAT] in {
 // 13. Vector Floating-Point Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
@@ -6565,7 +6569,7 @@ defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W_RM;
 
 defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
 } // mayRaiseFPException = true
-} // Predicates = [HasVInstructionsAnyF]
+} // Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT
 
 //===----------------------------------------------------------------------===//
 // 14. Vector Reduction Operations
@@ -6593,7 +6597,7 @@ defm PseudoVWREDSUM    : VPseudoVWRED_VS;
 }
 } // Predicates = [HasVInstructions]
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
 //===----------------------------------------------------------------------===//
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
@@ -6612,7 +6616,7 @@ defm PseudoVFWREDUSUM  : VPseudoVFWRED_VS_RM;
 defm PseudoVFWREDOSUM  : VPseudoVFWREDO_VS_RM;
 }
 
-} // Predicates = [HasVInstructionsAnyF]
+} // Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT
 
 //===----------------------------------------------------------------------===//
 // 15. Vector Mask Instructions
@@ -6703,7 +6707,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.2. Floating-Point Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach f = FPList in {
     let HasSEWOp = 1, BaseInstr = VFMV_F_S in
@@ -6718,7 +6722,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
       Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
   }
 }
-} // Predicates = [HasVInstructionsAnyF]
+} // Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT
 
 //===----------------------------------------------------------------------===//
 // 16.3. Vector Slide Instructions
@@ -6730,10 +6734,10 @@ let Predicates = [HasVInstructions] in {
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
   defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF<"@earlyclobber $rd">;
   defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF;
-} // Predicates = [HasVInstructionsAnyF]
+} // Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT
 
 //===----------------------------------------------------------------------===//
 // 16.4. Vector Register Gather Instructions
