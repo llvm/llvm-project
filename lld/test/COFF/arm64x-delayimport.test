@@ -61,33 +61,35 @@ DISASM-NEXT: 180001010: d61f0200     br      x16
 DISASM-NEXT: 180001014: b0000031     adrp    x17, 0x180006000
 DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
 DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
-DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
+DISASM-NEXT: 180001020: a9b27bfd     stp     x29, x30, [sp, #-0xe0]!
 DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
 DISASM-NEXT: 180001028: a90107e0     stp     x0, x1, [sp, #0x10]
 DISASM-NEXT: 18000102c: a9020fe2     stp     x2, x3, [sp, #0x20]
 DISASM-NEXT: 180001030: a90317e4     stp     x4, x5, [sp, #0x30]
 DISASM-NEXT: 180001034: a9041fe6     stp     x6, x7, [sp, #0x40]
-DISASM-NEXT: 180001038: ad0287e0     stp     q0, q1, [sp, #0x50]
-DISASM-NEXT: 18000103c: ad038fe2     stp     q2, q3, [sp, #0x70]
-DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
-DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
-DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
-DISASM-NEXT: 18000104c: f0000000     adrp    x0, 0x180004000
-DISASM-NEXT: 180001050: 910d2000     add     x0, x0, #0x348
-DISASM-NEXT: 180001054: 90000002     adrp    x2, 0x180001000 <.text>
-DISASM-NEXT: 180001058: 91000042     add     x2, x2, #0x0
-DISASM-NEXT: 18000105c: d63f0040     blr     x2
-DISASM-NEXT: 180001060: aa0003f0     mov     x16, x0
-DISASM-NEXT: 180001064: ad459fe6     ldp     q6, q7, [sp, #0xb0]
-DISASM-NEXT: 180001068: ad4497e4     ldp     q4, q5, [sp, #0x90]
-DISASM-NEXT: 18000106c: ad438fe2     ldp     q2, q3, [sp, #0x70]
-DISASM-NEXT: 180001070: ad4287e0     ldp     q0, q1, [sp, #0x50]
-DISASM-NEXT: 180001074: a9441fe6     ldp     x6, x7, [sp, #0x40]
-DISASM-NEXT: 180001078: a94317e4     ldp     x4, x5, [sp, #0x30]
-DISASM-NEXT: 18000107c: a9420fe2     ldp     x2, x3, [sp, #0x20]
-DISASM-NEXT: 180001080: a94107e0     ldp     x0, x1, [sp, #0x10]
-DISASM-NEXT: 180001084: a8cd7bfd     ldp     x29, x30, [sp], #0xd0
-DISASM-NEXT: 180001088: d61f0200     br      x16
+DISASM-NEXT: 180001038: f9002be8     str     x8,     [sp, #0x50]
+DISASM-NEXT: 18000103c: ad0307e0     stp     q0, q1, [sp, #0x60]
+DISASM-NEXT: 180001040: ad040fe2     stp     q2, q3, [sp, #0x80]
+DISASM-NEXT: 180001044: ad0517e4     stp     q4, q5, [sp, #0xa0]
+DISASM-NEXT: 180001048: ad061fe6     stp     q6, q7, [sp, #0xc0]
+DISASM-NEXT: 18000104c: aa1103e1     mov     x1, x17
+DISASM-NEXT: 180001050: f0000000     adrp    x0, 0x180004000
+DISASM-NEXT: 180001054: 910d2000     add     x0, x0, #0x348
+DISASM-NEXT: 180001058: 90000002     adrp    x2, 0x180001000 <.text>
+DISASM-NEXT: 18000105c: 91000042     add     x2, x2, #0x0
+DISASM-NEXT: 180001060: d63f0040     blr     x2
+DISASM-NEXT: 180001064: aa0003f0     mov     x16, x0
+DISASM-NEXT: 180001068: ad461fe6     ldp     q6, q7, [sp, #0xc0]
+DISASM-NEXT: 18000106c: ad4517e4     ldp     q4, q5, [sp, #0xa0]
+DISASM-NEXT: 180001070: ad440fe2     ldp     q2, q3, [sp, #0x80]
+DISASM-NEXT: 180001074: ad4307e0     ldp     q0, q1, [sp, #0x60]
+DISASM-NEXT: 180001078: f9402be8     ldr     x8,     [sp, #0x50]
+DISASM-NEXT: 18000107c: a9441fe6     ldp     x6, x7, [sp, #0x40]
+DISASM-NEXT: 180001080: a94317e4     ldp     x4, x5, [sp, #0x30]
+DISASM-NEXT: 180001084: a9420fe2     ldp     x2, x3, [sp, #0x20]
+DISASM-NEXT: 180001088: a94107e0     ldp     x0, x1, [sp, #0x10]
+DISASM-NEXT: 18000108c: a8ce7bfd     ldp     x29, x30, [sp], #0xe0
+DISASM-NEXT: 180001090: d61f0200     br      x16
 DISASM-NEXT:                 ...
 DISASM-NEXT: 180002000: 52800040     mov     w0, #0x2                // =2
 DISASM-NEXT: 180002004: d65f03c0     ret
@@ -186,33 +188,35 @@ NATIVE-DISASM-NEXT: 180001010: d61f0200     br      x16
 NATIVE-DISASM-NEXT: 180001014: 90000031     adrp    x17, 0x180005000
 NATIVE-DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
 NATIVE-DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
-NATIVE-DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
+NATIVE-DISASM-NEXT: 180001020: a9b27bfd     stp     x29, x30, [sp, #-0xe0]!
 NATIVE-DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
 NATIVE-DISASM-NEXT: 180001028: a90107e0     stp     x0, x1, [sp, #0x10]
 NATIVE-DISASM-NEXT: 18000102c: a9020fe2     stp     x2, x3, [sp, #0x20]
 NATIVE-DISASM-NEXT: 180001030: a90317e4     stp     x4, x5, [sp, #0x30]
 NATIVE-DISASM-NEXT: 180001034: a9041fe6     stp     x6, x7, [sp, #0x40]
-NATIVE-DISASM-NEXT: 180001038: ad0287e0     stp     q0, q1, [sp, #0x50]
-NATIVE-DISASM-NEXT: 18000103c: ad038fe2     stp     q2, q3, [sp, #0x70]
-NATIVE-DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
-NATIVE-DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
-NATIVE-DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
-NATIVE-DISASM-NEXT: 18000104c: d0000000     adrp    x0, 0x180003000
-NATIVE-DISASM-NEXT: 180001050: 910cc000     add     x0, x0, #0x330
-NATIVE-DISASM-NEXT: 180001054: 90000002     adrp    x2, 0x180001000 <.text>
-NATIVE-DISASM-NEXT: 180001058: 91000042     add     x2, x2, #0x0
-NATIVE-DISASM-NEXT: 18000105c: d63f0040     blr     x2
-NATIVE-DISASM-NEXT: 180001060: aa0003f0     mov     x16, x0
-NATIVE-DISASM-NEXT: 180001064: ad459fe6     ldp     q6, q7, [sp, #0xb0]
-NATIVE-DISASM-NEXT: 180001068: ad4497e4     ldp     q4, q5, [sp, #0x90]
-NATIVE-DISASM-NEXT: 18000106c: ad438fe2     ldp     q2, q3, [sp, #0x70]
-NATIVE-DISASM-NEXT: 180001070: ad4287e0     ldp     q0, q1, [sp, #0x50]
-NATIVE-DISASM-NEXT: 180001074: a9441fe6     ldp     x6, x7, [sp, #0x40]
-NATIVE-DISASM-NEXT: 180001078: a94317e4     ldp     x4, x5, [sp, #0x30]
-NATIVE-DISASM-NEXT: 18000107c: a9420fe2     ldp     x2, x3, [sp, #0x20]
-NATIVE-DISASM-NEXT: 180001080: a94107e0     ldp     x0, x1, [sp, #0x10]
-NATIVE-DISASM-NEXT: 180001084: a8cd7bfd     ldp     x29, x30, [sp], #0xd0
-NATIVE-DISASM-NEXT: 180001088: d61f0200     br      x16
+NATIVE-DISASM-NEXT: 180001038: f9002be8     str     x8,     [sp, #0x50]
+NATIVE-DISASM-NEXT: 18000103c: ad0307e0     stp     q0, q1, [sp, #0x60]
+NATIVE-DISASM-NEXT: 180001040: ad040fe2     stp     q2, q3, [sp, #0x80]
+NATIVE-DISASM-NEXT: 180001044: ad0517e4     stp     q4, q5, [sp, #0xa0]
+NATIVE-DISASM-NEXT: 180001048: ad061fe6     stp     q6, q7, [sp, #0xc0]
+NATIVE-DISASM-NEXT: 18000104c: aa1103e1     mov     x1, x17
+NATIVE-DISASM-NEXT: 180001050: d0000000     adrp    x0, 0x180003000
+NATIVE-DISASM-NEXT: 180001054: 910cc000     add     x0, x0, #0x330
+NATIVE-DISASM-NEXT: 180001058: 90000002     adrp    x2, 0x180001000 <.text>
+NATIVE-DISASM-NEXT: 18000105c: 91000042     add     x2, x2, #0x0
+NATIVE-DISASM-NEXT: 180001060: d63f0040     blr     x2
+NATIVE-DISASM-NEXT: 180001064: aa0003f0     mov     x16, x0
+NATIVE-DISASM-NEXT: 180001068: ad461fe6     ldp     q6, q7, [sp, #0xc0]
+NATIVE-DISASM-NEXT: 18000106c: ad4517e4     ldp     q4, q5, [sp, #0xa0]
+NATIVE-DISASM-NEXT: 180001070: ad440fe2     ldp     q2, q3, [sp, #0x80]
+NATIVE-DISASM-NEXT: 180001074: ad4307e0     ldp     q0, q1, [sp, #0x60]
+NATIVE-DISASM-NEXT: 180001078: f9402be8     ldr     x8,     [sp, #0x50]
+NATIVE-DISASM-NEXT: 18000107c: a9441fe6     ldp     x6, x7, [sp, #0x40]
+NATIVE-DISASM-NEXT: 180001080: a94317e4     ldp     x4, x5, [sp, #0x30]
+NATIVE-DISASM-NEXT: 180001084: a9420fe2     ldp     x2, x3, [sp, #0x20]
+NATIVE-DISASM-NEXT: 180001088: a94107e0     ldp     x0, x1, [sp, #0x10]
+NATIVE-DISASM-NEXT: 18000108c: a8ce7bfd     ldp     x29, x30, [sp], #0xe0
+NATIVE-DISASM-NEXT: 180001090: d61f0200     br      x16
 
 RUN: llvm-readobj --coff-load-config out-native.dll | FileCheck --check-prefix=NATIVE-LOADCFG %s
 NATIVE-LOADCFG:      AuxiliaryDelayloadIAT: 0x4000
