@@ -153,13 +153,14 @@ TEST(StringSwitchTest, EndsWithLower) {
 }
 
 TEST(StringSwitchTest, Cases) {
-  enum class OSType { Windows, Linux, Unknown };
+  enum class OSType { Windows, Linux, MacOS, Unknown };
 
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<OSType>(S)
         .Cases(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
                OSType::Windows)
         .Cases("linux", "unix", "*nix", "posix", OSType::Linux)
+        .Cases({"macos", "osx"}, OSType::MacOS)
         .Default(OSType::Unknown);
   };
 
@@ -172,21 +173,26 @@ TEST(StringSwitchTest, Cases) {
   EXPECT_EQ(OSType::Linux, Translate("*nix"));
   EXPECT_EQ(OSType::Linux, Translate("posix"));
 
+  EXPECT_EQ(OSType::MacOS, Translate("macos"));
+  EXPECT_EQ(OSType::MacOS, Translate("osx"));
+
   // Note that the whole null-terminator embedded string is required for the
   // case to match.
   EXPECT_EQ(OSType::Unknown, Translate("wind"));
   EXPECT_EQ(OSType::Unknown, Translate("Windows"));
+  EXPECT_EQ(OSType::Unknown, Translate("MacOS"));
   EXPECT_EQ(OSType::Unknown, Translate(""));
 }
 
 TEST(StringSwitchTest, CasesLower) {
-  enum class OSType { Windows, Linux, Unknown };
+  enum class OSType { Windows, Linux, MacOS, Unknown };
 
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<OSType>(S)
         .CasesLower(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
                     OSType::Windows)
         .CasesLower("linux", "unix", "*nix", "posix", OSType::Linux)
+        .CasesLower({"macos", "osx"}, OSType::MacOS)
         .Default(OSType::Unknown);
   };
 
@@ -201,6 +207,9 @@ TEST(StringSwitchTest, CasesLower) {
 
   EXPECT_EQ(OSType::Windows, Translate(llvm::StringRef("wind\0ws", 7)));
   EXPECT_EQ(OSType::Linux, Translate("linux"));
+
+  EXPECT_EQ(OSType::MacOS, Translate("macOS"));
+  EXPECT_EQ(OSType::MacOS, Translate("OSX"));
 
   EXPECT_EQ(OSType::Unknown, Translate("wind"));
   EXPECT_EQ(OSType::Unknown, Translate(""));
