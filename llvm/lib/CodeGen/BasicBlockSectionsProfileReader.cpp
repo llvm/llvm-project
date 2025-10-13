@@ -472,6 +472,11 @@ BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
   return BBSPR.getClonePathsForFunction(FuncName);
 }
 
+
+const CfgProfile *BasicBlockSectionsProfileReaderWrapperPass::getFunctionCfgProfile(StringRef FuncName) const  {
+  return BBSPR.getFunctionCfgProfile(FuncName);
+}
+
 BasicBlockSectionsProfileReader &
 BasicBlockSectionsProfileReaderWrapperPass::getBBSPR() {
   return BBSPR;

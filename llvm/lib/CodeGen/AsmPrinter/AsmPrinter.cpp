@@ -165,6 +165,10 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
+static cl::opt<bool> PgoAnalysisMapUsePropellerCfg("pgo-analysis-map-use-propeller-cfg",
+cl::desc("If available, use the Propeller cfg profile in the PGO analysis map."),
+cl::Hidden, cl::init(false));
+
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
     cl::desc("Skip emitting basic block entries in the SHT_LLVM_BB_ADDR_MAP "
@@ -474,6 +478,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -1532,16 +1537,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     assert(BBAddrMapVersion >= 2 &&
            "PGOAnalysisMap only supports version 2 or later");
 
-    // We will emit the BBSPR profile data if availale. Otherwise, we fall back
+    // We will emit the BBSPR profile data if requested and availale. Otherwise, we fall back
     // to MBFI and MBPI.
-    const BasicBlockSectionsProfileReader *BBSPR = nullptr;
-    if (auto *BBSPRPass = getAnalysisIfAvailable<
-            BasicBlockSectionsProfileReaderWrapperPass>())
-      BBSPR = &BBSPRPass->getBBSPR();
-
-    const CFGProfile *FuncCFGProfile = nullptr;
-    if (BBSPR)
-      FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
+    const CfgProfile *FuncCFGProfile = nullptr;
+    if (PgoAnalysisMapUsePropellerCfg) {
+       if (auto *BBSPR = getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
+        FuncCFGProfile = BBSPR->getFunctionCfgProfile(MF.getFunction().getName());
+    }
 
     const MachineBlockFrequencyInfo *MBFI =
         Features.BBFreq

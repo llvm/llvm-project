@@ -43,7 +43,7 @@ struct BBClusterInfo {
 };
 
 // This represents the CFG profile data for a function.
-struct CFGProfile {
+struct CfgProfile {
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge, stored as a nested map.
@@ -74,8 +74,8 @@ struct FunctionProfile {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
-  // CFG profile data.
-  CFGProfile CFG;
+  // Cfg profile data (block and edge frequencies).
+  CfgProfile CFG;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -103,9 +103,9 @@ public:
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  // Returns a pointer to the CFGProfile for the given function.
+  // Returns a pointer to the CfgProfile for the given function.
   // Returns nullptr if no profile data is available for the function.
-  const CFGProfile *getFunctionCFGProfile(StringRef FuncName) const {
+  const CfgProfile *getFunctionCfgProfile(StringRef FuncName) const {
     auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
     if (It == ProgramPathAndClusterInfo.end())
       return nullptr;
@@ -217,6 +217,8 @@ public:
 
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
+
+  const CfgProfile *getFunctionCfgProfile(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
