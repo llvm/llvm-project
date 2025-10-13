@@ -111,6 +111,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
   }
 
+  setTruncStoreAction(MVT::i32, MVT::i8, Custom);
+  setTruncStoreAction(MVT::i32, MVT::i16, Custom);
+  setTruncStoreAction(MVT::i64, MVT::i8, Custom);
+  setTruncStoreAction(MVT::i64, MVT::i16, Custom);
+  setTruncStoreAction(MVT::i64, MVT::i32, Custom);
+
   setOperationAction(ISD::GlobalAddress, MVTPtr, Custom);
   setOperationAction(ISD::GlobalTLSAddress, MVTPtr, Custom);
   setOperationAction(ISD::ExternalSymbol, MVTPtr, Custom);
@@ -1683,6 +1689,11 @@ static bool IsWebAssemblyGlobal(SDValue Op) {
   if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
     return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
 
+  if (Op->getOpcode() == WebAssemblyISD::Wrapper)
+    if (const GlobalAddressSDNode *GA =
+            dyn_cast<GlobalAddressSDNode>(Op->getOperand(0)))
+      return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
+
   return false;
 }
 
@@ -1704,15 +1715,84 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
   const SDValue &Base = SN->getBasePtr();
   const SDValue &Offset = SN->getOffset();
 
+  const EVT ValueType = Value.getValueType();
+  const EVT MemType = SN->getMemoryVT();
+
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())
       report_fatal_error("unexpected offset when storing to webassembly global",
                          false);
 
-    SDVTList Tys = DAG.getVTList(MVT::Other);
-    SDValue Ops[] = {SN->getChain(), Value, Base};
-    return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_SET, DL, Tys, Ops,
-                                   SN->getMemoryVT(), SN->getMemOperand());
+    if (!ValueType.isInteger()) {
+      SDVTList Tys = DAG.getVTList(MVT::Other);
+      SDValue Ops[] = {SN->getChain(), Value, Base};
+      return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_SET, DL, Tys, Ops,
+                                     SN->getMemoryVT(), SN->getMemOperand());
+    }
+
+    EVT GT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(
+            Base->getOpcode() == WebAssemblyISD::Wrapper ? Base->getOperand(0)
+                                                         : Base))
+      GT = EVT::getEVT(GA->getGlobal()->getValueType());
+
+    if (GT != MVT::i8 && GT != MVT::i16 && GT != MVT::i32 && GT != MVT::i64)
+      report_fatal_error("encountered unexpected global type for Base when "
+                         "storing into webassembly global",
+                         false);
+
+    EVT PromotedGT = getTypeToTransformTo(*DAG.getContext(), GT);
+
+    if (PromotedGT == ValueType && ValueType == MemType) {
+      SDVTList Tys = DAG.getVTList(MVT::Other);
+      SDValue Ops[] = {SN->getChain(), Value, Base};
+      return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_SET, DL, Tys, Ops,
+                                     SN->getMemoryVT(), SN->getMemOperand());
+    }
+
+    SDValue ModifiedNewValue = Value;
+    if (MemType.bitsLT(ValueType)) {
+      APInt Mask = APInt::getLowBitsSet(ValueType.getFixedSizeInBits(),
+                                        MemType.getFixedSizeInBits());
+      ModifiedNewValue = DAG.getNode(ISD::AND, DL, ValueType, ModifiedNewValue,
+                                     DAG.getConstant(Mask, DL, ValueType));
+    }
+    if (ValueType != PromotedGT) {
+      ModifiedNewValue = DAG.getAnyExtOrTrunc(ModifiedNewValue, DL, PromotedGT);
+    }
+
+    SDValue Chain = SN->getChain();
+
+    SDValue CombinedValue = ModifiedNewValue;
+    if (GT.bitsGT(MemType)) {
+      MachineMemOperand &StoreMMO = *SN->getMemOperand();
+      MachineMemOperand *NewMMO = DAG.getMachineFunction().getMachineMemOperand(
+          StoreMMO.getPointerInfo(),
+          (StoreMMO.getFlags() & ~MachineMemOperand::Flags::MOStore) |
+              MachineMemOperand::Flags::MOLoad,
+          LLT(PromotedGT.getSimpleVT()), StoreMMO.getBaseAlign(),
+          StoreMMO.getAAInfo(), StoreMMO.getRanges(), StoreMMO.getSyncScopeID(),
+          StoreMMO.getSuccessOrdering(), StoreMMO.getFailureOrdering());
+
+      SDValue OrigValue = DAG.getLoad(PromotedGT, DL, Chain, Base, NewMMO);
+      Chain = OrigValue.getValue(1);
+      APInt Mask = APInt::getHighBitsSet(GT.getFixedSizeInBits(),
+                                         GT.getFixedSizeInBits() -
+                                             MemType.getFixedSizeInBits());
+      SDValue ModifiedOrigValue =
+          DAG.getNode(ISD::AND, DL, PromotedGT, OrigValue,
+                      DAG.getConstant(Mask, DL, PromotedGT));
+      CombinedValue = DAG.getNode(ISD::OR, DL, PromotedGT, ModifiedNewValue,
+                                  ModifiedOrigValue);
+    }
+
+    MachineMemOperand *MMO = SN->getMemOperand();
+    MMO->setType(LLT(PromotedGT.getSimpleVT()));
+
+    SDValue NewStore = DAG.getStore(Chain, DL, CombinedValue, Base, MMO);
+
+    return NewStore;
   }
 
   if (std::optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {

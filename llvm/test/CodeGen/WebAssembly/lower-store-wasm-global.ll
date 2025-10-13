@@ -14,9 +14,14 @@ define void @store_i8_to_i32(i8 %val) {
 ; CHECK-LABEL: store_i8_to_i32:
 ; CHECK:         .functype store_i8_to_i32 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.store8 globalI32
+; CHECK-NEXT:    i32.const 255
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i32.const -256
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    global.set globalI32
 ; CHECK-NEXT:    # fallthrough-return
   store i8 %val, ptr addrspace(1) @globalI32
   ret void
@@ -26,9 +31,14 @@ define void @store_i16_to_i32(i16 %val) {
 ; CHECK-LABEL: store_i16_to_i32:
 ; CHECK:         .functype store_i16_to_i32 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.store16 globalI32
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i32.const -65536
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    global.set globalI32
 ; CHECK-NEXT:    # fallthrough-return
   store i16 %val, ptr addrspace(1) @globalI32
   ret void
@@ -50,6 +60,7 @@ define void @store_i64_to_i32(i64 %val) {
 ; CHECK:         .functype store_i64_to_i32 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    global.set globalI32
 ; CHECK-NEXT:    # fallthrough-return
   store i64 %val, ptr addrspace(1) @globalI32
@@ -60,9 +71,15 @@ define void @store_i8_to_i64(i8 %val) {
 ; CHECK-LABEL: store_i8_to_i64:
 ; CHECK:         .functype store_i8_to_i64 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.store8 globalI64
+; CHECK-NEXT:    i32.const 255
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.const -256
+; CHECK-NEXT:    i64.and
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    global.set globalI64
 ; CHECK-NEXT:    # fallthrough-return
   store i8 %val, ptr addrspace(1) @globalI64
   ret void
@@ -72,9 +89,15 @@ define void @store_i16_to_i64(i16 %val) {
 ; CHECK-LABEL: store_i16_to_i64:
 ; CHECK:         .functype store_i16_to_i64 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.store16 globalI64
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.const -65536
+; CHECK-NEXT:    i64.and
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    global.set globalI64
 ; CHECK-NEXT:    # fallthrough-return
   store i16 %val, ptr addrspace(1) @globalI64
   ret void
@@ -85,6 +108,11 @@ define void @store_i32_to_i64(i32 %val) {
 ; CHECK:         .functype store_i32_to_i64 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.const -4294967296
+; CHECK-NEXT:    i64.and
+; CHECK-NEXT:    i64.or
 ; CHECK-NEXT:    global.set globalI64
 ; CHECK-NEXT:    # fallthrough-return
   store i32 %val, ptr addrspace(1) @globalI64
@@ -106,9 +134,10 @@ define void @store_i8_to_i8(i8 %val) {
 ; CHECK-LABEL: store_i8_to_i8:
 ; CHECK:         .functype store_i8_to_i8 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.store8 globalI8
+; CHECK-NEXT:    i32.const 255
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    global.set globalI8
 ; CHECK-NEXT:    # fallthrough-return
   store i8 %val, ptr addrspace(1) @globalI8
   ret void
@@ -130,6 +159,7 @@ define void @store_i64_to_i8(i64 %val) {
 ; CHECK:         .functype store_i64_to_i8 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    global.set globalI8
 ; CHECK-NEXT:    # fallthrough-return
   store i64 %val, ptr addrspace(1) @globalI8
