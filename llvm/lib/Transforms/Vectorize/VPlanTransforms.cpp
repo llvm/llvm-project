@@ -1026,6 +1026,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       PredPHI->replaceAllUsesWith(Op);
   }
 
+  VPBuilder Builder(Def);
   VPValue *A;
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     Type *TruncTy = TypeInfo.inferScalarType(Def);
@@ -1041,18 +1042,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        auto *VPC =
-            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
+                                            TruncTy);
         if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
-          VPC->setUnderlyingValue(UnderlyingExt);
+          Ext->setUnderlyingValue(UnderlyingExt);
         }
-        VPC->insertBefore(&R);
-        Def->replaceAllUsesWith(VPC);
+        Def->replaceAllUsesWith(Ext);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-        auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
-        VPC->insertBefore(&R);
-        Def->replaceAllUsesWith(VPC);
+        auto *Trunc = Builder.createWidenCast(Instruction::Trunc, A, TruncTy);
+        Def->replaceAllUsesWith(Trunc);
       }
     }
 #ifndef NDEBUG
@@ -1098,7 +1097,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(Def->getOperand(1));
 
   // (x && y) || (x && z) -> x && (y || z)
-  VPBuilder Builder(Def);
   if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
       // Simplify only if one of the operands has one use to avoid creating an
@@ -1233,6 +1231,18 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // below.
   if (!Plan->isUnrolled())
     return;
+
+  // Hoist an invariant increment Y of a phi X, by having X start at Y.
+  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && Y->isLiveIn() &&
+      isa<VPPhi>(X)) {
+    auto *Phi = cast<VPPhi>(X);
+    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
+        Phi->getNumUsers() == 1 && (*Phi->user_begin() == &R)) {
+      Phi->setOperand(0, Y);
+      Def->replaceAllUsesWith(Phi);
+      return;
+    }
+  }
 
   // VPVectorPointer for part 0 can be replaced by their start pointer.
   if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&R)) {
@@ -1648,7 +1658,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
   ScalarEvolution &SE = *PSE.getSE();
-  if (match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+  if (match(Term, m_BranchOnCount()) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if TC <= VF * UF when the latch
@@ -1899,8 +1909,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
 
   SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
   for (VPRecipeBase &R :
@@ -2011,6 +2020,13 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
         })
+        .Case<VPVectorPointerRecipe>([](auto *I) {
+          // For recipes that do not directly map to LLVM IR instructions,
+          // assign opcodes after the last VPInstruction opcode (which is also
+          // after the last IR Instruction opcode), based on the VPDefID.
+          return std::make_pair(false,
+                                VPInstruction::OpsEnd + 1 + I->getVPDefID());
+        })
         .Default([](auto *) { return std::nullopt; });
   }
 
@@ -2034,11 +2050,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool canHandle(const VPSingleDefRecipe *Def) {
     // We can extend the list of handled recipes in the future,
     // provided we account for the data embedded in them while checking for
-    // equality or hashing. We assign VPVectorEndPointerRecipe the GEP opcode,
-    // as it is essentially a GEP with different semantics.
-    auto C = isa<VPVectorPointerRecipe>(Def)
-                 ? std::make_pair(false, Instruction::GetElementPtr)
-                 : getOpcodeOrIntrinsicID(Def);
+    // equality or hashing.
+    auto C = getOpcodeOrIntrinsicID(Def);
 
     // The issue with (Insert|Extract)Value is that the index of the
     // insert/extract is not a proper operand in LLVM IR, and hence also not in
@@ -2077,6 +2090,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||
         !equal(L->operands(), R->operands()))
       return false;
+    assert(getOpcodeOrIntrinsicID(L) && getOpcodeOrIntrinsicID(R) &&
+           "must have valid opcode info for both recipes");
     if (auto *LFlags = dyn_cast<VPRecipeWithIRFlags>(L))
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
@@ -2223,20 +2238,20 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
         auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
-        VPWidenCastRecipe *NewOp =
-            IterIsEmpty
-                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy,
-                                        VPIRFlags::TruncFlagsTy(false, false))
-                : ProcessedIter->second;
-        R.setOperand(Idx, NewOp);
-        if (!IterIsEmpty)
+        if (!IterIsEmpty) {
+          R.setOperand(Idx, ProcessedIter->second);
           continue;
-        ProcessedIter->second = NewOp;
-        if (!Op->isLiveIn()) {
-          NewOp->insertBefore(&R);
-        } else {
-          PH->appendRecipe(NewOp);
         }
+
+        VPBuilder Builder;
+        if (Op->isLiveIn())
+          Builder.setInsertPoint(PH);
+        else
+          Builder.setInsertPoint(&R);
+        VPWidenCastRecipe *NewOp =
+            Builder.createWidenCast(Instruction::Trunc, Op, NewResTy);
+        ProcessedIter->second = NewOp;
+        R.setOperand(Idx, NewOp);
       }
 
     }
@@ -3040,8 +3055,7 @@ void VPlanTransforms::createInterleaveGroups(
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
   for (const auto *IG : InterleaveGroups) {
     auto *Start =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
@@ -3417,9 +3431,8 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
 
   VPBuilder Builder(LatchVPBB->getTerminator());
   VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
-  assert(
-      match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond(m_VPValue())) &&
-      "Terminator must be be BranchOnCond");
+  assert(match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond()) &&
+         "Terminator must be be BranchOnCond");
   VPValue *CondOfEarlyExitingVPBB =
       EarlyExitingVPBB->getTerminator()->getOperand(0);
   auto *CondToEarlyExit = TrueSucc == EarlyExitVPBB
@@ -3681,8 +3694,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
     return;
 
 #ifndef NDEBUG
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
 #endif
 
   SmallVector<VPValue *> VPValues;
@@ -4028,8 +4040,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R) ||
-        match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+    if (isa<VPCanonicalIVPHIRecipe>(&R) || match(&R, m_BranchOnCount()))
       continue;
 
     if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&

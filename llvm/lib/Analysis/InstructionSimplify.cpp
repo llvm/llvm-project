@@ -671,12 +671,12 @@ Value *llvm::simplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 /// This is very similar to stripAndAccumulateConstantOffsets(), except it
 /// normalizes the offset bitwidth to the stripped pointer type, not the
 /// original pointer type.
-static APInt stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
-                                            bool AllowNonInbounds = false) {
+static APInt stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V) {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
   APInt Offset = APInt::getZero(DL.getIndexTypeSizeInBits(V->getType()));
-  V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
+  V = V->stripAndAccumulateConstantOffsets(DL, Offset,
+                                           /*AllowNonInbounds=*/true);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
   // the offset calculated.
   return Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(V->getType()));
@@ -853,10 +853,12 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
           return W;
 
   // Variations on GEP(base, I, ...) - GEP(base, i, ...) -> GEP(null, I-i, ...).
-  if (match(Op0, m_PtrToInt(m_Value(X))) && match(Op1, m_PtrToInt(m_Value(Y))))
+  if (match(Op0, m_PtrToIntOrAddr(m_Value(X))) &&
+      match(Op1, m_PtrToIntOrAddr(m_Value(Y)))) {
     if (Constant *Result = computePointerDifference(Q.DL, X, Y))
       return ConstantFoldIntegerCast(Result, Op0->getType(), /*IsSigned*/ true,
                                      Q.DL);
+  }
 
   // i1 sub -> xor.
   if (MaxRecurse && Op0->getType()->isIntOrIntVectorTy(1))

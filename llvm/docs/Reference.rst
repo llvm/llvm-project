@@ -15,6 +15,7 @@ LLVM and API reference documentation.
    BranchWeightMetadata
    Bugpoint
    CalleeTypeMetadata
+   CallGraphSection
    CIBestPractices
    CommandGuide/index
    ContentAddressableStorage

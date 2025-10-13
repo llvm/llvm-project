@@ -604,14 +604,17 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return std::nullopt;
   const NormalizedConstraint::OccurenceList &Used =
       Constraint.mappingOccurenceList();
+  // The empty MLTAL situation should only occur when evaluating non-dependent
+  // constraints.
+  if (!MLTAL.getNumSubstitutedLevels())
+    MLTAL.addOuterTemplateArguments(TD, {}, /*Final=*/false);
   SubstitutedOuterMost =
       llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
     TemplateArgument Arg;
     if (Used[I])
-      Arg = S.Context.getCanonicalTemplateArgument(
-          CTAI.SugaredConverted[MappedIndex++]);
+      Arg = CTAI.SugaredConverted[MappedIndex++];
     if (I < SubstitutedOuterMost.size()) {
       SubstitutedOuterMost[I] = Arg;
       Offset = I + 1;
@@ -623,9 +626,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   if (Offset < SubstitutedOuterMost.size())
     SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
 
-  MLTAL.replaceOutermostTemplateArguments(
-      const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
-      SubstitutedOuterMost);
+  MLTAL.replaceOutermostTemplateArguments(TD, SubstitutedOuterMost);
   return std::move(MLTAL);
 }
 
@@ -956,11 +957,20 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
           ? Constraint.getPackSubstitutionIndex()
           : PackSubstitutionIndex;
 
-  Sema::InstantiatingTemplate _(S, ConceptId->getBeginLoc(),
-                                Sema::InstantiatingTemplate::ConstraintsCheck{},
-                                ConceptId->getNamedConcept(),
-                                MLTAL.getInnermost(),
-                                Constraint.getSourceRange());
+  Sema::InstantiatingTemplate InstTemplate(
+      S, ConceptId->getBeginLoc(),
+      Sema::InstantiatingTemplate::ConstraintsCheck{},
+      ConceptId->getNamedConcept(),
+      // We may have empty template arguments when checking non-dependent
+      // nested constraint expressions.
+      // In such cases, non-SFINAE errors would have already been diagnosed
+      // during parameter mapping substitution, so the instantiating template
+      // arguments are less useful here.
+      MLTAL.getNumSubstitutedLevels() ? MLTAL.getInnermost()
+                                      : ArrayRef<TemplateArgument>{},
+      Constraint.getSourceRange());
+  if (InstTemplate.isInvalid())
+    return ExprError();
 
   unsigned Size = Satisfaction.Details.size();
 
