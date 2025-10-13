@@ -4631,7 +4631,7 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal">;
   defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal">;
 
-} // End HasSME2p2orSVE2p2
+} // End HasSME2p3orSVE2p3
 
 //===----------------------------------------------------------------------===//
 // SME2.2 or SVE2.2 instructions - Legal in streaming mode iff target has SME2p2
