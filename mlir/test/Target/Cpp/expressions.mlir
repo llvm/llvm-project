@@ -315,16 +315,13 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
 }
 
 // CPP-DEFAULT:      int32_t expression_with_dereference(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
-// CPP-DEFAULT-NEXT:   int32_t [[VAL_3:v[0-9]+]] = *([[VAL_2]] - [[VAL_1]]);
-// CPP-DEFAULT-NEXT:   return [[VAL_3]];
+// CPP-DEFAULT-NEXT:   return *([[VAL_2]] - [[VAL_1]]);
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      int32_t expression_with_dereference(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
-// CPP-DECLTOP-NEXT:   int32_t [[VAL_3:v[0-9]+]];
-// CPP-DECLTOP-NEXT:   [[VAL_3]] = *([[VAL_2]] - [[VAL_1]]);
-// CPP-DECLTOP-NEXT:   return [[VAL_3]];
+// CPP-DECLTOP-NEXT:   return *([[VAL_2]] - [[VAL_1]]);
 // CPP-DECLTOP-NEXT: }
-func.func @expression_with_dereference(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i32 {
+emitc.func @expression_with_dereference(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i32 {
   %c = emitc.expression %arg1, %arg2 : (i32, !emitc.ptr<i32>) -> i32 {
     %e = emitc.sub %arg2, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
     %d = emitc.apply "*"(%e) : (!emitc.ptr<i32>) -> i32
@@ -384,19 +381,16 @@ func.func @expression_with_subscript_user(%arg0: !emitc.ptr<!emitc.opaque<"void"
 // CPP-DEFAULT: bool expression_with_load(int32_t [[VAL_1:v.+]], int32_t [[VAL_2:v.+]], int32_t* [[VAL_3:v.+]]) {
 // CPP-DEFAULT-NEXT:   int64_t [[VAL_4:v.+]] = 0;
 // CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v.+]] = 42;
-// CPP-DEFAULT-NEXT:   bool [[VAL_6:v.+]] = [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
-// CPP-DEFAULT-NEXT:   return [[VAL_6]];
+// CPP-DEFAULT-NEXT:   return [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
 
 // CPP-DECLTOP: bool expression_with_load(int32_t [[VAL_1:v.+]], int32_t [[VAL_2:v.+]], int32_t* [[VAL_3:v.+]]) {
 // CPP-DECLTOP-NEXT:   int64_t [[VAL_4:v.+]];
 // CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v.+]];
-// CPP-DECLTOP-NEXT:   bool [[VAL_6:v.+]];
 // CPP-DECLTOP-NEXT:   [[VAL_4]] = 0;
 // CPP-DECLTOP-NEXT:   [[VAL_5]] = 42;
-// CPP-DECLTOP-NEXT:   [[VAL_6]] = [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
-// CPP-DECLTOP-NEXT:   return [[VAL_6]];
+// CPP-DECLTOP-NEXT:   return [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
 
-func.func @expression_with_load(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
+emitc.func @expression_with_load(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
   %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
   %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
   %ptr = emitc.subscript %arg2[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
@@ -408,22 +402,19 @@ func.func @expression_with_load(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) 
     %e = emitc.cmp lt, %b, %d :(i32, i32) -> i1
     yield %e : i1
   }
-  return %result : i1
+  emitc.return %result : i1
 }
 
 // CPP-DEFAULT: bool expression_with_load_and_call(int32_t* [[VAL_1:v.+]]) {
 // CPP-DEFAULT-NEXT:   int64_t [[VAL_2:v.+]] = 0;
-// CPP-DEFAULT-NEXT:   bool [[VAL_3:v.+]] = [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
-// CPP-DEFAULT-NEXT:   return [[VAL_3]];
+// CPP-DEFAULT-NEXT:   return [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
 
 // CPP-DECLTOP: bool expression_with_load_and_call(int32_t* [[VAL_1:v.+]]) {
 // CPP-DECLTOP-NEXT:   int64_t [[VAL_2:v.+]];
-// CPP-DECLTOP-NEXT:   bool [[VAL_3:v.+]];
 // CPP-DECLTOP-NEXT:   [[VAL_2]] = 0;
-// CPP-DECLTOP-NEXT:   [[VAL_3]] = [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
-// CPP-DECLTOP-NEXT:   return [[VAL_3]];
+// CPP-DECLTOP-NEXT:   return [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
 
-func.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
+emitc.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
   %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
   %ptr = emitc.subscript %arg0[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %result = emitc.expression %ptr : (!emitc.lvalue<i32>) -> i1 {
@@ -435,7 +426,7 @@ func.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
     %f = emitc.cmp lt, %e, %b :(i32, i32) -> i1
     yield %f : i1
   }
-  return %result : i1
+  emitc.return %result : i1
 }
 
 
@@ -455,6 +446,207 @@ emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
     %3 = cmp lt, %0, %1 : (i32, i32) -> i1
     %4 = emitc.call_opaque "f"(%3) {"args" = [0: index]} : (i1) -> i1
     yield %4 : i1
+  }
+  return
+}
+
+// CPP-DEFAULT: void inline_side_effects_into_assign(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   int64_t [[VAL_3:v[0-9]+]] = 0;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = 42;
+// CPP-DEFAULT-NEXT:   [[VAL_4]] = [[VAL_4]] * [[VAL_1]] + [[VAL_2]][[[VAL_3]]];
+// CPP-DEFAULT-NEXT:   return;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: void inline_side_effects_into_assign(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   int64_t [[VAL_3:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_3]] = 0;
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = 42;
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = [[VAL_4]] * [[VAL_1]] + [[VAL_2]][[[VAL_3]]];
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }
+
+emitc.func @inline_side_effects_into_assign(%arg0: i32, %arg1: !emitc.ptr<i32>) {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
+  %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+  %result = emitc.expression %arg0, %0, %ptr : (i32, !emitc.lvalue<i32>, !emitc.lvalue<i32>) -> i32 {
+    %a = emitc.load %0 : !emitc.lvalue<i32>
+    %b = emitc.mul %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.load %ptr : !emitc.lvalue<i32>
+    %d = emitc.add %b, %c : (i32, i32) -> i32
+    yield %d : i32
+  }
+  emitc.assign %result : i32 to %0 : !emitc.lvalue<i32>
+  emitc.return
+}
+
+// CPP-DEFAULT: void do_not_inline_side_effects_into_assign(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   int64_t [[VAL_3:v[0-9]+]] = 0;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = 42;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v[0-9]+]] = [[VAL_4]] * [[VAL_1]];
+// CPP-DEFAULT-NEXT:   [[VAL_2]][[[VAL_3]]] = [[VAL_5]];
+// CPP-DEFAULT-NEXT:   return;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: void do_not_inline_side_effects_into_assign(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   int64_t [[VAL_3:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_3]] = 0;
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = 42;
+// CPP-DECLTOP-NEXT:   [[VAL_5:v[0-9]+]] = [[VAL_4]] * [[VAL_1]];
+// CPP-DECLTOP-NEXT:   [[VAL_2]][[[VAL_3]]] = [[VAL_5]];
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }
+
+emitc.func @do_not_inline_side_effects_into_assign(%arg0: i32, %arg1: !emitc.ptr<i32>) {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
+  %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+  %result = emitc.expression %arg0, %0 : (i32, !emitc.lvalue<i32>) -> i32 {
+    %a = emitc.load %0 : !emitc.lvalue<i32>
+    %b = emitc.mul %a, %arg0 : (i32, i32) -> i32
+    yield %b : i32
+  }
+  emitc.assign %result : i32 to %ptr : !emitc.lvalue<i32>
+  emitc.return
+}
+
+// CPP-DEFAULT: int32_t do_not_inline_non_preceding_side_effects(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   int64_t [[VAL_3:v[0-9]+]] = 0;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = 42;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v[0-9]+]] = [[VAL_4]] * [[VAL_1]];
+// CPP-DEFAULT-NEXT:   [[VAL_2]][[[VAL_3]]] = [[VAL_1]];
+// CPP-DEFAULT-NEXT:   return [[VAL_5]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: int32_t do_not_inline_non_preceding_side_effects(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   int64_t [[VAL_3:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_3:v[0-9]+]] = 0;
+// CPP-DECLTOP-NEXT:   [[VAL_4:v[0-9]+]] = 42;
+// CPP-DECLTOP-NEXT:   [[VAL_5:v[0-9]+]] = [[VAL_4]] * [[VAL_1]];
+// CPP-DECLTOP-NEXT:   [[VAL_2]][[[VAL_3]]] = [[VAL_1]];
+// CPP-DECLTOP-NEXT:   return [[VAL_5]];
+// CPP-DECLTOP-NEXT: }
+
+emitc.func @do_not_inline_non_preceding_side_effects(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i32 {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
+  %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+  %result = emitc.expression %arg0, %0 : (i32, !emitc.lvalue<i32>) -> i32 {
+    %a = emitc.load %0 : !emitc.lvalue<i32>
+    %b = emitc.mul %a, %arg0 : (i32, i32) -> i32
+    yield %b : i32
+  }
+  emitc.assign %arg0 : i32 to %ptr : !emitc.lvalue<i32>
+  emitc.return %result : i32
+}
+
+// CPP-DEFAULT: int32_t inline_side_effects_into_if(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DEFAULT-NEXT:   if (bar([[VAL_1]], [[VAL_2]]) < [[VAL_3]]) {
+// CPP-DEFAULT-NEXT:     [[VAL_4]] = [[VAL_1]];
+// CPP-DEFAULT-NEXT:   } else {
+// CPP-DEFAULT-NEXT:     [[VAL_4]] = [[VAL_2]];
+// CPP-DEFAULT-NEXT:   }
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v[0-9]+]] = [[VAL_4]];
+// CPP-DEFAULT-NEXT:   return [[VAL_5]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: int32_t inline_side_effects_into_if(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   if (bar([[VAL_1]], [[VAL_2]]) < [[VAL_3]]) {
+// CPP-DECLTOP-NEXT:     [[VAL_4]] = [[VAL_1]];
+// CPP-DECLTOP-NEXT:   } else {
+// CPP-DECLTOP-NEXT:     [[VAL_4]] = [[VAL_2]];
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT:   [[VAL_5]] = [[VAL_4]];
+// CPP-DECLTOP-NEXT:   return [[VAL_5]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @inline_side_effects_into_if(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  %cond = emitc.expression %arg0, %arg1, %arg2 : (i32, i32, i32) -> i1 {
+    %a = emitc.call_opaque "bar" (%arg0, %arg1) : (i32, i32) -> (i32)
+    %b = emitc.cmp lt, %a, %arg2 :(i32, i32) -> i1
+    emitc.yield %b : i1
+  }
+  emitc.if %cond {
+    emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+    emitc.yield
+  } else {
+    emitc.assign %arg1 : i32 to %v : !emitc.lvalue<i32>
+    emitc.yield
+  }
+  %v_load = emitc.load %v : !emitc.lvalue<i32>
+  return %v_load : i32
+}
+
+// CPP-DEFAULT: void inline_side_effects_into_switch(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   switch (bar([[VAL_1]], [[VAL_2]]) + [[VAL_3]]) {
+// CPP-DEFAULT-NEXT:   case 2: {
+// CPP-DEFAULT-NEXT:     int32_t [[VAL_4:v[0-9]+]] = func_b();
+// CPP-DEFAULT-NEXT:     break;
+// CPP-DEFAULT-NEXT:   }
+// CPP-DEFAULT-NEXT:   case 5: {
+// CPP-DEFAULT-NEXT:     int32_t [[VAL_5:v[0-9]+]] = func_a();
+// CPP-DEFAULT-NEXT:     break;
+// CPP-DEFAULT-NEXT:   }
+// CPP-DEFAULT-NEXT:   default: {
+// CPP-DEFAULT-NEXT:     float [[VAL_6:v[0-9]+]] = 4.200000000e+01f;
+// CPP-DEFAULT-NEXT:     func2([[VAL_6]]);
+// CPP-DEFAULT-NEXT:     break;
+// CPP-DEFAULT-NEXT:   }
+// CPP-DEFAULT-NEXT:   }
+// CPP-DEFAULT-NEXT:   return;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: void inline_side_effects_into_switch(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   float [[VAL_6:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   switch (bar([[VAL_1]], [[VAL_2]]) + [[VAL_3]]) {
+// CPP-DECLTOP-NEXT:   case 2: {
+// CPP-DECLTOP-NEXT:     [[VAL_4]] = func_b();
+// CPP-DECLTOP-NEXT:     break;
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT:   case 5: {
+// CPP-DECLTOP-NEXT:     [[VAL_5]] = func_a();
+// CPP-DECLTOP-NEXT:     break;
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT:   default: {
+// CPP-DECLTOP-NEXT:     [[VAL_6]] = 4.200000000e+01f;
+// CPP-DECLTOP-NEXT:     func2([[VAL_6]]);
+// CPP-DECLTOP-NEXT:     break;
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }
+
+func.func @inline_side_effects_into_switch(%arg0: i32, %arg1: i32, %arg2: i32) {
+  %0 = emitc.expression %arg0, %arg1, %arg2 : (i32, i32, i32) -> i32 {
+    %a = emitc.call_opaque "bar" (%arg0, %arg1) : (i32, i32) -> (i32)
+    %b = emitc.add %a, %arg2 :(i32, i32) -> i32
+    emitc.yield %b : i32
+  }
+  emitc.switch %0 : i32
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 5 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
   }
   return
 }
