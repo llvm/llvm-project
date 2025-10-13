@@ -114,8 +114,7 @@ template <typename Bitfield, typename StorageType> struct Impl {
     } else {
       static_assert(std::is_signed_v<IntegerType>,
                     "IntegerType must be signed");
-      assert(UserValue <= maxIntN(Bitfield::Bits) && "value is too big");
-      assert(UserValue >= minIntN(Bitfield::Bits) && "value is too small");
+      assert(isInt<Bitfield::Bits>(UserValue) && "value is out of range");
     }
   }
 
