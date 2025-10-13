@@ -198,7 +198,6 @@ namespace AArch64TLBIP {
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64TLBIP
 
-
 namespace AArch64MLBI {
 #define GET_MLBITable_IMPL
 #include "AArch64GenSystemOperands.inc"
