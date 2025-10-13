@@ -8,6 +8,7 @@
 
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "gtest/gtest.h"
@@ -1063,6 +1064,72 @@ TEST_F(ConstantFPRangeTest, sub) {
       },
       SparseLevel::SpecialValuesOnly);
 #endif
+}
+
+TEST_F(ConstantFPRangeTest, flushDenormals) {
+  const fltSemantics &FP8Sem = APFloat::Float8E4M3();
+  APFloat NormalVal = APFloat::getSmallestNormalized(FP8Sem);
+  APFloat Subnormal1 = NormalVal;
+  Subnormal1.next(/*nextDown=*/true);
+  APFloat Subnormal2 = APFloat::getSmallest(FP8Sem);
+  APFloat ZeroVal = APFloat::getZero(FP8Sem);
+  APFloat EdgeValues[8] = {-NormalVal, -Subnormal1, -Subnormal2, -ZeroVal,
+                           ZeroVal,    Subnormal2,  Subnormal1,  NormalVal};
+  constexpr DenormalMode::DenormalModeKind Modes[4] = {
+      DenormalMode::IEEE, DenormalMode::PreserveSign,
+      DenormalMode::PositiveZero, DenormalMode::Dynamic};
+  for (uint32_t I = 0; I != 8; ++I) {
+    for (uint32_t J = I; J != 8; ++J) {
+      ConstantFPRange OriginCR =
+          ConstantFPRange::getNonNaN(EdgeValues[I], EdgeValues[J]);
+      for (auto Mode : Modes) {
+        StringRef ModeName = denormalModeKindName(Mode);
+        ConstantFPRange FlushedCR = OriginCR;
+        FlushedCR.flushDenormals(Mode);
+
+        ConstantFPRange Expected = ConstantFPRange::getEmpty(FP8Sem);
+        auto CheckFlushedV = [&](const APFloat &V, const APFloat &FlushedV) {
+          EXPECT_TRUE(FlushedCR.contains(FlushedV))
+              << "Wrong result for flushDenormal(" << V << ", " << ModeName
+              << "). The result " << FlushedCR << " should contain "
+              << FlushedV;
+          if (!Expected.contains(FlushedV))
+            Expected = Expected.unionWith(ConstantFPRange(FlushedV));
+        };
+        EnumerateValuesInConstantFPRange(
+            OriginCR,
+            [&](const APFloat &V) {
+              if (V.isDenormal()) {
+                switch (Mode) {
+                case DenormalMode::IEEE:
+                  break;
+                case DenormalMode::PreserveSign:
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem, V.isNegative()));
+                  break;
+                case DenormalMode::PositiveZero:
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem));
+                  break;
+                case DenormalMode::Dynamic:
+                  // PreserveSign
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem, V.isNegative()));
+                  // PositiveZero
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem));
+                  break;
+                default:
+                  llvm_unreachable("unknown denormal mode");
+                }
+              }
+              // It is not mandated that flushing to zero occurs.
+              CheckFlushedV(V, V);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(FlushedCR, Expected)
+            << "Suboptimal result for flushDenormal(" << OriginCR << ", "
+            << ModeName << "). Expected " << Expected << ", but got "
+            << FlushedCR;
+      }
+    }
+  }
 }
 
 } // anonymous namespace
