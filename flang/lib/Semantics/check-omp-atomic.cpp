@@ -693,14 +693,14 @@ OmpStructureChecker::CheckUpdateCapture(
         "In ATOMIC UPDATE operation with CAPTURE neither statement could be the update or the capture"_err_en_US);
   }};
 
-  auto checkSameAtomicLocation{[&](const evaluate::Assignment &upd,
-                                     const evaluate::Assignment &cap) {
-    // For now, this is a placeholder. A complete implementation would need
-    // to walk the entire expression tree of upd.rhs to find all DataRef nodes
-    // and compare them structurally with the atomic variable (upd.lhs).
-    // This is complex and requires proper expression traversal.
-    // The MLIR verification layer catches these cases as a safety net.
-  }};
+  auto checkSameAtomicLocation{
+      [&](const evaluate::Assignment &upd, const evaluate::Assignment &cap) {
+        // For now, this is a placeholder. A complete implementation would need
+        // to walk the entire expression tree of upd.rhs to find all DataRef
+        // nodes and compare them structurally with the atomic variable
+        // (upd.lhs). This is complex and requires proper expression traversal.
+        // The MLIR verification layer catches these cases as a safety net.
+      }};
 
   auto makeSelectionFromDet{[&](int det) -> ReturnTy {
     // If det != 0, then the checks unambiguously suggest a specific

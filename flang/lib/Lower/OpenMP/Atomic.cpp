@@ -459,7 +459,6 @@ void Fortran::lower::omp::lowerAtomic(
   } else {
     int action0 = analysis.op0.what & analysis.Action;
     int action1 = analysis.op1.what & analysis.Action;
-
     mlir::Operation *captureOp = nullptr;
     fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
     fir::FirOpBuilder::InsertPoint atomicAt, postAt;
