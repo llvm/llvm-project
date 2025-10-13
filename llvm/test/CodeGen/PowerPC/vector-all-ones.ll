@@ -11,8 +11,23 @@
 ; Currently the generated code uses `vspltisw` to generate vector of 1s followed by add operation.
 ; This pattern is expected to be optimized in a future patch by using `xxleqv` to generate vector of -1s
 ; followed by subtraction operation.
-define dso_local noundef <4 x i32> @test1(<4 x i32> %a) {
-; CHECK-LABEL: test1:
+
+; Function for the vector type v2i64 `a + {1, 1}`
+define dso_local noundef <2 x i64> @test_v2i64(<2 x i64> noundef %a) {
+; CHECK-LABEL: test_v2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vspltisw v3, 1
+; CHECK-NEXT:    vupklsw v3, v3
+; CHECK-NEXT:    vaddudm v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %add = add <2 x i64> %a, splat (i64 1)
+  ret <2 x i64> %add
+}
+
+; Function for the vector type v4i32 `a + {1, 1, 1, 1}`
+define dso_local noundef <4 x i32> @test_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: test_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw v3, 1
 ; CHECK-NEXT:    vadduwm v2, v2, v3
@@ -20,4 +35,28 @@ define dso_local noundef <4 x i32> @test1(<4 x i32> %a) {
 entry:
   %add = add <4 x i32> %a, splat (i32 1)
   ret <4 x i32> %add
+}
+
+; Function for the vector type v8i16 `a + {1, 1, 1, 1, 1, 1, 1, 1}`
+define dso_local noundef <8 x i16> @test_v8i16(<8 x i16> noundef %a) {
+; CHECK-LABEL: test_v8i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vspltish v3, 1
+; CHECK-NEXT:    vadduhm v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %add = add <8 x i16> %a, splat (i16 1)
+  ret <8 x i16> %add
+}
+
+; Function for the vector type v16i8 `a + {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}`
+define dso_local noundef <16 x i8> @test_16i8(<16 x i8> noundef %a) {
+; CHECK-LABEL: test_16i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v3, 1
+; CHECK-NEXT:    vaddubm v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %add = add <16 x i8> %a, splat (i8 1)
+  ret <16 x i8> %add
 }
