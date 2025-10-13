@@ -209,9 +209,10 @@ struct TailFoldingInfo {
   TargetLibraryInfo *TLI;
   LoopVectorizationLegality *LVL;
   InterleavedAccessInfo *IAI;
+  bool UseWideLaneMask;
   TailFoldingInfo(TargetLibraryInfo *TLI, LoopVectorizationLegality *LVL,
-                  InterleavedAccessInfo *IAI)
-      : TLI(TLI), LVL(LVL), IAI(IAI) {}
+                  InterleavedAccessInfo *IAI, bool UseWideLaneMask = false)
+      : TLI(TLI), LVL(LVL), IAI(IAI), UseWideLaneMask(UseWideLaneMask) {}
 };
 
 class TargetTransformInfo;
