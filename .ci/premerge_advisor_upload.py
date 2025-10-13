@@ -45,4 +45,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.commit_sha, args.workflow_run_number, args.build_log_files)
-    main()
