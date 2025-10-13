@@ -197,7 +197,12 @@ public:
                                    MlirPatternRewriter rewriter,
                                    void *userData) -> MlirLogicalResult {
       nb::handle f(static_cast<PyObject *>(userData));
-      nb::object res = f(op, PyPatternRewriter(rewriter));
+
+      PyMlirContextRef ctx =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+
+      nb::object res = f(opView, PyPatternRewriter(rewriter));
       return logicalResultFromObject(res);
     };
     MlirRewritePattern pattern = mlirOpRewritePattenCreate(
