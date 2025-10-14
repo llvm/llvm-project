@@ -1416,6 +1416,31 @@ concept IsEntitySpec =
 
 }
 
+namespace case8 {
+
+template <class T>
+struct type_identity {
+    using type = T;
+};
+
+template <typename Inner>
+struct Cat {};
+
+template <typename T>
+concept CatConcept = requires {
+    []<class Inner>(type_identity<Cat<Inner>>) {}(type_identity<T>{});
+};
+
+template <typename Dummy>
+struct Feeder {
+    template <CatConcept Dummy2>
+    void feed() noexcept {}
+};
+
+void main() { Feeder<int>{}.feed<Cat<int>>(); }
+
+}
+
 }
 
 namespace GH162125 {
