@@ -744,8 +744,13 @@ namespace clang {
     Error ImportOverriddenMethods(CXXMethodDecl *ToMethod,
                                   CXXMethodDecl *FromMethod);
 
-    Expected<FunctionDecl *>
-    FindFunctionTemplateSpecialization(FunctionDecl *FromFD);
+    Expected<FunctionDecl *> FindFunctionTemplateSpecialization(
+        FunctionDecl *FromFD);
+
+    // Returns true if the given function has a placeholder return type and
+    // that type is declared inside the body of the function.
+    // E.g. auto f() { struct X{}; return X(); }
+    bool hasReturnTypeDeclaredInside(FunctionDecl *D);
   };
 
 template <typename InContainerTy>
@@ -3896,6 +3901,30 @@ private:
 };
 } // namespace
 
+/// This function checks if the given function has a return type that contains
+/// a reference (in any way) to a declaration inside the same function.
+bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
+  QualType FromTy = D->getType();
+  const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
+  assert(FromFPT && "Must be called on FunctionProtoType");
+
+  auto IsCXX11Lambda = [&]() {
+    if (Importer.FromContext.getLangOpts().CPlusPlus14) // C++14 or later
+      return false;
+
+    return isLambdaMethod(D);
+  };
+
+  QualType RetT = FromFPT->getReturnType();
+  if (isa<AutoType>(RetT.getTypePtr()) || IsCXX11Lambda()) {
+    FunctionDecl *Def = D->getDefinition();
+    IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
+    return Visitor.CheckType(RetT);
+  }
+
+  return false;
+}
+
 ExplicitSpecifier
 ASTNodeImporter::importExplicitSpecifier(Error &Err, ExplicitSpecifier ESpec) {
   Expr *ExplicitExpr = ESpec.getExpr();
@@ -4044,8 +4073,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
     // Reuse this approach for auto return types declared as typenames from
-    // template params, tracked in FunctionReturnTypeCycleDetector.
-    if (Importer.FunctionReturnTypeCycleDetector->isCycle(D)) {
+    // template pamams, tracked in FunctionReturnTypeCycleDetector.
+    if (hasReturnTypeDeclaredInside(D) ||
+        Importer.FunctionReturnTypeCycleDetector->isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
