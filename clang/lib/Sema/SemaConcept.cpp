@@ -565,7 +565,7 @@ std::optional<MultiLevelTemplateArgumentList>
 ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const NormalizedConstraintWithParamMapping &Constraint,
     MultiLevelTemplateArgumentList MLTAL,
-    llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
+    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
 
   if (!Constraint.hasParameterMapping())
     return std::move(MLTAL);
@@ -607,7 +607,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   // The empty MLTAL situation should only occur when evaluating non-dependent
   // constraints.
   if (MLTAL.getNumSubstitutedLevels())
-    SubstitutedOutermost =
+    SubstitutedOuterMost =
         llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
@@ -615,19 +615,19 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     if (Used[I])
       Arg = S.Context.getCanonicalTemplateArgument(
           CTAI.SugaredConverted[MappedIndex++]);
-    if (I < SubstitutedOutermost.size()) {
-      SubstitutedOutermost[I] = Arg;
+    if (I < SubstitutedOuterMost.size()) {
+      SubstitutedOuterMost[I] = Arg;
       Offset = I + 1;
     } else {
-      SubstitutedOutermost.push_back(Arg);
-      Offset = SubstitutedOutermost.size();
+      SubstitutedOuterMost.push_back(Arg);
+      Offset = SubstitutedOuterMost.size();
     }
   }
-  if (Offset < SubstitutedOutermost.size())
-    SubstitutedOutermost.erase(SubstitutedOutermost.begin() + Offset);
+  if (Offset < SubstitutedOuterMost.size())
+    SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
 
   MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
-  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOutermost,
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOuterMost,
                                                     /*Final=*/false);
   return std::move(SubstitutedTemplateArgs);
 }
@@ -636,9 +636,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
@@ -786,13 +786,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                      FoldExpandedConstraint::FoldOperatorKind::And;
   unsigned EffectiveDetailEndIndex = Satisfaction.Details.size();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   // FIXME: Is PackSubstitutionIndex correct?
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
           static_cast<const NormalizedConstraintWithParamMapping &>(Constraint),
-          MLTAL, SubstitutedOutermost);
+          MLTAL, SubstitutedOuterMost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprError();
@@ -880,9 +880,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const MultiLevelTemplateArgumentList &MLTAL, unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
