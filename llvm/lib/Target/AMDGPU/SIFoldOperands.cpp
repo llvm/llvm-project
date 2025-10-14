@@ -245,7 +245,7 @@ public:
   std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
-  bool tryFoldArithmetic(MachineInstr &MI) const;
+  bool tryFoldZeroHighBits(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -1730,33 +1730,26 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
-bool SIFoldOperandsImpl::tryFoldArithmetic(MachineInstr &MI) const {
-  unsigned Opc = MI.getOpcode();
+bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
+  if (MI.getOpcode() != AMDGPU::V_AND_B32_e64 &&
+      MI.getOpcode() != AMDGPU::V_AND_B32_e32)
+    return false;
 
-  switch (Opc) {
-    default:
-      return false;
-    case AMDGPU::V_AND_B32_e64:
-    case AMDGPU::V_AND_B32_e32: {
-      std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
-      if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
-        return false;
+  std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
+  if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
+    return false;
 
-      Register Src1 = MI.getOperand(2).getReg();
-      MachineInstr *SrcDef = MRI->getVRegDef(Src1);
-      if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
-        return false;
+  Register Src1 = MI.getOperand(2).getReg();
+  MachineInstr *SrcDef = MRI->getVRegDef(Src1);
+  if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
+    return false;
 
-      Register Dst = MI.getOperand(0).getReg();
-      MRI->replaceRegWith(Dst, Src1);
-      if (!MI.getOperand(2).isKill())
-        MRI->clearKillFlags(Src1);
-      MI.eraseFromParent();
-      return true;
-    }
-  }
-
-  return false;
+  Register Dst = MI.getOperand(0).getReg();
+  MRI->replaceRegWith(Dst, Src1);
+  if (!MI.getOperand(2).isKill())
+    MRI->clearKillFlags(Src1);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
@@ -2797,7 +2790,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
     for (auto &MI : make_early_inc_range(*MBB)) {
       Changed |= tryFoldCndMask(MI);
 
-      if (tryFoldArithmetic(MI)) {
+      if (tryFoldZeroHighBits(MI)) {
         Changed = true;
         continue;
       }
