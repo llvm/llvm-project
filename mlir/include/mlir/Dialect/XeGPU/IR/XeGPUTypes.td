@@ -237,10 +237,10 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
       return MemDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
     }
 
-    ArrayAttr getStridesAttr() {
+    ArrayAttr getStrideAttr() {
       auto layout = getMemLayout();
       if (layout && layout.hasAttr("stride")) {
-        return layout.getStrides();
+        return layout.getStrideAttr();
       }
       // derive and return default strides
       SmallVector<int64_t> defaultStrides;
@@ -262,7 +262,7 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
     /// Heuristic to determine if the MemDesc uses column-major layout,
     /// based on the rank and the value of the first stride dimension.
     bool isColMajor() {
-      auto dim0 = dyn_cast<IntegerAttr>(getStridesAttr()[0]);
+      auto dim0 = dyn_cast<IntegerAttr>(getStrideAttr()[0]);
       return getRank() == 2 && dim0 && dim0.getInt() == 1;
     }
 

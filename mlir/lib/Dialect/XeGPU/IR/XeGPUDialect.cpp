@@ -781,7 +781,7 @@ SmallVector<int64_t> MemDescType::getStrideShape() {
 
   SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
 
-  ArrayAttr strideAttr = getStridesAttr();
+  ArrayAttr strideAttr = getStrideAttr();
   SmallVector<int64_t> strides;
   for (Attribute attr : strideAttr.getValue()) {
     strides.push_back(cast<IntegerAttr>(attr).getInt());

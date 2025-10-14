@@ -534,18 +534,6 @@ public:
   }
 };
 
-class MemDescSubviewOpPattern final
-    : public OpConversionPattern<xegpu::MemDescSubviewOp> {
-public:
-  using OpConversionPattern<xegpu::MemDescSubviewOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::MemDescSubviewOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        op, "MemDescSubviewOp are not supported on Xe2/Xe3 architecture.");
-  }
-};
-
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
@@ -1085,8 +1073,7 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
       typeConverter, patterns.getContext());
   patterns.add<LoadStoreMatrixToXeVMPattern<xegpu::LoadMatrixOp>,
                LoadStoreMatrixToXeVMPattern<xegpu::StoreMatrixOp>,
-               CreateMemDescOpPattern, MemDescSubviewOpPattern>(
-      typeConverter, patterns.getContext());
+               CreateMemDescOpPattern>(typeConverter, patterns.getContext());
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
 }

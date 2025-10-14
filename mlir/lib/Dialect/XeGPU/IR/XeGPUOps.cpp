@@ -1135,40 +1135,6 @@ LogicalResult StoreMatrixOp::verify() {
                                [&]() { return emitError(); });
 }
 
-//===----------------------------------------------------------------------===//
-// XeGPU_MemDescSubviewOp
-//===----------------------------------------------------------------------===//
-
-void MemDescSubviewOp::build(OpBuilder &builder, OperationState &state,
-                             Type resTy, Value src,
-                             llvm::ArrayRef<OpFoldResult> offsets) {
-  llvm::SmallVector<Value> dynamicOffsets;
-  llvm::SmallVector<int64_t> staticOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr);
-}
-
-LogicalResult MemDescSubviewOp::verify() {
-  MemDescType srcTy = getSrc().getType();
-  MemDescType resTy = getRes().getType();
-  ArrayRef<int64_t> srcShape = srcTy.getShape();
-  ArrayRef<int64_t> resShape = resTy.getShape();
-
-  if (srcTy.getRank() < resTy.getRank())
-    return emitOpError("result rank must not exceed source rank.");
-
-  if (llvm::any_of(
-          llvm::zip_equal(resShape, srcShape.take_back(resShape.size())),
-          [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("result shape must not exceed source shape.");
-
-  if (srcTy.getStridesAttr() != resTy.getStridesAttr())
-    return emitOpError("result must inherit the source strides.");
-
-  return success();
-}
-
 } // namespace xegpu
 } // namespace mlir
 

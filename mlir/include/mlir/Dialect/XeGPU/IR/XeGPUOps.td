@@ -1392,41 +1392,4 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
-def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
-          [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
-  let description = [{
-    Creates a subview of a memory descriptor. The resulting memory descriptor can have
-    a lower rank than the source; in this case, the result dimensions correspond to the
-    higher-order dimensions of the source memory descriptor.
-
-    Arguments:
-     - `src` : a memory descriptor.
-     - `offsets` : the coordinates within the matrix the subview will be created from.
-
-    Results:
-    - `res` : a memory descriptor with smaller size.
-
-  }];
-  let arguments = (ins XeGPU_MemDesc:$src,
-                       Variadic<Index>:$offsets,
-                       DenseI64ArrayAttr:$const_offsets);
-  let results = (outs XeGPU_MemDesc:$res);
-  let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
-                         attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
-  let builders = [
-    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets)>
-  ];
-
-  let extraClassDeclaration = [{
-    mlir::Value getViewSource() { return getSrc(); }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
-    }
-  }];
-
-  let hasVerifier = 1;
-}
-
-
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
