@@ -918,12 +918,13 @@ SourceLocation SourceManager::getSpellingLocSlowCase(SourceLocation Loc) const {
 SourceLocation
 SourceManager::getRefinedSpellingLocSlowCase(SourceLocation Loc) const {
   do {
-    FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
-    const ExpansionInfo &Expansion = getSLocEntry(LocInfo.first).getExpansion();
-    if (Expansion.isMacroArgExpansion()) {
-      Loc = Expansion.getSpellingLoc().getLocWithOffset(LocInfo.second);
+    const SLocEntry &E = getSLocEntry(getFileID(Loc));
+    const ExpansionInfo &Exp = E.getExpansion();
+    if (Exp.isMacroArgExpansion()) {
+      Loc = Exp.getSpellingLoc().getLocWithOffset(Loc.getOffset() -
+                                                  E.getOffset());
     } else {
-      Loc = Expansion.getExpansionLocStart();
+      Loc = Exp.getExpansionLocStart();
     }
   } while (!Loc.isFileID());
   return Loc;
