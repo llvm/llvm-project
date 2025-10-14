@@ -3532,25 +3532,31 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-          InstructionCost ExtRedCost;
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
+          InstructionCost BaseCost = ExtCost + RedCost;
 
           if (isa<VPPartialReductionRecipe>(Red)) {
             TargetTransformInfo::PartialReductionExtendKind ExtKind =
                 TargetTransformInfo::getPartialReductionExtendKind(ExtOpc);
             // FIXME: Move partial reduction creation, costing and clamping
             // here from LoopVectorize.cpp.
-            ExtRedCost = Ctx.TTI.getPartialReductionCost(
-                Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
-                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
-          } else {
-            ExtRedCost = Ctx.TTI.getExtendedReductionCost(
-                Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
-                Red->getFastMathFlags(), CostKind);
+            InstructionCost PartialReductionCost =
+                Ctx.TTI.getPartialReductionCost(
+                    Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
+                    llvm::TargetTransformInfo::PR_None, std::nullopt,
+                    Ctx.CostKind);
+            assert(PartialReductionCost <= BaseCost &&
+                   "A partial reduction should have a lower cost than the "
+                   "extend + add");
+            return true;
           }
-          return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
+
+          InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+              Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
+              Red->getFastMathFlags(), CostKind);
+          return ExtRedCost.isValid() && ExtRedCost < BaseCost;
         },
         Range);
   };
@@ -3595,33 +3601,6 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           Type *SrcTy =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
-          InstructionCost MulAccCost;
-
-          if (IsPartialReduction) {
-            Type *SrcTy2 =
-                Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : nullptr;
-            // FIXME: Move partial reduction creation, costing and clamping
-            // here from LoopVectorize.cpp.
-            MulAccCost = Ctx.TTI.getPartialReductionCost(
-                Opcode, SrcTy, SrcTy2, RedTy, VF,
-                Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
-                           Ext0->getOpcode())
-                     : TargetTransformInfo::PR_None,
-                Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
-                           Ext1->getOpcode())
-                     : TargetTransformInfo::PR_None,
-                Mul->getOpcode(), CostKind);
-          } else {
-            // Only partial reductions support mixed extends at the moment.
-            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
-              return false;
-
-            bool IsZExt =
-                !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
-            auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-            MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, Opcode, RedTy,
-                                                        SrcVecTy, CostKind);
-          }
 
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
@@ -3632,9 +3611,40 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
             ExtCost += Ext1->computeCost(VF, Ctx);
           if (OuterExt)
             ExtCost += OuterExt->computeCost(VF, Ctx);
+          InstructionCost BaseCost = ExtCost + MulCost + RedCost;
 
-          return MulAccCost.isValid() &&
-                 MulAccCost < ExtCost + MulCost + RedCost;
+          if (IsPartialReduction) {
+            Type *SrcTy2 =
+                Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : nullptr;
+            // FIXME: Move partial reduction creation, costing and clamping
+            // here from LoopVectorize.cpp.
+            InstructionCost PartialReductionCost =
+                Ctx.TTI.getPartialReductionCost(
+                    Opcode, SrcTy, SrcTy2, RedTy, VF,
+                    Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
+                               Ext0->getOpcode())
+                         : TargetTransformInfo::PR_None,
+                    Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
+                               Ext1->getOpcode())
+                         : TargetTransformInfo::PR_None,
+                    Mul->getOpcode(), CostKind);
+            assert(PartialReductionCost <= BaseCost &&
+                   "A partial reduction should have a lower cost than the "
+                   "extend + mul + add");
+            return true;
+          }
+            // Only partial reductions support mixed extends at the moment.
+            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+              return false;
+
+            bool IsZExt =
+                !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
+            auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+            InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
+                IsZExt, Opcode, RedTy, SrcVecTy, CostKind);
+
+            return MulAccCost.isValid() &&
+                   MulAccCost < ExtCost + MulCost + RedCost;
         },
         Range);
   };
