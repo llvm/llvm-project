@@ -243,6 +243,9 @@ void RemarkEngine::report(const Remark &&remark) {
 }
 
 RemarkEngine::~RemarkEngine() {
+  if (remarkEmittingPolicy)
+    remarkEmittingPolicy->finalize();
+
   if (remarkStreamer)
     remarkStreamer->finalize();
 }

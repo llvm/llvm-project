@@ -368,13 +368,6 @@ TEST(Remark, TestRemarkFinal) {
         locOther,
         remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
         << pass4Msg;
-
-    // Finalize the remark engine
-    if (auto *remarkEngine = context.getRemarkEngine()) {
-      if (auto *remarkPolicy = remarkEngine->getRemarkEmittingPolicy()) {
-        remarkPolicy->finalize();
-      }
-    }
   }
 
   llvm::errs().flush();
