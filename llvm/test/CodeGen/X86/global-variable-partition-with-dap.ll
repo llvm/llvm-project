@@ -18,9 +18,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     input-without-dap.ll -o - 2>&1 | FileCheck %s --check-prefixes=NODAP
 
-; LOG: hot_bss has section prefix hot, the max from DAP as hot and PGO counters as hot
-; LOG: data_unknown_hotness has section prefix <empty>, the max from DAP as <empty> and PGO counters as unlikely
-; LOG: external_relro_arrayhas section prefix unlikely, solely from data access profiles
+; LOG: hot_bss has section prefix hot, the max from data access profiles as hot and PGO counters as hot
+; LOG: data_unknown_hotness has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
+; LOG: external_relro_array has section prefix unlikely, solely from data access profiles
 
 ; IR:          .type   hot_bss,@object
 ; IR-NEXT:     .section .bss.hot.,"aw"

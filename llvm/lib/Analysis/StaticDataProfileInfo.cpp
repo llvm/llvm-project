@@ -50,12 +50,6 @@ bool IsAnnotationOK(const GlobalVariable &GV) {
 } // namespace memprof
 } // namespace llvm
 
-#ifndef NDEBUG
-static StringRef debugPrintSectionPrefix(StringRef Prefix) {
-  return Prefix.empty() ? "<empty>" : Prefix;
-}
-#endif
-
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
   if (!Count) {
@@ -90,7 +84,7 @@ StaticDataProfileInfo::getSectionHotnessUsingProfileCount(
 }
 
 StaticDataProfileInfo::StaticDataHotness
-StaticDataProfileInfo::getSectionHotnessUsingDAP(
+StaticDataProfileInfo::getSectionHotnessUsingDataAccessProfile(
     std::optional<StringRef> MaybeSectionPrefix) const {
   if (!MaybeSectionPrefix)
     return StaticDataProfileInfo::StaticDataHotness::LukewarmOrUnknown;
@@ -125,32 +119,51 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     const Constant *C, const ProfileSummaryInfo *PSI) const {
   std::optional<uint64_t> Count = getConstantProfileCount(C);
 
+#ifndef NDEBUG
+  auto DbgPrintPrefix = [](StringRef Prefix) {
+    return Prefix.empty() ? "<empty>" : Prefix;
+  };
+#endif
+
   if (EnableDataAccessProf) {
     // Module flag `HasDataAccessProf` is 1 -> empty section prefix means
     // unknown hotness except for string literals.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
         GV && llvm::memprof::IsAnnotationOK(*GV) &&
         !GV->getName().starts_with(".str")) {
-      auto HotnessFromDAP = getSectionHotnessUsingDAP(GV->getSectionPrefix());
+      auto HotnessFromDataAccessProf =
+          getSectionHotnessUsingDataAccessProfile(GV->getSectionPrefix());
 
       if (!Count) {
-        StringRef Prefix = hotnessToStr(HotnessFromDAP);
-        LLVM_DEBUG(dbgs() << GV->getName() << "has section prefix "
-                          << debugPrintSectionPrefix(Prefix)
+        StringRef Prefix = hotnessToStr(HotnessFromDataAccessProf);
+        LLVM_DEBUG(dbgs() << GV->getName() << " has section prefix "
+                          << DbgPrintPrefix(Prefix)
                           << ", solely from data access profiles\n");
         return Prefix;
       }
 
-      // Both DAP and PGO counters are available. Use the hotter one.
+      // Both data access profiles and PGO counters are available. Use the
+      // hotter one.
       auto HotnessFromPGO = getSectionHotnessUsingProfileCount(C, PSI, *Count);
-      StringRef Prefix = hotnessToStr(std::max(HotnessFromDAP, HotnessFromPGO));
-      LLVM_DEBUG(dbgs() << GV->getName() << " has section prefix "
-                        << debugPrintSectionPrefix(Prefix)
-                        << ", the max from DAP as "
-                        << debugPrintSectionPrefix(hotnessToStr(HotnessFromDAP))
-                        << " and PGO counters as "
-                        << debugPrintSectionPrefix(hotnessToStr(HotnessFromPGO))
-                        << "\n");
+      StaticDataHotness GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
+      if (HotnessFromDataAccessProf == StaticDataHotness::Hot ||
+          HotnessFromPGO == StaticDataHotness::Hot) {
+        GlobalVarHotness = StaticDataHotness::Hot;
+      } else if (HotnessFromDataAccessProf ==
+                     StaticDataHotness::LukewarmOrUnknown ||
+                 HotnessFromPGO == StaticDataHotness::LukewarmOrUnknown) {
+        GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
+      } else {
+        GlobalVarHotness = StaticDataHotness::Cold;
+      }
+      StringRef Prefix = hotnessToStr(GlobalVarHotness);
+      LLVM_DEBUG(
+          dbgs() << GV->getName() << " has section prefix "
+                 << DbgPrintPrefix(Prefix)
+                 << ", the max from data access profiles as "
+                 << DbgPrintPrefix(hotnessToStr(HotnessFromDataAccessProf))
+                 << " and PGO counters as "
+                 << DbgPrintPrefix(hotnessToStr(HotnessFromPGO)) << "\n");
       return Prefix;
     }
   }

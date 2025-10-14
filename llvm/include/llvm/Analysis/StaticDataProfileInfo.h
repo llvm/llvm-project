@@ -59,8 +59,8 @@ public:
       const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const;
 
   /// Return the hotness based on section prefix \p SectionPrefix.
-  LLVM_ABI StaticDataHotness
-  getSectionHotnessUsingDAP(std::optional<StringRef> SectionPrefix) const;
+  LLVM_ABI StaticDataHotness getSectionHotnessUsingDataAccessProfile(
+      std::optional<StringRef> SectionPrefix) const;
 
   /// Return the string representation of the hotness enum \p Hotness.
   LLVM_ABI StringRef hotnessToStr(StaticDataHotness Hotness) const;
