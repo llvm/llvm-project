@@ -472,7 +472,7 @@ __OMP_RTL(__kmpc_target_init, false, Int32, KernelEnvironmentPtr, KernelLaunchEn
 __OMP_RTL(__kmpc_target_deinit, false, Void,)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
 __OMP_RTL(__kmpc_parallel_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
-          FuncPtrTy, VoidPtr, VoidPtrPtr, SizeTy)
+          FuncPtrTy, FuncPtrTy, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_for_static_loop_4, false, Void, IdentPtr, VoidPtr, VoidPtr, Int32, Int32, Int32, Int8)
 __OMP_RTL(__kmpc_for_static_loop_4u, false, Void, IdentPtr, VoidPtr, VoidPtr, Int32, Int32, Int32, Int8)
 __OMP_RTL(__kmpc_for_static_loop_8, false, Void, IdentPtr, VoidPtr, VoidPtr, Int64, Int64, Int64, Int8)

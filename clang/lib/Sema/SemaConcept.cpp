@@ -614,7 +614,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
     TemplateArgument Arg;
     if (Used[I])
-      Arg = CTAI.SugaredConverted[MappedIndex++];
+      Arg = S.Context.getCanonicalTemplateArgument(
+          CTAI.SugaredConverted[MappedIndex++]);
     if (I < SubstitutedOuterMost.size()) {
       SubstitutedOuterMost[I] = Arg;
       Offset = I + 1;

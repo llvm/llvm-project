@@ -286,6 +286,7 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 - The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
+- The `-fconstexpr-steps` compiler flag now accepts value `0` to opt out of this limit. (#GH160440)
 
 Removed Compiler Flags
 -------------------------
@@ -640,6 +641,8 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
 - Added support for 'omp fuse' directive.
+- Updated parsing and semantic analysis support for ``nowait`` clause to accept
+  optional argument in OpenMP >= 60.
 
 Improvements
 ^^^^^^^^^^^^

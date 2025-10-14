@@ -5788,6 +5788,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FCOPYSIGN:
   case ISD::FMA:
   case ISD::FMAD:
+  case ISD::FMULADD:
   case ISD::FP_EXTEND:
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
@@ -5906,6 +5907,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
   case ISD::FCOSH:
   case ISD::FTANH:
   case ISD::FMA:
+  case ISD::FMULADD:
   case ISD::FMAD: {
     if (SNaN)
       return true;
@@ -7233,7 +7235,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   }
 
   // Handle fma/fmad special cases.
-  if (Opcode == ISD::FMA || Opcode == ISD::FMAD) {
+  if (Opcode == ISD::FMA || Opcode == ISD::FMAD || Opcode == ISD::FMULADD) {
     assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
     assert(Ops[0].getValueType() == VT && Ops[1].getValueType() == VT &&
            Ops[2].getValueType() == VT && "FMA types must match!");
@@ -7244,7 +7246,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       APFloat V1 = C1->getValueAPF();
       const APFloat &V2 = C2->getValueAPF();
       const APFloat &V3 = C3->getValueAPF();
-      if (Opcode == ISD::FMAD) {
+      if (Opcode == ISD::FMAD || Opcode == ISD::FMULADD) {
         V1.multiply(V2, APFloat::rmNearestTiesToEven);
         V1.add(V3, APFloat::rmNearestTiesToEven);
       } else
@@ -8783,7 +8785,7 @@ static SDValue getMemcpyLoadsAndStores(
       if (Value.getNode()) {
         Store = DAG.getStore(
             Chain, dl, Value,
-            DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
             DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
         OutChains.push_back(Store);
       }
@@ -8799,7 +8801,7 @@ static SDValue getMemcpyLoadsAndStores(
       assert(NVT.bitsGE(VT));
 
       bool isDereferenceable =
-        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+          SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
       MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
       if (isDereferenceable)
         SrcMMOFlags |= MachineMemOperand::MODereferenceable;
@@ -8808,14 +8810,14 @@ static SDValue getMemcpyLoadsAndStores(
 
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
+          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
           commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
           DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
@@ -8945,14 +8947,14 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     SDValue Value;
 
     bool isDereferenceable =
-      SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
     MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
     if (isDereferenceable)
       SrcMMOFlags |= MachineMemOperand::MODereferenceable;
 
     Value = DAG.getLoad(
         VT, dl, Chain,
-        DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
+        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
         SrcPtrInfo.getWithOffset(SrcOff), *SrcAlign, SrcMMOFlags, NewAAInfo);
     LoadValues.push_back(Value);
     LoadChains.push_back(Value.getValue(1));
@@ -8967,7 +8969,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     Store = DAG.getStore(
         Chain, dl, LoadValues[i],
-        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
         DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VTSize;
@@ -9099,7 +9101,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     assert(Value.getValueType() == VT && "Value with wrong type.");
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
-        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
         DstPtrInfo.getWithOffset(DstOff), Alignment,
         isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
         NewAAInfo);
