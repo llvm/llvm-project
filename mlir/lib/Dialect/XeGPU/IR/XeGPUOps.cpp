@@ -199,8 +199,7 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
-  } else if (dataShape.size() == 1) {
-
+  } else {
     SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
     // if the subgroup_block_io attribute is set,  mdescTy must have block
     // attribute
@@ -212,8 +211,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
     if (subgroup_block_io && mdescTy.isColMajor())
       return emitError() << "mem_desc should be row major when "
                             "subgroup_block_io is set.";
-  } else if (dataShape.size() == 0) {
-    return emitError() << "result shape must not be empty.";
   }
 
   return success();
