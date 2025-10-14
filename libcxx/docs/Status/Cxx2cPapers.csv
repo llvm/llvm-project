@@ -85,7 +85,7 @@
 "`P3222R0 <https://wg21.link/P3222R0>`__","Fix C++26 by adding transposed special cases for P2642 layouts","2024-11 (Wrocław)","","","`#118374 <https://github.com/llvm/llvm-project/issues/118374>`__",""
 "`P3050R2 <https://wg21.link/P3050R2>`__","Fix C++26 by optimizing ``linalg::conjugated`` for noncomplex value types","2024-11 (Wrocław)","","","`#118375 <https://github.com/llvm/llvm-project/issues/118375>`__",""
 "`P3396R1 <https://wg21.link/P3396R1>`__","``std::execution`` wording fixes","2024-11 (Wrocław)","","","`#118376 <https://github.com/llvm/llvm-project/issues/118376>`__",""
-"`P2835R7 <https://wg21.link/P2835R7>`__","Expose ``std::atomic_ref``'s object address","2024-11 (Wrocław)","","","`#118377 <https://github.com/llvm/llvm-project/issues/118377>`__",""
+"`P2835R7 <https://wg21.link/P2835R7>`__","Expose ``std::atomic_ref``'s object address","2024-11 (Wrocław)","|Complete|","22","`#118377 <https://github.com/llvm/llvm-project/issues/118377>`__",""
 "`P3323R1 <https://wg21.link/P3323R1>`__","cv-qualified types in ``atomic`` and ``atomic_ref``","2024-11 (Wrocław)","","","`#118378 <https://github.com/llvm/llvm-project/issues/118378>`__",""
 "`P3508R0 <https://wg21.link/P3508R0>`__","Wording for ""constexpr for specialized memory algorithms""","2024-11 (Wrocław)","","","`#118379 <https://github.com/llvm/llvm-project/issues/118379>`__",""
 "`P3369R0 <https://wg21.link/P3369R0>`__","constexpr for ``uninitialized_default_construct``","2024-11 (Wrocław)","","","`#118380 <https://github.com/llvm/llvm-project/issues/118380>`__",""
