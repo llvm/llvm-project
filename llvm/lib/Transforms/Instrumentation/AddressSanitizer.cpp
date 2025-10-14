@@ -2997,9 +2997,8 @@ void AddressSanitizer::markCatchParametersAsUninteresting(Function &F) {
         // Mark the parameters to a catch-block as uninteresting to avoid
         // instrumenting them
         for (Value *Operand : CatchPad->arg_operands()) {
-          if (auto *AI = dyn_cast<AllocaInst>(Operand)) {
+          if (auto *AI = dyn_cast<AllocaInst>(Operand))
             ProcessedAllocas[AI] = false;
-          }
         }
       }
     }
