@@ -9281,14 +9281,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmPackExpr(
     SubstNonTypeTemplateParmPackExpr *E) {
   Error Err = Error::success();
   auto ToType = importChecked(Err, E->getType());
-  auto ToNameLoc = importChecked(Err, E->getParameterPackLocation());
+  auto ToPackLoc = importChecked(Err, E->getParameterPackLocation());
   auto ToArgPack = importChecked(Err, E->getArgumentPack());
   auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmPackExpr(
-      ToType, E->getValueKind(), ToNameLoc, ToArgPack, ToAssociatedDecl,
+      ToType, E->getValueKind(), ToPackLoc, ToArgPack, ToAssociatedDecl,
       E->getIndex(), E->getFinal());
 }
 
@@ -9296,15 +9296,11 @@ ExpectedStmt ASTNodeImporter::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
   SmallVector<Expr *, 4> ToSemantics(E->getNumSemanticExprs());
   if (Error Err = ImportContainerChecked(E->semantics(), ToSemantics))
     return std::move(Err);
-  Expr *ToSynt = nullptr;
-  if (const Expr *FromSynt = E->getSyntacticForm()) {
-    if (auto ToSyntOrErr = import(FromSynt))
-      ToSynt = *ToSyntOrErr;
-    else
-      return ToSyntOrErr.takeError();
-  }
-  return PseudoObjectExpr::Create(Importer.getToContext(), ToSynt, ToSemantics,
-                                  E->getResultExprIndex());
+  auto ToSyntOrErr = import(E->getSyntacticForm());
+  if (!ToSyntOrErr)
+    return ToSyntOrErr.takeError();
+  return PseudoObjectExpr::Create(Importer.getToContext(), *ToSyntOrErr,
+                                  ToSemantics, E->getResultExprIndex());
 }
 
 ExpectedStmt
