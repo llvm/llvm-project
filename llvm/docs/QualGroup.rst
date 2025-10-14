@@ -245,11 +245,11 @@ Slides used to support discussions during sync-up meetings are stored in LLVM's 
 
 Available slides:
 
+* (add future entries here)
 * `October 2025 <https://docs.google.com/presentation/d/1ND2SkjgcHvcEbQmMd8ExL-PpRXouP49T-wfy3xf2yRQ/edit?usp=sharing>`_
 * `September 2025 <https://docs.google.com/presentation/d/1SZAE-QHfJED6CxJCCtBkPDxcw7XU9ORX54TJyXe1ppc/edit?usp=sharing>`_
 * `August 2025 <https://docs.google.com/presentation/d/1K8GWoRm8ZAeyyGvTeV5f-sMOhMr7WHiEk6_Nm5Fk10o/edit?usp=sharing>`_
 * `July 2025 <https://docs.google.com/presentation/d/1ktURe9qz5ggbdOQYK-2ISpiC18B-Y_35WvGyAnnxEpw/edit?usp=sharing>`_
-* (add future entries here)
 
 AI Transcription Policy
 =======================
