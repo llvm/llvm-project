@@ -844,7 +844,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     auto isSibling = std::bind(&BinaryContext::areRelatedFragments, this,
                                &Function, std::placeholders::_1);
     assert(llvm::all_of(JT->Parents, isSibling) &&
-           "cannot re-use jump table of a different function");
+           "cannot reuse jump table of a different function");
     (void)isSibling;
     if (opts::Verbosity > 2) {
       this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
@@ -860,7 +860,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     return JT->getFirstLabel();
   }
 
-  // Re-use the existing symbol if possible.
+  // Reuse the existing symbol if possible.
   MCSymbol *JTLabel = nullptr;
   if (BinaryData *Object = getBinaryDataAtAddress(Address)) {
     if (!isInternalSymbolName(Object->getSymbol()->getName()))

@@ -176,6 +176,6 @@ bool cas::ondisk::useSmallMappingSize(const Twine &P) {
   if (strcmp(StatFS.f_fstypename, "tmpfs") == 0)
     return true;
 #endif
-  // Default to use regular datbase file.
+  // Default to use regular database file.
   return false;
 }

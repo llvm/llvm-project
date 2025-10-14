@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file Helper function to test OnDiskCASDatabases.
+/// \file Helper functions to test OnDiskCASDatabases.
 //
 //===----------------------------------------------------------------------===//
 

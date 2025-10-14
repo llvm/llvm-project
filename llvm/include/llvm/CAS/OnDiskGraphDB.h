@@ -22,7 +22,7 @@
 
 namespace llvm::cas::ondisk {
 
-/// standard 8B reference inside OnDiskGraphDB.
+/// Standard 8B reference inside OnDiskGraphDB.
 class InternalRef {
 public:
   FileOffset getFileOffset() const { return FileOffset(Data); }
@@ -43,7 +43,7 @@ private:
   uint64_t Data;
 };
 
-/// compact 4B reference inside OnDiskGraphDB for smaller references.
+/// Compact 4B reference inside OnDiskGraphDB for smaller references.
 class InternalRef4B {
 public:
   FileOffset getFileOffset() const { return FileOffset(Data); }
@@ -318,8 +318,8 @@ public:
 
   /// Validate the OnDiskGraphDB.
   ///
-  /// \param Deep if true, rehash all the objects to make sure no data
-  /// corruption in stored object, otherwise just validate the structure of
+  /// \param Deep if true, rehash all the objects to ensure no data
+  /// corruption in stored objects, otherwise just validate the structure of
   /// CAS database.
   /// \param Hasher is the hashing function used for objects inside CAS.
   Error validate(bool Deep, HashingFuncT Hasher) const;
@@ -362,11 +362,11 @@ private:
     OnlyInUpstreamDB,
   };
 
-  // Check if object exists and if it is on upstream only.
+  /// Check if object exists and if it is on upstream only.
   Expected<ObjectPresence> getObjectPresence(ObjectID Ref,
                                              bool CheckUpstream) const;
 
-  // \returns true if object can be found in database.
+  /// \returns true if object can be found in database.
   bool containsObject(ObjectID Ref, bool CheckUpstream) const {
     auto Presence = getObjectPresence(Ref, CheckUpstream);
     if (!Presence) {
@@ -387,7 +387,7 @@ private:
   /// to load it from the upstream store and copy it to the primary one.
   Expected<std::optional<ObjectHandle>> faultInFromUpstream(ObjectID PrimaryID);
 
-  /// Import the entire tree from upstream with \param UpstreamNode as root.
+  /// Import the entire tree from upstream with \p UpstreamNode as root.
   Error importFullTree(ObjectID PrimaryID, ObjectHandle UpstreamNode);
   /// Import only the \param UpstreamNode.
   Error importSingleNode(ObjectID PrimaryID, ObjectHandle UpstreamNode);
@@ -452,16 +452,16 @@ private:
   /// Data type is DataRecordHandle.
   OnDiskDataAllocator DataPool;
 
-  // a StandaloneDataMap.
+  /// A StandaloneDataMap.
   void *StandaloneData;
 
-  // Path to the root directory.
+  /// Path to the root directory.
   std::string RootPath;
 
-  // Optional on-disk store to be used for faulting-in nodes.
+  /// Optional on-disk store to be used for faulting-in nodes.
   std::unique_ptr<OnDiskGraphDB> UpstreamDB;
 
-  // The policy used to fault in data from upstream.
+  /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;
 };
 

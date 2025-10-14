@@ -63,10 +63,10 @@ public:
   open(StringRef Path, StringRef HashName, unsigned KeySize,
        StringRef ValueName, size_t ValueSize);
 
-  /// Validate the storage with a callback \p CheckValue to check the stored
-  /// value.
   using CheckValueT =
       function_ref<Error(FileOffset Offset, ArrayRef<char> Data)>;
+  /// Validate the storage with a callback \p CheckValue to check the stored
+  /// value.
   Error validate(CheckValueT CheckValue) const;
 
 private:

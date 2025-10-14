@@ -66,7 +66,7 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
     return createFileError(Path, EC);
 
   SmallString<256> CachePath(Path);
-  sys::path::append(CachePath, ActionCacheFile + CASVersion);
+  sys::path::append(CachePath, ActionCacheFile + CASFormatVersion);
   constexpr uint64_t MB = 1024ull * 1024ull;
   constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
 

@@ -1311,7 +1311,7 @@ InternalRef OnDiskGraphDB::makeInternalRef(FileOffset IndexOffset) {
 void OnDiskGraphDB::getStandalonePath(StringRef Prefix, const IndexProxy &I,
                                       SmallVectorImpl<char> &Path) const {
   Path.assign(RootPath.begin(), RootPath.end());
-  sys::path::append(Path, Prefix + Twine(I.Offset.get()) + "." + CASVersion);
+  sys::path::append(Path, Prefix + Twine(I.Offset.get()) + "." + CASFormatVersion);
 }
 
 OnDiskContent StandaloneDataInMemory::getContent() const {
@@ -1582,7 +1582,7 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
     MaxIndexSize = MaxDataPoolSize = **CustomSize;
 
   SmallString<256> IndexPath(AbsPath);
-  sys::path::append(IndexPath, IndexFilePrefix + CASVersion);
+  sys::path::append(IndexPath, IndexFilePrefix + CASFormatVersion);
   std::optional<OnDiskTrieRawHashMap> Index;
   if (Error E = OnDiskTrieRawHashMap::create(
                     IndexPath, IndexTableName + "[" + HashName + "]",
@@ -1595,7 +1595,7 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
   uint32_t UserHeaderSize = sizeof(std::atomic<uint64_t>);
 
   SmallString<256> DataPoolPath(AbsPath);
-  sys::path::append(DataPoolPath, DataPoolFilePrefix + CASVersion);
+  sys::path::append(DataPoolPath, DataPoolFilePrefix + CASFormatVersion);
   std::optional<OnDiskDataAllocator> DataPool;
   StringRef PolicyName =
       Policy == FaultInPolicy::SingleNode ? "single" : "full";

@@ -4,11 +4,11 @@ set(ONDISK_CAS_TEST_SOURCES
   OnDiskKeyValueDBTest.cpp
   OnDiskTrieRawHashMapTest.cpp
   ProgramTest.cpp
-)
+  )
 
 set(LLVM_OPTIONAL_SOURCES
   ${ONDISK_CAS_TEST_SOURCES}
-)
+  )
 
 if (NOT LLVM_ENABLE_ONDISK_CAS)
   unset(ONDISK_CAS_TEST_SOURCES)
