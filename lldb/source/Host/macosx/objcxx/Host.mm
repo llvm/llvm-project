@@ -1210,6 +1210,39 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     }
   }
 
+  if (launch_info.GetFlags().Test(eLaunchFlagMemoryTagging)) {
+    // The following function configures the spawn attributes to launch the
+    // process with memory tagging explicitly enabled.  We look it up
+    // dynamically since it is only available on newer OS.  Does nothing on
+    // hardware which does not support MTE.
+    //
+    //   int posix_spawnattr_set_use_sec_transition_shims_np(
+    //       posix_spawnattr_t *attr, uint32_t flags);
+    //
+    using posix_spawnattr_set_use_sec_transition_shims_np_t =
+        int (*)(posix_spawnattr_t *attr, uint32_t flags);
+    auto posix_spawnattr_set_use_sec_transition_shims_np_fn =
+        (posix_spawnattr_set_use_sec_transition_shims_np_t)dlsym(
+            RTLD_DEFAULT, "posix_spawnattr_set_use_sec_transition_shims_np");
+    if (posix_spawnattr_set_use_sec_transition_shims_np_fn) {
+      error =
+          Status(posix_spawnattr_set_use_sec_transition_shims_np_fn(&attr, 0),
+                 eErrorTypePOSIX);
+      if (error.Fail()) {
+        LLDB_LOG(log,
+                 "error: {0}, "
+                 "posix_spawnattr_set_use_sec_transition_shims_np(&attr, 0)",
+                 error);
+        return error;
+      }
+    } else {
+      LLDB_LOG(log,
+               "error: posix_spawnattr_set_use_sec_transition_shims_np not "
+               "available",
+               error);
+    }
+  }
+
   // Don't set the binpref if a shell was provided. After all, that's only
   // going to affect what version of the shell is launched, not what fork of
   // the binary is launched.  We insert "arch --arch <ARCH> as part of the
