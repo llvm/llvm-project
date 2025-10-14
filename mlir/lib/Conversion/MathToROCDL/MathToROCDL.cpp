@@ -10,6 +10,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -59,10 +60,27 @@ struct ClampFOpConversion final
           op, ("pre-gfx9 (gfx" + std::to_string(chipset.majorVersion) +
                "): V_MED_F16 / V_MED3_F32 not supported."));
     }
+    auto resultType = getTypeConverter()->convertType(op.getType());
+    // Handle multi-dimensional vectors (converted to LLVM arrays)
+    if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(resultType)) {
+      // Handle multi-dimensional vectors (converted to LLVM arrays)
+      return LLVM::detail::handleMultidimensionalVectors(
+          op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
+          [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
+            typename math::ClampFOp::Adaptor adaptor(operands);
+            return rewriter.create<ROCDL::FMed3Op>(
+                op.getLoc(), llvm1DVectorTy, adaptor.getValue(),
+                adaptor.getMin(), adaptor.getMax());
+          },
+          rewriter);
+    }
+
+    // Handle 1D vectors and scalars directly
     rewriter.replaceOpWithNewOp<ROCDL::FMed3Op>(op, op.getType(), op.getValue(),
                                                 op.getMin(), op.getMax());
     return success();
   }
+
   amdgpu::Chipset chipset;
 };
 

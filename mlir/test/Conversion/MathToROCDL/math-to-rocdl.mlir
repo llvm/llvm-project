@@ -601,28 +601,63 @@ module @test_module {
 // -----
 
 // f16 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_f16
 func.func @clampf_f16(%x: f16, %lo: f16, %hi: f16) -> f16 {
   %r = math.clampf %x to [%lo, %hi] : f16
   return %r : f16
+  // POST9: rocdl.fmed3 {{.*}} : f16
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : f16
 }
 
 // f32 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_f32
 func.func @clampf_f32(%x: f32, %lo: f32, %hi: f32) -> f32 {
   %r = math.clampf %x to [%lo, %hi] : f32
   return %r : f32
+  // POST9: rocdl.fmed3 {{.*}} : f32
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : f32
 }
 
-// POST9-LABEL: func.func @clampf_f16
-// POST9: rocdl.fmed3 {{.*}} : f16
-// POST9: return
+// -----
 
-// POST9-LABEL: func.func @clampf_f32
-// POST9: rocdl.fmed3 {{.*}} : f32
-// POST9: return
+// Vector f16 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_vector_f16
+func.func @clampf_vector_f16(%x: vector<2xf16>, %lo: vector<2xf16>, %hi: vector<2xf16>) -> vector<2xf16> {
+  %r = math.clampf %x to [%lo, %hi] : vector<2xf16>
+  return %r : vector<2xf16>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : vector<2xf16>
+}
 
-// PRE9-LABEL: func.func @clampf_f16
-// PRE9-NOT: rocdl.fmed3
-// PRE9: math.clampf {{.*}} : f16
+// -----
 
-// PRE9-LABEL: func.func @clampf_f32
-// PRE9-NOT: rocdl.fmed3
+// Vector f32 clamp → rocdl.fmed3 on gfx9+
+// CHECK-LABEL: func.func @clampf_vector_f32
+func.func @clampf_vector_f32(%x: vector<2xf32>, %lo: vector<2xf32>, %hi: vector<2xf32>) -> vector<2xf32> {
+  %r = math.clampf %x to [%lo, %hi] : vector<2xf32>
+  return %r : vector<2xf32>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf32>
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : vector<2xf32>
+}
+
+// -----
+
+// Multi-dimensional vector f16 clamp → rocdl.fmed3 on gfx9+ (unrolled to 1D vectors)
+// CHECK-LABEL: func.func @clampf_vector_2d_f16
+func.func @clampf_vector_2d_f16(%x: vector<2x2xf16>, %lo: vector<2x2xf16>, %hi: vector<2x2xf16>) -> vector<2x2xf16> {
+  %r = math.clampf %x to [%lo, %hi] : vector<2x2xf16>
+  return %r : vector<2x2xf16>
+  // POST9: builtin.unrealized_conversion_cast {{.*}} : vector<2x2xf16> to !llvm.array<2 x vector<2xf16>>
+  // POST9: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
+  // POST9: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // POST9: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
+  // POST9: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+  // PRE9-NOT: rocdl.fmed3
+  // PRE9: math.clampf {{.*}} : vector<2x2xf16>
+}
