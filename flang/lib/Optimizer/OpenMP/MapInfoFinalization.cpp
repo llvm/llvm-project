@@ -812,6 +812,11 @@ class MapInfoFinalizationPass
                   argIface.getUseDeviceAddrBlockArgsStart() +
                       argIface.numUseDeviceAddrBlockArgs());
 
+      mlir::MutableOperandRange useDevPtrMutableOpRange =
+          targetDataOp.getUseDevicePtrVarsMutable();
+      addOperands(useDevPtrMutableOpRange, target,
+                  argIface.getUseDevicePtrBlockArgsStart() +
+                      argIface.numUseDevicePtrBlockArgs());
     } else if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target)) {
       mlir::MutableOperandRange hasDevAddrMutableOpRange =
           targetOp.getHasDeviceAddrVarsMutable();
