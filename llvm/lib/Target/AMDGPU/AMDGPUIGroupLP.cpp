@@ -2392,23 +2392,23 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = false;
 
   else if (MI.isInlineAsm()) {
-    auto &TRI = TII->getRegisterInfo();
+    const SIRegisterInfo &TRI = TII->getRegisterInfo();
     auto &MRI = MI.getParent()->getParent()->getRegInfo();
     bool SGPR_used = false, VGPR_used = false, VMFMA_used = false,
          MayLoad = MI.mayLoad(), MayStore = MI.mayStore();
     for (const MachineOperand &Operand : MI.operands())
       if (Operand.isReg()) {
         auto &RegClass = *TRI.getRegClassForOperandReg(MRI, Operand);
-        if (TRI.isVGPRClass(&RegClass))
+        if (TRI.hasVGPRs(&RegClass))
           VGPR_used = true;
-        if (TRI.isAGPRClass(&RegClass) || TRI.getRegSizeInBits(RegClass) > 128)
+        if (TRI.hasAGPRs(&RegClass) || TRI.getRegSizeInBits(RegClass) > 128) // > 128 bit registers are usually only used by MFMA instructions, so we're using that as a heuristic to guess the schedule group mask of the inline asm.
           VMFMA_used = true;
-        if (TRI.isSGPRClass(&RegClass))
+        if (TRI.hasSGPRs(&RegClass))
           SGPR_used = true;
       }
 
     unsigned long InlineAsmMask = 0;
-    if (VGPR_used && !SGPR_used && !VMFMA_used && !MayLoad && !MayStore)
+    if (VGPR_used && !VMFMA_used && !MayLoad && !MayStore)
       InlineAsmMask |= (unsigned long)SchedGroupMask::VALU;
     if (SGPR_used && !MayLoad && !MayStore)
       InlineAsmMask |= (unsigned long)SchedGroupMask::SALU;
@@ -2434,16 +2434,6 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 
     Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
 
-    // Original implementation
-#if 0
-    StringRef Text = MI.getOperand(0).getSymbolName();
-    if (Text.find("SGMASK:") != std::string::npos) {
-      Text = Text.substr(Text.find("SGMASK:") + strlen("SGMASK:"));
-      Text = Text.substr(0, Text.find_first_of(" \t\r\n"));
-      unsigned long InlineAsmMask = std::stoul(Text.str(), nullptr, 0);
-      Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
-    }
-#endif
   }
 
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
