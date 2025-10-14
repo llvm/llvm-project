@@ -166,16 +166,16 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                       Requires<[In64BitMode]>, Sched<[WriteJumpLd]>, NOTRACK;
   }
 
-  let Predicates = [Not64BitMode], AsmVariantName = "att" in {
+  let Predicates = [Not64BitMode], AsmVariantName = "att" in
     def FARJMP32i  : Iseg32<0xEA, RawFrmImm16, (outs),
                             (ins i32imm:$off, i16imm:$seg),
                             "ljmp{l}\t$seg, $off", []>,
                             OpSize32, Sched<[WriteJump]>;
+  let AsmVariantName = "att" in
     def FARJMP16i  : Iseg16<0xEA, RawFrmImm16, (outs),
                             (ins i16imm:$off, i16imm:$seg),
                             "ljmp{w}\t$seg, $off", []>,
                             OpSize16, Sched<[WriteJump]>;
-  }
   let mayLoad = 1 in {
     def FARJMP64m  : RI<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
                         "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
@@ -214,11 +214,6 @@ let isCall = 1 in
                            (outs), (ins i32imm_brtarget:$dst),
                            "call{l}\t$dst", []>, OpSize32,
                       Requires<[Not64BitMode]>, Sched<[WriteJump]>;
-    let hasSideEffects = 0 in
-      def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
-                             (outs), (ins i16imm_brtarget:$dst),
-                             "call{w}\t$dst", []>, OpSize16,
-                        Requires<[Not64BitMode]>, Sched<[WriteJump]>;
     def CALL16r     : I<0xFF, MRM2r, (outs), (ins GR16:$dst),
                         "call{w}\t{*}$dst", [(X86call GR16:$dst)]>,
                       OpSize16, Requires<[Not64BitMode]>, Sched<[WriteJump]>;
@@ -329,6 +324,11 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                         (outs), (ins i64i32imm_brtarget:$dst),
                         "call{q}\t$dst", []>, OpSize32,
                       Requires<[In64BitMode]>;
+  let hasSideEffects = 0 in
+    def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
+                           (outs), (ins i16imm_brtarget:$dst),
+                           "call{w}\t$dst", []>, OpSize16,
+                      Sched<[WriteJump]>;
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
                         "call{q}\t{*}$dst", [(X86call GR64:$dst)]>,
                       Requires<[In64BitMode,NotUseIndirectThunkCalls,ImportCallOptimizationDisabled]>;
