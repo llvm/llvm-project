@@ -54,9 +54,9 @@ static std::optional<TextEncoding> getKnownEncoding(StringRef Name) {
   return std::nullopt;
 }
 
-LLVM_ATTRIBUTE_UNUSED static void
-HandleOverflow(size_t &Capacity, char *&Output, size_t &OutputLength,
-               SmallVectorImpl<char> &Result) {
+[[maybe_unused]] static void HandleOverflow(size_t &Capacity, char *&Output,
+                                            size_t &OutputLength,
+                                            SmallVectorImpl<char> &Result) {
   // No space left in output buffer. Double the size of the underlying
   // memory in the SmallVectorImpl, adjust pointer and length and continue
   // the conversion.
