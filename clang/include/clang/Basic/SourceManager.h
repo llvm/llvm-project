@@ -1250,6 +1250,21 @@ public:
     return getSpellingLocSlowCase(Loc);
   }
 
+  /// Given a SourceLocation object, return the refined spelling
+  /// location referenced by the ID.
+  ///
+  /// The key difference to \ref getSpellingLoc is that the source location
+  /// for macro body is resolved to the expansion site.
+  ///
+  /// This is the place where the characters that make up the lexed token
+  /// can be found.
+  SourceLocation getRefinedSpellingLoc(SourceLocation Loc) const {
+    // Handle the non-mapped case inline, defer to out of line code to handle
+    // expansions.
+    if (Loc.isFileID()) return Loc;
+    return getRefinedSpellingLocSlowCase(Loc);
+  }
+
   /// Given a SourceLocation object, return the spelling location
   /// referenced by the ID.
   ///
@@ -1977,6 +1992,7 @@ private:
 
   SourceLocation getExpansionLocSlowCase(SourceLocation Loc) const;
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
+  SourceLocation getRefinedSpellingLocSlowCase(SourceLocation Loc) const;
   SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
 
   FileIDAndOffset
