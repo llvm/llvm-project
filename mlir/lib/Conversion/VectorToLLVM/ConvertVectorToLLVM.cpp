@@ -30,6 +30,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 
 #include <optional>
@@ -248,7 +249,9 @@ public:
 
     // Resolve alignment.
     // Explicit alignment takes priority over use-vector-alignment.
-    unsigned align = loadOrStoreOp.getAlignment().value_or(0);
+    unsigned align = 0;
+    if (llvm::MaybeAlign maybeAlign = loadOrStoreOp.getMaybeAlign())
+      align = maybeAlign->value();
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
                                         memRefTy, align, useVectorAlignment)))
@@ -301,7 +304,9 @@ public:
 
     // Resolve alignment.
     // Explicit alignment takes priority over use-vector-alignment.
-    unsigned align = gather.getAlignment().value_or(0);
+    unsigned align = 0;
+    if (llvm::MaybeAlign maybeAlign = gather.getMaybeAlign())
+      align = maybeAlign->value();
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
                                         memRefType, align, useVectorAlignment)))
@@ -358,7 +363,9 @@ public:
 
     // Resolve alignment.
     // Explicit alignment takes priority over use-vector-alignment.
-    unsigned align = scatter.getAlignment().value_or(0);
+    unsigned align = 0;
+    if (llvm::MaybeAlign maybeAlign = scatter.getMaybeAlign())
+      align = maybeAlign->value();
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
                                         memRefType, align, useVectorAlignment)))
@@ -407,7 +414,7 @@ public:
     // From:
     // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
     //   The pointer alignment defaults to 1.
-    uint64_t alignment = expand.getAlignment().value_or(1);
+    uint64_t alignment = expand.getMaybeAlign().valueOrOne().value();
 
     rewriter.replaceOpWithNewOp<LLVM::masked_expandload>(
         expand, vtype, ptr, adaptor.getMask(), adaptor.getPassThru(),
@@ -435,7 +442,7 @@ public:
     // From:
     // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
     //   The pointer alignment defaults to 1.
-    uint64_t alignment = compress.getAlignment().value_or(1);
+    uint64_t alignment = compress.getMaybeAlign().valueOrOne().value();
 
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
         compress, adaptor.getValueToStore(), ptr, adaptor.getMask(), alignment);
