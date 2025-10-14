@@ -2947,54 +2947,29 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
-    if (SemaRef.checkArgCount(TheCall, 1) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0))
-      return true;
+    assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
     // use the type of the handle (arg0) as a return type
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 6) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
-                            AST.getPointerType(AST.CharTy.withConst())))
-      return true;
+    assert(TheCall->getNumArgs() == 6 && "expected 6 args");
     // use the type of the handle (arg0) as a return type
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 6) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
-                            AST.getPointerType(AST.CharTy.withConst())))
-      return true;
+    assert(TheCall->getNumArgs() == 6 && "expected 6 args");
     // use the type of the handle (arg0) as a return type
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
+    assert(TheCall->getNumArgs() == 3 && "expected 3 args");
     ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 3) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy))
-      return true;
-
     QualType MainHandleTy = TheCall->getArg(0)->getType();
     auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
     auto MainAttrs = MainResType->getAttrs();
@@ -3302,14 +3277,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    assert(TheCall->getNumArgs() == 2 && "expected 2 args");
     auto checkResTy = [](const HLSLAttributedResourceType *ResTy) -> bool {
       return !(ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
                ResTy->getAttrs().RawBuffer && ResTy->hasContainedType());
     };
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().IntTy))
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
       return true;
     Expr *OffsetExpr = TheCall->getArg(1);
     std::optional<llvm::APSInt> Offset =
