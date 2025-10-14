@@ -809,8 +809,8 @@ int llvm::findVPTInactiveOperandIdx(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
 
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
-    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R)  {
-      assert(MCID.getOperandConstraint(i+3, MCOI::TIED_TO) != -1 &&
+    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R) {
+      assert(MCID.getOperandConstraint(i + 3, MCOI::TIED_TO) != -1 &&
              "Operand #3 of VPRED_R is the one tied to the output register");
       return i + 3;
     }
