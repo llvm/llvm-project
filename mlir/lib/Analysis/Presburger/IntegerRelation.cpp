@@ -21,6 +21,7 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -1723,12 +1724,67 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
   return minDiff;
 }
 
+void IntegerRelation::pruneConstraints(unsigned pos) {
+  llvm::DenseSet<unsigned> relatedCols({pos}), relatedRows;
+
+  llvm::SmallVector<unsigned> rowStack, colStack({pos});
+  unsigned numConstraints = getNumConstraints();
+  if (numConstraints == 0)
+    return;
+  while (!rowStack.empty() || !colStack.empty()) {
+    if (!rowStack.empty()) {
+      unsigned currentRow = rowStack.pop_back_val();
+      for (uint64_t colIndex = 0; colIndex < getNumVars(); ++colIndex) {
+        if (currentRow < getNumInequalities()) {
+          if (atIneq(currentRow, colIndex) != 0 &&
+              relatedCols.insert(colIndex).second) {
+            colStack.push_back(colIndex);
+          }
+        } else {
+          if (atEq(currentRow - getNumInequalities(), colIndex) != 0 &&
+              relatedCols.insert(colIndex).second) {
+            colStack.push_back(colIndex);
+          }
+        }
+      }
+    } else {
+      unsigned currentCol = colStack.pop_back_val();
+      for (uint64_t rowIndex = 0; rowIndex < numConstraints; ++rowIndex) {
+        if (rowIndex < getNumInequalities()) {
+          if (atIneq(rowIndex, currentCol) != 0 &&
+              relatedRows.insert(rowIndex).second) {
+            rowStack.push_back(rowIndex);
+          }
+        } else {
+          if (atEq(rowIndex - getNumInequalities(), currentCol) != 0 &&
+              relatedRows.insert(rowIndex).second) {
+            rowStack.push_back(rowIndex);
+          }
+        }
+      }
+    }
+  }
+
+  for (int64_t constraintId = numConstraints - 1; constraintId >= 0;
+       --constraintId) {
+    if (!relatedRows.contains(constraintId)) {
+      if (constraintId >= getNumInequalities()) {
+        removeEquality(constraintId - getNumInequalities());
+      } else {
+        removeInequality(constraintId);
+      }
+    }
+  }
+}
+
 template <bool isLower>
 std::optional<DynamicAPInt>
 IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   // Project to 'pos'.
+  pruneConstraints(pos);
   projectOut(0, pos);
+  pruneConstraints(0);
   projectOut(1, getNumVars() - 1);
   // Check if there's an equality equating the '0'^th variable to a constant.
   int eqRowIdx = findEqualityToConstant(/*pos=*/0, /*symbolic=*/false);

@@ -511,6 +511,9 @@ public:
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
 
+  /// Prune constraints that are irrelevant to the target variable.
+  void pruneConstraints(unsigned pos);
+
   /// Tries to fold the specified variable to a constant using a trivial
   /// equality detection; if successful, the constant is substituted for the
   /// variable everywhere in the constraint system and then removed from the
