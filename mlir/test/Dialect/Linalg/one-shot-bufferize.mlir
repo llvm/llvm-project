@@ -10,10 +10,10 @@
 
 // TODO: Some test cases from this file should be moved to other dialects.
 
-// CHECK-LABEL: func @fill_inplace(
+// CHECK-LABEL: func private @fill_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
-// CHECK-NO-LAYOUT-MAP-LABEL: func @fill_inplace(%{{.*}}: memref<?xf32>) {
-func.func @fill_inplace(
+// CHECK-NO-LAYOUT-MAP-LABEL: func private @fill_inplace(%{{.*}}: memref<?xf32>) {
+func.func private @fill_inplace(
     %A : tensor<?xf32> {bufferization.writable = true})
   -> tensor<?xf32>
 {
@@ -56,10 +56,10 @@ func.func @not_inplace(
 // -----
 
 
-// CHECK-LABEL: func @not_inplace
+// CHECK-LABEL: func private @not_inplace
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>) {
-// CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?x?xf32>) {
-func.func @not_inplace(
+// CHECK-NO-LAYOUT-MAP-LABEL: func private @not_inplace(%{{.*}}: memref<?x?xf32>) {
+func.func private @not_inplace(
     %A : tensor<?x?xf32> {bufferization.writable = true})
   -> tensor<?x?xf32>
 {
@@ -235,7 +235,7 @@ func.func @dominance_violation_bug_1(
 
 // -----
 
-func.func @gather_like(
+func.func private @gather_like(
     %arg0 : tensor<?x?xf32> {bufferization.writable = false},
     %arg1 : tensor<?xi32> {bufferization.writable = false},
     %arg2 : tensor<?x?xf32> {bufferization.writable = true})
@@ -254,7 +254,7 @@ func.func @gather_like(
       } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
-// CHECK-LABEL: func @gather_like(
+// CHECK-LABEL: func private @gather_like(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32,
 //  CHECK-SAME:     %[[ARG1:.+]]: memref<?xi32
 //  CHECK-SAME:     %[[ARG2:.+]]: memref<?x?xf32
