@@ -322,8 +322,11 @@ public:
   }
 
   // Return true if the target wants to optimize the mul overflow intrinsic
-  // by detecting if there is no overflow.
-  bool shouldOptimizeMulOverflowIntrinsic() const override { return true; }
+  // for the given \p VT.
+  bool shouldOptimizeMulOverflowIntrinsic(LLVMContext &Context,
+                                          EVT VT) const override {
+    return getTypeAction(Context, VT) == TypeExpandInteger;
+  }
 
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
