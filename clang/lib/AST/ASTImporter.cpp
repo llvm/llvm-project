@@ -4073,7 +4073,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
     // Reuse this approach for auto return types declared as typenames from
-    // template pamams, tracked in FunctionReturnTypeCycleDetector.
+    // template params, tracked in FunctionReturnTypeCycleDetector.
     if (hasReturnTypeDeclaredInside(D) ||
         Importer.FunctionReturnTypeCycleDetector->isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
