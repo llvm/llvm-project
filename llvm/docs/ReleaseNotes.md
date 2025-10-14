@@ -171,6 +171,7 @@ Changes to LLDB
   debugging Wasm with supported runtimes (WAMR and V8).
 * LLDB no longer stops processes by default when receiving SIGWINCH signals 
   (window resize events) on Linux. This is the default on other Unix platforms.
+  You can re-enable it using `process handle --notify=false --stop=false SIGWINCH`.
 
 
 Changes to BOLT
