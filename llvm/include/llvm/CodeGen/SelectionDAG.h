@@ -1850,9 +1850,11 @@ public:
   /// Get the specified node if it's already available, or else return NULL.
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
                                    ArrayRef<SDValue> Ops,
-                                   const SDNodeFlags Flags);
+                                   const SDNodeFlags Flags,
+                                   bool AllowCommute = false);
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
-                                   ArrayRef<SDValue> Ops);
+                                   ArrayRef<SDValue> Ops,
+                                   bool AllowCommute = false);
 
   /// Check if a node exists without modifying its flags.
   LLVM_ABI bool doesNodeExist(unsigned Opcode, SDVTList VTList,

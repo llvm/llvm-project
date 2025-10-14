@@ -55,12 +55,20 @@ Error SpecialCaseList::RegexMatcher::insert(StringRef Pattern,
   return Error::success();
 }
 
+void SpecialCaseList::RegexMatcher::preprocess(bool BySize) {
+  if (BySize) {
+    llvm::stable_sort(RegExes, [](const Reg &A, const Reg &B) {
+      return A.Name.size() < B.Name.size();
+    });
+  }
+}
+
 void SpecialCaseList::RegexMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
   for (const auto &R : reverse(RegExes))
     if (R.Rg.match(Query))
-      Cb(R.Name, R.LineNo);
+      return Cb(R.Name, R.LineNo);
 }
 
 Error SpecialCaseList::GlobMatcher::insert(StringRef Pattern,
@@ -75,12 +83,20 @@ Error SpecialCaseList::GlobMatcher::insert(StringRef Pattern,
   return Error::success();
 }
 
+void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
+  if (BySize) {
+    llvm::stable_sort(Globs, [](const Glob &A, const Glob &B) {
+      return A.Name.size() < B.Name.size();
+    });
+  }
+}
+
 void SpecialCaseList::GlobMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
   for (const auto &G : reverse(Globs))
     if (G.Pattern.match(Query))
-      Cb(G.Name, G.LineNo);
+      return Cb(G.Name, G.LineNo);
 }
 
 SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
@@ -91,16 +107,20 @@ SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
     M.emplace<RegexMatcher>();
 }
 
+Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber) {
+  return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
+}
+
+LLVM_ABI void SpecialCaseList::Matcher::preprocess(bool BySize) {
+  return std::visit([&](auto &V) { return V.preprocess(BySize); }, M);
+}
+
 void SpecialCaseList::Matcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
   if (RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
   return std::visit([&](auto &V) { return V.match(Query, Cb); }, M);
-}
-
-Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber) {
-  return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
 // TODO: Refactor this to return Expected<...>
@@ -141,7 +161,7 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
       return false;
     }
     std::string ParseError;
-    if (!parse(i, FileOrErr.get().get(), ParseError)) {
+    if (!parse(i, FileOrErr.get().get(), ParseError, /*OrderBySize=*/false)) {
       Error = (Twine("error parsing file '") + Path + "': " + ParseError).str();
       return false;
     }
@@ -149,9 +169,9 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
   return true;
 }
 
-bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
-                                     std::string &Error) {
-  if (!parse(0, MB, Error))
+bool SpecialCaseList::createInternal(const MemoryBuffer *MB, std::string &Error,
+                                     bool OrderBySize) {
+  if (!parse(0, MB, Error, OrderBySize))
     return false;
   return true;
 }
@@ -174,7 +194,7 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 }
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
-                            std::string &Error) {
+                            std::string &Error, bool OrderBySize) {
   unsigned long long Version = 2;
 
   StringRef Header = MB->getBuffer();
@@ -246,6 +266,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
       return false;
     }
   }
+
+  for (Section &S : Sections)
+    S.preprocess(OrderBySize);
+
   return true;
 }
 
@@ -281,6 +305,13 @@ SpecialCaseList::Section::findMatcher(StringRef Prefix,
     return nullptr;
 
   return &II->second;
+}
+
+LLVM_ABI void SpecialCaseList::Section::preprocess(bool OrderBySize) {
+  SectionMatcher.preprocess(false);
+  for (auto &[K1, E] : Entries)
+    for (auto &[K2, M] : E)
+      M.preprocess(OrderBySize);
 }
 
 unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,

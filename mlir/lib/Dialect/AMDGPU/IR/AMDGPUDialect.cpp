@@ -26,6 +26,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -40,6 +41,15 @@ using namespace mlir::amdgpu;
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
+namespace {
+struct AMDGPUInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 void AMDGPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
@@ -49,6 +59,7 @@ void AMDGPUDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
       >();
+  addInterfaces<AMDGPUInlinerInterface>();
 }
 
 //===----------------------------------------------------------------------===//

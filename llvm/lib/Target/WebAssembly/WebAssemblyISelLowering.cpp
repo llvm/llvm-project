@@ -317,6 +317,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
     }
 
+    if (Subtarget->hasFP16()) {
+      setOperationAction(ISD::FMA, MVT::v8f16, Legal);
+    }
+
+    if (Subtarget->hasRelaxedSIMD()) {
+      setOperationAction(ISD::FMULADD, MVT::v4f32, Legal);
+      setOperationAction(ISD::FMULADD, MVT::v2f64, Legal);
+    }
+
     // Partial MLA reductions.
     for (auto Op : {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA}) {
       setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v16i8, Legal);
@@ -1118,6 +1127,18 @@ WebAssemblyTargetLowering::getPreferredVectorAction(MVT VT) const {
   }
 
   return TargetLoweringBase::getPreferredVectorAction(VT);
+}
+
+bool WebAssemblyTargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
+  if (!Subtarget->hasFP16() || !VT.isVector())
+    return false;
+
+  EVT ScalarVT = VT.getScalarType();
+  if (!ScalarVT.isSimple())
+    return false;
+
+  return ScalarVT.getSimpleVT().SimpleTy == MVT::f16;
 }
 
 bool WebAssemblyTargetLowering::shouldSimplifyDemandedVectorElts(

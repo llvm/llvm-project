@@ -893,6 +893,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return DefaultedMemberString(Val);
   case DW_AT_APPLE_enum_kind:
     return EnumKindString(Val);
+  case DW_AT_language_name:
+    return SourceLanguageNameString(static_cast<SourceLanguageName>(Val));
   }
 
   return StringRef();

@@ -1728,6 +1728,7 @@ static APFloat constantFoldFpUnary(const MachineInstr &MI,
     Result.clearSign();
     return Result;
   }
+  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     bool Unused;
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());

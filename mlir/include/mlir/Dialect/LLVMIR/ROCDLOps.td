@@ -292,8 +292,46 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
+
+def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` $id attr-dict";
+}
+
 def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0, [0], ["id"]>,
   Arguments<(ins I32Attr:$id)> {
+  let results = (outs);
+  let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` $id attr-dict";
+}
+
+def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr attr-dict";
+}
+
+def ROCDL_BarrierLeaveOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.leave", [], 0, [0], ["id"]>,
+  Arguments<(ins I16Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
 }
@@ -302,6 +340,24 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
   Arguments<(ins I16Attr:$id)> {
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.isfirst", [], 1, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I1:$res);
+  let assemblyFormat = "$id attr-dict `:` type($res)";
+}
+
+def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", [], 1, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I32:$res);
+  let assemblyFormat = "$id attr-dict `:` type($res)";
 }
 
 def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,
@@ -497,7 +553,6 @@ def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x32.iu4", [1]
 // LDS transpose intrinsics (available in GFX950)
 
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
-def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {

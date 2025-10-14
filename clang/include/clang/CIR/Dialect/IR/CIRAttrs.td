@@ -814,6 +814,14 @@ def CIR_GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor"> {
   }];
 }
 
+def CIR_GlobalDtorAttr : CIR_GlobalCtorDtor<"Dtor", "dtor"> {
+  let summary = "Marks a function as a global destructor";
+  let description = [{
+      Marks a function as a global destructor in the module dtors list.
+      The function will be executed before the module unloading.
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
 //===----------------------------------------------------------------------===//

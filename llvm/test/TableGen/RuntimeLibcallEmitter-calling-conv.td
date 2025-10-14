@@ -48,6 +48,11 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:     Entry = DefaultCC;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
+// CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:     0x0000000000001a
+// CHECK-NEXT:   });
+// CHECK-NEXT:   AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
 // CHECK-NEXT:    };
@@ -70,9 +75,14 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:   static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:       {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
-// CHECK-NEXT:   };
+// CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:     0x0000000000001a
+// CHECK-NEXT:   });
+// CHECK-NEXT:   AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
+// CHECK-NEXT:    };
 // CHECK-EMPTY:
 // CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:     setLibcallImpl(Func, Impl);
@@ -92,6 +102,11 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  if (TT.getArch() == Triple::msp430) {
+// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:      0x00000000000010
+// CHECK-NEXT:    });
+// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
 // CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
 // CHECK-NEXT:    };
