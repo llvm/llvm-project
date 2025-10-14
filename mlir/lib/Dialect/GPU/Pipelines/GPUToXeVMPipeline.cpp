@@ -18,6 +18,7 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
+#include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
@@ -76,6 +77,7 @@ void buildGpuPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
   }
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeGPUToXeVMPass());
   {
     ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
