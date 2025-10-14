@@ -28,10 +28,10 @@ using namespace llvm;
 // namespace {
 
 // Helper function for rebasing successor distances into current block frame
-static inline int64_t rebaseFromSucc(int64_t succStored, unsigned succEntryOff,
-                                     int64_t edgeWeight /*0 or LoopTag*/) {
+static inline int64_t rebaseFromSucc(int64_t SuccStored, unsigned SuccEntryOff,
+                                     int64_t EdgeWeight /*0 or LoopTag*/) {
   // Move succ-relative value into "current block end" frame.
-  return (int64_t)succStored + (int64_t)succEntryOff + (int64_t)edgeWeight;
+  return (int64_t)SuccStored + (int64_t)SuccEntryOff + (int64_t)EdgeWeight;
 }
 
 class NextUseResult {
@@ -40,10 +40,6 @@ class NextUseResult {
   const MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   MachineLoopInfo *LI;
-
-  TimerGroup *TG;
-  Timer *T1;
-  Timer *T2;
 
   class VRegDistances {
 
@@ -129,13 +125,11 @@ class NextUseResult {
 
           // Add new record
           return Dists.insert(R).second;
-        } else {
-          // Record already exists!
-          return false;
         }
-      } else {
-        return NextUseMap[VMP.getVReg()].insert(R).second;
+        // Record already exists!
+        return false;
       }
+      return NextUseMap[VMP.getVReg()].insert(R).second;
     }
 
     void clear(VRegMaskPair VMP) {
@@ -196,7 +190,7 @@ class NextUseResult {
 
         for (const auto &D : OtherDists) {
           // D.second is the successor's STORED value (signed, relative to succ)
-          int64_t rebased = rebaseFromSucc(D.second, SuccEntryOff, EdgeWeight);
+          int64_t Rebased = rebaseFromSucc(D.second, SuccEntryOff, EdgeWeight);
 
           // Try to find existing record with the same LaneBitmask
           auto It =
@@ -205,11 +199,11 @@ class NextUseResult {
 
           if (It == MineDists.end()) {
             // No record → insert
-            MineDists.insert({D.first, rebased});
-          } else if (It->second > rebased) { // take MIN in the current frame
+            MineDists.insert({D.first, Rebased});
+          } else if (It->second > Rebased) { // take MIN in the current frame
             // Furthest wins (adjusted is more distant) → replace
             MineDists.erase(It);
-            MineDists.insert({D.first, rebased});
+            MineDists.insert({D.first, Rebased});
           }
         }
       }
@@ -246,9 +240,9 @@ private:
 
   // Core materialization: convert stored relative value + snapshot offset
   // to full materialized distance with bounds checking.
-  int64_t materialize(int64_t stored, unsigned snapshotOffset) const {
-    int64_t mat64 = stored + static_cast<int64_t>(snapshotOffset);
-    return (mat64 <= 0) ? 0 : mat64;
+  int64_t materialize(int64_t Stored, unsigned SnapshotOffset) const {
+    int64_t Mat64 = Stored + static_cast<int64_t>(SnapshotOffset);
+    return (Mat64 <= 0) ? 0 : Mat64;
   }
 
   // Structure for enhanced distance ranking and printing
@@ -258,33 +252,33 @@ private:
     int64_t LoopMultiplier;  // How many LoopTags are in the distance
     int64_t Rema;            // remainder after extracting LoopTags
     
-    PrintDist(int64_t mat64) {
-      if (mat64 >= DeadTag) {
+    PrintDist(int64_t Mat64) {
+      if (Mat64 >= DeadTag) {
         IsInfinity = false;
         IsDead = true;
         LoopMultiplier = 0;
-        Rema = mat64 - DeadTag;
-      } else if (mat64 >= LoopTag) {
+        Rema = Mat64 - DeadTag;
+      } else if (Mat64 >= LoopTag) {
         IsInfinity = true;
         IsDead = false;
         // Extract LoopTag multiples and remainder
-        LoopMultiplier = mat64 / LoopTag;
-        Rema = mat64 % LoopTag;
+        LoopMultiplier = Mat64 / LoopTag;
+        Rema = Mat64 % LoopTag;
       } else {
         IsInfinity = false;
         IsDead = false;
         LoopMultiplier = 0;
-        Rema = mat64;
+        Rema = Mat64;
       }
     }
   };
 
   // Materializer for spiller use: applies three-tier ranking system
-  unsigned materializeForRank(int64_t stored, unsigned snapshotOffset) const;
+  unsigned materializeForRank(int64_t Stored, unsigned SnapshotOffset) const;
 
   // Materializer for printing: returns PrintDist structure
-  PrintDist materializeForPrint(int64_t stored, unsigned snapshotOffset) const {
-    return PrintDist(materialize(stored, snapshotOffset));
+  PrintDist materializeForPrint(int64_t Stored, unsigned SnapshotOffset) const {
+    return PrintDist(materialize(Stored, SnapshotOffset));
   }
 
   // Print each (VReg, LaneMask) entry with materialized distances.
