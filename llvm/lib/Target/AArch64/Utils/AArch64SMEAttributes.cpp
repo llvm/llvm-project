@@ -130,6 +130,12 @@ SMECallAttrs::SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI)
   if (auto *CalledFunction = CB.getCalledFunction())
     CalledFn = SMEAttrs(*CalledFunction, TLI);
 
+  // An `invoke` of an agnostic ZA function may not return normally (it may
+  // resume in an exception block). In this case, it acts like a private ZA
+  // callee and may require a ZA save to be set up before it is called.
+  if (isa<InvokeInst>(CB))
+    CalledFn.set(SMEAttrs::ZA_State_Agnostic, /*Enable=*/false);
+
   // FIXME: We probably should not allow SME attributes on direct calls but
   // clang duplicates streaming mode attributes at each callsite.
   assert((IsIndirect ||

@@ -31,12 +31,17 @@ Token Assignment Mode
 
 The default mode to calculate tokens is:
 
-* ``typehash``: This mode assigns a token ID based on the hash of the allocated
-  type's name.
+* ``typehashpointersplit``: This mode assigns a token ID based on the hash of
+  the allocated type's name, where the top half ID-space is reserved for types
+  that contain pointers and the bottom half for types that do not contain
+  pointers.
 
 Other token ID assignment modes are supported, but they may be subject to
 change or removal. These may (experimentally) be selected with ``-mllvm
 -alloc-token-mode=<mode>``:
+
+* ``typehash``: This mode assigns a token ID based on the hash of the allocated
+  type's name.
 
 * ``random``: This mode assigns a statically-determined random token ID to each
   allocation site.
@@ -116,6 +121,35 @@ which encodes the token ID hint in the allocation function name.
 
 This ABI provides a more efficient alternative where
 ``-falloc-token-max`` is small.
+
+Instrumenting Non-Standard Allocation Functions
+-----------------------------------------------
+
+By default, AllocToken only instruments standard library allocation functions.
+This simplifies adoption, as a compatible allocator only needs to provide
+token-enabled variants for a well-defined set of standard functions.
+
+To extend instrumentation to custom allocation functions, enable broader
+coverage with ``-fsanitize-alloc-token-extended``. Such functions require being
+marked with the `malloc
+<https://clang.llvm.org/docs/AttributeReference.html#malloc>`_ or `alloc_size
+<https://clang.llvm.org/docs/AttributeReference.html#alloc-size>`_ attributes
+(or a combination).
+
+For example:
+
+.. code-block:: c
+
+    void *custom_malloc(size_t size) __attribute__((malloc));
+    void *my_malloc(size_t size) __attribute__((alloc_size(1)));
+
+    // Original:
+    ptr1 = custom_malloc(size);
+    ptr2 = my_malloc(size);
+
+    // Instrumented:
+    ptr1 = __alloc_token_custom_malloc(size, token_id);
+    ptr2 = __alloc_token_my_malloc(size, token_id);
 
 Disabling Instrumentation
 -------------------------

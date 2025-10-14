@@ -643,6 +643,8 @@ public:
     return localSymbols.lookupStorage(sym);
   }
 
+  Fortran::lower::SymMap &getSymbolMap() override final { return localSymbols; }
+
   void
   overrideExprValues(const Fortran::lower::ExprToValueMap *map) override final {
     exprValueOverrides = map;
@@ -5054,8 +5056,7 @@ private:
           hlfir::Entity entity{baseValue};
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
-          auto needCleanup = fir::getIntIfConstant(cleanup);
-          if (needCleanup && *needCleanup) {
+          if (cleanup) {
             if (auto declareOp =
                     mlir::dyn_cast<hlfir::DeclareOp>(temp.getDefiningOp()))
               temps.push_back(declareOp.getMemref());
