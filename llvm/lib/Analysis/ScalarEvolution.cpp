@@ -15594,8 +15594,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,
                               DenseMap<const SCEV *, const SCEV *> &RewriteMap,
-                              const DenseMap<const SCEV *, const SCEV *>
-                                  &DivInfo) {
+                              const LoopGuards &DivGuards) {
     // WARNING: It is generally unsound to apply any wrap flags to the proposed
     // replacement SCEV which isn't directly implied by the structure of that
     // SCEV.  In particular, using contextual facts to imply flags is *NOT*
@@ -15637,12 +15636,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     if (isa<SCEVConstant>(LHS) || SE.containsAddRecurrence(RHS))
       return;
 
-    // If RHS is SCEVUnknown, make sure the information is applied to it.
-    if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
-      std::swap(LHS, RHS);
-      Predicate = CmpInst::getSwappedPredicate(Predicate);
-    }
-
     // Puts rewrite rule \p From -> \p To into the rewrite map. Also if \p From
     // and \p FromRewritten are the same (i.e. there has been no rewrite
     // registered for \p From), then puts this value in the list of rewritten
@@ -15663,8 +15656,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
     const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
     // Apply divisibility information when computing the constant multiple.
-    LoopGuards DivGuards(SE);
-    DivGuards.RewriteMap = DivInfo;
     const APInt &DividesBy =
         SE.getConstantMultiple(DivGuards.rewrite(RewrittenLHS));
 
@@ -15871,6 +15862,8 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         const auto *LHS = SE.getSCEV(Cmp->getOperand(0));
         const auto *RHS = SE.getSCEV(Cmp->getOperand(1));
         // If LHS is a constant, apply information to the other expression.
+        // TODO: If LHS is not a constant, check if using CompareSCEVComplexity
+        // can improve results.
         if (isa<SCEVConstant>(LHS)) {
           std::swap(LHS, RHS);
           Predicate = CmpInst::getSwappedPredicate(Predicate);
@@ -15888,17 +15881,18 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     }
   }
 
-  // Process divisibility guards in reverse order to populate DivInfo early.
+  // Process divisibility guards in reverse order to populate DivGuards early.
   DenseMap<const SCEV *, APInt> Multiples;
-  DenseMap<const SCEV *, const SCEV *> DivInfo;
+  LoopGuards DivGuards(SE);
   for (const auto &[Predicate, LHS, RHS] : GuardsToProcess) {
     if (!isDivisibilityGuard(LHS, RHS, SE))
       continue;
-    collectDivisibilityInformation(Predicate, LHS, RHS, DivInfo, Multiples, SE);
+    collectDivisibilityInformation(Predicate, LHS, RHS, DivGuards.RewriteMap,
+                                   Multiples, SE);
   }
 
   for (const auto &[Predicate, LHS, RHS] : GuardsToProcess)
-    CollectCondition(Predicate, LHS, RHS, Guards.RewriteMap, DivInfo);
+    CollectCondition(Predicate, LHS, RHS, Guards.RewriteMap, DivGuards);
 
   // Apply divisibility information last. This ensures it is applied to the
   // outermost expression after other rewrites for the given value.
