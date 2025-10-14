@@ -779,34 +779,6 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   }
 }
 
-template <typename DeclT>
-static clang::Decl *preferDefinitionImpl(clang::Decl *D) {
-  if (auto *X = dyn_cast<DeclT>(D))
-    if (auto *Def = X->getDefinition())
-      return Def;
-  return D;
-}
-
-template <> clang::Decl *preferDefinitionImpl<ObjCMethodDecl>(clang::Decl *D) {
-  if (const auto *X = dyn_cast<ObjCMethodDecl>(D)) {
-    for (auto *I : X->redecls())
-      if (I->hasBody())
-        return I;
-  }
-  return D;
-}
-
-static Decl *getDefinitionOrCanonicalDecl(Decl *D) {
-  assert(D);
-  D = D->getCanonicalDecl();
-  D = preferDefinitionImpl<VarDecl>(D);
-  D = preferDefinitionImpl<FunctionDecl>(D);
-  D = preferDefinitionImpl<TagDecl>(D);
-  D = preferDefinitionImpl<ObjCMethodDecl>(D);
-  assert(D);
-  return D;
-}
-
 //===----------------------------------------------------------------------===//
 // Path-sensitive checking.
 //===----------------------------------------------------------------------===//
@@ -818,12 +790,13 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   // FIXME: Inter-procedural analysis will need to handle invalid CFGs.
   if (!Mgr->getCFG(D))
     return;
-
+  auto *DeclContext = Mgr->getAnalysisDeclContext(D);
   // See if the LiveVariables analysis scales.
-  if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
+  if (!DeclContext->getAnalysis<RelaxedLiveVariables>())
     return;
 
-  const Decl *DefDecl = getDefinitionOrCanonicalDecl(D);
+  // DeclContext declaration is the redeclaration of D that has a body.
+  const Decl *DefDecl = DeclContext->getDecl();
 
   // Get the SyntaxRunningTime from the function summary, because it is computed
   // during the AM_Syntax analysis, which is done at a different point in time
