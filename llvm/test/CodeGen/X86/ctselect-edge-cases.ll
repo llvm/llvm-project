@@ -101,15 +101,34 @@ define float @test_ctselect_f32_special_values(i1 %cond) {
 ;
 ; X32-LABEL: test_ctselect_f32_special_values:
 ; X32:       # %bb.0:
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X32-NEXT:    jne .LBB3_2
-; X32-NEXT:  # %bb.1:
-; X32-NEXT:    fstp %st(1)
-; X32-NEXT:    fldz
-; X32-NEXT:  .LBB3_2:
-; X32-NEXT:    fstp %st(0)
+; X32-NEXT:    sete %al
+; X32-NEXT:    movl {{\.?LCPI[0-9]+_[0-9]+}}, %ecx
+; X32-NEXT:    movl {{\.?LCPI[0-9]+_[0-9]+}}, %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, (%esp)
+; X32-NEXT:    flds (%esp)
+; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
   %result = call float @llvm.ct.select.f32(i1 %cond, float 0x7FF8000000000000, float 0x7FF0000000000000)
   ret float %result
@@ -127,15 +146,50 @@ define double @test_ctselect_f64_special_values(i1 %cond) {
 ;
 ; X32-LABEL: test_ctselect_f64_special_values:
 ; X32:       # %bb.0:
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    subl $24, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 36
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X32-NEXT:    jne .LBB4_2
-; X32-NEXT:  # %bb.1:
-; X32-NEXT:    fstp %st(1)
-; X32-NEXT:    fldz
-; X32-NEXT:  .LBB4_2:
-; X32-NEXT:    fstp %st(0)
+; X32-NEXT:    sete %al
+; X32-NEXT:    fxch %st(1)
+; X32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstpl (%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl (%esp), %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X32-NEXT:    fldl {{[0-9]+}}(%esp)
+; X32-NEXT:    addl $24, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
   %result = call double @llvm.ct.select.f64(i1 %cond, double 0x7FF8000000000000, double 0x7FF0000000000000)
   ret double %result

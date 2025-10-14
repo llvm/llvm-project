@@ -38057,6 +38057,121 @@ emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
   return BB;
 }
 
+// Helper structure to hold memory operand information for FP loads
+struct FPLoadMemOperands {
+  bool IsValid = false;
+  unsigned BaseReg = 0;
+  int64_t ScaleVal = 1;
+  unsigned IndexReg = 0;
+  int64_t Disp = 0;
+  unsigned SegReg = 0;
+  int FrameIndex = -1;
+  bool IsFrameIndex = false;
+  int ConstantPoolIndex = -1;
+  bool IsConstantPool = false;
+  const GlobalValue *Global = nullptr;
+  int64_t GlobalOffset = 0;
+  bool IsGlobal = false;
+};
+
+// Check if a virtual register is defined by a simple FP load instruction
+// Returns the memory operands if it's a simple load, otherwise returns invalid
+static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
+                                               MachineRegisterInfo &MRI,
+                                               unsigned ExpectedLoadOpcode) {
+  FPLoadMemOperands Result;
+
+  if (!Reg.isVirtual())
+    return Result;
+
+  MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  if (!DefMI)
+    return Result;
+
+  // Check if it's the expected load opcode (e.g., LD_Fp32m, LD_Fp64m, LD_Fp80m)
+  if (DefMI->getOpcode() != ExpectedLoadOpcode)
+    return Result;
+
+  // Check that this is a simple load - not volatile, not atomic, etc.
+  // FP loads have hasSideEffects = 0 in their definition for simple loads
+  if (DefMI->hasOrderedMemoryRef())
+    return Result;
+
+  // The load should have a single def (the destination register) and memory operands
+  // Format: %reg = LD_Fpxxm <fi#N>, 1, %noreg, 0, %noreg
+  // or: %reg = LD_Fpxxm %base, scale, %index, disp, %segment
+  if (DefMI->getNumOperands() < 6)
+    return Result;
+
+  // Operand 0 is the destination, operands 1-5 are the memory reference
+  MachineOperand &BaseMO = DefMI->getOperand(1);
+  MachineOperand &ScaleMO = DefMI->getOperand(2);
+  MachineOperand &IndexMO = DefMI->getOperand(3);
+  MachineOperand &DispMO = DefMI->getOperand(4);
+  MachineOperand &SegMO = DefMI->getOperand(5);
+
+  // Check if this is a frame index load
+  if (BaseMO.isFI()) {
+    Result.IsValid = true;
+    Result.IsFrameIndex = true;
+    Result.FrameIndex = BaseMO.getIndex();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = DispMO.getImm();
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  // Check if this is a constant pool load
+  // Format: %reg = LD_Fpxxm $noreg, 1, $noreg, %const.N, $noreg
+  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister &&
+      ScaleMO.isImm() && IndexMO.isReg() &&
+      IndexMO.getReg() == X86::NoRegister &&
+      DispMO.isCPI() && SegMO.isReg()) {
+    Result.IsValid = true;
+    Result.IsConstantPool = true;
+    Result.ConstantPoolIndex = DispMO.getIndex();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = 0;
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  // Check if this is a global variable load
+  // Format: %reg = LD_Fpxxm $noreg, 1, $noreg, @global_name, $noreg
+  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister &&
+      ScaleMO.isImm() && IndexMO.isReg() &&
+      IndexMO.getReg() == X86::NoRegister &&
+      DispMO.isGlobal() && SegMO.isReg()) {
+    Result.IsValid = true;
+    Result.IsGlobal = true;
+    Result.Global = DispMO.getGlobal();
+    Result.GlobalOffset = DispMO.getOffset();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = 0;
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  // Regular memory operands (e.g., pointer loads)
+  if (BaseMO.isReg() && ScaleMO.isImm() && IndexMO.isReg() &&
+      DispMO.isImm() && SegMO.isReg()) {
+    Result.IsValid = true;
+    Result.IsFrameIndex = false;
+    Result.IsConstantPool = false;
+    Result.BaseReg = BaseMO.getReg();
+    Result.ScaleVal = ScaleMO.getImm();
+    Result.IndexReg = IndexMO.getReg();
+    Result.Disp = DispMO.getImm();
+    Result.SegReg = SegMO.getReg();
+    return Result;
+  }
+
+  return Result;
+}
+
 static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
                                                      MachineBasicBlock *BB,
                                                      unsigned pseudoInstr) {
@@ -38082,6 +38197,85 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
   auto storeFpToSlot = [&](unsigned Opcode, int Slot, Register Reg) {
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(Opcode)), Slot)
         .addReg(Reg, RegState::Kill);
+  };
+
+  // Helper to load integer from memory operands
+  auto loadIntFromMemOperands = [&](const FPLoadMemOperands &MemOps,
+                                     unsigned Offset) -> unsigned {
+    unsigned IntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+    MachineInstrBuilder MIB =
+        BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), IntReg);
+
+    if (MemOps.IsFrameIndex) {
+      // Frame index: addFrameIndex + scale + index + disp + segment
+      MIB.addFrameIndex(MemOps.FrameIndex)
+          .addImm(MemOps.ScaleVal)
+          .addReg(MemOps.IndexReg)
+          .addImm(MemOps.Disp + Offset)
+          .addReg(MemOps.SegReg);
+    } else if (MemOps.IsConstantPool) {
+      // Constant pool: base_reg + scale + index + CP_index + segment
+      // MOV32rm format: base, scale, index, displacement, segment
+      MIB.addReg(X86::NoRegister)  // Base register
+          .addImm(MemOps.ScaleVal)  // Scale
+          .addReg(MemOps.IndexReg)  // Index register
+          .addConstantPoolIndex(MemOps.ConstantPoolIndex, Offset)  // Displacement (CP index)
+          .addReg(MemOps.SegReg);  // Segment
+    } else if (MemOps.IsGlobal) {
+      // Global variable: base_reg + scale + index + global + segment
+      // MOV32rm format: base, scale, index, displacement, segment
+      MIB.addReg(X86::NoRegister)  // Base register
+          .addImm(MemOps.ScaleVal)  // Scale
+          .addReg(MemOps.IndexReg)  // Index register
+          .addGlobalAddress(MemOps.Global, MemOps.GlobalOffset + Offset)  // Displacement (global address)
+          .addReg(MemOps.SegReg);  // Segment
+    } else {
+      // Regular memory: base_reg + scale + index + disp + segment
+      MIB.addReg(MemOps.BaseReg)
+          .addImm(MemOps.ScaleVal)
+          .addReg(MemOps.IndexReg)
+          .addImm(MemOps.Disp + Offset)
+          .addReg(MemOps.SegReg);
+    }
+
+    return IntReg;
+  };
+
+  // Optimized path: load integers directly from memory when both operands are
+  // memory loads, avoiding FP register round-trip
+  auto emitCtSelectFromMemory = [&](unsigned NumValues,
+                                     const FPLoadMemOperands &TrueMemOps,
+                                     const FPLoadMemOperands &FalseMemOps,
+                                     int ResultSlot) {
+    for (unsigned Val = 0; Val < NumValues; ++Val) {
+      unsigned Offset = Val * RegSizeInByte;
+
+      // Load true and false values directly from their memory locations as integers
+      unsigned TrueIntReg = loadIntFromMemOperands(TrueMemOps, Offset);
+      unsigned FalseIntReg = loadIntFromMemOperands(FalseMemOps, Offset);
+
+      // Use CTSELECT_I386_INT_GR32 pseudo instruction for constant-time selection
+      unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+      unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+
+      BuildMI(*BB, MI, MIMD, TII->get(X86::CTSELECT_I386_INT_GR32rr))
+          .addDef(ResultIntReg)    // dst (output)
+          .addDef(TmpByteReg)      // tmp_byte (output)
+          .addDef(TmpMaskReg)      // tmp_mask (output)
+          .addReg(FalseIntReg)     // src1 (input) - false value
+          .addReg(TrueIntReg)      // src2 (input) - true value
+          .addReg(CondByteReg);    // pre-materialized condition byte (input)
+
+      // Store result back to result slot
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
+          .addFrameIndex(ResultSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0)
+          .addReg(ResultIntReg, RegState::Kill);
+    }
   };
 
   auto emitCtSelectWithPseudo = [&](unsigned NumValues, int TrueSlot, int FalseSlot, int ResultSlot) {
@@ -38131,17 +38325,40 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
 
   switch (pseudoInstr) {
   case X86::CTSELECT_I386_FP32rr: {
-    // Allocate stack slots (4 bytes for f32)
+    // Check if both operands are simple memory loads
+    FPLoadMemOperands TrueMemOps =
+        getFPLoadMemOperands(TrueReg, MRI, X86::LD_Fp32m);
+    FPLoadMemOperands FalseMemOps =
+        getFPLoadMemOperands(FalseReg, MRI, X86::LD_Fp32m);
+
     int ResultSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
-    int TrueSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
-    int FalseSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
 
-    // Store f32 values to stack
-    storeFpToSlot(X86::ST_Fp32m, TrueSlot, TrueReg);
-    storeFpToSlot(X86::ST_Fp32m, FalseSlot, FalseReg);
+    if (TrueMemOps.IsValid && FalseMemOps.IsValid) {
+      // Optimized path: load directly from memory as integers
+      // Works for both frame index loads (stack parameters) and
+      // constant pool loads (constants)
+      emitCtSelectFromMemory(1, TrueMemOps, FalseMemOps, ResultSlot);
 
-    // Use pseudo instruction for selection (1 x 32-bit value)
-    emitCtSelectWithPseudo(1, TrueSlot, FalseSlot, ResultSlot);
+      // Erase the original FP load instructions since we're not using them
+      // and have loaded the data directly as integers instead
+      if (MRI.hasOneUse(TrueReg)) {
+        if (MachineInstr *TrueDefMI = MRI.getVRegDef(TrueReg))
+          TrueDefMI->eraseFromParent();
+      }
+      if (MRI.hasOneUse(FalseReg)) {
+        if (MachineInstr *FalseDefMI = MRI.getVRegDef(FalseReg))
+          FalseDefMI->eraseFromParent();
+      }
+    } else {
+      // General path: spill FP registers to stack first
+      int TrueSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+      int FalseSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+
+      storeFpToSlot(X86::ST_Fp32m, TrueSlot, TrueReg);
+      storeFpToSlot(X86::ST_Fp32m, FalseSlot, FalseReg);
+
+      emitCtSelectWithPseudo(1, TrueSlot, FalseSlot, ResultSlot);
+    }
 
     // Load result back as f32
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp32m), DestReg),
@@ -38150,17 +38367,42 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
   }
   case X86::CTSELECT_I386_FP64rr: {
     unsigned StackSlotSize = 8;
-    // Allocate stack slots (8 bytes for f64)
-    int TrueSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
-    int FalseSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+
+    // Check if both operands are simple memory loads
+    FPLoadMemOperands TrueMemOps =
+        getFPLoadMemOperands(TrueReg, MRI, X86::LD_Fp64m);
+    FPLoadMemOperands FalseMemOps =
+        getFPLoadMemOperands(FalseReg, MRI, X86::LD_Fp64m);
+
     int ResultSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
 
-    // Store f64 values to stack
-    storeFpToSlot(X86::ST_Fp64m, TrueSlot, TrueReg);
-    storeFpToSlot(X86::ST_Fp64m, FalseSlot, FalseReg);
+    if (TrueMemOps.IsValid && FalseMemOps.IsValid) {
+      // Optimized path: load directly from memory as integers
+      // Works for both frame index loads (stack parameters) and
+      // constant pool loads (constants)
+      emitCtSelectFromMemory(StackSlotSize / RegSizeInByte, TrueMemOps,
+                             FalseMemOps, ResultSlot);
 
-    // Use pseudo instruction for selection (2 x 32-bit values)
-    emitCtSelectWithPseudo(StackSlotSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot);
+      // Erase the original FP load instructions since we're not using them
+      if (MRI.hasOneUse(TrueReg)) {
+        if (MachineInstr *TrueDefMI = MRI.getVRegDef(TrueReg))
+          TrueDefMI->eraseFromParent();
+      }
+      if (MRI.hasOneUse(FalseReg)) {
+        if (MachineInstr *FalseDefMI = MRI.getVRegDef(FalseReg))
+          FalseDefMI->eraseFromParent();
+      }
+    } else {
+      // General path: spill FP registers to stack first
+      int TrueSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+      int FalseSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+
+      storeFpToSlot(X86::ST_Fp64m, TrueSlot, TrueReg);
+      storeFpToSlot(X86::ST_Fp64m, FalseSlot, FalseReg);
+
+      emitCtSelectWithPseudo(StackSlotSize / RegSizeInByte, TrueSlot, FalseSlot,
+                             ResultSlot);
+    }
 
     // Load result back as f64
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp64m), DestReg),
@@ -38168,18 +38410,44 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
     break;
   }
   case X86::CTSELECT_I386_FP80rr: {
-    // Allocate stack slots (12 bytes for f80 - 80-bit = 10 bytes, aligned to 12)
+    // f80 is 80 bits (10 bytes), but stored with 12-byte alignment
     unsigned StackObjectSize = 12;
-    int TrueSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
-    int FalseSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+
+    // Check if both operands are simple memory loads
+    FPLoadMemOperands TrueMemOps =
+        getFPLoadMemOperands(TrueReg, MRI, X86::LD_Fp80m);
+    FPLoadMemOperands FalseMemOps =
+        getFPLoadMemOperands(FalseReg, MRI, X86::LD_Fp80m);
+
     int ResultSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
 
-    // Store f80 values to stack
-    storeFpToSlot(X86::ST_FpP80m, TrueSlot, TrueReg);
-    storeFpToSlot(X86::ST_FpP80m, FalseSlot, FalseReg);
+    if (TrueMemOps.IsValid && FalseMemOps.IsValid) {
+      // Optimized path: load directly from memory as integers
+      // Works for both frame index loads (stack parameters) and
+      // constant pool loads (constants)
+      emitCtSelectFromMemory(StackObjectSize / RegSizeInByte, TrueMemOps,
+                             FalseMemOps, ResultSlot);
 
-    // Use pseudo instruction for selection (3 x 32-bit values)
-    emitCtSelectWithPseudo(StackObjectSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot);
+      // Erase the original FP load instructions since we're not using them
+      if (MRI.hasOneUse(TrueReg)) {
+        if (MachineInstr *TrueDefMI = MRI.getVRegDef(TrueReg))
+          TrueDefMI->eraseFromParent();
+      }
+      if (MRI.hasOneUse(FalseReg)) {
+        if (MachineInstr *FalseDefMI = MRI.getVRegDef(FalseReg))
+          FalseDefMI->eraseFromParent();
+      }
+    } else {
+      // General path: spill FP registers to stack first
+      int TrueSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+      int FalseSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+
+      storeFpToSlot(X86::ST_FpP80m, TrueSlot, TrueReg);
+      storeFpToSlot(X86::ST_FpP80m, FalseSlot, FalseReg);
+
+      emitCtSelectWithPseudo(StackObjectSize / RegSizeInByte, TrueSlot,
+                             FalseSlot, ResultSlot);
+    }
 
     // Load result back as f80
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp80m), DestReg),

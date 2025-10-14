@@ -24,9 +24,6 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ;
 ; X32-NOCMOV-LABEL: test_ctselect_i8:
 ; X32-NOCMOV:       # %bb.0:
-; X32-NOCMOV-NEXT:    pushl %esi
-; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
-; X32-NOCMOV-NEXT:    .cfi_offset %esi, -8
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
@@ -38,8 +35,6 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ; X32-NOCMOV-NEXT:    notb %ch
 ; X32-NOCMOV-NEXT:    andb %cl, %ch
 ; X32-NOCMOV-NEXT:    orb %ch, %al
-; X32-NOCMOV-NEXT:    popl %esi
-; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NOCMOV-NEXT:    retl
   %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %a, i8 %b)
   ret i8 %result
@@ -74,13 +69,13 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
 ; X32-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    sete %bl
 ; X32-NOCMOV-NEXT:    movb %bl, %bh
-; X32-NOCMOV-NEXT:    movzbw %bh, %esi
-; X32-NOCMOV-NEXT:    negw %esi
+; X32-NOCMOV-NEXT:    movzbw %bh, %si
+; X32-NOCMOV-NEXT:    negw %si
 ; X32-NOCMOV-NEXT:    movw %dx, %ax
-; X32-NOCMOV-NEXT:    andw %esi, %ax
-; X32-NOCMOV-NEXT:    notw %esi
-; X32-NOCMOV-NEXT:    andw %cx, %esi
-; X32-NOCMOV-NEXT:    orw %esi, %ax
+; X32-NOCMOV-NEXT:    andw %si, %ax
+; X32-NOCMOV-NEXT:    notw %si
+; X32-NOCMOV-NEXT:    andw %cx, %si
+; X32-NOCMOV-NEXT:    orw %si, %ax
 ; X32-NOCMOV-NEXT:    popl %esi
 ; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NOCMOV-NEXT:    popl %ebx
@@ -212,28 +207,66 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
 ;
 ; X32-LABEL: test_ctselect_f32:
 ; X32:       # %bb.0:
-; X32-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NEXT:    jne .LBB4_2
-; X32-NEXT:  # %bb.1:
-; X32-NEXT:    fstp %st(1)
-; X32-NEXT:    fldz
-; X32-NEXT:  .LBB4_2:
-; X32-NEXT:    fstp %st(0)
+; X32-NEXT:    sete %al
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, (%esp)
+; X32-NEXT:    flds (%esp)
+; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X32-NOCMOV-LABEL: test_ctselect_f32:
 ; X32-NOCMOV:       # %bb.0:
-; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NOCMOV-NEXT:    pushl %edi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+; X32-NOCMOV-NEXT:    pushl %esi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
+; X32-NOCMOV-NEXT:    pushl %eax
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 16
+; X32-NOCMOV-NEXT:    .cfi_offset %esi, -12
+; X32-NOCMOV-NEXT:    .cfi_offset %edi, -8
 ; X32-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NOCMOV-NEXT:    jne .LBB4_2
-; X32-NOCMOV-NEXT:  # %bb.1:
-; X32-NOCMOV-NEXT:    fstp %st(1)
-; X32-NOCMOV-NEXT:    fldz
-; X32-NOCMOV-NEXT:  .LBB4_2:
-; X32-NOCMOV-NEXT:    fstp %st(0)
+; X32-NOCMOV-NEXT:    sete %al
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NOCMOV-NEXT:    movb %al, %ah
+; X32-NOCMOV-NEXT:    movzbl %ah, %edi
+; X32-NOCMOV-NEXT:    negl %edi
+; X32-NOCMOV-NEXT:    movl %edx, %esi
+; X32-NOCMOV-NEXT:    andl %edi, %esi
+; X32-NOCMOV-NEXT:    notl %edi
+; X32-NOCMOV-NEXT:    andl %ecx, %edi
+; X32-NOCMOV-NEXT:    orl %edi, %esi
+; X32-NOCMOV-NEXT:    movl %esi, (%esp)
+; X32-NOCMOV-NEXT:    flds (%esp)
+; X32-NOCMOV-NEXT:    addl $4, %esp
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
+; X32-NOCMOV-NEXT:    popl %esi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+; X32-NOCMOV-NEXT:    popl %edi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NOCMOV-NEXT:    retl
   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
   ret float %result
@@ -251,28 +284,88 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
 ;
 ; X32-LABEL: test_ctselect_f64:
 ; X32:       # %bb.0:
-; X32-NEXT:    fldl {{[0-9]+}}(%esp)
-; X32-NEXT:    fldl {{[0-9]+}}(%esp)
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 20
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NEXT:    jne .LBB5_2
-; X32-NEXT:  # %bb.1:
-; X32-NEXT:    fstp %st(1)
-; X32-NEXT:    fldz
-; X32-NEXT:  .LBB5_2:
-; X32-NEXT:    fstp %st(0)
+; X32-NEXT:    sete %al
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, (%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X32-NEXT:    fldl (%esp)
+; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X32-NOCMOV-LABEL: test_ctselect_f64:
 ; X32-NOCMOV:       # %bb.0:
-; X32-NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
-; X32-NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
+; X32-NOCMOV-NEXT:    pushl %edi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+; X32-NOCMOV-NEXT:    pushl %esi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
+; X32-NOCMOV-NEXT:    subl $8, %esp
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 20
+; X32-NOCMOV-NEXT:    .cfi_offset %esi, -12
+; X32-NOCMOV-NEXT:    .cfi_offset %edi, -8
 ; X32-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NOCMOV-NEXT:    jne .LBB5_2
-; X32-NOCMOV-NEXT:  # %bb.1:
-; X32-NOCMOV-NEXT:    fstp %st(1)
-; X32-NOCMOV-NEXT:    fldz
-; X32-NOCMOV-NEXT:  .LBB5_2:
-; X32-NOCMOV-NEXT:    fstp %st(0)
+; X32-NOCMOV-NEXT:    sete %al
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NOCMOV-NEXT:    movb %al, %ah
+; X32-NOCMOV-NEXT:    movzbl %ah, %edi
+; X32-NOCMOV-NEXT:    negl %edi
+; X32-NOCMOV-NEXT:    movl %edx, %esi
+; X32-NOCMOV-NEXT:    andl %edi, %esi
+; X32-NOCMOV-NEXT:    notl %edi
+; X32-NOCMOV-NEXT:    andl %ecx, %edi
+; X32-NOCMOV-NEXT:    orl %edi, %esi
+; X32-NOCMOV-NEXT:    movl %esi, (%esp)
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NOCMOV-NEXT:    movb %al, %ah
+; X32-NOCMOV-NEXT:    movzbl %ah, %edi
+; X32-NOCMOV-NEXT:    negl %edi
+; X32-NOCMOV-NEXT:    movl %edx, %esi
+; X32-NOCMOV-NEXT:    andl %edi, %esi
+; X32-NOCMOV-NEXT:    notl %edi
+; X32-NOCMOV-NEXT:    andl %ecx, %edi
+; X32-NOCMOV-NEXT:    orl %edi, %esi
+; X32-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X32-NOCMOV-NEXT:    fldl (%esp)
+; X32-NOCMOV-NEXT:    addl $8, %esp
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
+; X32-NOCMOV-NEXT:    popl %esi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+; X32-NOCMOV-NEXT:    popl %edi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NOCMOV-NEXT:    retl
   %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
   ret double %result
@@ -645,8 +738,14 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
 ;
 ; X32-LABEL: test_ctselect_fcmp_oeq:
 ; X32:       # %bb.0:
-; X32-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    fucompi %st(1), %st
@@ -654,18 +753,37 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
 ; X32-NEXT:    setnp %al
 ; X32-NEXT:    sete %cl
 ; X32-NEXT:    testb %al, %cl
-; X32-NEXT:    jne .LBB13_2
-; X32-NEXT:  # %bb.1:
-; X32-NEXT:    fstp %st(1)
-; X32-NEXT:    fldz
-; X32-NEXT:  .LBB13_2:
-; X32-NEXT:    fstp %st(0)
+; X32-NEXT:    sete %al
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb %al, %ah
+; X32-NEXT:    movzbl %ah, %edi
+; X32-NEXT:    negl %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    andl %edi, %esi
+; X32-NEXT:    notl %edi
+; X32-NEXT:    andl %ecx, %edi
+; X32-NEXT:    orl %edi, %esi
+; X32-NEXT:    movl %esi, (%esp)
+; X32-NEXT:    flds (%esp)
+; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X32-NOCMOV-LABEL: test_ctselect_fcmp_oeq:
 ; X32-NOCMOV:       # %bb.0:
-; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NOCMOV-NEXT:    pushl %edi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+; X32-NOCMOV-NEXT:    pushl %esi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
+; X32-NOCMOV-NEXT:    pushl %eax
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 16
+; X32-NOCMOV-NEXT:    .cfi_offset %esi, -12
+; X32-NOCMOV-NEXT:    .cfi_offset %edi, -8
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    fucompp
@@ -675,12 +793,25 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
 ; X32-NOCMOV-NEXT:    setnp %al
 ; X32-NOCMOV-NEXT:    sete %cl
 ; X32-NOCMOV-NEXT:    testb %al, %cl
-; X32-NOCMOV-NEXT:    jne .LBB13_2
-; X32-NOCMOV-NEXT:  # %bb.1:
-; X32-NOCMOV-NEXT:    fstp %st(1)
-; X32-NOCMOV-NEXT:    fldz
-; X32-NOCMOV-NEXT:  .LBB13_2:
-; X32-NOCMOV-NEXT:    fstp %st(0)
+; X32-NOCMOV-NEXT:    sete %al
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NOCMOV-NEXT:    movb %al, %ah
+; X32-NOCMOV-NEXT:    movzbl %ah, %edi
+; X32-NOCMOV-NEXT:    negl %edi
+; X32-NOCMOV-NEXT:    movl %edx, %esi
+; X32-NOCMOV-NEXT:    andl %edi, %esi
+; X32-NOCMOV-NEXT:    notl %edi
+; X32-NOCMOV-NEXT:    andl %ecx, %edi
+; X32-NOCMOV-NEXT:    orl %edi, %esi
+; X32-NOCMOV-NEXT:    movl %esi, (%esp)
+; X32-NOCMOV-NEXT:    flds (%esp)
+; X32-NOCMOV-NEXT:    addl $4, %esp
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
+; X32-NOCMOV-NEXT:    popl %esi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+; X32-NOCMOV-NEXT:    popl %edi
+; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NOCMOV-NEXT:    retl
   %cond = fcmp oeq float %x, %y
   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
