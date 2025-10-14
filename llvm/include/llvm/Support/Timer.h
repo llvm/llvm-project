@@ -66,6 +66,11 @@ public:
     MemUsed -= RHS.MemUsed;
     InstructionsExecuted -= RHS.InstructionsExecuted;
   }
+  TimeRecord operator-(const TimeRecord &RHS) const {
+    TimeRecord R = *this;
+    R -= RHS;
+    return R;
+  }
 
   /// Print the current time record to \p OS, with a breakdown showing
   /// contributions to the \p Total time record.
