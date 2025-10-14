@@ -20645,10 +20645,8 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
 
-  if (!IsStrict) {
-    if (SDValue V = lowerFPToIntToFP(Op, dl, DAG, Subtarget))
-      return V;
-  }
+  if (SDValue V = lowerFPToIntToFP(Op, dl, DAG, Subtarget))
+    return V;
 
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, dl, DAG, Subtarget);
