@@ -285,7 +285,7 @@ cl::opt<bool> TimeRewrite("time-rewrite",
 
 cl::opt<bool> UseOldText(
     "use-old-text",
-    cl::desc("re-use space in old .text if possible (relocation mode)"),
+    cl::desc("reuse space in old .text if possible (relocation mode)"),
     cl::cat(BoltCategory));
 
 cl::opt<bool> UpdateDebugSections(
