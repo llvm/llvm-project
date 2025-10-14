@@ -14,6 +14,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/Sequence.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -266,22 +267,47 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
   return true;
 }
 
-bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
-                                       lldb::addr_t relative_selector_base_addr,
-                                       bool is_small, bool has_direct_sel) {
-  size_t ptr_size = process->GetAddressByteSize();
-  size_t size = GetSize(process, is_small);
+llvm::SmallVector<ClassDescriptorV2::method_t, 0>
+ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
+                               lldb::addr_t relative_selector_base_addr,
+                               bool is_small, bool has_direct_sel) const {
+  lldb_private::Process *process = m_runtime.GetProcess();
+  if (!process)
+    return {};
 
-  DataBufferHeap buffer(size, '\0');
-  Status error;
+  const size_t size = method_t::GetSize(process, is_small);
+  const size_t num_methods = addresses.size();
 
-  process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
+  llvm::SmallVector<uint8_t, 0> buffer(num_methods * size, 0);
+  llvm::DenseSet<uint32_t> failed_indices;
+
+  for (auto [idx, addr] : llvm::enumerate(addresses)) {
+    Status error;
+    process->ReadMemory(addr, buffer.data() + idx * size, size, error);
+    if (error.Fail())
+      failed_indices.insert(idx);
   }
 
-  DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
-                          ptr_size);
+  llvm::SmallVector<method_t, 0> methods;
+  methods.reserve(num_methods);
+  for (auto [idx, addr] : llvm::enumerate(addresses)) {
+    if (failed_indices.contains(idx))
+      continue;
+    DataExtractor extractor(buffer.data() + idx * size, size,
+                            process->GetByteOrder(),
+                            process->GetAddressByteSize());
+    methods.push_back(method_t());
+    methods.back().Read(extractor, process, addr, relative_selector_base_addr,
+                        is_small, has_direct_sel);
+  }
+
+  return methods;
+}
+
+bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
+                                       Process *process, lldb::addr_t addr,
+                                       lldb::addr_t relative_selector_base_addr,
+                                       bool is_small, bool has_direct_sel) {
   lldb::offset_t cursor = 0;
 
   if (is_small) {
@@ -291,11 +317,11 @@ bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
 
     m_name_ptr = addr + nameref_offset;
 
+    Status error;
     if (!has_direct_sel) {
       // The SEL offset points to a SELRef. We need to dereference twice.
-      m_name_ptr = process->ReadUnsignedIntegerFromMemory(m_name_ptr, ptr_size,
-                                                          0, error);
-      if (!error.Success())
+      m_name_ptr = process->ReadPointerFromMemory(m_name_ptr, error);
+      if (error.Fail())
         return false;
     } else if (relative_selector_base_addr != LLDB_INVALID_ADDRESS) {
       m_name_ptr = relative_selector_base_addr + nameref_offset;
@@ -308,13 +334,13 @@ bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
     m_imp_ptr = extractor.GetAddress_unchecked(&cursor);
   }
 
+  Status error;
   process->ReadCStringFromMemory(m_name_ptr, m_name, error);
-  if (error.Fail()) {
+  if (error.Fail())
     return false;
-  }
 
   process->ReadCStringFromMemory(m_types_ptr, m_types, error);
-  return !error.Fail();
+  return error.Success();
 }
 
 bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
@@ -447,17 +473,19 @@ ClassDescriptorV2::GetMethodList(Process *process,
 bool ClassDescriptorV2::ProcessMethodList(
     std::function<bool(const char *, const char *)> const &instance_method_func,
     ClassDescriptorV2::method_list_t &method_list) const {
-  lldb_private::Process *process = m_runtime.GetProcess();
-  auto method = std::make_unique<method_t>();
-  lldb::addr_t relative_selector_base_addr =
-      m_runtime.GetRelativeSelectorBaseAddr();
-  for (uint32_t i = 0, e = method_list.m_count; i < e; ++i) {
-    method->Read(process, method_list.m_first_ptr + (i * method_list.m_entsize),
-                 relative_selector_base_addr, method_list.m_is_small,
-                 method_list.m_has_direct_selector);
-    if (instance_method_func(method->m_name.c_str(), method->m_types.c_str()))
+  auto idx_to_method_addr = [&](uint32_t idx) {
+    return method_list.m_first_ptr + (idx * method_list.m_entsize);
+  };
+  llvm::SmallVector<addr_t> addresses = llvm::to_vector(llvm::map_range(
+      llvm::seq<uint32_t>(method_list.m_count), idx_to_method_addr));
+
+  llvm::SmallVector<method_t, 0> methods =
+      ReadMethods(addresses, m_runtime.GetRelativeSelectorBaseAddr(),
+                  method_list.m_is_small, method_list.m_has_direct_selector);
+
+  for (const auto &method : methods)
+    if (instance_method_func(method.m_name.c_str(), method.m_types.c_str()))
       break;
-  }
   return true;
 }
 
