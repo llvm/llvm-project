@@ -629,6 +629,10 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
+    // Apple uses DW_AT_GNU_dwo_id for things other than split DWARF.
+    if (IsMachO)
+      return ReturnDie;
+
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit())

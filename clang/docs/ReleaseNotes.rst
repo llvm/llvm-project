@@ -435,6 +435,7 @@ Bug Fixes to C++ Support
 - Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
 - Fixed a mismatched lambda scope bug when propagating up ``consteval`` within nested lambdas. (#GH145776)
+- Disallow immediate escalation in destructors. (#GH109096)
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
@@ -641,6 +642,8 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
 - Added support for 'omp fuse' directive.
+- Updated parsing and semantic analysis support for ``nowait`` clause to accept
+  optional argument in OpenMP >= 60.
 
 Improvements
 ^^^^^^^^^^^^

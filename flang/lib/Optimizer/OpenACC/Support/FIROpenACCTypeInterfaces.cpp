@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -548,14 +549,27 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const {
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const {
+  needsDestroy = false;
   mlir::Value retVal;
   mlir::Type unwrappedTy = fir::unwrapRefType(type);
   mlir::ModuleOp mod = builder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
-  fir::FirOpBuilder firBuilder(builder, mod);
 
+  if (auto recType = llvm::dyn_cast<fir::RecordType>(
+          fir::getFortranElementType(unwrappedTy))) {
+    // Need to make deep copies of allocatable components.
+    if (fir::isRecordWithAllocatableMember(recType))
+      TODO(loc,
+           "OpenACC: privatizing derived type with allocatable components");
+    // Need to decide if user assignment/final routine should be called.
+    if (fir::isRecordWithFinalRoutine(recType, mod).value_or(false))
+      TODO(loc, "OpenACC: privatizing derived type with user assignment or "
+                "final routine ");
+  }
+
+  fir::FirOpBuilder firBuilder(builder, mod);
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
     return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
@@ -615,9 +629,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       mlir::Value firClass =
           fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
       fir::StoreOp::create(builder, loc, firClass, retVal);
+      needsDestroy = true;
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
-      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+      auto [temp, cleanupFlag] =
+          hlfir::createTempFromMold(loc, firBuilder, source);
       if (fir::isa_ref_type(type)) {
         // When the temp is created - it is not a reference - thus we can
         // end up with a type inconsistency. Therefore ensure storage is created
@@ -636,6 +652,9 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       } else {
         retVal = temp;
       }
+      // If heap was allocated, a destroy is required later.
+      if (cleanupFlag)
+        needsDestroy = true;
     } else {
       TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
     }
@@ -667,23 +686,61 @@ template mlir::Value
 OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
+
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const {
+  mlir::Type unwrappedTy = fir::unwrapRefType(type);
+  // For boxed scalars allocated with AllocMem during init, free the heap.
+  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
+    mlir::Value boxVal = privatized;
+    if (fir::isa_ref_type(boxVal.getType()))
+      boxVal = fir::LoadOp::create(builder, loc, boxVal);
+    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, boxVal);
+    // FreeMem only accepts fir.heap and this may not be represented in the box
+    // type if the privatized entity is not an allocatable.
+    mlir::Type heapType =
+        fir::HeapType::get(fir::unwrapRefType(addr.getType()));
+    if (heapType != addr.getType())
+      addr = fir::ConvertOp::create(builder, loc, heapType, addr);
+    fir::FreeMemOp::create(builder, loc, addr);
+    return true;
+  }
+
+  // Nothing to do for other categories by default, they are stack allocated.
+  return true;
+}
+
+template bool OpenACCMappableModel<fir::BaseBoxType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+template bool OpenACCMappableModel<fir::ReferenceType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+template bool OpenACCMappableModel<fir::HeapType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+template bool OpenACCMappableModel<fir::PointerType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
 
 } // namespace fir::acc

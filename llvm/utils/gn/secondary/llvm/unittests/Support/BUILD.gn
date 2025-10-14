@@ -48,6 +48,7 @@ unittest("SupportTests") {
     "FSUniqueIDTest.cpp",
     "FileCollectorTest.cpp",
     "FileOutputBufferTest.cpp",
+    "Format.cpp",
     "FormatVariadicTest.cpp",
     "GenericDomTreeTest.cpp",
     "GlobPatternTest.cpp",

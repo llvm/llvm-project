@@ -1027,6 +1027,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dst", asAddr},
        {"nbytes", asValue}}},
      /*isElemental=*/false},
+    {"tma_bulk_s2g",
+     &I::genTMABulkS2G,
+     {{{"src", asAddr}, {"dst", asAddr}, {"nbytes", asValue}}},
+     /*isElemental=*/false},
     {"tma_bulk_wait_group",
      &I::genTMABulkWaitGroup,
      {{}},
@@ -9225,6 +9229,17 @@ void IntrinsicLibrary::genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           mlir::NVVM::NVVMMemorySpace::Global);
   mlir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
       builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
+}
+
+// TMA_BULK_S2G (CUDA)
+void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[0]),
+                                          mlir::NVVM::NVVMMemorySpace::Shared);
+  mlir::Value dst = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
+                                          mlir::NVVM::NVVMMemorySpace::Global);
+  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(
+      builder, loc, dst, src, fir::getBase(args[2]), {}, {});
 }
 
 // TMA_BULK_WAIT_GROUP (CUDA)

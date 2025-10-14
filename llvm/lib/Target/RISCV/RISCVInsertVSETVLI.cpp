@@ -168,13 +168,13 @@ struct DemandedFields {
   // If this is true, we demand that VTYPE is set to some legal state, i.e. that
   // vill is unset.
   bool VILL = false;
-  bool UseTWiden = false;
-  bool UseAltFmt = false;
+  bool TWiden = false;
+  bool AltFmt = false;
 
   // Return true if any part of VTYPE was used
   bool usedVTYPE() const {
     return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy || VILL ||
-           UseTWiden || UseAltFmt;
+           TWiden || AltFmt;
   }
 
   // Return true if any property of VL was used
@@ -190,8 +190,8 @@ struct DemandedFields {
     TailPolicy = true;
     MaskPolicy = true;
     VILL = true;
-    UseTWiden = true;
-    UseAltFmt = true;
+    TWiden = true;
+    AltFmt = true;
   }
 
   // Mark all VL properties as demanded
@@ -217,8 +217,8 @@ struct DemandedFields {
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
     VILL |= B.VILL;
-    UseAltFmt |= B.UseAltFmt;
-    UseTWiden |= B.UseTWiden;
+    AltFmt |= B.AltFmt;
+    TWiden |= B.TWiden;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -266,8 +266,8 @@ struct DemandedFields {
     OS << "TailPolicy=" << TailPolicy << ", ";
     OS << "MaskPolicy=" << MaskPolicy << ", ";
     OS << "VILL=" << VILL << ", ";
-    OS << "UseAltFmt=" << UseAltFmt << ", ";
-    OS << "UseTWiden=" << UseTWiden;
+    OS << "AltFmt=" << AltFmt << ", ";
+    OS << "TWiden=" << TWiden;
     OS << "}";
   }
 #endif
@@ -337,13 +337,13 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
   if (Used.MaskPolicy && RISCVVType::isMaskAgnostic(CurVType) !=
                              RISCVVType::isMaskAgnostic(NewVType))
     return false;
-  if (Used.UseTWiden && (RISCVVType::hasXSfmmWiden(CurVType) !=
-                             RISCVVType::hasXSfmmWiden(NewVType) ||
-                         (RISCVVType::hasXSfmmWiden(CurVType) &&
-                          RISCVVType::getXSfmmWiden(CurVType) !=
-                              RISCVVType::getXSfmmWiden(NewVType))))
+  if (Used.TWiden && (RISCVVType::hasXSfmmWiden(CurVType) !=
+                          RISCVVType::hasXSfmmWiden(NewVType) ||
+                      (RISCVVType::hasXSfmmWiden(CurVType) &&
+                       RISCVVType::getXSfmmWiden(CurVType) !=
+                           RISCVVType::getXSfmmWiden(NewVType))))
     return false;
-  if (Used.UseAltFmt &&
+  if (Used.AltFmt &&
       RISCVVType::isAltFmt(CurVType) != RISCVVType::isAltFmt(NewVType))
     return false;
   return true;
@@ -497,10 +497,10 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.TailPolicy = false;
   }
 
-  Res.UseAltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
-                  RISCVII::AltFmtType::DontCare;
-  Res.UseTWiden = RISCVII::hasTWidenOp(MI.getDesc().TSFlags) ||
-                  RISCVInstrInfo::isXSfmmVectorConfigInstr(MI);
+  Res.AltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
+               RISCVII::AltFmtType::DontCare;
+  Res.TWiden = RISCVII::hasTWidenOp(MI.getDesc().TSFlags) ||
+               RISCVInstrInfo::isXSfmmVectorConfigInstr(MI);
 
   return Res;
 }
@@ -1347,8 +1347,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
           IncomingInfo.getTailAgnostic(),
       (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
           IncomingInfo.getMaskAgnostic(),
-      (Demanded.UseAltFmt ? IncomingInfo : Info).getAltFmt(),
-      Demanded.UseTWiden ? IncomingInfo.getTWiden() : 0);
+      (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
+      Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
 
   // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
   // the AVL.
