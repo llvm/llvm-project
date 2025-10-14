@@ -1201,15 +1201,6 @@ std::optional<PrivateRecipeOp>
 PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
                                    StringRef recipeName, Type varType,
                                    StringRef varName, ValueRange bounds) {
-
-  // Check if a symbol with this name already exists in the symbol table.
-  // If it does - don't assume that we can just reuse the existing one.
-  Operation *parentOp = builder.getInsertionBlock()->getParentOp();
-  if (parentOp &&
-      SymbolTable::lookupNearestSymbolFrom(
-          parentOp, mlir::StringAttr::get(builder.getContext(), varName)))
-    return std::nullopt;
-
   // First, validate that we can handle this variable type
   bool isMappable = isa<MappableType>(varType);
   bool isPointerLike = isa<PointerLikeType>(varType);
@@ -1289,15 +1280,6 @@ std::optional<FirstprivateRecipeOp>
 FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
                                         StringRef recipeName, Type varType,
                                         StringRef varName, ValueRange bounds) {
-
-  // Check if a symbol with this name already exists in the symbol table.
-  // If it does - don't assume that we can just reuse the existing one.
-  Operation *parentOp = builder.getInsertionBlock()->getParentOp();
-  if (parentOp &&
-      SymbolTable::lookupNearestSymbolFrom(
-          parentOp, mlir::StringAttr::get(builder.getContext(), varName)))
-    return std::nullopt;
-
   // First, validate that we can handle this variable type
   bool isMappable = isa<MappableType>(varType);
   bool isPointerLike = isa<PointerLikeType>(varType);

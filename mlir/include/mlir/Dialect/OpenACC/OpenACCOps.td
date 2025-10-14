@@ -1323,7 +1323,9 @@ def OpenACC_PrivateRecipeOp
     /// PointerLikeType interface. If a type implements both, the MappableType
     /// API will be preferred. Returns std::nullopt if the recipe cannot be
     /// created or populated. The builder's current insertion point will be used
-    /// and it must be a valid place for this operation to be inserted.
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
     static std::optional<PrivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
@@ -1433,7 +1435,9 @@ def OpenACC_FirstprivateRecipeOp
     /// PointerLikeType interface. If a type implements both, the MappableType
     /// API will be preferred. Returns std::nullopt if the recipe cannot be
     /// created or populated. The builder's current insertion point will be used
-    /// and it must be a valid place for this operation to be inserted.
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
     static std::optional<FirstprivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
