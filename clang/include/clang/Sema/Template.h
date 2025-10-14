@@ -205,7 +205,7 @@ enum class TemplateSubstitutionKind : char {
 
     /// Add a new outmost level to the multi-level template argument
     /// list.
-    /// A 'Final' substitution means that these Args are not needed to be
+    /// A 'Final' substitution means that these Args don't need to be
     /// resugared later.
     void addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args,
                                    bool Final) {
