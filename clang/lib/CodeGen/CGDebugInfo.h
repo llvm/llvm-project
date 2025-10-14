@@ -408,6 +408,8 @@ private:
   /// Create a new lexical block node and push it on the stack.
   void CreateLexicalBlock(SourceLocation Loc);
 
+  SourceLocation getRefinedSpellingLocation(SourceLocation Loc) const;
+
   /// If target-specific LLVM \p AddressSpace directly maps to target-specific
   /// DWARF address space, appends extended dereferencing mechanism to complex
   /// expression \p Expr. Otherwise, does nothing.
