@@ -502,12 +502,11 @@ fi
             p = subprocess.Popen(full_llvm_reduce_cmd)
             p.communicate()
         except KeyboardInterrupt:
-            # Hack to kill C-Reduce because it jumps into its own pgid
             print("\n\nctrl-c detected, killed reduction tool")
             p.kill()
 
     def classify_crash(self) -> FailureType:
-        print("classifying crash ...")
+        print("Classifying crash ...")
         if self.check_expected_output(args=self.clang_args + ["-fsyntax-only"]):
             print("Found Frontend Crash")
             return FailureType.FrontEnd
@@ -515,13 +514,20 @@ fi
         print("Found Middle/Backend failure")
 
         self.opt_level = extract_opt_level(self.clang_args) or "-O2"
+        backend_result = self.check_backend()
+        if backend_result == FailureType.BackEnd:
+            return backend_result
+
         # Try running w/ -emit-llvm to generate an IR file,
         # if it succeeds we have a backend failure, and can use llc.
         if not self.check_expected_output(
-                args=self.clang_args + ["-emit-llvm", "-o", self.ir_file]):
+            args=self.clang_args + ["-emit-llvm", "-o", self.ir_file]
+        ):
             print("Checking llc for failure")
             if self.check_expected_output(
-                cmd=self.llc, args=[self.opt_level, "-filetype=obj"], filename=self.ir_file
+                cmd=self.llc,
+                args=[self.opt_level, "-filetype=obj"],
+                filename=self.ir_file,
             ):
                 print("Found BackEnd Crash")
                 return FailureType.BackEnd
@@ -530,6 +536,37 @@ fi
                 print(f"clean up {self.ir_file}, since we can't repro w/ llc")
                 os.remove(self.ir_file)
 
+        # The IR file will be in 'self.ir_file'
+        self.extract_crashing_ir()
+        return self.check_middle_end()
+
+    def check_llc_failure(self) -> bool:
+        return self.check_expected_output(
+            cmd=self.llc, args=[self.opt_level, "-filetype=obj"], filename=self.ir_file
+        )
+
+    def extract_backend_ir(self) -> bool:
+        return not self.check_expected_output(
+            args=self.clang_args + ["-emit-llvm", "-o", self.ir_file]
+        )
+
+    def check_backend(self) -> Optional[FailureType]:
+        # Try running w/ -emit-llvm to generate an IR file,
+        # if it succeeds we have a backend failure, and can use llc.
+        if self.extract_backend_ir():
+            print("Checking llc for failure")
+            if self.check_llc_failure():
+                print("Found BackEnd Crash")
+                return FailureType.BackEnd
+            elif os.path.exists(self.ir_file):
+                # clean up the IR file if we generated it, but won't use it.
+                print(f"clean up {self.ir_file}, since we can't repro w/ llc")
+                os.remove(self.ir_file)
+
+    def extract_crashing_ir(self):
+        """
+        Extract IR just before the crash using --print-on-crash
+        """
         args = self.clang_args + [
             "-mllvm",
             "--print-on-crash",
@@ -545,6 +582,7 @@ fi
         # The output from --print-on-crash has an invalid first line (pass name).
         remove_first_line(self.ir_file)
 
+    def check_middle_end(self) -> FailureType:
         # TODO: parse the exact pass from the backtrace and set the pass
         # pipeline directly via -passes="...".
         print("Checking opt for failure")
@@ -555,7 +593,9 @@ fi
         ):
             print("Found MiddleEnd Crash")
             return FailureType.MiddleEnd
-        print("Could not automatically detect crash type, falling back to creduce/cvise.")
+        print(
+            "Could not automatically detect crash type, falling back to creduce/cvise."
+        )
         return FailureType.Unknown
 
     def reduce_ir_crash(self, new_cmd: List[str]):
@@ -657,7 +697,7 @@ def main():
                 r.reduce_ir_crash(new_cmd)
                 return
             case FailureType.BackEnd:
-                new_cmd = [llc_cmd,  "-filetype=obj", r.opt_level]
+                new_cmd = [llc_cmd, "-filetype=obj", r.opt_level]
                 r.reduce_ir_crash(new_cmd)
                 return
 
