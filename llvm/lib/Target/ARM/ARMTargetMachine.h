@@ -42,8 +42,7 @@ public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                       bool isLittle);
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~ARMBaseTargetMachine() override;
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;

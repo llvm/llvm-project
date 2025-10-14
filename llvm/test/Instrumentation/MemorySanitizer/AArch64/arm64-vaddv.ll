@@ -30,7 +30,7 @@ define <8 x i8> @test_vaddv_s8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) #0 {
 ; CHECK-LABEL: define <8 x i8> @test_vaddv_s8_used_by_laneop(
 ; CHECK-SAME: <8 x i8> [[A1:%.*]], <8 x i8> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
@@ -74,7 +74,7 @@ define <4 x i16> @test_vaddv_s16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) #0
 ; CHECK-LABEL: define <4 x i16> @test_vaddv_s16_used_by_laneop(
 ; CHECK-SAME: <4 x i16> [[A1:%.*]], <4 x i16> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
@@ -115,7 +115,7 @@ define <2 x i32> @test_vaddv_s32_used_by_laneop(<2 x i32> %a1, <2 x i32> %a2) #0
 ; CHECK-LABEL: define <2 x i32> @test_vaddv_s32_used_by_laneop(
 ; CHECK-SAME: <2 x i32> [[A1:%.*]], <2 x i32> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
@@ -151,7 +151,7 @@ define <2 x i64> @test_vaddv_s64_used_by_laneop(<2 x i64> %a1, <2 x i64> %a2) #0
 ; CHECK-LABEL: define <2 x i64> @test_vaddv_s64_used_by_laneop(
 ; CHECK-SAME: <2 x i64> [[A1:%.*]], <2 x i64> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
@@ -191,7 +191,7 @@ define <8 x i8> @test_vaddv_u8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) #0 {
 ; CHECK-LABEL: define <8 x i8> @test_vaddv_u8_used_by_laneop(
 ; CHECK-SAME: <8 x i8> [[A1:%.*]], <8 x i8> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
@@ -259,7 +259,7 @@ define <4 x i16> @test_vaddv_u16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) #0
 ; CHECK-LABEL: define <4 x i16> @test_vaddv_u16_used_by_laneop(
 ; CHECK-SAME: <4 x i16> [[A1:%.*]], <4 x i16> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
@@ -324,7 +324,7 @@ define <2 x i32> @test_vaddv_u32_used_by_laneop(<2 x i32> %a1, <2 x i32> %a2) #0
 ; CHECK-LABEL: define <2 x i32> @test_vaddv_u32_used_by_laneop(
 ; CHECK-SAME: <2 x i32> [[A1:%.*]], <2 x i32> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
@@ -408,7 +408,7 @@ define <2 x i64> @test_vaddv_u64_used_by_laneop(<2 x i64> %a1, <2 x i64> %a2) #0
 ; CHECK-LABEL: define <2 x i64> @test_vaddv_u64_used_by_laneop(
 ; CHECK-SAME: <2 x i64> [[A1:%.*]], <2 x i64> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
@@ -429,7 +429,7 @@ define <1 x i64> @test_vaddv_u64_to_vec(<2 x i64> %a1, <1 x i64> %param1) #0 {
 ; CHECK-SAME: <2 x i64> [[A1:%.*]], <1 x i64> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A1]])
@@ -468,7 +468,7 @@ define <16 x i8> @test_vaddvq_s8_used_by_laneop(<16 x i8> %a1, <16 x i8> %a2) #0
 ; CHECK-LABEL: define <16 x i8> @test_vaddvq_s8_used_by_laneop(
 ; CHECK-SAME: <16 x i8> [[A1:%.*]], <16 x i8> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
@@ -512,7 +512,7 @@ define <8 x i16> @test_vaddvq_s16_used_by_laneop(<8 x i16> %a1, <8 x i16> %a2) #
 ; CHECK-LABEL: define <8 x i16> @test_vaddvq_s16_used_by_laneop(
 ; CHECK-SAME: <8 x i16> [[A1:%.*]], <8 x i16> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP0]])
@@ -552,7 +552,7 @@ define <4 x i32> @test_vaddvq_s32_used_by_laneop(<4 x i32> %a1, <4 x i32> %a2) #
 ; CHECK-LABEL: define <4 x i32> @test_vaddvq_s32_used_by_laneop(
 ; CHECK-SAME: <4 x i32> [[A1:%.*]], <4 x i32> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
@@ -592,7 +592,7 @@ define <16 x i8> @test_vaddvq_u8_used_by_laneop(<16 x i8> %a1, <16 x i8> %a2) #0
 ; CHECK-LABEL: define <16 x i8> @test_vaddvq_u8_used_by_laneop(
 ; CHECK-SAME: <16 x i8> [[A1:%.*]], <16 x i8> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
@@ -636,7 +636,7 @@ define <8 x i16> @test_vaddvq_u16_used_by_laneop(<8 x i16> %a1, <8 x i16> %a2) #
 ; CHECK-LABEL: define <8 x i16> @test_vaddvq_u16_used_by_laneop(
 ; CHECK-SAME: <8 x i16> [[A1:%.*]], <8 x i16> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP0]])
@@ -676,7 +676,7 @@ define <4 x i32> @test_vaddvq_u32_used_by_laneop(<4 x i32> %a1, <4 x i32> %a2) #
 ; CHECK-LABEL: define <4 x i32> @test_vaddvq_u32_used_by_laneop(
 ; CHECK-SAME: <4 x i32> [[A1:%.*]], <4 x i32> [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])

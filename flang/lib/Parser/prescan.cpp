@@ -97,17 +97,7 @@ void Prescanner::Prescan(ProvenanceRange range) {
   while (!IsAtEnd()) {
     Statement();
   }
-  if (inFixedForm_ != beganInFixedForm) {
-    std::string dir{"!dir$ "};
-    if (beganInFixedForm) {
-      dir += "fixed";
-    } else {
-      dir += "free";
-    }
-    dir += '\n';
-    TokenSequence tokens{dir, allSources_.AddCompilerInsertion(dir).start()};
-    tokens.Emit(cooked_);
-  }
+  inFixedForm_ = beganInFixedForm;
 }
 
 void Prescanner::Statement() {
@@ -156,6 +146,11 @@ void Prescanner::Statement() {
         directiveSentinel_[2] == 'u' && directiveSentinel_[3] == 'f' &&
         directiveSentinel_[4] == '\0') {
       // CUDA conditional compilation line.
+      condOffset = 5;
+    } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'a' &&
+        directiveSentinel_[2] == 'c' && directiveSentinel_[3] == 'c' &&
+        directiveSentinel_[4] == '\0') {
+      // OpenACC conditional compilation line.
       condOffset = 5;
     }
     if (condOffset && !preprocessingOnly_) {
@@ -324,10 +319,11 @@ void Prescanner::Statement() {
       }
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
-      SourceFormChange(preprocessed->ToString());
-      CheckAndEmitLine(
-          preprocessed->ClipComment(*this, true /* skip first ! */),
-          newlineProvenance);
+      if (!SourceFormChange(preprocessed->ToString())) {
+        CheckAndEmitLine(
+            preprocessed->ClipComment(*this, true /* skip first ! */),
+            newlineProvenance);
+      }
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
@@ -370,14 +366,16 @@ void Prescanner::Statement() {
         }
       }
       tokens.ToLowerCase();
-      SourceFormChange(tokens.ToString());
+      if (!SourceFormChange(tokens.ToString())) {
+        CheckAndEmitLine(tokens, newlineProvenance);
+      }
     } else { // Kind::Source
       tokens.ToLowerCase();
       if (inFixedForm_) {
         EnforceStupidEndStatementRules(tokens);
       }
+      CheckAndEmitLine(tokens, newlineProvenance);
     }
-    CheckAndEmitLine(tokens, newlineProvenance);
   }
   directiveSentinel_ = nullptr;
 }
@@ -1774,11 +1772,15 @@ Prescanner::LineClassification Prescanner::ClassifyLine(
   return classification;
 }
 
-void Prescanner::SourceFormChange(std::string &&dir) {
+bool Prescanner::SourceFormChange(std::string &&dir) {
   if (dir == "!dir$ free") {
     inFixedForm_ = false;
+    return true;
   } else if (dir == "!dir$ fixed") {
     inFixedForm_ = true;
+    return true;
+  } else {
+    return false;
   }
 }
 

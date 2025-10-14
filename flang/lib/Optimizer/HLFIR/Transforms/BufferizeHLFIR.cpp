@@ -118,7 +118,8 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
          fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
     auto declareOp =
         hlfir::DeclareOp::create(builder, loc, memref, name, shape, typeParams,
-                                 /*dummy_scope=*/nullptr, attrs);
+                                 /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+                                 /*storage_offset=*/0, attrs);
     return declareOp.getBase();
   };
 
@@ -135,12 +136,12 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
 static mlir::Value copyInTempAndPackage(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::Entity source) {
-  auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
+  auto [temp, mustFree] = hlfir::createTempFromMold(loc, builder, source);
   assert(!temp.isAllocatable() && "expect temp to already be allocated");
   hlfir::AssignOp::create(builder, loc, source, temp, /*realloc=*/false,
                           /*keep_lhs_length_if_realloc=*/false,
                           /*temporary_lhs=*/true);
-  return packageBufferizedExpr(loc, builder, temp, cleanup);
+  return packageBufferizedExpr(loc, builder, temp, mustFree);
 }
 
 struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
@@ -298,8 +299,7 @@ struct SetLengthOpConversion
     auto alloca = builder.createTemporary(loc, charType, tmpName,
                                           /*shape=*/{}, lenParams);
     auto declareOp = hlfir::DeclareOp::create(
-        builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+        builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams);
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
     hlfir::AssignOp::create(builder, loc, string, temp,

@@ -3,16 +3,17 @@
 
 target datalayout = "e-m:m-p1:64:64:64-p:32:32:32-n8:16:32"
 
-define dso_local i16 @select_i16(i16 %a, i16 %b, i1 %cond) {
+define dso_local i16 @select_i16(i16 %a, i16 %b, i1 %cond) !prof !0 {
 ; CHECK-LABEL: @select_i16(
+; CHECK: !prof [[PROF_0:![0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i16 [[A:%.*]], i16 [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i16 [[A:%.*]], i16 [[B:%.*]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
 entry:
   %conv0 = sext i16 %a to i32
   %conv1 = sext i16 %b to i32
-  %sel = select i1 %cond, i32 %conv0, i32 %conv1
+  %sel = select i1 %cond, i32 %conv0, i32 %conv1, !prof !1
   %conv4 = trunc i32 %sel to i16
   ret i16 %conv4
 }
@@ -133,4 +134,9 @@ entry:
   %conv4 = trunc i32 %sel to i16
   ret i16 %conv4
 }
+
+!0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"branch_weights", i32 2, i32 3}
+; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_1]] = !{!"branch_weights", i32 2, i32 3}
 

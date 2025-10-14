@@ -763,6 +763,15 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
       "}");
+  Style.ColumnLimit = 63;
+  verifyFormat(
+      "- (void)test {\n"
+      "  if ([object\n"
+      "          respondsToSelector:@selector(\n"
+      "                                 selectorName:param1:param2:)])\n"
+      "    return;\n"
+      "}");
+  Style.ColumnLimit = PreviousColumnLimit;
   verifyFormat("[contentsContainer replaceSubview:[subviews objectAtIndex:0]\n"
                "                             with:contentsNativeView];");
 

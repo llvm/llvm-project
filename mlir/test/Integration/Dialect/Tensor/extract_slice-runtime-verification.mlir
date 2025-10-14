@@ -47,47 +47,47 @@ func.func @main() {
 
   // Offset is out-of-bounds and slice runs out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1, %arg2, %arg3) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 1>, static_strides = array<i64: -9223372036854775808, 1>}> : (tensor<?x4xf32>, index, index, index) -> tensor<?xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}, 0] [%{{.*}}, 1] [%{{.*}}, 1] : tensor<?x4xf32> to tensor<?xf32>
   // CHECK-NEXT: ^ offset 0 is out-of-bounds
   // CHECK-NEXT: Location: loc({{.*}})
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1, %arg2, %arg3) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 1>, static_strides = array<i64: -9223372036854775808, 1>}> : (tensor<?x4xf32>, index, index, index) -> tensor<?xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}, 0] [%{{.*}}, 1] [%{{.*}}, 1] : tensor<?x4xf32> to tensor<?xf32>
   // CHECK-NEXT: ^ extract_slice runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_slice_dynamic_rank_reduce(%alloca_4_dyn, %5, %5, %1) : (tensor<?x4xf32>, index, index, index) -> ()
 
   // Offset is out-of-bounds and slice runs out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (tensor<1xf32>, index) -> tensor<1xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}] [1] [1] : tensor<1xf32> to tensor<1xf32>
   // CHECK-NEXT: ^ offset 0 is out-of-bounds
   // CHECK-NEXT: Location: loc({{.*}})
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (tensor<1xf32>, index) -> tensor<1xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}] [1] [1] : tensor<1xf32> to tensor<1xf32>
   // CHECK-NEXT: ^ extract_slice runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_slice(%alloca, %1) : (tensor<1xf32>, index) -> ()
 
   // Offset is out-of-bounds and slice runs out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (tensor<1xf32>, index) -> tensor<1xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}] [1] [1] : tensor<1xf32> to tensor<1xf32>
   // CHECK-NEXT: ^ offset 0 is out-of-bounds
   // CHECK-NEXT: Location: loc({{.*}})
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (tensor<1xf32>, index) -> tensor<1xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}] [1] [1] : tensor<1xf32> to tensor<1xf32>
   // CHECK-NEXT: ^ extract_slice runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_slice(%alloca, %n1) : (tensor<1xf32>, index) -> ()
 
   // Slice runs out-of-bounds due to size
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1, %arg2, %arg3) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 4>, static_strides = array<i64: -9223372036854775808, 1>}> : (tensor<?x4xf32>, index, index, index) -> tensor<?x4xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}, 0] [%{{.*}}, 4] [%{{.*}}, 1] : tensor<?x4xf32> to tensor<?x4xf32>
   // CHECK-NEXT: ^ extract_slice runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_slice_dynamic(%alloca_4_dyn, %0, %5, %1) : (tensor<?x4xf32>, index, index, index) -> ()
 
   // Slice runs out-of-bounds due to stride
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract_slice"(%arg0, %arg1, %arg2, %arg3) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 4>, static_strides = array<i64: -9223372036854775808, 1>}> : (tensor<?x4xf32>, index, index, index) -> tensor<?x4xf32>
+  // CHECK-NEXT: tensor.extract_slice %{{.*}}[%{{.*}}, 0] [%{{.*}}, 4] [%{{.*}}, 1] : tensor<?x4xf32> to tensor<?x4xf32>
   // CHECK-NEXT: ^ extract_slice runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_slice_dynamic(%alloca_4_dyn, %0, %4, %4) : (tensor<?x4xf32>, index, index, index) -> ()

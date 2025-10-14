@@ -180,4 +180,98 @@ let TargetPrefix = "riscv" in {
   // XSfvfnrclipxfqf
   defm int_riscv_sf_vfnrclip_x_f_qf : RISCVSFCustomVFNRCLIP;
   defm int_riscv_sf_vfnrclip_xu_f_qf : RISCVSFCustomVFNRCLIP;
+
+  // XSfmm
+  // Output: (output_len)
+  // Input: (input_len, vsew, twiden)
+  class RISCVSFVSet
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                              [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem]>;
+
+  // Input: (tss, base, tn)
+  class RISCVSFTileLoad
+      : DefaultAttrsIntrinsic<[],
+                              [llvm_anyint_ty, llvm_ptr_ty, LLVMMatchType<0>],
+                              [NoCapture<ArgIndex<1>>, IntrHasSideEffects]>,
+        RISCVVIntrinsic;
+
+  // Input: (tss, base, tn)
+  class RISCVSFTileStore
+      : DefaultAttrsIntrinsic<[],
+                              [llvm_anyint_ty, llvm_ptr_ty, LLVMMatchType<0>],
+                              [NoCapture<ArgIndex<1>>, IntrWriteMem,
+                               IntrHasSideEffects]>,
+        RISCVVIntrinsic;
+
+  // Output: ()
+  // Input: (mtd, mat1, mat2, tm, tn, tk, twiden)
+  class RISCVSFCustomMatMul<bit is_float = false>
+      : DefaultAttrsIntrinsic<[], [llvm_anyint_ty, llvm_anyvector_ty,
+                                   !if(is_float, LLVMMatchType<1>,
+                                                 llvm_anyvector_ty),
+                                   LLVMMatchType<0>, LLVMMatchType<0>,
+                                   LLVMMatchType<0>, LLVMMatchType<0>],
+                              [IntrNoMem, IntrHasSideEffects,
+                               ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<6>>]>,
+        RISCVVIntrinsic;
+
+  def int_riscv_sf_vsettnt  : RISCVSFVSet;
+  def int_riscv_sf_vsettm   : RISCVSFVSet;
+  def int_riscv_sf_vsettk   : RISCVSFVSet;
+
+  def int_riscv_sf_vlte8    : RISCVSFTileLoad;
+  def int_riscv_sf_vlte16   : RISCVSFTileLoad;
+  def int_riscv_sf_vlte32   : RISCVSFTileLoad;
+  def int_riscv_sf_vlte64   : RISCVSFTileLoad;
+  def int_riscv_sf_vste8    : RISCVSFTileStore;
+  def int_riscv_sf_vste16   : RISCVSFTileStore;
+  def int_riscv_sf_vste32   : RISCVSFTileStore;
+  def int_riscv_sf_vste64   : RISCVSFTileStore;
+
+  // Output: (vd)
+  // Input: (tss, tn)
+  def int_riscv_sf_vtmv_v_t
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyint_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrHasSideEffects]>,
+      RISCVVIntrinsic {
+    let VLOperand = 2;
+  }
+  // Output: ()
+  // Input: (tss, vs2, tn)
+  def int_riscv_sf_vtmv_t_v
+      : DefaultAttrsIntrinsic<[], [LLVMMatchType<1>, llvm_anyvector_ty,
+                                   llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects]>,
+      RISCVVIntrinsic {
+    let VLOperand = 2;
+  }
+
+  foreach a = ["u", "s"] in {
+    foreach b = ["u", "s"] in {
+      def int_riscv_sf_mm_ # a # _ # b   : RISCVSFCustomMatMul;
+    }
+  }
+
+  def int_riscv_sf_mm_f_f : RISCVSFCustomMatMul<true>;
+  foreach e1 = [5, 4] in
+    foreach e2 = [5, 4] in
+      def int_riscv_sf_mm_e # e1 # m # !sub(7, e1) # _e # e2 # m # !sub(7, e2)
+          : RISCVSFCustomMatMul<true>;
+
+  // Output: ()
+  // Input: (mtd)
+  def int_riscv_sf_vtzero_t
+      : DefaultAttrsIntrinsic<[],
+                              [llvm_anyint_ty, LLVMMatchType<0>,LLVMMatchType<0>,
+                               LLVMMatchType<0>, LLVMMatchType<0>],
+                              [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>,
+                               ImmArg<ArgIndex<4>>, IntrNoMem, IntrHasSideEffects]>,
+        RISCVVIntrinsic;
+
+  // Output: ()
+  // Input: ()
+  def int_riscv_sf_vtdiscard
+      : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>,
+        RISCVVIntrinsic;
 } // TargetPrefix = "riscv"

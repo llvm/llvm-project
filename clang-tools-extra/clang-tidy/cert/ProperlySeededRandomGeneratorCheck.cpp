@@ -1,4 +1,4 @@
-//===--- ProperlySeededRandomGeneratorCheck.cpp - clang-tidy---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ ProperlySeededRandomGeneratorCheck::ProperlySeededRandomGeneratorCheck(
     : ClangTidyCheck(Name, Context),
       RawDisallowedSeedTypes(
           Options.get("DisallowedSeedTypes", "time_t,std::time_t")) {
-  StringRef(RawDisallowedSeedTypes).split(DisallowedSeedTypes, ',');
+  RawDisallowedSeedTypes.split(DisallowedSeedTypes, ',');
 }
 
 void ProperlySeededRandomGeneratorCheck::storeOptions(

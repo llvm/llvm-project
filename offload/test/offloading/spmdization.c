@@ -2,7 +2,8 @@
 // RUN: %libomptarget-compileopt-generic
 // RUN: env LIBOMPTARGET_INFO=16 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,SPMD
-// RUN: %libomptarget-compileopt-generic -mllvm --openmp-opt-disable-spmdization
+// RUN: %libomptarget-compileopt-generic -mllvm --openmp-opt-disable-spmdization \
+// RUN:   -Xoffload-linker -mllvm=--openmp-opt-disable-spmdization
 // RUN: env LIBOMPTARGET_INFO=16 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,GENERIC
 // clang-format on

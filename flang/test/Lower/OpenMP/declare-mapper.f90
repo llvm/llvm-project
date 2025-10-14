@@ -6,6 +6,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-3.f90 -o - | FileCheck %t/omp-declare-mapper-3.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-5.f90 -o - | FileCheck %t/omp-declare-mapper-5.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -262,3 +263,41 @@ contains
       !$omp end target
    end subroutine
 end program declare_mapper_5
+
+!--- omp-declare-mapper-6.f90
+subroutine declare_mapper_nested_parent
+  type :: inner_t
+    real, allocatable :: deep_arr(:)
+  end type inner_t
+
+  type, abstract :: base_t
+    real, allocatable :: base_arr(:)
+    type(inner_t) :: inner
+  end type base_t
+
+  type, extends(base_t) :: real_t
+    real, allocatable :: real_arr(:)
+  end type real_t
+
+  !$omp declare mapper (custommapper : real_t :: t) map(tofrom: t%base_arr, t%real_arr)
+  ! CHECK: omp.declare_mapper @{{.*custommapper}}
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "t%base_t%base_arr"}
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "t%real_arr"}
+  ! CHECK: omp.declare_mapper.info
+
+  type(real_t) :: r
+
+  allocate(r%base_arr(10))
+  allocate(r%inner%deep_arr(10))
+  allocate(r%real_arr(10))
+  r%base_arr = 1.0
+  r%inner%deep_arr = 4.0
+  r%real_arr = 0.0
+
+  ! Check implicit maps for deep nested allocatable payloads not covered by mapper
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "r.deep_arr.implicit_map"}
+  ! CHECK: omp.target
+  !$omp target map(mapper(custommapper), tofrom: r)
+    r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
+  !$omp end target
+end subroutine declare_mapper_nested_parent

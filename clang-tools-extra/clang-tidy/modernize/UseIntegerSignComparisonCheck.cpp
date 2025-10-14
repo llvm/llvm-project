@@ -1,4 +1,4 @@
-//===--- UseIntegerSignComparisonCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -138,9 +138,9 @@ void UseIntegerSignComparisonCheck::check(
     return;
   const Expr *SubExprLHS = nullptr;
   const Expr *SubExprRHS = nullptr;
-  SourceRange R1 = SourceRange(LHS->getBeginLoc());
-  SourceRange R2 = SourceRange(BinaryOp->getOperatorLoc());
-  SourceRange R3 = SourceRange(Lexer::getLocForEndOfToken(
+  SourceRange R1(LHS->getBeginLoc());
+  SourceRange R2(BinaryOp->getOperatorLoc());
+  SourceRange R3(Lexer::getLocForEndOfToken(
       RHS->getEndLoc(), 0, *Result.SourceManager, getLangOpts()));
   if (const auto *LHSCast = llvm::dyn_cast<ExplicitCastExpr>(LHS)) {
     SubExprLHS = LHSCast->getSubExpr();

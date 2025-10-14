@@ -61,6 +61,9 @@ public:
       QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
+  llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                 llvm::PointerType *T,
+                                 QualType QT) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -132,13 +135,14 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().CUDAIsDevice) {
+  if (getContext().getLangOpts().isTargetDevice()) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for HIPSPV/CUDASPV. When the language mode is HIP/CUDA, the
-    // SPIRTargetInfo maps cuda_device to SPIR-V's CrossWorkGroup address space.
+    // pointers for target devices as default address space kernel arguments
+    // are not allowed. We use the opencl_global language address space which
+    // always maps to CrossWorkGroup.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
+    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
     if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
       LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
@@ -237,6 +241,29 @@ void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
       FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+}
+
+// LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
+// targets use a non-zero encoding for null in certain address spaces.
+// Because SPIR(-V) is a generic target and the bit pattern of null in
+// non-generic AS is unspecified, materialize null in non-generic AS via an
+// addrspacecast from null in generic AS. This allows later lowering to
+// substitute the target's real sentinel value.
+llvm::Constant *
+CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                            llvm::PointerType *PT,
+                                            QualType QT) const {
+  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
+                  ? LangAS::Default
+                  : QT->getPointeeType().getAddressSpace();
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic)
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto &Ctx = CGM.getContext();
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
 }
 
 LangAS
@@ -485,6 +512,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    if (ResAttrs.IsCounter) {
+      llvm::Type *ElemType = llvm::Type::getInt32Ty(Ctx);
+      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {ElemType},
+                                      {StorageClass, true});
+    }
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;

@@ -46,8 +46,7 @@ static std::string makeIdentifier(StringRef str) {
 
 static void emitEnumClass(const Record &enumDef, StringRef enumName,
                           StringRef underlyingType, StringRef description,
-                          const std::vector<EnumCase> &enumerants,
-                          raw_ostream &os) {
+                          ArrayRef<EnumCase> enumerants, raw_ostream &os) {
   os << "// " << description << "\n";
   os << "enum class " << enumName;
 
@@ -55,14 +54,13 @@ static void emitEnumClass(const Record &enumDef, StringRef enumName,
     os << " : " << underlyingType;
   os << " {\n";
 
-  for (const auto &enumerant : enumerants) {
+  for (const EnumCase &enumerant : enumerants) {
     auto symbol = makeIdentifier(enumerant.getSymbol());
     auto value = enumerant.getValue();
-    if (value >= 0) {
+    if (value >= 0)
       os << formatv("  {0} = {1},\n", symbol, value);
-    } else {
+    else
       os << formatv("  {0},\n", symbol);
-    }
   }
   os << "};\n\n";
 }
@@ -222,7 +220,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         llvm::StringSwitch<StringRef>(separator.trim())
             .Case("|", "parseOptionalVerticalBar")
             .Case(",", "parseOptionalComma")
-            .Default("error, enum seperator must be '|' or ','");
+            .Default("error, enum separator must be '|' or ','");
     os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
                   enumInfo.getSummary(), casesList, separator,
                   parseSeparatorFn);
@@ -364,6 +362,9 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumCase> cases) {
 // inline constexpr <enum-type> operator|(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator&(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator^(<enum-type> a, <enum-type> b);
+// inline constexpr <enum-type> &operator|=(<enum-type> &a, <enum-type> b);
+// inline constexpr <enum-type> &operator&=(<enum-type> &a, <enum-type> b);
+// inline constexpr <enum-type> &operator^=(<enum-type> &a, <enum-type> b);
 // inline constexpr <enum-type> operator~(<enum-type> bits);
 // inline constexpr bool bitEnumContainsAll(<enum-type> bits, <enum-type> bit);
 // inline constexpr bool bitEnumContainsAny(<enum-type> bits, <enum-type> bit);
@@ -384,6 +385,15 @@ inline constexpr {0} operator&({0} a, {0} b) {{
 }
 inline constexpr {0} operator^({0} a, {0} b) {{
   return static_cast<{0}>(static_cast<{1}>(a) ^ static_cast<{1}>(b));
+}
+inline constexpr {0} &operator|=({0} &a, {0} b) {{
+    return a = a | b;
+}
+inline constexpr {0} &operator&=({0} &a, {0} b) {{
+    return a = a & b;
+}
+inline constexpr {0} &operator^=({0} &a, {0} b) {{
+    return a = a ^ b;
 }
 inline constexpr {0} operator~({0} bits) {{
   // Ensure only bits that can be present in the enum are set

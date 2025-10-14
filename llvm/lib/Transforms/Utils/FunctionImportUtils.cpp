@@ -13,7 +13,11 @@
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/TimeProfiler.h"
+
 using namespace llvm;
+
+namespace llvm {
 
 /// Uses the "source_filename" instead of a Module hash ID for the suffix of
 /// promoted locals during LTO. NOTE: This requires that the source filename
@@ -32,6 +36,8 @@ cl::list<GlobalValue::GUID> MoveSymbolGUID(
         "linkage is External where they are imported. It is meant to be "
         "used with the name of contextual profiling roots."),
     cl::Hidden);
+
+} // end namespace llvm
 
 FunctionImportGlobalProcessing::FunctionImportGlobalProcessing(
     Module &M, const ModuleSummaryIndex &Index,
@@ -370,6 +376,7 @@ void FunctionImportGlobalProcessing::run() { processGlobalsForThinLTO(); }
 void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
+  llvm::TimeTraceScope timeScope("Rename module for ThinLTO");
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
                                                    ClearDSOLocalOnDeclarations);
   ThinLTOProcessing.run();

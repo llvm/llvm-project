@@ -274,19 +274,14 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
 
-        assert(dxbc::isValidParameterType(L.Header.Type) &&
-               "invalid DXContainer YAML");
-        assert(dxbc::isValidShaderVisibility(L.Header.Visibility) &&
-               "invalid DXContainer YAML");
-        dxbc::RootParameterType Type = dxbc::RootParameterType(L.Header.Type);
-        dxbc::ShaderVisibility Visibility =
-            dxbc::ShaderVisibility(L.Header.Visibility);
+        const dxbc::RootParameterType Type = L.Header.Type;
+        const dxbc::ShaderVisibility Visibility = L.Header.Visibility;
 
         switch (Type) {
         case dxbc::RootParameterType::Constants32Bit: {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);
-          dxbc::RTS0::v1::RootConstants Constants;
+          mcdxbc::RootConstants Constants;
 
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
@@ -300,7 +295,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
               P.RootSignature->Parameters.getOrInsertDescriptor(L);
 
-          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          mcdxbc::RootDescriptor Descriptor;
           Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)
@@ -313,8 +308,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
-
-            dxbc::RTS0::v2::DescriptorRange Range;
+            mcdxbc::DescriptorRange Range;
             Range.RangeType = R.RangeType;
             Range.NumDescriptors = R.NumDescriptors;
             Range.BaseShaderRegister = R.BaseShaderRegister;
@@ -334,7 +328,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       for (const auto &Param : P.RootSignature->samplers()) {
-        dxbc::RTS0::v1::StaticSampler NewSampler;
+        mcdxbc::StaticSampler NewSampler;
         NewSampler.Filter = Param.Filter;
         NewSampler.AddressU = Param.AddressU;
         NewSampler.AddressV = Param.AddressV;
@@ -348,6 +342,9 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         NewSampler.ShaderRegister = Param.ShaderRegister;
         NewSampler.RegisterSpace = Param.RegisterSpace;
         NewSampler.ShaderVisibility = Param.ShaderVisibility;
+
+        if (RS.Version > 2)
+          NewSampler.Flags = Param.getEncodedFlags();
 
         RS.StaticSamplers.push_back(NewSampler);
       }

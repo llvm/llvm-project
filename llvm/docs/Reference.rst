@@ -15,6 +15,7 @@ LLVM and API reference documentation.
    BranchWeightMetadata
    Bugpoint
    CalleeTypeMetadata
+   CallGraphSection
    CIBestPractices
    CommandGuide/index
    ContentAddressableStorage
@@ -46,6 +47,7 @@ LLVM and API reference documentation.
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   QualGroup
    Security
    SecurityTransparencyReports
    SegmentedStacks

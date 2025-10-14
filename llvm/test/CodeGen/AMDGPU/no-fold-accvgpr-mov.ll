@@ -54,19 +54,20 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    s_branch .LBB0_2
 ; GFX908-NEXT:  .LBB0_1: ; %bb2
 ; GFX908-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GFX908-NEXT:    s_nop 6
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a2
 ; GFX908-NEXT:    s_or_b32 s4, s3, 1
 ; GFX908-NEXT:    s_ashr_i32 s5, s3, 31
 ; GFX908-NEXT:    s_mov_b32 s3, s2
 ; GFX908-NEXT:    v_mov_b32_e32 v1, s2
-; GFX908-NEXT:    s_nop 2
-; GFX908-NEXT:    v_accvgpr_read_b32 v0, a2
 ; GFX908-NEXT:    v_mov_b32_e32 v2, s3
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, v3
 ; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a1
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
+; GFX908-NEXT:    s_and_b32 s3, s5, s4
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, v4
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, v3
-; GFX908-NEXT:    s_and_b32 s3, s5, s4
+; GFX908-NEXT:    s_nop 0
 ; GFX908-NEXT:    v_mfma_f32_16x16x16f16 a[2:5], v[1:2], v[1:2], a[0:3]
 ; GFX908-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX908-NEXT:  .LBB0_2: ; %bb

@@ -407,7 +407,8 @@ public:
   Elf_Note_Iterator notes_begin(const Elf_Phdr &Phdr, Error &Err) const {
     assert(Phdr.p_type == ELF::PT_NOTE && "Phdr is not of type PT_NOTE");
     ErrorAsOutParameter ErrAsOutParam(Err);
-    if (Phdr.p_offset + Phdr.p_filesz > getBufSize()) {
+    if (Phdr.p_offset + Phdr.p_filesz > getBufSize() ||
+        Phdr.p_offset + Phdr.p_filesz < Phdr.p_offset) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Phdr.p_offset) +
                       ") or size (0x" + Twine::utohexstr(Phdr.p_filesz) + ")");
@@ -435,7 +436,8 @@ public:
   Elf_Note_Iterator notes_begin(const Elf_Shdr &Shdr, Error &Err) const {
     assert(Shdr.sh_type == ELF::SHT_NOTE && "Shdr is not of type SHT_NOTE");
     ErrorAsOutParameter ErrAsOutParam(Err);
-    if (Shdr.sh_offset + Shdr.sh_size > getBufSize()) {
+    if (Shdr.sh_offset + Shdr.sh_size > getBufSize() ||
+        Shdr.sh_offset + Shdr.sh_size < Shdr.sh_offset) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Shdr.sh_offset) +
                       ") or size (0x" + Twine::utohexstr(Shdr.sh_size) + ")");

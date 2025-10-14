@@ -120,7 +120,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
   const bool generate_debug_info = true;
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               generate_debug_info);
+                               generate_debug_info, diagnostic_manager);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 

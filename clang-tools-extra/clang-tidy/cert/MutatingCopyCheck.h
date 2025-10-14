@@ -1,4 +1,4 @@
-//===--- MutatingCopyCheck.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::cert {
 /// in copy constructors and copy assignment operators.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/oop58-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert/oop58-cpp.html
 class MutatingCopyCheck : public ClangTidyCheck {
 public:
   MutatingCopyCheck(StringRef Name, ClangTidyContext *Context)

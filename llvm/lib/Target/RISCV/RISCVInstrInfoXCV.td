@@ -271,7 +271,7 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins GPRMem:$rs1, simm12:$imm12),
+              (ins GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -292,7 +292,7 @@ class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
-              (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
+              (ins GPR:$rs2, GPR:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -332,7 +332,7 @@ class CVStore_rr<bits<3> funct3, bits<7> funct7, string opcodestr>
 
 class CVLoad_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
-      (ins GPRMem:$rs1, simm12:$imm12), opcodestr, "$rd, ${imm12}(${rs1})">;
+      (ins GPRMem:$rs1, simm12_lo:$imm12), opcodestr, "$rd, ${imm12}(${rs1})">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -669,19 +669,19 @@ let Predicates = [HasVendorXCValu, IsRV32] in {
 // Patterns for load & store operations
 //===----------------------------------------------------------------------===//
 class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
-    : Pat<(XLenVT (LoadOp CVrr:$regreg)),
+    : Pat<(i32 (LoadOp CVrr:$regreg)),
           (Inst CVrr:$regreg)>;
 
 class CVStriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (XLenVT GPR:$rs2), GPR:$rs1, simm12:$imm12),
-          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_lo:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12_lo:$imm12)>;
 
 class CVStrriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (XLenVT GPR:$rs2), GPR:$rs1, GPR:$rs3),
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, GPR:$rs3),
           (Inst GPR:$rs2, GPR:$rs1, GPR:$rs3)>;
 
 class CVStrrPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (XLenVT GPR:$rs2), CVrr:$regreg),
+    : Pat<(StoreOp (i32 GPR:$rs2), CVrr:$regreg),
           (Inst GPR:$rs2, CVrr:$regreg)>;
 
 let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
@@ -725,17 +725,17 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
             (CV_INSERT GPR:$rd, GPR:$rs1, (CV_HI5 cv_uimm10:$imm),
                                           (CV_LO5 cv_uimm10:$imm))>;
 
-  def : PatGpr<cttz, CV_FF1>;
-  def : PatGpr<ctlz, CV_FL1>;
+  def : PatGpr<cttz, CV_FF1, i32>;
+  def : PatGpr<ctlz, CV_FL1, i32>;
   def : PatGpr<int_riscv_cv_bitmanip_clb, CV_CLB>;
-  def : PatGpr<ctpop, CV_CNT>;
+  def : PatGpr<ctpop, CV_CNT, i32>;
 
-  def : PatGprGpr<rotr, CV_ROR>;
+  def : PatGprGpr<rotr, CV_ROR, i32>;
 
   def : Pat<(int_riscv_cv_bitmanip_bitrev GPR:$rs1, cv_tuimm5:$pts,
              cv_tuimm2:$radix),
             (CV_BITREV GPR:$rs1, cv_tuimm2:$radix, cv_tuimm5:$pts)>;
-  def : Pat<(bitreverse (XLenVT GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;
+  def : Pat<(bitreverse (i32 GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;
 }
 
 class PatCoreVAluGpr<string intr, string asm> :
@@ -760,18 +760,18 @@ multiclass PatCoreVAluGprGprImm<Intrinsic intr> {
 }
 
 let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
-  def : PatGpr<abs, CV_ABS>;
-  def : PatGprGpr<setle, CV_SLE>;
-  def : PatGprGpr<setule, CV_SLEU>;
-  def : PatGprGpr<smin, CV_MIN>;
-  def : PatGprGpr<umin, CV_MINU>;
-  def : PatGprGpr<smax, CV_MAX>;
-  def : PatGprGpr<umax, CV_MAXU>;
+  def : PatGpr<abs, CV_ABS, i32>;
+  def : PatGprGpr<setle, CV_SLE, i32>;
+  def : PatGprGpr<setule, CV_SLEU, i32>;
+  def : PatGprGpr<smin, CV_MIN, i32>;
+  def : PatGprGpr<umin, CV_MINU, i32>;
+  def : PatGprGpr<smax, CV_MAX, i32>;
+  def : PatGprGpr<umax, CV_MAXU, i32>;
 
-  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
-  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
-  def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
-  def : Pat<(and (XLenVT GPR:$rs1), 0xff), (CV_EXTBZ GPR:$rs1)>;
+  def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
+  def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
+  def : Pat<(and (i32 GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
+  def : Pat<(and (i32 GPR:$rs1), 0xff), (CV_EXTBZ GPR:$rs1)>;
 
   defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
   defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;
@@ -790,9 +790,9 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
-  def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
+  def : Pat<(riscv_brcc (i32 GPR:$rs1), simm5:$imm5, SETEQ, bb:$imm12),
             (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
-  def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
+  def : Pat<(riscv_brcc (i32 GPR:$rs1), simm5:$imm5, SETNE, bb:$imm12),
             (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
 
   defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;

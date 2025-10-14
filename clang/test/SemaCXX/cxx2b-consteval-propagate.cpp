@@ -626,3 +626,20 @@ void fn() {
 }
 
 }
+
+
+namespace GH109096 {
+consteval void undefined();
+template <typename T>
+struct scope_exit {
+    T t;
+    constexpr ~scope_exit() { t(); }
+    // expected-error@-1 {{call to immediate function 'GH109096::(anonymous class)::operator()' is not a constant expression}} \
+    // expected-note@-1 {{implicit use of 'this' pointer is only allowed within the evaluation}}
+};
+
+scope_exit guard( // expected-note {{in instantiation of member function}}
+    []() { undefined(); }
+);
+
+}

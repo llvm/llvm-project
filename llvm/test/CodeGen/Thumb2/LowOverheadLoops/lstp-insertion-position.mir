@@ -232,9 +232,9 @@ body:             |
   bb.3.middle.block:
     liveins: $q1
 
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s6, renamable $s7, 14 /* CC::al */, $noreg
-    renamable $s2 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, killed renamable $s5, 14 /* CC::al */, $noreg, implicit $q1
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s2, killed renamable $s0, 14 /* CC::al */, $noreg
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s6, renamable $s7, 14 /* CC::al */, $noreg, implicit $fpscr_rm
+    renamable $s2 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, killed renamable $s5, 14 /* CC::al */, $noreg, implicit $q1, implicit $fpscr_rm
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s2, killed renamable $s0, 14 /* CC::al */, $noreg, implicit $fpscr_rm
     $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
     tBX_RET 14 /* CC::al */, $noreg, implicit killed $s0
 
@@ -376,9 +376,9 @@ body:             |
   bb.3.middle.block:
     liveins: $q1
 
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s6, renamable $s7, 14 /* CC::al */, $noreg
-    renamable $s2 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, killed renamable $s5, 14 /* CC::al */, $noreg, implicit $q1
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s2, killed renamable $s0, 14 /* CC::al */, $noreg
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s6, renamable $s7, 14 /* CC::al */, $noreg, implicit $fpscr_rm
+    renamable $s2 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, killed renamable $s5, 14 /* CC::al */, $noreg, implicit $q1, implicit $fpscr_rm
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s2, killed renamable $s0, 14 /* CC::al */, $noreg, implicit $fpscr_rm
     $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
     tBX_RET 14 /* CC::al */, $noreg, implicit killed $s0
 

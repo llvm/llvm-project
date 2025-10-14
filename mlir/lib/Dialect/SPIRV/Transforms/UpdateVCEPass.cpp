@@ -158,6 +158,12 @@ void UpdateVCEPass::runOnOperation() {
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
       valueTypes.push_back(globalVar.getType());
 
+    // If the op is FunctionLike make sure to process input and result types.
+    if (auto funcOpInterface = dyn_cast<FunctionOpInterface>(op)) {
+      llvm::append_range(valueTypes, funcOpInterface.getArgumentTypes());
+      llvm::append_range(valueTypes, funcOpInterface.getResultTypes());
+    }
+
     // Requirements from values' types
     SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;
     SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;

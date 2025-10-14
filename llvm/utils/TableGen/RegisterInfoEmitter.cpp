@@ -1083,14 +1083,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
     std::string RCName = Order.empty() ? "nullptr" : RC.getName();
     std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
     std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
-    assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
        << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
-       << RegSize << ", " << RC.CopyCost << ", "
+       << RegSize << ", " << static_cast<unsigned>(RC.CopyCost) << ", "
        << (RC.Allocatable ? "true" : "false") << ", "
        << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
   }
@@ -1107,11 +1106,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   for (const auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
     const BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
-    uint64_t Value = 0;
-    for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
-      if (const BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
-        Value |= (uint64_t)B->getValue() << b;
-    }
+    uint64_t Value = BI->convertKnownBitsToInt();
     OS << "  " << Value << ",\n";
   }
   OS << "};\n"; // End of HW encoding table

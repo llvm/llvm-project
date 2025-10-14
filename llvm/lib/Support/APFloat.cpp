@@ -5857,7 +5857,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
   // practice.
   if (Exp == APFloat::IEK_NaN) {
     DoubleAPFloat Quiet{Arg};
-    Quiet.getFirst().makeQuiet();
+    Quiet.getFirst() = Quiet.getFirst().makeQuiet();
     return Quiet;
   }
 

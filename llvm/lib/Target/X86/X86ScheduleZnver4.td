@@ -1005,14 +1005,14 @@ def Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr : SchedWriteRes<[Zn4FPFMisc0]> {
 def : InstRW<[Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr], (instrs VEXTRACTF128rri, VEXTRACTI128rri)>;
 
 def Zn4WriteVEXTRACTI128mr : SchedWriteRes<[Zn4FPFMisc0, Zn4FPSt, Zn4Store]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr.NumMicroOps, 1);
 }
 def : InstRW<[Zn4WriteVEXTRACTI128mr], (instrs VEXTRACTI128mri, VEXTRACTF128mri)>;
 
 def Zn4WriteVINSERTF128rmr : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPFMisc0]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn4WriteVEXTRACTF128rr_VEXTRACTI128rr.NumMicroOps, 0);
 }
@@ -1262,7 +1262,7 @@ def Zn4WriteSHA1MSG1rr : SchedWriteRes<[Zn4FPU0123]> {
 def : InstRW<[Zn4WriteSHA1MSG1rr], (instrs SHA1MSG1rr)>;
 
 def Zn4WriteSHA1MSG1rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPU0123]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteSHA1MSG1rr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteSHA1MSG1rr.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn4WriteSHA1MSG1rr.NumMicroOps, 0);
 }
@@ -1276,7 +1276,7 @@ def Zn4WriteSHA1MSG2rr_SHA1NEXTErr : SchedWriteRes<[Zn4FPU0123]> {
 def : InstRW<[Zn4WriteSHA1MSG2rr_SHA1NEXTErr], (instrs SHA1MSG2rr, SHA1NEXTErr)>;
 
 def Zn4Writerm_SHA1MSG2rm_SHA1NEXTErm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPU0123]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteSHA1MSG2rr_SHA1NEXTErr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteSHA1MSG2rr_SHA1NEXTErr.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn4WriteSHA1MSG2rr_SHA1NEXTErr.NumMicroOps, 0);
 }
@@ -1290,7 +1290,7 @@ def Zn4WriteSHA256MSG1rr : SchedWriteRes<[Zn4FPU0123]> {
 def : InstRW<[Zn4WriteSHA256MSG1rr], (instrs SHA256MSG1rr)>;
 
 def Zn4Writerm_SHA256MSG1rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPU0123]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteSHA256MSG1rr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteSHA256MSG1rr.Latency);
   let ReleaseAtCycles = [1, 1, 3];
   let NumMicroOps = !add(Zn4WriteSHA256MSG1rr.NumMicroOps, 0);
 }
@@ -1304,7 +1304,7 @@ def Zn4WriteSHA256MSG2rr : SchedWriteRes<[Zn4FPU0123]> {
 def : InstRW<[Zn4WriteSHA256MSG2rr], (instrs SHA256MSG2rr)>;
 
 def Zn4WriteSHA256MSG2rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPU0123]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteSHA256MSG2rr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteSHA256MSG2rr.Latency);
   let ReleaseAtCycles = [1, 1, 8];
   let NumMicroOps = !add(Zn4WriteSHA256MSG2rr.NumMicroOps, 1);
 }
@@ -1379,7 +1379,7 @@ def Zn4WriteVPERM2I128rr_VPERM2F128rr : SchedWriteRes<[Zn4FPVShuf]> {
 def : InstRW<[Zn4WriteVPERM2I128rr_VPERM2F128rr], (instrs VPERM2I128rri, VPERM2F128rri)>;
 
 def Zn4WriteVPERM2F128rm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteVPERM2I128rr_VPERM2F128rr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERM2I128rr_VPERM2F128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn4WriteVPERM2I128rr_VPERM2F128rr.NumMicroOps, 0);
 }
@@ -1393,7 +1393,7 @@ def Zn4WriteVPERMPSYrr : SchedWriteRes<[Zn4FPVShuf]> {
 def : InstRW<[Zn4WriteVPERMPSYrr], (instrs VPERMPSYrr)>;
 
 def Zn4WriteVPERMPSYrm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteVPERMPSYrr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMPSYrr.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn4WriteVPERMPSYrr.NumMicroOps, 1);
 }
@@ -1407,7 +1407,7 @@ def Zn4WriteVPERMYri : SchedWriteRes<[Zn4FPVShuf]> {
 def : InstRW<[Zn4WriteVPERMYri], (instrs VPERMPDYri, VPERMQYri)>;
 
 def Zn4WriteVPERMPDYmi : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteVPERMYri.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMYri.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn4WriteVPERMYri.NumMicroOps, 1);
 }
@@ -1421,7 +1421,7 @@ def Zn4WriteVPERMDYrr : SchedWriteRes<[Zn4FPVShuf]> {
 def : InstRW<[Zn4WriteVPERMDYrr], (instrs VPERMDYrr)>;
 
 def Zn4WriteVPERMYm : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPVShuf]> {
-  let Latency = !add(Znver4Model.LoadLatency, Zn4WriteVPERMDYrr.Latency);
+  let Latency = !add(Znver4Model.VecLoadLatency, Zn4WriteVPERMDYrr.Latency);
   let ReleaseAtCycles = [1, 1, 2];
   let NumMicroOps = !add(Zn4WriteVPERMDYrr.NumMicroOps, 0);
 }
@@ -1534,9 +1534,9 @@ def Zn4WriteVFIXUPIMMPDZrr_VRANGESDrr : SchedWriteRes<[Zn4FPFMisc01]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVFIXUPIMMPDZrr_VRANGESDrr], (instregex
-	"VFIXUPIMM(S|P)(S|D)(Z|Z128|Z256?)rrik", "VFIXUPIMM(S|P)(S|D)(Z?|Z128?|Z256?)rrikz", 
+        "VFIXUPIMM(S|P)(S|D)(Z|Z128|Z256?)rrik", "VFIXUPIMM(S|P)(S|D)(Z?|Z128?|Z256?)rrikz", 
         "VFIXUPIMM(S|P)(S|D)(Z128|Z256?)rri",  "VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)",
-	"VRANGE(S|P)(S|D)(Z|Z128|Z256?)rri(b?)k","VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)kz"
+        "VRANGE(S|P)(S|D)(Z|Z128|Z256?)rri(b?)k","VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)kz"
 	)>;
 
 // SCALE & REDUCE instructions
@@ -1567,7 +1567,7 @@ def Zn4WriteBUSDr_VPMADDr: SchedWriteRes<[Zn4FPFMisc01]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteBUSDr_VPMADDr], (instregex
-	"VPDP(BU|WS)(S|P)(S|D|DS)(Z|Z128|Z256)(r|rk|rkz)",
+        "VPDP(BU|WS)(S|P)(S|D|DS)(Z?|Z128?|Z256?|Y?)r(r|rk|rkz)",
         "VPMADD52(H|L)UQ(Z|Z128|Z256)(r|rk|rkz)"
 	)>;
 
@@ -1586,7 +1586,7 @@ def : InstRW<[Zn4WriteSHIFTrr], (instregex
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z256?)(ri|rik|rikz)",
         "(V?)P(ROL|ROR)(D|Q)(Z?|Z128?)(ri|rik|rikz)",
-	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
+        "VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
 	)>;
 
 def Zn4WriteSHIFTri: SchedWriteRes<[Zn4FPFMisc01]> {
@@ -1598,24 +1598,40 @@ def : InstRW<[Zn4WriteSHIFTri], (instregex
         "VP(SLL|SRL|SRA)(D|Q|W)(Z|Z128|Z256?)(ri|rik|rikz)"
 	)>;
 
-// ALIGN Instructions
-def Zn4WriteALIGN: SchedWriteRes<[Zn4FPFMisc12]> {
+// ALIGNR Instructions
+def Zn4WriteALIGNR: SchedWriteRes<[Zn4FPFMisc12]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [1];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn4WriteALIGNR], (instregex
+        "(V?)PALIGNR(Y?|Z128?|Z256?)(rri|rrik|rrikz)"
+	)>;
+def Zn4WriteALIGNRZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 2;
   let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn4WriteALIGN], (instregex
-        "(V?)PALIGNR(Z?|Z128?|Z256?)(rri|rrik|rrikz)"
+def : InstRW<[Zn4WriteALIGNRZ], (instregex
+        "(V?)PALIGNRZ(rri|rrik|rrikz)"
 	)>;
 
-//PACK Instructions
+// PACK Instructions
 def Zn4WritePACK: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 2;
-  let ReleaseAtCycles = [2];
+  let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WritePACK], (instregex
-        "(V?)PACK(SS|US)(DW|WB)(Z?|Z128?|Z256?)(rr|rrk|rrkz)"
+        "(V?)PACK(SS|US)(DW|WB)(Y?|Z128?|Z256?)(rr|rrk|rrkz)"
+	)>;
+def Zn4WritePACKZ: SchedWriteRes<[Zn4FPFMisc12]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [2];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn4WritePACKZ], (instregex
+        "(V?)PACK(SS|US)(DW|WB)Z(rr|rrk|rrkz)"
 	)>;
 
 // MAX and MIN Instructions

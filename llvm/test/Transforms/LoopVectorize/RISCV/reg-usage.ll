@@ -5,50 +5,54 @@
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=1 -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -riscv-v-register-bit-width-lmul=1 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL1
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=2 -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -riscv-v-register-bit-width-lmul=2 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL2
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=4 -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -riscv-v-register-bit-width-lmul=4 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL4
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=8 -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -riscv-v-register-bit-width-lmul=8 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL8
 
-; TODO: -prefer-predicate-over-epilogue=scalar-epilogue was added to allow
-; unrolling. Calculate register pressure for all VPlans, not just unrolled ones,
-; and remove.
-
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
-; CHECK-LABEL: add
+; CHECK-SCALAR-LABEL: add
 ; CHECK-SCALAR:      LV(REG): VF = 1
 ; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 2 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::FPRRC, 2 registers
 ; CHECK-SCALAR-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-LMUL1:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
+; CHECK-LMUL1-LABEL: add
+; CHECK-LMUL1:       LV(REG): VF = vscale x 2
+; CHECK-LMUL1-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
 ; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
 ; CHECK-LMUL1-NEXT:  LV(REG): Found invariant usage: 1 item
 ; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-LMUL2:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
+; CHECK-LMUL2-LABEL: add
+; CHECK-LMUL2:       LV(REG): VF = vscale x 4
+; CHECK-LMUL2-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
 ; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; CHECK-LMUL2-NEXT:  LV(REG): Found invariant usage: 1 item
 ; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-LMUL4:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
+; CHECK-LMUL4-LABEL: add
+; CHECK-LMUL4:       LV(REG): VF = vscale x 8
+; CHECK-LMUL4-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
 ; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
 ; CHECK-LMUL4-NEXT:  LV(REG): Found invariant usage: 1 item
 ; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-LMUL8:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
+; CHECK-LMUL8-LABEL: add
+; CHECK-LMUL8:       LV(REG): VF = vscale x 16
+; CHECK-LMUL8-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
 ; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
 ; CHECK-LMUL8-NEXT:  LV(REG): Found invariant usage: 1 item
 ; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
@@ -76,22 +80,26 @@ for.body:
 }
 
 define void @goo(ptr nocapture noundef %a, i32 noundef signext %n) {
-; CHECK-LABEL: goo
+; CHECK-SCALAR-LABEL: goo
 ; CHECK-SCALAR:      LV(REG): VF = 1
 ; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
-; CHECK-LMUL1:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
-; CHECK-LMUL2:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
-; CHECK-LMUL4:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
-; CHECK-LMUL8:       LV(REG): Found max usage: 2 item
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK-LMUL1:       LV(REG): VF = vscale x 2
+; CHECK-LMUL1-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-LMUL2:       LV(REG): VF = vscale x 4
+; CHECK-LMUL2-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-LMUL4:       LV(REG): VF = vscale x 8
+; CHECK-LMUL4-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK-LMUL8:       LV(REG): VF = vscale x 16
+; CHECK-LMUL8-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
 entry:
   %cmp3 = icmp sgt i32 %n, 0
   br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup

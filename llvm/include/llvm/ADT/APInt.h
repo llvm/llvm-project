@@ -151,9 +151,9 @@ public:
   /// deprecated because this constructor is prone to ambiguity with the
   /// APInt(unsigned, uint64_t, bool) constructor.
   ///
-  /// If this overload is ever deleted, care should be taken to prevent calls
-  /// from being incorrectly captured by the APInt(unsigned, uint64_t, bool)
-  /// constructor.
+  /// Once all uses of this constructor are migrated to other constructors,
+  /// consider marking this overload ""= delete" to prevent calls from being
+  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
   LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.

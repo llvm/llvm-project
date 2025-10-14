@@ -12,7 +12,7 @@ void g() {
   // expected-note@#FDEF{{because 'int' does not satisfy 'c'}}
   // expected-note@#CDEF{{because 'f(t)' would be invalid: no matching function for call to 'f'}}
 }
-} // namespace GH53213 
+} // namespace GH53213
 
 namespace GH45736 {
 struct constrained;
@@ -67,15 +67,14 @@ struct my_range{
 
 void baz() {
 auto it = begin(rng); // #BEGIN_CALL
-// expected-error@#INF_BEGIN {{satisfaction of constraint 'Inf<Inf auto>' depends on itself}}
-// expected-note@#INF_BEGIN {{while substituting template arguments into constraint expression here}}
+// expected-error-re@#INF_REQ {{satisfaction of constraint {{.*}} depends on itself}}
+// expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<DirectRecursiveCheck::my_range>' requested here}}
 // expected-note@#INF_BEGIN_EXPR {{while checking constraint satisfaction for template 'begin<DirectRecursiveCheck::my_range>' required here}}
 // expected-note@#INF_BEGIN_EXPR {{while substituting deduced template arguments into function template 'begin'}}
 // expected-note@#INF_BEGIN_EXPR {{in instantiation of requirement here}}
 // expected-note@#INF_REQ {{while substituting template arguments into constraint expression here}}
-// expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<DirectRecursiveCheck::my_range>' requested here}}
-// expected-note@#INF_BEGIN {{while substituting template arguments into constraint expression here}}
-// expected-note@#BEGIN_CALL {{while checking constraint satisfaction for template 'begin<DirectRecursiveCheck::my_range>' required here}}
+// expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<struct my_range>' requested here}}
+// expected-note@#BEGIN_CALL {{while checking constraint satisfaction for template 'begin<struct my_range>' required here}}
 // expected-note@#BEGIN_CALL {{while substituting deduced template arguments into function template}}
 
 // Fallout of the failure is failed lookup, which is necessary to stop odd
@@ -83,6 +82,7 @@ auto it = begin(rng); // #BEGIN_CALL
 // expected-error@#BEGIN_CALL {{no matching function for call to 'begin'}}
 // expected-note@#NOTINF_BEGIN {{candidate function}}
 // expected-note@#INF_BEGIN{{candidate template ignored: constraints not satisfied}}
+// expected-note@#INF_BEGIN{{because 'Inf auto' does not satisfy 'Inf}}
 }
 } // namespace DirectRecursiveCheck
 
@@ -100,16 +100,17 @@ namespace GH50891 {
   static_assert(Numeric<Deferred>); // #STATIC_ASSERT
   // expected-error@#NUMERIC{{satisfaction of constraint 'requires (T a) { foo(a); }' depends on itself}}
   // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-  // expected-note@#OP_TO {{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
-  // expected-note@#OP_TO {{while substituting template arguments into constraint expression here}}
-  // expected-note@#FOO_CALL {{while checking constraint satisfaction for template}}
-  // expected-note@#FOO_CALL {{while substituting deduced template arguments into function template}}
-  // expected-note@#FOO_CALL {{in instantiation of requirement here}}
+  // expected-note@#OP_TO {{while checking the satisfaction of concept 'Numeric<Deferred>' requested here}}
+  // expected-note@#OP_TO {{skipping 1 context}}
+  // expected-note@#FOO_CALL 2{{while checking constraint satisfaction for template}}
+  // expected-note@#FOO_CALL 2{{while substituting deduced template arguments into function template}}
+  // expected-note@#FOO_CALL 2{{in instantiation of requirement here}}
   // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
 
   // expected-error@#STATIC_ASSERT {{static assertion failed}}
-  // expected-note@#STATIC_ASSERT{{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
-  // expected-note@#STATIC_ASSERT{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#STATIC_ASSERT{{while checking the satisfaction of concept 'Numeric<Deferred>' requested here}}
+  // expected-note@#STATIC_ASSERT{{because 'Deferred' does not satisfy 'Numeric'}}
+  // expected-note@#FOO_CALL{{because 'foo(a)' would be invalid}}
 
 } // namespace GH50891
 

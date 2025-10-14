@@ -24,8 +24,9 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CSKYGenInstrInfo.inc"
 
-CSKYInstrInfo::CSKYInstrInfo(CSKYSubtarget &STI)
-    : CSKYGenInstrInfo(CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP), STI(STI) {
+CSKYInstrInfo::CSKYInstrInfo(const CSKYSubtarget &STI)
+    : CSKYGenInstrInfo(STI, CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP),
+      STI(STI) {
   v2sf = STI.hasFPUv2SingleFloat();
   v2df = STI.hasFPUv2DoubleFloat();
   v3sf = STI.hasFPUv3SingleFloat();

@@ -14,12 +14,14 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -201,6 +203,42 @@ void ArgList::print(raw_ostream &O) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
+
+StringRef ArgList::getSubCommand(
+    ArrayRef<OptTable::SubCommand> AllSubCommands,
+    std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+    std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const {
+
+  SmallVector<StringRef, 4> SubCommands;
+  SmallVector<StringRef, 4> OtherPositionals;
+  for (const Arg *A : *this) {
+    if (A->getOption().getKind() != Option::InputClass)
+      continue;
+
+    size_t OldSize = SubCommands.size();
+    for (const OptTable::SubCommand &CMD : AllSubCommands) {
+      if (StringRef(CMD.Name) == A->getValue())
+        SubCommands.push_back(A->getValue());
+    }
+
+    if (SubCommands.size() == OldSize)
+      OtherPositionals.push_back(A->getValue());
+  }
+
+  // Invoke callbacks if necessary.
+  if (SubCommands.size() > 1) {
+    HandleMultipleSubcommands(SubCommands);
+    return {};
+  }
+  if (!OtherPositionals.empty()) {
+    HandleOtherPositionals(OtherPositionals);
+    return {};
+  }
+
+  if (SubCommands.size() == 1)
+    return SubCommands.front();
+  return {}; // No valid usage of subcommand found.
+}
 
 void InputArgList::releaseMemory() {
   // An InputArgList always owns its arguments.

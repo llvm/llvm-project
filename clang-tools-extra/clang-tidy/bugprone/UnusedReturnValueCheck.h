@@ -1,4 +1,4 @@
-//===--- UnusedReturnValueCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// Detects function calls where the return value is unused.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-return-value.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-return-value.html
 class UnusedReturnValueCheck : public ClangTidyCheck {
 public:
   UnusedReturnValueCheck(StringRef Name, ClangTidyContext *Context);

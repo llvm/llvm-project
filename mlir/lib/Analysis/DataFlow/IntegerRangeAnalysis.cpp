@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -76,9 +77,17 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   else
     dialect = value.getParentBlock()->getParentOp()->getDialect();
 
-  Type type = getElementTypeOrSelf(value);
-  solver->propagateIfChanged(
-      cv, cv->join(ConstantValue(IntegerAttr::get(type, *constant), dialect)));
+  Attribute cstAttr;
+  if (isa<IntegerType, IndexType>(value.getType())) {
+    cstAttr = IntegerAttr::get(value.getType(), *constant);
+  } else if (auto shapedTy = dyn_cast<ShapedType>(value.getType())) {
+    cstAttr = SplatElementsAttr::get(shapedTy, *constant);
+  } else {
+    llvm::report_fatal_error(
+        Twine("FIXME: Don't know how to create a constant for this type: ") +
+        mlir::debugString(value.getType()));
+  }
+  solver->propagateIfChanged(cv, cv->join(ConstantValue(cstAttr, dialect)));
 }
 
 LogicalResult IntegerRangeAnalysis::visitOperation(

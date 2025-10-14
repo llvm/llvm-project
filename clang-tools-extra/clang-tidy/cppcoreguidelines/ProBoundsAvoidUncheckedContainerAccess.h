@@ -1,4 +1,4 @@
-//===--- ProBoundsAvoidUncheckedContainerAccess.h - clang-tidy --*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access.html
 class ProBoundsAvoidUncheckedContainerAccess : public ClangTidyCheck {
 public:
   ProBoundsAvoidUncheckedContainerAccess(StringRef Name,

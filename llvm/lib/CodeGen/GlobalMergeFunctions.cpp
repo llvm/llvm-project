@@ -587,16 +587,12 @@ public:
 } // namespace
 
 char GlobalMergeFuncPassWrapper::ID = 0;
-INITIALIZE_PASS_BEGIN(GlobalMergeFuncPassWrapper, "global-merge-func",
-                      "Global merge function pass", false, false)
-INITIALIZE_PASS_END(GlobalMergeFuncPassWrapper, "global-merge-func",
-                    "Global merge function pass", false, false)
+INITIALIZE_PASS(GlobalMergeFuncPassWrapper, "global-merge-func",
+                "Global merge function pass", false, false)
 
-namespace llvm {
-ModulePass *createGlobalMergeFuncPass() {
+ModulePass *llvm::createGlobalMergeFuncPass() {
   return new GlobalMergeFuncPassWrapper();
 }
-} // namespace llvm
 
 GlobalMergeFuncPassWrapper::GlobalMergeFuncPassWrapper() : ModulePass(ID) {
   initializeGlobalMergeFuncPassWrapperPass(

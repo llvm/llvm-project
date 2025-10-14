@@ -51,7 +51,11 @@ public:
   virtual void reserve(size_t NumBytes, OnReservedFunction OnReserved) = 0;
 
   /// Provides working memory
-  virtual char *prepare(ExecutorAddr Addr, size_t ContentSize) = 0;
+  /// The LinkGraph parameter is included to allow implementations to allocate
+  /// working memory from the LinkGraph's allocator, in which case it will be
+  /// deallocated when the LinkGraph is destroyed.
+  virtual char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                        size_t ContentSize) = 0;
 
   using OnInitializedFunction = unique_function<void(Expected<ExecutorAddr>)>;
 
@@ -92,7 +96,8 @@ public:
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override;
 
   void deinitialize(ArrayRef<ExecutorAddr> Allocations,
                     OnDeinitializedFunction OnDeInitialized) override;
@@ -142,7 +147,8 @@ public:
 
   void reserve(size_t NumBytes, OnReservedFunction OnReserved) override;
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override;
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 

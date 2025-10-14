@@ -57,7 +57,6 @@ class BugDriver {
 
   // FIXME: sort out public/private distinctions...
   friend class ReducePassList;
-  friend class ReduceMisCodegenFunctions;
 
 public:
   BugDriver(const char *toolname, bool find_bugs, unsigned timeout,
@@ -76,7 +75,7 @@ public:
   void setPassesToRun(const std::vector<std::string> &PTR) {
     PassesToRun = PTR;
   }
-  const std::vector<std::string> &getPassesToRun() const { return PassesToRun; }
+  ArrayRef<std::string> getPassesToRun() const { return PassesToRun; }
 
   /// run - The top level method that is invoked after all of the instance
   /// variables are set up from command line arguments. The \p as_child argument
@@ -111,7 +110,6 @@ public:
   Error debugCodeGenerator();
 
   /// isExecutingJIT - Returns true if bugpoint is currently testing the JIT
-  ///
   bool isExecutingJIT();
 
   Module &getProgram() const { return *Program; }
@@ -167,7 +165,7 @@ public:
                              bool RemoveBitcode = false) const;
 
   /// This function is used to output M to a file named "bugpoint-ID.bc".
-  void EmitProgressBitcode(const Module &M, const std::string &ID,
+  void emitProgressBitcode(const Module &M, const std::string &ID,
                            bool NoFlyer = false) const;
 
   /// This method clones the current Program and deletes the specified
@@ -214,7 +212,6 @@ public:
   /// outs() a single line message indicating whether compilation was successful
   /// or failed, unless Quiet is set.  ExtraArgs specifies additional arguments
   /// to pass to the child bugpoint instance.
-  ///
   bool runPasses(Module &Program, const std::vector<std::string> &PassesToRun,
                  std::string &OutputFilename, bool DeleteOutput = false,
                  bool Quiet = false,
@@ -223,7 +220,6 @@ public:
   /// runPasses - Just like the method above, but this just returns true or
   /// false indicating whether or not the optimizer crashed on the specified
   /// input (true = crashed).  Does not produce any output.
-  ///
   bool runPasses(Module &M, const std::vector<std::string> &PassesToRun) const {
     std::string Filename;
     return runPasses(M, PassesToRun, Filename, true);
@@ -247,7 +243,6 @@ public:
 private:
   /// initializeExecutionEnvironment - This method is used to set up the
   /// environment for executing LLVM programs.
-  ///
   Error initializeExecutionEnvironment();
 };
 
@@ -258,37 +253,31 @@ struct DiscardTemp {
 
 ///  Given a bitcode or assembly input filename, parse and return it, or return
 ///  null if not possible.
-///
 std::unique_ptr<Module> parseInputFile(StringRef InputFilename,
                                        LLVMContext &ctxt);
 
 /// getPassesString - Turn a list of passes into a string which indicates the
 /// command line options that must be passed to add the passes.
-///
 std::string getPassesString(const std::vector<std::string> &Passes);
 
-/// PrintFunctionList - prints out list of problematic functions
-///
-void PrintFunctionList(const std::vector<Function *> &Funcs);
+/// Prints out list of problematic functions
+void printFunctionList(const std::vector<Function *> &Funcs);
 
-/// PrintGlobalVariableList - prints out list of problematic global variables
-///
-void PrintGlobalVariableList(const std::vector<GlobalVariable *> &GVs);
+/// Prints out list of problematic global variables
+void printGlobalVariableList(const std::vector<GlobalVariable *> &GVs);
 
-// DeleteGlobalInitializer - "Remove" the global variable by deleting its
-// initializer, making it external.
-//
-void DeleteGlobalInitializer(GlobalVariable *GV);
+/// "Remove" the global variable by deleting its initializer, making it
+/// external.
+void deleteGlobalInitializer(GlobalVariable *GV);
 
-// DeleteFunctionBody - "Remove" the function by deleting all of it's basic
-// blocks, making it external.
-//
-void DeleteFunctionBody(Function *F);
+/// "Remove" the function by deleting all of it's basic blocks, making it
+/// external.
+void deleteFunctionBody(Function *F);
 
 /// Given a module and a list of functions in the module, split the functions
 /// OUT of the specified module, and place them in the new module.
 std::unique_ptr<Module>
-SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
+splitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
                           ValueToValueMapTy &VMap);
 
 } // End llvm namespace

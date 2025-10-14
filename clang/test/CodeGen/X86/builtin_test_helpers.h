@@ -13,8 +13,18 @@ constexpr bool match_v1di(__m64 v, long long a) {
   return v[0] == a;
 }
 
+constexpr bool match_v1du(__m64 _v, unsigned long long a) {
+  __v1du v = (__v1du)_v;
+  return v[0] == a;
+}
+
 constexpr bool match_v2si(__m64 _v, int a, int b) {
   __v2si v = (__v2si)_v;
+  return v[0] == a && v[1] == b;
+}
+
+constexpr bool match_v2su(__m64 _v, unsigned a, unsigned b) {
+  __v2su v = (__v2su)_v;
   return v[0] == a && v[1] == b;
 }
 
@@ -48,11 +58,13 @@ constexpr bool match_m128d(__m128d _v, double a, double b) {
   return v[0] == __builtin_bit_cast(unsigned long long, a) && v[1] == __builtin_bit_cast(unsigned long long, b);
 }
 
+#ifdef __SSE2__
 constexpr bool match_m128h(__m128h _v, _Float16 __e00, _Float16 __e01, _Float16 __e02, _Float16 __e03, _Float16 __e04, _Float16 __e05, _Float16 __e06, _Float16 __e07) {
   __v8hu v = (__v8hu)_v;
   return v[ 0] == __builtin_bit_cast(unsigned short, __e00) && v[ 1] == __builtin_bit_cast(unsigned short, __e01) && v[ 2] == __builtin_bit_cast(unsigned short, __e02) && v[ 3] == __builtin_bit_cast(unsigned short, __e03) &&
          v[ 4] == __builtin_bit_cast(unsigned short, __e04) && v[ 5] == __builtin_bit_cast(unsigned short, __e05) && v[ 6] == __builtin_bit_cast(unsigned short, __e06) && v[ 7] == __builtin_bit_cast(unsigned short, __e07);
 }
+#endif
 
 constexpr bool match_m128i(__m128i _v, unsigned long long a, unsigned long long b) {
   __v2du v = (__v2du)_v;
@@ -63,8 +75,18 @@ constexpr bool match_v2di(__m128i v, long long a, long long b) {
   return v[0] == a && v[1] == b;
 }
 
+constexpr bool match_v2du(__m128i _v, unsigned long long a, unsigned long long b) {
+  __v2du v = (__v2du)_v;
+  return v[0] == a && v[1] == b;
+}
+
 constexpr bool match_v4si(__m128i _v, int a, int b, int c, int d) {
   __v4si v = (__v4si)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
+}
+
+constexpr bool match_v4su(__m128i _v, unsigned a, unsigned b, unsigned c, unsigned d) {
+  __v4su v = (__v4su)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
 
@@ -99,6 +121,7 @@ constexpr bool match_m256d(__m256d _v, double a, double b, double c, double d) {
   return v[0] == __builtin_bit_cast(unsigned long long, a) && v[1] == __builtin_bit_cast(unsigned long long, b) && v[2] == __builtin_bit_cast(unsigned long long, c) && v[3] == __builtin_bit_cast(unsigned long long, d);
 }
 
+#ifdef __SSE2__
 constexpr bool match_m256h(__m256h _v, _Float16 __e00, _Float16 __e01, _Float16 __e02, _Float16 __e03, _Float16 __e04, _Float16 __e05, _Float16 __e06, _Float16 __e07,
                                        _Float16 __e08, _Float16 __e09, _Float16 __e10, _Float16 __e11, _Float16 __e12, _Float16 __e13, _Float16 __e14, _Float16 __e15) {
   __v16hu v = (__v16hu)_v;
@@ -107,6 +130,7 @@ constexpr bool match_m256h(__m256h _v, _Float16 __e00, _Float16 __e01, _Float16 
          v[ 8] == __builtin_bit_cast(unsigned short, __e08) && v[ 9] == __builtin_bit_cast(unsigned short, __e09) && v[10] == __builtin_bit_cast(unsigned short, __e10) && v[11] == __builtin_bit_cast(unsigned short, __e11) &&
          v[12] == __builtin_bit_cast(unsigned short, __e12) && v[13] == __builtin_bit_cast(unsigned short, __e13) && v[14] == __builtin_bit_cast(unsigned short, __e14) && v[15] == __builtin_bit_cast(unsigned short, __e15);
 }
+#endif
 
 constexpr bool match_m256i(__m256i _v, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d) {
   __v4du v = (__v4du)_v;
@@ -120,6 +144,11 @@ constexpr bool match_v4di(__m256i _v, long long a, long long b, long long c, lon
 
 constexpr bool match_v8si(__m256i _v, int a, int b, int c, int d, int e, int f, int g, int h) {
   __v8si v = (__v8si)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
+}
+
+constexpr bool match_v8su(__m256i _v, unsigned a, unsigned b, unsigned c, unsigned d, unsigned e, unsigned f, unsigned g, unsigned h) {
+  __v8su v = (__v8su)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
 
@@ -169,6 +198,7 @@ constexpr bool match_m512d(__m512d _v, double __e00, double __e01, double __e02,
          v[ 4] == __builtin_bit_cast(unsigned long long, __e04) && v[ 5] == __builtin_bit_cast(unsigned long long, __e05) && v[ 6] == __builtin_bit_cast(unsigned long long, __e06) && v[ 7] == __builtin_bit_cast(unsigned long long, __e07);
 }
 
+#ifdef __SSE2__
 constexpr bool match_m512h(__m512h _v, _Float16 __e00, _Float16 __e01, _Float16 __e02, _Float16 __e03, _Float16 __e04, _Float16 __e05, _Float16 __e06, _Float16 __e07,
                                        _Float16 __e08, _Float16 __e09, _Float16 __e10, _Float16 __e11, _Float16 __e12, _Float16 __e13, _Float16 __e14, _Float16 __e15,
                                        _Float16 __e16, _Float16 __e17, _Float16 __e18, _Float16 __e19, _Float16 __e20, _Float16 __e21, _Float16 __e22, _Float16 __e23,
@@ -183,6 +213,7 @@ constexpr bool match_m512h(__m512h _v, _Float16 __e00, _Float16 __e01, _Float16 
          v[24] == __builtin_bit_cast(unsigned short, __e24) && v[25] == __builtin_bit_cast(unsigned short, __e25) && v[26] == __builtin_bit_cast(unsigned short, __e26) && v[27] == __builtin_bit_cast(unsigned short, __e27) &&
          v[28] == __builtin_bit_cast(unsigned short, __e28) && v[29] == __builtin_bit_cast(unsigned short, __e29) && v[30] == __builtin_bit_cast(unsigned short, __e30) && v[31] == __builtin_bit_cast(unsigned short, __e31);
 }
+#endif
 
 constexpr bool match_m512i(__m512i _v, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long g, unsigned long long h) {
   __v8du v = (__v8du)_v;
@@ -196,6 +227,11 @@ constexpr bool match_v8di(__m512i _v, long long a, long long b, long long c, lon
 
 constexpr bool match_v16si(__m512i _v, int a, int b, int c, int d, int e, int f, int g, int h, int i, int j, int k, int l, int m, int n, int o, int p) {
   __v16si v = (__v16si)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
+}
+
+constexpr bool match_v16su(__m512i _v, unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int e, unsigned int f, unsigned int g, unsigned int h, unsigned int i, unsigned int j, unsigned int k, unsigned int l, unsigned int m, unsigned int n, unsigned int o, unsigned int p) {
+  __v16su v = (__v16su)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
 }
 

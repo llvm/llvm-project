@@ -393,6 +393,15 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto iota = __iota::__fn{};
 } // namespace __cpo
+
+#  if _LIBCPP_STD_VER >= 26
+
+inline constexpr auto indices = [](__integer_like auto __size) static {
+  return ranges::views::iota(decltype(__size){}, __size);
+};
+
+#  endif
+
 } // namespace views
 } // namespace ranges
 

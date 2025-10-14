@@ -48,7 +48,7 @@ namespace {
 /// until a one-dimensional vector is reached.
 class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -100,7 +100,7 @@ public:
 /// will be folded at LLVM IR level.
 class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ConstantMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -184,7 +184,7 @@ namespace {
 /// and actually match the traits of its the nested `MaskableOpInterface`.
 template <class SourceOp>
 struct MaskOpRewritePattern : OpRewritePattern<MaskOp> {
-  using OpRewritePattern<MaskOp>::OpRewritePattern;
+  using Base::Base;
 
 private:
   LogicalResult matchAndRewrite(MaskOp maskOp,

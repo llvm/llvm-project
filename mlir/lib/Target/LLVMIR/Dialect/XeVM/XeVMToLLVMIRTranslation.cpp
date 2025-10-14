@@ -55,10 +55,6 @@ public:
       return handleDecorationCacheControl(instructions.front(),
                                           cacheControlsArray.getValue());
     }
-    auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
-    if (!func)
-      return failure();
-
     return success();
   }
 

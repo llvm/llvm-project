@@ -12,6 +12,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   LoggerTest.cpp
   MapLatticeTest.cpp
   MatchSwitchTest.cpp
+  MockHeaders.cpp
   MultiVarConstantPropagationTest.cpp
   RecordOpsTest.cpp
   SignAnalysisTest.cpp

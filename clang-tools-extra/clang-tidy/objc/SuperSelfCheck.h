@@ -1,4 +1,4 @@
-//===--- SuperSelfCheck.h - clang-tidy --------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::objc {
 /// of NSObject and recommends calling a superclass initializer instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc/super-self.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/objc/super-self.html
 class SuperSelfCheck : public ClangTidyCheck {
 public:
   SuperSelfCheck(StringRef Name, ClangTidyContext *Context)

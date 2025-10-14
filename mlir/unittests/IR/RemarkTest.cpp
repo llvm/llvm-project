@@ -48,7 +48,8 @@ TEST(Remark, TestOutputOptimizationRemark) {
     context.printStackTraceOnDiagnostic(true);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryInliner};
@@ -148,7 +149,6 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
 
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
-  std::string funcName("myFunc");
   SmallString<64> tmpPathStorage;
   sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
                             /*MakeAbsolute=*/true);
@@ -197,7 +197,8 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     });
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryUnroll};
@@ -269,16 +270,14 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   std::string categoryInline("Inliner");
   std::string myPassname1("myPass1");
   std::string myPassname2("myPass2");
-  std::string funcName("myFunc");
-
-  std::string seenMsg = "";
 
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryLoopunroll,
                                         /*missed=*/std::nullopt,
                                         /*analysis=*/std::nullopt,
                                         /*failed=*/categoryLoopunroll};

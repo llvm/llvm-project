@@ -3,7 +3,7 @@ include "llvm/Target/Target.td"
 
 def HasFeat : Predicate<"Subtarget->hasFeat()">;
 
-def TestMode : HwMode<"+feat1", [HasFeat]>;
+def TestMode : HwMode<[HasFeat]>;
 
 class MyReg<string n>
   : Register<n> {

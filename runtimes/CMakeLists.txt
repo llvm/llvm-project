@@ -74,7 +74,7 @@ endif()
 if (NOT LLVM_FOUND)
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
 
 # Setting these variables will allow the sub-build to put their outputs into
@@ -181,14 +181,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   endif()
 endif()
 
+# The NVPTX target needs to override linking to pass compiler flag checks.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
+endif()
+
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
-
-# This can be used to detect whether we're targeting a GPU architecture.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
-   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
-  set(LLVM_RUNTIMES_GPU_BUILD ON)
-endif()
 
 # Handle common options used by all runtimes.
 include(AddLLVM)

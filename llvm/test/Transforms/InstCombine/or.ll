@@ -2047,3 +2047,69 @@ define i1 @or_truncs(i8 %x) {
   %or1 = or i1 %trunc1, %trunc2
   ret i1 %or1
 }
+
+define i32 @or_zext_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %zext = zext i8 %a to i32
+  %or = or i32 %zext, 1
+  ret i32 %or
+}
+
+define i32 @or_zext_minus_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_minus_constant(
+; CHECK-NEXT:    [[OR:%.*]] = zext i8 [[TMP1:%.*]] to i32
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[OR]], -9
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %zext = zext i8 %a to i32
+  %or = or i32 %zext, -9
+  ret i32 %or
+}
+
+define i32 @or_zext_nneg_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_nneg_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 9
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %zext = zext nneg i8 %a to i32
+  %or = or i32 %zext, 9
+  ret i32 %or
+}
+
+define <4 x i32> @or_zext_nneg_constant_splat(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_constant_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i8> [[A:%.*]], splat (i8 9)
+; CHECK-NEXT:    [[OR:%.*]] = zext nneg <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %zext = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %zext, splat (i32 9)
+  ret <4 x i32> %or
+}
+
+define i32 @or_zext_nneg_minus_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_nneg_minus_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], -9
+; CHECK-NEXT:    [[ZEXT:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %zext = zext nneg i8 %a to i32
+  %or = or i32 %zext, -9
+  ret i32 %or
+}
+
+define <4 x i32> @or_zext_nneg_minus_constant_splat(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_minus_constant_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i8> [[A:%.*]], splat (i8 -9)
+; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %zext = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %zext, splat (i32 -9)
+  ret <4 x i32> %or
+}

@@ -14,12 +14,13 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 
-#include <machine/elf.h>
-
 #include <cstdio>
 #include <dlfcn.h>
 #include <execinfo.h>
 
+#include "llvm/Object/ELF.h"
+
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -97,17 +98,33 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
     proc_args.AppendArgument(llvm::StringRef(cstr));
   }
 
-  return true;
-}
-
-static bool GetFreeBSDProcessCPUType(ProcessInstanceInfo &process_info) {
-  if (process_info.ProcessIDIsValid()) {
-    process_info.GetArchitecture() =
-        HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
+  auto buffer_sp = FileSystem::Instance().CreateDataBuffer(pathname, 0x20, 0);
+  if (!buffer_sp) {
+    process_info.Clear();
     return true;
   }
-  process_info.GetArchitecture().Clear();
-  return false;
+  uint8_t exe_class =
+      llvm::object::getElfArchType(
+          {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+           size_t(buffer_sp->GetByteSize())})
+          .first;
+
+  switch (exe_class) {
+  case llvm::ELF::ELFCLASS32:
+    process_info.SetArchitecture(
+        HostInfo::GetArchitecture(HostInfo::eArchKind32));
+    break;
+  case llvm::ELF::ELFCLASS64:
+    process_info.SetArchitecture(
+        HostInfo::GetArchitecture(HostInfo::eArchKind64));
+    break;
+  case llvm::ELF::ELFCLASSNONE:
+    process_info.SetArchitecture(
+        HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
+    break;
+  }
+
+  return true;
 }
 
 static bool GetFreeBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
@@ -214,7 +231,6 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     // Make sure our info matches before we go fetch the name and cpu type
     if (match_info_noname.Matches(process_info) &&
         GetFreeBSDProcessArgs(&match_info, process_info)) {
-      GetFreeBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))
         process_infos.push_back(process_info);
     }
@@ -228,7 +244,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 
   if (GetFreeBSDProcessArgs(NULL, process_info)) {
     // should use libprocstat instead of going right into sysctl?
-    GetFreeBSDProcessCPUType(process_info);
     GetFreeBSDProcessUserAndGroup(process_info);
     return true;
   }

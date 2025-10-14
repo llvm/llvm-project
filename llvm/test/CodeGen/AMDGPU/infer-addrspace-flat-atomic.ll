@@ -11,8 +11,8 @@ define protected amdgpu_kernel void @InferNothing(i32 %a, ptr %b, double %c) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_lshl_b64 s[2:3], s[6:7], 3
-; CHECK-NEXT:    s_add_u32 s0, s2, s0
-; CHECK-NEXT:    s_addc_u32 s1, s3, s1
+; CHECK-NEXT:    s_add_u32 s0, s0, s2
+; CHECK-NEXT:    s_addc_u32 s1, s1, s3
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    v_add_co_u32_e64 v0, vcc, -8, s0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -69,13 +69,13 @@ define protected amdgpu_kernel void @InferMixed(i32 %a, ptr addrspace(1) %b, dou
 ; CHECK-NEXT:    s_lshl_b64 s[2:3], s[6:7], 3
 ; CHECK-NEXT:    s_add_u32 s0, s0, s2
 ; CHECK-NEXT:    s_addc_u32 s1, s1, s3
+; CHECK-NEXT:    s_add_u32 s0, s0, -8
+; CHECK-NEXT:    s_addc_u32 s1, s1, -1
 ; CHECK-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    v_mov_b32_e32 v1, s1
-; CHECK-NEXT:    v_add_co_u32_e64 v0, vcc, -7, s0
-; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
-; CHECK-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; CHECK-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3] offset:1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    s_endpgm
@@ -113,7 +113,7 @@ define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, doubl
 ; CHECK-NEXT:    s_addc_u32 s1, s1, s5
 ; CHECK-NEXT:    s_add_u32 s4, s0, -8
 ; CHECK-NEXT:    s_addc_u32 s5, s1, -1
-; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 9
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0

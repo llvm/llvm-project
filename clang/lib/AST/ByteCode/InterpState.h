@@ -67,20 +67,17 @@ public:
   Expr::EvalStatus &getEvalStatus() const override {
     return Parent.getEvalStatus();
   }
-  ASTContext &getASTContext() const override { return Parent.getASTContext(); }
+  ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
+  const LangOptions &getLangOpts() const {
+    return Ctx.getASTContext().getLangOpts();
+  }
 
   // Forward status checks and updates to the walker.
-  bool checkingForUndefinedBehavior() const override {
-    return Parent.checkingForUndefinedBehavior();
-  }
   bool keepEvaluatingAfterFailure() const override {
     return Parent.keepEvaluatingAfterFailure();
   }
   bool keepEvaluatingAfterSideEffect() const override {
     return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool checkingPotentialConstantExpression() const override {
-    return Parent.checkingPotentialConstantExpression();
   }
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();
@@ -95,9 +92,6 @@ public:
   }
   bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
   bool noteSideEffect() override { return Parent.noteSideEffect(); }
-
-  /// Reports overflow and return true if evaluation should continue.
-  bool reportOverflow(const Expr *E, const llvm::APSInt &Value);
 
   /// Deallocates a pointer.
   void deallocate(Block *B);
@@ -115,7 +109,13 @@ public:
 
   void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
-  DynamicAllocator &getAllocator() { return Alloc; }
+  DynamicAllocator &getAllocator() {
+    if (!Alloc) {
+      Alloc = std::make_unique<DynamicAllocator>();
+    }
+
+    return *Alloc.get();
+  }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
   /// Will return \c false if there were any allocations to diagnose,
@@ -125,7 +125,9 @@ public:
   StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
 
   void *allocate(size_t Size, unsigned Align = 8) const {
-    return Allocator.Allocate(Size, Align);
+    if (!Allocator)
+      Allocator.emplace();
+    return Allocator->Allocate(Size, Align);
   }
   template <typename T> T *allocate(size_t Num = 1) const {
     return static_cast<T *>(allocate(Num * sizeof(T), alignof(T)));
@@ -161,7 +163,7 @@ private:
   /// Reference to the offset-source mapping.
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
-  DynamicAllocator Alloc;
+  std::unique_ptr<DynamicAllocator> Alloc;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -191,7 +193,7 @@ public:
   /// for.
   llvm::SmallVector<const Block *> InitializingBlocks;
 
-  mutable llvm::BumpPtrAllocator Allocator;
+  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 };
 
 class InterpStateCCOverride final {

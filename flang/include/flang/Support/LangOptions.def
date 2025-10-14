@@ -60,7 +60,8 @@ LANGOPT(OpenMPNoThreadState, 1, 0)
 LANGOPT(OpenMPNoNestedParallelism, 1, 0)
 /// Use SIMD only OpenMP support.
 LANGOPT(OpenMPSimd, 1, false)
-
+/// Enable fast MOD operations for REAL
+LANGOPT(NoFastRealMod, 1, false)
 LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
 LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
 

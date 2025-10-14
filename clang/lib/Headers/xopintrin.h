@@ -208,25 +208,25 @@ _mm_perm_epi8(__m128i __A, __m128i __B, __m128i __C)
   return (__m128i)__builtin_ia32_vpperm((__v16qi)__A, (__v16qi)__B, (__v16qi)__C);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_rot_epi8(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_elementwise_fshl((__v16qu)__A, (__v16qu)__A, (__v16qu)__B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_rot_epi16(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_elementwise_fshl((__v8hu)__A, (__v8hu)__A, (__v8hu)__B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_rot_epi32(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_elementwise_fshl((__v4su)__A, (__v4su)__A, (__v4su)__B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_rot_epi64(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_elementwise_fshl((__v2du)__A, (__v2du)__A, (__v2du)__B);

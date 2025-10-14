@@ -934,7 +934,7 @@ typedef __char32_t char32_t;
 #    endif
 #  endif
 
-#  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
+#  if __has_attribute(__no_thread_safety_analysis__)
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
 #  else
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
@@ -1156,6 +1156,13 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_LIFETIMEBOUND
 #  endif
 
+// This is to work around https://llvm.org/PR156809
+#  ifndef _LIBCPP_CXX03_LANG
+#    define _LIBCPP_CTOR_LIFETIMEBOUND _LIBCPP_LIFETIMEBOUND
+#  else
+#    define _LIBCPP_CTOR_LIFETIMEBOUND
+#  endif
+
 #  if __has_cpp_attribute(_Clang::__noescape__)
 #    define _LIBCPP_NOESCAPE [[_Clang::__noescape__]]
 #  else
@@ -1167,12 +1174,6 @@ typedef __char32_t char32_t;
       [[_Clang::__no_specializations__("Users are not allowed to specialize this standard library entity")]]
 #  else
 #    define _LIBCPP_NO_SPECIALIZATIONS
-#  endif
-
-#  if __has_cpp_attribute(_Clang::__standalone_debug__)
-#    define _LIBCPP_STANDALONE_DEBUG [[_Clang::__standalone_debug__]]
-#  else
-#    define _LIBCPP_STANDALONE_DEBUG
 #  endif
 
 #  if __has_cpp_attribute(_Clang::__preferred_name__)

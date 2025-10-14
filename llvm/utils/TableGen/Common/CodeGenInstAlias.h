@@ -22,11 +22,9 @@
 
 namespace llvm {
 
-template <typename T> class ArrayRef;
 class CodeGenInstruction;
 class CodeGenTarget;
 class DagInit;
-class SMLoc;
 class Record;
 
 /// CodeGenInstAlias - This represents an InstAlias definition.
@@ -45,19 +43,28 @@ public:
   /// Result).
   CodeGenInstruction *ResultInst;
 
-  struct ResultOperand {
-  private:
+  class ResultOperand {
     std::string Name;
     const Record *R = nullptr;
     int64_t Imm = 0;
 
+    ResultOperand(std::string N, const Record *R)
+        : Name(std::move(N)), R(R), Kind(K_Record) {}
+    ResultOperand(int64_t Imm) : Imm(Imm), Kind(K_Imm) {}
+    ResultOperand(const Record *R) : R(R), Kind(K_Reg) {}
+
   public:
     enum { K_Record, K_Imm, K_Reg } Kind;
 
-    ResultOperand(std::string N, const Record *R)
-        : Name(std::move(N)), R(R), Kind(K_Record) {}
-    ResultOperand(int64_t I) : Imm(I), Kind(K_Imm) {}
-    ResultOperand(const Record *R) : R(R), Kind(K_Reg) {}
+    static ResultOperand createRecord(std::string N, const Record *R) {
+      return ResultOperand(std::move(N), R);
+    }
+    static ResultOperand createImmediate(int64_t Imm) {
+      return ResultOperand(Imm);
+    }
+    static ResultOperand createRegister(const Record *R) {
+      return ResultOperand(R);
+    }
 
     bool isRecord() const { return Kind == K_Record; }
     bool isImm() const { return Kind == K_Imm; }
@@ -94,11 +101,6 @@ public:
   std::vector<std::pair<unsigned, int>> ResultInstOperandIndex;
 
   CodeGenInstAlias(const Record *R, const CodeGenTarget &T);
-
-  bool tryAliasOpMatch(const DagInit *Result, unsigned AliasOpNo,
-                       const Record *InstOpRec, bool hasSubOps,
-                       ArrayRef<SMLoc> Loc, const CodeGenTarget &T,
-                       ResultOperand &ResOp);
 };
 
 } // namespace llvm

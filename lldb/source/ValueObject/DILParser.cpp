@@ -180,12 +180,15 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //
 //  primary_expression:
 //    numeric_literal
+//    boolean_literal
 //    id_expression
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
   if (CurToken().IsOneOf({Token::integer_constant, Token::float_constant}))
     return ParseNumericLiteral();
+  if (CurToken().IsOneOf({Token::kw_true, Token::kw_false}))
+    return ParseBooleanLiteral();
   if (CurToken().IsOneOf(
           {Token::coloncolon, Token::identifier, Token::l_paren})) {
     // Save the source location for the diagnostics message.
@@ -336,6 +339,20 @@ std::string DILParser::ParseUnqualifiedId() {
   return identifier;
 }
 
+// Parse an boolean_literal.
+//
+//  boolean_literal:
+//    "true"
+//    "false"
+//
+ASTNodeUP DILParser::ParseBooleanLiteral() {
+  ExpectOneOf(std::vector<Token::Kind>{Token::kw_true, Token::kw_false});
+  uint32_t loc = CurToken().GetLocation();
+  bool literal_value = CurToken().Is(Token::kw_true);
+  m_dil_lexer.Advance();
+  return std::make_unique<BooleanLiteralNode>(loc, literal_value);
+}
+
 void DILParser::BailOut(const std::string &error, uint32_t loc,
                         uint16_t err_len) {
   if (m_error)
@@ -440,6 +457,14 @@ ASTNodeUP DILParser::ParseFloatingPointLiteral() {
 void DILParser::Expect(Token::Kind kind) {
   if (CurToken().IsNot(kind)) {
     BailOut(llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+  }
+}
+
+void DILParser::ExpectOneOf(std::vector<Token::Kind> kinds_vec) {
+  if (!CurToken().IsOneOf(kinds_vec)) {
+    BailOut(llvm::formatv("expected any of ({0}), got: {1}",
+                          llvm::iterator_range(kinds_vec), CurToken()),
             CurToken().GetLocation(), CurToken().GetSpelling().length());
   }
 }

@@ -907,7 +907,7 @@ ErrorOr<uint64_t> DataReader::parseHexField(char EndChar, bool EndNl) {
   StringRef NumStr = NumStrRes.get();
   uint64_t Num;
   if (NumStr.getAsInteger(16, Num)) {
-    reportError("expected hexidecimal number");
+    reportError("expected hexadecimal number");
     Diag << "Found: " << NumStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }

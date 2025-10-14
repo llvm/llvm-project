@@ -136,7 +136,7 @@ public:
 
   // Return the name and description of the counter with the given ID.
   std::pair<std::string, std::string> getCounterInfo(unsigned ID) const {
-    return std::make_pair(RegisteredCounters[ID], Counters.lookup(ID).Desc);
+    return {RegisteredCounters[ID], Counters.lookup(ID).Desc};
   }
 
   // Iterate through the registered counters
@@ -178,6 +178,7 @@ protected:
     std::string Desc;
     SmallVector<Chunk> Chunks;
   };
+  bool handleCounterIncrement(CounterInfo &Info);
 
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
@@ -187,6 +188,8 @@ protected:
   bool Enabled = false;
 
   bool ShouldPrintCounter = false;
+
+  bool ShouldPrintCounterQueries = false;
 
   bool BreakOnLast = false;
 };

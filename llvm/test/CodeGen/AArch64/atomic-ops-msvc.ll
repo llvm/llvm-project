@@ -850,18 +850,18 @@ define dso_local void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldxr x8, [x9]
 ; CHECK-NEXT:    cmp x8, x0
-; CHECK-NEXT:    b.ne .LBB43_3
+; CHECK-NEXT:    b.ne .LBB43_4
 ; CHECK-NEXT:  // %bb.2: // %cmpxchg.trystore
 ; CHECK-NEXT:    // in Loop: Header=BB43_1 Depth=1
 ; CHECK-NEXT:    stxr w10, x1, [x9]
 ; CHECK-NEXT:    cbnz w10, .LBB43_1
-; CHECK-NEXT:    b .LBB43_4
-; CHECK-NEXT:  .LBB43_3: // %cmpxchg.nostore
-; CHECK-NEXT:    clrex
-; CHECK-NEXT:  .LBB43_4: // %cmpxchg.end
+; CHECK-NEXT:  .LBB43_3: // %cmpxchg.end
 ; CHECK-NEXT:    adrp x9, var64
 ; CHECK-NEXT:    str x8, [x9, :lo12:var64]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB43_4: // %cmpxchg.nostore
+; CHECK-NEXT:    clrex
+; CHECK-NEXT:    b .LBB43_3
    %pair = cmpxchg ptr @var64, i64 %wanted, i64 %new monotonic monotonic
    %old = extractvalue { i64, i1 } %pair, 0
    store i64 %old, ptr @var64

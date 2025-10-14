@@ -1,3 +1,6 @@
+<!-- Packets are listed in alpabetical order, and if in a section, alphabetical
+     order within that section. -->
+
 # GDB Remote Protocol Extensions
 
 LLDB has added new GDB server packets to better support multi-threaded and
@@ -2427,43 +2430,6 @@ Response is `F` plus the return value of `unlink()`, base 16 encoding.
 Return value may optionally be followed by a comma and the base16
 value of errno if unlink failed.
 
-## "x" - Binary memory read
-
-> **Warning:** The format of this packet was decided before GDB 16
-> introduced its own format for `x`. Future versions of LLDB may not
-> support the format described here, and new code should produce and
-> expect the format used by GDB.
-
-Like the `m` (read) and `M` (write) packets, this is a partner to the
-`X` (write binary data) packet, `x`.
-
-It is called like
-```
-xADDRESS,LENGTH
-```
-
-where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
-
-To test if this packet is available, send a addr/len of 0:
-```
-x0,0
-```
-You will get an `OK` response if it is supported.
-
-The reply will be the data requested in 8-bit binary data format.
-The standard quoting is applied to the payload. Characters `}  #  $  *`
-will all be escaped with `}` (`0x7d`) character and then XOR'ed with `0x20`.
-
-A typical use to read 512 bytes at 0x1000 would look like:
-```
-x0x1000,0x200
-```
-The `0x` prefixes are optional - like most of the gdb-remote packets,
-omitting them will work fine; these numbers are always base 16.
-
-The length of the payload is not provided.  A reliable, 8-bit clean,
-transport layer is assumed.
-
 ## Wasm Packets
 
 The packet below are supported by the
@@ -2530,3 +2496,40 @@ read packet: $e0030100#b9
 
 **Priority to Implement:** Only required for Wasm support. Necessary to show
 variables.
+
+## "x" - Binary memory read
+
+> **Warning:** The format of this packet was decided before GDB 16
+> introduced its own format for `x`. Future versions of LLDB may not
+> support the format described here, and new code should produce and
+> expect the format used by GDB.
+
+Like the `m` (read) and `M` (write) packets, this is a partner to the
+`X` (write binary data) packet, `x`.
+
+It is called like
+```
+xADDRESS,LENGTH
+```
+
+where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
+
+To test if this packet is available, send a addr/len of 0:
+```
+x0,0
+```
+You will get an `OK` response if it is supported.
+
+The reply will be the data requested in 8-bit binary data format.
+The standard quoting is applied to the payload. Characters `}  #  $  *`
+will all be escaped with `}` (`0x7d`) character and then XOR'ed with `0x20`.
+
+A typical use to read 512 bytes at 0x1000 would look like:
+```
+x0x1000,0x200
+```
+The `0x` prefixes are optional - like most of the gdb-remote packets,
+omitting them will work fine; these numbers are always base 16.
+
+The length of the payload is not provided.  A reliable, 8-bit clean,
+transport layer is assumed.

@@ -319,6 +319,11 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
 
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
+  const InstrItineraryData *II = ST.getInstrItineraryData();
+  // If there is no itineraries information, abandon.
+  if (II->Itineraries == nullptr)
+    return false;
+
   // Instantiate the packetizer.
   R600PacketizerList Packetizer(Fn, ST, MLI);
 
