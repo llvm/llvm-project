@@ -7620,10 +7620,14 @@ namespace {
 /// %out = arith.constant dense<false> : vector<3xi1>.
 /// ```
 ///
-/// Above [0, 1, 2] > [7, 7, 7] => [false, false, false]. Because the result is
-/// false at ALL indices we fold. If the constant was 1, then
-/// [0, 1, 2] > [1, 1, 1] => [false, false, true] and we do fold, conservatively
-/// preferring the 'compact' vector.step representation.
+/// Above `[0, 1, 2] > [7, 7, 7]` => `[false, false, false]`. Because the result
+/// is false at ALL indices we fold. If the constant was 1, then
+/// `[0, 1, 2] > [1, 1, 1]` => `[false, false, true]` and we do fold,
+/// conservatively preferring the 'compact' vector.step representation.
+///
+/// Note: this folder only works for the case where the constant (`%cst` above)
+/// is the second operand of the comparison. The arith.cmpi canonicalizer will
+/// ensure that constants are always second (on the right).
 struct StepCompareFolder : public OpRewritePattern<StepOp> {
   using Base::Base;
 
@@ -7631,7 +7635,7 @@ struct StepCompareFolder : public OpRewritePattern<StepOp> {
                                 PatternRewriter &rewriter) const override {
     const int64_t stepSize = stepOp.getResult().getType().getNumElements();
 
-    for (auto &use : stepOp.getResult().getUses()) {
+    for (OpOperand &use : stepOp.getResult().getUses()) {
       auto cmpiOp = dyn_cast<arith::CmpIOp>(use.getOwner());
       if (!cmpiOp)
         continue;
@@ -7644,7 +7648,8 @@ struct StepCompareFolder : public OpRewritePattern<StepOp> {
       // Check that operand 1 is a constant.
       unsigned constOperandNumber = 1;
       Value otherOperand = cmpiOp.getOperand(constOperandNumber);
-      auto maybeConstValue = getConstantIntValue(otherOperand);
+      std::optional<int64_t> maybeConstValue =
+          getConstantIntValue(otherOperand);
       if (!maybeConstValue.has_value())
         continue;
 
