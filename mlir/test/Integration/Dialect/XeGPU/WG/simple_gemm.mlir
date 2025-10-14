@@ -26,7 +26,9 @@ module @gemm attributes {gpu.container_module} {
     gpu.memcpy %B_gpu, %B : memref<256x256xf16>, memref<256x256xf16>
     %C_gpu = gpu.alloc () : memref<256x256xf32>
     gpu.memcpy %C_gpu, %C : memref<256x256xf32>, memref<256x256xf32>
-    // NOTE: Here we can't use [8, 64] wi threads following the SG thread layout of [8, 4]. Because runtime will linearize the x dimension first (we need y dimension to be linearized first).
+    // NOTE: Here we can't use [8, 64] wi threads following
+    // the SG thread layout of [8, 4]. Because runtime will linearize
+    // the x dimension first (we need y dimension to be linearized first).
     // So just use linearized thread layout of [512, 1] wi threads.
     gpu.launch_func  @test_kernel::@test_kernel blocks in (%c1, %c1, %c1) threads in (%c512, %c1, %c1) args(%A_gpu : memref<256x256xf16>, %B_gpu : memref<256x256xf16>, %C_gpu : memref<256x256xf32>)
     gpu.wait // Wait for the kernel to finish.

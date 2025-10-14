@@ -50,7 +50,7 @@ void buildCommonPassPipeline(
     xevmTargetOptions.cmdOptions = options.cmdOptions;
     pm.addPass(createGpuXeVMAttachTarget(xevmTargetOptions));
   }
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
+  pm.addPass(createLowerAffinePass());
   pm.addNestedPass<func::FuncOp>(createGpuAsyncRegionPass());
 }
 
@@ -84,6 +84,7 @@ void buildGpuPassPipeline(OpPassManager &pm,
         createConvertGpuOpsToLLVMSPVOps(gpuToLLVMSPVOptions));
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,7 +92,6 @@ void buildGpuPassPipeline(OpPassManager &pm,
 //===----------------------------------------------------------------------===//
 void buildHostPostPipeline(OpPassManager &pm,
                            const mlir::gpu::GPUToXeVMPipelineOptions &options) {
-  pm.addPass(createReconcileUnrealizedCastsPass());
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   {
