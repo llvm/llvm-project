@@ -218,13 +218,12 @@ bool IsSignalHandlerFromSanitizer(int signum) {
 }
 
 bool SetSignalHandlerFromSanitizer(int signum, bool new_state) {
-  bool old_state = false;
-  if (signum >= 0 && static_cast<unsigned>(signum) <
-                         ARRAY_SIZE(signal_handler_is_from_sanitizer))
-    old_state = atomic_exchange(&signal_handler_is_from_sanitizer[signum],
-                                new_state, memory_order_relaxed);
+  if (signum < 0 || static_cast<unsigned>(signum) >=
+                        ARRAY_SIZE(signal_handler_is_from_sanitizer))
+    return false;
 
-  return old_state;
+  return atomic_exchange(&signal_handler_is_from_sanitizer[signum], new_state,
+                         memory_order_relaxed);
 }
 
 static void MaybeInstallSigaction(int signum,
