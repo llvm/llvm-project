@@ -3,5 +3,5 @@
 ## written out by LLC with a pointer-capturing regex, and also does not produce
 ## new metadata operand pointers
 
-# RUN: cp -f %S/Inputs/metadata-pointer.ll %t.ll && %update_mir_test_checks %t.ll
-# RUN: diff -u %S/Inputs/metadata-pointer.ll.expected %t.ll
+# RUN: cp -f %S/Inputs/amdgpu-metadata-pointer.ll %t.ll && %update_mir_test_checks %t.ll
+# RUN: diff -u %S/Inputs/amdgpu-metadata-pointer.ll.expected %t.ll
