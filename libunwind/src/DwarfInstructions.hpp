@@ -938,7 +938,7 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
 
     case DW_OP_xderef_size:
     case DW_OP_nop:
-    case DW_OP_push_object_addres:
+    case DW_OP_push_object_address:
     case DW_OP_call2:
     case DW_OP_call4:
     case DW_OP_call_ref:
