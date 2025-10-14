@@ -353,9 +353,8 @@ Status PlatformDarwin::GetSharedModule(
     // Get module search paths from the target if available.
     TargetSP target_sp = module_spec.GetTargetSP();
     FileSpecList module_search_paths;
-    if (target_sp) {
+    if (target_sp)
       module_search_paths = target_sp->GetExecutableSearchPaths();
-    }
     if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
       // We can try to pull off part of the file path up to the bundle
       // directory level and try any module search paths...
@@ -1310,9 +1309,8 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
   const FileSpec &platform_file = module_spec.GetFileSpec();
   TargetSP target_sp = module_spec.GetTargetSP();
   FileSpecList module_search_paths;
-  if (target_sp) {
+  if (target_sp)
     module_search_paths = target_sp->GetExecutableSearchPaths();
-  }
   // See if the file is present in any of the module_search_paths
   // directories.
   if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {

@@ -274,9 +274,9 @@ protected:
   ArchSpec m_arch;
   UUID m_uuid;
   ConstString m_object_name;
-  std::weak_ptr<Target>
-      m_target; // This is set to take advantage of the target's search path
-                // and platform's locate module callback
+  /// This is set to take advantage of the target's search path and platform's
+  /// locate module callback
+  std::weak_ptr<Target> m_target;
   uint64_t m_object_offset = 0;
   uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
