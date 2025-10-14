@@ -31,7 +31,7 @@ void no_func() {}
 // 5. Remove "@__profc_no_profc"
 // 6. Remove "@no_func"
 ;--- gen
-clang --target=x86_64-unknown-linux-gnu -fprofile-generate -mllvm -debug-info-correlate -S -emit-llvm -g a.c -o -
+clang --target=x86_64-unknown-linux-gnu -fprofile-generate -mllvm -profile-correlate=debug-info -S -emit-llvm -g a.c -o -
 
 ;--- a.ll
 ; ModuleID = 'a.c'
