@@ -2343,7 +2343,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 }
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
-                                   bool notify, Status *error_ptr) {
+                                   bool notify, Status *error_ptr,
+                                   bool defer_preload) {
   ModuleSP module_sp;
 
   Status error;
@@ -2511,8 +2512,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
 
         // Preload symbols outside of any lock, so hopefully we can do this for
         // each library in parallel.
-        if (GetPreloadSymbols())
+        if (GetPreloadSymbols() && !defer_preload)
           module_sp->PreloadSymbols();
+
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=

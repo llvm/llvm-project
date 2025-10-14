@@ -511,6 +511,9 @@ public:
   /// Atomically swaps the contents of this module list with \a other.
   void Swap(ModuleList &other);
 
+  /// For each module in this ModuleList, preload its symbols.
+  void PreloadSymbols() const;
+
 protected:
   // Class typedefs.
   typedef std::vector<lldb::ModuleSP>

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -15,6 +16,7 @@
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "llvm/Support/ThreadPool.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
@@ -1380,4 +1382,15 @@ void ModuleList::Swap(ModuleList &other) {
   std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lock(
       m_modules_mutex, other.m_modules_mutex);
   m_modules.swap(other.m_modules);
+}
+
+void ModuleList::PreloadSymbols() const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+  for (const ModuleSP &module_sp : m_modules)
+    task_group.async([module_sp] {
+      if (module_sp)
+        module_sp->PreloadSymbols();
+    });
+  // task group destructor waits for all tasks to complete
 }
