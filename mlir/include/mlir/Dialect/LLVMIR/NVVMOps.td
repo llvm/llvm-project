@@ -291,8 +291,13 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
       const ::llvm::APInt &upper = rangeAttr->getUpper();
       
       // Check LLVM ConstantRange constructor condition
-      if (!(lower != upper || (lower.isMaxValue() || lower.isMinValue()))) {
-        return emitOpError("invalid range attribute: range must be a valid constant range");
+      if (lower == upper && !lower.isMaxValue() && !lower.isMinValue()) {
+        unsigned bitWidth = lower.getBitWidth();
+        ::llvm::APInt minVal = ::llvm::APInt::getMinValue(bitWidth);
+        ::llvm::APInt maxVal = ::llvm::APInt::getMaxValue(bitWidth);
+        return emitOpError("invalid range attribute: Lower == Upper, but they aren't min (")
+               << ::llvm::toString(minVal, 10, false) << ") or max (" 
+               << ::llvm::toString(maxVal, 10, false) << ") value! This is an invalid constant range.";
       }
       
       return ::mlir::success();
