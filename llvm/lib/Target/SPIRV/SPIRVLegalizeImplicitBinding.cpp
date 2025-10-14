@@ -32,7 +32,9 @@ class SPIRVLegalizeImplicitBinding : public ModulePass {
 public:
   static char ID;
   SPIRVLegalizeImplicitBinding() : ModulePass(ID) {}
-
+  StringRef getPassName() const override {
+    return "SPIRV Legalize Implicit Binding";
+  }
   bool runOnModule(Module &M) override;
 
 private:

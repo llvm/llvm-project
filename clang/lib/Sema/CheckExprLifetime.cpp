@@ -10,7 +10,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -1265,7 +1265,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       return true;
     case NotGSLPointer:
       IsGslPtrValueFromGslTempOwner = false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Report:
       break;
     }

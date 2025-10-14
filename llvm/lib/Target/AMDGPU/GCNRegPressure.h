@@ -31,6 +31,12 @@ class SlotIndex;
 struct GCNRegPressure {
   enum RegKind { SGPR, VGPR, AGPR, AVGPR, TOTAL_KINDS };
 
+  static constexpr const char *getName(RegKind Kind) {
+    const char *Names[] = {"SGPR", "VGPR", "AGPR", "AVGPR"};
+    assert(Kind < TOTAL_KINDS);
+    return Names[Kind];
+  }
+
   GCNRegPressure() {
     clear();
   }
@@ -40,6 +46,11 @@ struct GCNRegPressure {
   }
 
   void clear() { std::fill(&Value[0], &Value[ValueArraySize], 0); }
+
+  unsigned getNumRegs(RegKind Kind) const {
+    assert(Kind < TOTAL_KINDS);
+    return Value[Kind];
+  }
 
   /// \returns the SGPR32 pressure
   unsigned getSGPRNum() const { return Value[SGPR]; }
@@ -137,6 +148,12 @@ struct GCNRegPressure {
   }
 
   void dump() const;
+
+  static RegKind getRegKind(unsigned Reg, const MachineRegisterInfo &MRI) {
+    const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+    const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
+    return (RegKind)getRegKind(MRI.getRegClass(Reg), STI);
+  }
 
 private:
   static constexpr unsigned ValueArraySize = TOTAL_KINDS * 2;
@@ -294,8 +311,10 @@ public:
   }
 };
 
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-                                     const MachineRegisterInfo &MRI);
+GCNRPTracker::LiveRegSet
+getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
+            const MachineRegisterInfo &MRI,
+            GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
@@ -313,8 +332,8 @@ public:
 
   /// reset tracker to the end of the \p MBB.
   void reset(const MachineBasicBlock &MBB) {
-    reset(MBB.getParent()->getRegInfo(),
-          LIS.getSlotIndexes()->getMBBEndIdx(&MBB));
+    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
+    reset(MBB.getParent()->getRegInfo(), MBBLastSlot);
   }
 
   /// reset tracker to the point just after \p MI (in program order).
@@ -428,9 +447,6 @@ LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                             const MachineRegisterInfo &MRI,
                             LaneBitmask LaneMaskFilter = LaneBitmask::getAll());
 
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-                                     const MachineRegisterInfo &MRI);
-
 /// creates a map MachineInstr -> LiveRegSet
 /// R - range of iterators on instructions
 /// After - upon entry or exit of every instruction
@@ -523,6 +539,11 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+
+LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
+                                 GCNRegPressure::RegKind Kind,
+                                 LiveIntervals &LIS,
+                                 const MachineLoopInfo *MLI);
 
 } // end namespace llvm
 

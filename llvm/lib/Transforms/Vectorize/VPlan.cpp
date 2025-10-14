@@ -635,9 +635,9 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   const VPRecipeBase *R = &VPBB->back();
   bool IsSwitch = isa<VPInstruction>(R) &&
                   cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
-  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
-                      match(R, m_BranchOnCond(m_VPValue())) ||
-                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
+  bool IsCondBranch =
+      isa<VPBranchOnMaskRecipe>(R) ||
+      match(R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()));
   (void)IsCondBranch;
   (void)IsSwitch;
   if (VPBB->getNumSuccessors() == 2 ||
@@ -1772,9 +1772,13 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 }
 
 InstructionCost VPCostContext::getScalarizationOverhead(
-    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF) {
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+    bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
+
+  assert(!VF.isScalable() &&
+         "Scalarization overhead not supported for scalable vectors");
 
   InstructionCost ScalarizationCost = 0;
   // Compute the cost of scalarizing the result if needed.
@@ -1792,7 +1796,11 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   SmallPtrSet<const VPValue *, 4> UniqueOperands;
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
-    if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
+    if (Op->isLiveIn() ||
+        (!AlwaysIncludeReplicatingR &&
+         isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
+        (isa<VPReplicateRecipe>(Op) &&
+         cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));

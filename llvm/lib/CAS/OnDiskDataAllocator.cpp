@@ -182,7 +182,7 @@ Expected<ArrayRef<char>> OnDiskDataAllocator::get(FileOffset Offset,
   if (Offset.get() + Size >= Impl->File.getAlloc().size())
     return createStringError(make_error_code(std::errc::protocol_error),
                              "requested size too large in allocator");
-  return ArrayRef{Impl->File.getRegion().data() + Offset.get(), Size};
+  return ArrayRef<char>{Impl->File.getRegion().data() + Offset.get(), Size};
 }
 
 MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
@@ -209,14 +209,16 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
                            "OnDiskDataAllocator is not supported");
 }
 
-Expected<OnDiskDataAllocator::pointer>
+Expected<OnDiskDataAllocator::OnDiskPtr>
 OnDiskDataAllocator::allocate(size_t Size) {
   return createStringError(make_error_code(std::errc::not_supported),
                            "OnDiskDataAllocator is not supported");
 }
 
-const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
-  return nullptr;
+Expected<ArrayRef<char>> OnDiskDataAllocator::get(FileOffset Offset,
+                                                  size_t Size) const {
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskDataAllocator is not supported");
 }
 
 MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() { return {}; }

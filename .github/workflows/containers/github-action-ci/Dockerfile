@@ -62,7 +62,6 @@ RUN apt-get update && \
     # Having a symlink from python to python3 enables code sharing between
     # the Linux and Windows pipelines.
     python3-pip \
-    python3-venv \
     file \
     tzdata \
     python-is-python3 && \
