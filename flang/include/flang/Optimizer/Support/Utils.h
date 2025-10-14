@@ -200,6 +200,12 @@ std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
     mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
+/// Indicate if a derived type has final routine. Returns std::nullopt if that
+/// information is not in the IR;
+std::optional<bool>
+isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                         const mlir::SymbolTable *symbolTable = nullptr);
+
 /// Generate a LLVM constant value of type `ity`, using the provided offset.
 mlir::LLVM::ConstantOp
 genConstantIndex(mlir::Location loc, mlir::Type ity,

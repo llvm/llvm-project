@@ -118,9 +118,13 @@ STATISTIC(
 STATISTIC(NumDeleted, "Number of instructions deleted");
 STATISTIC(NumVectorized, "Number of vectorized aggregates");
 
+namespace llvm {
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 namespace {
 
 class AllocaSliceRewriter;
@@ -1777,7 +1781,8 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
   }
 
   Value *V = IRB.CreateSelect(SI.getCondition(), TL, FL,
-                              LI.getName() + ".sroa.speculated");
+                              LI.getName() + ".sroa.speculated",
+                              ProfcheckDisableMetadataFixes ? nullptr : &SI);
 
   LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
   LI.replaceAllUsesWith(V);
@@ -2961,6 +2966,7 @@ public:
         isa<FixedVectorType>(NewAI.getAllocatedType())
             ? cast<FixedVectorType>(NewAI.getAllocatedType())->getElementType()
             : Type::getInt8Ty(NewAI.getContext());
+    unsigned AllocatedEltTySize = DL.getTypeSizeInBits(AllocatedEltTy);
 
     // Helper to check if a type is
     //  1. A fixed vector type
@@ -2991,9 +2997,16 @@ public:
         // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
         //   2. The store is volatile
+        //   3. The total store size is not a multiple of the allocated element
+        //   type size
         if (!IsTypeValidForTreeStructuredMerge(
                 SI->getValueOperand()->getType()) ||
             SI->isVolatile())
+          return std::nullopt;
+        auto *VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+        unsigned NumElts = VecTy->getNumElements();
+        unsigned EltSize = DL.getTypeSizeInBits(VecTy->getElementType());
+        if (NumElts * EltSize % AllocatedEltTySize != 0)
           return std::nullopt;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
                                 SI->getValueOperand());
@@ -4352,10 +4365,13 @@ private:
     };
 
     Value *Cond, *True, *False;
+    Instruction *MDFrom = nullptr;
     if (auto *SI = dyn_cast<SelectInst>(Sel)) {
       Cond = SI->getCondition();
       True = SI->getTrueValue();
       False = SI->getFalseValue();
+      if (!ProfcheckDisableMetadataFixes)
+        MDFrom = SI;
     } else {
       Cond = Sel->getOperand(0);
       True = ConstantInt::get(Sel->getType(), 1);
@@ -4375,8 +4391,12 @@ private:
         IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
                       False->getName() + ".sroa.gep", NW);
 
-    Value *NSel =
-        IRB.CreateSelect(Cond, NTrue, NFalse, Sel->getName() + ".sroa.sel");
+    Value *NSel = MDFrom
+                      ? IRB.CreateSelect(Cond, NTrue, NFalse,
+                                         Sel->getName() + ".sroa.sel", MDFrom)
+                      : IRB.CreateSelectWithUnknownProfile(
+                            Cond, NTrue, NFalse, DEBUG_TYPE,
+                            Sel->getName() + ".sroa.sel");
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
     GEPI.eraseFromParent();
