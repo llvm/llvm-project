@@ -2682,7 +2682,7 @@ public:
     QualType EltTy = VTy->getElementType();
     if (VTy->isPackedVectorBoolType(*this))
       return 1;
-    if (EltTy.getTypePtrOrNull() && EltTy->isBitIntType())
+    if (EltTy->isBitIntType())
       return EltTy->castAs<BitIntType>()->getNumBits();
     return getTypeSize(EltTy);
   }

@@ -532,6 +532,34 @@ static_assert(round_trip<packed_vec_t<4, 4>>(static_cast<short>(0x5555)), "");
 static_assert(bit_cast<unsigned char>(packed_vec_t<4, 2>{-4, -7}) == (LITTLE_END ? 0x9C : 0xC9), "");
 static_assert(bit_cast<unsigned short>(packed_vec_t<4, 4>{3, -5, -1, 7}) == (LITTLE_END ? 0x7FB3 : 0x3BF7), "");
 
+// expected-error@+2 {{constexpr variable 'bad_packed_vec_2_3_to_char' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(2) __attribute__((ext_vector_type(3)))' (vector of 3 '_BitInt(2)' values) is not allowed in a constant expression; element size 2 * element count 3 is not a multiple of the byte size 8}}
+constexpr unsigned char bad_packed_vec_2_3_to_char = __builtin_bit_cast(unsigned char, packed_vec_t<2, 3>{1, 0, 1});
+// expected-error@+2 {{constexpr variable 'bad_char_to_packed_vec_2_3' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(2) __attribute__((ext_vector_type(3)))' (vector of 3 '_BitInt(2)' values) is not allowed in a constant expression; element size 2 * element count 3 is not a multiple of the byte size 8}}
+constexpr packed_vec_t<2, 3> bad_char_to_packed_vec_2_3 = __builtin_bit_cast(packed_vec_t<2, 3>, static_cast<unsigned char>(0));
+
+// expected-error@+2 {{constexpr variable 'bad_packed_vec_2_6_to_short' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(2) __attribute__((ext_vector_type(6)))' (vector of 6 '_BitInt(2)' values) is not allowed in a constant expression; element size 2 * element count 6 is not a multiple of the byte size 8}}
+constexpr unsigned short bad_packed_vec_2_6_to_short = __builtin_bit_cast(unsigned short, packed_vec_t<2, 6>{1, 0, 1});
+// expected-error@+2 {{constexpr variable 'bad_short_to_packed_vec_2_6' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(2) __attribute__((ext_vector_type(6)))' (vector of 6 '_BitInt(2)' values) is not allowed in a constant expression; element size 2 * element count 6 is not a multiple of the byte size 8}}
+constexpr packed_vec_t<2, 6> bad_short_to_packed_vec_2_6 = __builtin_bit_cast(packed_vec_t<2, 6>, static_cast<unsigned short>(0));
+
+// expected-error@+2 {{constexpr variable 'bad_packed_vec_4_3_to_short' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(4) __attribute__((ext_vector_type(3)))' (vector of 3 '_BitInt(4)' values) is not allowed in a constant expression; element size 4 * element count 3 is not a multiple of the byte size 8}}
+constexpr unsigned short bad_packed_vec_4_3_to_short = __builtin_bit_cast(unsigned short, packed_vec_t<4, 3>{1, 0, 1});
+// expected-error@+2 {{constexpr variable 'bad_short_to_packed_vec_4_3' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(4) __attribute__((ext_vector_type(3)))' (vector of 3 '_BitInt(4)' values) is not allowed in a constant expression; element size 4 * element count 3 is not a multiple of the byte size 8}}
+constexpr packed_vec_t<4, 3> bad_short_to_packed_vec_4_3 = __builtin_bit_cast(packed_vec_t<4, 3>, static_cast<unsigned short>(0));
+
+// expected-error@+2 {{constexpr variable 'bad_packed_vec_4_5_to_int' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(4) __attribute__((ext_vector_type(5)))' (vector of 5 '_BitInt(4)' values) is not allowed in a constant expression; element size 4 * element count 5 is not a multiple of the byte size 8}}
+constexpr unsigned int bad_packed_vec_4_5_to_int = __builtin_bit_cast(unsigned int, packed_vec_t<4, 5>{1, 0, 1});
+// expected-error@+2 {{constexpr variable 'bad_int_to_packed_vec_4_5' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type '_BitInt(4) __attribute__((ext_vector_type(5)))' (vector of 5 '_BitInt(4)' values) is not allowed in a constant expression; element size 4 * element count 5 is not a multiple of the byte size 8}}
+constexpr packed_vec_t<4, 5> bad_int_to_packed_vec_4_5 = __builtin_bit_cast(packed_vec_t<4, 5>, static_cast<unsigned int>(0));
+
 }
 
 namespace test_complex {
