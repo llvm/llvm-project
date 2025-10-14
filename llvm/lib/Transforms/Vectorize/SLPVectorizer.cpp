@@ -2248,10 +2248,9 @@ public:
   /// Return true if an array of scalar loads can be replaced with a strided
   ///  load (with constant stride).
   ///
-  ///  It is possible that the load gets "widened". Suppose that originally each load loads `k` bytes and `PointerOps` can be arranged as follows (`%s` is constant):
-  ///  %b + 0 * %s + 0
-  ///  %b + 0 * %s + 1
-  ///  %b + 0 * %s + 2
+  ///  It is possible that the load gets "widened". Suppose that originally each
+  ///  load loads `k` bytes and `PointerOps` can be arranged as follows (`%s` is
+  ///  constant): %b + 0 * %s + 0 %b + 0 * %s + 1 %b + 0 * %s + 2
   ///  ...
   ///  %b + 0 * %s + (w - 1)
   ///
@@ -2273,8 +2272,10 @@ public:
   /// \param PointerOps list of pointer arguments of loads.
   /// \param ElemTy original scalar type of loads.
   /// \param Alignment alignment of the first load.
-  /// \param SortedIndices is the order of PointerOps as returned by `sortPtrAccesses`
-  /// \param Diff Pointer difference between the lowest and the highes pointer in `PointerOps` as returned by `getPointersDiff`.
+  /// \param SortedIndices is the order of PointerOps as returned by
+  /// `sortPtrAccesses`
+  /// \param Diff Pointer difference between the lowest and the highes pointer
+  /// in `PointerOps` as returned by `getPointersDiff`.
   /// \param Ptr0 first pointer in `PointersOps`.
   /// \param PtrN last pointer in `PointersOps`.
   /// \param SPtrInfo If the function return `true`, it also sets all the fields
