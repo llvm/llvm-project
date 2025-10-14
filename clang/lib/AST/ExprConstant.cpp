@@ -12275,9 +12275,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned SourceLen = Source.getVectorLength();
     const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
     QualType ElemQT = VT->getElementType();
-    unsigned LaneBitWidth = Info.Ctx.getTypeSize(ElemQT);
+    unsigned ElemBitWidth = Info.Ctx.getTypeSize(ElemQT);
 
-    APInt MinIndex(LaneBitWidth, 0);
+    APInt MinIndex(ElemBitWidth, 0);
     APInt MinVal = Source.getVectorElt(0).getInt();
     for (unsigned I = 0; I != SourceLen; ++I) {
       APInt Val = Source.getVectorElt(I).getInt();
@@ -12297,7 +12297,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Result.emplace_back(APSInt(MinVal, ResultUnsigned));
     Result.emplace_back(APSInt(MinIndex, ResultUnsigned));
     for (unsigned I = 0; I != SourceLen - 2; ++I) {
-      Result.emplace_back(APSInt(APInt(LaneBitWidth, 0), ResultUnsigned));
+      Result.emplace_back(APSInt(APInt(ElemBitWidth, 0), ResultUnsigned));
     }
     return Success(APValue(Result.data(), Result.size()), E);
   }

@@ -2985,7 +2985,7 @@ static bool interp__builtin_ia32_phminposuw(InterpState &S, CodePtr OpPC,
   unsigned SourceLen = Source.getNumElems();
   QualType ElemQT = getElemType(Source);
   OptPrimType ElemT = S.getContext().classify(ElemQT);
-  unsigned LaneBitWidth = S.getASTContext().getTypeSize(ElemQT);
+  unsigned ElemBitWidth = S.getASTContext().getTypeSize(ElemQT);
 
   bool DestUnsigned = Call->getCallReturnType(S.getASTContext())
                           ->castAs<VectorType>()
@@ -2993,7 +2993,7 @@ static bool interp__builtin_ia32_phminposuw(InterpState &S, CodePtr OpPC,
                           ->isUnsignedIntegerOrEnumerationType();
 
   INT_TYPE_SWITCH_NO_BOOL(*ElemT, {
-    APSInt MinIndex(LaneBitWidth, DestUnsigned);
+    APSInt MinIndex(ElemBitWidth, DestUnsigned);
     APSInt MinVal = Source.elem<T>(0).toAPSInt();
 
     for (unsigned I = 1; I != SourceLen; ++I) {
@@ -3007,7 +3007,7 @@ static bool interp__builtin_ia32_phminposuw(InterpState &S, CodePtr OpPC,
     Dest.elem<T>(0) = static_cast<T>(MinVal);
     Dest.elem<T>(1) = static_cast<T>(MinIndex);
     for (unsigned I = 2; I != SourceLen; ++I) {
-      Dest.elem<T>(I) = static_cast<T>(APSInt(LaneBitWidth, DestUnsigned));
+      Dest.elem<T>(I) = static_cast<T>(APSInt(ElemBitWidth, DestUnsigned));
     }
   });
   Dest.initializeAllElements();
