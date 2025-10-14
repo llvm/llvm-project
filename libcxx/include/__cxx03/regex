@@ -3911,7 +3911,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
       ++__first;
       break;
     default:
-      if (*__first != '_' && !__traits_.isctype(*__first, ctype_base::alnum)) {
+      if (!__traits_.isctype(*__first, ctype_base::alnum)) {
         if (__str)
           *__str = *__first;
         else
