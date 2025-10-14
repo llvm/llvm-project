@@ -58,8 +58,6 @@ static Expected<BitVector> expand(StringRef S, StringRef Original) {
 static Expected<SmallVector<std::string, 1>>
 parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
   SmallVector<std::string> SubPatterns = {S.str()};
-  if (!MaxSubPatterns || !S.contains('{'))
-    return std::move(SubPatterns);
 
   struct BraceExpansion {
     size_t Start;
@@ -152,9 +150,15 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   Pat.Suffix = S.substr(SuffixStart);
   S = S.substr(0, SuffixStart);
 
-  SmallVector<std::string, 1> SubPats;
-  if (auto Err = parseBraceExpansions(S, MaxSubPatterns).moveInto(SubPats))
-    return std::move(Err);
+  SmallVector<StringRef, 1> SubPats;
+  if (MaxSubPatterns && S.contains('{')) {
+    if (auto Err = parseBraceExpansions(S, MaxSubPatterns)
+                       .moveInto(Pat.BraceExpansions))
+      return std::move(Err);
+    SubPats.assign(Pat.BraceExpansions.begin(), Pat.BraceExpansions.end());
+  } else {
+    SubPats.push_back(S);
+  }
   for (StringRef SubPat : SubPats) {
     auto SubGlobOrErr = SubGlobPattern::create(SubPat);
     if (!SubGlobOrErr)
@@ -170,7 +174,7 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
   SubGlobPattern Pat;
 
   // Parse brackets.
-  Pat.Pat.assign(S.begin(), S.end());
+  Pat.Pat = S;
   for (size_t I = 0, E = S.size(); I != E; ++I) {
     if (S[I] == '[') {
       // ']' is allowed as the first character of a character class. '[]' is
