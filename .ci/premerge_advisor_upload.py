@@ -10,7 +10,7 @@ import requests
 
 import generate_test_report_lib
 
-PREMERGE_ADVISOR_URL = "http://premerge-advisor:5000/upload"
+PREMERGE_ADVISOR_URL = "http://premerge-advisor.premerge-advisor:5000/upload"
 
 
 def main(commit_sha, workflow_run_number, build_log_files):
