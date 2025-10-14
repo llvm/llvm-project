@@ -2731,10 +2731,11 @@ public:
   }
 
   static void
-  forEachAttr(llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
-    intptr_t n = mlirOperationGetNumAttributes(operation->get());
+  forEachAttr(MlirOperation op,
+              llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
+    intptr_t n = mlirOperationGetNumAttributes(op);
     for (intptr_t i = 0; i < n; ++i) {
-      MlirNamedAttribute na = mlirOperationGetAttribute(operation->get(), i);
+      MlirNamedAttribute na = mlirOperationGetAttribute(op, i);
       MlirStringRef name = mlirIdentifierStr(na.name);
       fn(name, na.attribute);
     }
@@ -2751,36 +2752,44 @@ public:
         .def("__iter__",
              [](PyOpAttributeMap &self) {
                nb::list keys;
-               self.forEachAttr([&](MlirStringRef name, MlirAttribute) {
-                 keys.append(nb::str(name.data, name.length));
-               });
+               PyOpAttributeMap::forEachAttr(
+                   self.operation->get(),
+                   [&](MlirStringRef name, MlirAttribute) {
+                     keys.append(nb::str(name.data, name.length));
+                   });
                return nb::iter(keys);
              })
         .def("keys",
              [](PyOpAttributeMap &self) {
                nb::list out;
-               self.forEachAttr([&](MlirStringRef name, MlirAttribute) {
-                 out.append(nb::str(name.data, name.length));
-               });
+               PyOpAttributeMap::forEachAttr(
+                   self.operation->get(),
+                   [&](MlirStringRef name, MlirAttribute) {
+                     out.append(nb::str(name.data, name.length));
+                   });
                return out;
              })
         .def("values",
              [](PyOpAttributeMap &self) {
                nb::list out;
-               self.forEachAttr([&](MlirStringRef, MlirAttribute attr) {
-                 out.append(PyAttribute(self.operation->getContext(), attr)
-                                .maybeDownCast());
-               });
+               PyOpAttributeMap::forEachAttr(
+                   self.operation->get(),
+                   [&](MlirStringRef, MlirAttribute attr) {
+                     out.append(PyAttribute(self.operation->getContext(), attr)
+                                    .maybeDownCast());
+                   });
                return out;
              })
         .def("items", [](PyOpAttributeMap &self) {
           nb::list out;
-          self.forEachAttr([&](MlirStringRef name, MlirAttribute attr) {
-            out.append(
-                nb::make_tuple(nb::str(name.data, name.length),
-                               PyAttribute(self.operation->getContext(), attr)
-                                   .maybeDownCast()));
-          });
+          PyOpAttributeMap::forEachAttr(
+              self.operation->get(),
+              [&](MlirStringRef name, MlirAttribute attr) {
+                out.append(nb::make_tuple(
+                    nb::str(name.data, name.length),
+                    PyAttribute(self.operation->getContext(), attr)
+                        .maybeDownCast()));
+              });
           return out;
         });
   }
