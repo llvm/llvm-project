@@ -283,7 +283,7 @@ private:
 
   // Print each (VReg, LaneMask) entry with materialized distances.
   // Returns true if at least one record was printed.
-  LLVM_ATTRIBUTE_NOINLINE
+  LLVM_DUMP_METHOD
   bool printSortedRecords(const VRegDistances::SortedRecords &Records,
                           unsigned VReg, unsigned SnapshotOffset,
                           int64_t EdgeWeigth = 0, raw_ostream &O = dbgs(),
@@ -327,7 +327,7 @@ private:
 
   // Iterate VRegs and delegate to printSortedRecords.
   // Returns true if anything was printed.
-  LLVM_ATTRIBUTE_NOINLINE
+  LLVM_DUMP_METHOD
   bool printVregDistances(const VRegDistances &D, unsigned SnapshotOffset,
                           int64_t EdgeWeight = 0, raw_ostream &O = dbgs(),
                           StringRef Indent = "      ") const {
@@ -340,7 +340,7 @@ private:
   }
 
   // Backward-compat shim for block-end printing (offset = 0, default indent).
-  LLVM_ATTRIBUTE_NOINLINE
+  LLVM_DUMP_METHOD
   bool printVregDistances(const VRegDistances &D,
                           raw_ostream &O = dbgs()) const {
     return printVregDistances(D, /*SnapshotOffset=*/0, /*EdgeWeight*/ 0, O);
@@ -400,10 +400,10 @@ public:
     return UsedInBlock[MBB.getNumber()];
   }
 
-  void dumpUsedInBlock();
+  LLVM_DUMP_METHOD void dumpUsedInBlock();
 
   /// Dump complete next-use analysis results for testing
-  void dumpAllNextUseDistances(const MachineFunction &MF);
+  LLVM_DUMP_METHOD void dumpAllNextUseDistances(const MachineFunction &MF);
 };
 
 class AMDGPUNextUseAnalysis : public AnalysisInfoMixin<AMDGPUNextUseAnalysis> {
