@@ -149,7 +149,7 @@ namespace std_example {
   template<typename T> constexpr bool is_same_v<T, T> = true;
 
   template<typename T, typename U> concept same_as = is_same_v<T, U>;
-  // expected-note@-1 {{because 'is_same_v<int, typename T2::inner>' evaluated to false}}
+  // expected-note@-1 {{because 'is_same_v<int, typename std_example::T2::inner>' evaluated to false}}
 
   static_assert(C1<int>);
   static_assert(C1<int*>);
@@ -160,7 +160,7 @@ namespace std_example {
   template<typename T> concept C2 =
     requires(T x) {
       {*x} -> same_as<typename T::inner>;
-      // expected-note@-1{{because 'same_as<int, typename T2::inner>' evaluated to false}}
+      // expected-note@-1{{because 'same_as<int, typename std_example::T2::inner>' evaluated to false}}
       // expected-note@-2{{because '*x' would be invalid: indirection requires pointer operand ('int' invalid)}}
     };
 
