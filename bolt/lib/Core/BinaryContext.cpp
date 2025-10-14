@@ -1336,8 +1336,17 @@ void BinaryContext::processInterproceduralReferences() {
             << Function.getPrintName() << " and "
             << TargetFunction->getPrintName() << '\n';
       }
-      if (uint64_t Offset = Address - TargetFunction->getAddress())
-        TargetFunction->addEntryPointAtOffset(Offset);
+      if (uint64_t Offset = Address - TargetFunction->getAddress()) {
+        if (!TargetFunction->isInConstantIsland(Address)) {
+          TargetFunction->addEntryPointAtOffset(Offset);
+        } else {
+          TargetFunction->setIgnored();
+          this->outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
+                       << Twine::utohexstr(Address)
+                       << " in constant island of function " << *TargetFunction
+                       << '\n';
+        }
+      }
 
       continue;
     }
