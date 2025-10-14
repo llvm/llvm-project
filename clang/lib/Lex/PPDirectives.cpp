@@ -4135,7 +4135,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
       return;
     }
 
-    // Clean the module-name tokens and replace these tokens with annot_module_name.
+    // Clean the module-name tokens and replace these tokens with
+    // annot_module_name.
     DirToks.resize(NumToksInDirective);
     ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
     DirToks.emplace_back();
@@ -4322,7 +4323,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
       }
 
       ModuleNameLoc *PartitionLoc = ModuleNameLoc::Create(*this, Partition);
-       DirToks.resize(NumToksInDirective);
+      DirToks.resize(NumToksInDirective);
       DirToks.emplace_back();
       DirToks.back().setKind(tok::annot_module_name);
       DirToks.back().setAnnotationRange(NameLoc->getRange());

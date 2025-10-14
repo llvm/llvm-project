@@ -2387,7 +2387,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                           /*WarnOnUnknownAttrs=*/true);
 
   if (ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
-                       tok::getKeywordSpelling(tok::kw_module)))
+                           tok::getKeywordSpelling(tok::kw_module)))
     SkipUntil(tok::semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,

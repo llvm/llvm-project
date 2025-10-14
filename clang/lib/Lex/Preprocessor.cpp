@@ -1345,7 +1345,6 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
     return CollectPPImportSuffixAndEnterStream(Suffix);
 
-  
   ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
   Suffix.clear();
   Suffix.emplace_back();
