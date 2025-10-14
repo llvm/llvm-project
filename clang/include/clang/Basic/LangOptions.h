@@ -781,12 +781,12 @@ public:
 
   /// Returns the most applicable C standard-compliant language version code.
   /// If none could be determined, returns \ref std::nullopt.
-  std::optional<CLangStd> GetCLangStd() const;
+  std::optional<CLangStd> getCLangStd() const;
 
   /// Returns the most applicable C++ standard-compliant language
   /// version code.
   /// If none could be determined, returns \ref std::nullopt.
-  std::optional<CPlusPlusLangStd> GetCPlusPlusLangStd() const;
+  std::optional<CPlusPlusLangStd> getCPlusPlusLangStd() const;
 };
 
 /// Floating point control options

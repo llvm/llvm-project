@@ -459,14 +459,14 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      value is, are implementation-defined.
   // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
-    if (auto LangStd = LangOpts.GetCLangStd())
+    if (auto LangStd = LangOpts.getCLangStd())
       Builder.defineMacro("__STDC_VERSION__", Twine(*LangStd) + "L");
     else if (!LangOpts.GNUMode && LangOpts.Digraphs)
       Builder.defineMacro("__STDC_VERSION__", "199409L");
   } else {
     //   -- __cplusplus
     Builder.defineMacro("__cplusplus",
-                        Twine(*LangOpts.GetCPlusPlusLangStd()) + "L");
+                        Twine(*LangOpts.getCPlusPlusLangStd()) + "L");
 
     //   -- __STDCPP_DEFAULT_NEW_ALIGNMENT__
     //      [C++17] An integer literal of type std::size_t whose value is the

@@ -17,46 +17,46 @@ using namespace clang;
 namespace {
 TEST(LangOptsTest, CStdLang) {
   LangOptions opts;
-  EXPECT_FALSE(opts.GetCLangStd());
+  EXPECT_FALSE(opts.getCLangStd());
   opts.C99 = 1;
-  EXPECT_EQ(opts.GetCLangStd(), clang::LangOptionsBase::CLangStd::C_99);
+  EXPECT_EQ(opts.getCLangStd(), clang::LangOptionsBase::CLangStd::C_99);
   opts.C11 = 1;
-  EXPECT_EQ(opts.GetCLangStd(), clang::LangOptionsBase::CLangStd::C_11);
+  EXPECT_EQ(opts.getCLangStd(), clang::LangOptionsBase::CLangStd::C_11);
   opts.C17 = 1;
-  EXPECT_EQ(opts.GetCLangStd(), clang::LangOptionsBase::CLangStd::C_17);
+  EXPECT_EQ(opts.getCLangStd(), clang::LangOptionsBase::CLangStd::C_17);
   opts.C23 = 1;
-  EXPECT_EQ(opts.GetCLangStd(), clang::LangOptionsBase::CLangStd::C_23);
+  EXPECT_EQ(opts.getCLangStd(), clang::LangOptionsBase::CLangStd::C_23);
   opts.C2y = 1;
-  EXPECT_EQ(opts.GetCLangStd(), clang::LangOptionsBase::CLangStd::C_2y);
+  EXPECT_EQ(opts.getCLangStd(), clang::LangOptionsBase::CLangStd::C_2y);
 
-  EXPECT_FALSE(opts.GetCPlusPlusLangStd());
+  EXPECT_FALSE(opts.getCPlusPlusLangStd());
 }
 
 TEST(LangOptsTest, CppStdLang) {
   LangOptions opts;
-  EXPECT_FALSE(opts.GetCPlusPlusLangStd());
+  EXPECT_FALSE(opts.getCPlusPlusLangStd());
   opts.CPlusPlus = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_03);
   opts.CPlusPlus11 = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_11);
   opts.CPlusPlus14 = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_14);
   opts.CPlusPlus17 = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_17);
   opts.CPlusPlus20 = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_20);
   opts.CPlusPlus23 = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_23);
   opts.CPlusPlus26 = 1;
-  EXPECT_EQ(opts.GetCPlusPlusLangStd(),
+  EXPECT_EQ(opts.getCPlusPlusLangStd(),
             clang::LangOptionsBase::CPlusPlusLangStd::CPP_26);
 
-  EXPECT_FALSE(opts.GetCLangStd());
+  EXPECT_FALSE(opts.getCLangStd());
 }
 } // namespace
