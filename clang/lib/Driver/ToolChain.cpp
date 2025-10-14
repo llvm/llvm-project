@@ -954,10 +954,12 @@ llvm::Triple ToolChain::getTripleWithoutOSVersion() const {
 
 std::optional<std::string>
 ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
+  dbgs() << "getTargetSubDirPath: " << BaseDir << "\n";
   auto getPathForTriple =
       [&](const llvm::Triple &Triple) -> std::optional<std::string> {
     SmallString<128> P(BaseDir);
     llvm::sys::path::append(P, Triple.str());
+  dbgs() << "getTargetSubDirPath: " << P << "\n";
     if (getVFS().exists(P))
       return std::string(P);
     return {};
@@ -1032,7 +1034,13 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
 
 std::optional<std::string> ToolChain::getStdlibPath() const {
   SmallString<128> P(D.Dir);
+  if (Triple.isOSDarwin())
+  dbgs() << "getStdlibPath(): " << P << "\n";
   llvm::sys::path::append(P, "..", "lib");
+  // Darwin does not use per-target runtime directory.
+  if (Triple.isOSDarwin())
+    return std::string(P);
+  dbgs() << "getStdlibPath(): " << P << "\n";
   return getTargetSubDirPath(P);
 }
 
@@ -1551,9 +1559,11 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 
 void ToolChain::AddFilePathLibArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
-  for (const auto &LibPath : getFilePaths())
+  for (const auto &LibPath : getFilePaths()) {
+	  llvm::dbgs() << "LibPath: " << LibPath << "\n";
     if(LibPath.length() > 0)
       CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+  }
 }
 
 void ToolChain::AddCCKextLibArgs(const ArgList &Args,
