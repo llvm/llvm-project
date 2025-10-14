@@ -1488,14 +1488,16 @@ bool PreRARematStage::initGCNSchedStage() {
   // occupancy in impacted regions.
   REMAT_DEBUG(dbgs() << "==== REMAT RESULTS ====\n");
   unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
-  AchievedOcc = MFI.getMaxWavesPerEU();
   for (unsigned I : RescheduleRegions.set_bits()) {
-    const GCNRegPressure &RP = RPTargets[I].getCurrentRP();
-    DAG.Pressure[I] = RP;
-    unsigned NewRegionOcc = RP.getOccupancy(ST, DynamicVGPRBlockSize);
-    AchievedOcc = std::min(AchievedOcc, NewRegionOcc);
-    REMAT_DEBUG(dbgs() << '[' << I << "] Achieved occupancy " << NewRegionOcc
+    DAG.Pressure[I] = RPTargets[I].getCurrentRP();
+    REMAT_DEBUG(dbgs() << '[' << I << "] Achieved occupancy "
+                       << DAG.Pressure[I].getOccupancy(ST, DynamicVGPRBlockSize)
                        << " (" << RPTargets[I] << ")\n");
+  }
+  AchievedOcc = MFI.getMaxWavesPerEU();
+  for (const GCNRegPressure &RP : DAG.Pressure) {
+    AchievedOcc =
+        std::min(AchievedOcc, RP.getOccupancy(ST, DynamicVGPRBlockSize));
   }
 
   REMAT_DEBUG({
