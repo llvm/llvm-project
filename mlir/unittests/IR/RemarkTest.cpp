@@ -53,10 +53,12 @@ TEST(Remark, TestOutputOptimizationRemark) {
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryInliner};
-
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
     LogicalResult isEnabled =
         mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-            context, yamlFile, llvm::remarks::Format::YAML, cats);
+            context, yamlFile, llvm::remarks::Format::YAML, std::move(policy),
+            cats);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // PASS: something succeeded
@@ -202,9 +204,10 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryUnroll};
-
-    LogicalResult isEnabled =
-        remark::enableOptimizationRemarks(context, nullptr, cats, true);
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, nullptr, std::move(policy), cats, true);
 
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
@@ -282,8 +285,11 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
                                         /*analysis=*/std::nullopt,
                                         /*failed=*/categoryLoopunroll};
 
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
     LogicalResult isEnabled = remark::enableOptimizationRemarks(
-        context, std::make_unique<MyCustomStreamer>(), cats, true);
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        true);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
@@ -310,5 +316,67 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // printed
   EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
   EXPECT_EQ(errOut.find(pass3Msg), std::string::npos); // filtered out
+}
+
+TEST(Remark, TestRemarkFinal) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "I failed";
+  const auto *pass2Msg = "I failed too";
+  const auto *pass3Msg = "I succeeded";
+  const auto *pass4Msg = "I succeeded too";
+
+  std::string categoryLoopunroll("LoopUnroll");
+
+  std::string seenMsg = "";
+
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    Location locOther = FileLineColLoc::get(&context, "test.cpp", 55, 5);
+
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryLoopunroll,
+                                        /*missed=*/categoryLoopunroll,
+                                        /*analysis=*/categoryLoopunroll,
+                                        /*failed=*/categoryLoopunroll};
+
+    std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Remark 1: failure
+    remark::failed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << pass1Msg;
+
+    // Remark 2: failure
+    remark::missed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << remark::reason(pass2Msg);
+
+    // Remark 3: pass
+    remark::passed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << pass3Msg;
+
+    // Remark 4: pass
+    remark::passed(
+        locOther,
+        remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << pass4Msg;
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Containment checks for messages.
+  EXPECT_EQ(errOut.find(pass1Msg), std::string::npos); // dropped
+  EXPECT_EQ(errOut.find(pass2Msg), std::string::npos); // dropped
+  EXPECT_NE(errOut.find(pass3Msg), std::string::npos); // shown
+  EXPECT_NE(errOut.find(pass4Msg), std::string::npos); // shown
 }
 } // namespace
