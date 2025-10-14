@@ -15,8 +15,9 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-// TODO: Replace with sysconf call once the function is properly implemented.
-constexpr size_t PAGE_SIZE = 4096;
+#include <unistd.h>
+
+const size_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMsyncTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

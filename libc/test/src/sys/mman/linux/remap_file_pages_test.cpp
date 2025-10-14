@@ -17,9 +17,9 @@
 
 #include <sys/mman.h>
 #include <sys/stat.h> // For S_IRWXU
+#include <unistd.h>
 
-// TODO: Replace with sysconf call once the function is properly implemented.
-constexpr size_t PAGE_SIZE = 4096;
+const size_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

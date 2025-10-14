@@ -27,9 +27,9 @@
 #include "test/UnitTest/Test.h"
 
 #include <sys/syscall.h>
+#include <unistd.h>
 
-// TODO: Replace with sysconf call once the function is properly implemented.
-constexpr size_t PAGE_SIZE = 4096;
+const size_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
