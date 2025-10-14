@@ -172,10 +172,15 @@ private:
              + field_size; // IMP imp;
     }
 
-    bool Read(Process *process, lldb::addr_t addr,
+    bool Read(DataExtractor &extractor, Process *process, lldb::addr_t addr,
               lldb::addr_t relative_selector_base_addr, bool is_small,
               bool has_direct_sel);
   };
+
+  llvm::SmallVector<method_t, 0>
+  ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
+              lldb::addr_t relative_selector_base_addr, bool is_small,
+              bool has_direct_sel) const;
 
   struct ivar_list_t {
     uint32_t m_entsize;
