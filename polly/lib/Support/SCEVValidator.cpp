@@ -156,6 +156,10 @@ public:
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
 
+  ValidatorResult visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return visit(Expr->getOperand());
+  }
+
   ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     return visit(Expr->getOperand());
   }

@@ -498,6 +498,8 @@ private:
 
   Value *visitVScale(const SCEVVScale *S);
 
+  Value *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S);
+
   Value *visitPtrToIntExpr(const SCEVPtrToIntExpr *S);
 
   Value *visitTruncateExpr(const SCEVTruncateExpr *S);
