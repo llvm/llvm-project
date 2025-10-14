@@ -26,6 +26,7 @@ bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
@@ -33,6 +34,8 @@ bool tryToFindPtrOrigin(
         auto QT = VD->getType();
         auto IsImmortal = safeGetName(VD) == "NSApp";
         if (VD->hasGlobalStorage() && (IsImmortal || QT.isConstQualified()))
+          return callback(E, true);
+        if (VD->hasGlobalStorage() && isSafeGlobalDecl(VD))
           return callback(E, true);
       }
     }
@@ -71,9 +74,11 @@ bool tryToFindPtrOrigin(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, callback) &&
+                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
+                                callback) &&
              tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, callback);
+                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
+                                callback);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
