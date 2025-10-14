@@ -2137,24 +2137,18 @@ let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
   def movdqa64store256_mask : X86Builtin<"void(_Vector<4, long long int *>, _Vector<4, long long int>, unsigned char)">;
 }
 
-let Features = "avx512ifma", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512ifma", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def vpmadd52huq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Vector<8, long long int>)">;
   def vpmadd52luq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Vector<8, long long int>)">;
 }
 
-let Features = "avx512ifma,avx512vl|avxifma", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512ifma,avx512vl|avxifma", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vpmadd52huq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Vector<2, long long int>)">;
-}
-
-let Features = "avx512ifma,avx512vl|avxifma", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpmadd52huq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Vector<4, long long int>)">;
-}
-
-let Features = "avx512ifma,avx512vl|avxifma", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def vpmadd52luq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Vector<2, long long int>)">;
 }
 
-let Features = "avx512ifma,avx512vl|avxifma", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512ifma,avx512vl|avxifma", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+  def vpmadd52huq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Vector<4, long long int>)">;
   def vpmadd52luq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Vector<4, long long int>)">;
 }
 

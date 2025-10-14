@@ -3818,6 +3818,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return F;
         });
 
+  case X86::BI__builtin_ia32_vpmadd52luq128:
+  case X86::BI__builtin_ia32_vpmadd52luq256:
+  case X86::BI__builtin_ia32_vpmadd52luq512:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call, [](const APSInt &A, const APSInt &B, const APSInt &C) {
+          return A + (B.trunc(52) * C.trunc(52)).zext(64);
+        });
+  case X86::BI__builtin_ia32_vpmadd52huq128:
+  case X86::BI__builtin_ia32_vpmadd52huq256:
+  case X86::BI__builtin_ia32_vpmadd52huq512:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call, [](const APSInt &A, const APSInt &B, const APSInt &C) {
+          return A + llvm::APIntOps::mulhu(B.trunc(52), C.trunc(52)).zext(64);
+        });
+
   case X86::BI__builtin_ia32_vpshldd128:
   case X86::BI__builtin_ia32_vpshldd256:
   case X86::BI__builtin_ia32_vpshldd512:
