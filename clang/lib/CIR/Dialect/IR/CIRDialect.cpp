@@ -15,6 +15,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -69,6 +70,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
     }
     if (auto bitfield = mlir::dyn_cast<cir::BitfieldInfoAttr>(attr)) {
       os << "bfi_" << bitfield.getName().str();
+      return AliasResult::FinalAlias;
+    }
+    if (auto dynCastInfoAttr = mlir::dyn_cast<cir::DynamicCastInfoAttr>(attr)) {
+      os << dynCastInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
     return AliasResult::NoAlias;
@@ -1632,12 +1637,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
 
+  mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
+  mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
 
+  if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
+    state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
+  if (::mlir::succeeded(
+          parser.parseOptionalKeyword(coroutineNameAttr.strref())))
+    state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
     state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
@@ -1709,6 +1721,43 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
+  auto parseGlobalDtorCtor =
+      [&](StringRef keyword,
+          llvm::function_ref<void(std::optional<int> prio)> createAttr)
+      -> mlir::LogicalResult {
+    if (mlir::succeeded(parser.parseOptionalKeyword(keyword))) {
+      std::optional<int> priority;
+      if (mlir::succeeded(parser.parseOptionalLParen())) {
+        auto parsedPriority = mlir::FieldParser<int>::parse(parser);
+        if (mlir::failed(parsedPriority))
+          return parser.emitError(parser.getCurrentLocation(),
+                                  "failed to parse 'priority', of type 'int'");
+        priority = parsedPriority.value_or(int());
+        // Parse literal ')'
+        if (parser.parseRParen())
+          return failure();
+      }
+      createAttr(priority);
+    }
+    return success();
+  };
+
+  if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> priority) {
+        mlir::IntegerAttr globalCtorPriorityAttr =
+            builder.getI32IntegerAttr(priority.value_or(65535));
+        state.addAttribute(getGlobalCtorPriorityAttrName(state.name),
+                           globalCtorPriorityAttr);
+      }).failed())
+    return failure();
+
+  if (parseGlobalDtorCtor("global_dtor", [&](std::optional<int> priority) {
+        mlir::IntegerAttr globalDtorPriorityAttr =
+            builder.getI32IntegerAttr(priority.value_or(65535));
+        state.addAttribute(getGlobalDtorPriorityAttrName(state.name),
+                           globalDtorPriorityAttr);
+      }).failed())
+    return failure();
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1747,6 +1796,12 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getBuiltin())
+    p << " builtin";
+
+  if (getCoroutine())
+    p << " coroutine";
+
   if (getLambda())
     p << " lambda";
 
@@ -1782,6 +1837,18 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
     p << ")";
+  }
+
+  if (auto globalCtorPriority = getGlobalCtorPriority()) {
+    p << " global_ctor";
+    if (globalCtorPriority.value() != 65535)
+      p << "(" << globalCtorPriority.value() << ")";
+  }
+
+  if (auto globalDtorPriority = getGlobalDtorPriority()) {
+    p << " global_dtor";
+    if (globalDtorPriority.value() != 65535)
+      p << "(" << globalDtorPriority.value() << ")";
   }
 
   // Print the body if this is not an external function.
@@ -2389,9 +2456,8 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult cir::ComplexRealOp::verify() {
   mlir::Type operandTy = getOperand().getType();
-  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy)) {
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
     operandTy = complexOperandTy.getElementType();
-  }
 
   if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
@@ -2418,14 +2484,22 @@ OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ComplexImagOp::verify() {
-  if (getType() != getOperand().getType().getElementType()) {
+  mlir::Type operandTy = getOperand().getType();
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
+    operandTy = complexOperandTy.getElementType();
+
+  if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
     return failure();
   }
+
   return success();
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (!mlir::isa<cir::ComplexType>(getOperand().getType()))
+    return nullptr;
+
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(1);
 

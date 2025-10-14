@@ -31,8 +31,10 @@ template <typename T>
 struct StructuredOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           StructuredOpInterface<T>, T> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto linalgOp = llvm::cast<LinalgOp>(op);
 
     SmallVector<Range> loopRanges = linalgOp.createLoopRanges(builder, loc);
@@ -70,7 +72,7 @@ struct StructuredOpInterface
             builder.createOrFold<index::MinSOp>(loc, startIndex, endIndex);
         auto cmpOp = builder.createOrFold<index::CmpOp>(
             loc, index::IndexCmpPredicate::SGE, min, zero);
-        auto msg = RuntimeVerifiableOpInterface::generateErrorMessage(
+        auto msg = generateErrorMessage(
             linalgOp, "unexpected negative result on dimension #" +
                           std::to_string(dim) + " of input/output operand #" +
                           std::to_string(opOperand.getOperandNumber()));
@@ -100,7 +102,7 @@ struct StructuredOpInterface
 
         cmpOp = builder.createOrFold<index::CmpOp>(
             loc, predicate, inferredDimSize, actualDimSize);
-        msg = RuntimeVerifiableOpInterface::generateErrorMessage(
+        msg = generateErrorMessage(
             linalgOp, "dimension #" + std::to_string(dim) +
                           " of input/output operand #" +
                           std::to_string(opOperand.getOperandNumber()) +

@@ -353,6 +353,7 @@ def OMPC_Novariants : Clause<[Spelling<"novariants">]> {
 }
 def OMPC_NoWait : Clause<[Spelling<"nowait">]> {
   let clangClass = "OMPNowaitClause";
+  let isValueOptional = true;
 }
 def OMP_NUMTASKS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTASKS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
@@ -1331,6 +1332,9 @@ def OMP_ThreadPrivate : Directive<[Spelling<"threadprivate">]> {
 }
 def OMP_Tile : Directive<[Spelling<"tile">]> {
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 51>,
+  ];
+  let requiredClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
   let association = AS_Loop;

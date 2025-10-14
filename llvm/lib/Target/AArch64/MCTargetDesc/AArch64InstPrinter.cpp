@@ -1066,12 +1066,13 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
       Encoding &= ~(1 << 7);
     }
 
-    const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByEncoding(Encoding);
-    if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
+    const AArch64TLBIP::TLBIP *TLBIP =
+        AArch64TLBIP::lookupTLBIPByEncoding(Encoding);
+    if (!TLBIP || !TLBIP->haveFeatures(STI.getFeatureBits()))
       return false;
 
     Ins = "tlbip\t";
-    Name = std::string(TLBI->Name);
+    Name = std::string(TLBIP->Name);
     if (CnVal == 9)
       Name += "nXS";
   } else

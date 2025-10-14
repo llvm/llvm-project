@@ -262,8 +262,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* open(const string& __s, ios_base::openmode __mode);
 
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI basic_filebuf*
-  open(const filesystem::path& __p, ios_base::openmode __mode) {
+  _LIBCPP_HIDE_FROM_ABI basic_filebuf* open(const filesystem::path& __p, ios_base::openmode __mode) {
     return open(__p.c_str(), __mode);
   }
 #    endif
@@ -1157,8 +1156,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const string& __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-      _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in)
       : basic_ifstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI basic_ifstream(basic_ifstream&& __rhs);
@@ -1176,8 +1174,7 @@ public:
 #    endif
   void open(const string& __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI void
-  open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in) {
+  _LIBCPP_HIDE_FROM_ABI void open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in) {
     return open(__p.c_str(), __mode);
   }
 #    endif // _LIBCPP_STD_VER >= 17
@@ -1314,8 +1311,7 @@ public:
 
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-      _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const _Tp& __p, ios_base::openmode __mode = ios_base::out)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const _Tp& __p, ios_base::openmode __mode = ios_base::out)
       : basic_ofstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
 
@@ -1335,8 +1331,7 @@ public:
   void open(const string& __s, ios_base::openmode __mode = ios_base::out);
 
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI void
-  open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::out) {
+  _LIBCPP_HIDE_FROM_ABI void open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::out) {
     return open(__p.c_str(), __mode);
   }
 #    endif // _LIBCPP_STD_VER >= 17
@@ -1476,8 +1471,7 @@ public:
 
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(
-      const _Tp& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
       : basic_fstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
 
@@ -1499,7 +1493,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI void
+  _LIBCPP_HIDE_FROM_ABI void
   open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in | ios_base::out) {
     return open(__p.c_str(), __mode);
   }

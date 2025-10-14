@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify=expected,cxx20 %s
+// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -verify=expected %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -1036,7 +1037,7 @@ void test() {
 
 namespace GH66612 {
   template<typename C>
-    auto end(C c) ->int;
+    auto end(C c) ->int; // expected-note {{possible target for call}}
 
   template <typename T>
     concept Iterator = true;
@@ -1046,9 +1047,8 @@ namespace GH66612 {
         { end } -> Iterator; // #66612GH_END
     };
 
-  static_assert(Container<int>);// expected-error{{static assertion failed}}
-  // expected-note@-1{{because 'int' does not satisfy 'Container'}}
-  // expected-note@#66612GH_END{{because 'end' would be invalid: reference to overloaded function could not be resolved; did you mean to call it?}}
+  static_assert(Container<int>);
+  // expected-error@#66612GH_END{{reference to overloaded function could not be resolved; did you mean to call it?}}
 }
 
 namespace GH66938 {
@@ -1333,4 +1333,175 @@ static_assert(__cpp17_iterator<not_move_constructible>); \
 // expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
 }
 
+namespace case4 {
+
+template<bool b>
+concept bool_ = b;
+
+template<typename... Ts>
+concept unary = bool_<sizeof...(Ts) == 1>;
+
+static_assert(!unary<>);
+static_assert(unary<void>);
+
 }
+
+namespace case5 {
+
+template<int size>
+concept true1 = size == size;
+
+template<typename... Ts>
+concept true2 = true1<sizeof...(Ts)>;
+
+template<typename... Ts>
+concept true3 = true2<Ts...>;
+
+static_assert(true3<void>);
+
+}
+
+namespace case6 {
+
+namespace std {
+template <int __v>
+struct integral_constant {
+  static const int value = __v;
+};
+
+template <class _Tp, class... _Args>
+constexpr bool is_constructible_v = __is_constructible(_Tp, _Args...);
+
+template <class _From, class _To>
+constexpr bool is_convertible_v = __is_convertible(_From, _To);
+
+template <class>
+struct tuple_size;
+
+template <class _Tp>
+constexpr decltype(sizeof(int)) tuple_size_v = tuple_size<_Tp>::value;
+}  // namespace std
+
+template <int N, int X>
+concept FixedExtentConstructibleFromExtent = X == N;
+
+template <int Extent>
+struct span {
+  int static constexpr extent = Extent;
+  template <typename R, int N = std::tuple_size_v<R>>
+    requires(FixedExtentConstructibleFromExtent<extent, N>)
+  span(R);
+};
+
+template <class, int>
+struct array {};
+
+template <class _Tp, decltype(sizeof(int)) _Size>
+struct std::tuple_size<array<_Tp, _Size>> : integral_constant<_Size> {};
+
+static_assert(std::is_convertible_v<array<int, 3>, span<3>>);
+static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
+
+}
+
+namespace case7 {
+
+template <class _Tp, class _Up>
+concept __same_as_impl = __is_same(_Tp, _Up);
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up>;
+template <typename>
+concept IsEntitySpec =
+  requires { requires same_as<void, void>; };
+
+}
+
+}
+
+namespace GH162125 {
+template<typename, int size>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<void, sizeof...(Ts)>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<void, Ts...[0]{1}>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+void(*test)(int) = &s<bool>::f<int>;
+}
+
+namespace GH162125_reversed {
+template<int size, typename>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<sizeof...(Ts), void>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<Ts...[0]{1}, void>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+
+void(*test)(int) = &s<bool>::f<int>;
+}
+namespace GH51246 {
+void f(); // expected-note {{possible target for call}}
+void f(int); // expected-note {{possible target for call}}
+void g();
+static_assert(requires { f; }); // expected-error {{reference to overloaded function could not be resolved}}
+static_assert(requires { g; });
+struct S {
+    void mf() {
+        static_assert(requires { mf(); });
+        static_assert(requires { mf; });    // expected-error {{reference to non-static member function must be called}}
+        static_assert(requires { S::mf; }); // expected-error {{reference to non-static member function must be called}}
+    }
+    void mf2(int); // expected-note 2{{possible target for call}}
+    void mf2() { // expected-note 2{{possible target for call}}
+        static_assert(requires { mf2; });    // expected-error {{reference to non-static member function must be called}}
+        static_assert(requires { S::mf2; }); // expected-error {{reference to non-static member function must be called}}
+    }
+};
+
+} // namespace GH51246
+
+
+namespace GH97753 {
+
+void f(); // expected-note {{possible target for call}}
+void f(int); // expected-note {{possible target for call}}
+
+template<typename T>
+concept C = sizeof(T) == 42;
+
+static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
+// expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+
+}
+
+namespace GH162770 {
+  enum e {};
+  template<e> struct s {};
+
+  template<typename> struct specialized;
+  template<e x> struct specialized<s<x>> {
+    static auto make(auto) -> s<x>;
+  };
+
+  template<e x> struct check {
+    static constexpr auto m = requires { specialized<s<x>>::make(0); };
+  };
+
+  template<typename... Ts> auto comma = (..., Ts());
+  auto b = comma<check<e{}>>;
+} // namespace GH162770

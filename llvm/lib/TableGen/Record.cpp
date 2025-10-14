@@ -46,8 +46,7 @@ using namespace llvm;
 //    Context
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-namespace detail {
+namespace llvm::detail {
 /// This class represents the internal implementation of the RecordKeeper.
 /// It contains all of the contextual static state of the Record classes. It is
 /// kept out-of-line to simplify dependencies, and also make it easier for
@@ -100,8 +99,7 @@ struct RecordKeeperImpl {
 
   void dumpAllocationStats(raw_ostream &OS) const;
 };
-} // namespace detail
-} // namespace llvm
+} // namespace llvm::detail
 
 void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   // Dump memory allocation related stats.
@@ -1365,9 +1363,12 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
   }
   case LISTSPLAT: {
     const auto *Value = dyn_cast<TypedInit>(LHS);
-    const auto *Size = dyn_cast<IntInit>(RHS);
-    if (Value && Size) {
-      SmallVector<const Init *, 8> Args(Size->getValue(), Value);
+    const auto *Count = dyn_cast<IntInit>(RHS);
+    if (Value && Count) {
+      if (Count->getValue() < 0)
+        PrintFatalError(Twine("!listsplat count ") + Count->getAsString() +
+                        " is negative");
+      SmallVector<const Init *, 8> Args(Count->getValue(), Value);
       return ListInit::get(Args, Value->getType());
     }
     break;

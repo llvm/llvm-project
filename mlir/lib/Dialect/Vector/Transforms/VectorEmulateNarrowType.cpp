@@ -90,7 +90,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
-  // TODO: add support to `vector.splat`.
+  // TODO: add support to `vector.broadcast`.
   // Finding the mask creation operation.
   while (maskOp &&
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
@@ -796,7 +796,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
                                currentSourceIndex, remainingElements, 0);
 
       // Generate back mask.
-      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, 0);
+      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, false);
       std::fill_n(maskValues.begin(), remainingElements, 1);
       auto backMask = arith::ConstantOp::create(
           rewriter, loc,

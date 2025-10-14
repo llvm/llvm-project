@@ -218,6 +218,65 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   }
 };
 
+struct TestXeGPUSGDistribute
+    : public PassWrapper<TestXeGPUSGDistribute,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSGDistribute)
+
+  StringRef getArgument() const final { return "test-xegpu-sg-distribute"; }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU Subgroup Distribution";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<index::IndexDialect>();
+  }
+
+  TestXeGPUSGDistribute() = default;
+  TestXeGPUSGDistribute(const TestXeGPUSGDistribute &pass) = default;
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestXeGPUMoveFuncBodyToWarpOp
+    : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUMoveFuncBodyToWarpOp)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-move-func-to-warp-op";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU move gpu function body to "
+           "WarpExecuteOnLane0 op.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUMoveFuncBodyToWarpOp() = default;
+  TestXeGPUMoveFuncBodyToWarpOp(const TestXeGPUMoveFuncBodyToWarpOp &pass) =
+      default;
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestXeGPULayoutInterface
     : public PassWrapper<TestXeGPULayoutInterface,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -282,6 +341,8 @@ namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
+  PassRegistration<TestXeGPUSGDistribute>();
+  PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
 }
 } // namespace test
 } // namespace mlir

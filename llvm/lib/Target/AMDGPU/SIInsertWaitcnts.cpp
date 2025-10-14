@@ -1019,7 +1019,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
       // SMEM and VMEM operations. So there will never be
       // outstanding address translations for both SMEM and
       // VMEM at the same time.
-      setScoreLB(T, CurrScore - 1);
+      setScoreLB(T, getScoreUB(T) - 1);
       PendingEvents &= ~(1 << OtherEvent);
     }
     for (const MachineOperand &Op : Inst.all_uses())

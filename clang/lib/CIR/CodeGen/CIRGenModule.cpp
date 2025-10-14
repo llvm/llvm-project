@@ -76,6 +76,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
   UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
   UInt8PtrTy = cir::PointerType::get(UInt8Ty);
+  cirAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
   UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
   UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
@@ -450,13 +451,45 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   setNonAliasAttributes(gd, funcOp);
   assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
 
-  if (funcDecl->getAttr<ConstructorAttr>())
-    errorNYI(funcDecl->getSourceRange(), "constructor attribute");
-  if (funcDecl->getAttr<DestructorAttr>())
-    errorNYI(funcDecl->getSourceRange(), "destructor attribute");
+  auto getPriority = [this](const auto *attr) -> int {
+    Expr *e = attr->getPriority();
+    if (e)
+      return e->EvaluateKnownConstInt(this->getASTContext()).getExtValue();
+    return attr->DefaultPriority;
+  };
+
+  if (const ConstructorAttr *ca = funcDecl->getAttr<ConstructorAttr>())
+    addGlobalCtor(funcOp, getPriority(ca));
+  if (const DestructorAttr *da = funcDecl->getAttr<DestructorAttr>())
+    addGlobalDtor(funcOp, getPriority(da));
 
   if (funcDecl->getAttr<AnnotateAttr>())
     errorNYI(funcDecl->getSourceRange(), "deferredAnnotations");
+}
+
+/// Track functions to be called before main() runs.
+void CIRGenModule::addGlobalCtor(cir::FuncOp ctor,
+                                 std::optional<int> priority) {
+  assert(!cir::MissingFeatures::globalCtorLexOrder());
+  assert(!cir::MissingFeatures::globalCtorAssociatedData());
+
+  // Traditional LLVM codegen directly adds the function to the list of global
+  // ctors. In CIR we just add a global_ctor attribute to the function. The
+  // global list is created in LoweringPrepare.
+  //
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  ctor.setGlobalCtorPriority(priority);
+}
+
+/// Add a function to the list that will be called when the module is unloaded.
+void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
+                                 std::optional<int> priority) {
+  if (codeGenOpts.RegisterGlobalDtorsWithAtExit &&
+      (!getASTContext().getTargetInfo().getTriple().isOSAIX()))
+    errorNYI(dtor.getLoc(), "registerGlobalDtorsWithAtExit");
+
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  dtor.setGlobalDtorPriority(priority);
 }
 
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
@@ -1343,32 +1376,36 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
 
   mlir::Attribute c = getConstantArrayFromStringLiteral(s);
 
-  if (getLangOpts().WritableStrings) {
-    errorNYI(s->getSourceRange(),
-             "getGlobalForStringLiteral: Writable strings");
+  cir::GlobalOp gv;
+  if (!getLangOpts().WritableStrings && constantStringMap.count(c)) {
+    gv = constantStringMap[c];
+    // The bigger alignment always wins.
+    if (!gv.getAlignment() ||
+        uint64_t(alignment.getQuantity()) > *gv.getAlignment())
+      gv.setAlignmentAttr(getSize(alignment));
+  } else {
+    // Mangle the string literal if that's how the ABI merges duplicate strings.
+    // Don't do it if they are writable, since we don't want writes in one TU to
+    // affect strings in another.
+    if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
+        !getLangOpts().WritableStrings) {
+      errorNYI(s->getSourceRange(),
+               "getGlobalForStringLiteral: mangle string literals");
+    }
+
+    // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+    // we need to do that explicitly.
+    std::string uniqueName = getUniqueGlobalName(name.str());
+    mlir::Location loc = getLoc(s->getSourceRange());
+    auto typedC = llvm::cast<mlir::TypedAttr>(c);
+    gv = generateStringLiteral(loc, typedC,
+                               cir::GlobalLinkageKind::PrivateLinkage, *this,
+                               uniqueName, alignment);
+    setDSOLocal(static_cast<mlir::Operation *>(gv));
+    constantStringMap[c] = gv;
+
+    assert(!cir::MissingFeatures::sanitizers());
   }
-
-  // Mangle the string literal if that's how the ABI merges duplicate strings.
-  // Don't do it if they are writable, since we don't want writes in one TU to
-  // affect strings in another.
-  if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
-      !getLangOpts().WritableStrings) {
-    errorNYI(s->getSourceRange(),
-             "getGlobalForStringLiteral: mangle string literals");
-  }
-
-  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
-  // we need to do that explicitly.
-  std::string uniqueName = getUniqueGlobalName(name.str());
-  mlir::Location loc = getLoc(s->getSourceRange());
-  auto typedC = llvm::cast<mlir::TypedAttr>(c);
-  cir::GlobalOp gv =
-      generateStringLiteral(loc, typedC, cir::GlobalLinkageKind::PrivateLinkage,
-                            *this, uniqueName, alignment);
-  setDSOLocal(static_cast<mlir::Operation *>(gv));
-
-  assert(!cir::MissingFeatures::sanitizers());
-
   return gv;
 }
 
@@ -2063,6 +2100,38 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       theModule.push_back(func);
   }
   return func;
+}
+
+cir::FuncOp
+CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd) {
+  cir::FuncOp fnOp = createCIRFunction(loc, name, ty, fd);
+  fnOp.setBuiltin(true);
+  return fnOp;
+}
+
+cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
+                                                StringRef name, mlir::ArrayAttr,
+                                                [[maybe_unused]] bool isLocal,
+                                                bool assumeConvergent) {
+  if (assumeConvergent)
+    errorNYI("createRuntimeFunction: assumeConvergent");
+  if (isLocal)
+    errorNYI("createRuntimeFunction: local");
+
+  cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
+                                             /*forVtable=*/false);
+
+  if (entry) {
+    // TODO(cir): set the attributes of the function.
+    assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    entry.setDSOLocal(true);
+  }
+
+  return entry;
 }
 
 mlir::SymbolTable::Visibility

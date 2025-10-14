@@ -1064,6 +1064,7 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
+    OpsEnd = VScale,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -2263,8 +2264,7 @@ public:
   /// debug location \p DL.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
-        Name(Name.str()) {
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, {}, Phi, DL), Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }
