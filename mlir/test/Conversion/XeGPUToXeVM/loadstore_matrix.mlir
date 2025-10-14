@@ -11,8 +11,8 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     //CHECK: %[[TID:.*]] = gpu.thread_id x
     //CHECK: %[[C1:.*]] = arith.constant 1 : index
     //CHECK: %[[MUL1:.*]] = arith.muli %[[TID]], %[[C1]] : index
-    //CHECK: %[[C4:.*]] = arith.constant 4 : i64
-    //CHECK: %[[MUL2:.*]] = arith.muli {{.*}}, %[[C4]] : i64
+    //CHECK: %[[C4:.*]] = arith.constant 4 : i32
+    //CHECK: %[[MUL2:.*]] = arith.muli {{.*}}, %[[C4]] : i32
     //CHECK: llvm.load {{.*}} : !llvm.ptr<3> -> f32
 
     %tid_x = gpu.thread_id x
@@ -80,7 +80,7 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     %c19 = arith.constant 19: index
     
     //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[view]] : memref<2048xf16, 3> -> index
-    //CHECK: %[[basePtrI64:.*]] = arith.index_castui %[[intptr]] : index to i64
+    //CHECK: %[[basePtrI64:.*]] = arith.index_castui %[[intptr]] : index to i32
     //CHECK: %[[c16:.*]] = arith.constant 16 : index
     //CHECK: %[[offsetx_0:.*]] = arith.divsi %[[c19]], %[[c16]] : index
     //CHECK: %[[offsetx_1:.*]] = arith.remsi %[[c19]], %[[c16]] : index
@@ -164,7 +164,7 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     %c48 = arith.constant 48 : index
 
     //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[view]] : memref<2048xf16, 3> -> index
-    //CHECK: %[[basePtrI64:.*]] = arith.index_castui %[[intptr]] : index to i64
+    //CHECK: %[[basePtrI64:.*]] = arith.index_castui %[[intptr]] : index to i32
     //CHECK: %[[offset0:.*]] = arith.divsi %[[c16]], %[[c16]] : index
     //CHECK: %[[offset1:.*]] = arith.remsi %[[c16]], %[[c16]] : index
     //CHECK: %[[offset2:.*]] = arith.divsi %[[c48]], %[[c16]] : index
@@ -180,11 +180,11 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     //CHECK: %[[c1:.*]] = arith.constant 1 : index
     //CHECK: %[[mul3:.*]] = arith.muli %[[offset3]], %[[c1]] : index
     //CHECK: %[[linearOffset:.*]] = arith.addi %[[mul3]], %[[add2]] : index
-    //CHECK: %[[linearOffsetI64:.*]] = arith.index_castui %[[linearOffset]] : index to i64
-    //CHECK: %[[c2:.*]] = arith.constant 2 : i64
-    //CHECK: %[[byteOffset:.*]] = arith.muli %[[linearOffsetI64]], %[[c2]] : i64
-    //CHECK: %[[finalPtr:.*]] = arith.addi %[[basePtrI64]], %[[byteOffset]] : i64
-    //CHECK: %[[ptr:.*]] = llvm.inttoptr %[[finalPtr]] : i64 to !llvm.ptr<3>
+    //CHECK: %[[linearOffsetI64:.*]] = arith.index_castui %[[linearOffset]] : index to i32
+    //CHECK: %[[c2:.*]] = arith.constant 2 : i32
+    //CHECK: %[[byteOffset:.*]] = arith.muli %[[linearOffsetI64]], %[[c2]] : i32
+    //CHECK: %[[finalPtr:.*]] = arith.addi %[[basePtrI64]], %[[byteOffset]] : i32
+    //CHECK: %[[ptr:.*]] = llvm.inttoptr %[[finalPtr]] : i32 to !llvm.ptr<3>
     //CHECK: %[[loadedI16:.*]] = xevm.blockload %[[ptr]] : (!llvm.ptr<3>) -> vector<8xi16>
     //CHECK: %[[loaded:.*]] = vector.bitcast %[[loadedI16]] : vector<8xi16> to vector<8xf16>
 

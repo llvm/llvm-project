@@ -365,10 +365,11 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
 // Add a builder that creates
 // offset * elemByteSize + baseAddr
-static Value addOffset(ConversionPatternRewriter &rewriter, Location loc,
-                       Value baseAddr, Value offset, int64_t elemByteSize) {
+static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value baseAddr, Value offset,
+                                 int64_t elemByteSize) {
   Value byteSize = arith::ConstantIntOp::create(
-      rewriter, loc, rewriter.getI64Type(), elemByteSize);
+      rewriter, loc, baseAddr.getType(), elemByteSize);
   Value byteOffset = arith::MulIOp::create(rewriter, loc, offset, byteSize);
   Value newAddr = arith::AddIOp::create(rewriter, loc, baseAddr, byteOffset);
   return newAddr;
@@ -443,7 +444,8 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       // If offset is provided, we add them to the base pointer.
       // Offset is in number of elements, we need to multiply by
       // element byte size.
-      basePtrI64 = addOffset(rewriter, loc, basePtrI64, offset, elemByteSize);
+      basePtrI64 =
+          addOffsetToBaseAddr(rewriter, loc, basePtrI64, offset, elemByteSize);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
@@ -516,7 +518,7 @@ public:
   LogicalResult
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypedValue<MemRefType> src = op.getSource();
+
     auto resTy = cast<xegpu::MemDescType>(op.getResult().getType());
 
     // Create the result MemRefType with the same shape, element type, and
@@ -525,7 +527,7 @@ public:
 
     Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
     auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy,
-                                         Value(src), zero, ValueRange());
+                                         op.getSource(), zero, ValueRange());
     rewriter.replaceOp(op, viewOp);
     return success();
   }
@@ -587,87 +589,73 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     Value basePtrLLVM = memref::ExtractAlignedPointerAsIndexOp::create(
         rewriter, loc, basePtrStruct);
 
-    // Convert base pointer (ptr) to i64
-    Value basePtrI64 = arith::IndexCastUIOp::create(
-        rewriter, loc, rewriter.getI64Type(), basePtrLLVM);
+    // Convert base pointer (ptr) to i32
+    Value basePtrI32 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), basePtrLLVM);
 
     Value linearOffset = mdescTy.getLinearOffsets(rewriter, loc, offsets);
     linearOffset = arith::IndexCastUIOp::create(
-        rewriter, loc, rewriter.getI64Type(), linearOffset);
-    basePtrI64 =
-        addOffset(rewriter, loc, basePtrI64, linearOffset, elemByteSize);
+        rewriter, loc, rewriter.getI32Type(), linearOffset);
+    basePtrI32 = addOffsetToBaseAddr(rewriter, loc, basePtrI32, linearOffset,
+                                     elemByteSize);
 
-    // convert base pointer (i64) to LLVM pointer type
+    // convert base pointer (i32) to LLVM pointer type
     basePtrLLVM =
-        LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI64);
+        LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI32);
 
-    // if the size of valOrResVecTy is 1, it lowers to a scalar load/store
-    // operation. LLVM load/store does not support vector of size 1, so we need
-    // to handle this case separately.
-    if (valOrResVecTy.getNumElements() == 1) {
-      Type scalarTy = valOrResVecTy.getElementType();
-      if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-        Value loadOp =
-            LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
-        rewriter.replaceOp(op, loadOp);
-      } else {
-        LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
-        rewriter.eraseOp(op);
-      }
-      return success();
-    } else {
+    if (op.getSubgroupBlockIoAttr()) {
       // if the attribute 'subgroup_block_io' is set to true, it lowers to
       // xevm.blockload
-      auto subgroupBlockIoAttr = op.getSubgroupBlockIoAttr();
-      bool subgroup_block_io = static_cast<bool>(subgroupBlockIoAttr);
 
-      // BlockLoadOp only supports integer types, so we need to bitcast
-      // Get integer type with matching bit width
-      Type elemTy = valOrResVecTy.getElementType();
-      int64_t bitWidth = elemTy.getIntOrFloatBitWidth();
-      Type intElemTy = rewriter.getIntegerType(bitWidth);
+      Type intElemTy = rewriter.getIntegerType(elemBitWidth);
       VectorType intVecTy =
           VectorType::get(valOrResVecTy.getShape(), intElemTy);
 
-      if (subgroup_block_io) {
-        if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-          Value loadOp =
-              xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
-          if (intVecTy != valOrResVecTy) {
-            loadOp =
-                vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);
-          }
-          rewriter.replaceOp(op, loadOp);
-        } else {
-          Value dataToStore = adaptor.getData();
-          if (valOrResVecTy != intVecTy) {
-            dataToStore =
-                vector::BitCastOp::create(rewriter, loc, intVecTy, dataToStore);
-          }
-          xevm::BlockStoreOp::create(rewriter, loc, basePtrLLVM, dataToStore,
-                                     nullptr);
-          rewriter.eraseOp(op);
+      if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+        Value loadOp =
+            xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
+        if (intVecTy != valOrResVecTy) {
+          loadOp =
+              vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);
         }
+        rewriter.replaceOp(op, loadOp);
       } else {
-        // if the result is 1D vector, if the vector direction is Column, then
-        // the
-        //  memory descriptor should be treated as column major
-        auto chipOpt = xegpu::getChipStr(op);
-        if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
-          // the lowering only works for pvc and bmg
-          return rewriter.notifyMatchFailure(
-              op, "The lowering is specific to pvc or bmg.");
+        Value dataToStore = adaptor.getData();
+        if (valOrResVecTy != intVecTy) {
+          dataToStore =
+              vector::BitCastOp::create(rewriter, loc, intVecTy, dataToStore);
         }
-
-        if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-          Value loadOp =
-              LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
-          rewriter.replaceOp(op, loadOp);
-        } else {
-          LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
-          rewriter.eraseOp(op);
-        }
+        xevm::BlockStoreOp::create(rewriter, loc, basePtrLLVM, dataToStore,
+                                   nullptr);
+        rewriter.eraseOp(op);
       }
+      return success();
+    }
+
+    if (valOrResVecTy.getNumElements() >= 1) {
+      auto chipOpt = xegpu::getChipStr(op);
+      if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
+        // the lowering for chunk load only works for pvc and bmg
+        return rewriter.notifyMatchFailure(
+            op, "The lowering is specific to pvc or bmg.");
+      }
+    }
+
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+      // if the size of valOrResVecTy is 1, it lowers to a scalar load/store
+      // operation. LLVM load/store does not support vector of size 1, so we
+      // need to handle this case separately.
+      auto scalarTy = valOrResVecTy.getElementType();
+      LLVM::LoadOp loadOp;
+      if (valOrResVecTy.getNumElements() == 1)
+        loadOp = LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
+      else
+        loadOp =
+            LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
+      rewriter.replaceOp(op, loadOp);
+    } else {
+      LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
+      rewriter.eraseOp(op);
     }
     return success();
   }
@@ -715,8 +703,8 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
                 op, "Expected element type bit width to be multiple of 8.");
           elemByteSize = elemBitWidth / 8;
         }
-        basePtrI64 =
-            addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
+        basePtrI64 = addOffsetToBaseAddr(rewriter, loc, basePtrI64, offsets,
+                                         elemByteSize);
       }
     }
     // Default memory space is global.

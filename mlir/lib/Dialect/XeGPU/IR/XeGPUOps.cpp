@@ -174,9 +174,9 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
 }
 
 LogicalResult
-IsValidStoreMatrixParams(VectorType dataTy, MemDescType mdescTy,
-                         UnitAttr subgroup_block_io,
-                         function_ref<InFlightDiagnostic()> emitError) {
+IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
+                      UnitAttr subgroup_block_io,
+                      function_ref<InFlightDiagnostic()> emitError) {
 
   if (!dataTy) {
     if (subgroup_block_io)
@@ -1107,8 +1107,8 @@ LogicalResult LoadMatrixOp::verify() {
   UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
   MemDescType mdescTy = getMemDesc().getType();
 
-  return IsValidStoreMatrixParams(resTy, mdescTy, subgroup_block_io,
-                                  [&]() { return emitError(); });
+  return IsValidMatrixOpParams(resTy, mdescTy, subgroup_block_io,
+                               [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1131,8 +1131,8 @@ LogicalResult StoreMatrixOp::verify() {
   auto dataTy = dyn_cast<VectorType>(getData().getType());
   UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
   MemDescType mdescTy = getMemDesc().getType();
-  return IsValidStoreMatrixParams(dataTy, mdescTy, subgroup_block_io,
-                                  [&]() { return emitError(); });
+  return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
+                               [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
