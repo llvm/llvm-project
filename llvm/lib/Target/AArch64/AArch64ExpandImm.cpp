@@ -239,15 +239,18 @@ static bool trySequenceOfOnes(uint64_t UImm,
   return true;
 }
 
-// Attempt to expand 64-bit immediate values whose negated upper half match
-// the lower half (for example, 0x1234'5678'edcb'a987).
-// Immediates of this form can generally be expanded via a sequence of
-// MOVN+MOVK to expand the lower half, followed by an EOR to shift and negate
-// the result to the upper half, e.g.:
+// Attempt to expand 64-bit immediate values that consist of shifted negated
+// components such as 0x1234'5678'edcb'a987, where the upper half is the
+// negation of the lower half. Immediates of this form can generally be
+// expanded via a sequence of MOVN+MOVK to expand the lower half, followed by
+// an EOR or EON to shift and negate the result to the upper half, for example:
 //   mov  x0, #-22137          // =0xffffffffffffa987
 //   movk x0, #60875, lsl #16  // =0xffffffffedcba987
 //   eor  x0, x0, x0, lsl #32  // =0xffffffffedcba987 ^ 0xedcba98700000000
 //                                =0x12345678edcba987.
+// The logic extends to other shift amounts in the range [17, 48) (outside that
+// range we get runs of ones/zeros that are optimised separately).
+//
 // When the lower half contains a 16-bit chunk of ones, such as
 // 0x0000'5678'ffff'a987, the intermediate MOVK is redundant.
 // Similarly, when it contains a 16-bit chunk of zeros, such as
@@ -261,35 +264,44 @@ static bool trySequenceOfOnes(uint64_t UImm,
 // compared to the default expansion based on MOV and MOVKs.
 static bool tryCopyWithNegation(uint64_t Imm, bool AllowThreeSequence,
                                 SmallVectorImpl<ImmInsnModel> &Insn) {
-  // We need the negation of the upper half of Imm to match the lower half.
   // Degenerate cases where Imm is a run of ones should be handled separately.
-  if ((~Imm >> 32) != (Imm & 0xffffffffULL) || llvm::isShiftedMask_64(Imm))
+  if (!Imm || llvm::isShiftedMask_64(Imm))
     return false;
 
   const unsigned Mask = 0xffff;
-  unsigned Opc = AArch64::EORXrs;
 
-  // If we have a chunk of all zeros in the lower half, we can save a MOVK by
-  // materialising the negated immediate and negating the result with an EON.
-  if ((Imm & Mask) == 0 || ((Imm >> 16) & Mask) == 0) {
-    Opc = AArch64::EONXrs;
-    Imm = ~Imm;
+  auto tryExpansion = [&](unsigned Opc, uint64_t C, unsigned N) {
+    assert((C >> 32) == 0xffffffffULL && "Invalid immediate");
+    const unsigned Imm0 = C & Mask;
+    const unsigned Imm16 = (C >> 16) & Mask;
+    if (Imm0 != Mask && Imm16 != Mask && !AllowThreeSequence)
+      return false;
+
+    if (Imm0 != Mask) {
+      Insn.push_back({AArch64::MOVNXi, Imm0 ^ Mask, 0});
+      if (Imm16 != Mask)
+        Insn.push_back({AArch64::MOVKXi, Imm16, 16});
+    } else {
+      Insn.push_back({AArch64::MOVNXi, Imm16 ^ Mask, 16});
+    }
+
+    Insn.push_back({Opc, 0, N});
+    return true;
+  };
+
+  for (unsigned N = 17; N < 48; ++N) {
+    // Attempt EOR.
+    uint64_t C = 0xffffffff00000000ULL | (Imm ^ (Imm << N));
+    if ((C ^ (C << N)) == Imm && tryExpansion(AArch64::EORXrs, C, N))
+      return true;
+
+    // Attempt EON.
+    C = 0xffffffff00000000ULL | (Imm ^ ~(~Imm << N));
+    if ((C ^ ~(C << N)) == Imm && tryExpansion(AArch64::EONXrs, C, N))
+      return true;
   }
 
-  unsigned Imm0 = Imm & Mask;
-  unsigned Imm16 = (Imm >> 16) & Mask;
-  if (Imm0 != Mask && Imm16 != Mask && !AllowThreeSequence)
-    return false;
-  if (Imm0 != Mask) {
-    Insn.push_back({AArch64::MOVNXi, Imm0 ^ Mask, 0});
-    if (Imm16 != Mask)
-      Insn.push_back({AArch64::MOVKXi, Imm16, 16});
-  } else {
-    Insn.push_back({AArch64::MOVNXi, Imm16 ^ Mask, 16});
-  }
-
-  Insn.push_back({Opc, 0, 32});
-  return true;
+  return false;
 }
 
 static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
@@ -700,7 +712,7 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   if (BitSize == 64 && trySequenceOfOnes(UImm, Insn))
     return;
 
-  // Attempt to use a sequence of MOVN+MOVK+EOR (shifted register).
+  // Attempt to use a sequence of MOVN+MOVK+EOR/EON (shifted register).
   if (tryCopyWithNegation(Imm, /*AllowThreeSequence=*/true, Insn))
     return;
 
