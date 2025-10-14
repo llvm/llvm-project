@@ -1264,8 +1264,7 @@ def inRange32GlobalAddr : PatLeaf<(tglobaladdr:$dst), [{
   std::optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
   if (!CR)
     return true;
-  return CR->getSignedMin().sge(-1ull << 32) &&
-         CR->getSignedMax().slt(1ull << 32);
+  return CR->getMinSignedBits() <= 32;
 }]>;
 def : Pat<(i64 (X86Wrapper inRange32GlobalAddr:$dst)),
           (MOV64ri32 tglobaladdr:$dst)>, Requires<[KernelCode]>;
