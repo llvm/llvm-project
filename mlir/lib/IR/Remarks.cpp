@@ -16,7 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 
 using namespace mlir::remark::detail;
-
+using namespace mlir::remark;
 //------------------------------------------------------------------------------
 // Remark
 //------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
-  StringRef categoryName = getFullCategoryName();
+  StringRef categoryName = getCombinedCategoryName();
   StringRef name = remarkName;
 
   os << '[' << type << "] ";
@@ -81,9 +81,10 @@ void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
     os << "Function=" << getFunction() << " | ";
 
   if (printLocation) {
-    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
+    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation())) {
       os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
          << flc.getColumn();
+    }
   }
 
   printArgs(os, getArgs());
@@ -140,7 +141,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.RemarkType = getRemarkType();
   r.RemarkName = getRemarkName();
   // MLIR does not use passes; instead, it has categories and sub-categories.
-  r.PassName = getFullCategoryName();
+  r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
   for (const Remark::Arg &arg : getArgs()) {
@@ -225,26 +226,42 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &&remark) {
+void RemarkEngine::reportImpl(const Remark &remark) {
   // Stream the remark
-  if (remarkStreamer)
+  if (remarkStreamer) {
     remarkStreamer->streamOptimizationRemark(remark);
+  }
 
   // Print using MLIR's diagnostic
   if (printAsEmitRemarks)
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
+void RemarkEngine::report(const Remark &&remark) {
+  if (remarkEmittingPolicy)
+    remarkEmittingPolicy->reportRemark(remark);
+}
+
 RemarkEngine::~RemarkEngine() {
+  if (remarkEmittingPolicy)
+    remarkEmittingPolicy->finalize();
+
   if (remarkStreamer)
     remarkStreamer->finalize();
 }
 
-llvm::LogicalResult
-RemarkEngine::initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
-                         std::string *errMsg) {
-  // If you need to validate categories/filters, do so here and set errMsg.
+llvm::LogicalResult RemarkEngine::initialize(
+    std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
+    std::string *errMsg) {
+
   remarkStreamer = std::move(streamer);
+
+  auto reportFunc =
+      std::bind(&RemarkEngine::reportImpl, this, std::placeholders::_1);
+  remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
+
+  this->remarkEmittingPolicy = std::move(remarkEmittingPolicy);
   return success();
 }
 
@@ -301,14 +318,15 @@ RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
 }
 
 llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
-    MLIRContext &ctx,
-    std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-    const remark::RemarkCategories &cats, bool printAsEmitRemarks) {
+    MLIRContext &ctx, std::unique_ptr<detail::MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
+    const RemarkCategories &cats, bool printAsEmitRemarks) {
   auto engine =
-      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
+      std::make_unique<detail::RemarkEngine>(printAsEmitRemarks, cats);
 
   std::string errMsg;
-  if (failed(engine->initialize(std::move(streamer), &errMsg))) {
+  if (failed(engine->initialize(std::move(streamer),
+                                std::move(remarkEmittingPolicy), &errMsg))) {
     llvm::report_fatal_error(
         llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
   }
@@ -316,3 +334,12 @@ llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// Remark emitting policies
+//===----------------------------------------------------------------------===//
+
+namespace mlir::remark {
+RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
+RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
+} // namespace mlir::remark
