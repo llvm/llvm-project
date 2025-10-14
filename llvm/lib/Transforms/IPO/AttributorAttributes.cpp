@@ -5194,6 +5194,7 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
   case Intrinsic::ptrmask: {
     const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
         QueryingAA, IRPosition::value(*II.getOperand(1)), DepClassTy::NONE);
+    // Is it appropriate to pull attribute in initialization?
     const auto *AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(II),
                                               DepClassTy::NONE);
     if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
