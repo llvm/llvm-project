@@ -31,7 +31,7 @@ endfunction()
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
-  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
+  set (DEFAULT_PROJECTS "clang;lld")
 else()
   set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
 endif()
