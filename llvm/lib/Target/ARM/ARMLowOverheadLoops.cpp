@@ -1050,13 +1050,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   SmallVector<MachineInstr *> Worklist(LiveOutMIs.begin(), LiveOutMIs.end());
   while (!Worklist.empty()) {
     MachineInstr *MI = Worklist.pop_back_val();
-    if (MI->getOpcode() == ARM::MQPRCopy) {
-      VMOVCopies.insert(MI);
-      MachineInstr *CopySrc =
-          RDI.getUniqueReachingMIDef(MI, MI->getOperand(1).getReg());
-      if (CopySrc)
-        Worklist.push_back(CopySrc);
-    } else if (NonPredicated.count(MI) && FalseLanesUnknown.contains(MI)) {
+    if (NonPredicated.count(MI) && FalseLanesUnknown.contains(MI)) {
       LLVM_DEBUG(dbgs() << " Unable to handle live out: " << *MI);
       VMOVCopies.clear();
       return false;
