@@ -95,3 +95,80 @@ declare i4 @llvm.ctpop.i4(i4) #1
 !6 = !{!"short", !7, i64 0}
 !7 = !{!"omnipotent char", !8, i64 0}
 !8 = !{!"Simple C/C++ TBAA"}
+
+; Function to lockdown changes for floating point vector comparisons
+define range(i32 0, 5) i32 @cols_needed(ptr %colauths){
+; POWERPC_64LE-LABEL: cols_needed:
+; POWERPC_64LE:       # %bb.0: # %entry
+; POWERPC_64LE-NEXT:    lxv vs0, 0(r3)
+; POWERPC_64LE-NEXT:    xxlxor vs1, vs1, vs1
+; POWERPC_64LE-NEXT:    li r4, 4
+; POWERPC_64LE-NEXT:    li r3, 0
+; POWERPC_64LE-NEXT:    xvcmpeqsp vs0, vs0, vs1
+; POWERPC_64LE-NEXT:    xxlnor v2, vs0, vs0
+; POWERPC_64LE-NEXT:    vextuwrx r4, r4, v2
+; POWERPC_64LE-NEXT:    vextuwrx r3, r3, v2
+; POWERPC_64LE-NEXT:    rlwinm r4, r4, 1, 30, 30
+; POWERPC_64LE-NEXT:    sub r3, r4, r3
+; POWERPC_64LE-NEXT:    mfvsrwz r4, v2
+; POWERPC_64LE-NEXT:    rlwinm r4, r4, 2, 29, 29
+; POWERPC_64LE-NEXT:    or r3, r3, r4
+; POWERPC_64LE-NEXT:    li r4, 12
+; POWERPC_64LE-NEXT:    vextuwrx r4, r4, v2
+; POWERPC_64LE-NEXT:    slwi r4, r4, 3
+; POWERPC_64LE-NEXT:    or r3, r3, r4
+; POWERPC_64LE-NEXT:    clrlwi r3, r3, 28
+; POWERPC_64LE-NEXT:    stb r3, -1(r1)
+; POWERPC_64LE-NEXT:    lbz r3, -1(r1)
+; POWERPC_64LE-NEXT:    popcntd r3, r3
+; POWERPC_64LE-NEXT:    blr
+;
+; POWERPC_64-LABEL: cols_needed:
+; POWERPC_64:       # %bb.0: # %entry
+; POWERPC_64-NEXT:    lxv vs0, 0(r3)
+; POWERPC_64-NEXT:    xxlxor vs1, vs1, vs1
+; POWERPC_64-NEXT:    li r4, 8
+; POWERPC_64-NEXT:    xvcmpeqsp vs0, vs0, vs1
+; POWERPC_64-NEXT:    xxlnor v2, vs0, vs0
+; POWERPC_64-NEXT:    vextuwlx r4, r4, v2
+; POWERPC_64-NEXT:    mfvsrwz r3, v2
+; POWERPC_64-NEXT:    rlwinm r4, r4, 1, 30, 30
+; POWERPC_64-NEXT:    rlwimi r4, r3, 2, 29, 29
+; POWERPC_64-NEXT:    li r3, 0
+; POWERPC_64-NEXT:    vextuwlx r3, r3, v2
+; POWERPC_64-NEXT:    rlwimi r4, r3, 3, 0, 28
+; POWERPC_64-NEXT:    li r3, 12
+; POWERPC_64-NEXT:    vextuwlx r3, r3, v2
+; POWERPC_64-NEXT:    sub r3, r4, r3
+; POWERPC_64-NEXT:    clrlwi r3, r3, 28
+; POWERPC_64-NEXT:    stb r3, -1(r1)
+; POWERPC_64-NEXT:    lbz r3, -1(r1)
+; POWERPC_64-NEXT:    popcntd r3, r3
+; POWERPC_64-NEXT:    blr
+;
+; POWERPC_32-LABEL: cols_needed:
+; POWERPC_32:       # %bb.0: # %entry
+; POWERPC_32-NEXT:    lxv vs0, 0(r3)
+; POWERPC_32-NEXT:    xxlxor vs1, vs1, vs1
+; POWERPC_32-NEXT:    xvcmpeqsp vs0, vs0, vs1
+; POWERPC_32-NEXT:    xxlnor vs0, vs0, vs0
+; POWERPC_32-NEXT:    stxv vs0, -32(r1)
+; POWERPC_32-NEXT:    lwz r3, -24(r1)
+; POWERPC_32-NEXT:    lwz r4, -28(r1)
+; POWERPC_32-NEXT:    rlwinm r3, r3, 1, 30, 30
+; POWERPC_32-NEXT:    rlwimi r3, r4, 2, 29, 29
+; POWERPC_32-NEXT:    lwz r4, -32(r1)
+; POWERPC_32-NEXT:    rlwimi r3, r4, 3, 0, 28
+; POWERPC_32-NEXT:    lwz r4, -20(r1)
+; POWERPC_32-NEXT:    sub r3, r3, r4
+; POWERPC_32-NEXT:    clrlwi r3, r3, 28
+; POWERPC_32-NEXT:    popcntw r3, r3
+; POWERPC_32-NEXT:    blr
+entry:
+  %0 = load <4 x float>, ptr %colauths, align 4, !tbaa !5
+  %1 = fcmp une <4 x float> %0, zeroinitializer
+  %2 = bitcast <4 x i1> %1 to i4
+  %3 = tail call range(i4 0, 5) i4 @llvm.ctpop.i4(i4 %2)
+  %4 = zext nneg i4 %3 to i32
+  ret i32 %4
+}
