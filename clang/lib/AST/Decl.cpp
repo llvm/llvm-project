@@ -3316,6 +3316,10 @@ bool FunctionDecl::isImmediateEscalating() const {
       CD && CD->isInheritingConstructor())
     return CD->getInheritedConstructor().getConstructor();
 
+  // Destructors are not immediate escalating.
+  if (isa<CXXDestructorDecl>(this))
+    return false;
+
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
   TemplatedKind TK = getTemplatedKind();

@@ -951,6 +951,13 @@ llvm.func @rocdl.s.barrier() {
   llvm.return
 }
 
+llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.barrier.init
+  // CHECK: rocdl.s.barrier.init %[[PTR:.+]], 1
+  rocdl.s.barrier.init %ptr, 1
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier.signal() {
   // CHECK-LABEL: rocdl.s.barrier.signal
   // CHECK: rocdl.s.barrier.signal -1
@@ -958,10 +965,45 @@ llvm.func @rocdl.s.barrier.signal() {
   llvm.return
 }
 
+llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.barrier.signal.var
+  // CHECK: rocdl.s.barrier.signal.var %[[PTR:.+]], 1
+  rocdl.s.barrier.signal.var %ptr, 1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.barrier.join
+  // CHECK: rocdl.s.barrier.join %[[PTR:.+]]
+  rocdl.s.barrier.join %ptr
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.leave() {
+  // CHECK-LABEL: rocdl.s.barrier.leave
+  // CHECK: rocdl.s.barrier.leave 1
+  rocdl.s.barrier.leave 1
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier.wait() {
   // CHECK-LABEL: rocdl.s.barrier.wait
   // CHECK: rocdl.s.barrier.wait -1
   rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.signal.isfirst() {
+  // CHECK-LABEL: rocdl.s.barrier.signal.isfirst
+  // CHECK: rocdl.s.barrier.signal.isfirst 1
+  %0 = rocdl.s.barrier.signal.isfirst 1 : i1
+  llvm.return
+}
+
+llvm.func @rocdl.s.get.barrier.state() {
+  // CHECK-LABEL: rocdl.s.get.barrier.state
+  // CHECK: rocdl.s.get.barrier.state 1
+  %0 = rocdl.s.get.barrier.state 1 : i32
   llvm.return
 }
 

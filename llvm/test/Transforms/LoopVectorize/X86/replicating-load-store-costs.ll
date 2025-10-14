@@ -621,8 +621,6 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
 ; I32-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; I32-NEXT:    [[TMP2:%.*]] = sub i64 [[START]], [[N_VEC]]
-; I32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[START]], i64 0
-; I32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; I32-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC_2]], i64 0
 ; I32-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT1]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -644,14 +642,6 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[TMP16:%.*]] = add i64 [[TMP8]], 1
 ; I32-NEXT:    [[TMP17:%.*]] = add i64 [[TMP9]], 1
 ; I32-NEXT:    [[TMP18:%.*]] = add i64 [[TMP10]], 1
-; I32-NEXT:    [[TMP19:%.*]] = insertelement <8 x i64> poison, i64 [[TMP11]], i32 0
-; I32-NEXT:    [[TMP20:%.*]] = insertelement <8 x i64> [[TMP19]], i64 [[TMP12]], i32 1
-; I32-NEXT:    [[TMP21:%.*]] = insertelement <8 x i64> [[TMP20]], i64 [[TMP13]], i32 2
-; I32-NEXT:    [[TMP22:%.*]] = insertelement <8 x i64> [[TMP21]], i64 [[TMP14]], i32 3
-; I32-NEXT:    [[TMP23:%.*]] = insertelement <8 x i64> [[TMP22]], i64 [[TMP15]], i32 4
-; I32-NEXT:    [[TMP24:%.*]] = insertelement <8 x i64> [[TMP23]], i64 [[TMP16]], i32 5
-; I32-NEXT:    [[TMP25:%.*]] = insertelement <8 x i64> [[TMP24]], i64 [[TMP17]], i32 6
-; I32-NEXT:    [[TMP26:%.*]] = insertelement <8 x i64> [[TMP25]], i64 [[TMP18]], i32 7
 ; I32-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP11]]
 ; I32-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
 ; I32-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP13]]
@@ -677,22 +667,21 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[TMP49:%.*]] = insertelement <8 x float> [[TMP48]], float [[TMP41]], i32 6
 ; I32-NEXT:    [[TMP50:%.*]] = insertelement <8 x float> [[TMP49]], float [[TMP42]], i32 7
 ; I32-NEXT:    [[TMP51:%.*]] = fcmp oeq <8 x float> [[TMP50]], zeroinitializer
-; I32-NEXT:    [[TMP52:%.*]] = mul <8 x i64> [[TMP26]], [[BROADCAST_SPLAT]]
-; I32-NEXT:    [[TMP53:%.*]] = extractelement <8 x i64> [[TMP52]], i32 0
+; I32-NEXT:    [[TMP53:%.*]] = mul i64 [[TMP11]], [[START]]
+; I32-NEXT:    [[TMP55:%.*]] = mul i64 [[TMP12]], [[START]]
+; I32-NEXT:    [[TMP57:%.*]] = mul i64 [[TMP13]], [[START]]
+; I32-NEXT:    [[TMP59:%.*]] = mul i64 [[TMP14]], [[START]]
+; I32-NEXT:    [[TMP61:%.*]] = mul i64 [[TMP15]], [[START]]
+; I32-NEXT:    [[TMP63:%.*]] = mul i64 [[TMP16]], [[START]]
+; I32-NEXT:    [[TMP65:%.*]] = mul i64 [[TMP17]], [[START]]
+; I32-NEXT:    [[TMP67:%.*]] = mul i64 [[TMP18]], [[START]]
 ; I32-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP53]]
-; I32-NEXT:    [[TMP55:%.*]] = extractelement <8 x i64> [[TMP52]], i32 1
 ; I32-NEXT:    [[TMP56:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP55]]
-; I32-NEXT:    [[TMP57:%.*]] = extractelement <8 x i64> [[TMP52]], i32 2
 ; I32-NEXT:    [[TMP58:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP57]]
-; I32-NEXT:    [[TMP59:%.*]] = extractelement <8 x i64> [[TMP52]], i32 3
 ; I32-NEXT:    [[TMP60:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP59]]
-; I32-NEXT:    [[TMP61:%.*]] = extractelement <8 x i64> [[TMP52]], i32 4
 ; I32-NEXT:    [[TMP62:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP61]]
-; I32-NEXT:    [[TMP63:%.*]] = extractelement <8 x i64> [[TMP52]], i32 5
 ; I32-NEXT:    [[TMP64:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP63]]
-; I32-NEXT:    [[TMP65:%.*]] = extractelement <8 x i64> [[TMP52]], i32 6
 ; I32-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP65]]
-; I32-NEXT:    [[TMP67:%.*]] = extractelement <8 x i64> [[TMP52]], i32 7
 ; I32-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[TMP67]]
 ; I32-NEXT:    [[TMP69:%.*]] = insertelement <8 x ptr> poison, ptr [[TMP54]], i32 0
 ; I32-NEXT:    [[TMP70:%.*]] = insertelement <8 x ptr> [[TMP69]], ptr [[TMP56]], i32 1
@@ -774,7 +763,222 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-cpu"="znver3" }
+define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %src.1, i32 %x) #0 {
+; I64-LABEL: define void @address_use_in_different_block(
+; I64-SAME: ptr noalias [[DST:%.*]], ptr [[SRC_0:%.*]], ptr [[SRC_1:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; I64-NEXT:  [[ENTRY:.*:]]
+; I64-NEXT:    [[X_POS:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 0)
+; I64-NEXT:    [[OFFSET:%.*]] = zext i32 [[X_POS]] to i64
+; I64-NEXT:    br label %[[VECTOR_PH:.*]]
+; I64:       [[VECTOR_PH]]:
+; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
+; I64:       [[VECTOR_BODY]]:
+; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; I64-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; I64-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; I64-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
+; I64-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
+; I64-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
+; I64-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
+; I64-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
+; I64-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
+; I64-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP0]], [[OFFSET]]
+; I64-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP1]], [[OFFSET]]
+; I64-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP2]], [[OFFSET]]
+; I64-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP3]], [[OFFSET]]
+; I64-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP4]], [[OFFSET]]
+; I64-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP5]], [[OFFSET]]
+; I64-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP6]], [[OFFSET]]
+; I64-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP7]], [[OFFSET]]
+; I64-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP8]]
+; I64-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP9]]
+; I64-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP10]]
+; I64-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP11]]
+; I64-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP12]]
+; I64-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP13]]
+; I64-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP14]]
+; I64-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP15]]
+; I64-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP16]], align 4
+; I64-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP17]], align 4
+; I64-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP18]], align 4
+; I64-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP19]], align 4
+; I64-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP20]], align 4
+; I64-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP21]], align 4
+; I64-NEXT:    [[TMP30:%.*]] = load i32, ptr [[TMP22]], align 4
+; I64-NEXT:    [[TMP31:%.*]] = load i32, ptr [[TMP23]], align 4
+; I64-NEXT:    [[TMP32:%.*]] = sext i32 [[TMP24]] to i64
+; I64-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP25]] to i64
+; I64-NEXT:    [[TMP34:%.*]] = sext i32 [[TMP26]] to i64
+; I64-NEXT:    [[TMP35:%.*]] = sext i32 [[TMP27]] to i64
+; I64-NEXT:    [[TMP36:%.*]] = sext i32 [[TMP28]] to i64
+; I64-NEXT:    [[TMP37:%.*]] = sext i32 [[TMP29]] to i64
+; I64-NEXT:    [[TMP38:%.*]] = sext i32 [[TMP30]] to i64
+; I64-NEXT:    [[TMP39:%.*]] = sext i32 [[TMP31]] to i64
+; I64-NEXT:    [[TMP40:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP32]]
+; I64-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP33]]
+; I64-NEXT:    [[TMP42:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP34]]
+; I64-NEXT:    [[TMP43:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP35]]
+; I64-NEXT:    [[TMP44:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP36]]
+; I64-NEXT:    [[TMP45:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP37]]
+; I64-NEXT:    [[TMP46:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP38]]
+; I64-NEXT:    [[TMP47:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP39]]
+; I64-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[TMP40]], i64 -8
+; I64-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[TMP41]], i64 -8
+; I64-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[TMP42]], i64 -8
+; I64-NEXT:    [[TMP51:%.*]] = getelementptr i8, ptr [[TMP43]], i64 -8
+; I64-NEXT:    [[TMP52:%.*]] = getelementptr i8, ptr [[TMP44]], i64 -8
+; I64-NEXT:    [[TMP53:%.*]] = getelementptr i8, ptr [[TMP45]], i64 -8
+; I64-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[TMP46]], i64 -8
+; I64-NEXT:    [[TMP55:%.*]] = getelementptr i8, ptr [[TMP47]], i64 -8
+; I64-NEXT:    [[TMP56:%.*]] = load double, ptr [[TMP48]], align 8
+; I64-NEXT:    [[TMP57:%.*]] = load double, ptr [[TMP49]], align 8
+; I64-NEXT:    [[TMP58:%.*]] = insertelement <2 x double> poison, double [[TMP56]], i32 0
+; I64-NEXT:    [[TMP59:%.*]] = insertelement <2 x double> [[TMP58]], double [[TMP57]], i32 1
+; I64-NEXT:    [[TMP60:%.*]] = load double, ptr [[TMP50]], align 8
+; I64-NEXT:    [[TMP61:%.*]] = load double, ptr [[TMP51]], align 8
+; I64-NEXT:    [[TMP62:%.*]] = insertelement <2 x double> poison, double [[TMP60]], i32 0
+; I64-NEXT:    [[TMP63:%.*]] = insertelement <2 x double> [[TMP62]], double [[TMP61]], i32 1
+; I64-NEXT:    [[TMP64:%.*]] = load double, ptr [[TMP52]], align 8
+; I64-NEXT:    [[TMP65:%.*]] = load double, ptr [[TMP53]], align 8
+; I64-NEXT:    [[TMP66:%.*]] = insertelement <2 x double> poison, double [[TMP64]], i32 0
+; I64-NEXT:    [[TMP67:%.*]] = insertelement <2 x double> [[TMP66]], double [[TMP65]], i32 1
+; I64-NEXT:    [[TMP68:%.*]] = load double, ptr [[TMP54]], align 8
+; I64-NEXT:    [[TMP69:%.*]] = load double, ptr [[TMP55]], align 8
+; I64-NEXT:    [[TMP70:%.*]] = insertelement <2 x double> poison, double [[TMP68]], i32 0
+; I64-NEXT:    [[TMP71:%.*]] = insertelement <2 x double> [[TMP70]], double [[TMP69]], i32 1
+; I64-NEXT:    [[TMP72:%.*]] = fsub <2 x double> zeroinitializer, [[TMP59]]
+; I64-NEXT:    [[TMP73:%.*]] = fsub <2 x double> zeroinitializer, [[TMP63]]
+; I64-NEXT:    [[TMP74:%.*]] = fsub <2 x double> zeroinitializer, [[TMP67]]
+; I64-NEXT:    [[TMP75:%.*]] = fsub <2 x double> zeroinitializer, [[TMP71]]
+; I64-NEXT:    [[TMP76:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP8]]
+; I64-NEXT:    [[TMP77:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP9]]
+; I64-NEXT:    [[TMP78:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
+; I64-NEXT:    [[TMP79:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP11]]
+; I64-NEXT:    [[TMP80:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
+; I64-NEXT:    [[TMP81:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP13]]
+; I64-NEXT:    [[TMP82:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP14]]
+; I64-NEXT:    [[TMP83:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP15]]
+; I64-NEXT:    [[TMP84:%.*]] = extractelement <2 x double> [[TMP72]], i32 0
+; I64-NEXT:    store double [[TMP84]], ptr [[TMP76]], align 8
+; I64-NEXT:    [[TMP85:%.*]] = extractelement <2 x double> [[TMP72]], i32 1
+; I64-NEXT:    store double [[TMP85]], ptr [[TMP77]], align 8
+; I64-NEXT:    [[TMP86:%.*]] = extractelement <2 x double> [[TMP73]], i32 0
+; I64-NEXT:    store double [[TMP86]], ptr [[TMP78]], align 8
+; I64-NEXT:    [[TMP87:%.*]] = extractelement <2 x double> [[TMP73]], i32 1
+; I64-NEXT:    store double [[TMP87]], ptr [[TMP79]], align 8
+; I64-NEXT:    [[TMP88:%.*]] = extractelement <2 x double> [[TMP74]], i32 0
+; I64-NEXT:    store double [[TMP88]], ptr [[TMP80]], align 8
+; I64-NEXT:    [[TMP89:%.*]] = extractelement <2 x double> [[TMP74]], i32 1
+; I64-NEXT:    store double [[TMP89]], ptr [[TMP81]], align 8
+; I64-NEXT:    [[TMP90:%.*]] = extractelement <2 x double> [[TMP75]], i32 0
+; I64-NEXT:    store double [[TMP90]], ptr [[TMP82]], align 8
+; I64-NEXT:    [[TMP91:%.*]] = extractelement <2 x double> [[TMP75]], i32 1
+; I64-NEXT:    store double [[TMP91]], ptr [[TMP83]], align 8
+; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; I64-NEXT:    [[TMP92:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; I64-NEXT:    br i1 [[TMP92]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; I64:       [[MIDDLE_BLOCK]]:
+; I64-NEXT:    br label %[[SCALAR_PH:.*]]
+; I64:       [[SCALAR_PH]]:
+;
+; I32-LABEL: define void @address_use_in_different_block(
+; I32-SAME: ptr noalias [[DST:%.*]], ptr [[SRC_0:%.*]], ptr [[SRC_1:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; I32-NEXT:  [[ENTRY:.*:]]
+; I32-NEXT:    [[X_POS:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 0)
+; I32-NEXT:    [[OFFSET:%.*]] = zext i32 [[X_POS]] to i64
+; I32-NEXT:    br label %[[VECTOR_PH:.*]]
+; I32:       [[VECTOR_PH]]:
+; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
+; I32:       [[VECTOR_BODY]]:
+; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; I32-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; I32-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; I32-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
+; I32-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
+; I32-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP0]], [[OFFSET]]
+; I32-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP1]], [[OFFSET]]
+; I32-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP2]], [[OFFSET]]
+; I32-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP3]], [[OFFSET]]
+; I32-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP4]]
+; I32-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP5]]
+; I32-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP6]]
+; I32-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[TMP7]]
+; I32-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP8]], align 4
+; I32-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4
+; I32-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP10]], align 4
+; I32-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP11]], align 4
+; I32-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP12]] to i64
+; I32-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP13]] to i64
+; I32-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP14]] to i64
+; I32-NEXT:    [[TMP19:%.*]] = sext i32 [[TMP15]] to i64
+; I32-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP16]]
+; I32-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP17]]
+; I32-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP18]]
+; I32-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[TMP19]]
+; I32-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP20]], i64 -8
+; I32-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP21]], i64 -8
+; I32-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP22]], i64 -8
+; I32-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP23]], i64 -8
+; I32-NEXT:    [[TMP28:%.*]] = load double, ptr [[TMP24]], align 8
+; I32-NEXT:    [[TMP29:%.*]] = load double, ptr [[TMP25]], align 8
+; I32-NEXT:    [[TMP30:%.*]] = load double, ptr [[TMP26]], align 8
+; I32-NEXT:    [[TMP31:%.*]] = load double, ptr [[TMP27]], align 8
+; I32-NEXT:    [[TMP32:%.*]] = insertelement <4 x double> poison, double [[TMP28]], i32 0
+; I32-NEXT:    [[TMP33:%.*]] = insertelement <4 x double> [[TMP32]], double [[TMP29]], i32 1
+; I32-NEXT:    [[TMP34:%.*]] = insertelement <4 x double> [[TMP33]], double [[TMP30]], i32 2
+; I32-NEXT:    [[TMP35:%.*]] = insertelement <4 x double> [[TMP34]], double [[TMP31]], i32 3
+; I32-NEXT:    [[TMP36:%.*]] = fsub <4 x double> zeroinitializer, [[TMP35]]
+; I32-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP4]]
+; I32-NEXT:    [[TMP38:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP5]]
+; I32-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP6]]
+; I32-NEXT:    [[TMP40:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP7]]
+; I32-NEXT:    [[TMP41:%.*]] = extractelement <4 x double> [[TMP36]], i32 0
+; I32-NEXT:    store double [[TMP41]], ptr [[TMP37]], align 8
+; I32-NEXT:    [[TMP42:%.*]] = extractelement <4 x double> [[TMP36]], i32 1
+; I32-NEXT:    store double [[TMP42]], ptr [[TMP38]], align 8
+; I32-NEXT:    [[TMP43:%.*]] = extractelement <4 x double> [[TMP36]], i32 2
+; I32-NEXT:    store double [[TMP43]], ptr [[TMP39]], align 8
+; I32-NEXT:    [[TMP44:%.*]] = extractelement <4 x double> [[TMP36]], i32 3
+; I32-NEXT:    store double [[TMP44]], ptr [[TMP40]], align 8
+; I32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; I32-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; I32-NEXT:    br i1 [[TMP45]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; I32:       [[MIDDLE_BLOCK]]:
+; I32-NEXT:    br label %[[SCALAR_PH:.*]]
+; I32:       [[SCALAR_PH]]:
+;
+entry:
+  %x.pos = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %offset = zext i32 %x.pos to i64
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %7 = mul i64 %iv, %offset
+  %gep.src.0 = getelementptr i32, ptr %src.0, i64 %7
+  %l8 = load i32, ptr %gep.src.0, align 4
+  %c = icmp sgt i32 %x, 0
+  br i1 %c, label %loop.latch, label %then
+
+then:
+  br label %loop.latch
+
+loop.latch:
+  %l.ext = sext i32 %l8 to i64
+  %gep.src.1 = getelementptr double, ptr %src.1, i64 %l.ext
+  %13 = getelementptr i8, ptr %gep.src.1, i64 -8
+  %l.2 = load double, ptr %13, align 8
+  %sub = fsub double 0.000000e+00, %l.2
+  %gep.dst = getelementptr double, ptr %dst, i64 %7
+  store double %sub, ptr %gep.dst, align 8
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-cpu"="znver2" }
 
 !0 = distinct !{!0, !1}

@@ -215,7 +215,6 @@ public:
   bool diagnosePositionType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
-  bool ContainsBitField(QualType BaseTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);

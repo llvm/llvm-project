@@ -547,7 +547,7 @@ unsigned X86TargetLowering::getAddressSpace() const {
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
   return TargetTriple.isOSGlibc() || TargetTriple.isOSFuchsia() ||
-         (TargetTriple.isAndroid() && !TargetTriple.isAndroidVersionLT(17));
+         TargetTriple.isAndroid();
 }
 
 static Constant* SegmentOffset(IRBuilderBase &IRB,

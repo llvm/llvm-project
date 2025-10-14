@@ -42,12 +42,6 @@ private:
     static T &&from(T &&Arg) noexcept { return std::forward<T>(Arg); }
   };
 
-  template <typename T> struct Serializable<T *> {
-    typedef ExecutorAddr serializable_type;
-    static ExecutorAddr to(T *Arg) { return ExecutorAddr::fromPtr(Arg); }
-    static T *from(ExecutorAddr A) { return A.toPtr<T *>(); }
-  };
-
   template <> struct Serializable<Error> {
     typedef SPSSerializableError serializable_type;
     static SPSSerializableError to(Error Err) {
@@ -63,21 +57,6 @@ private:
     }
     static Expected<T> from(SPSSerializableExpected<T> Val) {
       return Val.toExpected();
-    }
-  };
-
-  template <typename T> struct Serializable<Expected<T *>> {
-    typedef SPSSerializableExpected<ExecutorAddr> serializable_type;
-    static SPSSerializableExpected<ExecutorAddr> to(Expected<T *> Val) {
-      return SPSSerializableExpected<ExecutorAddr>(
-          Val ? Expected<ExecutorAddr>(ExecutorAddr::fromPtr(*Val))
-              : Expected<ExecutorAddr>(Val.takeError()));
-    }
-    static Expected<T *> from(SPSSerializableExpected<ExecutorAddr> Val) {
-      if (auto Tmp = Val.toExpected())
-        return Tmp->toPtr<T *>();
-      else
-        return Tmp.takeError();
     }
   };
 
@@ -110,7 +89,7 @@ public:
   }
 
   template <typename ArgTuple>
-  std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
+  std::optional<ArgTuple> deserialize(const WrapperFunctionBuffer &ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());

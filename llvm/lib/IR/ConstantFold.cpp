@@ -741,7 +741,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       assert(!CI2->isZero() && "And zero handled above");
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
-        if (CE1->getOpcode() == Instruction::PtrToInt &&
+        if ((CE1->getOpcode() == Instruction::PtrToInt ||
+             CE1->getOpcode() == Instruction::PtrToAddr) &&
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 

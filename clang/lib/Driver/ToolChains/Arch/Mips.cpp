@@ -442,6 +442,8 @@ bool mips::hasCompactBranches(StringRef &CPU) {
   return llvm::StringSwitch<bool>(CPU)
       .Case("mips32r6", true)
       .Case("mips64r6", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }
 

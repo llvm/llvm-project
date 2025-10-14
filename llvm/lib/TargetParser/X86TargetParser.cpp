@@ -175,7 +175,7 @@ constexpr FeatureBitset FeaturesArrowlakeS =
     FeaturesArrowlake | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
-    (FeaturesArrowlakeS ^ FeatureWIDEKL) | FeaturePREFETCHI;
+    (FeaturesArrowlakeS ^ FeatureWIDEKL);
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;

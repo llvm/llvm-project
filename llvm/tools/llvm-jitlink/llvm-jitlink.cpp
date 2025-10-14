@@ -623,8 +623,9 @@ public:
         });
   }
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
-    return InProcessMemoryMapper::prepare(Addr - DeltaAddr, ContentSize);
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override {
+    return InProcessMemoryMapper::prepare(G, Addr - DeltaAddr, ContentSize);
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {

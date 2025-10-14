@@ -273,7 +273,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     EpilogueVectorizationMinVF = 8;
     MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NeoverseN2:
   case NeoverseN3:
     PrefFunctionAlignment = Align(16);

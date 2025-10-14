@@ -273,3 +273,106 @@ loop:
 exit:
   ret void
 }
+
+define void @ld_div2_ld_scevunknown_nonuniform(ptr %src.a, ptr noalias %src.b, ptr noalias %dst) {
+; CHECK-LABEL: define void @ld_div2_ld_scevunknown_nonuniform
+; CHECK-SAME: (ptr [[SRC_A:%.*]], ptr noalias [[SRC_B:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[TMP14]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = load i64, ptr [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x i64> poison, i64 [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x i64> [[TMP24]], i64 [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <8 x i64> [[TMP25]], i64 [[TMP18]], i32 2
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <8 x i64> [[TMP26]], i64 [[TMP19]], i32 3
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <8 x i64> [[TMP27]], i64 [[TMP20]], i32 4
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <8 x i64> [[TMP28]], i64 [[TMP21]], i32 5
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <8 x i64> [[TMP29]], i64 [[TMP22]], i32 6
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <8 x i64> [[TMP30]], i64 [[TMP23]], i32 7
+; CHECK-NEXT:    [[TMP32:%.*]] = udiv <8 x i64> [[TMP31]], splat (i64 2)
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i64> [[TMP32]], i32 0
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i64> [[TMP32]], i32 1
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP35]]
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i64> [[TMP32]], i32 2
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP37]]
+; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <8 x i64> [[TMP32]], i32 3
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP39]]
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <8 x i64> [[TMP32]], i32 4
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP41]]
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <8 x i64> [[TMP32]], i32 5
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP43]]
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <8 x i64> [[TMP32]], i32 6
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP45]]
+; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <8 x i64> [[TMP32]], i32 7
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i32, ptr [[SRC_B]], i64 [[TMP47]]
+; CHECK-NEXT:    [[TMP49:%.*]] = load i32, ptr [[TMP34]], align 4
+; CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[TMP36]], align 4
+; CHECK-NEXT:    [[TMP51:%.*]] = load i32, ptr [[TMP38]], align 4
+; CHECK-NEXT:    [[TMP52:%.*]] = load i32, ptr [[TMP40]], align 4
+; CHECK-NEXT:    [[TMP53:%.*]] = load i32, ptr [[TMP42]], align 4
+; CHECK-NEXT:    [[TMP54:%.*]] = load i32, ptr [[TMP44]], align 4
+; CHECK-NEXT:    [[TMP55:%.*]] = load i32, ptr [[TMP46]], align 4
+; CHECK-NEXT:    [[TMP56:%.*]] = load i32, ptr [[TMP48]], align 4
+; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <8 x i32> poison, i32 [[TMP49]], i32 0
+; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <8 x i32> [[TMP57]], i32 [[TMP50]], i32 1
+; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <8 x i32> [[TMP58]], i32 [[TMP51]], i32 2
+; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <8 x i32> [[TMP59]], i32 [[TMP52]], i32 3
+; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <8 x i32> [[TMP60]], i32 [[TMP53]], i32 4
+; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <8 x i32> [[TMP61]], i32 [[TMP54]], i32 5
+; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <8 x i32> [[TMP62]], i32 [[TMP55]], i32 6
+; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <8 x i32> [[TMP63]], i32 [[TMP56]], i32 7
+; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    store <8 x i32> [[TMP64]], ptr [[TMP65]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP66]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr i32, ptr %src.a, i64 %iv
+  %load.a = load i64, ptr %gep.a
+  %d = udiv i64 %load.a, 2
+  %gep.b = getelementptr i32, ptr %src.b, i64 %d
+  %load.b = load i32, ptr %gep.b
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %load.b, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv, 1000
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}

@@ -2161,19 +2161,6 @@ public:
   }
 };
 
-/// Convert `vector.splat` to `vector.broadcast`. There is a path to LLVM from
-/// `vector.broadcast` through other patterns.
-struct VectorSplatToBroadcast : public ConvertOpToLLVMPattern<vector::SplatOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
-  LogicalResult
-  matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splat, splat.getType(),
-                                                     adaptor.getInput());
-    return success();
-  }
-};
-
 } // namespace
 
 void mlir::vector::populateVectorRankReducingFMAPattern(
@@ -2212,7 +2199,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorInsertOpConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
-               VectorSplatToBroadcast, VectorBroadcastScalarToLowRankLowering,
+               VectorBroadcastScalarToLowRankLowering,
                VectorBroadcastScalarToNdLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
