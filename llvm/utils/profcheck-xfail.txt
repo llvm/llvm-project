@@ -1312,14 +1312,11 @@ Transforms/SimpleLoopUnswitch/pr60736.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-freeze-individual-conditions.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-logical-and-or.ll
-Transforms/SROA/addrspacecast.ll
-Transforms/SROA/phi-and-select.ll
 Transforms/SROA/phi-gep.ll
 Transforms/SROA/scalable-vectors-with-known-vscale.ll
 Transforms/SROA/select-gep.ll
 Transforms/SROA/select-load.ll
 Transforms/SROA/slice-width.ll
-Transforms/SROA/std-clamp.ll
 Transforms/SROA/vector-conversion.ll
 Transforms/SROA/vector-promotion-cannot-tree-structure-merge.ll
 Transforms/SROA/vector-promotion.ll
