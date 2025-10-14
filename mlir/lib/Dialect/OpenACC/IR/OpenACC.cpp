@@ -1043,13 +1043,10 @@ static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
   if (isa<MappableType>(varType)) {
     auto mappableTy = cast<MappableType>(varType);
     auto typedVar = cast<TypedValue<MappableType>>(blockArgVar);
-    privatizedValue = mappableTy.generatePrivateInit(builder, loc, typedVar,
-                                                     varName, bounds, {});
+    privatizedValue = mappableTy.generatePrivateInit(
+        builder, loc, typedVar, varName, bounds, {}, needsFree);
     if (!privatizedValue)
       return nullptr;
-    // TODO: MappableType doesn't yet support needsFree
-    // For now assume it doesn't need explicit deallocation
-    needsFree = false;
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
     auto pointerLikeTy = cast<PointerLikeType>(varType);
