@@ -11,7 +11,7 @@
 
 int main() {
   int x = 10;
-  __builtin_debugtrap();
+  return x;
 }
 
 #--- with-target.input
@@ -21,12 +21,13 @@ expr blah
 # CHECK-TARGET: (lldb) expr
 # CHECK-TARGET: note: Falling back to default language. Ran expression as 'Objective C++'.
 
+b 4
 run
 
 expr blah
 
 # CHECK-TARGET: (lldb) expr
-# CHECK-TARGET: note: Ran expression as 'C++14'.
+# CHECK-TARGET: note: Ran expression as '{{(ISO )?}}C++{{.*}}'
 
 expr -l objc -- blah
 
