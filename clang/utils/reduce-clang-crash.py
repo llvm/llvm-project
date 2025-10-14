@@ -513,6 +513,23 @@ fi
             return FailureType.FrontEnd
 
         print("Found Middle/Backend failure")
+
+        self.opt_level = extract_opt_level(self.clang_args) or "-O2"
+        # Try running w/ -emit-llvm to generate an IR file,
+        # if it succeeds we have a backend failure, and can use llc.
+        if not self.check_expected_output(
+                args=self.clang_args + ["-emit-llvm", "-o", self.ir_file]):
+            print("Checking llc for failure")
+            if self.check_expected_output(
+                cmd=self.llc, args=[self.opt_level, "-filetype=obj"], filename=self.ir_file
+            ):
+                print("Found BackEnd Crash")
+                return FailureType.BackEnd
+            elif os.path.exists(self.ir_file):
+                # clean up the IR file if we generated it, but won't use it.
+                print(f"clean up {self.ir_file}, since we can't repro w/ llc")
+                os.remove(self.ir_file)
+
         args = self.clang_args + [
             "-mllvm",
             "--print-on-crash",
@@ -528,8 +545,9 @@ fi
         # The output from --print-on-crash has an invalid first line (pass name).
         remove_first_line(self.ir_file)
 
-        self.opt_level = extract_opt_level(self.clang_args) or "-O2"
-
+        # TODO: parse the exact pass from the backtrace and set the pass
+        # pipeline directly via -passes="...".
+        print("Checking opt for failure")
         if self.check_expected_output(
             cmd=self.opt,
             args=[self.opt_level, "-disable-output"],
@@ -537,12 +555,7 @@ fi
         ):
             print("Found MiddleEnd Crash")
             return FailureType.MiddleEnd
-        if self.check_expected_output(
-            cmd=self.llc, args=[self.opt_level], filename=self.ir_file
-        ):
-            print("Found BackEnd Crash")
-            return FailureType.BackEnd
-        print("Found Unknow Crash Type. Falling back to creduce")
+        print("Could not automatically detect crash type, falling back to creduce/cvise.")
         return FailureType.Unknown
 
     def reduce_ir_crash(self, new_cmd: List[str]):
@@ -640,13 +653,11 @@ def main():
                 print("Starting reduction with creduce/cvise")
                 pass
             case FailureType.MiddleEnd:
-                # TODO: parse the exact pass from the backtrace and set the
-                # pass pipeline directly.
                 new_cmd = [opt_cmd, "-disable-output", r.opt_level]
                 r.reduce_ir_crash(new_cmd)
                 return
             case FailureType.BackEnd:
-                new_cmd = [llc_cmd, r.opt_level]
+                new_cmd = [llc_cmd,  "-filetype=obj", r.opt_level]
                 r.reduce_ir_crash(new_cmd)
                 return
 
