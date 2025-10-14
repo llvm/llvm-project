@@ -713,8 +713,8 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
                                                         bool IsHiBits) {
   MachineBasicBlock &MBB = *I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  const MachineOperand *SrcMO1 = TII->getNamedOperand(I, AMDGPU::OpName::src0);
-  const MachineOperand *SrcMO2 = TII->getNamedOperand(I, AMDGPU::OpName::src1);
+  const MachineOperand *SrcMO0 = TII->getNamedOperand(I, AMDGPU::OpName::src0);
+  const MachineOperand *SrcMO1 = TII->getNamedOperand(I, AMDGPU::OpName::src1);
   Register DstReg = I.getOperand(0).getReg();
   unsigned OpCode = I.getOpcode();
   Register UnpackedDstReg = IsHiBits ? TRI->getSubReg(DstReg, AMDGPU::sub1)
@@ -730,11 +730,12 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   NewMI.addDef(UnpackedDstReg); // vdst
   if (AMDGPU::hasNamedOperand(UnpackedOpcode, AMDGPU::OpName::src0) &&
       AMDGPU::hasNamedOperand(UnpackedOpcode, AMDGPU::OpName::src1)) {
-    addOperandAndMods(NewMI, Src0Mods, IsHiBits, *SrcMO1);
-    addOperandAndMods(NewMI, Src1Mods, IsHiBits, *SrcMO2);
+    addOperandAndMods(NewMI, Src0Mods, IsHiBits, *SrcMO0);
+    addOperandAndMods(NewMI, Src1Mods, IsHiBits, *SrcMO1);
   } else {
-    const MachineOperand *SrcMO = IsHiBits ? SrcMO2 : SrcMO1;
-    addOperandAndMods(NewMI, Src1Mods, IsHiBits, *SrcMO);
+    const MachineOperand *SrcMO = IsHiBits ? SrcMO1 : SrcMO0;
+    unsigned SrcMods = IsHiBits ? Src1Mods : Src0Mods;
+    addOperandAndMods(NewMI, SrcMods, IsHiBits, *SrcMO);
   }
 
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
