@@ -113,6 +113,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
   using _ArrayCookie = __arm_array_cookie<_Tp>;
 #else
   static_assert(false, "The array cookie layout is unknown on this ABI");
+  struct _ArrayCookie { // dummy definition required to make the function parse
+    size_t element_count;
+  };
 #endif
 
   char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
