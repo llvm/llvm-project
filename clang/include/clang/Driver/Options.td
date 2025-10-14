@@ -9654,6 +9654,9 @@ def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
   HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
 def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
 }
+def famd_allow_threadprivate_equivalence : Flag<["-"], "famd-allow-threadprivate-equivalence">,
+  Flags<[HelpHidden]>, Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Allow to use veriables in EQUIVALENCE statements with THREADPRIVATE">;
 let Visibility = [ClangOption, CLOption] in {
 def floop_unswitch_aggressive : Flag<["-"], "floop-unswitch-aggressive">, Group<f_Group>,
   HelpText<"Aggressively unswitch loops.">;
