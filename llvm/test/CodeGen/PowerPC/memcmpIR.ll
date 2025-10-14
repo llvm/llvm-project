@@ -127,7 +127,7 @@ entry:
 define signext i32 @test4(ptr nocapture readonly %buffer1, ptr nocapture readonly %buffer2)  {
 
 entry:
-  %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 165)
+  %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 129)
   ret i32 %call
 }
 
