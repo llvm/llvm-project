@@ -18,6 +18,7 @@
 
 #include "swift/Demangling/Demangle.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -416,16 +417,27 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
   Log *log = GetLog(LLDBLog::Types);
 
   auto format_string = [](const std::string &dest) {
-    StreamString stream;
-    for (auto c : dest) {
-      if (c >= 32 && c <= 127) {
-        stream << c;
-      } else {
-        stream << "\\0";
-        stream.PutHex8(c);
-      }
+    std::string result;
+    llvm::raw_string_ostream s(result);
+    llvm::printEscapedString(dest, s);
+    return result;
+  };
+  /// Very quickly (this is a high-firing event), copy a few
+  /// human-readable bytes usable as detail in the progress update.
+  auto short_string = [](const std::string &dest) {
+    std::string result;
+    result.reserve(24);
+    size_t end = std::min<size_t>(dest.size(), 24);
+    for (size_t i = 0; i < end; ++i) {
+      signed char c = dest[i];
+      result.append(1, c > 32 ? c : '.');
     }
-    return std::string(stream.GetData());
+    if (end < dest.size()) {
+      result[21] = '.';
+      result[22] = '.';
+      result[23] = '.';
+    }
+    return result;
   };
   LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0:x}",
             address.getRawAddress());
@@ -463,6 +475,8 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
       !readMetadataFromFileCacheEnabled() || !addr.IsSectionOffset();
   target.ReadCStringFromMemory(addr, dest, error, force_live_memory);
   if (error.Success()) {
+    if (m_progress_callback)
+      m_progress_callback(short_string(dest));
     LLDB_LOGV(log, "[MemoryReader] memory read returned string: \"{0}\"",
               format_string(dest));
     return true;

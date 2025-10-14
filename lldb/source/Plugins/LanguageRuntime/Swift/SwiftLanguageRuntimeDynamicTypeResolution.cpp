@@ -608,6 +608,22 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
 
 namespace {
 
+class ProgressRAII {
+  Progress m_progress;
+  LLDBMemoryReader &m_memory_reader;
+public:
+  ProgressRAII(std::string title, Debugger *debugger,
+               LLDBMemoryReader &memory_reader)
+      : m_progress(title, {}, {}, debugger,
+                   Progress::kDefaultHighFrequencyReportTime),
+        m_memory_reader(memory_reader) {
+    m_memory_reader.SetProgressCallback([&](StringRef message) {
+      m_progress.Increment(1, message.str());
+    });
+  }
+  ~ProgressRAII() { m_memory_reader.SetProgressCallback(); };
+};
+
 CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
                                 const swift::reflection::TypeRef *type_ref,
                                 swift::Mangle::ManglingFlavor flavor) {
@@ -3480,6 +3496,14 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
 
+  // On remove connections downloading reflection metadata can be a bottleneck.
+  auto flavor = GetManglingFlavor(type.GetMangledTypeName());
+  static std::string g_debuginfo = "Loading debug info";
+  static std::string g_reflection = "Loading reflection metadata";
+  ProgressRAII progress(
+      flavor == swift::Mangle::ManglingFlavor::Embedded ? g_debuginfo
+                                                        : g_reflection,
+      &GetProcess().GetTarget().GetDebugger(), *GetMemoryReader());
   LLDBTypeInfoProvider provider(*this, ts);
   return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
                                      ts.GetDescriptorFinder());
