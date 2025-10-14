@@ -2600,9 +2600,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           m_images.Append(module_sp, notify);
 
         for (ModuleSP &old_module_sp : replaced_modules) {
-          Module *old_module_ptr = old_module_sp.get();
+          auto old_module_wp = old_module_sp->weak_from_this();
           old_module_sp.reset();
-          ModuleList::RemoveSharedModuleIfOrphaned(old_module_ptr);
+          ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
         }
       } else
         module_sp.reset();
