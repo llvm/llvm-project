@@ -8,9 +8,7 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr9 -mtriple=powerpc-ibm-aix \
 ; RUN:     -ppc-asm-full-reg-names --ppc-vsr-nums-as-vr < %s | FileCheck %s
 
-; Currently the generated code uses `vspltisw` to generate vector of 1s followed by add operation.
-; This pattern is expected to be optimized in a future patch by using `xxleqv` to generate vector of -1s
-; followed by subtraction operation.
+; The addition of vector `A` with vector of 1s currently uses `vspltisw` to generate vector of 1s followed by add operation.
 
 ; Function for the vector type v2i64 `a + {1, 1}`
 define <2 x i64> @test_v2i64(<2 x i64> %a) {
