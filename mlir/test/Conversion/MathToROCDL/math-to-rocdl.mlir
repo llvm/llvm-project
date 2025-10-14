@@ -661,3 +661,13 @@ func.func @clampf_vector_2d_f16(%x: vector<2x2xf16>, %lo: vector<2x2xf16>, %hi: 
   // PRE9-NOT: rocdl.fmed3
   // PRE9: math.clampf {{.*}} : vector<2x2xf16>
 }
+
+// -----
+// CHECK-LABEL: func.func @clampf_bf16
+func.func @clampf_bf16(%x: bf16, %lo: bf16, %hi: bf16) -> bf16 {
+  %r = math.clampf %x to [%lo, %hi] : bf16
+  return %r : bf16
+  // CHECK: math.clampf {{.*}} : bf16
+  // CHECK-NOT: rocdl.fmed3
+}
+

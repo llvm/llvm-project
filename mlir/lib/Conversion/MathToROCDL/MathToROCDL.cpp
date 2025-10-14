@@ -54,13 +54,25 @@ struct ClampFOpConversion final
   LogicalResult
   matchAndRewrite(math::ClampFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // V_MED3_F16/F32 only exists in gfx9+ artchitectures
+    // Only f16 and f32 types are supported by fmed3
+    Type opTy = op.getType();
+    auto resultType = getTypeConverter()->convertType(opTy);
+
+    if (auto vectorType = dyn_cast<VectorType>(opTy)) {
+      opTy = vectorType.getElementType();
+    }
+
+    if (!opTy.isF16() && !opTy.isF32()) {
+      return rewriter.notifyMatchFailure(
+          op, "fmed3 only supports f16 and f32 types");
+    }
+
+    // V_MED3_F16/F32 only exists in gfx9+ architectures
     if (chipset.majorVersion < 9) {
       return rewriter.notifyMatchFailure(
           op, ("pre-gfx9 (gfx" + std::to_string(chipset.majorVersion) +
                "): V_MED_F16 / V_MED3_F32 not supported."));
     }
-    auto resultType = getTypeConverter()->convertType(op.getType());
     // Handle multi-dimensional vectors (converted to LLVM arrays)
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(resultType)) {
       // Handle multi-dimensional vectors (converted to LLVM arrays)
