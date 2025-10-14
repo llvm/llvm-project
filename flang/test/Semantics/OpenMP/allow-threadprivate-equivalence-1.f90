@@ -15,9 +15,9 @@ program equiv
 
     !$omp parallel num_threads(2)
         x = -42
-        !$omp master
+        !$omp masked
             x = 42
-        !$omp end master
+        !$omp end masked
         !$omp barrier
         !$omp atomic update
             a = a + 1
