@@ -30,7 +30,7 @@ public:
   /// not get destroyed. 
   BreakpointLocationCollection(bool preserving = false);
 
-  virtual ~BreakpointLocationCollection();
+  ~BreakpointLocationCollection();
 
   BreakpointLocationCollection &operator=(const BreakpointLocationCollection &rhs);
 
@@ -39,7 +39,7 @@ public:
   /// \param[in] bp_loc_sp
   ///     Shared pointer to the breakpoint location that will get added
   ///     to the list.
-  virtual void Add(const lldb::BreakpointLocationSP &bp_loc_sp);
+  void Add(const lldb::BreakpointLocationSP &bp_loc_sp);
 
   /// Removes the breakpoint location given by \b breakID from this
   /// list.
@@ -52,7 +52,7 @@ public:
   ///
   /// \result
   ///     \b true if the breakpoint was in the list.
-  virtual bool Remove(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
+  bool Remove(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
 
   /// Returns a shared pointer to the breakpoint location with id \a
   /// breakID.
