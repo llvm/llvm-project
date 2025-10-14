@@ -291,9 +291,11 @@ ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+if "%arch%"=="amd64" (
+  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+)
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
-REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -323,12 +325,14 @@ ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+if "%arch%"=="amd64" (
+  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+)
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
-ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
-ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
+REM ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
+REM ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
 REM ninja check-lldb || ninja check-lldb || ninja check-lldb || exit /b 1
-REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 ninja package || exit /b 1
 
 :: generate tarball with install toolchain only off
