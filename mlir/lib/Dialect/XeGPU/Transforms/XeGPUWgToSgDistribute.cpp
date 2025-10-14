@@ -913,7 +913,8 @@ struct WgToSgLoadGatherOpWithOffset
          llvm::zip(adaptor.getOffsets(), adaptor.getMask())) {
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), /*layout*/nullptr);
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+          /*layout*/ nullptr);
       xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0),
                                      layout.dropSgLayoutAndData());
       newLoadOps.push_back(newLoadOp);
@@ -969,8 +970,8 @@ struct WgToSgStoreScatterOpWithOffset
 
       auto store = xegpu::StoreScatterOp::create(
           rewriter, loc, val, op.getDest(), offs, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), /*layout*/newLayout);
-      
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+          /*layout*/ newLayout);
     }
     rewriter.eraseOp(op);
     return success();

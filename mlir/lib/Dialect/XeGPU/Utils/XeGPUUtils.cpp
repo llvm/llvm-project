@@ -207,7 +207,8 @@ template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
 void xegpu::setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
-    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp, xegpu::LoadGatherOp, xegpu::StoreScatterOp>(nestOp))
+    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp, xegpu::LoadGatherOp,
+            xegpu::StoreScatterOp>(nestOp))
       return;
 
     for (OpOperand &opr : nestOp->getOpOperands()) {
@@ -227,7 +228,8 @@ void xegpu::removeLayoutAttr(const T &operandOrResult) {
   std::string name = xegpu::getLayoutName(operandOrResult);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->removeAttr(name);
-  if (isa<xegpu::StoreMatrixOp, xegpu::LoadGatherOp>(owner) && owner->hasAttrOfType<DistributeLayoutAttr>("layout"))
+  if (isa<xegpu::StoreMatrixOp, xegpu::LoadGatherOp>(owner) &&
+      owner->hasAttrOfType<DistributeLayoutAttr>("layout"))
     owner->removeAttr("layout");
 }
 
