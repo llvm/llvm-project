@@ -1348,12 +1348,16 @@ int test_mm256_movemask_pd(__m256d A) {
   // CHECK: call {{.*}}i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %{{.*}})
   return _mm256_movemask_pd(A);
 }
+TEST_CONSTEXPR(_mm256_movemask_pd((__m256d)(__v4df){-1234.5678901234, 98765.4321098765, 0.000123456789, -3.14159265358979}) == 0x9);
+TEST_CONSTEXPR(_mm256_movemask_pd((__m256d)(__v4df){-0.000000987654321, -99999.999999999, 42.424242424242, 314159.2653589793}) == 0x3);
 
 int test_mm256_movemask_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_movemask_ps
   // CHECK: call {{.*}}i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %{{.*}})
   return _mm256_movemask_ps(A);
 }
+TEST_CONSTEXPR(_mm256_movemask_ps((__m256)(__v8sf){-12.3456f, 34.7890f, -0.0001234f, 123456.78f, -987.654f, 0.001234f, 3.14159f, -256.001f}) == 0x95);
+TEST_CONSTEXPR(_mm256_movemask_ps((__m256)(__v8sf){0.333333f, -45.6789f, 999.999f, -0.9999f, 17.234f, -128.512f, 2048.0f, -3.14f}) == 0xAA);
 
 __m256d test_mm256_mul_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_mul_pd

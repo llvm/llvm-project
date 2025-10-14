@@ -3014,9 +3014,7 @@ _mm_cvtps_pi8(__m128 __a)
 /// \returns A 32-bit integer value. Bits [3:0] contain the sign bits from each
 ///    single-precision floating-point element of the parameter. Bits [31:4] are
 ///    set to zero.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_movemask_ps(__m128 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_movemask_ps(__m128 __a) {
   return __builtin_ia32_movmskps((__v4sf)__a);
 }
 
