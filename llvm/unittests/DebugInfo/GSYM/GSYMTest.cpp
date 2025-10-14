@@ -24,8 +24,8 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Testing/Support/Error.h"
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include <string>
 
 using namespace llvm;
