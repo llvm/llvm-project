@@ -2,17 +2,17 @@
 
 namespace N0 {
   struct A {
-      static void f() {
-        []() -> decltype(this) { }; // expected-error{{invalid use of 'this' outside of a non-static member function}}
-      }
+    static void f() {
+      []() -> decltype(this) { }; // expected-error{{invalid use of 'this' outside of a non-static member function}}
+    }
   };
 } // namespace N0
 
 namespace N1 {
   struct A {
-      static void f() {
-        []() noexcept(decltype(this)()) { }; // expected-error{{invalid use of 'this' outside of a non-static member function}}
-      }
+    static void f() {
+      []() noexcept(decltype(this)()) { }; // expected-error{{invalid use of 'this' outside of a non-static member function}}
+    }
   };
 } // namespace N1
 
