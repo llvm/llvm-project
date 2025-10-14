@@ -928,7 +928,8 @@ struct WarpOpDeadResult : public WarpDistributionPattern {
     // Some values may be yielded multiple times and correspond to multiple
     // results. Deduplicating occurs by taking each result with its matching
     // yielded value, and:
-    //   1. recording the unique first position at which the value is yielded.
+    //   1. recording the unique first position at which the value with uses is
+    //   yielded.
     //   2. recording for the result, the first position at which the dedup'ed
     //      value is yielded.
     //   3. skipping from the new result types / new yielded values any result
