@@ -4959,3 +4959,129 @@ TEST(GSYMTest, TestUnableToLocateDWO) {
   std::string warn("warning: Unable to retrieve DWO .debug_info section for");
   EXPECT_TRUE(errors.find(warn) == std::string::npos);
 }
+
+TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
+  // Test that if llvm-gsymutil finds a line table for a compile unit and if
+  // there are no matching entries for a function in that compile unit, that
+  // it doesn't print out a error saying that a DIE has an invalid file index
+  // if there is no DW_AT_decl_file attribute.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name        ("main.cpp")
+  //               DW_AT_language    (DW_LANG_C)
+  //               DW_AT_stmt_list   (0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name      ("foo")
+  //                 DW_AT_low_pc    (0x0000000000001000)
+  //                 DW_AT_high_pc   (0x0000000000001050)
+  //
+  // 0x0000002a:   NULL
+  //
+  // Line table that has entries, but none that match "foo":
+  //
+  // Address            Line   Column File   ISA Discriminator OpIndex Flags
+  // ------------------ ------ ------ ------ --- ------------- ------- -----
+  // 0x0000000000002000     10      0      1   0             0       0 is_stmt
+  // 0x0000000000002050     13      0      1   0             0       0 is_stmt
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - main.cpp
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x27
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            foo
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          58
+      Version:         2
+      PrologueLength:  31
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:            main.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            8192
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            80
+        - Opcode:          DW_LNS_advance_line
+          SData:           3
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
+
+  // Make sure this warning is not in the binary
+  std::string error_str("error: function DIE at 0x00000015 has an invalid file "
+                        "index 4294967295 in its DW_AT_decl_file attribute");
+  EXPECT_TRUE(errors.find(error_str) == std::string::npos);
+}
