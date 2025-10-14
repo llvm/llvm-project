@@ -725,9 +725,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                   InsertVectorEltPred, sizeIs(2, sXLen.getSizeInBits())))
+                   InsertVectorEltPred, typeIs(2, sXLen)))
       .legalIf(all(typeIsLegalIntOrFPVec(0, BoolVecTys, ST),
-                   InsertVectorEltPred, sizeIs(2, sXLen.getSizeInBits())));
+                   InsertVectorEltPred, typeIs(2, sXLen)));
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
