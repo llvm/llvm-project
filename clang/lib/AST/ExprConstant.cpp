@@ -11787,13 +11787,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     const auto *RetVT = E->getType()->castAs<VectorType>();
-    if (!RetVT) return false;
-
     unsigned RetLen = RetVT->getNumElements();
     unsigned SrcLen = SourceVec.getVectorLength();
-    if (SrcLen != RetLen * 2) 
-      return false;
-
     unsigned Idx = SourceImm.getInt().getZExtValue() & 1;
     
     SmallVector<APValue, 32> ResultElements;
@@ -11820,28 +11815,25 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue SourceVec, MergeVec;
     APSInt Imm, MaskImm;
 
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||  
-      !EvaluateInteger(E->getArg(1), Imm, Info) ||  
-      !EvaluateAsRValue(Info, E->getArg(2), MergeVec)  ||  
-      !EvaluateInteger(E->getArg(3), MaskImm, Info))      
-    return false;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(2), MergeVec) ||
+        !EvaluateInteger(E->getArg(3), MaskImm, Info))
+      return false;
 
     const auto *RetVT = E->getType()->castAs<VectorType>();
     unsigned RetLen = RetVT->getNumElements();
 
     if (!SourceVec.isVector() || !MergeVec.isVector()) return false;
     unsigned SrcLen = SourceVec.getVectorLength();
-    if (!SrcLen || !RetLen || (SrcLen % RetLen) != 0) return false;
-
     unsigned Lanes = SrcLen / RetLen;
     unsigned Lane = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
     unsigned Base = Lane * RetLen;
-    uint64_t Mask = MaskImm.getZExtValue();
 
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(RetLen);
     for (unsigned I = 0; I < RetLen; ++I) {
-      if ((Mask >> I) & 1)
+      if (MaskImm[I])
         ResultElements.push_back(SourceVec.getVectorElt(Base + I));
       else
         ResultElements.push_back(MergeVec.getVectorElt(I)); 

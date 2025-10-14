@@ -2877,9 +2877,6 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
   unsigned SrcElems = Src.getNumElems();
   unsigned DstElems = Dst.getNumElems();
 
-  if (SrcElems == 0 || DstElems == 0 || (SrcElems % DstElems) != 0)
-    return false;
-
   unsigned NumLanes = SrcElems / DstElems;
   unsigned Lane = static_cast<unsigned>(Index % NumLanes);
   unsigned ExtractPos = Lane * DstElems;
@@ -2917,8 +2914,6 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr Op
 
   unsigned SrcElems = Src.getNumElems();
   unsigned DstElems = Dst.getNumElems();
-  if (!SrcElems || !DstElems || (SrcElems % DstElems) != 0)
-    return false;
 
   PrimType ElemT = Src.getFieldDesc()->getPrimType();
   if (ElemT != Dst.getFieldDesc()->getPrimType() ||
@@ -2929,11 +2924,9 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr Op
   unsigned Lane = static_cast<unsigned>(ImmAPS.getZExtValue() % NumLanes);
   unsigned Base = Lane * DstElems;
 
-  uint64_t Mask = MaskAPS.getZExtValue();
-
   TYPE_SWITCH(ElemT, {
     for (unsigned I = 0; I != DstElems; ++I) {
-      if ((Mask >> I) & 1)
+      if (MaskAPS[I])
         Dst.elem<T>(I) = Src.elem<T>(Base + I);
       else
         Dst.elem<T>(I) = Merge.elem<T>(I);   
