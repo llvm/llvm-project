@@ -359,7 +359,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // to the declared memref.
             if (auto storage = op.getStorage())
               return storage;
-            return mlir::Value(varPtr); 
+            return mlir::Value(varPtr);
           })
           .Case<hlfir::DesignateOp>([&](auto op) {
             // Get the base object.
