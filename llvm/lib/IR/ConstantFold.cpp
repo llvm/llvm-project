@@ -55,15 +55,8 @@ foldConstantCastPair(
   Type *MidTy = Op->getType();
   Instruction::CastOps firstOp = Instruction::CastOps(Op->getOpcode());
   Instruction::CastOps secondOp = Instruction::CastOps(opc);
-
-  // Assume that pointers are never more than 64 bits wide, and only use this
-  // for the middle type. Otherwise we could end up folding away illegal
-  // bitcasts between address spaces with different sizes.
-  IntegerType *FakeIntPtrTy = Type::getInt64Ty(DstTy->getContext());
-
-  // Let CastInst::isEliminableCastPair do the heavy lifting.
   return CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy, DstTy,
-                                        nullptr, FakeIntPtrTy, nullptr);
+                                        /*DL=*/nullptr);
 }
 
 static Constant *FoldBitCast(Constant *V, Type *DestTy) {
@@ -748,7 +741,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       assert(!CI2->isZero() && "And zero handled above");
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
-        if (CE1->getOpcode() == Instruction::PtrToInt &&
+        if ((CE1->getOpcode() == Instruction::PtrToInt ||
+             CE1->getOpcode() == Instruction::PtrToAddr) &&
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 

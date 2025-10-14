@@ -38,10 +38,7 @@ struct MissingFeatures {
   static bool opGlobalPartition() { return false; }
   static bool opGlobalUsedOrCompilerUsed() { return false; }
   static bool opGlobalAnnotations() { return false; }
-  static bool opGlobalDtorLowering() { return false; }
-  static bool opGlobalCtorAttr() { return false; }
   static bool opGlobalCtorPriority() { return false; }
-  static bool opGlobalCtorList() { return false; }
   static bool setDSOLocal() { return false; }
   static bool setComdat() { return false; }
 
@@ -81,9 +78,13 @@ struct MissingFeatures {
   static bool opFuncExtraAttrs() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }
+  static bool opFuncNoUnwind() { return false; }
   static bool opFuncOperandBundles() { return false; }
   static bool opFuncParameterAttributes() { return false; }
+  static bool opFuncReadOnly() { return false; }
   static bool opFuncSection() { return false; }
+  static bool opFuncWillReturn() { return false; }
+  static bool opFuncNoReturn() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
   static bool setFunctionAttributes() { return false; }
 
@@ -138,7 +139,6 @@ struct MissingFeatures {
   // RecordType
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
-  static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
@@ -173,6 +173,10 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+
+  // Global ctor handling
+  static bool globalCtorLexOrder() { return false; }
+  static bool globalCtorAssociatedData() { return false; }
 
   // Misc
   static bool abiArgInfo() { return false; }
@@ -256,6 +260,8 @@ struct MissingFeatures {
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
+  static bool loweringPrepareX86CXXABI() { return false; }
+  static bool loweringPrepareAArch64XXABI() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }

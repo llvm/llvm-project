@@ -475,6 +475,7 @@ mlir_c_api_cc_library(
         ":Pass",
         ":Support",
         ":config",
+        ":Rewrite",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -1049,6 +1050,32 @@ filegroup(
 )
 
 cc_library(
+    name = "MLIRBindingsPythonHeaders",
+    includes = [
+        "include",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    deps = [
+        ":CAPIIRHeaders",
+        "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+)
+
+cc_library(
+    name = "MLIRBindingsPythonHeadersAndDeps",
+    includes = [
+        "include",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    deps = [
+        ":CAPIIR",
+        "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+)
+
+cc_library(
     name = "MLIRBindingsPythonNanobindHeaders",
     includes = [
         "include",
@@ -1059,11 +1086,6 @@ cc_library(
         "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
-)
-
-alias(
-    name = "MLIRBindingsPythonHeaders",
-    actual = ":MLIRBindingsPythonNanobindHeaders",
 )
 
 cc_library(
@@ -1077,11 +1099,6 @@ cc_library(
         "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
-)
-
-alias(
-    name = "MLIRBindingsPythonHeadersAndDeps",
-    actual = ":MLIRBindingsPythonNanobindHeadersAndDeps",
 )
 
 # These flags are needed for pybind11 to work.
@@ -1131,7 +1148,7 @@ cc_library(
         ":CAPIIR",
         ":CAPIInterfaces",
         ":CAPITransforms",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         ":Support",
         ":config",
         "//llvm:Support",
@@ -1154,7 +1171,7 @@ cc_library(
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
         ":CAPITransformsHeaders",
-        ":MLIRBindingsPythonHeaders",
+        ":MLIRBindingsPythonNanobindHeaders",
         ":Support",
         ":config",
         "//llvm:Support",
@@ -1204,7 +1221,7 @@ cc_binary(
     linkstatic = 0,
     deps = [
         ":CAPIIR",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
 )
@@ -1222,7 +1239,7 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
 )
@@ -1237,7 +1254,7 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPILLVM",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
 )
@@ -1252,7 +1269,7 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPIQuant",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
 )
@@ -1267,7 +1284,7 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPISparseTensor",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
 )
@@ -1282,7 +1299,7 @@ cc_binary(
     linkstatic = 0,
     deps = [
         ":CAPIExecutionEngine",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -1298,7 +1315,7 @@ cc_binary(
     linkstatic = 0,
     deps = [
         ":CAPILinalg",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -1641,6 +1658,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":InliningUtils",
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
@@ -3677,6 +3695,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],
@@ -3748,6 +3767,16 @@ cc_library(
         ":TransformUtils",
         ":XeGPUDialect",
         ":XeVMDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUuArch",
+    hdrs = glob(["include/mlir/Dialect/XeGPU/uArch/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
         "//llvm:Support",
     ],
 )
@@ -5198,6 +5227,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LLVMDialectBytecodeIncGen",
         ":LLVMDialectInterfaceIncGen",
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
@@ -5650,6 +5680,16 @@ td_library(
     ],
 )
 
+td_library(
+    name = "LLVMDialectBytecodeTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td"],
+    includes = ["include"],
+    deps = [
+        ":BytecodeTdFiles",
+        ":LLVMOpsTdFiles",
+    ],
+)
+
 cc_library(
     name = "GPUCommonTransforms",
     hdrs = [
@@ -6003,6 +6043,17 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "LLVMDialectBytecodeIncGen",
+    tbl_outs = {"include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.cpp.inc": [
+        "-gen-bytecode",
+        "-bytecode-dialect=LLVM",
+    ]},
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td",
+    deps = [":LLVMDialectBytecodeTdFiles"],
+)
+
+gentbl_cc_library(
     name = "LLVMTypesIncGen",
     tbl_outs = {
         "include/mlir/Dialect/LLVMIR/LLVMTypes.h.inc": [
@@ -6281,6 +6332,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferIntRangeInterface",
+        ":InliningUtils",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
@@ -7784,6 +7836,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -9419,6 +9472,7 @@ cc_binary(
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMemRefToLLVMWithTransforms",
         "//mlir/test:TestNVGPU",
+        "//mlir/test:TestOpenACC",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
@@ -9978,6 +10032,7 @@ cc_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
+        ":ArithDialect",
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
         ":BytecodeOpInterface",
@@ -11338,6 +11393,7 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":VectorUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -11612,6 +11668,7 @@ cc_library(
         ":TensorUtils",
         ":TosaDialect",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 

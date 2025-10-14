@@ -533,9 +533,9 @@ static T extractMaskValue(T KeyPath) {
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
     ARGS, DIAGS, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS,         \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,        \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX)                                                               \
+    METAVAR, VALUES, SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
@@ -551,8 +551,9 @@ static T extractMaskValue(T KeyPath) {
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
     CONSUMER, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS, \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
-    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
-    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+    SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     [&](const auto &Extracted) {                                               \
       if (ALWAYS_EMIT ||                                                       \
@@ -1832,6 +1833,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
 
+  if (Opts.AllocTokenMax)
+    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
+                std::to_string(*Opts.AllocTokenMax));
+
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
@@ -2343,6 +2348,15 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     } else {
       Opts.AllowRuntimeCheckSkipHotCutoff = A;
     }
+  }
+
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
+    StringRef S = Arg->getValue();
+    uint64_t Value = 0;
+    if (S.getAsInteger(0, Value))
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+    else
+      Opts.AllocTokenMax = Value;
   }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);

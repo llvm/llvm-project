@@ -280,6 +280,11 @@ public:
     if (T->getDepth() >= TemplateArgs.getNumLevels())
       return true;
 
+    // There might not be a corresponding template argument before substituting
+    // into the parameter mapping, e.g. a sizeof... expression.
+    if (!TemplateArgs.hasTemplateArgument(T->getDepth(), T->getIndex()))
+      return true;
+
     TemplateArgument Arg = TemplateArgs(T->getDepth(), T->getIndex());
 
     if (T->isParameterPack() && SemaRef.ArgPackSubstIndex) {
@@ -299,6 +304,12 @@ public:
     NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(D);
     if (!NTTP)
       return TraverseDecl(D);
+
+    if (NTTP->getDepth() >= TemplateArgs.getNumLevels())
+      return true;
+
+    if (!TemplateArgs.hasTemplateArgument(NTTP->getDepth(), NTTP->getIndex()))
+      return true;
 
     TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
     if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
@@ -326,17 +337,25 @@ public:
     return inherited::TraverseDecl(D);
   }
 
+  bool TraverseCallExpr(CallExpr *CE) {
+    inherited::TraverseStmt(CE->getCallee());
+
+    for (Expr *Arg : CE->arguments())
+      inherited::TraverseStmt(Arg);
+
+    return true;
+  }
+
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     // We don't care about TypeLocs. So traverse Types instead.
-    return TraverseType(TL.getType(), TraverseQualifier);
+    return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
   }
 
   bool TraverseTagType(const TagType *T, bool TraverseQualifier) {
     // T's parent can be dependent while T doesn't have any template arguments.
     // We should have already traversed its qualifier.
     // FIXME: Add an assert to catch cases where we failed to profile the
-    // concept. assert(!T->isDependentType() && "We missed a case in profiling
-    // concepts!");
+    // concept.
     return true;
   }
 
@@ -585,6 +604,10 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return std::nullopt;
   const NormalizedConstraint::OccurenceList &Used =
       Constraint.mappingOccurenceList();
+  // The empty MLTAL situation should only occur when evaluating non-dependent
+  // constraints.
+  if (!MLTAL.getNumSubstitutedLevels())
+    MLTAL.addOuterTemplateArguments(TD, {}, /*Final=*/false);
   SubstitutedOuterMost =
       llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
@@ -604,9 +627,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   if (Offset < SubstitutedOuterMost.size())
     SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
 
-  MLTAL.replaceOutermostTemplateArguments(
-      const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
-      SubstitutedOuterMost);
+  MLTAL.replaceOutermostTemplateArguments(TD, SubstitutedOuterMost);
   return std::move(MLTAL);
 }
 
@@ -701,7 +722,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
       Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
-
     auto &Cached = Iter->second.Satisfaction;
     Satisfaction.ContainsErrors = Cached.ContainsErrors;
     Satisfaction.IsSatisfied = Cached.IsSatisfied;
@@ -938,11 +958,20 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
           ? Constraint.getPackSubstitutionIndex()
           : PackSubstitutionIndex;
 
-  Sema::InstantiatingTemplate _(S, ConceptId->getBeginLoc(),
-                                Sema::InstantiatingTemplate::ConstraintsCheck{},
-                                ConceptId->getNamedConcept(),
-                                MLTAL.getInnermost(),
-                                Constraint.getSourceRange());
+  Sema::InstantiatingTemplate InstTemplate(
+      S, ConceptId->getBeginLoc(),
+      Sema::InstantiatingTemplate::ConstraintsCheck{},
+      ConceptId->getNamedConcept(),
+      // We may have empty template arguments when checking non-dependent
+      // nested constraint expressions.
+      // In such cases, non-SFINAE errors would have already been diagnosed
+      // during parameter mapping substitution, so the instantiating template
+      // arguments are less useful here.
+      MLTAL.getNumSubstitutedLevels() ? MLTAL.getInnermost()
+                                      : ArrayRef<TemplateArgument>{},
+      Constraint.getSourceRange());
+  if (InstTemplate.isInvalid())
+    return ExprError();
 
   unsigned Size = Satisfaction.Details.size();
 
