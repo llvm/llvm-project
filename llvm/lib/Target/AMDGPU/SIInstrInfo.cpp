@@ -9116,17 +9116,19 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
   const DebugLoc &DL = Inst.getDebugLoc();
 
   if (ST.useRealTrue16Insts()) {
-    Register SrcReg0 = Src0.getReg();
-    Register SrcReg1 = Src1.getReg();
-
-    if (!RI.isVGPR(MRI, SrcReg0)) {
+    Register SrcReg0, SrcReg1;
+    if (!Src0.isReg() || (Src0.isReg() && !RI.isVGPR(MRI, Src0.getReg()))) {
       SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
-    }
-    if (!RI.isVGPR(MRI, SrcReg1)) {
+    } else
+      SrcReg0 = Src0.getReg();
+
+    if (!Src1.isReg() || (Src1.isReg() && !RI.isVGPR(MRI, Src1.getReg()))) {
       SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
-    }
+    } else
+      SrcReg1 = Src1.getReg();
+
     bool isSrc0Reg16 = MRI.constrainRegClass(SrcReg0, &AMDGPU::VGPR_16RegClass);
     bool isSrc1Reg16 = MRI.constrainRegClass(SrcReg1, &AMDGPU::VGPR_16RegClass);
 
