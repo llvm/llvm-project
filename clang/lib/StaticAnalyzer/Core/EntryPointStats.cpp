@@ -9,7 +9,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -22,7 +24,6 @@ using namespace ento;
 
 namespace {
 struct Registry {
-  std::vector<BoolEPStat *> BoolStats;
   std::vector<CounterEPStat *> CounterStats;
   std::vector<UnsignedMaxEPStat *> UnsignedMaxStats;
   std::vector<UnsignedEPStat *> UnsignedStats;
@@ -31,13 +32,13 @@ struct Registry {
 
   struct Snapshot {
     const Decl *EntryPoint;
-    std::vector<bool> BoolStatValues;
     std::vector<unsigned> UnsignedStatValues;
 
     void dumpAsCSV(llvm::raw_ostream &OS) const;
   };
 
   std::vector<Snapshot> Snapshots;
+  std::string EscapedCPPFileName;
 };
 } // namespace
 
@@ -45,7 +46,6 @@ static llvm::ManagedStatic<Registry> StatsRegistry;
 
 namespace {
 template <typename Callback> void enumerateStatVectors(const Callback &Fn) {
-  Fn(StatsRegistry->BoolStats);
   Fn(StatsRegistry->CounterStats);
   Fn(StatsRegistry->UnsignedMaxStats);
   Fn(StatsRegistry->UnsignedStats);
@@ -69,7 +69,7 @@ static void checkStatName(const EntryPointStat *M) {
   }
 }
 
-void EntryPointStat::lockRegistry() {
+void EntryPointStat::lockRegistry(llvm::StringRef CPPFileName) {
   auto CmpByNames = [](const EntryPointStat *L, const EntryPointStat *R) {
     return L->name() < R->name();
   };
@@ -78,6 +78,8 @@ void EntryPointStat::lockRegistry() {
   enumerateStatVectors(
       [](const auto &Stats) { llvm::for_each(Stats, checkStatName); });
   StatsRegistry->IsLocked = true;
+  llvm::raw_string_ostream OS(StatsRegistry->EscapedCPPFileName);
+  llvm::printEscapedString(CPPFileName, OS);
 }
 
 [[maybe_unused]] static bool isRegistered(llvm::StringLiteral Name) {
@@ -87,12 +89,6 @@ void EntryPointStat::lockRegistry() {
     Result = Result || llvm::any_of(Stats, ByName);
   });
   return Result;
-}
-
-BoolEPStat::BoolEPStat(llvm::StringLiteral Name) : EntryPointStat(Name) {
-  assert(!StatsRegistry->IsLocked);
-  assert(!isRegistered(Name));
-  StatsRegistry->BoolStats.push_back(this);
 }
 
 CounterEPStat::CounterEPStat(llvm::StringLiteral Name) : EntryPointStat(Name) {
@@ -144,32 +140,30 @@ static std::vector<llvm::StringLiteral> getStatNames() {
   return Ret;
 }
 
-void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
-  OS << '"';
-  llvm::printEscapedString(
-      clang::AnalysisDeclContext::getFunctionName(EntryPoint), OS);
-  OS << "\", ";
-  auto PrintAsBool = [&OS](bool B) { OS << (B ? "true" : "false"); };
-  llvm::interleaveComma(BoolStatValues, OS, PrintAsBool);
-  OS << ((BoolStatValues.empty() || UnsignedStatValues.empty()) ? "" : ", ");
-  llvm::interleaveComma(UnsignedStatValues, OS);
+static std::string getUSR(const Decl *D) {
+  llvm::SmallVector<char> Buf;
+  if (index::generateUSRForDecl(D, Buf)) {
+    assert(false && "This should never fail");
+    return AnalysisDeclContext::getFunctionName(D);
+  }
+  return llvm::toStringRef(Buf).str();
 }
 
-static std::vector<bool> consumeBoolStats() {
-  std::vector<bool> Result;
-  Result.reserve(StatsRegistry->BoolStats.size());
-  for (auto *M : StatsRegistry->BoolStats) {
-    Result.push_back(M->value());
-    M->reset();
-  }
-  return Result;
+void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
+  OS << '"';
+  llvm::printEscapedString(getUSR(EntryPoint), OS);
+  OS << "\",\"";
+  OS << StatsRegistry->EscapedCPPFileName << "\",\"";
+  llvm::printEscapedString(
+      clang::AnalysisDeclContext::getFunctionName(EntryPoint), OS);
+  OS << "\"";
+  OS << (UnsignedStatValues.empty() ? "" : ",");
+  llvm::interleave(UnsignedStatValues, OS, [&OS](unsigned U) { OS << U; }, ",");
 }
 
 void EntryPointStat::takeSnapshot(const Decl *EntryPoint) {
-  auto BoolValues = consumeBoolStats();
   auto UnsignedValues = consumeUnsignedStats();
-  StatsRegistry->Snapshots.push_back(
-      {EntryPoint, std::move(BoolValues), std::move(UnsignedValues)});
+  StatsRegistry->Snapshots.push_back({EntryPoint, std::move(UnsignedValues)});
 }
 
 void EntryPointStat::dumpStatsAsCSV(llvm::StringRef FileName) {
@@ -181,8 +175,8 @@ void EntryPointStat::dumpStatsAsCSV(llvm::StringRef FileName) {
 }
 
 void EntryPointStat::dumpStatsAsCSV(llvm::raw_ostream &OS) {
-  OS << "EntryPoint, ";
-  llvm::interleaveComma(getStatNames(), OS);
+  OS << "USR,File,DebugName,";
+  llvm::interleave(getStatNames(), OS, [&OS](const auto &a) { OS << a; }, ",");
   OS << "\n";
 
   std::vector<std::string> Rows;

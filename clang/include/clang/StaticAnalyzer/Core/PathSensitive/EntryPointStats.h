@@ -25,7 +25,7 @@ class EntryPointStat {
 public:
   llvm::StringLiteral name() const { return Name; }
 
-  static void lockRegistry();
+  static void lockRegistry(llvm::StringRef CPPFileName);
 
   static void takeSnapshot(const Decl *EntryPoint);
   static void dumpStatsAsCSV(llvm::raw_ostream &OS);
@@ -40,19 +40,6 @@ protected:
 
 private:
   llvm::StringLiteral Name;
-};
-
-class BoolEPStat : public EntryPointStat {
-  std::optional<bool> Value = {};
-
-public:
-  explicit BoolEPStat(llvm::StringLiteral Name);
-  unsigned value() const { return Value && *Value; }
-  void set(bool V) {
-    assert(!Value.has_value());
-    Value = V;
-  }
-  void reset() { Value = {}; }
 };
 
 // used by CounterEntryPointTranslationUnitStat

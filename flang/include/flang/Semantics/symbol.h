@@ -570,17 +570,21 @@ private:
 
 class CommonBlockDetails : public WithBindName {
 public:
+  explicit CommonBlockDetails(SourceName location)
+      : sourceLocation_{location} {}
+  SourceName sourceLocation() const { return sourceLocation_; }
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
   void replace_object(Symbol &object, unsigned index) {
-    CHECK(index < (unsigned)objects_.size());
+    CHECK(index < objects_.size());
     objects_[index] = object;
   }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
+  SourceName sourceLocation_;
   MutableSymbolVector objects_;
   std::size_t alignment_{0}; // required alignment in bytes
 };
@@ -1121,6 +1125,9 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
           [&](const UseDetails &x) { return x.symbol().GetTypeImpl(depth); },
           [&](const HostAssocDetails &x) {
             return x.symbol().GetTypeImpl(depth);
+          },
+          [&](const GenericDetails &x) {
+            return x.specific() ? x.specific()->GetTypeImpl(depth) : nullptr;
           },
           [](const auto &) -> const DeclTypeSpec * { return nullptr; },
       },

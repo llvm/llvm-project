@@ -47,6 +47,8 @@ class LoopOp;
 
 namespace clang::CIRGen {
 
+struct CGCoroData;
+
 class CIRGenFunction : public CIRGenTypeCache {
 public:
   CIRGenModule &cgm;
@@ -65,6 +67,18 @@ public:
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
+
+  // Holds coroutine data if the current function is a coroutine. We use a
+  // wrapper to manage its lifetime, so that we don't have to define CGCoroData
+  // in this header.
+  struct CGCoroInfo {
+    std::unique_ptr<CGCoroData> data;
+    CGCoroInfo();
+    ~CGCoroInfo();
+  };
+  CGCoroInfo curCoro;
+
+  bool isCoroutine() const { return curCoro.data != nullptr; }
 
   /// The temporary alloca to hold the return value. This is
   /// invalid iff the function has no return value.
@@ -541,6 +555,33 @@ public:
   cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
                                               cir::GlobalOp gv,
                                               cir::GetGlobalOp gvAddr);
+
+  /// Enter the cleanups necessary to complete the given phase of destruction
+  /// for a destructor. The end result should call destructors on members and
+  /// base classes in reverse order of their construction.
+  void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
+
+  /// Determines whether an EH cleanup is required to destroy a type
+  /// with the given destruction kind.
+  /// TODO(cir): could be shared with Clang LLVM codegen
+  bool needsEHCleanup(QualType::DestructionKind kind) {
+    switch (kind) {
+    case QualType::DK_none:
+      return false;
+    case QualType::DK_cxx_destructor:
+    case QualType::DK_objc_weak_lifetime:
+    case QualType::DK_nontrivial_c_struct:
+      return getLangOpts().Exceptions;
+    case QualType::DK_objc_strong_lifetime:
+      return getLangOpts().Exceptions &&
+             cgm.getCodeGenOpts().ObjCAutoRefCountExceptions;
+    }
+    llvm_unreachable("bad destruction kind");
+  }
+
+  CleanupKind getCleanupKind(QualType::DestructionKind kind) {
+    return needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup;
+  }
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -1076,6 +1117,8 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  void emitAnyExprToExn(const Expr *e, Address addr);
+
   void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
@@ -1174,6 +1217,10 @@ public:
 
   void emitConstructorBody(FunctionArgList &args);
 
+  mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
+  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
@@ -1234,11 +1281,19 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
+  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
+                               mlir::Type ElementTy, Address BeginPtr,
+                               mlir::Value NumElements,
+                               mlir::Value AllocSizeWithoutCookie);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
+
+  void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
+                        Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
@@ -1256,6 +1311,8 @@ public:
                       QualType deleteTy);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+
+  mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -1278,6 +1335,8 @@ public:
 
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
+
+  LValue emitPredefinedLValue(const PredefinedExpr *e);
 
   mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
 
@@ -1473,7 +1532,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
-  LValue emitStringLiteralLValue(const StringLiteral *e);
+  LValue emitStringLiteralLValue(const StringLiteral *e,
+                                 llvm::StringRef name = ".str");
 
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
