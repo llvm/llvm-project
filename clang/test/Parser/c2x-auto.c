@@ -62,6 +62,8 @@ auto basic_usage(auto auto) {   // c23-error {{'auto' not allowed in function pr
 
   int auto_cxx_decl = auto(0);  // expected-error {{expected expression}}
 
+  constexpr auto int x = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
+                               c17-error {{use of undeclared identifier 'constexpr'}}
   return c;
 }
 
