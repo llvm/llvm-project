@@ -11641,9 +11641,8 @@ static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
     uint8_t Ctl = static_cast<uint8_t>(CtlByte.getZExtValue());
 
     if (Ctl & 0x80) {
-      APSInt Zero(ElemBits, DestUnsigned);
-      Zero = 0;
-      ResultElements.push_back(APValue(Zero));
+      APValue Zero(Info.Ctx.MakeIntValue(0, ElemT));
+      ResultElements.push_back(Zero);
     } else {
       unsigned LaneBase = (Idx / 16) * 16;
       unsigned SrcOffset = Ctl & 0x0F;
