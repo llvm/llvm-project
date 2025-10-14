@@ -1,7 +1,7 @@
 # RUN: llvm-mc --filetype=obj --gsframe -triple x86_64 %s -o %t.o
 # RUN: llvm-readelf --sframe %t.o | FileCheck %s
 
-# Tests that .cfi_escape sequences that are are ok to pass through work.
+# Tests that .cfi_escape sequences that are ok to pass through work.
 
         .align 1024
 cfi_escape_ok:
