@@ -1542,11 +1542,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
 
     // We will emit the BBSPR profile data if requested and availale. Otherwise,
     // we fall back to MBFI and MBPI.
-    const CfgProfile *FuncCFGProfile = nullptr;
+    const CfgProfile *FuncCfgProfile = nullptr;
     if (PgoAnalysisMapUsePropellerCfg) {
       if (auto *BBSPR = getAnalysisIfAvailable<
               BasicBlockSectionsProfileReaderWrapperPass>())
-        FuncCFGProfile =
+        FuncCfgProfile =
             BBSPR->getFunctionCfgProfile(MF.getFunction().getName());
     }
 
@@ -1562,8 +1562,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (Features.FuncEntryCount) {
       OutStreamer->AddComment("function entry count");
       uint64_t EntryCount = 0;
-      if (FuncCFGProfile) {
-        EntryCount = FuncCFGProfile->getNodeCount(*MF.front().getBBID());
+      if (FuncCfgProfile) {
+        EntryCount = FuncCfgProfile->getNodeCount(*MF.front().getBBID());
       } else {
         auto MaybeEntryCount = MF.getFunction().getEntryCount();
         EntryCount = MaybeEntryCount ? MaybeEntryCount->getCount() : 0;
@@ -1577,7 +1577,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
         if (Features.BBFreq) {
           OutStreamer->AddComment("basic block frequency");
           uint64_t BlockFrequency =
-              FuncCFGProfile ? FuncCFGProfile->getNodeCount(*MBB.getBBID())
+              FuncCfgProfile ? FuncCfgProfile->getNodeCount(*MBB.getBBID())
                              : MBFI->getBlockFreq(&MBB).getFrequency();
           OutStreamer->emitULEB128IntValue(BlockFrequency);
         }
@@ -1591,8 +1591,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             // For MPBI, we emit the numerator of the probability. For BBSPR, we
             // emit the raw edge count.
             uint64_t EdgeFrequency =
-                FuncCFGProfile
-                    ? FuncCFGProfile->getEdgeCount(*MBB.getBBID(),
+                FuncCfgProfile
+                    ? FuncCfgProfile->getEdgeCount(*MBB.getBBID(),
                                                    *SuccMBB->getBBID())
                     : MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator();
             OutStreamer->emitULEB128IntValue(EdgeFrequency);

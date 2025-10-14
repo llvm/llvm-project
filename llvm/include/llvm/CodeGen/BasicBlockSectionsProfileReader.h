@@ -42,7 +42,7 @@ struct BBClusterInfo {
   unsigned PositionInCluster;
 };
 
-// This represents the CFG profile data for a function.
+// This represents the cfg profile data for a function.
 struct CfgProfile {
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
@@ -75,7 +75,7 @@ struct FunctionProfile {
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
   // Cfg profile data (block and edge frequencies).
-  CfgProfile CFG;
+  CfgProfile Cfg;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -109,7 +109,7 @@ public:
     auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
     if (It == ProgramPathAndClusterInfo.end())
       return nullptr;
-    return &It->second.CFG;
+    return &It->second.Cfg;
   }
 
 private:
