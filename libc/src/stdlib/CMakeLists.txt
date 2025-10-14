@@ -663,3 +663,16 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+
+add_entrypoint_object(
+  ignore_handler_s
+  HDRS
+    ignore_handler_s.h
+  SRCS
+    ignore_handler_s.cpp
+  DEPENDS
+    libc.hdr.types.errno_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+)
