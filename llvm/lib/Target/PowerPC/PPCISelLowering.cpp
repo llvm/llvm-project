@@ -15795,6 +15795,9 @@ SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
     FullVal |= ElemAPInt;
   }
 
+  if (FullVal.isZero() || FullVal.isAllOnes())
+    return SDValue();
+
   if (auto UIMOpt = getPatternInfo(FullVal)) {
     const auto &[Uim, ShiftAmount] = *UIMOpt;
     SDLoc Dl(Op);
@@ -15809,6 +15812,8 @@ SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
                  LxvkqInstr.dump());
       return LxvkqInstr;
     }
+
+    assert(ShiftAmount == 127 && "Unexpected lxvkq shift amount value");
 
     // The right shifted pattern can be constructed using a combination of
     // XXSPLTIB and VSRQ instruction. VSRQ uses the shift amount from the lower
