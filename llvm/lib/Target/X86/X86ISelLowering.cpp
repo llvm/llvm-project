@@ -3448,6 +3448,20 @@ bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
   if (!Subtarget.hasDQI() && BitcastVT == MVT::v8i1 && LoadVT == MVT::i8)
     return false;
 
+  // With low alignment, don't convert integer vectors to large scalar loads,
+  // because otherwise they get broken into many small scalar loads.
+  if (LoadVT.isVector() && LoadVT.isInteger() && !BitcastVT.isVector() &&
+      BitcastVT.isInteger()) {
+    const DataLayout &DL = DAG.getDataLayout();
+    unsigned MinAlign = DL.getPointerSize();
+    // Aligned well, will legalize into a clean sequence of loads.
+    if (MMO.getAlign() >= MinAlign)
+      return true;
+    // Aligned poorly for a large enough scalar.
+    if (BitcastVT.getSizeInBits() > 2 * DL.getPointerSizeInBits())
+      return false;
+  }
+
   // If both types are legal vectors, it's always ok to convert them.
   if (LoadVT.isVector() && BitcastVT.isVector() &&
       isTypeLegal(LoadVT) && isTypeLegal(BitcastVT))
