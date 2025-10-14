@@ -130,13 +130,11 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   const CXXMethodDecl *calleeDecl =
       devirtualizedMethod ? devirtualizedMethod : md;
   const CIRGenFunctionInfo *fInfo = nullptr;
-  if (isa<CXXDestructorDecl>(calleeDecl)) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
-    return RValue::get(nullptr);
-  }
-
-  fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl))
+    fInfo = &cgm.getTypes().arrangeCXXStructorDeclaration(
+        GlobalDecl(dtor, Dtor_Complete));
+  else
+    fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
 
   cir::FuncType ty = cgm.getTypes().getFunctionType(*fInfo);
 
@@ -151,9 +149,34 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   // because then we know what the type is.
   bool useVirtualCall = canUseVirtualCall && !devirtualizedMethod;
 
-  if (isa<CXXDestructorDecl>(calleeDecl)) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl)) {
+    assert(ce->arg_begin() == ce->arg_end() &&
+           "Destructor shouldn't have explicit parameters");
+    assert(returnValue.isNull() && "Destructor shouldn't have return value");
+    if (useVirtualCall) {
+      cgm.getCXXABI().emitVirtualDestructorCall(*this, dtor, Dtor_Complete,
+                                                thisPtr.getAddress(),
+                                                cast<CXXMemberCallExpr>(ce));
+    } else {
+      GlobalDecl globalDecl(dtor, Dtor_Complete);
+      CIRGenCallee callee;
+      assert(!cir::MissingFeatures::appleKext());
+      if (!devirtualizedMethod) {
+        callee = CIRGenCallee::forDirect(
+            cgm.getAddrOfCXXStructor(globalDecl, fInfo, ty), globalDecl);
+      } else {
+        cgm.errorNYI(ce->getSourceRange(), "devirtualized destructor call");
+        return RValue::get(nullptr);
+      }
+
+      QualType thisTy =
+          isArrow ? base->getType()->getPointeeType() : base->getType();
+      // CIRGen does not pass CallOrInvoke here (different from OG LLVM codegen)
+      // because in practice it always null even in OG.
+      emitCXXDestructorCall(globalDecl, callee, thisPtr.getPointer(), thisTy,
+                            /*implicitParam=*/nullptr,
+                            /*implicitParamTy=*/QualType(), ce);
+    }
     return RValue::get(nullptr);
   }
 
@@ -463,12 +486,6 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
   void emit(CIRGenFunction &cgf) override {
     cgf.emitDeleteCall(operatorDelete, ptr, elementType);
   }
-
-  // This is a placeholder until EHCleanupScope is implemented.
-  size_t getSize() const override {
-    assert(!cir::MissingFeatures::ehCleanupScope());
-    return sizeof(CallObjectDelete);
-  }
 };
 } // namespace
 
@@ -727,4 +744,44 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
 
   // Emit the call to delete.
   emitNewDeleteCall(*this, deleteFD, deleteFTy, deleteArgs);
+}
+
+mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
+                                            const CXXDynamicCastExpr *dce) {
+  mlir::Location loc = getLoc(dce->getSourceRange());
+
+  cgm.emitExplicitCastExprType(dce, this);
+  QualType destTy = dce->getTypeAsWritten();
+  QualType srcTy = dce->getSubExpr()->getType();
+
+  // C++ [expr.dynamic.cast]p7:
+  //   If T is "pointer to cv void," then the result is a pointer to the most
+  //   derived object pointed to by v.
+  bool isDynCastToVoid = destTy->isVoidPointerType();
+  bool isRefCast = destTy->isReferenceType();
+
+  QualType srcRecordTy;
+  QualType destRecordTy;
+  if (isDynCastToVoid) {
+    srcRecordTy = srcTy->getPointeeType();
+    // No destRecordTy.
+  } else if (const PointerType *destPTy = destTy->getAs<PointerType>()) {
+    srcRecordTy = srcTy->castAs<PointerType>()->getPointeeType();
+    destRecordTy = destPTy->getPointeeType();
+  } else {
+    srcRecordTy = srcTy;
+    destRecordTy = destTy->castAs<ReferenceType>()->getPointeeType();
+  }
+
+  assert(srcRecordTy->isRecordType() && "source type must be a record type!");
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  if (dce->isAlwaysNull()) {
+    cgm.errorNYI(dce->getSourceRange(), "emitDynamicCastToNull");
+    return {};
+  }
+
+  auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
+  return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
+                                         destCirTy, isRefCast, thisAddr);
 }
