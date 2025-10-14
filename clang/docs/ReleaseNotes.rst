@@ -187,6 +187,8 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Fixed accepting as compatible unnamed tag types with the same fields within
+  the same translation unit but from different types.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
