@@ -5976,7 +5976,7 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 }
 
 // Check if the function attribute is not present and set it.
-static void SetFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
+static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
                                     StringRef Value) {
   if (!F.hasFnAttribute(FnAttrName))
     F.addFnAttr(FnAttrName, Value);
@@ -6000,7 +6000,7 @@ static void ConvertFunctionAttr(Function &F, bool Set, StringRef FnAttrName) {
   }
 }
 
-void llvm::CopyModuleAttrToFunctions(Module &M) {
+void llvm::copyModuleAttrToFunctions(Module &M) {
   Triple T(M.getTargetTriple());
   if (!T.isThumb() && !T.isARM() && !T.isAArch64())
     return;
@@ -6060,8 +6060,8 @@ void llvm::CopyModuleAttrToFunctions(Module &M) {
       continue;
 
     if (SRA) {
-      SetFunctionAttrIfNotSet(F, "sign-return-address", SignTypeValue);
-      SetFunctionAttrIfNotSet(F, "sign-return-address-key", SignKeyValue);
+      setFunctionAttrIfNotSet(F, "sign-return-address", SignTypeValue);
+      setFunctionAttrIfNotSet(F, "sign-return-address-key", SignKeyValue);
     } else {
       if (auto A = F.getFnAttribute("sign-return-address");
           A.isValid() && "none" == A.getValueAsString()) {

@@ -1515,7 +1515,7 @@ Error IRLinker::run() {
   // Convert module level attributes to function level attributes because
   // after merging modules the attributes might change and would have different
   // effect on the functions as the original module would have.
-  CopyModuleAttrToFunctions(*SrcM);
+  copyModuleAttrToFunctions(*SrcM);
 
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
@@ -1686,7 +1686,7 @@ IRMover::IRMover(Module &M) : Composite(M) {
   // Convert module level attributes to function level attributes because
   // after merging modules the attributes might change and would have different
   // effect on the functions as the original module would have.
-  CopyModuleAttrToFunctions(M);
+  copyModuleAttrToFunctions(M);
 }
 
 Error IRMover::move(std::unique_ptr<Module> Src,

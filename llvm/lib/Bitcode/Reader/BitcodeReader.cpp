@@ -7141,7 +7141,7 @@ Error BitcodeReader::materializeModule() {
 
   UpgradeARCRuntime(*TheModule);
 
-  CopyModuleAttrToFunctions(*TheModule);
+  copyModuleAttrToFunctions(*TheModule);
 
   return Error::success();
 }
