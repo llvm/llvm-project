@@ -233,6 +233,11 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 }
 
 
+// For lldb::SBFileSpec::GetPath
+%typemap(in) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+%typemap(argout) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+
+
 // typemap for an outgoing buffer
 // See also SBEvent::SBEvent(uint32_t event, const char *cstr, uint32_t cstr_len).
 // Ditto for SBProcess::PutSTDIN(const char *src, size_t src_len).

@@ -862,48 +862,46 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
 
   OS << TII->getName(MI.getOpcode());
 
-  LS = ListSeparator();
+  // Print a space after the opcode if any additional tokens are printed.
+  LS = ListSeparator(", ", " ");
 
-  if (I < E) {
-    OS << ' ';
-    for (; I < E; ++I) {
-      OS << LS;
-      printMIOperand(OS, State, MI, I, TRI, TII, ShouldPrintRegisterTies,
-                     PrintedTypes, MRI, /*PrintDef=*/true);
-    }
+  for (; I < E; ++I) {
+    OS << LS;
+    printMIOperand(OS, State, MI, I, TRI, TII, ShouldPrintRegisterTies,
+                   PrintedTypes, MRI, /*PrintDef=*/true);
   }
 
   // Print any optional symbols attached to this instruction as-if they were
   // operands.
   if (MCSymbol *PreInstrSymbol = MI.getPreInstrSymbol()) {
-    OS << LS << " pre-instr-symbol ";
+    OS << LS << "pre-instr-symbol ";
     MachineOperand::printSymbol(OS, *PreInstrSymbol);
   }
   if (MCSymbol *PostInstrSymbol = MI.getPostInstrSymbol()) {
-    OS << LS << " post-instr-symbol ";
+    OS << LS << "post-instr-symbol ";
     MachineOperand::printSymbol(OS, *PostInstrSymbol);
   }
   if (MDNode *HeapAllocMarker = MI.getHeapAllocMarker()) {
-    OS << LS << " heap-alloc-marker ";
+    OS << LS << "heap-alloc-marker ";
     HeapAllocMarker->printAsOperand(OS, State.MST);
   }
   if (MDNode *PCSections = MI.getPCSections()) {
-    OS << LS << " pcsections ";
+    OS << LS << "pcsections ";
     PCSections->printAsOperand(OS, State.MST);
   }
   if (MDNode *MMRA = MI.getMMRAMetadata()) {
-    OS << LS << " mmra ";
+    OS << LS << "mmra ";
     MMRA->printAsOperand(OS, State.MST);
   }
   if (uint32_t CFIType = MI.getCFIType())
-    OS << LS << " cfi-type " << CFIType;
+    OS << LS << "cfi-type " << CFIType;
 
   if (auto Num = MI.peekDebugInstrNum())
-    OS << LS << " debug-instr-number " << Num;
+    OS << LS << "debug-instr-number " << Num;
 
   if (PrintLocations) {
     if (const DebugLoc &DL = MI.getDebugLoc()) {
-      OS << LS << " debug-location ";
+      OS << LS << "debug-location ";
       DL->printAsOperand(OS, State.MST);
     }
   }

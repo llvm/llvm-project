@@ -128,9 +128,6 @@ defvar TAIL_AGNOSTIC = 1;
 defvar TU_MU = 0;
 defvar TA_MU = 1;
 defvar TA_MA = 3;
-defvar DONT_CARE_ALTFMT = 0;
-defvar IS_NOT_ALTFMT = 1;
-defvar IS_ALTFMT = 2;
 
 //===----------------------------------------------------------------------===//
 // Utilities.
