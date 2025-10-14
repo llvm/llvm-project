@@ -12,7 +12,7 @@
 
 #include "Basic/TableGen.h"
 
-#error compilation_erro
+#error compilation_error
 
 /// Command line parameters are shared between llvm-tblgen and llvm-min-tblgen.
 /// The indirection to tblgen_main exists to ensure that the static variables
