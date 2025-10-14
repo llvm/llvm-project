@@ -600,9 +600,8 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
 
 let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
-  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant int)">;
-
-  def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
+  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, "
+                              "_Vector<32, char>, _Constant int)">;
   def pmulhrsw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
   def psadbw256 : X86Builtin<"_Vector<4, long long int>(_Vector<32, char>, _Vector<32, char>)">;
   def pshufb256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>)">;
