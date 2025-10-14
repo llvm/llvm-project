@@ -1883,10 +1883,10 @@ def : ProcModel<P, AlderlakePModel,
 }
 def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
-def : ProcModel<"pantherlake", AlderlakePModel,
+foreach P = ["pantherlake", "wildcatlake"] in {
+def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
-def : ProcModel<"wildcatlake", AlderlakePModel,
-                ProcessorFeatures.WCLFeatures, ProcessorFeatures.ADLTuning>;
+}
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,
