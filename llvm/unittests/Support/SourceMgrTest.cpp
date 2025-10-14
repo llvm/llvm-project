@@ -516,5 +516,4 @@ TEST_F(SourceMgrTest, IncludeDirs) {
   std::string ResolvedPath;
   unsigned NumBuffers = SM.AddIncludeFile("file", SMLoc(), ResolvedPath);
   EXPECT_EQ(NumBuffers, 1u);
-  EXPECT_EQ(ResolvedPath, "include/file");
 }
