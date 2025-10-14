@@ -3797,7 +3797,7 @@ static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if every element in Mask, is an in-place blend/select mask or is
 /// undef.
-LLVM_ATTRIBUTE_UNUSED static bool isBlendOrUndef(ArrayRef<int> Mask) {
+[[maybe_unused]] static bool isBlendOrUndef(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
   for (auto [I, M] : enumerate(Mask))
     if (!isUndefOrEqual(M, I) && !isUndefOrEqual(M, I + NumElts))
@@ -8106,7 +8106,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   return DstVec;
 }
 
-LLVM_ATTRIBUTE_UNUSED static bool isHorizOp(unsigned Opcode) {
+[[maybe_unused]] static bool isHorizOp(unsigned Opcode) {
   switch (Opcode) {
   case X86ISD::PACKSS:
   case X86ISD::PACKUS:
@@ -20823,7 +20823,7 @@ SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     // for DAG type consistency we have to match the FP operand type.
 
     APFloat Thresh(APFloat::IEEEsingle(), APInt(32, 0x5f000000));
-    LLVM_ATTRIBUTE_UNUSED APFloat::opStatus Status = APFloat::opOK;
+    [[maybe_unused]] APFloat::opStatus Status = APFloat::opOK;
     bool LosesInfo = false;
     if (TheVT == MVT::f64)
       // The rounding mode is irrelevant as the conversion should be exact.
