@@ -279,6 +279,23 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
         SetIntRangeFn setResultRanges) {
         nvvmInferResultRanges(getOperation(), getResult(), argRanges, setResultRanges);
     }
+
+    // Verify the range attribute satisfies LLVM ConstantRange constructor requirements.
+    ::llvm::LogicalResult $cppClass::verify() {
+      auto rangeAttr = getRange();
+      if (!rangeAttr)
+        return ::mlir::success(); // No range specified, validation passes
+      
+      const ::llvm::APInt &lower = rangeAttr->getLower();
+      const ::llvm::APInt &upper = rangeAttr->getUpper();
+      
+      // Check LLVM ConstantRange constructor condition
+      if (!(lower != upper || (lower.isMaxValue() || lower.isMinValue()))) {
+        return emitOpError("invalid range attribute: range must be a valid constant range");
+      }
+      
+      return ::mlir::success();
+    }
   }];
 
 }
