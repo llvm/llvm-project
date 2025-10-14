@@ -766,7 +766,8 @@ static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i,
       !ctx.in.riscvTableJumpSection->isFinalized)
     return false;
 
-  const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
+  const uint32_t jalr = read32le(sec.contentMaybeDecompress().data() +
+                                 r.offset + (r.type == R_RISCV_JAL ? 0 : 4));
   const uint8_t rd = extractBits(jalr, 11, 7);
   int tblEntryIndex = -1;
   if (rd == 0) {
@@ -779,7 +780,7 @@ static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i,
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_TBJAL;
     sec.relaxAux->writes.push_back(0xA002 |
                                    (tblEntryIndex << 2)); // cm.jt or cm.jalt
-    remove = 6;
+    remove = (r.type == R_RISCV_JAL ? 2 : 6);
     return true;
   }
   return false;
@@ -930,6 +931,11 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
       if (relaxable(relocs, i)) {
         remove = pass < 4 ? 6 : cur - delta;
         relaxCall(ctx, sec, i, loc, r, remove);
+      }
+      break;
+    case R_RISCV_JAL:
+      if (relaxable(relocs, i)) {
+        relaxTableJump(ctx, sec, i, loc, r, remove);
       }
       break;
     case R_RISCV_TPREL_HI20:
@@ -1596,7 +1602,9 @@ void TableJumpSection::scanTableJumpEntries(const InputSection &sec) const {
     case R_RISCV_JAL:
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT: {
-      const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
+      const uint32_t jalr =
+          read32le(sec.contentMaybeDecompress().data() + r.offset +
+                   (r.type == R_RISCV_JAL ? 0 : 4));
       const uint8_t rd = extractBits(jalr, 11, 7);
 
       int csReduction = 6;
