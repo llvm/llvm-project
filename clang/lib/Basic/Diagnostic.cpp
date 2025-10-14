@@ -517,12 +517,6 @@ public:
                         const SourceManager &SM) const;
 
 private:
-  // Find the longest glob pattern that matches FilePath amongst
-  // CategoriesToMatchers, return true iff the match exists and belongs to a
-  // positive category.
-  bool globsMatches(const llvm::StringMap<Matcher> &CategoriesToMatchers,
-                    StringRef FilePath) const;
-
   llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
 } // namespace
@@ -531,14 +525,15 @@ std::unique_ptr<WarningsSpecialCaseList>
 WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
                                 std::string &Err) {
   auto WarningSuppressionList = std::make_unique<WarningsSpecialCaseList>();
-  if (!WarningSuppressionList->createInternal(&Input, Err))
+  if (!WarningSuppressionList->createInternal(&Input, Err,
+                                              /*OrderBySize=*/true))
     return nullptr;
   return WarningSuppressionList;
 }
 
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
-  for (const auto &SectionEntry : Sections) {
+  for (const auto &SectionEntry : sections()) {
     StringRef DiagGroup = SectionEntry.SectionStr;
     if (DiagGroup == "*") {
       // Drop the default section introduced by special case list, we only
@@ -584,43 +579,24 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
+    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
-  const SectionEntries &EntityTypeToCategories = DiagSection->Entries;
-  auto SrcEntriesIt = EntityTypeToCategories.find("src");
-  if (SrcEntriesIt == EntityTypeToCategories.end())
-    return false;
-  const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
-      SrcEntriesIt->getValue();
-  // We also use presumed locations here to improve reproducibility for
-  // preprocessed inputs.
-  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
-    return globsMatches(
-        CategoriesToMatchers,
-        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
-  return false;
-}
 
-bool WarningsSpecialCaseList::globsMatches(
-    const llvm::StringMap<Matcher> &CategoriesToMatchers,
-    StringRef FilePath) const {
-  StringRef LongestMatch;
-  bool LongestIsPositive = false;
-  for (const auto &Entry : CategoriesToMatchers) {
-    StringRef Category = Entry.getKey();
-    const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
-    bool IsPositive = Category != "emit";
-    for (const auto &Glob : Matcher.Globs) {
-      if (Glob->Name.size() < LongestMatch.size())
-        continue;
-      if (!Glob->Pattern.match(FilePath))
-        continue;
-      LongestMatch = Glob->Name;
-      LongestIsPositive = IsPositive;
-    }
-  }
-  return LongestIsPositive;
+  StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
+
+  StringRef LongestSup = DiagSection->getLongestMatch("src", F, "");
+  if (LongestSup.empty())
+    return false;
+
+  StringRef LongestEmit = DiagSection->getLongestMatch("src", F, "emit");
+  if (LongestEmit.empty())
+    return true;
+
+  return LongestSup.size() > LongestEmit.size();
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,

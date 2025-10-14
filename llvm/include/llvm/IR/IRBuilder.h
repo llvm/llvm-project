@@ -2548,6 +2548,11 @@ public:
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
+  LLVM_ABI Value *CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                 Value *False,
+                                                 StringRef PassName,
+                                                 const Twine &Name = "");
+
   LLVM_ABI Value *CreateSelect(Value *C, Value *True, Value *False,
                                const Twine &Name = "",
                                Instruction *MDFrom = nullptr);
