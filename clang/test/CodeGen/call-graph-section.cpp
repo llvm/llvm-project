@@ -11,7 +11,8 @@
 
 class Cls1 {
 public:
-  // FT-DAG: define {{.*}} ptr @_ZN4Cls18receiverEPcPf({{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
+  // FT-LABEL: define {{.*}} ptr @_ZN4Cls18receiverEPcPf(
+  // FT: {{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
   static int *receiver(char *a, float *b) { return 0; }
 };
 
@@ -19,43 +20,52 @@ class Cls2 {
 public:
   int *(*fp)(char *, float *);
 
-  // FT-DAG: define {{.*}} i32 @_ZN4Cls22f1Ecfd({{.*}} !type [[F_TCLS2F1:![0-9]+]]
+  // FT-LABEL: define {{.*}} i32 @_ZN4Cls22f1Ecfd(
+  // FT: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
   int f1(char a, float b, double c) { return 0; }
 
-  // FT-DAG: define {{.*}} ptr @_ZN4Cls22f2EPcPfPd({{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-LABEL: define {{.*}} ptr @_ZN4Cls22f2EPcPfPd(
+  // FT: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
   int *f2(char *a, float *b, double *c) { return 0; }
 
-  // FT-DAG: define {{.*}} void @_ZN4Cls22f3E4Cls1({{.*}} !type [[F_TCLS2F3F4:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls22f3E4Cls1(
+  // FT: {{.*}} !type [[F_TCLS2F3F4:![0-9]+]]
   void f3(Cls1 a) {}
 
-  // FT-DAG: define {{.*}} void @_ZN4Cls22f4E4Cls1({{.*}} !type [[F_TCLS2F3F4]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls22f4E4Cls1(
+  // FT: {{.*}} !type [[F_TCLS2F3F4]]
   void f4(const Cls1 a) {}
 
-  // FT-DAG: define {{.*}} void @_ZN4Cls22f5EP4Cls1({{.*}} !type [[F_TCLS2F5:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls22f5EP4Cls1(
+  // FT: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
   void f5(Cls1 *a) {}
 
-  // FT-DAG: define {{.*}} void @_ZN4Cls22f6EPK4Cls1({{.*}} !type [[F_TCLS2F6:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls22f6EPK4Cls1(
+  // FT: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
   void f6(const Cls1 *a) {}
 
-  // FT-DAG: define {{.*}} void @_ZN4Cls22f7ER4Cls1({{.*}} !type [[F_TCLS2F7:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls22f7ER4Cls1(
+  // FT: {{.*}} !type [[F_TCLS2F7:![0-9]+]]
   void f7(Cls1 &a) {}
 
-  // FT-DAG: define {{.*}} void @_ZN4Cls22f8ERK4Cls1({{.*}} !type [[F_TCLS2F8:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls22f8ERK4Cls1(
+  // FT: {{.*}} !type [[F_TCLS2F8:![0-9]+]]
   void f8(const Cls1 &a) {}
 
-  // FT-DAG: define {{.*}} void @_ZNK4Cls22f9Ev({{.*}} !type [[F_TCLS2F9:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZNK4Cls22f9Ev(
+  // FT: {{.*}} !type [[F_TCLS2F9:![0-9]+]]
   void f9() const {}
 };
 
-// FT-DAG: [[F_TCLS1RECEIVER]] = !{i64 0, !"_ZTSFPiPcPfE.generalized"}
-// FT-DAG: [[F_TCLS2F2]]   = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
-// FT-DAG: [[F_TCLS2F1]]   = !{i64 0, !"_ZTSFicfdE.generalized"}
-// FT-DAG: [[F_TCLS2F3F4]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F5]]   = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F6]]   = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F7]]   = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F8]]   = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F9]]   = !{i64 0, !"_ZTSKFvvE.generalized"}
+// FT: [[F_TCLS1RECEIVER]] = !{i64 0, !"_ZTSFPiPcPfE.generalized"}
+// FT: [[F_TCLS2F1]]   = !{i64 0, !"_ZTSFicfdE.generalized"}
+// FT: [[F_TCLS2F2]]   = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
+// FT: [[F_TCLS2F3F4]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+// FT: [[F_TCLS2F5]]   = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
+// FT: [[F_TCLS2F6]]   = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
+// FT: [[F_TCLS2F7]]   = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+// FT: [[F_TCLS2F8]]   = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
+// FT: [[F_TCLS2F9]]   = !{i64 0, !"_ZTSKFvvE.generalized"}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Callsites (check for indirect callsites' callee_type metadata )
@@ -109,30 +119,29 @@ void foo() {
   (ObjCls2Ptr->*fp_f9)();
 }
 
+// CST: [[F_TCLS1RECEIVER_CT]] = !{[[F_TCLS1RECEIVER:![0-9]+]]}
+// CST: [[F_TCLS1RECEIVER]] = !{i64 0, !"_ZTSFPiPcPfE.generalized"}
 
-// CST-DAG: [[F_TCLS1RECEIVER_CT]] = !{[[F_TCLS1RECEIVER:![0-9]+]]}
-// CST-DAG: [[F_TCLS1RECEIVER]] = !{i64 0, !"_ZTSFPiPcPfE.generalized"}
+// CST: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
+// CST: [[F_TCLS2F1]]   = !{i64 0, !"_ZTSFicfdE.generalized"}
 
-// CST-DAG: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F2]]   = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
+// CST: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
+// CST: [[F_TCLS2F2]]   = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
 
-// CST-DAG: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F1]]   = !{i64 0, !"_ZTSFicfdE.generalized"}
+// CST: [[F_TCLS2F3F4_CT]] = !{[[F_TCLS2F3F4:![0-9]+]]}
+// CST: [[F_TCLS2F3F4]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
 
-// CST-DAG: [[F_TCLS2F3F4_CT]] = !{[[F_TCLS2F3F4:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F3F4]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+// CST: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
+// CST: [[F_TCLS2F5]]   = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
 
-// CST-DAG: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F5]]   = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
+// CST: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
+// CST: [[F_TCLS2F6]]   = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
 
-// CST-DAG: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F6]]   = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
+// CST: [[F_TCLS2F7_CT]] = !{[[F_TCLS2F7:![0-9]+]]}
+// CST: [[F_TCLS2F7]]   = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
 
-// CST-DAG: [[F_TCLS2F7_CT]] = !{[[F_TCLS2F7:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F7]]   = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+// CST: [[F_TCLS2F8_CT]] = !{[[F_TCLS2F8:![0-9]+]]}
+// CST: [[F_TCLS2F8]]   = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
 
-// CST-DAG: [[F_TCLS2F8_CT]] = !{[[F_TCLS2F8:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F8]]   = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
-
-// CST-DAG: [[F_TCLS2F9_CT]] = !{[[F_TCLS2F9:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F9]]   = !{i64 0, !"_ZTSKFvvE.generalized"}
+// CST: [[F_TCLS2F9_CT]] = !{[[F_TCLS2F9:![0-9]+]]}
+// CST: [[F_TCLS2F9]]   = !{i64 0, !"_ZTSKFvvE.generalized"}

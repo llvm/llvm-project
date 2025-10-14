@@ -16,34 +16,40 @@ class Cls1 {};
 template <class T>
 class Cls2 {
 public:
-  // FT: define {{.*}} void @_ZN4Cls2I4Cls1E2f1Ev({{.*}} !type [[F_TCLS2F1:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f1Ev(
+  // FT: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
   void f1() {}
 
-  // FT: define {{.*}} void @_ZN4Cls2I4Cls1E2f2ES0_({{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f2ES0_(
+  // FT: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
   void f2(T a) {}
 
-  // FT: define {{.*}} void @_ZN4Cls2I4Cls1E2f3EPS0_({{.*}} !type [[F_TCLS2F3:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f3EPS0_(
+  // FT: {{.*}} !type [[F_TCLS2F3:![0-9]+]]
   void f3(T *a) {}
 
-  // FT: define {{.*}} void @_ZN4Cls2I4Cls1E2f4EPKS0_({{.*}} !type [[F_TCLS2F4:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f4EPKS0_(
+  // FT: {{.*}} !type [[F_TCLS2F4:![0-9]+]]
   void f4(const T *a) {}
 
-  // FT: define {{.*}} void @_ZN4Cls2I4Cls1E2f5ERS0_({{.*}} !type [[F_TCLS2F5:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f5ERS0_(
+  // FT: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
   void f5(T &a) {}
 
-  // FT: define {{.*}} void @_ZN4Cls2I4Cls1E2f6ERKS0_({{.*}} !type [[F_TCLS2F6:![0-9]+]]
+  // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f6ERKS0_(
+  // FT: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
   void f6(const T &a) {}
 
   // Mixed type function pointer member
   T *(*fp)(T a, T *b, const T *c, T &d, const T &e);
 };
 
-// FT-DAG: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
-// FT-DAG: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
-// FT-DAG: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
+// FT: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
+// FT: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+// FT: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
+// FT: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
+// FT: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+// FT: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Callsites (check for indirect callsite operand bundles)
@@ -91,24 +97,20 @@ void foo() {
   (Obj2Ptr->*fp_f6)(Cls1Obj);
 }
 
-// CST: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_({{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
-// CST-DAG: [[F_TFUNC_CLS1_CT]] = !{[[F_TFUNC_CLS1:![0-9]+]]}
-// CST-DAG: [[F_TFUNC_CLS1]] = !{i64 0, !"_ZTSFP4Cls1S_S0_PKS_RS_RS1_E.generalized"}
+// CST-LABEL: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_(
+// CST: {{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
 
-// CST-DAG: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
-
-// CST-DAG: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
-
-// CST-DAG: [[F_TCLS2F3_CT]] = !{[[F_TCLS2F3:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
-
-// CST-DAG: [[F_TCLS2F4_CT]] = !{[[F_TCLS2F4:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
-
-// CST-DAG: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
-
-// CST-DAG: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
-// CST-DAG: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
+// CST: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
+// CST: [[F_TFUNC_CLS1_CT]] = !{[[F_TFUNC_CLS1:![0-9]+]]}
+// CST: [[F_TFUNC_CLS1]] = !{i64 0, !"_ZTSFP4Cls1S_S0_PKS_RS_RS1_E.generalized"}
+// CST: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
+// CST: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
+// CST: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+// CST: [[F_TCLS2F3_CT]] = !{[[F_TCLS2F3:![0-9]+]]}
+// CST: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
+// CST: [[F_TCLS2F4_CT]] = !{[[F_TCLS2F4:![0-9]+]]}
+// CST: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
+// CST: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
+// CST: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+// CST: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
+// CST: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}

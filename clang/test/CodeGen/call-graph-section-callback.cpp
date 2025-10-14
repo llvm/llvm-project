@@ -27,4 +27,4 @@ int takeCallbackAddress() {
     return 0;
 }
 
-// CHECK-DAG: [[F_CALLBACK]]   = !{i64 0, !"_ZTSFviE.generalized"}
+// CHECK: [[F_CALLBACK]]   = !{i64 0, !"_ZTSFviE.generalized"}

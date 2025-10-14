@@ -18,11 +18,11 @@ class Base {
   
   class Derived : public Base {
   public:
-    // FT-DAG: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !type [[F_TVF]]
+    // FT: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !type [[F_TVF]]
     int vf(char *a) override { return 1; };
   };
   
-  // FT-DAG: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
+  // FT: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
   
   ////////////////////////////////////////////////////////////////////////////////
   // Callsites (check for indirect callsite operand bundles)
@@ -52,5 +52,5 @@ class Base {
     (Dptr->*FpDerivedVf)(0);
   }
 
-  // CST-DAG: [[F_TVF_CT]] = !{[[F_TVF:![0-9]+]]}
-  // CST-DAG: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
+  // CST: [[F_TVF_CT]] = !{[[F_TVF:![0-9]+]]}
+  // CST: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
