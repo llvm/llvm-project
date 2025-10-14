@@ -62,7 +62,7 @@ struct ClampFOpConversion final
       opTy = vectorType.getElementType();
     }
 
-    if (!opTy.isF16() && !opTy.isF32()) {
+    if (!isa<Float16Type, Float32Type>(opTy)) {
       return rewriter.notifyMatchFailure(
           op, "fmed3 only supports f16 and f32 types");
     }
@@ -74,9 +74,9 @@ struct ClampFOpConversion final
           op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
           [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
             typename math::ClampFOp::Adaptor adaptor(operands);
-            return rewriter.create<ROCDL::FMed3Op>(
-                op.getLoc(), llvm1DVectorTy, adaptor.getValue(),
-                adaptor.getMin(), adaptor.getMax());
+            return ROCDL::FMed3Op::create(rewriter, op.getLoc(), llvm1DVectorTy,
+                                          adaptor.getValue(), adaptor.getMin(),
+                                          adaptor.getMax());
           },
           rewriter);
     }
@@ -90,9 +90,9 @@ struct ClampFOpConversion final
   amdgpu::Chipset chipset;
 };
 
-void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
-                                 RewritePatternSet &patterns,
-                                 amdgpu::Chipset chipset) {
+static void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
+                                        RewritePatternSet &patterns,
+                                        amdgpu::Chipset chipset) {
 
   // V_MED3_F16/F32 only exists in gfx9+ architectures
   if (chipset.majorVersion >= 9) {
