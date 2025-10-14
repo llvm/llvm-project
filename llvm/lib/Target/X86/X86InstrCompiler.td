@@ -1256,8 +1256,20 @@ def : Pat<(i64 (X86Wrapper tconstpool  :$dst)),
           (MOV64ri32 tconstpool  :$dst)>, Requires<[KernelCode]>;
 def : Pat<(i64 (X86Wrapper tjumptable  :$dst)),
           (MOV64ri32 tjumptable  :$dst)>, Requires<[KernelCode]>;
-def : Pat<(i64 (X86Wrapper tglobaladdr :$dst)),
-          (MOV64ri32 tglobaladdr :$dst)>, Requires<[KernelCode]>;
+
+// If the globaladdr has an absolute_symbol range, we should assert it would
+// fit into a 32-bit offset.
+def inRange32GlobalAddr : PatLeaf<(tglobaladdr:$dst), [{
+  auto *GA = cast<GlobalAddressSDNode>(N);
+  std::optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
+  if (!CR)
+    return true;
+  return CR->getSignedMin().sge(-1ull << 32) &&
+         CR->getSignedMax().slt(1ull << 32);
+}]>;
+def : Pat<(i64 (X86Wrapper inRange32GlobalAddr:$dst)),
+          (MOV64ri32 tglobaladdr:$dst)>, Requires<[KernelCode]>;
+
 def : Pat<(i64 (X86Wrapper texternalsym:$dst)),
           (MOV64ri32 texternalsym:$dst)>, Requires<[KernelCode]>;
 def : Pat<(i64 (X86Wrapper mcsym:$dst)),
