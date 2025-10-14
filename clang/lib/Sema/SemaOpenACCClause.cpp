@@ -1772,7 +1772,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   }
 
   SmallVector<Expr *> ValidVars;
-  SmallVector<OpenACCReductionRecipe> Recipes;
+  SmallVector<OpenACCReductionRecipeWithStorage> Recipes;
 
   for (Expr *Var : Clause.getVarList()) {
     ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
@@ -1924,7 +1924,7 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   // off here. This will result in CurType being the actual 'type' of the
   // expression, which is what we are looking to check.
   QualType CurType = isa<ArraySectionExpr>(VarExpr)
-                         ? ArraySectionExpr::getBaseOriginalType(VarExpr)
+                         ? cast<ArraySectionExpr>(VarExpr)->getElementType()
                          : VarExpr->getType();
 
   // This can happen when we have a dependent type in an array element that the
@@ -2196,7 +2196,7 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
     SourceLocation EndLoc) {
   if (DirectiveKind == OpenACCDirectiveKind::Loop ||
       isOpenACCCombinedDirectiveKind(DirectiveKind)) {
