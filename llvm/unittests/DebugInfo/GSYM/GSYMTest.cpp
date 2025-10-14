@@ -166,7 +166,7 @@ TEST(GSYMTest, TestFunctionInfo) {
   // Test if we have an entry with lines and one with more lines for the same
   // range, the ones with more lines is greater than the one with less.
   FunctionInfo FIWithMoreLines = FIWithLines;
-  FIWithMoreLines.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line + 5));
+  FIWithMoreLines.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line+5));
   EXPECT_LT(FIWithLines, FIWithMoreLines);
 
   // Test that if we have the same number of lines we compare the line entries
@@ -286,6 +286,7 @@ static void AddLines(uint64_t FuncAddr, uint32_t FileIdx, FunctionInfo &FI) {
     FI.OptLineTable->push(Line1);
     FI.OptLineTable->push(Line2);
 }
+
 
 static void AddInline(uint64_t FuncAddr, uint64_t FuncSize, FunctionInfo &FI) {
     FI.Inline = InlineInfo();
@@ -827,7 +828,7 @@ TEST(GSYMTest, TestLineTableEncodeErrors) {
   LT.push(Line0);
   LT.push(Line1);
   checkError("LineEntry has address 0x1000 which is less than the function "
-             "start address 0x1010", LT.encode(FW, BaseAddr + 0x10));
+             "start address 0x1010", LT.encode(FW, BaseAddr+0x10));
   LT.clear();
 
   // Try to encode a line table where a line entries  has an address that is less
@@ -871,7 +872,7 @@ static void InitHeader(Header &H) {
   H.NumAddresses = 1;
   H.StrtabOffset= 0x2000;
   H.StrtabSize = 0x1000;
-  for (size_t i=0; i < GSYM_MAX_UUID_SIZE; ++i) {
+  for (size_t i=0; i<GSYM_MAX_UUID_SIZE; ++i) {
     if (i < H.UUIDSize)
       H.UUID[i] = i;
     else
@@ -1278,6 +1279,7 @@ TEST(GSYMTest, TestGsymLookups) {
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8, 32}));
 }
+
 
 TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   // Create a single compile unit with a single function and make sure it gets
@@ -1864,7 +1866,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
                          SourceLocation{"main", "/tmp", "main.c", 10, 256}));
-  LR = GR->lookup(0x1180 - 1);
+  LR = GR->lookup(0x1180-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
@@ -2795,7 +2797,6 @@ TEST(GSYMTest, TestGsymSegmentingNoBase) {
     ASSERT_THAT_EXPECTED(GR3000->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED(GR3000->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED(GR3000->lookup(0x4000), Failed());
-
 }
 
   // Verify that all lookups match the range [0x4000-0x4030) when doing lookups
@@ -3079,7 +3080,8 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
     "error: inlined function DIE at 0x00000058 has a range [0x0000000000001000 "
     "- 0x0000000000001100) that isn't contained in any parent address ranges, "
     "this inline range will be removed."
-  };  // Make sure all expected errors are in the error stream for the two invalid
+  };
+  // Make sure all expected errors are in the error stream for the two invalid
   // inlined functions that we removed due to invalid range scoping.
   for (const auto &Error: ExpectedLogErrors) {
     EXPECT_TRUE(OS.str().find(Error) != std::string::npos);
