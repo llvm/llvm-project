@@ -117,31 +117,26 @@ inline DebugOptionTy &getDebugOption() {
     OptVal.Level = std::atoi(EnvStr);
     if (OptVal.Level)
       return OptVal; // defined as numeric value
+    struct DebugStrToBitTy {
+      const char *Str;
+      uint32_t Bit;
+    } DebugStrToBit[] = {
+        {"rtl", DEBUG_INFOTYPE_RTL},       {"device", DEBUG_INFOTYPE_DEVICE},
+        {"module", DEBUG_INFOTYPE_MODULE}, {"kernel", DEBUG_INFOTYPE_KERNEL},
+        {"memory", DEBUG_INFOTYPE_MEMORY}, {"map", DEBUG_INFOTYPE_MAP},
+        {"copy", DEBUG_INFOTYPE_COPY},     {"interop", DEBUG_INFOTYPE_INTEROP},
+        {"tool", DEBUG_INFOTYPE_TOOL},     {"api", DEBUG_INFOTYPE_API},
+        {"all", DEBUG_INFOTYPE_ALL},       {nullptr, 0},
+    };
     // Check string value of the option
     std::istringstream Tokens(EnvStr);
     for (std::string Token; std::getline(Tokens, Token, ',');) {
-      if (Token == "rtl")
-        OptVal.Type |= DEBUG_INFOTYPE_RTL;
-      else if (Token == "device")
-        OptVal.Type |= DEBUG_INFOTYPE_DEVICE;
-      else if (Token == "module")
-        OptVal.Type |= DEBUG_INFOTYPE_MODULE;
-      else if (Token == "kernel")
-        OptVal.Type |= DEBUG_INFOTYPE_KERNEL;
-      else if (Token == "memory")
-        OptVal.Type |= DEBUG_INFOTYPE_MEMORY;
-      else if (Token == "map")
-        OptVal.Type |= DEBUG_INFOTYPE_MAP;
-      else if (Token == "copy")
-        OptVal.Type |= DEBUG_INFOTYPE_COPY;
-      else if (Token == "interop")
-        OptVal.Type |= DEBUG_INFOTYPE_INTEROP;
-      else if (Token == "tool")
-        OptVal.Type |= DEBUG_INFOTYPE_TOOL;
-      else if (Token == "api")
-        OptVal.Type |= DEBUG_INFOTYPE_API;
-      else if (Token == "all")
-        OptVal.Type |= DEBUG_INFOTYPE_ALL;
+      for (int I = 0; DebugStrToBit[I].Str; I++) {
+        if (Token == DebugStrToBit[I].Str) {
+          OptVal.Type |= DebugStrToBit[I].Bit;
+          break;
+        }
+      }
     }
     return OptVal;
   }();
