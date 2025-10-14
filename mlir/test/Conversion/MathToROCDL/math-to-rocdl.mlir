@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -pass-pipeline='builtin.module(convert-math-to-rocdl{chipset=gfx803})' | FileCheck %s --check-prefix=PRE9
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -pass-pipeline='builtin.module(convert-math-to-rocdl{chipset=gfx942})' | FileCheck %s --check-prefix=POST9
+// RUN: mlir-opt %s -convert-math-to-rocdl -allow-unregistered-dialect -split-input-file | FileCheck %s
 
 module @test_module {
   // CHECK: llvm.func @__ocml_fmod_f16(f16, f16) -> f16
@@ -596,77 +595,4 @@ module @test_module {
     %result = math.sin %arg : vector<2x2xf16>
     func.return %result : vector<2x2xf16>
   }
-}
-
-// -----
-
-// f16 clamp → rocdl.fmed3 on gfx9+
-// CHECK-LABEL: func.func @clampf_f16
-func.func @clampf_f16(%x: f16, %lo: f16, %hi: f16) -> f16 {
-  %r = math.clampf %x to [%lo, %hi] : f16
-  return %r : f16
-  // POST9: rocdl.fmed3 {{.*}} : f16
-  // PRE9-NOT: rocdl.fmed3
-  // PRE9: math.clampf {{.*}} : f16
-}
-
-// f32 clamp → rocdl.fmed3 on gfx9+
-// CHECK-LABEL: func.func @clampf_f32
-func.func @clampf_f32(%x: f32, %lo: f32, %hi: f32) -> f32 {
-  %r = math.clampf %x to [%lo, %hi] : f32
-  return %r : f32
-  // POST9: rocdl.fmed3 {{.*}} : f32
-  // PRE9-NOT: rocdl.fmed3
-  // PRE9: math.clampf {{.*}} : f32
-}
-
-// -----
-
-// Vector f16 clamp → rocdl.fmed3 on gfx9+
-// CHECK-LABEL: func.func @clampf_vector_f16
-func.func @clampf_vector_f16(%x: vector<2xf16>, %lo: vector<2xf16>, %hi: vector<2xf16>) -> vector<2xf16> {
-  %r = math.clampf %x to [%lo, %hi] : vector<2xf16>
-  return %r : vector<2xf16>
-  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
-  // PRE9-NOT: rocdl.fmed3
-  // PRE9: math.clampf {{.*}} : vector<2xf16>
-}
-
-// -----
-
-// Vector f32 clamp → rocdl.fmed3 on gfx9+
-// CHECK-LABEL: func.func @clampf_vector_f32
-func.func @clampf_vector_f32(%x: vector<2xf32>, %lo: vector<2xf32>, %hi: vector<2xf32>) -> vector<2xf32> {
-  %r = math.clampf %x to [%lo, %hi] : vector<2xf32>
-  return %r : vector<2xf32>
-  // POST9: rocdl.fmed3 {{.*}} : vector<2xf32>
-  // PRE9-NOT: rocdl.fmed3
-  // PRE9: math.clampf {{.*}} : vector<2xf32>
-}
-
-// -----
-
-// Multi-dimensional vector f16 clamp → rocdl.fmed3 on gfx9+ (unrolled to 1D vectors)
-// CHECK-LABEL: func.func @clampf_vector_2d_f16
-func.func @clampf_vector_2d_f16(%x: vector<2x2xf16>, %lo: vector<2x2xf16>, %hi: vector<2x2xf16>) -> vector<2x2xf16> {
-  %r = math.clampf %x to [%lo, %hi] : vector<2x2xf16>
-  return %r : vector<2x2xf16>
-  // POST9: builtin.unrealized_conversion_cast {{.*}} : vector<2x2xf16> to !llvm.array<2 x vector<2xf16>>
-  // POST9: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
-  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
-  // POST9: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
-  // POST9: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
-  // POST9: rocdl.fmed3 {{.*}} : vector<2xf16>
-  // POST9: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
-  // PRE9-NOT: rocdl.fmed3
-  // PRE9: math.clampf {{.*}} : vector<2x2xf16>
-}
-
-// -----
-// CHECK-LABEL: func.func @clampf_bf16
-func.func @clampf_bf16(%x: bf16, %lo: bf16, %hi: bf16) -> bf16 {
-  %r = math.clampf %x to [%lo, %hi] : bf16
-  return %r : bf16
-  // CHECK: math.clampf {{.*}} : bf16
-  // CHECK-NOT: rocdl.fmed3
 }
