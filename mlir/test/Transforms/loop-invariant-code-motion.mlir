@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion | FileCheck %s
 
+// CHECK-LABEL func.func @nested_loops_both_having_invariant_code
 func.func @nested_loops_both_having_invariant_code() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -7,7 +8,7 @@ func.func @nested_loops_both_having_invariant_code() {
 
   affine.for %arg0 = 0 to 10 {
     %v0 = arith.addf %cf7, %cf8 : f32
-    affine.for %arg1 = 0 to 10 {
+    affine.for %arg1 = 0 to 9 {
       %v1 = arith.addf %v0, %cf8 : f32
       affine.store %v0, %m[%arg0] : memref<10xf32>
     }
@@ -18,8 +19,8 @@ func.func @nested_loops_both_having_invariant_code() {
   // CHECK-NEXT: %[[CST1:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: %[[ADD0:.*]] = arith.addf %[[CST0]], %[[CST1]] : f32
   // CHECK-NEXT: arith.addf %[[ADD0]], %[[CST1]] : f32
-  // CHECK-NEXT: affine.for
-  // CHECK-NEXT: affine.for
+  // CHECK: affine.for %[[IV:.*]] = 0 to 9
+  // CHECK: affine.for %[[IV:.*]] = 0 to 10
   // CHECK-NEXT: affine.store
 
   return
@@ -27,6 +28,7 @@ func.func @nested_loops_both_having_invariant_code() {
 
 // -----
 
+// CHECK-LABEL func.func @nested_loops_code_invariant_to_both
 func.func @nested_loops_code_invariant_to_both() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -48,6 +50,7 @@ func.func @nested_loops_code_invariant_to_both() {
 
 // -----
 
+// CHECK-LABEL func.func @single_loop_nothing_invariant
 func.func @single_loop_nothing_invariant() {
   %m1 = memref.alloc() : memref<10xf32>
   %m2 = memref.alloc() : memref<10xf32>
@@ -71,6 +74,7 @@ func.func @single_loop_nothing_invariant() {
 
 // -----
 
+// CHECK-LABEL func.func @invariant_code_inside_affine_if
 func.func @invariant_code_inside_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
@@ -99,6 +103,7 @@ func.func @invariant_code_inside_affine_if() {
 
 // -----
 
+// CHECK-LABEL func.func @invariant_affine_if
 func.func @invariant_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
@@ -579,7 +584,6 @@ func.func @test_invariant_nested_loop() {
   return
 }
 
-
 // -----
 
 // Test ops in a graph region are hoisted.
@@ -650,6 +654,8 @@ func.func @test_always_speculatable_op(%lb: index, %ub: index, %step: index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: test_never_speculatable_op
 func.func @test_never_speculatable_op(%lb: index, %ub: index, %step: index) {
   // CHECK: scf.for
@@ -660,6 +666,8 @@ func.func @test_never_speculatable_op(%lb: index, %ub: index, %step: index) {
 
   return
 }
+
+// -----
 
 // CHECK-LABEL: test_conditionally_speculatable_op_success
 func.func @test_conditionally_speculatable_op_success(%lb: index, %ub: index, %step: index) {
@@ -672,6 +680,8 @@ func.func @test_conditionally_speculatable_op_success(%lb: index, %ub: index, %s
 
   return
 }
+
+// -----
 
 // CHECK-LABEL: test_conditionally_speculatable_op_failure
 func.func @test_conditionally_speculatable_op_failure(%lb: index, %ub: index, %step: index, %arg: i32) {
@@ -686,6 +696,8 @@ func.func @test_conditionally_speculatable_op_failure(%lb: index, %ub: index, %s
   return
 }
 
+// -----
+
 // CHECK-LABEL: test_recursively_speculatable_op_success
 func.func @test_recursively_speculatable_op_success(%lb: index, %ub: index, %step: index, %arg: i32) {
   // CHECK: test.recursively_speculatable_op
@@ -699,6 +711,8 @@ func.func @test_recursively_speculatable_op_success(%lb: index, %ub: index, %ste
 
   return
 }
+
+// -----
 
 // CHECK-LABEL: test_recursively_speculatable_op_failure
 func.func @test_recursively_speculatable_op_failure(%lb: index, %ub: index, %step: index, %arg: i32) {
@@ -728,6 +742,8 @@ func.func @speculate_tensor_dim_unknown_rank_unknown_dim(
   return
 }
 
+// -----
+
 func.func @speculate_tensor_dim_known_rank_unknown_dim(
 // CHECK-LABEL: @speculate_tensor_dim_known_rank_unknown_dim
     %t: tensor<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
@@ -739,6 +755,8 @@ func.func @speculate_tensor_dim_known_rank_unknown_dim(
 
   return
 }
+
+// -----
 
 func.func @speculate_tensor_dim_unknown_rank_known_dim(
 // CHECK-LABEL: @speculate_tensor_dim_unknown_rank_known_dim
@@ -752,6 +770,8 @@ func.func @speculate_tensor_dim_unknown_rank_known_dim(
 
   return
 }
+
+// -----
 
 func.func @speculate_tensor_dim_known_rank_known_dim_inbounds(
 // CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_inbounds
@@ -780,6 +800,8 @@ func.func @speculate_memref_dim_unknown_rank_unknown_dim(
   return
 }
 
+// -----
+
 func.func @speculate_memref_dim_known_rank_unknown_dim(
 // CHECK-LABEL: @speculate_memref_dim_known_rank_unknown_dim
     %t: memref<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
@@ -791,6 +813,8 @@ func.func @speculate_memref_dim_known_rank_unknown_dim(
 
   return
 }
+
+// -----
 
 func.func @speculate_memref_dim_unknown_rank_known_dim(
 // CHECK-LABEL: @speculate_memref_dim_unknown_rank_known_dim
@@ -880,6 +904,8 @@ func.func @no_speculate_divui(
   return
 }
 
+// -----
+
 func.func @no_speculate_divsi(
 // CHECK-LABEL: @no_speculate_divsi(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -891,6 +917,8 @@ func.func @no_speculate_divsi(
 
   return
 }
+
+// -----
 
 func.func @no_speculate_ceildivui(
 // CHECK-LABEL: @no_speculate_ceildivui(
@@ -904,6 +932,8 @@ func.func @no_speculate_ceildivui(
   return
 }
 
+// -----
+
 func.func @no_speculate_ceildivsi(
 // CHECK-LABEL: @no_speculate_ceildivsi(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -916,6 +946,8 @@ func.func @no_speculate_ceildivsi(
   return
 }
 
+// -----
+
 func.func @no_speculate_divui_const(%num: i32, %lb: index, %ub: index, %step: index) {
 // CHECK-LABEL: @no_speculate_divui_const(
   %c0 = arith.constant 0 : i32
@@ -927,6 +959,8 @@ func.func @no_speculate_divui_const(%num: i32, %lb: index, %ub: index, %step: in
 
   return
 }
+
+// -----
 
 func.func @speculate_divui_const(
 // CHECK-LABEL: @speculate_divui_const(
@@ -941,6 +975,8 @@ func.func @speculate_divui_const(
   return
 }
 
+// -----
+
 func.func @no_speculate_ceildivui_const(%num: i32, %lb: index, %ub: index, %step: index) {
 // CHECK-LABEL: @no_speculate_ceildivui_const(
   %c0 = arith.constant 0 : i32
@@ -952,6 +988,8 @@ func.func @no_speculate_ceildivui_const(%num: i32, %lb: index, %ub: index, %step
 
   return
 }
+
+// -----
 
 func.func @speculate_ceildivui_const(
 // CHECK-LABEL: @speculate_ceildivui_const(
@@ -966,6 +1004,8 @@ func.func @speculate_ceildivui_const(
   return
 }
 
+// -----
+
 func.func @no_speculate_divsi_const0(
 // CHECK-LABEL: @no_speculate_divsi_const0(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -978,6 +1018,8 @@ func.func @no_speculate_divsi_const0(
 
   return
 }
+
+// -----
 
 func.func @no_speculate_divsi_const_minus1(
 // CHECK-LABEL: @no_speculate_divsi_const_minus1(
@@ -992,6 +1034,8 @@ func.func @no_speculate_divsi_const_minus1(
   return
 }
 
+// -----
+
 func.func @speculate_divsi_const(
 // CHECK-LABEL: @speculate_divsi_const(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -1004,6 +1048,8 @@ func.func @speculate_divsi_const(
 
   return
 }
+
+// -----
 
 func.func @no_speculate_ceildivsi_const0(
 // CHECK-LABEL: @no_speculate_ceildivsi_const0(
@@ -1018,6 +1064,8 @@ func.func @no_speculate_ceildivsi_const0(
   return
 }
 
+// -----
+
 func.func @no_speculate_ceildivsi_const_minus1(
 // CHECK-LABEL: @no_speculate_ceildivsi_const_minus1(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -1030,6 +1078,8 @@ func.func @no_speculate_ceildivsi_const_minus1(
 
   return
 }
+
+// -----
 
 func.func @speculate_ceildivsi_const(
 // CHECK-LABEL: @speculate_ceildivsi_const(
@@ -1044,6 +1094,8 @@ func.func @speculate_ceildivsi_const(
   return
 }
 
+// -----
+
 func.func @no_speculate_divui_range(
 // CHECK-LABEL: @no_speculate_divui_range(
     %num: i8, %lb: index, %ub: index, %step: index) {
@@ -1056,6 +1108,8 @@ func.func @no_speculate_divui_range(
 
   return
 }
+
+// -----
 
 func.func @no_speculate_divsi_range(
 // CHECK-LABEL: @no_speculate_divsi_range(
@@ -1072,6 +1126,8 @@ func.func @no_speculate_divsi_range(
   return
 }
 
+// -----
+
 func.func @no_speculate_ceildivui_range(
 // CHECK-LABEL: @no_speculate_ceildivui_range(
     %num: i8, %lb: index, %ub: index, %step: index) {
@@ -1084,6 +1140,8 @@ func.func @no_speculate_ceildivui_range(
 
   return
 }
+
+// -----
 
 func.func @no_speculate_ceildivsi_range(
 // CHECK-LABEL: @no_speculate_ceildivsi_range(
@@ -1100,6 +1158,8 @@ func.func @no_speculate_ceildivsi_range(
   return
 }
 
+// -----
+
 func.func @speculate_divui_range(
 // CHECK-LABEL: @speculate_divui_range(
     %num: i8, %lb: index, %ub: index, %step: index) {
@@ -1112,6 +1172,8 @@ func.func @speculate_divui_range(
 
   return
 }
+
+// -----
 
 func.func @speculate_divsi_range(
 // CHECK-LABEL: @speculate_divsi_range(
@@ -1129,6 +1191,8 @@ func.func @speculate_divsi_range(
   return
 }
 
+// -----
+
 func.func @speculate_ceildivui_range(
 // CHECK-LABEL: @speculate_ceildivui_range(
     %num: i8, %lb: index, %ub: index, %step: index) {
@@ -1141,6 +1205,8 @@ func.func @speculate_ceildivui_range(
 
   return
 }
+
+// -----
 
 func.func @speculate_ceildivsi_range(
 // CHECK-LABEL: @speculate_ceildivsi_range(
@@ -1436,4 +1502,480 @@ func.func @do_not_hoist_vector_transfer_ops_memref(
     scf.yield %out : vector<4x4xf32>
   }
   func.return %final : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @move_single_resource_basic
+func.func @move_single_resource_basic() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // Single write effect on one resource in a triple-nested loop
+  // No loop-variant inputs to op and no read effects -> movable
+
+  // Note: loop order is flipped as empty loops are hoisted out
+  // in reverse order!
+
+  // CHECK: "test.test_effects_write_A"() : () -> ()
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+      scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+        "test.test_effects_write_A"() : () -> ()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_single_resource_write_dominant
+func.func @move_single_resource_write_dominant() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // Write effect on one resource followed by a Read.
+  // No loop-variant inputs to Write op, no conflict on
+  // "A" --> both ops movable
+
+  // Note: loop order is flipped as empty loops are hoisted out
+  // in reverse order!
+
+  // CHECK: "test.test_effects_write_A"() : () -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+      scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+        "test.test_effects_write_A"() : () -> ()
+        "test.test_effects_read_A"() : () -> ()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_single_resource_read_dominant
+func.func @move_single_resource_read_dominant() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+
+    // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+    scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+      scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+        
+        // Read effect on "A" dominates write.
+        // Causes conflict on "A" --> not movable.
+
+        // CHECK: "test.test_effects_read_A"() : () -> ()
+        // CHECK: "test.test_effects_write_A"() : () -> ()
+
+        "test.test_effects_read_A"() : () -> ()
+        "test.test_effects_write_A"() : () -> ()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_single_resource_basic_conflict
+func.func @move_single_resource_basic_conflict() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+
+    // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+    scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+      scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+
+        // CHECK: "test.test_effects_write_A"() : () -> ()
+        // CHECK: "test.test_effects_read_A"() : () -> ()
+
+        // Read of "A" dominates Write "A" --> "A" is in conflict.
+        // "C" is not in conflict but, since all resources used
+        // by op aren't conflict free, they're not movable.
+
+        // CHECK: "test.test_effects_write_AC"() : () -> ()
+        // CHECK: "test.test_effects_read_AC"() : () -> ()
+
+        "test.test_effects_write_A"() : () -> ()
+        "test.test_effects_read_A"() : () -> ()
+        "test.test_effects_write_AC"() : () -> ()
+        "test.test_effects_read_AC"() : () -> ()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_single_resource_if_region
+func.func @move_single_resource_if_region() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %c5_i32 = arith.constant 5 : i32
+
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+
+    // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+    scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+      scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+        %1 = arith.cmpi slt, %arg0, %c5_i32 : i32
+
+        // CHECK: scf.if
+        scf.if %1 {
+          // Checking that we're not moving ops out of
+          // non-loop regions.
+          
+          // CHECK: "test.test_effects_write_A"() : () -> ()
+          // CHECK: "test.test_effects_read_A"() : () -> ()
+
+          "test.test_effects_write_A"() : () -> ()
+          "test.test_effects_read_A"() : () -> ()
+        }
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_single_resource_for_inside_if_region
+func.func @move_single_resource_for_inside_if_region() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %c5_i32 = arith.constant 5 : i32
+
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    %1 = arith.cmpi slt, %arg0, %c5_i32 : i32
+
+    // CHECK: scf.if
+    scf.if %1 {
+      // Checking that we can move ops out of loops nested
+      // within other regions, without moving ops out of
+      // the parent, non-loop region.
+
+      // CHECK: "test.test_effects_write_A"() : () -> ()
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+
+      scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+        scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+          "test.test_effects_write_A"() : () -> ()
+        }
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_multi_resource_comprehensive
+func.func @move_multi_resource_comprehensive() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %c3_i32 = arith.constant 3 : i32
+  %c4_i32 = arith.constant 4 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c6_i32 = arith.constant 6 : i32
+  %c7_i32 = arith.constant 7 : i32
+  %c8_i32 = arith.constant 8 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c8_i32 step %c1_i32
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    // CHECK: "test.test_effects_write_CD"() : () -> ()
+    // CHECK: "test.test_effects_read_CD"() : () -> ()
+    // CHECK: "test.test_effects_write_EF"() : () -> ()
+    // CHECK: "test.test_effects_read_EF"() : () -> ()
+
+    // Both of these will be emptied and moved out of their parent
+    scf.for %arg1 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+      scf.for %arg2 = %c0_i32 to %c8_i32 step %c1_i32  : i32 {
+        "test.test_effects_write_CD"() : () -> ()
+        "test.test_effects_read_CD"() : () -> ()
+        "test.test_effects_write_EF"() : () -> ()
+        "test.test_effects_read_EF"() : () -> ()
+      }
+    }
+
+    %1 = arith.cmpi slt, %arg0, %c5_i32 : i32
+    scf.if %1 {
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c5_i32 step %c1_i32
+      // CHECK: "test.test_effects_write_B"() : () -> ()
+      // CHECK: "test.test_effects_read_B"() : () -> ()
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c4_i32 step %c1_i32
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c3_i32 step %c1_i32
+      
+      // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c6_i32 step %c1_i32
+      scf.for %arg3 = %c0_i32 to %c6_i32 step %c1_i32  : i32 {
+
+        // CHECK: "test.test_effects_write_A"() : () -> ()
+        // CHECK: "test.test_effects_read_A"() : () -> ()
+        
+        // Loop will be emptied and the empty loop will be moved out of parent
+        scf.for %arg4 = %c0_i32 to %c5_i32 step %c1_i32  : i32 {
+          "test.test_effects_write_A"() : () -> ()
+          "test.test_effects_read_A"() : () -> ()
+        }
+
+        // Loop will be emptied and the empty loop will be moved out of parent
+        scf.for %arg5 = %c0_i32 to %c4_i32 step %c1_i32  : i32 {          
+          "test.test_effects_write_B"() : () -> ()
+          "test.test_effects_read_B"() : () -> ()
+        }
+
+        // CHECK: "test.test_effects_write_AC"() : () -> ()
+        // CHECK: "test.test_effects_read_AC"() : () -> ()
+
+        // Loop will be emptied and the empty loop will be moved out of parent
+        scf.for %arg6 = %c0_i32 to %c3_i32 step %c1_i32  : i32 {
+          "test.test_effects_write_AC"() : () -> ()
+          "test.test_effects_read_AC"() : () -> ()
+        }
+      }
+    }
+    else {
+      // Checking that these ops aren't moved out of non-loop region
+      // CHECK: "test.test_effects_write_F"() : () -> ()
+      // CHECK: "test.test_effects_read_F"() : () -> ()
+
+      // Memory effects of ops placed in this region can 
+      // still cause conflicts on resources used in the IF's then region
+
+      "test.test_effects_write_F"() : () -> ()
+      "test.test_effects_read_F"() : () -> ()
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_write_with_invariant_input_multi_iteration
+func.func @ove_write_with_invariant_input_multi_iteration() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // (1) Ops are pulled out during the first LICM iteration on the 
+  // parent loop.
+  // CHECK: %{{.*}} = arith.constant 7 : index
+  // CHECK: "test.test_effects_write_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+
+  // (2) Opss pulled out during the second LICM iteration on the
+  // parent loop, as the input is no longer loop-variant, which 
+  // clears the conflict on resource "A," allowing us to move these ops.
+  // CHECK: "test.test_effects_write_A_with_input"(%c7) : (index) -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    %input = arith.constant 7 : index
+    "test.test_effects_write_A_with_input"(%input) : (index) -> ()
+    "test.test_effects_read_A"() : () -> ()
+
+    "test.test_effects_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_same_op_non_conflicting_read_before_write
+func.func @move_same_op_non_conflicting_read_before_write() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: "test.test_effects_read_A_write_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    "test.test_effects_read_A_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_read_A"() : () -> ()
+  }
+
+  // CHECK: "test.test_effects_read_A_then_write_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+    "test.test_effects_read_A_then_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_read_A"() : () -> ()
+  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @no_move_same_op_conflicting_read_before_write
+func.func @no_move_same_op_conflicting_read_before_write() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    
+    // CHECK: "test.test_effects_read_A_write_B"() : () -> ()
+    // CHECK: "test.test_effects_read_B"() : () -> ()
+    // CHECK: "test.test_effects_write_A"() : () -> ()
+
+    "test.test_effects_read_A_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_write_A"() : () -> ()
+  }
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+    // CHECK: "test.test_effects_read_A_then_write_B"() : () -> ()
+    // CHECK: "test.test_effects_read_B"() : () -> ()
+    // CHECK: "test.test_effects_write_A"() : () -> ()
+
+    "test.test_effects_read_A_then_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_write_A"() : () -> ()
+  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_same_op_non_conflicting_write_before_read
+func.func @move_same_op_non_conflicting_write_before_read() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c9_i32 = arith.constant 9 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: "test.test_effects_write_A_then_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+  
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    "test.test_effects_write_A_then_read_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_read_A"() : () -> ()
+  }
+
+  // CHECK: "test.test_effects_write_A_then_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+  // CHECK: "test.test_effects_write_A"() : () -> ()
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c9_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c9_i32 step %c1_i32  : i32 {
+    "test.test_effects_write_A_then_read_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_write_A"() : () -> ()
+  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @no_move_same_op_conflicting_write_before_read
+func.func @no_move_same_op_conflicting_write_before_read() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    // CHECK: "test.test_effects_write_A_then_read_B"() : () -> ()
+    // CHECK: "test.test_effects_read_A"() : () -> ()
+    // CHECK: "test.test_effects_write_A"() : () -> ()
+
+    "test.test_effects_write_A_then_read_B"() : () -> ()
+    "test.test_effects_read_A"() : () -> ()
+    "test.test_effects_write_A"() : () -> ()
+  }
+
+  return
 }
