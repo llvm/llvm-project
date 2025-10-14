@@ -6644,7 +6644,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
            "Invalid mask width");
     // If index-width (mask size) is less than pointer-size then mask is
     // 1-extended.
-    if (match(Op1, m_PtrToInt(m_Specific(Op0))))
+    if (match(Op1, m_PtrToIntOrAddr(m_Specific(Op0))))
       return Op0;
 
     // NOTE: We may have attributes associated with the return value of the
