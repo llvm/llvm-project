@@ -486,7 +486,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     Value result = arith::ConstantOp::create(rewriter, loc, dstVecType,
                                              rewriter.getZeroAttr(dstVecType));
     SmallVector<int64_t> strides(adjustedTargetShapeRank, 1);
-    VectorType computeVecType =
+    VectorType unrolledVecType =
         VectorType::get(*targetShape, dstVecType.getElementType());
 
     // Create the unrolled computation.
@@ -512,7 +512,7 @@ struct UnrollElementwisePattern : public RewritePattern {
       }
 
       Operation *newOp = cloneOpWithOperandsAndTypes(
-          rewriter, loc, op, extractOperands, computeVecType);
+          rewriter, loc, op, extractOperands, unrolledVecType);
 
       Value computeResult = newOp->getResult(0);
 

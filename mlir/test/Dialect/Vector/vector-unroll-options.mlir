@@ -485,3 +485,17 @@ func.func @elementwise(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) -> vector
 //       CHECK:   %[[ADD1:.*]] = arith.addf %[[S_LHS_1]], %[[S_RHS_1]] : vector<2x2xf32>
 //       CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[ADD1]], %[[I0]] {offsets = [1, 0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<2x2x2xf32>
 //       CHECK:   return %[[I1]] : vector<2x2x2xf32>
+
+
+func.func @elementwise_4D_to_2D(%v1: vector<2x2x2x2xf32>, %v2: vector<2x2x2x2xf32>) -> vector<2x2x2x2xf32> {
+  %0 = arith.addf %v1, %v2 : vector<2x2x2x2xf32>
+  return %0 : vector<2x2x2x2xf32>
+}
+
+//   CHECK-LABEL: func @elementwise_4D_to_2D
+//    CHECK-SAME: (%[[ARG0:.*]]: vector<2x2x2x2xf32>, %[[ARG1:.*]]: vector<2x2x2x2xf32>) -> vector<2x2x2x2xf32> {
+// CHECK-DAG-COUNT-4:   vector.extract_strided_slice %[[ARG0]] {offsets = [{{.*}}], sizes = [1, 1, 2, 2], strides = [1, 1, 1, 1]} : vector<2x2x2x2xf32> to vector<1x1x2x2xf32>
+// CHECK-DAG-COUNT-8:   vector.shape_cast {{.*}} : vector<1x1x2x2xf32> to vector<2x2xf32>
+// CHECK-DAG-COUNT-4:   vector.extract_strided_slice %[[ARG1]] {offsets = [{{.*}}], sizes = [1, 1, 2, 2], strides = [1, 1, 1, 1]} : vector<2x2x2x2xf32> to vector<1x1x2x2xf32>
+// CHECK-DAG-COUNT-4:   arith.addf %{{.*}}, %{{.*}} : vector<2x2xf32>
+// CHECK-DAG-COUNT-4:   vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [{{.*}}], strides = [1, 1]} : vector<2x2xf32> into vector<2x2x2x2xf32>
