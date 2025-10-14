@@ -1168,7 +1168,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (OriginalTripCount) {
       unsigned NewTripCount = *OriginalTripCount / ULO.Count;
       if (!ULO.Runtime && *OriginalTripCount % ULO.Count)
-        NewTripCount += 1;
+        ++NewTripCount;
       setLoopEstimatedTripCount(L, NewTripCount);
     }
   }
