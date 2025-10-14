@@ -47,17 +47,8 @@ define zeroext i8 @oeq_f64_u32(double %x) nounwind readnone {
 ; SSE-LABEL: oeq_f64_u32:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    cvttsd2si %xmm0, %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    sarl $31, %ecx
-; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; SSE-NEXT:    cvttsd2si %xmm1, %edx
-; SSE-NEXT:    andl %ecx, %edx
-; SSE-NEXT:    orl %eax, %edx
-; SSE-NEXT:    movd %edx, %xmm1
-; SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; SSE-NEXT:    cvttpd2dq %xmm0, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    cmpeqsd %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
 ; SSE-NEXT:    andl $1, %eax
@@ -67,16 +58,8 @@ define zeroext i8 @oeq_f64_u32(double %x) nounwind readnone {
 ; AVX-LABEL: oeq_f64_u32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    sarl $31, %ecx
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; AVX-NEXT:    vcvttsd2si %xmm1, %edx
-; AVX-NEXT:    andl %ecx, %edx
-; AVX-NEXT:    orl %eax, %edx
-; AVX-NEXT:    vmovd %edx, %xmm1
-; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm1
+; AVX-NEXT:    vcvtdq2pd %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
@@ -86,8 +69,8 @@ define zeroext i8 @oeq_f64_u32(double %x) nounwind readnone {
 ; AVX512-LABEL: oeq_f64_u32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm7, %xmm1
+; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm1
+; AVX512-NEXT:    vcvtdq2pd %xmm1, %xmm1
 ; AVX512-NEXT:    vcmpeqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -311,17 +294,8 @@ define zeroext i8 @une_f64_u32(double %x) nounwind readnone {
 ; SSE-LABEL: une_f64_u32:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    cvttsd2si %xmm0, %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    sarl $31, %ecx
-; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; SSE-NEXT:    cvttsd2si %xmm1, %edx
-; SSE-NEXT:    andl %ecx, %edx
-; SSE-NEXT:    orl %eax, %edx
-; SSE-NEXT:    movd %edx, %xmm1
-; SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; SSE-NEXT:    cvttpd2dq %xmm0, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    cmpneqsd %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
 ; SSE-NEXT:    andl $1, %eax
@@ -331,16 +305,8 @@ define zeroext i8 @une_f64_u32(double %x) nounwind readnone {
 ; AVX-LABEL: une_f64_u32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    sarl $31, %ecx
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; AVX-NEXT:    vcvttsd2si %xmm1, %edx
-; AVX-NEXT:    andl %ecx, %edx
-; AVX-NEXT:    orl %eax, %edx
-; AVX-NEXT:    vmovd %edx, %xmm1
-; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm1
+; AVX-NEXT:    vcvtdq2pd %xmm1, %xmm1
 ; AVX-NEXT:    vcmpneqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
@@ -350,8 +316,8 @@ define zeroext i8 @une_f64_u32(double %x) nounwind readnone {
 ; AVX512-LABEL: une_f64_u32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm7, %xmm1
+; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm1
+; AVX512-NEXT:    vcvtdq2pd %xmm1, %xmm1
 ; AVX512-NEXT:    vcmpneqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
