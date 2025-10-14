@@ -6417,8 +6417,18 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
   case scSequentialUMinExpr:
     return GetGCDMultiple(cast<SCEVNAryExpr>(S));
   case scUnknown: {
-    // ask ValueTracking for known bits
+    // Ask ValueTracking for known bits. SCEVUnknown only become available at
+    // the point their underlying IR instruction has been defined. If CtxI was
+    // not provided, use:
+    // * the first instruction in the entry block if it is an argument
+    // * the instruction itself otherwise.
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
+    if (!CtxI) {
+      if (isa<Argument>(U->getValue()))
+        CtxI = &*F.getEntryBlock().begin();
+      else if (auto *I = dyn_cast<Instruction>(U->getValue()))
+        CtxI = I;
+    }
     unsigned Known =
         computeKnownBits(U->getValue(), getDataLayout(), &AC, CtxI, &DT)
             .countMinTrailingZeros();
@@ -15761,6 +15771,21 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           const SCEV *OneAlignedUp =
               GetNextSCEVDividesByDivisor(One, DividesBy);
           To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);
+        } else {
+          if (LHS->getType()->isPointerTy()) {
+            LHS = SE.getLosslessPtrToIntExpr(LHS);
+            RHS = SE.getLosslessPtrToIntExpr(RHS);
+            if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
+              break;
+          }
+          auto AddSubRewrite = [&](const SCEV *A, const SCEV *B) {
+            const SCEV *Sub = SE.getMinusSCEV(A, B);
+            AddRewrite(Sub, Sub,
+                       SE.getUMaxExpr(Sub, SE.getOne(From->getType())));
+          };
+          AddSubRewrite(LHS, RHS);
+          AddSubRewrite(RHS, LHS);
+          continue;
         }
         break;
       default:

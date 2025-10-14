@@ -3190,6 +3190,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             F.Kind == MK_ImplicitModule)
           N = ForceValidateUserInputs ? NumUserInputs : 0;
 
+        if (N != 0)
+          Diag(diag::remark_module_validation)
+              << N << F.ModuleName << F.FileName;
+
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
           if (!IF.getFile() || IF.isOutOfDate())
@@ -11684,7 +11688,10 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
-void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUntiedClause(OMPUntiedClause *) {}
 

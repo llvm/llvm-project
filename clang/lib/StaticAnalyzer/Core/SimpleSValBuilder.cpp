@@ -1111,6 +1111,10 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
   assert(!BinaryOperator::isComparisonOp(op) &&
          "arguments to comparison ops must be of the same type");
 
+  SVal simplifiedRhs = simplifySVal(state, rhs);
+  if (auto simplifiedRhsAsNonLoc = simplifiedRhs.getAs<NonLoc>())
+    rhs = *simplifiedRhsAsNonLoc;
+
   // Special case: rhs is a zero constant.
   if (rhs.isZeroConstant())
     return lhs;
