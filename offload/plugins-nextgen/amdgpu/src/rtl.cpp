@@ -3040,9 +3040,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return false;
 
     // Checks if the pointer is known by HSA and accessible by the device
-    for (uint32_t i = 0; i < Count; i++)
+    for (uint32_t i = 0; i < Count; i++) {
       if (Agents[i].handle == getAgent().handle)
         return Info.sizeInBytes >= Size;
+    }
 
     // If the pointer is unknown to HSA it's assumed a host pointer
     // in that case the device can access it on unified memory support is
