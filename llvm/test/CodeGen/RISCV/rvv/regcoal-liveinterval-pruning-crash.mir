@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=register-coalescer -o - %s | FileCheck %s
 
 ---
-name:            main
+name:           pr71023 
 tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: main
