@@ -1734,7 +1734,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   // LLVM we shall take VLA's, division by element size, etc.
   //
   // See more in `EmitSub` in CGExprScalar.cpp.
-  assert(!cir::MissingFeatures::ptrDiffOp());
+  assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
   return builder.create<cir::PtrDiffOp>(cgf.getLoc(ops.loc), cgf.PtrDiffTy,
                                         ops.lhs, ops.rhs);
 }

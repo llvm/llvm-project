@@ -321,7 +321,8 @@ struct MissingFeatures {
   static bool ifOp() { return false; }
   static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
-  static bool ptrDiffOp() { return true; }
+  static bool ptrDiffOp() { return false; }
+  static bool llvmLoweringPtrDiffConsidersPointee() {return false; }
   static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
   static bool throwOp() { return false; }
