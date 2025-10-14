@@ -4765,6 +4765,39 @@ define void @scaleidx_scatter_outofrange(<8 x float> %value, ptr %base, <8 x i32
 }
 declare void @llvm.masked.scatter.v8f32.v8p0(<8 x float>, <8 x ptr>, i32 immarg, <8 x i1>)
 
+define <16 x i32> @pr163023(ptr %a0, <16 x i32> %a1) {
+; X64-LABEL: pr163023:
+; X64:       # %bb.0:
+; X64-NEXT:    vpmovsxdq %ymm0, %zmm1
+; X64-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; X64-NEXT:    vpmovsxdq %ymm0, %zmm0
+; X64-NEXT:    kxnorw %k0, %k0, %k1
+; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-NEXT:    kxnorw %k0, %k0, %k2
+; X64-NEXT:    vpgatherqd (%rdi,%zmm0), %ymm3 {%k2}
+; X64-NEXT:    vpgatherqd (%rdi,%zmm1), %ymm2 {%k1}
+; X64-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; X64-NEXT:    retq
+;
+; X86-LABEL: pr163023:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kxnorw %k0, %k0, %k1
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpgatherdd (%eax,%zmm0), %zmm1 {%k1}
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X86-NEXT:    retl
+  %addr.p = ptrtoint ptr %a0 to i64
+  %addr.v = insertelement <1 x i64> poison, i64 %addr.p, i64 0
+  %addr.splat = shufflevector <1 x i64> %addr.v, <1 x i64> poison, <16 x i32> zeroinitializer
+  %ofs = sext <16 x i32> %a1 to <16 x i64>
+  %addr = add nuw <16 x i64> %addr.splat, %ofs
+  %ptr = inttoptr <16 x i64> %addr to <16 x ptr>
+  %gather = tail call fastcc <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptr, i32 4, <16 x i1> splat (i1 true), <16 x i32> poison)
+  ret <16 x i32> %gather
+}
+
 ;
 ; PR45906
 ; This used to cause fast-isel to generate bad copy instructions that would
