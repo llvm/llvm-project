@@ -166,4 +166,27 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
   ];
 }
 
+def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
+  let summary = "Narrow I64 TOSA operations to I32";
+  let description = [{
+    This pass narrows TOSA operations with 64-bit integer tensor types to
+    32-bit integer tensor types. This can be useful for backends that do not
+    support the EXT-INT64 extension of TOSA.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless or whether the narrowing"
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+      "be inserted at the I/O boundaries.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect",
+    "tosa::TosaDialect",
+  ];
+}
+
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
