@@ -4768,16 +4768,10 @@ declare void @llvm.masked.scatter.v8f32.v8p0(<8 x float>, <8 x ptr>, i32 immarg,
 define <16 x i32> @pr163023(ptr %a0, <16 x i32> %a1) {
 ; X64-LABEL: pr163023:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxdq %ymm0, %zmm1
-; X64-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; X64-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; X64-NEXT:    kxnorw %k0, %k0, %k1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; X64-NEXT:    kxnorw %k0, %k0, %k2
-; X64-NEXT:    vpgatherqd (%rdi,%zmm0), %ymm3 {%k2}
-; X64-NEXT:    vpgatherqd (%rdi,%zmm1), %ymm2 {%k1}
-; X64-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpgatherdd (%rdi,%zmm0), %zmm1 {%k1}
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: pr163023:
