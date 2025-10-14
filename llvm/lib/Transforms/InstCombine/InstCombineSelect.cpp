@@ -2983,10 +2983,9 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
     Instruction *MDFrom = nullptr;
     if (!ProfcheckDisableMetadataFixes)
       MDFrom = &SI;
-    return SelectInst::Create(Op,
-                              IsAnd ? V : ConstantInt::getTrue(Op->getType()),
-                              IsAnd ? ConstantInt::getFalse(Op->getType()) : V,
-                              "", nullptr, MDFrom);
+    return SelectInst::Create(
+        Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
+        IsAnd ? ConstantInt::getFalse(Op->getType()) : V, "", nullptr, MDFrom);
   }
   return nullptr;
 }
