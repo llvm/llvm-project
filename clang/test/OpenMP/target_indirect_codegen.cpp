@@ -4,6 +4,12 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE
 
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o %t-spirv-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE
+
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -19,10 +25,10 @@
 // HOST: @[[BAR_ENTRY_NAME:.+]] = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[BAR_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_bar_l[0-9]+]]\00"
 // HOST: @.offloading.entry.[[BAR_NAME]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 8, ptr @_ZL3barv, ptr @[[BAR_ENTRY_NAME]], i64 8, i64 0, ptr null }
 //.
-// DEVICE: @[[FOO_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_foo_l[0-9]+]] = protected addrspace(1) constant ptr @_Z3foov
-// DEVICE: @[[BAZ_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_baz_l[0-9]+]] = protected addrspace(1) constant ptr @_Z3bazv
+// DEVICE: @[[FOO_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_foo_l[0-9]+]] = protected addrspace(1) constant {{ptr|ptr addrspace\(9\)}} @_Z3foov
+// DEVICE: @[[BAZ_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_baz_l[0-9]+]] = protected addrspace(1) constant {{ptr|ptr addrspace\(9\)}} @_Z3bazv
 // DEVICE: @var = protected addrspace(1) global i8 0, align 1
-// DEVICE: @[[BAR_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_bar_l[0-9]+]] = protected addrspace(1) constant ptr @_ZL3barv
+// DEVICE: @[[BAR_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_bar_l[0-9]+]] = protected addrspace(1) constant {{ptr|ptr addrspace\(9\)}} @_ZL3barv
 //.
 void foo() { }
 #pragma omp declare target to(foo) indirect

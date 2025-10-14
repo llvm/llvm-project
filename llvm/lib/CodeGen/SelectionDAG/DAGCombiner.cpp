@@ -509,6 +509,7 @@ namespace {
     SDValue visitFMUL(SDNode *N);
     template <class MatchContextClass> SDValue visitFMA(SDNode *N);
     SDValue visitFMAD(SDNode *N);
+    SDValue visitFMULADD(SDNode *N);
     SDValue visitFDIV(SDNode *N);
     SDValue visitFREM(SDNode *N);
     SDValue visitFSQRT(SDNode *N);
@@ -1991,6 +1992,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FMUL:               return visitFMUL(N);
   case ISD::FMA:                return visitFMA<EmptyMatchContext>(N);
   case ISD::FMAD:               return visitFMAD(N);
+  case ISD::FMULADD:            return visitFMULADD(N);
   case ISD::FDIV:               return visitFDIV(N);
   case ISD::FREM:               return visitFREM(N);
   case ISD::FSQRT:              return visitFSQRT(N);
@@ -5042,7 +5044,6 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 
   unsigned Opc = N->getOpcode();
   bool IsDiv = (ISD::SDIV == Opc) || (ISD::UDIV == Opc);
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // X / undef -> undef
   // X % undef -> undef
@@ -5074,7 +5075,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   // division-by-zero or remainder-by-zero, so assume the divisor is 1.
   // TODO: Similarly, if we're zero-extending a boolean divisor, then assume
   // it's a 1.
-  if ((N1C && N1C->isOne()) || (VT.getScalarType() == MVT::i1))
+  if (isOneOrOneSplat(N1) || (VT.getScalarType() == MVT::i1))
     return IsDiv ? N0 : DAG.getConstant(0, DL, VT);
 
   return SDValue();
@@ -18439,6 +18440,21 @@ SDValue DAGCombiner::visitFMAD(SDNode *N) {
 
   // Constant fold FMAD.
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FMAD, DL, VT, {N0, N1, N2}))
+    return C;
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFMULADD(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Constant fold FMULADD.
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(ISD::FMULADD, DL, VT, {N0, N1, N2}))
     return C;
 
   return SDValue();
