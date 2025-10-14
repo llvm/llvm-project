@@ -504,54 +504,25 @@ declare void @use_vec(<8 x i32>)
 define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) nounwind {
 ; RISCV-LABEL: test_masked_store_intervening:
 ; RISCV:       # %bb.0:
-; RISCV-NEXT:    addi sp, sp, -32
-; RISCV-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RISCV-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RISCV-NEXT:    csrr a1, vlenb
-; RISCV-NEXT:    slli a2, a1, 2
-; RISCV-NEXT:    add a1, a2, a1
-; RISCV-NEXT:    sub sp, sp, a1
-; RISCV-NEXT:    csrr a1, vlenb
-; RISCV-NEXT:    slli a1, a1, 2
-; RISCV-NEXT:    add a1, sp, a1
-; RISCV-NEXT:    addi a1, a1, 16
-; RISCV-NEXT:    vs1r.v v0, (a1) # vscale x 8-byte Folded Spill
-; RISCV-NEXT:    mv s0, a0
-; RISCV-NEXT:    csrr a1, vlenb
-; RISCV-NEXT:    slli a1, a1, 1
-; RISCV-NEXT:    add a1, sp, a1
-; RISCV-NEXT:    addi a1, a1, 16
-; RISCV-NEXT:    vs2r.v v8, (a1) # vscale x 16-byte Folded Spill
-; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RISCV-NEXT:    vle32.v v8, (a0)
-; RISCV-NEXT:    addi a1, sp, 16
-; RISCV-NEXT:    vs2r.v v8, (a1) # vscale x 16-byte Folded Spill
-; RISCV-NEXT:    vmv.v.i v8, 0
-; RISCV-NEXT:    vse32.v v8, (a0)
-; RISCV-NEXT:    call use_vec
-; RISCV-NEXT:    csrr a0, vlenb
-; RISCV-NEXT:    slli a0, a0, 2
-; RISCV-NEXT:    add a0, sp, a0
-; RISCV-NEXT:    addi a0, a0, 16
-; RISCV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
-; RISCV-NEXT:    csrr a0, vlenb
-; RISCV-NEXT:    slli a0, a0, 1
-; RISCV-NEXT:    add a0, sp, a0
-; RISCV-NEXT:    addi a0, a0, 16
-; RISCV-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
-; RISCV-NEXT:    addi a0, sp, 16
-; RISCV-NEXT:    vl2r.v v10, (a0) # vscale x 16-byte Folded Reload
-; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RISCV-NEXT:    vmerge.vvm v8, v10, v8, v0
-; RISCV-NEXT:    vse32.v v8, (s0)
-; RISCV-NEXT:    csrr a0, vlenb
-; RISCV-NEXT:    slli a1, a0, 2
-; RISCV-NEXT:    add a0, a1, a0
-; RISCV-NEXT:    add sp, sp, a0
-; RISCV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RISCV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RISCV-NEXT:    addi sp, sp, 32
-; RISCV-NEXT:    ret
+; RISCV-NEXT:	addi	sp, sp, -16
+; RISCV-NEXT:	sd	ra, 8(sp)                       # 8-byte Folded Spill
+; RISCV-NEXT:	sd	s0, 0(sp)                       # 8-byte Folded Spill
+; RISCV-NEXT:	vsetivli	zero, 8, e32, m2, ta, ma
+; RISCV-NEXT:	vmv1r.v	v26, v0
+; RISCV-NEXT:	mv	s0, a0
+; RISCV-NEXT:	vmv2r.v	v24, v8
+; RISCV-NEXT:	vle32.v	v28, (a0)
+; RISCV-NEXT:	vmv.v.i	v8, 0
+; RISCV-NEXT:	vse32.v	v8, (a0)
+; RISCV-NEXT:	call	use_vec
+; RISCV-NEXT:	vsetivli	zero, 8, e32, m2, ta, ma
+; RISCV-NEXT:	vmv1r.v	v0, v26
+; RISCV-NEXT:	vmerge.vvm	v8, v28, v24, v0
+; RISCV-NEXT:	vse32.v	v8, (s0)
+; RISCV-NEXT:	ld	ra, 8(sp)                       # 8-byte Folded Reload
+; RISCV-NEXT:	ld	s0, 0(sp)                       # 8-byte Folded Reload
+; RISCV-NEXT:	addi	sp, sp, 16
+; RISCV-NEXT:	ret
   %load = load <8 x i32>, ptr %ptr, align 32
   store <8 x i32> zeroinitializer, ptr %ptr, align 32
   %tmp = load <8 x i32>, ptr %ptr
