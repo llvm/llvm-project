@@ -65,7 +65,21 @@ add_mlir_library(MLIRFunctionInterfaces
 
 add_mlir_interface_library(IndexingMapOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
-add_mlir_interface_library(InferStridedMetadataInterface)
+
+add_mlir_library(MLIRInferStridedMetadataInterface
+  InferStridedMetadataInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRInferStridedMetadataInterfaceIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRInferIntRangeInterface
+  MLIRIR
+)
+
 add_mlir_interface_library(InferTypeOpInterface)
 
 add_mlir_library(MLIRLoopLikeInterface

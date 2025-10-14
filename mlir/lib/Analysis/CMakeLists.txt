@@ -54,6 +54,7 @@ add_mlir_library(MLIRAnalysis
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
+  MLIRInferStridedMetadataInterface
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
   MLIRPresburger
