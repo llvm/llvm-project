@@ -45,7 +45,7 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
 /// for-loop iterator.
 static void populateObjCForDestinationSet(
     ExplodedNodeSet &dstLocation, SValBuilder &svalBuilder,
-    const ObjCForCollectionStmt *S, const Stmt *elem, SVal elementV,
+    const ObjCForCollectionStmt *S, ConstCFGElementRef elem, SVal elementV,
     SymbolManager &SymMgr, const NodeBuilderContext *currBldrCtx,
     StmtNodeBuilder &Bldr, bool hasElements) {
 
@@ -66,8 +66,8 @@ static void populateObjCForDestinationSet(
 
         SVal V;
         if (hasElements) {
-          SymbolRef Sym = SymMgr.conjureSymbol(elem, LCtx, T,
-                                               currBldrCtx->blockCount());
+          SymbolRef Sym =
+              SymMgr.conjureSymbol(elem, LCtx, T, currBldrCtx->blockCount());
           V = svalBuilder.makeLoc(Sym);
         } else {
           V = svalBuilder.makeIntVal(0, T);
@@ -110,6 +110,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
   const Stmt *elem = S->getElement();
   const Stmt *collection = S->getCollection();
+  const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
   SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
 
@@ -124,24 +125,27 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
 
-  ExplodedNodeSet dstLocation;
-  evalLocation(dstLocation, S, elem, Pred, state, elementV, false);
+  ExplodedNodeSet DstLocation; // states in `DstLocation` may differ from `Pred`
+  evalLocation(DstLocation, S, elem, Pred, state, elementV, false);
 
-  ExplodedNodeSet Tmp;
-  StmtNodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
+  for (ExplodedNode *dstLocation : DstLocation) {
+    ExplodedNodeSet DstLocationSingleton{dstLocation}, Tmp;
+    StmtNodeBuilder Bldr(dstLocation, Tmp, *currBldrCtx);
 
-  if (!isContainerNull)
-    populateObjCForDestinationSet(dstLocation, svalBuilder, S, elem, elementV,
-                                  SymMgr, currBldrCtx, Bldr,
-                                  /*hasElements=*/true);
+    if (!isContainerNull)
+      populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S,
+                                    elemRef, elementV, SymMgr, currBldrCtx,
+                                    Bldr,
+                                    /*hasElements=*/true);
 
-  populateObjCForDestinationSet(dstLocation, svalBuilder, S, elem, elementV,
-                                SymMgr, currBldrCtx, Bldr,
-                                /*hasElements=*/false);
+    populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elemRef,
+                                  elementV, SymMgr, currBldrCtx, Bldr,
+                                  /*hasElements=*/false);
 
-  // Finally, run any custom checkers.
-  // FIXME: Eventually all pre- and post-checks should live in VisitStmt.
-  getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
+    // Finally, run any custom checkers.
+    // FIXME: Eventually all pre- and post-checks should live in VisitStmt.
+    getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
+  }
 }
 
 void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,

@@ -8,9 +8,11 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   BinaryFormat
   Core
+  Passes
   SPIRVCodeGen
   SPIRVAnalysis
   Support
+  TargetParser
   )
 
 add_llvm_target_unittest(SPIRVTests

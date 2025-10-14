@@ -8,6 +8,7 @@ add_mlir_library(MLIRTargetLLVM
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitWriter
   Core
   IPO
   IRReader
@@ -59,7 +60,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
     # See: https://gitlab.kitware.com/cmake/cmake/-/issues/24858
     # TODO: Bump the MLIR CMake version to 3.26.4 and switch to
     # ${CUDAToolkit_LIBRARY_ROOT}
-    if(NOT DEFINED ${CUDAToolkit_LIBRARY_ROOT})
+    if(NOT DEFINED CUDAToolkit_LIBRARY_ROOT)
       get_filename_component(MLIR_CUDAToolkit_ROOT ${CUDAToolkit_BIN_DIR}
                              DIRECTORY ABSOLUTE)
     else()
@@ -125,7 +126,7 @@ function(embed_binary_to_src file output_file symbol)
     # Convert hex data for C compatibility
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," filedata ${filedata})
     # Write data to output file
-    file(WRITE ${output_file} "const char ${symbol}[] = {${filedata}};\nconst int ${symbol}_size = sizeof(${symbol});\n")
+    file(WRITE ${output_file} "const unsigned char ${symbol}[] = {${filedata}};\nconst int ${symbol}_size = sizeof(${symbol});\n")
 endfunction()
 
 set(MLIR_NVVM_EMBED_LIBDEVICE 0 CACHE BOOL "Embed CUDA libdevice.bc in the binary at build time instead of looking it up at runtime")
@@ -209,3 +210,27 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
   )
 endif()
 
+if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(SPIRV_LIBS
+    SPIRVCodeGen
+    SPIRVDesc
+    SPIRVInfo
+  )
+endif()
+
+add_mlir_dialect_library(MLIRXeVMTarget
+  XeVM/Target.cpp
+
+  OBJECT
+
+  LINK_COMPONENTS
+  ${SPIRV_LIBS}
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRExecutionEngineUtils
+  MLIRSupport
+  MLIRGPUDialect
+  MLIRTargetLLVM
+  MLIRXeVMToLLVMIRTranslation
+)

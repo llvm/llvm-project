@@ -208,7 +208,7 @@ void MainLoopPosix::RunImpl::ProcessReadEvents() {
 #endif
 
 MainLoopPosix::MainLoopPosix() {
-  Status error = m_interrupt_pipe.CreateNew(/*child_process_inherit=*/false);
+  Status error = m_interrupt_pipe.CreateNew();
   assert(error.Success());
 
   // Make the write end of the pipe non-blocking.
@@ -392,9 +392,5 @@ void MainLoopPosix::Interrupt() {
     return;
 
   char c = '.';
-  size_t bytes_written;
-  Status error = m_interrupt_pipe.Write(&c, 1, bytes_written);
-  assert(error.Success());
-  UNUSED_IF_ASSERT_DISABLED(error);
-  assert(bytes_written == 1);
+  cantFail(m_interrupt_pipe.Write(&c, 1));
 }

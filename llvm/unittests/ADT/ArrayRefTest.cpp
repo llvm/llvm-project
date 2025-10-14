@@ -8,10 +8,16 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <limits>
 #include <vector>
+#if __has_include(<version>)
+#include <version>
+#endif
+#ifdef __cpp_lib_span
+#include <span>
+#endif
+
 using namespace llvm;
 
 // Check that the ArrayRef-of-pointer converting constructor only allows adding
@@ -96,6 +102,48 @@ TEST(ArrayRefTest, DropFront) {
   ArrayRef<int> AR1(TheNumbers);
   ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
   EXPECT_TRUE(AR1.drop_front(2).equals(AR2));
+}
+
+TEST(ArrayRefTest, ConsumeFront) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[0]);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[1]);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
+TEST(ArrayRefTest, ConsumeBack) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(TheNumbers, AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[5]);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[4]);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
+TEST(ArrayRefTest, MutableArryaRefConsumeFront) {
+  int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  MutableArrayRef<int> AR1(TheNumbers);
+  MutableArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[0]);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[1]);
+  EXPECT_TRUE(AR1.equals(AR2));
+
+  AR1.consume_front() = 33;
+  EXPECT_EQ(TheNumbers[2], 33);
+}
+
+TEST(ArrayRefTest, MutableArryaRefConsumeBack) {
+  int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  MutableArrayRef<int> AR1(TheNumbers);
+  MutableArrayRef<int> AR2(TheNumbers, AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[5]);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[4]);
+  EXPECT_TRUE(AR1.equals(AR2));
+
+  AR1.consume_back() = 33;
+  EXPECT_EQ(TheNumbers[3], 33);
 }
 
 TEST(ArrayRefTest, DropWhile) {
@@ -183,6 +231,27 @@ TEST(ArrayRefTest, EmptyEquals) {
   EXPECT_TRUE(ArrayRef<unsigned>() == ArrayRef<unsigned>());
 }
 
+TEST(ArrayRefTest, Compare) {
+  ArrayRef<char> Ban("Ban");
+  ArrayRef<char> Banana("Banana");
+  ArrayRef<char> Band("Band");
+
+  EXPECT_TRUE(Ban < Banana);
+  EXPECT_TRUE(Ban <= Banana);
+  EXPECT_FALSE(Ban > Banana);
+  EXPECT_FALSE(Ban >= Banana);
+
+  EXPECT_FALSE(Banana < Banana);
+  EXPECT_TRUE(Banana <= Banana);
+  EXPECT_FALSE(Banana > Banana);
+  EXPECT_TRUE(Banana >= Banana);
+
+  EXPECT_TRUE(Banana < Band);
+  EXPECT_TRUE(Banana <= Band);
+  EXPECT_FALSE(Banana > Band);
+  EXPECT_FALSE(Banana >= Band);
+}
+
 TEST(ArrayRefTest, ConstConvert) {
   int buf[4];
   for (int i = 0; i < 4; ++i)
@@ -253,6 +322,64 @@ TEST(ArrayRefTest, ArrayRefFromStdArray) {
   for (std::size_t i = 0; i < A1.size(); ++i) {
     EXPECT_EQ(A1[i], A2[i]);
   }
+}
+
+struct TestRandomAccessIterator {
+  using iterator_category = std::random_access_iterator_tag;
+};
+
+static_assert(!std::is_constructible_v<
+                  ArrayRef<int>, iterator_range<TestRandomAccessIterator>>,
+              "cannot construct from iterator range with non-pointer iterator");
+static_assert(!std::is_constructible_v<ArrayRef<int>, iterator_range<int>>,
+              "cannot construct from iterator range with non-pointer iterator");
+
+class TestBase {};
+
+class TestDerived : public TestBase {};
+
+static_assert(
+    !std::is_constructible_v<ArrayRef<TestDerived>, iterator_range<TestBase *>>,
+    "cannot construct ArrayRef with derived type");
+static_assert(
+    !std::is_constructible_v<ArrayRef<TestBase>, iterator_range<TestDerived *>>,
+    "cannot construct ArrayRef base type");
+static_assert(!std::is_constructible_v<ArrayRef<TestBase *>,
+                                       iterator_range<TestDerived **>>,
+              "cannot construct ArrayRef pointer of base type");
+
+static_assert(
+    !std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
+    "cannot construct ArrayRef with non-const elements from const iterator "
+    "range");
+static_assert(
+    std::is_constructible_v<ArrayRef<char *>, iterator_range<char **>>,
+    "should be able to construct ArrayRef from iterator_range over pointers");
+static_assert(
+    !std::is_constructible_v<ArrayRef<char *>, iterator_range<char *const *>>,
+    "should be able to construct ArrayRef from iterator_range over pointers");
+
+TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
+  int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<int> A2 = make_range(&A1[0], &A1[5]);
+
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
+    EXPECT_EQ(A1[i], A2[i]);
+
+  ArrayRef<const int> A3 = make_range(&A1[0], &A1[5]);
+  EXPECT_EQ(5ull, A3.size());
+  for (std::size_t i = 0; i < A3.size(); ++i)
+    EXPECT_EQ(A1[i], A3[i]);
+}
+
+TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
+  const int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<const int> A2 = make_range(&A1[0], &A1[5]);
+
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
+    EXPECT_EQ(A1[i], A2[i]);
 }
 
 static_assert(std::is_trivially_copyable_v<ArrayRef<int>>,
@@ -347,5 +474,26 @@ TEST(ArrayRefTest, MutableArrayRefDeductionGuides) {
     EXPECT_EQ(aref.size(), 4u);
   }
 }
+
+#ifdef __cpp_lib_span
+static_assert(std::is_constructible_v<ArrayRef<int>, std::span<const int>>,
+              "should be able to construct ArrayRef from const std::span");
+static_assert(std::is_constructible_v<std::span<const int>, ArrayRef<int>>,
+              "should be able to construct const std::span from ArrayRef");
+static_assert(std::is_constructible_v<ArrayRef<int>, std::span<int>>,
+              "should be able to construct ArrayRef from mutable std::span");
+static_assert(!std::is_constructible_v<std::span<int>, ArrayRef<int>>,
+              "cannot construct mutable std::span from ArrayRef");
+
+static_assert(
+    !std::is_constructible_v<MutableArrayRef<int>, std::span<const int>>,
+    "cannot construct MutableArrayRef from const std::span");
+static_assert(
+    std::is_constructible_v<std::span<const int>, MutableArrayRef<int>>,
+    "should be able to construct const std::span from MutableArrayRef");
+static_assert(
+    std::is_constructible_v<MutableArrayRef<int>, std::span<int>>,
+    "should be able to construct MutableArrayRef from mutable std::span");
+#endif
 
 } // end anonymous namespace

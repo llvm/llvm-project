@@ -1,4 +1,4 @@
-//===--- ArgumentCommentCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,7 @@ AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
 ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       IgnoreSingleArgument(Options.get("IgnoreSingleArgument", false)),
       CommentBoolLiterals(Options.get("CommentBoolLiterals", false)),
       CommentIntegerLiterals(Options.get("CommentIntegerLiterals", false)),
@@ -145,7 +145,7 @@ static bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params,
   std::string ArgNameLowerStr = ArgName.lower();
   StringRef ArgNameLower = ArgNameLowerStr;
   // The threshold is arbitrary.
-  unsigned UpperBound = (ArgName.size() + 2) / 3 + 1;
+  unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
   unsigned ThisED = ArgNameLower.edit_distance(
       Params[ArgIndex]->getIdentifier()->getName().lower(),
       /*AllowReplacements=*/true, UpperBound);

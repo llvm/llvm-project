@@ -26,18 +26,18 @@ define void @fp_convert_combine_crash(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    ldp s1, s0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    fcvtzs w8, s0, #3
-; NONEON-NOSVE-NEXT:    ldp s0, s2, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldp s2, s0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    fcvtzs w9, s1, #3
-; NONEON-NOSVE-NEXT:    fcvtzs w10, s2, #3
-; NONEON-NOSVE-NEXT:    fcvtzs w11, s0, #3
-; NONEON-NOSVE-NEXT:    ldp s2, s1, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldp s0, s3, [sp]
+; NONEON-NOSVE-NEXT:    fcvtzs w10, s0, #3
+; NONEON-NOSVE-NEXT:    fcvtzs w11, s2, #3
+; NONEON-NOSVE-NEXT:    ldp s1, s0, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp s2, s3, [sp]
 ; NONEON-NOSVE-NEXT:    stp w9, w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    fcvtzs w12, s1, #3
-; NONEON-NOSVE-NEXT:    fcvtzs w8, s2, #3
+; NONEON-NOSVE-NEXT:    fcvtzs w12, s0, #3
+; NONEON-NOSVE-NEXT:    fcvtzs w8, s1, #3
 ; NONEON-NOSVE-NEXT:    stp w11, w10, [sp, #48]
 ; NONEON-NOSVE-NEXT:    fcvtzs w9, s3, #3
-; NONEON-NOSVE-NEXT:    fcvtzs w10, s0, #3
+; NONEON-NOSVE-NEXT:    fcvtzs w10, s2, #3
 ; NONEON-NOSVE-NEXT:    stp w8, w12, [sp, #40]
 ; NONEON-NOSVE-NEXT:    stp w10, w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]

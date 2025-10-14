@@ -15,7 +15,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Common/DWARF.h"
-#include "llvm-c/lto.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -29,17 +28,15 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 #include <optional>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;
@@ -117,31 +114,116 @@ static coff_symbol_generic *cloneSymbol(COFFSymbolRef sym) {
   }
 }
 
+// Skip importing DllMain thunks from import libraries.
+static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
+                         const Archive::Symbol &sym, bool &skipDllMain) {
+  const Archive::Child &c =
+      CHECK(sym.getMember(), file->getFileName() +
+                                 ": could not get the member for symbol " +
+                                 toCOFFString(ctx, sym));
+  MemoryBufferRef mb =
+      CHECK(c.getMemoryBufferRef(),
+            file->getFileName() +
+                ": could not get the buffer for a child buffer of the archive");
+  if (identify_magic(mb.getBuffer()) == file_magic::coff_import_library) {
+    if (ctx.config.warnImportedDllMain) {
+      // We won't place DllMain symbols in the symbol table if they are
+      // coming from a import library. This message can be ignored with the flag
+      // '/ignore:importeddllmain'
+      Warn(ctx)
+          << file->getFileName()
+          << ": skipping imported DllMain symbol [importeddllmain]\nNOTE: this "
+             "might be a mistake when the DLL/library was produced.";
+    }
+    skipDllMain = true;
+    return true;
+  }
+  return false;
+}
+
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx.symtab, ArchiveKind, m) {}
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
+  SymbolTable *archiveSymtab = &symtab;
+
   // Parse a MemoryBufferRef as an archive file.
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (ctx.symtabEC) {
+  if (ctx.symtab.isEC()) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtabEC->addLazyArchive(this, sym);
+        ctx.symtab.addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (!ctx.hybridSymtab)
-        return;
+      archiveSymtab = &*ctx.hybridSymtab;
+    } else {
+      // If the ECSYMBOLS section is missing in the archive, the archive could
+      // be either a native-only ARM64 or x86_64 archive. Check the machine type
+      // of the object containing a symbol to determine which symbol table to
+      // use.
+      Archive::symbol_iterator sym = file->symbol_begin();
+      if (sym != file->symbol_end()) {
+        MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+        Archive::Child child =
+            CHECK(sym->getMember(),
+                  file->getFileName() +
+                      ": could not get the buffer for a child of the archive");
+        MemoryBufferRef mb = CHECK(
+            child.getMemoryBufferRef(),
+            file->getFileName() +
+                ": could not get the buffer for a child buffer of the archive");
+        switch (identify_magic(mb.getBuffer())) {
+        case file_magic::coff_object: {
+          std::unique_ptr<COFFObjectFile> obj =
+              CHECK(COFFObjectFile::create(mb),
+                    check(child.getName()) + ":" + ": not a valid COFF file");
+          machine = MachineTypes(obj->getMachine());
+          break;
+        }
+        case file_magic::coff_import_library:
+          machine = MachineTypes(COFFImportFile(mb).getMachine());
+          break;
+        case file_magic::bitcode: {
+          std::unique_ptr<lto::InputFile> obj =
+              check(lto::InputFile::create(mb));
+          machine = BitcodeFile::getMachineType(obj.get());
+          break;
+        }
+        default:
+          break;
+        }
+        archiveSymtab = &ctx.getSymtab(machine);
+      }
     }
   }
 
+  bool skipDllMain = false;
+  StringRef mangledDllMain, impMangledDllMain;
+
+  // The calls below will fail if we haven't set the machine type yet. Instead
+  // of failing, it is preferable to skip this "imported DllMain" check if we
+  // don't know the machine type at this point.
+  if (!file->isEmpty() && ctx.config.machine != IMAGE_FILE_MACHINE_UNKNOWN) {
+    mangledDllMain = archiveSymtab->mangle("DllMain");
+    impMangledDllMain = uniqueSaver().save("__imp_" + mangledDllMain);
+  }
+
   // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &sym : file->symbols())
-    ctx.symtab.addLazyArchive(this, sym);
+  for (const Archive::Symbol &sym : file->symbols()) {
+    // If an import library provides the DllMain symbol, skip importing it, as
+    // we should be using our own DllMain, not another DLL's DllMain.
+    if (!mangledDllMain.empty() && (sym.getName() == mangledDllMain ||
+                                    sym.getName() == impMangledDllMain)) {
+      if (skipDllMain || fixupDllMain(ctx, file.get(), sym, skipDllMain))
+        continue;
+    }
+    archiveSymtab->addLazyArchive(this, sym);
+  }
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -320,6 +402,11 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     callgraphSec = sec;
     return nullptr;
   }
+
+  // Those sections are generated by -fembed-bitcode and do not need to be kept
+  // in executable files.
+  if (name == ".llvmbc" || name == ".llvmcmd")
+    return nullptr;
 
   // Object files may have DWARF debug info or MS CodeView debug info
   // (or both).
@@ -664,9 +751,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    Log(ctx) << "conflicting comdat type for " << leader << ": "
-             << (int)leaderSelection << " in " << leader->getFile() << " and "
-             << (int)selection << " in " << this;
+    Log(ctx) << "conflicting comdat type for " << symtab.printSymbol(leader)
+             << ": " << (int)leaderSelection << " in " << leader->getFile()
+             << " and " << (int)selection << " in " << this;
     symtab.reportDuplicate(leader, this);
     return;
   }
@@ -1450,6 +1537,17 @@ void DLLFile::parse() {
     symtab.addLazyDLLSymbol(this, s, impName);
     if (code)
       symtab.addLazyDLLSymbol(this, s, symbolName);
+    if (symtab.isEC()) {
+      StringRef impAuxName = saver().save("__imp_aux_" + symbolName);
+      symtab.addLazyDLLSymbol(this, s, impAuxName);
+
+      if (code) {
+        std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(symbolName);
+        if (mangledName)
+          symtab.addLazyDLLSymbol(this, s, *mangledName);
+      }
+    }
   }
 }
 

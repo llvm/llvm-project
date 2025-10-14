@@ -26,6 +26,11 @@ using namespace llvm;
 #include "LoongArchGenAsmWriter.inc"
 
 static cl::opt<bool>
+    NoAliases("loongarch-no-aliases",
+              cl::desc("Disable the emission of assembler pseudo instructions"),
+              cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
     NumericReg("loongarch-numeric-reg",
                cl::desc("Print numeric register names rather than the ABI "
                         "names (such as $r0 instead of $zero)"),
@@ -37,6 +42,11 @@ static cl::opt<bool>
 // be an easier way to allow these options in all these tools, without doing it
 // this way.
 bool LoongArchInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
+  if (Opt == "no-aliases") {
+    PrintAliases = false;
+    return true;
+  }
+
   if (Opt == "numeric") {
     NumericReg = true;
     return true;
@@ -49,7 +59,7 @@ void LoongArchInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                      StringRef Annot,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (!printAliasInstr(MI, Address, STI, O))
+  if (!PrintAliases || NoAliases || !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
   printAnnotation(O, Annot);
 }
@@ -74,7 +84,7 @@ void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,

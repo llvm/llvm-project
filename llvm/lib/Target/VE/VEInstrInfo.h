@@ -53,7 +53,7 @@ class VEInstrInfo : public VEGenInstrInfo {
   virtual void anchor();
 
 public:
-  explicit VEInstrInfo(VESubtarget &ST);
+  explicit VEInstrInfo(const VESubtarget &ST);
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
@@ -80,7 +80,7 @@ public:
   /// } Branch Analysis & Modification
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 

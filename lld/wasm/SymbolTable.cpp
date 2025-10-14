@@ -87,8 +87,8 @@ void SymbolTable::compileBitcodeFiles() {
   for (BitcodeFile *f : ctx.bitcodeFiles)
     lto->add(*f);
 
-  for (StringRef filename : lto->compile()) {
-    auto *obj = make<ObjFile>(MemoryBufferRef(filename, "lto.tmp"), "");
+  for (auto &file : lto->compile()) {
+    auto *obj = cast<ObjFile>(file);
     obj->parse(true);
     ctx.objectFiles.push_back(obj);
   }
@@ -363,7 +363,7 @@ Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
     replaceSymbol<SharedFunctionSymbol>(sym, name, flags, file, sig);
   };
 
-  if (wasInserted) {
+  if (wasInserted || s->isLazy()) {
     replaceSym(s);
     return s;
   }
@@ -408,10 +408,18 @@ Symbol *SymbolTable::addSharedData(StringRef name, uint32_t flags,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
-  if (wasInserted || s->isUndefined()) {
+  if (wasInserted || s->isLazy()) {
     replaceSymbol<SharedData>(s, name, flags, file);
+    return s;
   }
 
+  // Shared symbols should never replace locally-defined ones
+  if (s->isDefined()) {
+    return s;
+  }
+
+  checkDataType(s, file);
+  replaceSymbol<SharedData>(s, name, flags, file);
   return s;
 }
 
@@ -784,7 +792,7 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
 }
 
 TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
-  WasmLimits limits{0, 0, 0}; // Set by the writer.
+  WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
   WasmTableType *type = make<WasmTableType>();
   type->ElemType = ValType::FUNCREF;
   type->Limits = limits;
@@ -799,7 +807,7 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
 
 TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
   const uint32_t invalidIndex = -1;
-  WasmLimits limits{0, 0, 0}; // Set by the writer.
+  WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
   WasmTableType type{ValType::FUNCREF, limits};
   WasmTable desc{invalidIndex, type, name};
   InputTable *table = make<InputTable>(desc, nullptr);

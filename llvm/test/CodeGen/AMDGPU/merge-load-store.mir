@@ -34,8 +34,8 @@
   bb:
     %tmp1 = load i32, i32 addrspace(3)* getelementptr inbounds ([256 x i32], [256 x i32] addrspace(3)* @lds0, i32 0, i32 0), align 4
     %0 = and i32 %tmp1, 255
-    %tmp3 = load i32, i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds1, i32 0, i32 undef), align 4
-    %tmp6 = load i32, i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds3, i32 0, i32 undef), align 4
+    %tmp3 = load i32, i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds1, i32 0, i32 poison), align 4
+    %tmp6 = load i32, i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds3, i32 0, i32 poison), align 4
     %tmp7 = tail call i32 asm "v_or_b32 $0, 0, $1", "=v,v"(i32 %tmp6) #1
     %tmp10 = lshr i32 %tmp7, 16
     %tmp11 = and i32 %tmp10, 255
@@ -48,7 +48,7 @@
     %tmp20 = and i32 %tmp19, 255
     %tmp21 = getelementptr inbounds [256 x i32], [256 x i32] addrspace(3)* @lds1, i32 0, i32 %tmp20
     %tmp22 = load i32, i32 addrspace(3)* %tmp21, align 4
-    %tmp24 = load i32, i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds2, i32 0, i32 undef), align 4
+    %tmp24 = load i32, i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds2, i32 0, i32 poison), align 4
     %tmp25 = xor i32 %tmp22, %tmp24
     %tmp26 = and i32 %tmp25, -16777216
     %tmp28 = or i32 %0, %tmp26
@@ -129,12 +129,12 @@ body:             |
   bb.0:
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vgpr_32 = DS_READ_B32 %1, 3072, 0, implicit $m0, implicit $exec :: (dereferenceable load (s32) from `i32 addrspace(3)* getelementptr inbounds ([256 x i32], [256 x i32] addrspace(3)* @lds0, i32 0, i32 0)`, addrspace 3)
-    %3:vgpr_32 = DS_READ_B32 %1, 2048, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds1, i32 0, i32 undef)`, addrspace 3)
-    %4:vgpr_32 = DS_READ_B32 %1, 1024, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds3, i32 0, i32 undef)`, addrspace 3)
+    %3:vgpr_32 = DS_READ_B32 %1, 2048, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds1, i32 0, i32 poison)`, addrspace 3)
+    %4:vgpr_32 = DS_READ_B32 %1, 1024, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds3, i32 0, i32 poison)`, addrspace 3)
     INLINEASM &"v_or_b32 $0, 0, $1", 32, 327690, def %0, 327689, %4
     %5:vgpr_32 = DS_READ_B32 %0, 2048, 0, implicit $m0, implicit $exec :: (load (s32) from %ir.tmp12, addrspace 3)
     %6:vgpr_32 = DS_READ_B32 %5, 2048, 0, implicit $m0, implicit $exec :: (load (s32) from %ir.tmp21, addrspace 3)
-    %7:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds2, i32 0, i32 undef)`, addrspace 3)
+    %7:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds2, i32 0, i32 poison)`, addrspace 3)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit %6, implicit %7
 
 ...

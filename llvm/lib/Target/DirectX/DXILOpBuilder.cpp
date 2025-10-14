@@ -201,6 +201,29 @@ static StructType *getResRetType(Type *ElementTy) {
   return getOrCreateStructType(TypeName, FieldTypes, Ctx);
 }
 
+static StructType *getCBufRetType(Type *ElementTy) {
+  LLVMContext &Ctx = ElementTy->getContext();
+  OverloadKind Kind = getOverloadKind(ElementTy);
+  std::string TypeName = constructOverloadTypeName(Kind, "dx.types.CBufRet.");
+
+  // 64-bit types only have two elements
+  if (ElementTy->isDoubleTy() || ElementTy->isIntegerTy(64))
+    return getOrCreateStructType(TypeName, {ElementTy, ElementTy}, Ctx);
+
+  // 16-bit types pack 8 elements and have .8 in their name to differentiate
+  // from min-precision types.
+  if (ElementTy->isHalfTy() || ElementTy->isIntegerTy(16)) {
+    TypeName += ".8";
+    return getOrCreateStructType(TypeName,
+                                 {ElementTy, ElementTy, ElementTy, ElementTy,
+                                  ElementTy, ElementTy, ElementTy, ElementTy},
+                                 Ctx);
+  }
+
+  return getOrCreateStructType(
+      TypeName, {ElementTy, ElementTy, ElementTy, ElementTy}, Ctx);
+}
+
 static StructType *getHandleType(LLVMContext &Ctx) {
   return getOrCreateStructType("dx.types.Handle", PointerType::getUnqual(Ctx),
                                Ctx);
@@ -228,6 +251,14 @@ static StructType *getSplitDoubleType(LLVMContext &Context) {
     return ST;
   Type *Int32Ty = Type::getInt32Ty(Context);
   return StructType::create({Int32Ty, Int32Ty}, "dx.types.splitdouble");
+}
+
+static StructType *getBinaryWithCarryType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.i32c"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int1Ty = Type::getInt1Ty(Context);
+  return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
 }
 
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
@@ -265,6 +296,18 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResRetType(Type::getInt32Ty(Ctx));
   case OpParamType::ResRetInt64Ty:
     return getResRetType(Type::getInt64Ty(Ctx));
+  case OpParamType::CBufRetHalfTy:
+    return getCBufRetType(Type::getHalfTy(Ctx));
+  case OpParamType::CBufRetFloatTy:
+    return getCBufRetType(Type::getFloatTy(Ctx));
+  case OpParamType::CBufRetDoubleTy:
+    return getCBufRetType(Type::getDoubleTy(Ctx));
+  case OpParamType::CBufRetInt16Ty:
+    return getCBufRetType(Type::getInt16Ty(Ctx));
+  case OpParamType::CBufRetInt32Ty:
+    return getCBufRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::CBufRetInt64Ty:
+    return getCBufRetType(Type::getInt64Ty(Ctx));
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
   case OpParamType::ResBindTy:
@@ -273,6 +316,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResPropsType(Ctx);
   case OpParamType::SplitDoubleTy:
     return getSplitDoubleType(Ctx);
+  case OpParamType::BinaryWithCarryTy:
+    return getBinaryWithCarryType(Ctx);
   }
   llvm_unreachable("Invalid parameter kind");
   return nullptr;
@@ -428,15 +473,14 @@ namespace dxil {
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
 DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M.getContext()) {
-  Triple TT(Triple(M.getTargetTriple()));
+  const Triple &TT = M.getTargetTriple();
   DXILVersion = TT.getDXILVersion();
   ShaderStage = TT.getEnvironment();
   // Ensure Environment type is known
   if (ShaderStage == Triple::UnknownEnvironment) {
-    report_fatal_error(
+    reportFatalUsageError(
         Twine(DXILVersion.getAsString()) +
-            ": Unknown Compilation Target Shader Stage specified ",
-        /*gen_crash_diag*/ false);
+        ": Unknown Compilation Target Shader Stage specified ");
   }
 }
 
@@ -535,8 +579,8 @@ StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
 }
 
-StructType *DXILOpBuilder::getSplitDoubleType(LLVMContext &Context) {
-  return ::getSplitDoubleType(Context);
+StructType *DXILOpBuilder::getCBufRetType(Type *ElementTy) {
+  return ::getCBufRetType(ElementTy);
 }
 
 StructType *DXILOpBuilder::getHandleType() {

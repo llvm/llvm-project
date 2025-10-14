@@ -13,9 +13,17 @@
 
 #include "M68kMCAsmInfo.h"
 
+#include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
+
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {M68k::S_GOTOFF, "GOTOFF"},     {M68k::S_GOTPCREL, "GOTPCREL"},
+    {M68k::S_GOTTPOFF, "GOTTPOFF"}, {M68k::S_PLT, "PLT"},
+    {M68k::S_TLSGD, "TLSGD"},       {M68k::S_TLSLD, "TLSLD"},
+    {M68k::S_TLSLDM, "TLSLDM"},     {M68k::S_TPOFF, "TPOFF"},
+};
 
 void M68kELFMCAsmInfo::anchor() {}
 
@@ -33,4 +41,6 @@ M68kELFMCAsmInfo::M68kELFMCAsmInfo(const Triple &T) {
 
   UseMotorolaIntegers = true;
   CommentString = ";";
+
+  initializeAtSpecifiers(atSpecifiers);
 }

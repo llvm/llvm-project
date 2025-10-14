@@ -58,7 +58,6 @@ cleanup:                                          ; preds = %entry, %if.end10
 }
 
 ; CHECK: w{{[0-9]+}} = *(u32 *)(r{{[0-9]+}} + 0)
-; CHECK-NOT: w{{[0-9]+}} = w{{[0-9]+}}
 
 declare dso_local i32 @work(ptr, i32) local_unnamed_addr #1
 

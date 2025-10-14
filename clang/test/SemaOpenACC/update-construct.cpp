@@ -6,7 +6,7 @@ void uses() {
   int Var;
 #pragma acc update async self(Var)
 #pragma acc update wait self(Var)
-#pragma acc update self(Var) device_type(I)
+#pragma acc update self(Var) device_type(host)
 #pragma acc update if(true) self(Var)
 #pragma acc update if_present self(Var)
 #pragma acc update self(Var)
@@ -14,44 +14,44 @@ void uses() {
 #pragma acc update device(Var)
 
   // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'update' construct}}
-  // expected-note@+1{{previous clause is here}}
-#pragma acc update self(Var) device_type(I) if(true)
+  // expected-note@+1{{active 'device_type' clause here}}
+#pragma acc update self(Var) device_type(default) if(true)
   // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'update' construct}}
-  // expected-note@+1{{previous clause is here}}
-#pragma acc update self(Var) device_type(I) if_present
+  // expected-note@+1{{active 'device_type' clause here}}
+#pragma acc update self(Var) device_type(multicore) if_present
   // expected-error@+2{{OpenACC clause 'self' may not follow a 'device_type' clause in a 'update' construct}}
-  // expected-note@+1{{previous clause is here}}
-#pragma acc update self(Var) device_type(I) self(Var)
+  // expected-note@+1{{active 'device_type' clause here}}
+#pragma acc update self(Var) device_type(nvidia) self(Var)
   // expected-error@+2{{OpenACC clause 'host' may not follow a 'device_type' clause in a 'update' construct}}
-  // expected-note@+1{{previous clause is here}}
-#pragma acc update self(Var) device_type(I) host(Var)
+  // expected-note@+1{{active 'device_type' clause here}}
+#pragma acc update self(Var) device_type(radeon) host(Var)
   // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'update' construct}}
-  // expected-note@+1{{previous clause is here}}
-#pragma acc update self(Var) device_type(I) device(Var)
+  // expected-note@+1{{active 'device_type' clause here}}
+#pragma acc update self(Var) device_type(multicore) device(Var)
   // These 2 are OK.
-#pragma acc update self(Var) device_type(I) async
-#pragma acc update self(Var) device_type(I) wait
+#pragma acc update self(Var) device_type(default) async
+#pragma acc update self(Var) device_type(nvidia) wait
   // Unless otherwise specified, we assume 'device_type' can happen after itself.
-#pragma acc update self(Var) device_type(I) device_type(I)
+#pragma acc update self(Var) device_type(acc_device_nvidia) device_type(multicore)
 
   // These diagnose because there isn't at least 1 of 'self', 'host', or
   // 'device'.
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update async
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update wait
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
-#pragma acc update device_type(I)
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
+#pragma acc update device_type(host)
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update if(true)
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update if_present
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
-#pragma acc update self(Var) if (NC) device_type(I)
+#pragma acc update self(Var) if (NC) device_type(radeon)
 
   // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'update' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc update self(Var) if(true) if (false)
 
   // Cannot be the body of an 'if', 'while', 'do', 'switch', or
@@ -89,14 +89,13 @@ void uses() {
   // expected-note@+1{{to match this '('}}
 #pragma acc update self(Var) async(getI(), getI())
   // expected-error@+2{{OpenACC 'async' clause cannot appear more than once on a 'update' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'async' clause is here}}
 #pragma acc update self(Var) async(getI()) async(getI())
   // expected-error@+1{{OpenACC clause 'async' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc update self(Var) async(NC)
 
   // Checking for 'wait', which has a complicated set arguments.
 #pragma acc update self(Var) wait
-#pragma acc update self(Var) wait()
 #pragma acc update self(Var) wait(getI(), getI())
 #pragma acc update self(Var) wait(devnum: getI():  getI())
 #pragma acc update self(Var) wait(devnum: getI(): queues: getI(), getI())

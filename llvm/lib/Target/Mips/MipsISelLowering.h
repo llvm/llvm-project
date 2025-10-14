@@ -290,8 +290,7 @@ class TargetRegisterClass;
     bool isCheapToSpeculateCttz(Type *Ty) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
     bool hasBitTest(SDValue X, SDValue Y) const override;
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     /// Return the register type for a given MVT, ensuring vectors are treated
     /// as a series of gpr sized integers.
@@ -591,6 +590,7 @@ class TargetRegisterClass;
                                  bool IsSRA) const;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
@@ -696,7 +696,7 @@ class TargetRegisterClass;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
@@ -705,7 +705,12 @@ class TargetRegisterClass;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+    bool isLegalAddImmediate(int64_t Imm) const override;
+
     unsigned getJumpTableEncoding() const override;
+    SDValue getPICJumpTableRelocBase(SDValue Table,
+                                     SelectionDAG &DAG) const override;
     bool useSoftFloat() const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {

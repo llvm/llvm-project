@@ -161,7 +161,7 @@ static void updateLoadCommandPayloadString(LoadCommand &LC, StringRef S) {
 
   LC.MachOLoadCommand.load_command_data.cmdsize = NewCmdsize;
   LC.Payload.assign(NewCmdsize - sizeof(LCType), 0);
-  std::copy(S.begin(), S.end(), LC.Payload.begin());
+  llvm::copy(S, LC.Payload.begin());
 }
 
 static LoadCommand buildRPathLoadCommand(StringRef Path) {
@@ -172,7 +172,7 @@ static LoadCommand buildRPathLoadCommand(StringRef Path) {
   RPathLC.cmdsize = alignTo(sizeof(MachO::rpath_command) + Path.size() + 1, 8);
   LC.MachOLoadCommand.rpath_command_data = RPathLC;
   LC.Payload.assign(RPathLC.cmdsize - sizeof(MachO::rpath_command), 0);
-  std::copy(Path.begin(), Path.end(), LC.Payload.begin());
+  llvm::copy(Path, LC.Payload.begin());
   return LC;
 }
 
@@ -306,25 +306,25 @@ static Error processLoadCommands(const MachOConfig &MachOConfig, Object &Obj) {
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
-                               Object &Obj) {
+                               StringRef InputFilename, Object &Obj) {
   for (LoadCommand &LC : Obj.LoadCommands)
     for (const std::unique_ptr<Section> &Sec : LC.Sections) {
       if (Sec->CanonicalName == SecName) {
         Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
             FileOutputBuffer::create(Filename, Sec->Content.size());
         if (!BufferOrErr)
-          return BufferOrErr.takeError();
+          return createFileError(Filename, BufferOrErr.takeError());
         std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
         llvm::copy(Sec->Content, Buf->getBufferStart());
 
         if (Error E = Buf->commit())
-          return E;
+          return createFileError(Filename, std::move(E));
         return Error::success();
       }
     }
 
-  return createStringError(object_error::parse_failed, "section '%s' not found",
-                           SecName.str().c_str());
+  return createFileError(InputFilename, object_error::parse_failed,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
@@ -360,6 +360,24 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
 static Expected<Section &> findSection(StringRef SecName, Object &O) {
   StringRef SegName;
   std::tie(SegName, SecName) = SecName.split(",");
+  // For compactness, intermediate object files (MH_OBJECT) contain
+  // only one segment in which all sections are placed.
+  // The static linker places each section in the named segment when building
+  // the final product (any file that is not of type MH_OBJECT).
+  //
+  // Source:
+  // https://math-atlas.sourceforge.net/devel/assembly/MachORuntime.pdf
+  // page 57
+  if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) {
+    for (const auto& LC : O.LoadCommands)
+      for (const auto& Sec : LC.Sections)
+        if (Sec->Segname == SegName && Sec->Sectname == SecName)
+          return *Sec;
+
+    StringRef ErrMsg = "could not find section with name '%s' in '%s' segment";
+    return createStringError(errc::invalid_argument, ErrMsg.str().c_str(),
+                             SecName.str().c_str(), SegName.str().c_str());
+  }
   auto FoundSeg =
       llvm::find_if(O.LoadCommands, [SegName](const LoadCommand &LC) {
         return LC.getSegmentName() == SegName;
@@ -426,12 +444,13 @@ static Error handleArgs(const CommonConfig &Config,
     StringRef SectionName;
     StringRef FileName;
     std::tie(SectionName, FileName) = Flag.split('=');
-    if (Error E = dumpSectionToFile(SectionName, FileName, Obj))
+    if (Error E =
+            dumpSectionToFile(SectionName, FileName, Config.InputFilename, Obj))
       return E;
   }
 
   if (Error E = removeSections(Config, Obj))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
 
   // Mark symbols to determine which symbols are still needed.
   if (Config.StripAll)
@@ -446,20 +465,20 @@ static Error handleArgs(const CommonConfig &Config,
 
   for (const NewSectionInfo &NewSection : Config.AddSection) {
     if (Error E = isValidMachOCannonicalName(NewSection.SectionName))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
     if (Error E = addSection(NewSection, Obj))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   for (const NewSectionInfo &NewSection : Config.UpdateSection) {
     if (Error E = isValidMachOCannonicalName(NewSection.SectionName))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
     if (Error E = updateSection(NewSection, Obj))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   if (Error E = processLoadCommands(MachOConfig, Obj))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
 
   return Error::success();
 }
@@ -479,7 +498,7 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
                              Config.InputFilename.str().c_str());
 
   if (Error E = handleArgs(Config, MachOConfig, **O))
-    return createFileError(Config.InputFilename, std::move(E));
+    return E;
 
   // Page size used for alignment of segment sizes in Mach-O executables and
   // dynamic libraries.

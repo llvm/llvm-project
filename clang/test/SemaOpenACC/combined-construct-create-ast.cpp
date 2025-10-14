@@ -19,7 +19,7 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: create clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
-  // CHECK-NEXT: pcreate clause : zero
+  // CHECK-NEXT: pcreate clause modifiers: zero
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
@@ -47,7 +47,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: create clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
-  // CHECK-NEXT: pcreate clause : zero
+  // CHECK-NEXT: pcreate clause modifiers: zero
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: present_or_create clause
@@ -75,7 +75,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: create clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
-  // CHECK-NEXT: pcreate clause : zero
+  // CHECK-NEXT: pcreate clause modifiers: zero
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'

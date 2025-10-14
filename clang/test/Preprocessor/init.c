@@ -1622,6 +1622,19 @@
 // RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC-N %s
 // OPENBSD-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
 //
+// RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// DRAGONFLY-STDC:#define __STDC_NO_THREADS__ 1
+//
+// RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC-N %s
+// DRAGONFLY-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
+//
+// RUN: %clang_cc1 -triple=aarch64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
+// RUN: %clang_cc1 -triple=riscv64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
+// MANAGARM: #define __managarm__ 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=xcore-none-none < /dev/null | FileCheck -match-full-lines -check-prefix XCORE %s
 // XCORE:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // XCORE:#define __LITTLE_ENDIAN__ 1
@@ -2089,12 +2102,6 @@
 // WEBASSEMBLY-CXX-NOT:__STDCPP_THREADS__
 // WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1
 // WEBASSEMBLY-CXX-ATOMICS:#define __STDCPP_THREADS__ 1
-
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple i686-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X32 %s
-// CYGWIN-X32: #define __USER_LABEL_PREFIX__ _
-
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple x86_64-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X64 %s
-// CYGWIN-X64: #define __USER_LABEL_PREFIX__
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=avr \
 // RUN:   < /dev/null \
@@ -2835,6 +2842,7 @@
 // RISCV64-LINUX: #define unix 1
 
 // RUN: %clang_cc1 -dM -triple=x86_64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+// RUN: %clang_cc1 -dM -triple=x86_64-unknown-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
 
 // UEFI: #define __UEFI__ 1
 

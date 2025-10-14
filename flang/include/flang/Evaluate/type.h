@@ -22,11 +22,12 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
 #include "flang/Common/template.h"
+#include "flang/Common/type-kinds.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
@@ -62,28 +63,6 @@ using LogicalResult = Type<TypeCategory::Logical, 4>;
 using LargestReal = Type<TypeCategory::Real, 16>;
 using Ascii = Type<TypeCategory::Character, 1>;
 
-// A predicate that is true when a kind value is a kind that could possibly
-// be supported for an intrinsic type category on some target instruction
-// set architecture.
-static constexpr bool IsValidKindOfIntrinsicType(
-    TypeCategory category, std::int64_t kind) {
-  switch (category) {
-  case TypeCategory::Integer:
-  case TypeCategory::Unsigned:
-    return kind == 1 || kind == 2 || kind == 4 || kind == 8 || kind == 16;
-  case TypeCategory::Real:
-  case TypeCategory::Complex:
-    return kind == 2 || kind == 3 || kind == 4 || kind == 8 || kind == 10 ||
-        kind == 16;
-  case TypeCategory::Character:
-    return kind == 1 || kind == 2 || kind == 4;
-  case TypeCategory::Logical:
-    return kind == 1 || kind == 2 || kind == 4 || kind == 8;
-  default:
-    return false;
-  }
-}
-
 // DynamicType is meant to be suitable for use as the result type for
 // GetType() functions and member functions; consequently, it must be
 // capable of being used in a constexpr context.  So it does *not*
@@ -95,7 +74,7 @@ static constexpr bool IsValidKindOfIntrinsicType(
 class DynamicType {
 public:
   constexpr DynamicType(TypeCategory cat, int k) : category_{cat}, kind_{k} {
-    CHECK(IsValidKindOfIntrinsicType(category_, kind_));
+    CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   }
   DynamicType(int charKind, const semantics::ParamValue &len);
   // When a known length is presented, resolve it to its effective
@@ -103,7 +82,7 @@ public:
   constexpr DynamicType(int k, std::int64_t len)
       : category_{TypeCategory::Character}, kind_{k}, knownLength_{
                                                           len >= 0 ? len : 0} {
-    CHECK(IsValidKindOfIntrinsicType(category_, kind_));
+    CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
       const semantics::DerivedTypeSpec &dt, bool poly = false)
@@ -295,9 +274,26 @@ public:
   using Scalar = value::Integer<8 * KIND>;
 };
 
+// Records when a default REAL literal constant is inexactly converted to binary
+// (e.g., 0.1 but not 0.125) to enable a usage warning if the expression in
+// which it appears undergoes an implicit widening conversion.
+class TrackInexactLiteralConversion {
+public:
+  constexpr bool isFromInexactLiteralConversion() const {
+    return isFromInexactLiteralConversion_;
+  }
+  void set_isFromInexactLiteralConversion(bool yes = true) {
+    isFromInexactLiteralConversion_ = yes;
+  }
+
+private:
+  bool isFromInexactLiteralConversion_{false};
+};
+
 template <int KIND>
 class Type<TypeCategory::Real, KIND>
-    : public TypeBase<TypeCategory::Real, KIND> {
+    : public TypeBase<TypeCategory::Real, KIND>,
+      public TrackInexactLiteralConversion {
 public:
   static constexpr int precision{common::PrecisionOfRealKind(KIND)};
   static constexpr int bits{common::BitsForBinaryPrecision(precision)};
@@ -310,7 +306,8 @@ public:
 // The KIND type parameter on COMPLEX is the kind of each of its components.
 template <int KIND>
 class Type<TypeCategory::Complex, KIND>
-    : public TypeBase<TypeCategory::Complex, KIND> {
+    : public TypeBase<TypeCategory::Complex, KIND>,
+      public TrackInexactLiteralConversion {
 public:
   using Part = Type<TypeCategory::Real, KIND>;
   using Scalar = value::Complex<typename Part::Scalar>;
@@ -360,7 +357,7 @@ using IndirectSubscriptIntegerExpr =
 // category that could possibly be supported on any target.
 template <TypeCategory CATEGORY, int KIND>
 using CategoryKindTuple =
-    std::conditional_t<IsValidKindOfIntrinsicType(CATEGORY, KIND),
+    std::conditional_t<common::IsValidKindOfIntrinsicType(CATEGORY, KIND),
         std::tuple<Type<CATEGORY, KIND>>, std::tuple<>>;
 
 template <TypeCategory CATEGORY, int... KINDS>

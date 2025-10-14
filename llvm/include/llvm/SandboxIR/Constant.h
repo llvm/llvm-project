@@ -76,16 +76,16 @@ class ConstantInt : public Constant {
   }
 
 public:
-  static ConstantInt *getTrue(Context &Ctx);
-  static ConstantInt *getFalse(Context &Ctx);
-  static ConstantInt *getBool(Context &Ctx, bool V);
-  static Constant *getTrue(Type *Ty);
-  static Constant *getFalse(Type *Ty);
-  static Constant *getBool(Type *Ty, bool V);
+  LLVM_ABI static ConstantInt *getTrue(Context &Ctx);
+  LLVM_ABI static ConstantInt *getFalse(Context &Ctx);
+  LLVM_ABI static ConstantInt *getBool(Context &Ctx, bool V);
+  LLVM_ABI static Constant *getTrue(Type *Ty);
+  LLVM_ABI static Constant *getFalse(Type *Ty);
+  LLVM_ABI static Constant *getBool(Type *Ty, bool V);
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
+  LLVM_ABI static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
@@ -93,27 +93,29 @@ public:
   /// be interpreted as a 64-bit signed integer and sign-extended to fit
   /// the type.
   /// Get a ConstantInt for a specific value.
-  static ConstantInt *get(IntegerType *Ty, uint64_t V, bool IsSigned = false);
+  LLVM_ABI static ConstantInt *get(IntegerType *Ty, uint64_t V,
+                                   bool IsSigned = false);
 
   /// Return a ConstantInt with the specified value for the specified type. The
   /// value V will be canonicalized to a an unsigned APInt. Accessing it with
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
-  static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
-  static Constant *getSigned(Type *Ty, int64_t V);
+  LLVM_ABI static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
+  LLVM_ABI static Constant *getSigned(Type *Ty, int64_t V);
 
   /// Return a ConstantInt with the specified value and an implied Type. The
   /// type is the integer type that corresponds to the bit width of the value.
-  static ConstantInt *get(Context &Ctx, const APInt &V);
+  LLVM_ABI static ConstantInt *get(Context &Ctx, const APInt &V);
 
   /// Return a ConstantInt constructed from the string strStart with the given
   /// radix.
-  static ConstantInt *get(IntegerType *Ty, StringRef Str, uint8_t Radix);
+  LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str,
+                                   uint8_t Radix);
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  static Constant *get(Type *Ty, const APInt &V);
+  LLVM_ABI static Constant *get(Type *Ty, const APInt &V);
 
   /// Return the constant as an APInt value reference. This allows clients to
   /// obtain a full-precision copy of the value.
@@ -166,7 +168,7 @@ public:
 
   /// Variant of the getType() method to always return an IntegerType, which
   /// reduces the amount of casting needed in parts of the compiler.
-  IntegerType *getIntegerType() const;
+  LLVM_ABI IntegerType *getIntegerType() const;
 
   /// This static method returns true if the type Ty is big enough to
   /// represent the value V. This can be used to avoid having the get method
@@ -177,8 +179,8 @@ public:
   /// to the appropriate unsigned type before calling the method.
   /// @returns true if V is a valid value for type Ty
   /// Determine if the value is in range for the given type.
-  static bool isValueValidForType(Type *Ty, uint64_t V);
-  static bool isValueValidForType(Type *Ty, int64_t V);
+  LLVM_ABI static bool isValueValidForType(Type *Ty, uint64_t V);
+  LLVM_ABI static bool isValueValidForType(Type *Ty, int64_t V);
 
   bool isNegative() const { return cast<llvm::ConstantInt>(Val)->isNegative(); }
 
@@ -264,29 +266,29 @@ public:
   /// for the specified value in the specified type. This should only be used
   /// for simple constant values like 2.0/1.0 etc, that are known-valid both as
   /// host double and as the target format.
-  static Constant *get(Type *Ty, double V);
+  LLVM_ABI static Constant *get(Type *Ty, double V);
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantFP for the given value.
-  static Constant *get(Type *Ty, const APFloat &V);
+  LLVM_ABI static Constant *get(Type *Ty, const APFloat &V);
 
-  static Constant *get(Type *Ty, StringRef Str);
+  LLVM_ABI static Constant *get(Type *Ty, StringRef Str);
 
-  static ConstantFP *get(const APFloat &V, Context &Ctx);
+  LLVM_ABI static ConstantFP *get(const APFloat &V, Context &Ctx);
 
-  static Constant *getNaN(Type *Ty, bool Negative = false,
-                          uint64_t Payload = 0);
-  static Constant *getQNaN(Type *Ty, bool Negative = false,
-                           APInt *Payload = nullptr);
-  static Constant *getSNaN(Type *Ty, bool Negative = false,
-                           APInt *Payload = nullptr);
-  static Constant *getZero(Type *Ty, bool Negative = false);
+  LLVM_ABI static Constant *getNaN(Type *Ty, bool Negative = false,
+                                   uint64_t Payload = 0);
+  LLVM_ABI static Constant *getQNaN(Type *Ty, bool Negative = false,
+                                    APInt *Payload = nullptr);
+  LLVM_ABI static Constant *getSNaN(Type *Ty, bool Negative = false,
+                                    APInt *Payload = nullptr);
+  LLVM_ABI static Constant *getZero(Type *Ty, bool Negative = false);
 
-  static Constant *getNegativeZero(Type *Ty);
-  static Constant *getInfinity(Type *Ty, bool Negative = false);
+  LLVM_ABI static Constant *getNegativeZero(Type *Ty);
+  LLVM_ABI static Constant *getInfinity(Type *Ty, bool Negative = false);
 
   /// Return true if Ty is big enough to represent V.
-  static bool isValueValidForType(Type *Ty, const APFloat &V);
+  LLVM_ABI static bool isValueValidForType(Type *Ty, const APFloat &V);
 
   inline const APFloat &getValueAPF() const {
     return cast<llvm::ConstantFP>(Val)->getValueAPF();
@@ -362,8 +364,8 @@ class ConstantArray final : public ConstantAggregate {
   friend class Context; // For constructor.
 
 public:
-  static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
-  ArrayType *getType() const;
+  LLVM_ABI static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
+  LLVM_ABI ArrayType *getType() const;
 
   // TODO: Missing functions: getType(), getTypeForElements(), getAnon(), get().
 
@@ -379,7 +381,7 @@ class ConstantStruct final : public ConstantAggregate {
   friend class Context; // For constructor.
 
 public:
-  static Constant *get(StructType *T, ArrayRef<Constant *> V);
+  LLVM_ABI static Constant *get(StructType *T, ArrayRef<Constant *> V);
 
   template <typename... Csts>
   static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
@@ -396,8 +398,8 @@ public:
     return get(getTypeForElements(Ctx, V, Packed), V);
   }
   /// This version of the method allows an empty list.
-  static StructType *getTypeForElements(Context &Ctx, ArrayRef<Constant *> V,
-                                        bool Packed = false);
+  LLVM_ABI static StructType *
+  getTypeForElements(Context &Ctx, ArrayRef<Constant *> V, bool Packed = false);
   /// Return an anonymous struct type to use for a constant with the specified
   /// set of elements. The list must not be empty.
   static StructType *getTypeForElements(ArrayRef<Constant *> V,
@@ -424,7 +426,19 @@ class ConstantVector final : public ConstantAggregate {
   friend class Context; // For constructor.
 
 public:
-  // TODO: Missing functions: getSplat(), getType(), getSplatValue(), get().
+  LLVM_ABI static Constant *get(ArrayRef<Constant *> V);
+  /// Return a ConstantVector with the specified constant in each element.
+  /// Note that this might not return an instance of ConstantVector
+  LLVM_ABI static Constant *getSplat(ElementCount EC, Constant *Elt);
+  /// Specialize the getType() method to always return a FixedVectorType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
+  }
+  /// If all elements of the vector constant have the same value, return that
+  /// value. Otherwise, return nullptr. Ignore poison elements by setting
+  /// AllowPoison to true.
+  LLVM_ABI Constant *getSplatValue(bool AllowPoison = false) const;
 
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
@@ -439,18 +453,18 @@ class ConstantAggregateZero final : public Constant {
   friend class Context; // For constructor.
 
 public:
-  static ConstantAggregateZero *get(Type *Ty);
+  LLVM_ABI static ConstantAggregateZero *get(Type *Ty);
   /// If this CAZ has array or vector type, return a zero with the right element
   /// type.
-  Constant *getSequentialElement() const;
+  LLVM_ABI Constant *getSequentialElement() const;
   /// If this CAZ has struct type, return a zero with the right element type for
   /// the specified element.
-  Constant *getStructElement(unsigned Elt) const;
+  LLVM_ABI Constant *getStructElement(unsigned Elt) const;
   /// Return a zero of the right value for the specified GEP index if we can,
   /// otherwise return null (e.g. if C is a ConstantExpr).
-  Constant *getElementValue(Constant *C) const;
+  LLVM_ABI Constant *getElementValue(Constant *C) const;
   /// Return a zero of the right value for the specified GEP index.
-  Constant *getElementValue(unsigned Idx) const;
+  LLVM_ABI Constant *getElementValue(unsigned Idx) const;
   /// Return the number of elements in the array, vector, or struct.
   ElementCount getElementCount() const {
     return cast<llvm::ConstantAggregateZero>(Val)->getElementCount();
@@ -474,6 +488,282 @@ public:
 #endif
 };
 
+/// ConstantDataSequential - A vector or array constant whose element type is a
+/// simple 1/2/4/8-byte integer or half/bfloat/float/double, and whose elements
+/// are just simple data values (i.e. ConstantInt/ConstantFP).  This Constant
+/// node has no operands because it stores all of the elements of the constant
+/// as densely packed data, instead of as Value*'s.
+///
+/// This is the common base class of ConstantDataArray and ConstantDataVector.
+class ConstantDataSequential : public Constant {
+protected:
+  ConstantDataSequential(ClassID ID, llvm::ConstantDataSequential *C,
+                         Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+
+public:
+  /// Return true if a ConstantDataSequential can be formed with a vector or
+  /// array of the specified element type.
+  /// ConstantDataArray only works with normal float and int types that are
+  /// stored densely in memory, not with things like i42 or x86_f80.
+  static bool isElementTypeCompatible(Type *Ty) {
+    return llvm::ConstantDataSequential::isElementTypeCompatible(Ty->LLVMTy);
+  }
+  /// If this is a sequential container of integers (of any size), return the
+  /// specified element in the low bits of a uint64_t.
+  uint64_t getElementAsInteger(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsInteger(ElmIdx);
+  }
+  /// If this is a sequential container of integers (of any size), return the
+  /// specified element as an APInt.
+  APInt getElementAsAPInt(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsAPInt(ElmIdx);
+  }
+  /// If this is a sequential container of floating point type, return the
+  /// specified element as an APFloat.
+  APFloat getElementAsAPFloat(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsAPFloat(ElmIdx);
+  }
+  /// If this is an sequential container of floats, return the specified element
+  /// as a float.
+  float getElementAsFloat(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsFloat(ElmIdx);
+  }
+  /// If this is an sequential container of doubles, return the specified
+  /// element as a double.
+  double getElementAsDouble(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsDouble(ElmIdx);
+  }
+  /// Return a Constant for a specified index's element.
+  /// Note that this has to compute a new constant to return, so it isn't as
+  /// efficient as getElementAsInteger/Float/Double.
+  Constant *getElementAsConstant(unsigned ElmIdx) const {
+    return Ctx.getOrCreateConstant(
+        cast<llvm::ConstantDataSequential>(Val)->getElementAsConstant(ElmIdx));
+  }
+  /// Return the element type of the array/vector.
+  Type *getElementType() const {
+    return Ctx.getType(
+        cast<llvm::ConstantDataSequential>(Val)->getElementType());
+  }
+  /// Return the number of elements in the array or vector.
+  unsigned getNumElements() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getNumElements();
+  }
+  /// Return the size (in bytes) of each element in the array/vector.
+  /// The size of the elements is known to be a multiple of one byte.
+  uint64_t getElementByteSize() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementByteSize();
+  }
+  /// This method returns true if this is an array of \p CharSize integers.
+  bool isString(unsigned CharSize = 8) const {
+    return cast<llvm::ConstantDataSequential>(Val)->isString(CharSize);
+  }
+  /// This method returns true if the array "isString", ends with a null byte,
+  /// and does not contains any other null bytes.
+  bool isCString() const {
+    return cast<llvm::ConstantDataSequential>(Val)->isCString();
+  }
+  /// If this array is isString(), then this method returns the array as a
+  /// StringRef. Otherwise, it asserts out.
+  StringRef getAsString() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getAsString();
+  }
+  /// If this array is isCString(), then this method returns the array (without
+  /// the trailing null byte) as a StringRef. Otherwise, it asserts out.
+  StringRef getAsCString() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getAsCString();
+  }
+  /// Return the raw, underlying, bytes of this data. Note that this is an
+  /// extremely tricky thing to work with, as it exposes the host endianness of
+  /// the data elements.
+  StringRef getRawDataValues() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getRawDataValues();
+  }
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantDataArray ||
+           From->getSubclassID() == ClassID::ConstantDataVector;
+  }
+};
+
+class ConstantDataArray final : public ConstantDataSequential {
+  ConstantDataArray(llvm::ConstantDataArray *C, Context &Ctx)
+      : ConstantDataSequential(ClassID::ConstantDataArray, C, Ctx) {}
+  friend class Context;
+
+public:
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantDataArray;
+  }
+  /// get() constructor - Return a constant with array type with an element
+  /// count and element type matching the ArrayRef passed in.  Note that this
+  /// can return a ConstantAggregateZero object.
+  template <typename ElementTy>
+  static Constant *get(Context &Ctx, ArrayRef<ElementTy> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataArray::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+
+  /// get() constructor - ArrayTy needs to be compatible with
+  /// ArrayRef<ElementTy>.
+  template <typename ArrayTy>
+  static Constant *get(Context &Ctx, ArrayTy &Elts) {
+    return ConstantDataArray::get(Ctx, ArrayRef(Elts));
+  }
+
+  /// getRaw() constructor - Return a constant with array type with an element
+  /// count and element type matching the NumElements and ElementTy parameters
+  /// passed in. Note that this can return a ConstantAggregateZero object.
+  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
+  /// the buffer containing the elements. Be careful to make sure Data uses the
+  /// right endianness, the buffer will be used as-is.
+  static Constant *getRaw(StringRef Data, uint64_t NumElements,
+                          Type *ElementTy) {
+    auto *LLVMC =
+        llvm::ConstantDataArray::getRaw(Data, NumElements, ElementTy->LLVMTy);
+    return ElementTy->getContext().getOrCreateConstant(LLVMC);
+  }
+  /// getFP() constructors - Return a constant of array type with a float
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
+  /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts) {
+    auto *LLVMC = llvm::ConstantDataArray::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(LLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts) {
+    auto *LLVMC = llvm::ConstantDataArray::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(LLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts) {
+    auto *LLVMC = llvm::ConstantDataArray::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(LLVMC);
+  }
+  /// This method constructs a CDS and initializes it with a text string.
+  /// The default behavior (AddNull==true) causes a null terminator to
+  /// be placed at the end of the array (increasing the length of the string by
+  /// one more than the StringRef would normally indicate.  Pass AddNull=false
+  /// to disable this behavior.
+  static Constant *getString(Context &Ctx, StringRef Initializer,
+                             bool AddNull = true) {
+    auto *LLVMC =
+        llvm::ConstantDataArray::getString(Ctx.LLVMCtx, Initializer, AddNull);
+    return Ctx.getOrCreateConstant(LLVMC);
+  }
+
+  /// Specialize the getType() method to always return an ArrayType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline ArrayType *getType() const {
+    return cast<ArrayType>(Value::getType());
+  }
+};
+
+/// A vector constant whose element type is a simple 1/2/4/8-byte integer or
+/// float/double, and whose elements are just simple data values
+/// (i.e. ConstantInt/ConstantFP). This Constant node has no operands because it
+/// stores all of the elements of the constant as densely packed data, instead
+/// of as Value*'s.
+class ConstantDataVector final : public ConstantDataSequential {
+  ConstantDataVector(llvm::ConstantDataVector *C, Context &Ctx)
+      : ConstantDataSequential(ClassID::ConstantDataVector, C, Ctx) {}
+  friend class Context;
+
+public:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantDataVector;
+  }
+  /// get() constructors - Return a constant with vector type with an element
+  /// count and element type matching the ArrayRef passed in.  Note that this
+  /// can return a ConstantAggregateZero object.
+  static Constant *get(Context &Ctx, ArrayRef<uint8_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<uint16_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<uint32_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<uint64_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<float> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<double> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+
+  /// getRaw() constructor - Return a constant with vector type with an element
+  /// count and element type matching the NumElements and ElementTy parameters
+  /// passed in. Note that this can return a ConstantAggregateZero object.
+  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
+  /// the buffer containing the elements. Be careful to make sure Data uses the
+  /// right endianness, the buffer will be used as-is.
+  static Constant *getRaw(StringRef Data, uint64_t NumElements,
+                          Type *ElementTy) {
+    auto *NewLLVMC =
+        llvm::ConstantDataVector::getRaw(Data, NumElements, ElementTy->LLVMTy);
+    return ElementTy->getContext().getOrCreateConstant(NewLLVMC);
+  }
+  /// getFP() constructors - Return a constant of vector type with a float
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
+  /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(NewLLVMC);
+  }
+
+  /// Return a ConstantVector with the specified constant in each element.
+  /// The specified constant has to be a of a compatible type (i8/i16/
+  /// i32/i64/half/bfloat/float/double) and must be a ConstantFP or ConstantInt.
+  static Constant *getSplat(unsigned NumElts, Constant *Elt) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getSplat(
+        NumElts, cast<llvm::Constant>(Elt->Val));
+    return Elt->getContext().getOrCreateConstant(NewLLVMC);
+  }
+
+  /// Returns true if this is a splat constant, meaning that all elements have
+  /// the same value.
+  bool isSplat() const {
+    return cast<llvm::ConstantDataVector>(Val)->isSplat();
+  }
+
+  /// If this is a splat constant, meaning that all of the elements have the
+  /// same value, return that value. Otherwise return NULL.
+  Constant *getSplatValue() const {
+    return Ctx.getOrCreateConstant(
+        cast<llvm::ConstantDataVector>(Val)->getSplatValue());
+  }
+
+  /// Specialize the getType() method to always return a FixedVectorType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
+  }
+};
+
 // TODO: Inherit from ConstantData.
 class ConstantPointerNull final : public Constant {
   ConstantPointerNull(llvm::ConstantPointerNull *C, Context &Ctx)
@@ -481,9 +771,9 @@ class ConstantPointerNull final : public Constant {
   friend class Context; // For constructor.
 
 public:
-  static ConstantPointerNull *get(PointerType *Ty);
+  LLVM_ABI static ConstantPointerNull *get(PointerType *Ty);
 
-  PointerType *getType() const;
+  LLVM_ABI PointerType *getType() const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -514,22 +804,22 @@ protected:
 
 public:
   /// Static factory methods - Return an 'undef' object of the specified type.
-  static UndefValue *get(Type *T);
+  LLVM_ABI static UndefValue *get(Type *T);
 
   /// If this Undef has array or vector type, return a undef with the right
   /// element type.
-  UndefValue *getSequentialElement() const;
+  LLVM_ABI UndefValue *getSequentialElement() const;
 
   /// If this undef has struct type, return a undef with the right element type
   /// for the specified element.
-  UndefValue *getStructElement(unsigned Elt) const;
+  LLVM_ABI UndefValue *getStructElement(unsigned Elt) const;
 
   /// Return an undef of the right value for the specified GEP index if we can,
   /// otherwise return null (e.g. if C is a ConstantExpr).
-  UndefValue *getElementValue(Constant *C) const;
+  LLVM_ABI UndefValue *getElementValue(Constant *C) const;
 
   /// Return an undef of the right value for the specified GEP index.
-  UndefValue *getElementValue(unsigned Idx) const;
+  LLVM_ABI UndefValue *getElementValue(unsigned Idx) const;
 
   /// Return the number of elements in the array, vector, or struct.
   unsigned getNumElements() const {
@@ -562,22 +852,22 @@ class PoisonValue final : public UndefValue {
 
 public:
   /// Static factory methods - Return an 'poison' object of the specified type.
-  static PoisonValue *get(Type *T);
+  LLVM_ABI static PoisonValue *get(Type *T);
 
   /// If this poison has array or vector type, return a poison with the right
   /// element type.
-  PoisonValue *getSequentialElement() const;
+  LLVM_ABI PoisonValue *getSequentialElement() const;
 
   /// If this poison has struct type, return a poison with the right element
   /// type for the specified element.
-  PoisonValue *getStructElement(unsigned Elt) const;
+  LLVM_ABI PoisonValue *getStructElement(unsigned Elt) const;
 
   /// Return an poison of the right value for the specified GEP index if we can,
   /// otherwise return null (e.g. if C is a ConstantExpr).
-  PoisonValue *getElementValue(Constant *C) const;
+  LLVM_ABI PoisonValue *getElementValue(Constant *C) const;
 
   /// Return an poison of the right value for the specified GEP index.
-  PoisonValue *getElementValue(unsigned Idx) const;
+  LLVM_ABI PoisonValue *getElementValue(unsigned Idx) const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -636,7 +926,7 @@ public:
   UnnamedAddr getUnnamedAddr() const {
     return cast<llvm::GlobalValue>(Val)->getUnnamedAddr();
   }
-  void setUnnamedAddr(UnnamedAddr V);
+  LLVM_ABI void setUnnamedAddr(UnnamedAddr V);
 
   static UnnamedAddr getMinUnnamedAddr(UnnamedAddr A, UnnamedAddr B) {
     return llvm::GlobalValue::getMinUnnamedAddr(A, B);
@@ -658,7 +948,7 @@ public:
   bool hasProtectedVisibility() const {
     return cast<llvm::GlobalValue>(Val)->hasProtectedVisibility();
   }
-  void setVisibility(VisibilityTypes V);
+  LLVM_ABI void setVisibility(VisibilityTypes V);
 
   // TODO: Add missing functions.
 };
@@ -688,32 +978,6 @@ public:
     }
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
-    return cast<llvm::GlobalObject>(Val)->getAlignment();
-  }
-
-  /// Returns the alignment of the given variable or function.
-  ///
-  /// Note that for functions this is the alignment of the code, not the
-  /// alignment of a function pointer.
-  MaybeAlign getAlign() const {
-    return cast<llvm::GlobalObject>(Val)->getAlign();
-  }
-
-  // TODO: Add missing: setAlignment(Align)
-
-  /// Sets the alignment attribute of the GlobalObject.
-  /// This method will be deprecated as the alignment property should always be
-  /// defined.
-  void setAlignment(MaybeAlign Align);
-
-  unsigned getGlobalObjectSubClassData() const {
-    return cast<llvm::GlobalObject>(Val)->getGlobalObjectSubClassData();
-  }
-
-  void setGlobalObjectSubClassData(unsigned V);
-
   /// Check if this global has a custom object file section.
   ///
   /// This is more efficient than calling getSection() and checking for an empty
@@ -734,7 +998,7 @@ public:
   ///
   /// Setting the section to the empty string tells LLVM to choose an
   /// appropriate default object file section.
-  void setSection(StringRef S);
+  LLVM_ABI void setSection(StringRef S);
 
   bool hasComdat() const { return cast<llvm::GlobalObject>(Val)->hasComdat(); }
 
@@ -769,7 +1033,7 @@ class GlobalWithNodeAPI : public ParentT {
   struct LLVMGVToGV {
     Context &Ctx;
     LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
-    GlobalT &operator()(LLVMGlobalT &LLVMGV) const;
+    LLVM_ABI GlobalT &operator()(LLVMGlobalT &LLVMGV) const;
   };
 
 public:
@@ -798,24 +1062,15 @@ public:
   }
 };
 
-// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
-extern template LLVM_TEMPLATE_ABI GlobalIFunc &
-GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
-                                                                  &LLVMGV)
-    const;
-extern template LLVM_TEMPLATE_ABI Function &
-GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
-    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
-
-extern template LLVM_TEMPLATE_ABI GlobalVariable &GlobalWithNodeAPI<
-    GlobalVariable, llvm::GlobalVariable, GlobalObject,
-    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
-    const;
-extern template LLVM_TEMPLATE_ABI GlobalAlias &
-GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
-                                                                 &LLVMGV) const;
+// Explicit instantiations.
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 class GlobalIFunc final
     : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
@@ -835,13 +1090,13 @@ public:
   // TODO: Missing functions: copyAttributesFrom(), removeFromParent(),
   // eraseFromParent()
 
-  void setResolver(Constant *Resolver);
+  LLVM_ABI void setResolver(Constant *Resolver);
 
-  Constant *getResolver() const;
+  LLVM_ABI Constant *getResolver() const;
 
   // Return the resolver function after peeling off potential ConstantExpr
   // indirection.
-  Function *getResolverFunction();
+  LLVM_ABI Function *getResolverFunction();
   const Function *getResolverFunction() const {
     return const_cast<GlobalIFunc *>(this)->getResolverFunction();
   }
@@ -874,7 +1129,7 @@ class GlobalVariable final
   struct LLVMGVToGV {
     Context &Ctx;
     LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
-    GlobalVariable &operator()(llvm::GlobalVariable &LLVMGV) const;
+    LLVM_ABI GlobalVariable &operator()(llvm::GlobalVariable &LLVMGV) const;
   };
 
 public:
@@ -919,11 +1174,11 @@ public:
   /// illegal to call this method if the global is external, because we cannot
   /// tell what the value is initialized to!
   ///
-  Constant *getInitializer() const;
+  LLVM_ABI Constant *getInitializer() const;
   /// setInitializer - Sets the initializer for this global variable, removing
   /// any existing initializer if InitVal==NULL. The initializer must have the
   /// type getValueType().
-  void setInitializer(Constant *InitVal);
+  LLVM_ABI void setInitializer(Constant *InitVal);
 
   // TODO: Add missing replaceInitializer(). Requires special tracker
 
@@ -934,12 +1189,12 @@ public:
   bool isConstant() const {
     return cast<llvm::GlobalVariable>(Val)->isConstant();
   }
-  void setConstant(bool V);
+  LLVM_ABI void setConstant(bool V);
 
   bool isExternallyInitialized() const {
     return cast<llvm::GlobalVariable>(Val)->isExternallyInitialized();
   }
-  void setExternallyInitialized(bool Val);
+  LLVM_ABI void setExternallyInitialized(bool Val);
 
   // TODO: Missing copyAttributesFrom()
 
@@ -1006,6 +1261,18 @@ public:
     return cast<llvm::GlobalVariable>(Val)->getCodeModel();
   }
 
+  /// Returns the alignment of the given variable.
+  MaybeAlign getAlign() const {
+    return cast<llvm::GlobalVariable>(Val)->getAlign();
+  }
+
+  // TODO: Add missing: setAligment(Align)
+
+  /// Sets the alignment attribute of the GlobalVariable.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  LLVM_ABI void setAlignment(MaybeAlign Align);
+
   // TODO: Missing setCodeModel(). Requires custom tracker.
 
 #ifndef NDEBUG
@@ -1037,10 +1304,10 @@ public:
   // TODO: Missing copyAttributresFrom().
   // TODO: Missing removeFromParent(), eraseFromParent().
 
-  void setAliasee(Constant *Aliasee);
-  Constant *getAliasee() const;
+  LLVM_ABI void setAliasee(Constant *Aliasee);
+  LLVM_ABI Constant *getAliasee() const;
 
-  const GlobalObject *getAliaseeObject() const;
+  LLVM_ABI const GlobalObject *getAliaseeObject() const;
   GlobalObject *getAliaseeObject() {
     return const_cast<GlobalObject *>(
         static_cast<const GlobalAlias *>(this)->getAliaseeObject());
@@ -1062,12 +1329,12 @@ class NoCFIValue final : public Constant {
 
 public:
   /// Return a NoCFIValue for the specified function.
-  static NoCFIValue *get(GlobalValue *GV);
+  LLVM_ABI static NoCFIValue *get(GlobalValue *GV);
 
-  GlobalValue *getGlobalValue() const;
+  LLVM_ABI GlobalValue *getGlobalValue() const;
 
   /// NoCFIValue is always a pointer.
-  PointerType *getType() const;
+  LLVM_ABI PointerType *getType() const;
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::NoCFIValue;
@@ -1095,21 +1362,21 @@ class ConstantPtrAuth final : public Constant {
 
 public:
   /// Return a pointer signed with the specified parameters.
-  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
-                              ConstantInt *Disc, Constant *AddrDisc);
+  LLVM_ABI static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                                       ConstantInt *Disc, Constant *AddrDisc);
   /// The pointer that is signed in this ptrauth signed pointer.
-  Constant *getPointer() const;
+  LLVM_ABI Constant *getPointer() const;
 
   /// The Key ID, an i32 constant.
-  ConstantInt *getKey() const;
+  LLVM_ABI ConstantInt *getKey() const;
 
   /// The integer discriminator, an i64 constant, or 0.
-  ConstantInt *getDiscriminator() const;
+  LLVM_ABI ConstantInt *getDiscriminator() const;
 
   /// The address discriminator if any, or the null constant.
   /// If present, this must be a value equivalent to the storage location of
   /// the only global-initializer user of the ptrauth signed pointer.
-  Constant *getAddrDiscriminator() const;
+  LLVM_ABI Constant *getAddrDiscriminator() const;
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {
@@ -1136,7 +1403,7 @@ public:
 
   /// Produce a new ptrauth expression signing the given value using
   /// the same schema as is stored in one.
-  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+  LLVM_ABI ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -1164,19 +1431,19 @@ class BlockAddress final : public Constant {
 
 public:
   /// Return a BlockAddress for the specified function and basic block.
-  static BlockAddress *get(Function *F, BasicBlock *BB);
+  LLVM_ABI static BlockAddress *get(Function *F, BasicBlock *BB);
 
   /// Return a BlockAddress for the specified basic block.  The basic
   /// block must be embedded into a function.
-  static BlockAddress *get(BasicBlock *BB);
+  LLVM_ABI static BlockAddress *get(BasicBlock *BB);
 
   /// Lookup an existing \c BlockAddress constant for the given BasicBlock.
   ///
   /// \returns 0 if \c !BB->hasAddressTaken(), otherwise the \c BlockAddress.
-  static BlockAddress *lookup(const BasicBlock *BB);
+  LLVM_ABI static BlockAddress *lookup(const BasicBlock *BB);
 
-  Function *getFunction() const;
-  BasicBlock *getBasicBlock() const;
+  LLVM_ABI Function *getFunction() const;
+  LLVM_ABI BasicBlock *getBasicBlock() const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -1191,9 +1458,9 @@ class DSOLocalEquivalent final : public Constant {
 
 public:
   /// Return a DSOLocalEquivalent for the specified global value.
-  static DSOLocalEquivalent *get(GlobalValue *GV);
+  LLVM_ABI static DSOLocalEquivalent *get(GlobalValue *GV);
 
-  GlobalValue *getGlobalValue() const;
+  LLVM_ABI GlobalValue *getGlobalValue() const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -1224,7 +1491,7 @@ class ConstantTokenNone final : public Constant {
 
 public:
   /// Return the ConstantTokenNone.
-  static ConstantTokenNone *get(Context &Ctx);
+  LLVM_ABI static ConstantTokenNone *get(Context &Ctx);
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {

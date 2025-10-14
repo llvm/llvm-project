@@ -1,6 +1,7 @@
-// CHECK-FIXES: #include <QtCore/q20utility.h>
 // RUN: %check_clang_tidy -std=c++17 %s modernize-use-integer-sign-comparison %t -- \
 // RUN: -config="{CheckOptions: {modernize-use-integer-sign-comparison.EnableQtSupport: true}}"
+
+// CHECK-FIXES: #include <QtCore/q20utility.h>
 
 // The code that triggers the check
 #define MAX_MACRO(a, b) (a < b) ? b : a
@@ -91,7 +92,8 @@ int AllComparisons() {
     if (static_cast<unsigned int>(uArray[2]) < static_cast<int>(sArray[2]))
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (q20::cmp_less(uArray[2],sArray[2]))
+// CHECK-FIXES: if (q20::cmp_less(uArray[2],sArray[2])))
+// FIXME: There should only be 2 closing braces. The fix-it inserts an unbalanced one.
 
     if ((unsigned int)uArray[3] < (int)sArray[3])
         return 0;

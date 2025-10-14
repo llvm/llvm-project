@@ -25,6 +25,7 @@ static_library("Serialization") {
     "GeneratePCH.cpp",
     "GlobalModuleIndex.cpp",
     "InMemoryModuleCache.cpp",
+    "ModuleCache.cpp",
     "ModuleFile.cpp",
     "ModuleFileExtension.cpp",
     "ModuleManager.cpp",

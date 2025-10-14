@@ -24,7 +24,7 @@
 using namespace llvm;
 
 Thumb1InstrInfo::Thumb1InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI) {}
+    : ARMBaseInstrInfo(STI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb1InstrInfo::getNop() const {
@@ -41,8 +41,8 @@ unsigned Thumb1InstrInfo::getUnindexedOpcode(unsigned Opc) const {
 
 void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc,
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
   // Need to check the arch.
   MachineFunction &MF = *MBB.getParent();

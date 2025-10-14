@@ -21,7 +21,7 @@
 #  pragma GCC system_header
 #endif
 
-namespace std { // purposefully not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 #if defined(_LIBCPP_ABI_VCRUNTIME) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS != 0)
 // The std::exception class was already included above, but we're explicit about this condition here for clarity.
@@ -48,7 +48,7 @@ public:
     __data_._DoFree = true;
   }
 
-  exception(exception const&) _NOEXCEPT {}
+  exception(exception const&) _NOEXCEPT : __data_() {}
 
   exception& operator=(exception const&) _NOEXCEPT { return *this; }
 
@@ -89,6 +89,6 @@ public:
 };
 #endif // !_LIBCPP_ABI_VCRUNTIME
 
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_H

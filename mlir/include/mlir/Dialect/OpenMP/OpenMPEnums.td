@@ -223,6 +223,34 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 
 //===----------------------------------------------------------------------===//
+// target_region_flags enum.
+//===----------------------------------------------------------------------===//
+
+def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
+def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
+def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
+def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
+
+def TargetRegionFlags : OpenMP_BitEnumAttr<
+    "TargetRegionFlags",
+    "These flags describe properties of the target kernel. "
+    "TargetRegionFlagsGeneric - denotes generic kernel. "
+    "TargetRegionFlagsSpmd - denotes SPMD kernel. "
+    "TargetRegionFlagsNoLoop - denotes kernel where "
+    "num_teams * num_threads >= loop_trip_count. It allows the conversion "
+    "of loops into sequential code by ensuring that each team/thread "
+    "executes at most one iteration. "
+    "TargetRegionFlagsTripCount - checks if the loop trip count should be "
+    "calculated.", [
+      TargetRegionFlagsNone,
+      TargetRegionFlagsGeneric,
+      TargetRegionFlagsSpmd,
+      TargetRegionFlagsTripCount,
+      TargetRegionFlagsNoLoop
+    ]>;
+
+//===----------------------------------------------------------------------===//
 // variable_capture_kind enum.
 //===----------------------------------------------------------------------===//
 

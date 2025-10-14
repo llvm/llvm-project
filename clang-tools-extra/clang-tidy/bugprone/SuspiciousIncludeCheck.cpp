@@ -1,4 +1,4 @@
-//===--- SuspiciousIncludeCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,13 +40,19 @@ SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()),
-      ImplementationFileExtensions(Context->getImplementationFileExtensions()) {
-}
+      ImplementationFileExtensions(Context->getImplementationFileExtensions()),
+      IgnoredRegexString(Options.get("IgnoredRegex").value_or(StringRef{})),
+      IgnoredRegex(IgnoredRegexString) {}
 
 void SuspiciousIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
       ::std::make_unique<SuspiciousIncludePPCallbacks>(*this, SM, PP));
+}
+
+void SuspiciousIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  if (!IgnoredRegexString.empty())
+    Options.store(Opts, "IgnoredRegex", IgnoredRegexString);
 }
 
 void SuspiciousIncludePPCallbacks::InclusionDirective(
@@ -55,6 +61,9 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
+    return;
+
+  if (!Check.IgnoredRegexString.empty() && Check.IgnoredRegex.match(FileName))
     return;
 
   SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);

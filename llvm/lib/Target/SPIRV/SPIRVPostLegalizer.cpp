@@ -17,14 +17,7 @@
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
@@ -35,24 +28,19 @@ namespace {
 class SPIRVPostLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPostLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPostLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-// Defined in SPIRVLegalizerInfo.cpp.
-extern bool isTypeFoldingSupported(unsigned Opcode);
-
 namespace llvm {
 //  Defined in SPIRVPreLegalizer.cpp.
-extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI);
+extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                              MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
-                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
+                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
+                         SPIRVType *KnownResType);
 } // namespace llvm
 
 static bool mayBeInserted(unsigned Opcode) {
@@ -107,20 +95,25 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register ResVReg = I.getOperand(0).getReg();
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (MRI.getRegClassOrNull(ResVReg))
-          continue;
-        assert(GR->getSPIRVTypeForVReg(ResVReg) == nullptr);
         // Check if we have type defined for operands of the new instruction
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
+        bool IsKnownReg = MRI.getRegClassOrNull(ResVReg);
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(
+            IsKnownReg ? ResVReg : I.getOperand(1).getReg());
         if (!ResVType)
           continue;
         // Set type & class
-        setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
+        if (!IsKnownReg)
+          setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
+          processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
+          if (IsKnownReg && MRI.hasOneUse(ResVReg)) {
+            MachineInstr &UseMI = *MRI.use_instr_begin(ResVReg);
+            if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
+              continue;
+          }
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
-          processInstr(I, MIB, MRI, GR);
         }
       }
     }
@@ -154,7 +147,7 @@ void visit(MachineFunction &MF, MachineBasicBlock &Start,
 // Do a preorder traversal of the CFG starting from the given function's entry
 // point. Calls |op| on each basic block encountered during the traversal.
 void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
-  visit(MF, *MF.begin(), op);
+  visit(MF, *MF.begin(), std::move(op));
 }
 
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {

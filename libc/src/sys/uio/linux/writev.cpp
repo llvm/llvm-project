@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/sys/uio/writev.h"
+#include "hdr/types/ssize_t.h"
+#include "hdr/types/struct_iovec.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {

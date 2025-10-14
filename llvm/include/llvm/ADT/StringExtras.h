@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -178,7 +179,8 @@ inline std::string utohexstr(uint64_t X, bool LowerCase = false,
   char Buffer[17];
   char *BufPtr = std::end(Buffer);
 
-  if (X == 0) *--BufPtr = '0';
+  if (X == 0 && !Width)
+    *--BufPtr = '0';
 
   for (unsigned i = 0; Width ? (i < Width) : X; ++i) {
     unsigned char Mod = static_cast<unsigned char>(X) & 15;
@@ -355,7 +357,7 @@ inline std::string toString(const APSInt &I, unsigned Radix) {
 /// StrInStrNoCase - Portable version of strcasestr.  Locates the first
 /// occurrence of string 's1' in string 's2', ignoring case.  Returns
 /// the offset of s2 in s1 or npos if s2 cannot be found.
-StringRef::size_type StrInStrNoCase(StringRef s1, StringRef s2);
+LLVM_ABI StringRef::size_type StrInStrNoCase(StringRef s1, StringRef s2);
 
 /// getToken - This function extracts one token from source, ignoring any
 /// leading characters that appear in the Delimiters string, and ending the
@@ -363,14 +365,14 @@ StringRef::size_type StrInStrNoCase(StringRef s1, StringRef s2);
 /// there are no tokens in the source string, an empty string is returned.
 /// The function returns a pair containing the extracted token and the
 /// remaining tail string.
-std::pair<StringRef, StringRef> getToken(StringRef Source,
-                                         StringRef Delimiters = " \t\n\v\f\r");
+LLVM_ABI std::pair<StringRef, StringRef>
+getToken(StringRef Source, StringRef Delimiters = " \t\n\v\f\r");
 
 /// SplitString - Split up the specified string according to the specified
 /// delimiters, appending the result fragments to the output list.
-void SplitString(StringRef Source,
-                 SmallVectorImpl<StringRef> &OutFragments,
-                 StringRef Delimiters = " \t\n\v\f\r");
+LLVM_ABI void SplitString(StringRef Source,
+                          SmallVectorImpl<StringRef> &OutFragments,
+                          StringRef Delimiters = " \t\n\v\f\r");
 
 /// Returns the English suffix for an ordinal integer (-st, -nd, -rd, -th).
 inline StringRef getOrdinalSuffix(unsigned Val) {
@@ -393,26 +395,26 @@ inline StringRef getOrdinalSuffix(unsigned Val) {
 
 /// Print each character of the specified string, escaping it if it is not
 /// printable or if it is an escape char.
-void printEscapedString(StringRef Name, raw_ostream &Out);
+LLVM_ABI void printEscapedString(StringRef Name, raw_ostream &Out);
 
 /// Print each character of the specified string, escaping HTML special
 /// characters.
-void printHTMLEscaped(StringRef String, raw_ostream &Out);
+LLVM_ABI void printHTMLEscaped(StringRef String, raw_ostream &Out);
 
 /// printLowerCase - Print each character as lowercase if it is uppercase.
-void printLowerCase(StringRef String, raw_ostream &Out);
+LLVM_ABI void printLowerCase(StringRef String, raw_ostream &Out);
 
 /// Converts a string from camel-case to snake-case by replacing all uppercase
 /// letters with '_' followed by the letter in lowercase, except if the
 /// uppercase letter is the first character of the string.
-std::string convertToSnakeFromCamelCase(StringRef input);
+LLVM_ABI std::string convertToSnakeFromCamelCase(StringRef input);
 
 /// Converts a string from snake-case to camel-case by replacing all occurrences
 /// of '_' followed by a lowercase letter with the letter in uppercase.
 /// Optionally allow capitalization of the first letter (if it is a lowercase
 /// letter)
-std::string convertToCamelFromSnakeCase(StringRef input,
-                                        bool capitalizeFirst = false);
+LLVM_ABI std::string convertToCamelFromSnakeCase(StringRef input,
+                                                 bool capitalizeFirst = false);
 
 namespace detail {
 
@@ -527,13 +529,15 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
 class ListSeparator {
   bool First = true;
   StringRef Separator;
+  StringRef Prefix;
 
 public:
-  ListSeparator(StringRef Separator = ", ") : Separator(Separator) {}
+  ListSeparator(StringRef Separator = ", ", StringRef Prefix = "")
+      : Separator(Separator), Prefix(Prefix) {}
   operator StringRef() {
     if (First) {
       First = false;
-      return {};
+      return Prefix;
     }
     return Separator;
   }

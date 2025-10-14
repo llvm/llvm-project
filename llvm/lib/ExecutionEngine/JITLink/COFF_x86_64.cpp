@@ -221,8 +221,7 @@ public:
         }
         case EdgeKind_coff_x86_64::SecRel32: {
           E.setAddend(E.getAddend() -
-                      getSectionStart(E.getTarget().getBlock().getSection())
-                          .getValue());
+                      getSectionStart(E.getTarget().getSection()).getValue());
           E.setKind(x86_64::Pointer32);
           break;
         }
@@ -236,12 +235,12 @@ public:
 
 private:
   orc::ExecutorAddr getSectionStart(Section &Sec) {
-    if (!SectionStartCache.count(&Sec)) {
+    auto [It, Inserted] = SectionStartCache.try_emplace(&Sec);
+    if (Inserted) {
       SectionRange Range(Sec);
-      SectionStartCache[&Sec] = Range.getStart();
-      return Range.getStart();
+      It->second = Range.getStart();
     }
-    return SectionStartCache[&Sec];
+    return It->second;
   }
 
   GetImageBaseSymbol GetImageBase;

@@ -21,13 +21,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -1850,13 +1850,12 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
 
       // If the EH pad on the stack top is where this instruction should unwind
       // next, we're good.
-      MachineBasicBlock *UnwindDest = getFakeCallerBlock(MF);
+      MachineBasicBlock *UnwindDest = nullptr;
       for (auto *Succ : MBB.successors()) {
         // Even though semantically a BB can have multiple successors in case an
-        // exception is not caught by a catchpad, in our backend implementation
-        // it is guaranteed that a BB can have at most one EH pad successor. For
-        // details, refer to comments in findWasmUnwindDestinations function in
-        // SelectionDAGBuilder.cpp.
+        // exception is not caught by a catchpad, the first unwind destination
+        // should appear first in the successor list, based on the calculation
+        // in findUnwindDestinations() in SelectionDAGBuilder.cpp.
         if (Succ->isEHPad()) {
           UnwindDest = Succ;
           break;

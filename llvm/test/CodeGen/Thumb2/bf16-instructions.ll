@@ -116,28 +116,19 @@ define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-FP:       @ %bb.0:
 ; CHECK-FP-NEXT:    .save {r7, lr}
 ; CHECK-FP-NEXT:    push {r7, lr}
-; CHECK-FP-NEXT:    .vsave {d8}
-; CHECK-FP-NEXT:    vpush {d8}
-; CHECK-FP-NEXT:    vmov r0, s1
-; CHECK-FP-NEXT:    vmov r1, s0
-; CHECK-FP-NEXT:    vmov.f32 s16, s2
+; CHECK-FP-NEXT:    vmov r0, s0
+; CHECK-FP-NEXT:    vmov r1, s1
+; CHECK-FP-NEXT:    vmov r2, s2
 ; CHECK-FP-NEXT:    lsls r0, r0, #16
+; CHECK-FP-NEXT:    lsls r1, r1, #16
+; CHECK-FP-NEXT:    vmov s4, r0
+; CHECK-FP-NEXT:    lsls r0, r2, #16
+; CHECK-FP-NEXT:    vmov s2, r1
 ; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    lsls r0, r1, #16
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vmul.f32 s0, s2, s0
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov r0, s16
-; CHECK-FP-NEXT:    vmov r1, s0
-; CHECK-FP-NEXT:    lsls r0, r0, #16
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    lsls r0, r1, #16
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-FP-NEXT:    vfma.f32 s0, s4, s2
 ; CHECK-FP-NEXT:    bl __truncsfbf2
 ; CHECK-FP-NEXT:    vmov.f16 r0, s0
 ; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    vpop {d8}
 ; CHECK-FP-NEXT:    pop {r7, pc}
   %mul = fmul fast bfloat %a, %b
   %r = fadd fast bfloat %mul, %c
@@ -2382,7 +2373,7 @@ define bfloat @test_roundeven(bfloat %a) {
 ; CHECK-FP-NEXT:    vmov r0, s0
 ; CHECK-FP-NEXT:    lsls r0, r0, #16
 ; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    bl roundevenf
+; CHECK-FP-NEXT:    vrintn.f32 s0, s0
 ; CHECK-FP-NEXT:    bl __truncsfbf2
 ; CHECK-FP-NEXT:    vmov.f16 r0, s0
 ; CHECK-FP-NEXT:    vmov s0, r0

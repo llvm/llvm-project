@@ -24,7 +24,13 @@ The debug records are not instructions, do not appear in the instruction list, a
 
 # Great, what do I need to do!
 
-Very little -- we've already instrumented all of LLVM to handle these new records ("`DbgRecords`") and behave identically to past LLVM behaviour. This is currently being turned on by default, so that `DbgRecords` will be used by default in memory, IR, and bitcode.
+We've largely completed the migration. The remaining rough edge is that going forwards, instructions must be inserted into basic blocks using iterators rather than instruction pointers. In almost all circumstances you can just call `getIterator` on an instruction pointer -- however, if you call a function that returns the start of a basic block, such as:
+
+1. BasicBlock::begin
+2. BasicBlock::getFirstNonPHIIt
+3. BasicBlock::getFirstInsertionPt
+
+Then you must past that iterator into the insertion function without modification (the iterator carries a debug-info bit). That's all! Read on for a more detailed explanation.
 
 ## API Changes
 

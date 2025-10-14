@@ -15,8 +15,8 @@ program sample
         !CHECK: OtherConstruct scope: size=0 alignment=1
         !CHECK: a (OmpPrivate): HostAssoc
         !CHECK: k (OmpPrivate): HostAssoc
-        !CHECK: x (OmpFirstPrivate): HostAssoc
-        !CHECK: y (OmpPrivate): HostAssoc
+        !CHECK: x (OmpFirstPrivate, OmpExplicit): HostAssoc
+        !CHECK: y (OmpPrivate, OmpExplicit): HostAssoc
         !CHECK: z (OmpPrivate): HostAssoc
         !$omp parallel default(private)
             !CHECK: OtherConstruct scope: size=0 alignment=1
@@ -34,7 +34,7 @@ program sample
         !$omp parallel default(firstprivate) shared(y) private(w)
             !CHECK: OtherConstruct scope: size=0 alignment=1
             !CHECK: k (OmpFirstPrivate): HostAssoc
-            !CHECK: w (OmpPrivate): HostAssoc
+            !CHECK: w (OmpPrivate, OmpExplicit): HostAssoc
             !CHECK: z (OmpFirstPrivate): HostAssoc
             y = 30
             w = 40 

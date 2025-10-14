@@ -99,7 +99,8 @@ public:
   ///
   /// \return
   ///    \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context) override;
+  bool ShouldStop(StoppointCallbackContext *context,
+                  BreakpointLocationCollection &stopping_bp_loc) override;
 
   /// Standard Dump method
   void Dump(Stream *s) const override;

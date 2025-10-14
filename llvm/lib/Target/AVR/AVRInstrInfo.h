@@ -65,7 +65,7 @@ enum TOF {
 /// Utilities related to the AVR instruction set.
 class AVRInstrInfo : public AVRGenInstrInfo {
 public:
-  explicit AVRInstrInfo(AVRSubtarget &STI);
+  explicit AVRInstrInfo(const AVRSubtarget &STI);
 
   const AVRRegisterInfo &getRegisterInfo() const { return RI; }
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;
@@ -74,7 +74,7 @@ public:
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
   void storeRegToStackSlot(

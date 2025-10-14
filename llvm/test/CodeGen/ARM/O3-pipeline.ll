@@ -6,7 +6,7 @@
 ; CHECK-NEXT:    Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:    FunctionPass Manager
 ; CHECK-NEXT:      Expand large div/rem
-; CHECK-NEXT:      Expand large fp convert
+; CHECK-NEXT:      Expand fp
 ; CHECK-NEXT:      Expand Atomic instructions
 ; CHECK-NEXT:      Simplify the CFG
 ; CHECK-NEXT:      Dominator Tree Construction
@@ -162,7 +162,7 @@
 ; CHECK-NEXT:      Machine Copy Propagation Pass
 ; CHECK-NEXT:      Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:      ARM load / store optimization pass
-; CHECK-NEXT:      ReachingDefAnalysis
+; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM Execution Domain Fix
 ; CHECK-NEXT:      BreakFalseDeps
 ; CHECK-NEXT:      ARM pseudo instruction expansion pass
@@ -204,14 +204,14 @@
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      Stack Frame Layout Analysis
-; CHECK-NEXT:      ReachingDefAnalysis
+; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM fix for Cortex-A57 AES Erratum 1742098
 ; CHECK-NEXT:      ARM Branch Targets
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM constant island placement and branch shortening pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
-; CHECK-NEXT:      ReachingDefAnalysis
+; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM Low Overhead Loops pass
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter

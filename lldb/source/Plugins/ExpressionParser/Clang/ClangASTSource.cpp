@@ -223,7 +223,7 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
           continue;
 
         TagDecl *candidate_tag_decl =
-            const_cast<TagDecl *>(tag_type->getDecl());
+            tag_type->getOriginalDecl()->getDefinitionOrSelf();
 
         if (TypeSystemClang::GetCompleteDecl(
                 &candidate_tag_decl->getASTContext(), candidate_tag_decl))
@@ -250,7 +250,8 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
       if (!tag_type)
         continue;
 
-      TagDecl *candidate_tag_decl = const_cast<TagDecl *>(tag_type->getDecl());
+      TagDecl *candidate_tag_decl =
+          tag_type->getOriginalDecl()->getDefinitionOrSelf();
 
       if (TypeSystemClang::GetCompleteDecl(&candidate_tag_decl->getASTContext(),
                                            candidate_tag_decl))
@@ -1477,8 +1478,7 @@ ClangASTImporter::DeclOrigin ClangASTSource::GetDeclOrigin(const clang::Decl *de
 }
 
 CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
-  auto ts = src_type.GetTypeSystem();
-  auto src_ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto src_ast = src_type.GetTypeSystem<TypeSystemClang>();
   if (!src_ast)
     return {};
 

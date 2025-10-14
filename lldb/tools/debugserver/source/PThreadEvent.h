@@ -12,11 +12,11 @@
 
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADEVENT_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADEVENT_H
-#include "PThreadCondition.h"
-#include "PThreadMutex.h"
+
 #include <cstdint>
 #include <ctime>
 #include <functional>
+#include <mutex>
 
 class PThreadEvent {
 public:
@@ -45,11 +45,8 @@ public:
                            const struct timespec *timeout_abstime = NULL) const;
 
 protected:
-  // pthread condition and mutex variable to control access and allow
-  // blocking between the main thread and the spotlight index thread.
-  mutable PThreadMutex m_mutex;
-  mutable PThreadCondition m_set_condition;
-  mutable PThreadCondition m_reset_condition;
+  mutable std::mutex m_mutex;
+  mutable std::condition_variable m_set_condition;
   uint32_t m_bits;
   uint32_t m_validBits;
   uint32_t m_reset_ack_mask;

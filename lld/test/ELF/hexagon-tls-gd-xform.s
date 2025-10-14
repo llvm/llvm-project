@@ -18,10 +18,10 @@
 _start:
 .ifdef GDPLT
                         call x@gdplt
-# CHECK_GDPLT:  101ec: { call 0x10220 }
+# CHECK_GDPLT:  101ec: { call 0x10220 <__tls_get_addr@plt> }
 .else
                   call x
-# CHECK:  101b8: { call 0x101e0 }
+# CHECK:  101b8: { call 0x101e0 <x@plt> }
 .endif
 
 # CHECK_GDPLT:        10220: { immext(#0x20040)

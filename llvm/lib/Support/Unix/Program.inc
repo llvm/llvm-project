@@ -168,13 +168,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask, bool DetachProcess) {
-  if (!llvm::sys::fs::exists(Program)) {
-    if (ErrMsg)
-      *ErrMsg = std::string("Executable \"") + Program.str() +
-                std::string("\" doesn't exist!");
-    return false;
-  }
-
   assert(!AffinityMask && "Starting a process with an affinity mask is "
                           "currently not supported on Unix!");
 
@@ -523,7 +516,7 @@ std::error_code llvm::sys::ChangeStdoutMode(fs::OpenFlags Flags) {
 
 std::error_code llvm::sys::ChangeStdinToBinary() {
 #ifdef __MVS__
-  return disablezOSAutoConversion(STDIN_FILENO);
+  return disableAutoConversion(STDIN_FILENO);
 #else
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();

@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx11.0.0"
 
 define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %count, i32 noundef %n) {
 ; CHECK-LABEL: define i32 @read_only_loop_with_runtime_check(
-; CHECK-SAME: ptr nocapture noundef readonly [[ARRAY:%.*]], i32 noundef [[COUNT:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[ARRAY:%.*]], i32 noundef [[COUNT:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP6_NOT:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP6_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
@@ -68,9 +68,9 @@ entry:
   store ptr %array, ptr %array.addr, align 8
   store i32 %count, ptr %count.addr, align 4
   store i32 %n, ptr %n.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %sum) #3
+  call void @llvm.lifetime.start.p0(ptr %sum) #3
   store i32 0, ptr %sum, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.start.p0(ptr %i) #3
   store i32 0, ptr %i, align 4
   br label %for.cond
 
@@ -81,7 +81,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.end.p0(ptr %i) #3
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -113,7 +113,7 @@ for.inc:                                          ; preds = %if.end
 
 for.end:                                          ; preds = %for.cond.cleanup
   %9 = load i32, ptr %sum, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %sum)
+  call void @llvm.lifetime.end.p0(ptr %sum)
   ret i32 %9
 }
 
@@ -122,7 +122,7 @@ for.end:                                          ; preds = %for.cond.cleanup
 
 define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1, i64 noundef %n) {
 ; CHECK-LABEL: define dso_local noundef i32 @sum_prefix_with_sum(
-; CHECK-SAME: ptr nocapture readonly [[S_COERCE0:%.*]], i64 [[S_COERCE1:%.*]], i64 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[S_COERCE0:%.*]], i64 [[S_COERCE1:%.*]], i64 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
@@ -184,9 +184,9 @@ entry:
   %1 = getelementptr inbounds { ptr, i64 }, ptr %s, i32 0, i32 1
   store i64 %s.coerce1, ptr %1, align 8
   store i64 %n, ptr %n.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ret) #7
+  call void @llvm.lifetime.start.p0(ptr %ret) #7
   store i32 0, ptr %ret, align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i) #7
+  call void @llvm.lifetime.start.p0(ptr %i) #7
   store i64 0, ptr %i, align 8
   br label %for.cond
 
@@ -197,7 +197,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i) #7
+  call void @llvm.lifetime.end.p0(ptr %i) #7
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -217,13 +217,13 @@ for.inc:                                          ; preds = %for.body
 
 for.end:                                          ; preds = %for.cond.cleanup
   %8 = load i32, ptr %ret, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ret)
+  call void @llvm.lifetime.end.p0(ptr %ret)
   ret i32 %8
 }
 
 define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_access(ptr noundef nonnull align 8 dereferenceable(16) %this, i64 noundef %__idx) {
 ; CHECK-LABEL: define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_access(
-; CHECK-SAME: ptr nocapture noundef nonnull readonly align 8 dereferenceable(16) [[THIS:%.*]], i64 noundef [[__IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(16) [[THIS:%.*]], i64 noundef [[__IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE__I]], align 8
@@ -268,7 +268,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 
 define hidden noundef i64 @span_access(ptr noundef nonnull align 8 dereferenceable(16) %this) {
 ; CHECK-LABEL: define hidden noundef i64 @span_access(
-; CHECK-SAME: ptr nocapture noundef nonnull readonly align 8 dereferenceable(16) [[THIS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(16) [[THIS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SIZE_:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE_]], align 8
@@ -283,11 +283,11 @@ entry:
   ret i64 %0
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @llvm.trap()
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

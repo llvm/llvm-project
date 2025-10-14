@@ -18,7 +18,6 @@
 define void @sample_test() {
 ; CHECK-LABEL: sample_test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1:

@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_DYLIBMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -25,7 +26,7 @@ namespace llvm::orc {
 
 class SymbolLookupSet;
 
-class DylibManager {
+class LLVM_ABI DylibManager {
 public:
   /// A pair of a dylib and a set of symbols to be looked up.
   struct LookupRequest {

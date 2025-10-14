@@ -8,6 +8,9 @@
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 
+// RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
+// RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-unknown -target-cpu gfx700 -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT
+
 // Extensions in all versions
 #ifndef cl_clang_storage_class_specifiers
 #error "Missing cl_clang_storage_class_specifiers define"
@@ -155,3 +158,32 @@
 #endif
 #pragma OPENCL EXTENSION cl_amd_media_ops2: enable
 
+#if (__OPENCL_C_VERSION__ >= 300)
+  #ifndef __opencl_c_program_scope_global_variables
+    #error "Missing __opencl_c_program_scope_global_variables define"
+  #endif
+#endif
+
+#if (__OPENCL_C_VERSION__ >= 300)
+  #ifdef FLAT_SUPPORT
+    #ifndef __opencl_c_generic_address_space
+      #error "Missing __opencl_c_generic_address_space define"
+    #endif
+  #else
+    #ifdef __opencl_c_generic_address_space
+      #error "Incorrect __opencl_c_generic_address_space define"
+    #endif
+  #endif
+#endif
+
+#if (__OPENCL_C_VERSION__ >= 300)
+  #ifdef FLAT_SUPPORT
+    #ifndef __opencl_c_device_enqueue
+      #error "Missing __opencl_c_device_enqueue define"
+    #endif
+  #else
+    #ifdef __opencl_c_device_enqueue
+      #error "Incorrect __opencl_c_device_enqueue define"
+    #endif
+  #endif
+#endif

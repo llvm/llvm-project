@@ -74,8 +74,14 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the endiannes identifier.
     StringAttr getEndiannessIdentifier(MLIRContext *context) const;
 
+    /// Returns the default memory space identifier.
+    StringAttr getDefaultMemorySpaceIdentifier(MLIRContext *context) const;
+
     /// Returns the alloca memory space identifier.
     StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
+
+    /// Returns the mangling mode identifier.
+    StringAttr getManglingModeIdentifier(MLIRContext *context) const;
 
     /// Returns the program memory space identifier.
     StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const;
@@ -85,6 +91,12 @@ def DLTI_DataLayoutSpecAttr :
 
     /// Returns the stack alignment identifier.
     StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
+
+    /// Returns the function pointer alignment identifier.
+    StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const;
+
+    /// Returns the legal int widths identifier.
+    StringAttr getLegalIntWidthsIdentifier(MLIRContext *context) const;
 
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) {
@@ -242,5 +254,36 @@ def DLTI_TargetDeviceSpecAttr :
     }
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// FunctionPointerAlignmentAttr
+//===----------------------------------------------------------------------===//
+
+def DLTI_FunctionPointerAlignmentAttr :
+    DLTIAttr<"FunctionPointerAlignment", []> {
+  let summary = "An attribute to represent function pointer alignment.";
+  let description = [{
+    Function pointer alignment specifies the minimum alignment of function
+    pointers, it's a multiple of `alignment`. This alignment can also depend
+    on the target function, indicated by `function_dependent`.
+    Example:
+    ```
+    #dlti.dl_entry<"dlti.function_pointer_alignment",
+               #dlti.function_pointer_alignment<64, function_dependent = false>>
+    ```
+  }];
+  let parameters = (ins
+    "uint64_t":$alignment,
+    "bool":$function_dependent
+  );
+  let assemblyFormat = [{
+    `<`
+    $alignment `,`
+    `function_dependent` `=` $function_dependent
+    `>`
+  }];
+  let mnemonic = "function_pointer_alignment";
+}
+
 
 #endif  // MLIR_DIALECT_DLTI_DLTIATTRS_TD

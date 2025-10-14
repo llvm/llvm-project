@@ -568,7 +568,7 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    psllw %xmm1, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -663,7 +663,7 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %splat = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -810,7 +810,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; SSE2-NEXT:    psllw %xmm1, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -910,7 +910,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <16 x i8> %b, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
@@ -927,7 +927,7 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) nounwind {
 ; SSE2-LABEL: constant_shift_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    paddq %xmm0, %xmm1
+; SSE2-NEXT:    paddq %xmm1, %xmm1
 ; SSE2-NEXT:    psllq $7, %xmm0
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE2-NEXT:    retq
@@ -975,7 +975,7 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) nounwind {
 ; X86-SSE-LABEL: constant_shift_v2i64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE-NEXT:    paddq %xmm0, %xmm1
+; X86-SSE-NEXT:    paddq %xmm1, %xmm1
 ; X86-SSE-NEXT:    psllq $7, %xmm0
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X86-SSE-NEXT:    retl

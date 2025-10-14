@@ -255,8 +255,8 @@ public:
     UnsupportedFPMode = Subtarget->isFP64bit() || Subtarget->useSoftFloat();
   }
 
-  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
-  unsigned fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeAlloca(const AllocaInst *AI) override;
+  Register fastMaterializeConstant(const Constant *C) override;
   bool fastSelectInstruction(const Instruction *I) override;
 
 #include "MipsGenFastISel.inc"
@@ -266,17 +266,19 @@ public:
 
 static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State) LLVM_ATTRIBUTE_UNUSED;
+                    Type *OrigTy, CCState &State) LLVM_ATTRIBUTE_UNUSED;
 
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
 static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
@@ -327,7 +329,7 @@ unsigned MipsFastISel::emitLogicalOp(unsigned ISDOpc, MVT RetVT,
   return ResultReg;
 }
 
-unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i32 &&
          "Alloca should always return a pointer.");
 
@@ -343,7 +345,7 @@ unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
 unsigned MipsFastISel::materializeInt(const Constant *C, MVT VT) {
@@ -437,12 +439,12 @@ unsigned MipsFastISel::materializeExternalCallSym(MCSymbol *Sym) {
 
 // Materialize a constant into a register, and return the register
 // number (or zero if we failed to handle it).
-unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
+Register MipsFastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
   if (!CEVT.isSimple())
-    return 0;
+    return Register();
   MVT VT = CEVT.getSimpleVT();
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
@@ -452,7 +454,7 @@ unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
   else if (isa<ConstantInt>(C))
     return materializeInt(C, VT);
 
-  return 0;
+  return Register();
 }
 
 bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
@@ -1144,8 +1146,12 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
                                    unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> ArgTys;
+  for (const ArgListEntry &Arg : CLI.Args)
+    ArgTys.push_back(Arg.Val->getType());
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, ArgTys,
+                             CCAssignFnForCall(CC));
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
   // This is the minimum argument area used for A0-A3.
@@ -1287,9 +1293,7 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     SmallVector<CCValAssign, 16> RVLocs;
     MipsCCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
 
-    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips, CLI.RetTy,
-                             CLI.Symbol ? CLI.Symbol->getName().data()
-                                        : nullptr);
+    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips);
 
     // Only handle a single return value.
     if (RVLocs.size() != 1)
@@ -1947,7 +1951,10 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  if (!isa<ConstantInt>(I->getOperand(1)) ||
+      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)

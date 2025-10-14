@@ -8,24 +8,25 @@ T accumulate(InputIt first, InputIt last, T init) {
   // is instantiated. In practice this happens somewhere in the implementation
   // of `accumulate`. For tests, do it here.
   (void)*first;
+  return init;
 }
 
 template <class InputIt, class T>
-T reduce(InputIt first, InputIt last, T init) { (void)*first; }
+T reduce(InputIt first, InputIt last, T init) { (void)*first; return init; }
 template <class ExecutionPolicy, class InputIt, class T>
 T reduce(ExecutionPolicy &&policy,
-         InputIt first, InputIt last, T init) { (void)*first; }
+         InputIt first, InputIt last, T init) { (void)*first; return init; }
 
 struct parallel_execution_policy {};
 constexpr parallel_execution_policy par{};
 
 template <class InputIt1, class InputIt2, class T>
 T inner_product(InputIt1 first1, InputIt1 last1,
-                InputIt2 first2, T value) { (void)*first1; (void)*first2; }
+                InputIt2 first2, T value) { (void)*first1; (void)*first2; return value;  }
 
 template <class ExecutionPolicy, class InputIt1, class InputIt2, class T>
 T inner_product(ExecutionPolicy &&policy, InputIt1 first1, InputIt1 last1,
-                InputIt2 first2, T value) { (void)*first1; (void)*first2; }
+                InputIt2 first2, T value) { (void)*first1; (void)*first2; return value; }
 
 } // namespace std
 

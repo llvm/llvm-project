@@ -10,8 +10,8 @@ from lldbsuite.test.lldbtest import *
 class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    MTE_BUF_ADDR = hex(0xFFFF82C74000)
-    BUF_ADDR = hex(0xFFFF82C73000)
+    MTE_BUF_ADDR = hex(0xFFFFA733B000)
+    BUF_ADDR = hex(0xFFFFA733A000)
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_mte_tag_core_file_memory_region(self):
@@ -88,9 +88,9 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr}+16 {addr}".format(addr=self.MTE_BUF_ADDR),
             error=True,
             patterns=[
-                "error: End address \(0x[A-Fa-f0-9]+\) "
+                r"error: End address \(0x[A-Fa-f0-9]+\) "
                 "must be greater than the start address "
-                "\(0x[A-Fa-f0-9]+\)"
+                r"\(0x[A-Fa-f0-9]+\)"
             ],
         )
 
@@ -100,8 +100,8 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr} {addr}+32".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)$"
+                "\\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\\): 0x0\n"
+                "\\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\\): 0x1 \\(mismatch\\)$"
             ],
         )
 
@@ -110,7 +110,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.expect(
             "memory tag read {addr} {addr}+16".format(addr=self.MTE_BUF_ADDR),
             patterns=[
-                "Allocation tags:\n" "\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0$"
+                "Allocation tags:\n" r"\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0$"
             ],
         )
         # Get the other half of the first byte.
@@ -119,7 +119,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr}+16 {addr}+32".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)$"
+                r"\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)$"
             ],
         )
 
@@ -128,18 +128,18 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr} {addr}+48".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)\n"
-                "\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\): 0x2 \(mismatch\)$"
+                "\\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\\): 0x0\n"
+                "\\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\\): 0x1 \\(mismatch\\)\n"
+                "\\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\\): 0x2 \\(mismatch\\)$"
             ],
         )
         self.expect(
             "memory tag read {addr}+16 {addr}+64".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)\n"
-                "\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\): 0x2 \(mismatch\)\n"
-                "\[0x[A-Fa-f0-9]+30, 0x[A-Fa-f0-9]+40\): 0x3 \(mismatch\)$"
+                "\\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\\): 0x1 \\(mismatch\\)\n"
+                "\\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\\): 0x2 \\(mismatch\\)\n"
+                "\\[0x[A-Fa-f0-9]+30, 0x[A-Fa-f0-9]+40\\): 0x3 \\(mismatch\\)$"
             ],
         )
         # Here both start and end are unaligned.
@@ -147,10 +147,10 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr}+16 {addr}+80".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)\n"
-                "\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\): 0x2 \(mismatch\)\n"
-                "\[0x[A-Fa-f0-9]+30, 0x[A-Fa-f0-9]+40\): 0x3 \(mismatch\)\n"
-                "\[0x[A-Fa-f0-9]+40, 0x[A-Fa-f0-9]+50\): 0x4 \(mismatch\)$"
+                "\\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\\): 0x1 \\(mismatch\\)\n"
+                "\\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\\): 0x2 \\(mismatch\\)\n"
+                "\\[0x[A-Fa-f0-9]+30, 0x[A-Fa-f0-9]+40\\): 0x3 \\(mismatch\\)\n"
+                "\\[0x[A-Fa-f0-9]+40, 0x[A-Fa-f0-9]+50\\): 0x4 \\(mismatch\\)$"
             ],
         )
 
@@ -159,7 +159,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.expect(
             "memory tag read {addr} {addr}+1".format(addr=self.MTE_BUF_ADDR),
             patterns=[
-                "Allocation tags:\n" "\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0$"
+                "Allocation tags:\n" r"\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0$"
             ],
         )
 
@@ -169,8 +169,8 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr} {addr}+17".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)$"
+                "\\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\\): 0x0\n"
+                "\\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\\): 0x1 \\(mismatch\\)$"
             ],
         )
 
@@ -179,9 +179,9 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             "memory tag read {addr} {addr}+33".format(addr=self.MTE_BUF_ADDR),
             patterns=[
                 "Allocation tags:\n"
-                "\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\): 0x0\n"
-                "\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\): 0x1 \(mismatch\)\n",
-                "\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\): 0x2 \(mismatch\)$",
+                "\\[0x[A-Fa-f0-9]+00, 0x[A-Fa-f0-9]+10\\): 0x0\n"
+                "\\[0x[A-Fa-f0-9]+10, 0x[A-Fa-f0-9]+20\\): 0x1 \\(mismatch\\)\n",
+                "\\[0x[A-Fa-f0-9]+20, 0x[A-Fa-f0-9]+30\\): 0x2 \\(mismatch\\)$",
             ],
         )
 
@@ -215,7 +215,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "* thread #1, name = 'a.out.mte', stop reason = SIGSEGV: sync tag check fault (fault address=0xffff82c74010)"
+                "* thread #1, name = 'a.out.mte', stop reason = SIGSEGV: sync tag check fault (fault address=0xffffa733b010)"
             ],
         )
 
@@ -231,12 +231,15 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.runCmd("target create --core core.mte")
         # The expected value is:
         # * Allowed tags value of 0xFFFF, shifted up by 3 resulting in 0x7fff8.
+        # * Bit 19 set to 0, which means that store only checking is disabled.
         # * Bit 1 set to enable synchronous tag faults.
         # * Bit 0 set to enable the tagged address ABI.
         expected = ["mte_ctrl = 0x000000000007fffb"]
 
         if self.hasXMLSupport():
-            expected.append("(TAGS = 65535, TCF = TCF_SYNC, TAGGED_ADDR_ENABLE = 1)")
+            expected.append(
+                "(STORE_ONLY = 0, TAGS = 65535, TCF = TCF_SYNC, TAGGED_ADDR_ENABLE = 1)"
+            )
 
         self.expect("register read mte_ctrl", substrs=expected)
 
@@ -248,3 +251,26 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
                     "TCF: 0 = TCF_NONE, 1 = TCF_SYNC, 2 = TCF_ASYNC, 3 = TCF_ASYMM"
                 ],
             )
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_mte_no_tags(self):
+        """Test that we handle there being a tag segment but that segment does
+        not contain any tag data. This can happen when the core is dumped
+        with a restrictive limit or filter."""
+        self.runCmd("target create --core core.mte.notags")
+
+        mte_buf_addr = 0xFFFFA4AF3000
+
+        # We can see which memory was tagged.
+        self.expect(
+            f"memory region {mte_buf_addr}", substrs=["memory tagging: enabled"]
+        )
+
+        # We cannot read those tags.
+        self.expect(
+            f"memory tag read {mte_buf_addr}",
+            substrs=[
+                "Could not read tags from core file segment. Segment is missing some or all tag data."
+            ],
+            error=True,
+        )

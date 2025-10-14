@@ -377,6 +377,7 @@ def : ProcessorModel<"star-mc1", CortexM4Model,         [ARMv8mMainline,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor,
+                                                         FeatureAvoidMULS,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,

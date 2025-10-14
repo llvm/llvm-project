@@ -23,18 +23,23 @@
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
 // PAUTHABI1-SAME: "-target-abi" "pauthtest"
-// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini"
+// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination" "-faarch64-jump-table-hardening"
 
 // RUN: %clang -### -c --target=aarch64 -mabi=pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fno-ptrauth-indirect-gotos -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fno-ptrauth-indirect-gotos \
+// RUN:   -fno-ptrauth-init-fini -fno-ptrauth-init-fini-address-discrimination \
+// RUN:   -fno-aarch64-jump-table-hardening %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
 // RUN: %clang -### -c --target=aarch64-pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fno-ptrauth-indirect-gotos -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fno-ptrauth-indirect-gotos \
+// RUN:   -fno-ptrauth-init-fini -fno-ptrauth-init-fini-address-discrimination \
+// RUN:   -fno-aarch64-jump-table-hardening %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
 // PAUTHABI2:     "-cc1"
 // PAUTHABI2-NOT: "-fptrauth-
+// PAUTHABI2-NOT: "-faarch64-jump-table-hardening"
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
@@ -64,22 +69,31 @@
 
 //// The only branch protection option compatible with PAuthABI is BTI.
 // RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=pac-ret %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR4
+// RUN:   FileCheck %s --check-prefix=ERR4_1
 // RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=pac-ret %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR4
-// ERR4: error: unsupported option '-mbranch-protection=pac-ret' for target 'aarch64-unknown-linux-pauthtest'
+// RUN:   FileCheck %s --check-prefix=ERR4_1
+// RUN: not %clang -### -c --target=aarch64 -fptrauth-returns     -mbranch-protection=pac-ret %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR4_2
+// ERR4_1: error: unsupported option '-mbranch-protection=pac-ret' for target 'aarch64-unknown-linux-pauthtest'
+// ERR4_2: error: the combination of '-mbranch-protection=pac-ret' and '-fptrauth-returns' is incompatible
 
 // RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=gcs %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR5
+// RUN:   FileCheck %s --check-prefix=ERR5_1
 // RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=gcs %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR5
-// ERR5: error: unsupported option '-mbranch-protection=gcs' for target 'aarch64-unknown-linux-pauthtest'
+// RUN:   FileCheck %s --check-prefix=ERR5_1
+// RUN: not %clang -### -c --target=aarch64 -fptrauth-returns     -mbranch-protection=gcs %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR5_2
+// ERR5_1: error: unsupported option '-mbranch-protection=gcs' for target 'aarch64-unknown-linux-pauthtest'
+// ERR5_2: error: the combination of '-mbranch-protection=gcs' and '-fptrauth-returns' is incompatible
 
 // RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=standard %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR6
+// RUN:   FileCheck %s --check-prefix=ERR6_1
 // RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=standard %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR6
-// ERR6: error: unsupported option '-mbranch-protection=standard' for target 'aarch64-unknown-linux-pauthtest'
+// RUN:   FileCheck %s --check-prefix=ERR6_1
+// RUN: not %clang -### -c --target=aarch64 -fptrauth-returns     -mbranch-protection=standard %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR6_2
+// ERR6_1: error: unsupported option '-mbranch-protection=standard' for target 'aarch64-unknown-linux-pauthtest'
+// ERR6_2: error: the combination of '-mbranch-protection=standard' and '-fptrauth-returns' is incompatible
 
 // RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -msign-return-address=all %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=ERR7

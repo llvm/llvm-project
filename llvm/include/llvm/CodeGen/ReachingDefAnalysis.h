@@ -26,6 +26,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/CodeGen/LoopTraversal.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
@@ -110,12 +111,15 @@ private:
 };
 
 /// This class provides the reaching def analysis.
-class ReachingDefAnalysis : public MachineFunctionPass {
+class ReachingDefInfo {
 private:
   MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits = 0;
+  unsigned NumStackObjects = 0;
+  int ObjectIndexBegin = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -139,6 +143,13 @@ private:
 
   MBBReachingDefsInfo MBBReachingDefs;
 
+  /// MBBFrameObjsReachingDefs[{i, j}] is a list of instruction indices
+  /// (relative to begining of MBB i) that define frame index j in MBB i. This
+  /// is used in answering reaching definition queries.
+  using MBBFrameObjsReachingDefsInfo =
+      DenseMap<std::pair<unsigned, int>, SmallVector<int>>;
+  MBBFrameObjsReachingDefsInfo MBBFrameObjsReachingDefs;
+
   /// Default values are 'nothing happened a long time ago'.
   const int ReachingDefDefaultVal = -(1 << 21);
 
@@ -146,25 +157,16 @@ private:
   using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  ReachingDefInfo();
+  ReachingDefInfo(ReachingDefInfo &&);
+  ~ReachingDefInfo();
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
-  ReachingDefAnalysis() : MachineFunctionPass(ID) {
-    initializeReachingDefAnalysisPass(*PassRegistry::getPassRegistry());
-  }
-  void releaseMemory() override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
-  }
+  void run(MachineFunction &mf);
+  void print(raw_ostream &OS);
+  void releaseMemory();
 
   /// Re-run the analysis.
   void reset();
@@ -177,6 +179,7 @@ public:
 
   /// Provides the instruction id of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
+  /// Note that Reg may represent a stack slot.
   int getReachingDef(MachineInstr *MI, Register Reg) const;
 
   /// Return whether A and B use the same def of Reg.
@@ -305,7 +308,48 @@ private:
 
   /// Provides the instruction of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
+  /// Note that Reg may represent a stack slot.
   MachineInstr *getReachingLocalMIDef(MachineInstr *MI, Register Reg) const;
+};
+
+class ReachingDefAnalysis : public AnalysisInfoMixin<ReachingDefAnalysis> {
+  friend AnalysisInfoMixin<ReachingDefAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = ReachingDefInfo;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c ReachingDefInfo results.
+class ReachingDefPrinterPass : public PassInfoMixin<ReachingDefPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit ReachingDefPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  static bool isRequired() { return true; }
+};
+
+class ReachingDefInfoWrapperPass : public MachineFunctionPass {
+  ReachingDefInfo RDI;
+
+public:
+  static char ID;
+
+  ReachingDefInfoWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  MachineFunctionProperties getRequiredProperties() const override;
+  bool runOnMachineFunction(MachineFunction &F) override;
+  void releaseMemory() override { RDI.releaseMemory(); }
+
+  ReachingDefInfo &getRDI() { return RDI; }
+  const ReachingDefInfo &getRDI() const { return RDI; }
 };
 
 } // namespace llvm

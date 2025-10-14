@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -33,11 +32,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -121,7 +117,7 @@ private:
 } // namespace
 
 TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(Triple(M.getTargetTriple())),
+    : TargetTriple(M.getTargetTriple()),
       AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
@@ -497,13 +493,8 @@ void collectMemAccessInfo(
       if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
 
-      if (isa<MemIntrinsic>(Inst)) {
+      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst))
         MemTypeResetInsts.push_back(&Inst);
-      } else if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end)
-          MemTypeResetInsts.push_back(&Inst);
-      }
     } else if (isa<AllocaInst>(Inst)) {
       MemTypeResetInsts.push_back(&Inst);
     }
@@ -798,6 +789,13 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   bool NeedsMemMove = false;
   IRBuilder<> IRB(BB, IP);
 
+  auto GetAllocaSize = [&](AllocaInst *AI) {
+    return IRB.CreateMul(
+        IRB.CreateZExtOrTrunc(AI->getArraySize(), IntptrTy),
+        ConstantInt::get(IntptrTy,
+                         DL.getTypeAllocSize(AI->getAllocatedType())));
+  };
+
   if (auto *A = dyn_cast<Argument>(V)) {
     assert(A->hasByValAttr() && "Type reset for non-byval argument?");
 
@@ -819,13 +817,13 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
           NeedsMemMove = isa<MemMoveInst>(MTI);
         }
       }
-    } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-          II->getIntrinsicID() != Intrinsic::lifetime_end)
+    } else if (auto *II = dyn_cast<LifetimeIntrinsic>(I)) {
+      auto *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
+      if (!AI)
         return false;
 
-      Size = II->getArgOperand(0);
-      Dest = II->getArgOperand(1);
+      Size = GetAllocaSize(AI);
+      Dest = II->getArgOperand(0);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
       // We need to clear the types for new stack allocations (or else we might
       // read stale type information from a previous function execution).
@@ -833,10 +831,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
       IRB.SetInsertPoint(&*std::next(BasicBlock::iterator(I)));
       IRB.SetInstDebugLocation(I);
 
-      Size = IRB.CreateMul(
-          IRB.CreateZExtOrTrunc(AI->getArraySize(), IntptrTy),
-          ConstantInt::get(IntptrTy,
-                           DL.getTypeAllocSize(AI->getAllocatedType())));
+      Size = GetAllocaSize(AI);
       Dest = I;
     } else {
       return false;

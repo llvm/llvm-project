@@ -1167,6 +1167,23 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_EmptyName) {
   EXPECT_TRUE(notMatches(Code, cxxRecordDecl(isSameOrDerivedFrom(""))));
 }
 
+TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  DeclarationMatcher IsDerivenFromBase = cxxRecordDecl(
+      isDerivedFrom(decl().bind("typedef")), unless(isImplicit()));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct AnInterface {};"
+      "typedef AnInterface UnusedTypedef;"
+      "typedef AnInterface Base;"
+      "class AClass : public Base {};",
+      IsDerivenFromBase,
+      std::make_unique<VerifyIdIsBoundTo<TypedefDecl>>("typedef", "Base")));
+}
+
 TEST_P(ASTMatchersTest, IsDerivedFrom_ObjC) {
   DeclarationMatcher IsDerivedFromX = objcInterfaceDecl(isDerivedFrom("X"));
   EXPECT_TRUE(
@@ -2011,6 +2028,13 @@ TEST_P(ASTMatchersTest, TemplateArgumentCountIs) {
   EXPECT_TRUE(
       notMatches("template<typename T> struct C {}; C<int> c;",
                  templateSpecializationType(templateArgumentCountIs(2))));
+
+  const char *FuncTemplateCode =
+      "template<typename T> T f(); auto v = f<int>();";
+  EXPECT_TRUE(
+      matches(FuncTemplateCode, functionDecl(templateArgumentCountIs(1))));
+  EXPECT_TRUE(
+      notMatches(FuncTemplateCode, functionDecl(templateArgumentCountIs(2))));
 }
 
 TEST_P(ASTMatchersTest, IsIntegral) {
@@ -2278,10 +2302,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
-                templateSpecializationType(hasDeclaration(classTemplateDecl(
-                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
-                                              .bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2299,10 +2322,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
-                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2317,10 +2339,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {
@@ -2901,6 +2922,19 @@ TEST_P(ASTMatchersTest, IsBitField) {
                          fieldDecl(isBitField(), hasName("b"))));
   EXPECT_TRUE(matches("struct C { int a : 2; int b : 4; };",
                       fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  if (GetParam().isCXX()) {
+    // This test verifies 2 things:
+    // (1) That templates work correctly.
+    // (2) That the matcher does not crash on template-dependent bit widths.
+    EXPECT_TRUE(matches("template<int N> "
+                        "struct C { "
+                        "explicit C(bool x) : a(x) { } "
+                        "int a : N; "
+                        "int b : 4; "
+                        "}; "
+                        "template struct C<2>;",
+                        fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  }
 }
 
 TEST_P(ASTMatchersTest, HasInClassInitializer) {

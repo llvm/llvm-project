@@ -46,6 +46,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 124
 ; AVX2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[BB12_PREHEADER11:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
+; AVX2-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775776
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -84,7 +85,6 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2:       vec.epilog.iter.check:
 ; AVX2-NEXT:    [[TMP26:%.*]] = shl i64 [[N_VEC]], 2
 ; AVX2-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP26]]
-; AVX2-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[BB12_PREHEADER1]], label [[BB12_PREHEADER11]]
 ; AVX2:       vec.epilog.ph:
@@ -109,7 +109,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX2-NEXT:    br i1 [[CMP_N17]], label [[EXIT]], label [[BB12_PREHEADER1]]
 ; AVX2:       bb12.preheader:
-; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AVX2-NEXT:    br label [[BB13:%.*]]
 ; AVX2:       bb12:
 ; AVX2-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[PTR2_PH]], [[BB12_PREHEADER1]] ]
