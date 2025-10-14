@@ -465,8 +465,7 @@ define void @peel_int_eq_condition(i32 %start) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C_0:%.*]] = icmp eq i32 [[IV]], [[START]]
-; CHECK-NEXT:    br i1 [[C_0]], label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @fn(i32 [[IV]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]

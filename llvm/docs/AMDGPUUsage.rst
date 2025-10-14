@@ -4132,7 +4132,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 "Image", or "Pipe". This may be
                                                 more restrictive than indicated
                                                 by "AccQual" to reflect what the
-                                                kernel actual does. If not
+                                                kernel actually does. If not
                                                 present then the runtime must
                                                 assume what is implied by
                                                 "AccQual" and "IsConst". Values
@@ -5396,8 +5396,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``COMPUTE_PGM_RSRC1.PRIORITY``.
      13:12   2 bits  FLOAT_ROUND_MODE_32             Wavefront starts execution
                                                      with specified rounding
-                                                     mode for single (32
-                                                     bit) floating point
+                                                     mode for single (32-bit)
+                                                     floating point
                                                      precision floating point
                                                      operations.
 
@@ -5729,7 +5729,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Wavefront starts execution
                                                      with memory violation
-                                                     exceptions exceptions
+                                                     exceptions
                                                      enabled which are generated
                                                      when a memory violation has
                                                      occurred for this wavefront from
@@ -5965,7 +5965,7 @@ The fields used by CP for code objects before V3 also match those specified in
      FLOAT_DENORM_MODE_FLUSH_NONE           3     No Flush
      ====================================== ===== ====================================
 
-  Denormal flushing is sign respecting. i.e. the behavior expected by
+  Denormal flushing is sign respecting, i.e., the behavior expected by
   ``"denormal-fp-math"="preserve-sign"``. The behavior is undefined with
   ``"denormal-fp-math"="positive-zero"``
 
@@ -16791,7 +16791,7 @@ For GFX125x:
 * Some memory operations contain a ``nv`` bit, for "non-volatile", which indicates
   memory that is not expected to change during a kernel's execution.
   This information is propagated to the cache lines for that address
-  (refered to as ``$nv``).
+  (referred to as ``$nv``).
 
   * When ``nv=0`` reads hit dirty ``$nv=1`` data in cache, the hardware will
     writeback the data to the next level in the hierarchy and then subsequently read
@@ -18930,7 +18930,7 @@ On entry to a function:
 #. All other registers are unspecified.
 #. Any necessary ``s_waitcnt`` has been performed to ensure memory is available
    to the function.
-#. Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+#. Use pass-by-reference (byref) instead of pass-by-value (byval) for struct
    arguments in C ABI. Callee is responsible for allocating stack memory and
    copying the value of the struct if modified. Note that the backend still
    supports byval for struct arguments.
@@ -20174,7 +20174,7 @@ from the value of the ``-mcpu`` option that is passed to the assembler.
 .amdgpu_hsa_kernel (name)
 +++++++++++++++++++++++++
 
-This directives specifies that the symbol with given name is a kernel entry
+This directive specifies that the symbol with given name is a kernel entry
 point (label) and the object should contain corresponding symbol of type
 STT_AMDGPU_HSA_KERNEL.
 
