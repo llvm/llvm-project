@@ -226,7 +226,9 @@ constexpr bool test() {
 
 #ifdef _LIBCPP_VERSION
   // These types should be implicit-lifetime, but they are not guaranteed to be so.
+#  ifndef _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
   test_is_implicit_lifetime<std::pair<int, float>>();
+#  endif
   test_is_implicit_lifetime<std::tuple<int, float>>();
 #endif
 
