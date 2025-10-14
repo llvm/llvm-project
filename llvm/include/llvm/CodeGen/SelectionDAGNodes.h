@@ -420,10 +420,12 @@ public:
     SameSign = 1 << 14,
     // ISD::PTRADD operations that remain in bounds, i.e., the left operand is
     // an address in a memory object in which the result of the operation also
-    // lies. WARNING: Since SDAG does not have pointer types, a PTRADD's pointer
-    // operand is effectively the result of an implicit inttoptr cast. This
-    // limits any provenance information implied by the InBounds flag and the
-    // possible transformations based on it.
+    // lies. WARNING: Since SDAG generally uses integers instead of pointer
+    // types, a PTRADD's pointer operand is effectively the result of an
+    // implicit inttoptr cast. Therefore, when an inbounds PTRADD uses a
+    // pointer P, transformations cannot assume that P has the provenance
+    // implied by its producer as, e.g, operations between producer and PTRADD
+    // that affect the provenance may have been optimized away.
     InBounds = 1 << 15,
 
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
