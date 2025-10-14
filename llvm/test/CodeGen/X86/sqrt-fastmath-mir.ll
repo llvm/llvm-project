@@ -24,7 +24,7 @@ define float @sqrt_ieee_ninf(float %f) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
+  ; CHECK-NEXT:   [[VRSQRTSSr:%[0-9]+]]:fr32 = ninf afn VRSQRTSSr killed [[DEF]], [[COPY]]
   ; CHECK-NEXT:   [[VMULSSrr:%[0-9]+]]:fr32 = ninf afn nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
   ; CHECK-NEXT:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
   ; CHECK-NEXT:   [[VFMADD213SSr:%[0-9]+]]:fr32 = ninf afn nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed [[VMULSSrr]], [[VMOVSSrm_alt]], implicit $mxcsr
@@ -71,7 +71,7 @@ define float @sqrt_daz_ninf(float %f) #1 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
+  ; CHECK-NEXT:   [[VRSQRTSSr:%[0-9]+]]:fr32 = ninf afn VRSQRTSSr killed [[DEF]], [[COPY]]
   ; CHECK-NEXT:   [[VMULSSrr:%[0-9]+]]:fr32 = ninf afn nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
   ; CHECK-NEXT:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
   ; CHECK-NEXT:   [[VFMADD213SSr:%[0-9]+]]:fr32 = ninf afn nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed [[VMULSSrr]], [[VMOVSSrm_alt]], implicit $mxcsr
