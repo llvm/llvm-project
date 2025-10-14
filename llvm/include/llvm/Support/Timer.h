@@ -71,6 +71,7 @@ public:
     R -= RHS;
     return R;
   }
+  // Feel free to add operator+ if you need it
 
   /// Print the current time record to \p OS, with a breakdown showing
   /// contributions to the \p Total time record.
