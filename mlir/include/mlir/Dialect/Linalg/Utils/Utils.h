@@ -115,50 +115,119 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 //===----------------------------------------------------------------------===//
 
 bool isaConv1DOp(LinalgOp op);
-bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv1DNcwCwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv1DNwcWcOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
+bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                       SmallVector<int64_t> *strides = nullptr);
+bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                       SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv1DNcwCwOp(LinalgOp op,
+                               SmallVector<int64_t> *dilations = nullptr,
+                               SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv1DNwcWcOp(LinalgOp op,
+                               SmallVector<int64_t> *dilations = nullptr,
+                               SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op,
+                                SmallVector<int64_t> *dilations = nullptr,
+                                SmallVector<int64_t> *strides = nullptr);
 bool isaConv2DOp(LinalgOp op);
-bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNhwcFhwcQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNchwFchwQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNgchwFgchwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNgchwGfchwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNhwcHwcfQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNhwgcGfhwcQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNgchwGfchwQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv2DNhwgcGfhwcOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv2DNchwChwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
+bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNhwcFhwcQOp(LinalgOp op,
+                          SmallVector<int64_t> *dilations = nullptr,
+                          SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNchwFchwQOp(LinalgOp op,
+                          SmallVector<int64_t> *dilations = nullptr,
+                          SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNgchwFgchwOp(LinalgOp op,
+                           SmallVector<int64_t> *dilations = nullptr,
+                           SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNgchwGfchwOp(LinalgOp op,
+                           SmallVector<int64_t> *dilations = nullptr,
+                           SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNhwcHwcfQOp(LinalgOp op,
+                          SmallVector<int64_t> *dilations = nullptr,
+                          SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNhwgcGfhwcQOp(LinalgOp op,
+                            SmallVector<int64_t> *dilations = nullptr,
+                            SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNgchwGfchwQOp(LinalgOp op,
+                            SmallVector<int64_t> *dilations = nullptr,
+                            SmallVector<int64_t> *strides = nullptr);
+bool isaConv2DNhwgcGfhwcOp(LinalgOp op,
+                           SmallVector<int64_t> *dilations = nullptr,
+                           SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv2DNchwChwOp(LinalgOp op,
+                                 SmallVector<int64_t> *dilations = nullptr,
+                                 SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op,
+                                 SmallVector<int64_t> *dilations = nullptr,
+                                 SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op,
+                                  SmallVector<int64_t> *dilations = nullptr,
+                                  SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op,
+                                  SmallVector<int64_t> *dilations = nullptr,
+                                  SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op,
+                                   SmallVector<int64_t> *dilations = nullptr,
+                                   SmallVector<int64_t> *strides = nullptr);
 bool isaConv3DOp(LinalgOp op);
-bool isaConv3DNcdhwFcdhwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv3DNdhwcDhwcfOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaConv3DNdhwcDhwcfQOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNhwcMinUnsignedOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNdhwcMaxOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNdhwcMinOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
-bool isaPoolingNdhwcSumOp(LinalgOp op, SmallVector<int64_t>* dilations = nullptr, SmallVector<int64_t>* strides = nullptr);
+bool isaConv3DNcdhwFcdhwOp(LinalgOp op,
+                           SmallVector<int64_t> *dilations = nullptr,
+                           SmallVector<int64_t> *strides = nullptr);
+bool isaConv3DNdhwcDhwcfOp(LinalgOp op,
+                           SmallVector<int64_t> *dilations = nullptr,
+                           SmallVector<int64_t> *strides = nullptr);
+bool isaConv3DNdhwcDhwcfQOp(LinalgOp op,
+                            SmallVector<int64_t> *dilations = nullptr,
+                            SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
+                                    SmallVector<int64_t> *dilations = nullptr,
+                                    SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op,
+                                   SmallVector<int64_t> *dilations = nullptr,
+                                   SmallVector<int64_t> *strides = nullptr);
+bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op,
+                                   SmallVector<int64_t> *dilations = nullptr,
+                                   SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                         SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op,
+                                 SmallVector<int64_t> *dilations = nullptr,
+                                 SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNhwcMinUnsignedOp(LinalgOp op,
+                                 SmallVector<int64_t> *dilations = nullptr,
+                                 SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                        SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                        SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                        SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                        SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations = nullptr,
+                        SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNdhwcMaxOp(LinalgOp op,
+                          SmallVector<int64_t> *dilations = nullptr,
+                          SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNdhwcMinOp(LinalgOp op,
+                          SmallVector<int64_t> *dilations = nullptr,
+                          SmallVector<int64_t> *strides = nullptr);
+bool isaPoolingNdhwcSumOp(LinalgOp op,
+                          SmallVector<int64_t> *dilations = nullptr,
+                          SmallVector<int64_t> *strides = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities

@@ -249,28 +249,34 @@ template <typename... OpTypes>
 static bool bodyMatcherForPoolOps(Value yieldVal, Block *body) {
   Operation *defOp = yieldVal.getDefiningOp();
   // if (!defOp) return false;
-  if (!(isa_and_present<OpTypes>(defOp) || ...)) return false;
+  if (!(isa_and_present<OpTypes>(defOp) || ...))
+    return false;
 
-  BlockArgument lhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(0));
-  BlockArgument rhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(1));
-  if (!lhsArg || !rhsArg) return false;
+  BlockArgument lhsArg = dyn_cast<BlockArgument>(defOp->getOperand(0));
+  BlockArgument rhsArg = dyn_cast<BlockArgument>(defOp->getOperand(1));
+  if (!lhsArg || !rhsArg)
+    return false;
   return true;
 }
 
 static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxSIOp>(yieldVal, body);
+  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxSIOp>(yieldVal,
+                                                                  body);
 }
 
 static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal, body);
+  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal,
+                                                                  body);
 }
 
 static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinSIOp>(yieldVal, body);
+  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinSIOp>(yieldVal,
+                                                                  body);
 }
 
 static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal, body);
+  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal,
+                                                                  body);
 }
 
 static bool bodyMatcherForSumPoolOps(Value yieldVal, Block *body) {
@@ -288,7 +294,8 @@ static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
 // Check if `expr` is either:
 // - a dimension expr alone (implying *1), or
 // - a multiplication of dimension expr by constant.
-static bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim, int64_t &constantValue) {
+static bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim,
+                                        int64_t &constantValue) {
   if (auto dExpr = dyn_cast<AffineDimExpr>(expr)) {
     dim = dExpr;
     constantValue = 1;
@@ -320,12 +327,13 @@ static bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim, int64_
 }
 
 /// Given an array of AffineMaps `indexingMaps` verify the following :-
-///   indexingMaps[0].getResult(iDim) == 
+///   indexingMaps[0].getResult(iDim) ==
 ///         indexingMaps[1].getResult(fDim) * <CST_1> +
 ///         indexingMaps[n-1].getResult(oDim) * <CST_2>
 ///  where, CST_1 and CST_2 can be any constant.
-static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim, unsigned fDim, unsigned oDim,
-  int64_t& dilation, int64_t& stride) {
+static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim,
+                                       unsigned fDim, unsigned oDim,
+                                       int64_t &dilation, int64_t &stride) {
   unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
   AffineExpr inpExpr = getAffineMapDim(indexingMaps, iIndex, iDim);
   auto addExpr = dyn_cast<AffineBinaryOpExpr>(inpExpr);
@@ -354,24 +362,37 @@ static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim, un
 }
 
 /// Given an array of AffineMaps `indexingMaps` verify the following :-
-///   indexingMaps[aIndex].getResult(aDim) == indexingMaps[bIndex].getResult(bDim)
-static bool matchConvDimExprPattern(ArrayAttr indexingMaps, unsigned aIndex, unsigned aDim, unsigned bIndex, unsigned bDim) {
-  return getAffineMapDim(indexingMaps, aIndex, aDim) == getAffineMapDim(indexingMaps, bIndex, bDim);
+///   indexingMaps[aIndex].getResult(aDim) ==
+///   indexingMaps[bIndex].getResult(bDim)
+static bool matchConvDimExprPattern(ArrayAttr indexingMaps, unsigned aIndex,
+                                    unsigned aDim, unsigned bIndex,
+                                    unsigned bDim) {
+  return getAffineMapDim(indexingMaps, aIndex, aDim) ==
+         getAffineMapDim(indexingMaps, bIndex, bDim);
 }
 
-/// Give an array of AffineMaps, verify each map to be of the corresponding `expectedSize`.
-static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps, ArrayRef<int64_t> expectedSizes) {
-  if (indexingMaps.size() != expectedSizes.size()) return false;
+/// Give an array of AffineMaps, verify each map to be of the corresponding
+/// `expectedSize`.
+static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps,
+                                       ArrayRef<int64_t> expectedSizes) {
+  if (indexingMaps.size() != expectedSizes.size())
+    return false;
 
-  for (auto [indexingMap, expectedSize] : llvm::zip_equal(indexingMaps, expectedSizes)) {
+  for (auto [indexingMap, expectedSize] :
+       llvm::zip_equal(indexingMaps, expectedSizes)) {
     auto affineMap = cast<AffineMapAttr>(indexingMap).getValue();
-    if (affineMap.getNumResults() != expectedSize) return false;
+    if (affineMap.getNumResults() != expectedSize)
+      return false;
   }
   return true;
 }
 
-/// Utility to update `dilations` and `strides` by copy the corresponding data from `tempDilations` and `tempStrides`.
-static bool updateConvDilationsAndStrides(SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides, ArrayRef<int64_t> tempDilations, ArrayRef<int64_t> tempStrides) {
+/// Utility to update `dilations` and `strides` by copy the corresponding data
+/// from `tempDilations` and `tempStrides`.
+static bool updateConvDilationsAndStrides(SmallVector<int64_t> *dilations,
+                                          SmallVector<int64_t> *strides,
+                                          ArrayRef<int64_t> tempDilations,
+                                          ArrayRef<int64_t> tempStrides) {
   if (!(dilations && strides))
     return true;
   for (auto [dilation, stride] : llvm::zip(tempDilations, tempStrides)) {
@@ -382,1087 +403,1540 @@ static bool updateConvDilationsAndStrides(SmallVector<int64_t>* dilations, Small
 }
 
 bool isaConv1DOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv1DOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {1,1,1})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {1, 1, 1}))
+    return false;
+
   // #map = affine_map<(d0, d1) -> (d0 + d1)>
   // #map1 = affine_map<(d0, d1) -> (d1)>
   // #map2 = affine_map<(d0, d1) -> (d0)>
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
-  return matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0, /*oDim=*/0, tempDilations[0], tempStrides[0]);
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
+  return matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0,
+                                    /*oDim=*/0, tempDilations[0],
+                                    tempStrides[0]);
 }
 
-bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv1DNwcWcfOp>(op)) return true;
+bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                       SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv1DNwcWcfOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 3, 3}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d3, d4)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4, d2)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 2));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 2));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv1DNcwFcwOp>(op)) return true;
+bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                       SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv1DNcwFcwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 3, 3}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d2 + d4)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d1, d3, d4)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv1DNcwCwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv1DNcwCwOp>(op)) return true;
+bool isaDepthwiseConv1DNcwCwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv1DNcwCwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,2,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 2, 3}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1 + d3)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[0], tempStrides[0]));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
 // -------------------
-bool isaDepthwiseConv1DNwcWcOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv1DNwcWcOp>(op)) return true;
+bool isaDepthwiseConv1DNwcWcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv1DNwcWcOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,2,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 2, 3}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv1DNwcWcmOp>(op)) return true;
+bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv1DNwcWcmOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 3, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d4, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d4, d2, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
 bool isaConv2DOp(LinalgOp op) {
-  if (isa<linalg::Conv2DOp>(op)) return true;
+  if (isa<linalg::Conv2DOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {2,2,2})) return false;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+  if (!verifyConvIndexingMapSizes(indexingMaps, {2, 2, 2}))
+    return false;
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0 + d2, d1 + d3)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
-  return (matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0, /*oDim=*/0, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1, /*oDim=*/1, tempDilations[1], tempStrides[1]));
+  return (matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0,
+                                     /*oDim=*/0, tempDilations[0],
+                                     tempStrides[0]) &&
+          matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1,
+                                     /*oDim=*/1, tempDilations[1],
+                                     tempStrides[1]));
 }
 
-bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNhwcFhwcOp>(op)) return true;
+bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcFhwcOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5,
+  // d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNhwcHwcfOp>(op)) return true;
+bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcHwcfOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5,
+  // d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNchwFchwOp>(op)) return true;
+bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNchwFchwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 +
+  // d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwcFhwcQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNhwcFhwcQOp>(op)) return true;
+bool isaConv2DNhwcFhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                          SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcFhwcQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,0,0,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 0, 0, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5,
+  // d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
   // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNchwFchwQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNchwFchwQOp>(op)) return true;
+bool isaConv2DNchwFchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                          SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNchwFchwQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,0,0,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 0, 0, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 +
+  // d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
   // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNgchwFgchwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNgchwFgchwOp>(op)) return true;
+bool isaConv2DNgchwFgchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                           SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNgchwFgchwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d2, d1, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4, /*oDim=*/4, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 2));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6,
+  // d4 + d7)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d2, d1,
+  // d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0,
+  // d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 2) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3,
+                                  /*oDim=*/3, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4,
+                                  /*oDim=*/4, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 2));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNgchwGfchwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNgchwGfchwOp>(op)) return true;
+bool isaConv2DNgchwGfchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                           SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNgchwGfchwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4, /*oDim=*/4, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 2));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6,
+  // d4 + d7)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2,
+  // d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0,
+  // d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 2) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3,
+                                  /*oDim=*/3, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4,
+                                  /*oDim=*/4, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 2));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwcHwcfQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNhwcHwcfQOp>(op)) return true;
+bool isaConv2DNhwcHwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                          SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcHwcfQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,0,0,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 0, 0, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5,
+  // d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
   // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwgcGfhwcQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNhwgcGfhwcQOp>(op)) return true;
+bool isaConv2DNhwgcGfhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                            SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwgcGfhwcQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,0,0,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 0, 0, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3, d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 +
+  // d6, d3, d7)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3,
+  // d4, d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
   // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/2, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/3, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 4) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/2,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/3,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 4) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNgchwGfchwQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNgchwGfchwQOp>(op)) return true;
+bool isaConv2DNgchwGfchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                            SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNgchwGfchwQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,0,0,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 0, 0, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4, /*oDim=*/4, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 2));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6,
+  // d4 + d7)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2,
+  // d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3,
+  // d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 2) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3,
+                                  /*oDim=*/3, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4,
+                                  /*oDim=*/4, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 2));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwgcGfhwcOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv2DNhwgcGfhwcOp>(op)) return true;
+bool isaConv2DNhwgcGfhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                           SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwgcGfhwcOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3, d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/2, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/3, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 4) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 +
+  // d6, d3, d7)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3,
+  // d4, d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) ->
+  // (d0, d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/2,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/3,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 4) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNchwChwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv2DNchwChwOp>(op)) return true;
+bool isaDepthwiseConv2DNchwChwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNchwChwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,3,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d1 + d4, d2 + d5)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[1], tempStrides[1]));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv2DNhwcHwcOp>(op)) return true;
+bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,3,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv2DNhwcHwcmOp>(op)) return true;
+bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcmOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6, d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6,
+  // d3)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv2DNhwcHwcmQOp>(op)) return true;
+bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                   SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcmQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,0,0,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 4, 0, 0, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6, d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6,
+  // d3)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
   // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv2DNhwcHwcQOp>(op)) return true;
+bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,3,0,0,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 0, 0, 4}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> ()>
   // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
 bool isaConv3DOp(LinalgOp op) {
-  if (isa<linalg::Conv3DOp>(op)) return true;
+  if (isa<linalg::Conv3DOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,3})) return false;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 3, 3}))
+    return false;
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0 + d3, d1 + d4, d2 + d5)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2)>
-  return (matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0, /*oDim=*/0, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1, /*oDim=*/1, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[2], tempStrides[2]));
+  return (matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0,
+                                     /*oDim=*/0, tempDilations[0],
+                                     tempStrides[0]) &&
+          matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1,
+                                     /*oDim=*/1, tempDilations[1],
+                                     tempStrides[1]) &&
+          matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                     /*oDim=*/2, tempDilations[2],
+                                     tempStrides[2]));
 }
 
-bool isaConv3DNcdhwFcdhwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv3DNcdhwFcdhwOp>(op)) return true;
+bool isaConv3DNcdhwFcdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                           SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv3DNcdhwFcdhwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d5, d2 + d6, d3 + d7, d4 + d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d1, d5, d6, d7, d8)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4, /*oDim=*/4, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d5, d2 + d6,
+  // d3 + d7, d4 + d8)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)
+  // -> (d1, d5, d6, d7, d8)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6,
+  // d7, d8) -> (d0, d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4,
+                                  /*oDim=*/4, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv3DNdhwcDhwcfOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv3DNdhwcDhwcfOp>(op)) return true;
+bool isaConv3DNdhwcDhwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                           SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv3DNdhwcDhwcfOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2
+  // + d6, d3 + d7, d8)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)
+  // -> (d5, d6, d7, d8, d4)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6,
+  // d7, d8) -> (d0, d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaConv3DNdhwcDhwcfQOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::Conv3DNdhwcDhwcfQOp>(op)) return true;
+bool isaConv3DNdhwcDhwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                            SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv3DNdhwcDhwcfQOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,0,0,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 0, 0, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 4;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> ()>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2
+  // + d6, d3 + d7, d8)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)
+  // -> (d5, d6, d7, d8, d4)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6,
+  // d7, d8) -> ()> #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) ->
+  // (d0, d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv3DNdhwcDhwcmOp>(op)) return true;
+bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
+                                    SmallVector<int64_t> *dilations,
+                                    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv3DNdhwcDhwcmOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,6})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 6}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d8, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 5));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2
+  // + d6, d3 + d7, d8)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)
+  // -> (d5, d6, d7, d8, d4)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6,
+  // d7, d8) -> (d0, d1, d2, d3, d8, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+       matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 5));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv3DNcdhwCdhwOp>(op)) return true;
+bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                   SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv3DNcdhwCdhwOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,4,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 4, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d7, d1 + d4, d2 + d5, d3 + d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d7, d4, d5, d6)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d7, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/3, /*oDim=*/4, tempDilations[2], tempStrides[2]));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d7, d1 + d4, d2
+  // + d5, d3 + d6)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d7,
+  // d4, d5, d6)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0,
+  // d7, d1, d2, d3)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/3,
+                                  /*oDim=*/4, tempDilations[2],
+                                  tempStrides[2]));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::DepthwiseConv3DNdhwcDhwcOp>(op)) return true;
+bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                   SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv3DNdhwcDhwcOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,4,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 4, 5}))
+    return false;
+
   unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d4, d2 + d5, d3 + d6, d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d4, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d7)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d4, d2 +
+  // d5, d3 + d6, d7)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) ->
+  // (d4, d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) ->
+  // (d0, d1, d2, d3, d7)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNchwMaxOp>(op)) return true;
+bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNchwMaxOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2 + d4, d3 + d5)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1, /*oDim=*/3, tempDilations[1], tempStrides[1]) &&
-      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]) &&
+       bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNchwSumOp>(op)) return true;
+bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNchwSumOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2 + d4, d3 + d5)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1, /*oDim=*/3, tempDilations[1], tempStrides[1]) &&
-      bodyMatcherForSumPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1,
+                                  /*oDim=*/3, tempDilations[1],
+                                  tempStrides[1]) &&
+       bodyMatcherForSumPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNhwcMaxOp>(op)) return true;
+bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNhwcMaxOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNhwcMinOp>(op)) return true;
+bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNhwcMinOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      bodyMatcherForMinSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       bodyMatcherForMinSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNhwcSumOp>(op)) return true;
+bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                         SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNhwcSumOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      bodyMatcherForSumPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       bodyMatcherForSumPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNhwcMaxUnsignedOp>(op)) return true;
+bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNhwcMaxUnsignedOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      bodyMatcherForMaxUnsignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       bodyMatcherForMaxUnsignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMinUnsignedOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNhwcMinUnsignedOp>(op)) return true;
+bool isaPoolingNhwcMinUnsignedOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNhwcMinUnsignedOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(2,1);
-  SmallVector<int64_t> tempStrides(2,1);
+
+  SmallVector<int64_t> tempDilations(2, 1);
+  SmallVector<int64_t> tempStrides(2, 1);
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
-      bodyMatcherForMinUnsignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+       bodyMatcherForMinUnsignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNcwMaxOp>(op)) return true;
+bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                        SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNcwMaxOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 1, 3}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
- 
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNcwSumOp>(op)) return true;
+bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                        SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNcwSumOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 1, 3}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
- 
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2, tempDilations[0], tempStrides[0]) &&
-      bodyMatcherForSumPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0,
+                                  /*oDim=*/2, tempDilations[0],
+                                  tempStrides[0]) &&
+       bodyMatcherForSumPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNwcMaxOp>(op)) return true;
+bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                        SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcMaxOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 1, 3}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
 
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+       bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNwcMinOp>(op)) return true;
+bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                        SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcMinOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 1, 3}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
 
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      bodyMatcherForMinSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+       bodyMatcherForMinSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNwcSumOp>(op)) return true;
+bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                        SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcSumOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 1, 3}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
 
-  SmallVector<int64_t> tempDilations(1,1);
-  SmallVector<int64_t> tempStrides(1,1);
+  SmallVector<int64_t> tempDilations(1, 1);
+  SmallVector<int64_t> tempStrides(1, 1);
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      bodyMatcherForSumPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+       bodyMatcherForSumPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNdhwcMaxOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNdhwcMaxOp>(op)) return true;
+bool isaPoolingNdhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                          SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNdhwcMaxOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,3,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 3, 5}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
-      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 +
+  // d6, d3 + d7, d4)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) ->
+  // (d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0,
+  // d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+       bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNdhwcMinOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNdhwcMinOp>(op)) return true;
+bool isaPoolingNdhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                          SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNdhwcMinOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,3,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 3, 5}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
-      bodyMatcherForMinSignedPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 +
+  // d6, d3 + d7, d4)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) ->
+  // (d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0,
+  // d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+       bodyMatcherForMinSignedPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
-bool isaPoolingNdhwcSumOp(LinalgOp op, SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides) {
-  if (isa<linalg::PoolingNdhwcSumOp>(op)) return true;
+bool isaPoolingNdhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                          SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNdhwcSumOp>(op))
+    return true;
 
-  if (!isaConvolutionOpInterface(op)) return false;
+  if (!isaConvolutionOpInterface(op))
+    return false;
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5,3,5})) return false;
-  
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 3, 5}))
+    return false;
+
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  
-  SmallVector<int64_t> tempDilations(3,1);
-  SmallVector<int64_t> tempStrides(3,1);
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  bool returnVal = (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1, tempDilations[0], tempStrides[0]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2, tempDilations[1], tempStrides[1]) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3, tempDilations[2], tempStrides[2]) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
-      bodyMatcherForSumPoolOps(yieldVal, body));
-  return returnVal && updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+
+  SmallVector<int64_t> tempDilations(3, 1);
+  SmallVector<int64_t> tempStrides(3, 1);
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 +
+  // d6, d3 + d7, d4)> #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) ->
+  // (d5, d6, d7)> #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0,
+  // d1, d2, d3, d4)>
+  bool returnVal =
+      (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
+                                  /*oDim=*/1, tempDilations[0],
+                                  tempStrides[0]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
+                                  /*oDim=*/2, tempDilations[1],
+                                  tempStrides[1]) &&
+       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
+                                  /*oDim=*/3, tempDilations[2],
+                                  tempStrides[2]) &&
+       matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+       bodyMatcherForSumPoolOps(yieldVal, body));
+  return returnVal && updateConvDilationsAndStrides(dilations, strides,
+                                                    tempDilations, tempStrides);
 }
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,

@@ -237,9 +237,12 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
-/// Utility to create a `genericOp` with a convolution op of type `ConvOpTy` with `dilations` and `strides`.
+/// Utility to create a `genericOp` with a convolution op of type `ConvOpTy`
+/// with `dilations` and `strides`.
 template <typename ConvOpTy>
-static FailureOr<LinalgOp> specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp, ArrayRef<int64_t> dilations, ArrayRef<int64_t> strides) {
+static FailureOr<LinalgOp>
+specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
+                   ArrayRef<int64_t> dilations, ArrayRef<int64_t> strides) {
   SmallVector<Value> inputs = genericOp.getDpsInputs();
   ValueRange outputs = genericOp.getDpsInits();
   SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
@@ -247,159 +250,227 @@ static FailureOr<LinalgOp> specializeToConvOp(RewriterBase &rewriter, GenericOp 
                                       ? TypeRange(ValueRange(outputs))
                                       : TypeRange{};
   LinalgOp namedOp;
-  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> || std::is_same_v<ConvOpTy, linalg::Conv2DOp> || std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
-    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes, inputs, outputs);
+  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> ||
+                std::is_same_v<ConvOpTy, linalg::Conv2DOp> ||
+                std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes,
+                                                    inputs, outputs);
   } else {
     Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
     Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
-    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
+        genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
   }
   return namedOp;
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank2ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank2ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
-  if (isaConv1DOp(genericOp)) return specializeToConvOp<linalg::Conv1DOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv1DOp(genericOp))
+    return specializeToConvOp<linalg::Conv1DOp>(rewriter, genericOp, dilations,
+                                                strides);
   return failure();
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank4ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank4ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
   if (isaDepthwiseConv1DNcwCwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv1DNcwCwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv1DNcwCwOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaDepthwiseConv1DNwcWcOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaConv2DOp(genericOp))
-    return specializeToConvOp<linalg::Conv2DOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DOp>(rewriter, genericOp, dilations,
+                                                strides);
   if (isaPoolingNcwMaxOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNcwMaxOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNcwMaxOp>(rewriter, genericOp,
+                                                       dilations, strides);
   if (isaPoolingNcwSumOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNcwSumOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNcwSumOp>(rewriter, genericOp,
+                                                       dilations, strides);
   if (isaPoolingNwcMaxOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNwcMaxOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNwcMaxOp>(rewriter, genericOp,
+                                                       dilations, strides);
   if (isaPoolingNwcMinOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNwcMinOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNwcMinOp>(rewriter, genericOp,
+                                                       dilations, strides);
   if (isaPoolingNwcSumOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNwcSumOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNwcSumOp>(rewriter, genericOp,
+                                                       dilations, strides);
   return failure();
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank5ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank5ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
   if (isaDepthwiseConv1DNwcWcmOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcmOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcmOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaConv1DNwcWcfOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv1DNwcWcfOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv1DNwcWcfOp>(rewriter, genericOp,
+                                                      dilations, strides);
   if (isaConv1DNcwFcwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv1DNcwFcwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv1DNcwFcwOp>(rewriter, genericOp,
+                                                      dilations, strides);
   return failure();
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank6ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank6ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
   if (isaDepthwiseConv2DNchwChwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv2DNchwChwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv2DNchwChwOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaDepthwiseConv2DNhwcHwcOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaDepthwiseConv2DNhwcHwcQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcQOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaConv3DOp(genericOp))
-    return specializeToConvOp<linalg::Conv3DOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv3DOp>(rewriter, genericOp, dilations,
+                                                strides);
   if (isaPoolingNchwMaxOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNchwMaxOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNchwMaxOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaPoolingNchwSumOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNchwSumOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNchwSumOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaPoolingNhwcMaxOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMaxOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNhwcMaxOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaPoolingNhwcMinOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMinOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNhwcMinOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaPoolingNhwcSumOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcSumOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNhwcSumOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaPoolingNhwcMaxUnsignedOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMaxUnsignedOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNhwcMaxUnsignedOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaPoolingNhwcMinUnsignedOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMinUnsignedOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNhwcMinUnsignedOp>(
+        rewriter, genericOp, dilations, strides);
   return failure();
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank7ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank7ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
   if (isaConv2DNhwcFhwcOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNhwcFhwcOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNhwcFhwcOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaConv2DNhwcHwcfOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNhwcHwcfOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNhwcHwcfOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaConv2DNchwFchwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNchwFchwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNchwFchwOp>(rewriter, genericOp,
+                                                        dilations, strides);
   if (isaConv2DNhwcFhwcQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNhwcFhwcQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNhwcFhwcQOp>(rewriter, genericOp,
+                                                         dilations, strides);
   if (isaConv2DNchwFchwQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNchwFchwQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNchwFchwQOp>(rewriter, genericOp,
+                                                         dilations, strides);
   if (isaConv2DNhwcHwcfQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNhwcHwcfQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNhwcHwcfQOp>(rewriter, genericOp,
+                                                         dilations, strides);
   if (isaDepthwiseConv2DNhwcHwcmOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcmOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcmOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaDepthwiseConv2DNhwcHwcmQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcmQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcmQOp>(
+        rewriter, genericOp, dilations, strides);
   return failure();
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank8ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank8ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
   if (isaConv2DNgchwFgchwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNgchwFgchwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNgchwFgchwOp>(rewriter, genericOp,
+                                                          dilations, strides);
   if (isaConv2DNgchwGfchwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNgchwGfchwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNgchwGfchwOp>(rewriter, genericOp,
+                                                          dilations, strides);
   if (isaConv2DNgchwGfchwQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNgchwGfchwQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNgchwGfchwQOp>(rewriter, genericOp,
+                                                           dilations, strides);
   if (isaConv2DNhwgcGfhwcOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNhwgcGfhwcOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNhwgcGfhwcOp>(rewriter, genericOp,
+                                                          dilations, strides);
   if (isaConv2DNhwgcGfhwcQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv2DNhwgcGfhwcQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv2DNhwgcGfhwcQOp>(rewriter, genericOp,
+                                                           dilations, strides);
   if (isaDepthwiseConv3DNcdhwCdhwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv3DNcdhwCdhwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv3DNcdhwCdhwOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaDepthwiseConv3DNdhwcDhwcOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcOp>(
+        rewriter, genericOp, dilations, strides);
   if (isaPoolingNdhwcMaxOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNdhwcMaxOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNdhwcMaxOp>(rewriter, genericOp,
+                                                         dilations, strides);
   if (isaPoolingNdhwcMinOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNdhwcMinOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNdhwcMinOp>(rewriter, genericOp,
+                                                         dilations, strides);
   if (isaPoolingNdhwcSumOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNdhwcSumOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::PoolingNdhwcSumOp>(rewriter, genericOp,
+                                                         dilations, strides);
   return failure();
 }
 
-static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank9ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+static FailureOr<LinalgOp>
+inferAndSpecializeBasedOnRank9ConvIteratorTypes(RewriterBase &rewriter,
+                                                GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
   if (isaConv3DNcdhwFcdhwOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv3DNcdhwFcdhwOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv3DNcdhwFcdhwOp>(rewriter, genericOp,
+                                                          dilations, strides);
   if (isaConv3DNdhwcDhwcfOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv3DNdhwcDhwcfOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv3DNdhwcDhwcfOp>(rewriter, genericOp,
+                                                          dilations, strides);
   if (isaConv3DNdhwcDhwcfQOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::Conv3DNdhwcDhwcfQOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::Conv3DNdhwcDhwcfQOp>(rewriter, genericOp,
+                                                           dilations, strides);
   if (isaDepthwiseConv3DNdhwcDhwcmOp(genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(rewriter, genericOp, dilations, strides);
+    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
+        rewriter, genericOp, dilations, strides);
   return failure();
 }
 
-// Converts linalg.generic to named linalg.*conv/pooling* where possible. To improve the search speed, the convolution ops have been segregated based on the rank of iterator types array.
-static FailureOr<LinalgOp> inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+// Converts linalg.generic to named linalg.*conv/pooling* where possible. To
+// improve the search speed, the convolution ops have been segregated based on
+// the rank of iterator types array.
+static FailureOr<LinalgOp>
+inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<utils::IteratorType> iteratorTypes =
+      genericOp.getIteratorTypesArray();
   unsigned totalIterators = iteratorTypes.size();
-  switch(totalIterators) {
-    case 2:
-      return inferAndSpecializeBasedOnRank2ConvIteratorTypes(rewriter, genericOp);
-    case 4:
-      return inferAndSpecializeBasedOnRank4ConvIteratorTypes(rewriter, genericOp);
-    case 5:
-      return inferAndSpecializeBasedOnRank5ConvIteratorTypes(rewriter, genericOp);
-    case 6:
-      return inferAndSpecializeBasedOnRank6ConvIteratorTypes(rewriter, genericOp);
-    case 7:
-      return inferAndSpecializeBasedOnRank7ConvIteratorTypes(rewriter, genericOp);
-    case 8:
-      return inferAndSpecializeBasedOnRank8ConvIteratorTypes(rewriter, genericOp);
-    case 9:
-      return inferAndSpecializeBasedOnRank9ConvIteratorTypes(rewriter, genericOp);
+  switch (totalIterators) {
+  case 2:
+    return inferAndSpecializeBasedOnRank2ConvIteratorTypes(rewriter, genericOp);
+  case 4:
+    return inferAndSpecializeBasedOnRank4ConvIteratorTypes(rewriter, genericOp);
+  case 5:
+    return inferAndSpecializeBasedOnRank5ConvIteratorTypes(rewriter, genericOp);
+  case 6:
+    return inferAndSpecializeBasedOnRank6ConvIteratorTypes(rewriter, genericOp);
+  case 7:
+    return inferAndSpecializeBasedOnRank7ConvIteratorTypes(rewriter, genericOp);
+  case 8:
+    return inferAndSpecializeBasedOnRank8ConvIteratorTypes(rewriter, genericOp);
+  case 9:
+    return inferAndSpecializeBasedOnRank9ConvIteratorTypes(rewriter, genericOp);
   }
   return failure();
 }
