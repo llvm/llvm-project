@@ -615,8 +615,8 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   // builds a single call to a deallocation function which is safe to emit
   // multiple times.
   void Emit(CodeGenFunction &CGF, Flags) override {
-    bool Splited = CGF.CurCoro.Data->InRamp != nullptr;
-    if (!Splited)
+    bool FirstEmit = CGF.CurCoro.Data->InRamp == nullptr;
+    if (FirstEmit)
       splitCleanupBB(CGF);
     EmitCoroFree(CGF);
   }
@@ -646,8 +646,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     if (S->getReturnStmt()) {
       // Clone cleanup block before EmitCoroFree()
       llvm::ValueToValueMapTy VMap{};
-      CoroData.RampCleanupBB =
-          llvm::CloneBasicBlock(CleanupBB, VMap, ".ramp");
+      CoroData.RampCleanupBB = llvm::CloneBasicBlock(CleanupBB, VMap, ".ramp");
     }
   }
 
