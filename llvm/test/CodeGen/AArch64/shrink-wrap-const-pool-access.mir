@@ -1,8 +1,5 @@
+# RUN: llc -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
 --- |
- ; RUN: llc -x=mir -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
- ; CHECK-NOT: savePoint
- ; CHECK-NOT: restorePoint
-
   declare double @foo()
 
   define double @shrink_wrap_load_from_const_pool(double %q) {
@@ -24,8 +21,11 @@
     br label %common.ret
   }
 ...
-# Following code has a load from constant pool. Accessing constant pool must not
-# be considered as a stack access and hence, shrink wrapping must happen.
+# FIXME: Following code has a load from constant pool. Accessing constant pool
+# must not be considered as a stack access and hence, shrink wrapping must
+# happen.
+# CHECK-NOT: savePoint
+# CHECK-NOT: restorePoint
 ---
 name:            shrink_wrap_load_from_const_pool
 tracksRegLiveness: true
