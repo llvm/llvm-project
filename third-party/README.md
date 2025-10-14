@@ -5,6 +5,7 @@ Integrating a new third-party dependency generally requires it to be licensed un
 the Apache-with-LLVM-exception license. For integrating code under other licenses,
 please follow the process explained in the [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents).
 
-In particular, Boost.Math is cleared for usage within the libc++ compiled library
-exclusively as discussed in [this RFC](https://discourse.llvm.org/t/rfc-libc-taking-a-dependency-on-boost-math-for-the-c-17-math-special-functions).
-Do not use it in other parts of LLVM without prior discussion (and update to this documentation).
+In particular, due to its non-LLVM license, the Boost.Math third-party dependency
+can exclusively be used within the libc++ compiled library as discussed in [this RFC](https://discourse.llvm.org/t/rfc-libc-taking-a-dependency-on-boost-math-for-the-c-17-math-special-functions).
+Do not use it in other parts of LLVM without prior discussion with the LLVM Board
+(and update this documentation).
