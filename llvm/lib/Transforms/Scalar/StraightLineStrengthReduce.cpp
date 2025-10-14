@@ -618,10 +618,10 @@ Constant *StraightLineStrengthReduce::getIndexDelta(Candidate &C,
                                                     Candidate &Basis) {
   APInt Idx = C.Index->getValue(), BasisIdx = Basis.Index->getValue();
   unifyBitWidth(Idx, BasisIdx);
-  APInt IndexOffset = Idx - BasisIdx;
+  APInt IndexDelta = Idx - BasisIdx;
   IntegerType *DeltaType =
-      IntegerType::get(C.Ins->getContext(), IndexOffset.getBitWidth());
-  return ConstantInt::get(DeltaType, IndexOffset);
+      IntegerType::get(C.Ins->getContext(), IndexDelta.getBitWidth());
+  return ConstantInt::get(DeltaType, IndexDelta);
 }
 
 bool StraightLineStrengthReduce::isSimilar(Candidate &C, Candidate &Basis,
@@ -768,8 +768,9 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 // Y = A + 2
 // Z = A + 3
 // Return the delta info for C aginst the new Basis
-auto StraightLineStrengthReduce::compressPath(
-    Candidate &C, Candidate *Basis) const -> DeltaInfo {
+auto StraightLineStrengthReduce::compressPath(Candidate &C,
+                                              Candidate *Basis) const
+    -> DeltaInfo {
   if (!Basis || !Basis->Basis || C.CandidateKind == Candidate::Mul)
     return {};
   Candidate *Root = Basis;
@@ -1119,8 +1120,17 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
     return Builder.CreateMul(LHS, RHS);
   };
 
+  Value *Delta = C.Delta;
+  // If Delta is 0, C is a fully redundant of C.Basis,
+  // just replace C.Ins with Basis.Ins
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Delta)) {
+    APInt DeltaValue = CI->getValue();
+    if (DeltaValue.isZero())
+      return nullptr;
+  }
+
   if (C.DeltaKind == Candidate::IndexDelta) {
-    APInt IndexOffset = cast<ConstantInt>(C.Delta)->getValue();
+    APInt IndexDelta = cast<ConstantInt>(C.Delta)->getValue();
     // IndexDelta
     // X = B + i * S
     // Y = B + i` * S
@@ -1129,21 +1139,15 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
     //   = X + IndexDelta * S
     // Bump = (i' - i) * S
 
-    // If Delta is 0, C is a fully redundant of C.Basis,
-    // just replace C.Ins with Basis.Ins
-    if (IndexOffset.isZero())
-      return nullptr;
-
-    // Compute Bump = C - Basis = (i' - i) * S.
     // Common case 1: if (i' - i) is 1, Bump = S.
-    if (IndexOffset == 1)
+    if (IndexDelta == 1)
       return C.Stride;
     // Common case 2: if (i' - i) is -1, Bump = -S.
-    if (IndexOffset.isAllOnes())
+    if (IndexDelta.isAllOnes())
       return Builder.CreateNeg(C.Stride);
 
     IntegerType *DeltaType =
-        IntegerType::get(Basis.Ins->getContext(), IndexOffset.getBitWidth());
+        IntegerType::get(Basis.Ins->getContext(), IndexDelta.getBitWidth());
     Value *ExtendedStride = Builder.CreateSExtOrTrunc(C.Stride, DeltaType);
 
     return CreateMul(ExtendedStride, C.Delta);
