@@ -511,6 +511,31 @@ public:
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
 
+  /// The set of constraints (equations/inequalities) can be modeled as an
+  /// undirected graph where:
+  /// 1. Variables are the nodes.
+  /// 2. Constraints are the edges connecting those nodes.
+  ///
+  /// Variables and constraints belonging to different connected components
+  /// are irrelevant to each other. This property allows for safe pruning of
+  /// constraints.
+  ///
+  /// For example, given the following constraints:
+  /// - Inequalities: (1) d0 + d1 > 0, (2) d1 >= 2, (3) d4 > 5
+  /// - Equalities:   (4) d3 + d4 = 1, (5) d0 - d2 = 3
+  ///
+  /// These form two connected components:
+  /// - Component 1: {d0, d1, d2} (related by constraints 1, 2, 5)
+  /// - Component 2: {d3, d4} (related by constraint 4)
+  ///
+  /// If we are querying the bound of variable `d0`, constraints related to
+  /// Component 2 (e.g., constraints 3 and 4) can be safely pruned as they
+  /// have no impact on the solution space of Component 1.
+  /// This function prunes irrelevant constraints by identifying all variables
+  /// and constraints that belong to the same connected component as the
+  /// target variable.
+  void pruneConstraints(unsigned pos);
+
   /// Tries to fold the specified variable to a constant using a trivial
   /// equality detection; if successful, the constant is substituted for the
   /// variable everywhere in the constraint system and then removed from the
