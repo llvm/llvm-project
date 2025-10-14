@@ -4,15 +4,17 @@
 
 // RUN: gcc -c -flto -x c %s -o %t.dynamic.o
 // RUN: gcc -fuse-ld=lld -flto %t.dynamic.o -o %t.dynamic
-// RUN: %t.dynamic | FileCheck %s
 // RUN: llvm-objdump -t -j .comment -s %t.dynamic | \
 // RUN:   FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-readelf -s %t.dynamic | \
+// RUN:   FileCheck --check-prefix=READELF %s
 
 // RUN: gcc -c -flto -x c -fPIE %s -o %t.pie.o
 // RUN: gcc -fuse-ld=lld -flto -pie %t.pie.o -o %t.pie
-// RUN: %t.pie | FileCheck %s
 // RUN: llvm-objdump -t -j .comment -s %t.pie \
 // RUN:   | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-readelf -s %t.pie | \
+// RUN:   FileCheck --check-prefix=READELF %s
 
 #include <stdio.h>
 
@@ -21,8 +23,8 @@ int main() {
   return 0;
 }
 
-// CHECK: It works!
-
 // OBJDUMP: __gnu_lto
 // OBJDUMP: .LLD 1.0
 // OBJDUMP: GCC
+
+// READELF: FUNC GLOBAL DEFAULT {{.*}} main
