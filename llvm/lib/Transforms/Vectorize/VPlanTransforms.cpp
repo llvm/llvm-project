@@ -2111,7 +2111,7 @@ static void licm(VPlan &Plan) {
   auto CannotHoistRecipe = [](VPRecipeBase &R) {
     // TODO: Relax checks in the future, e.g. we could also hoist reads, if
     // their memory location is not modified in the vector loop.
-    if (R.mayReadOrWriteMemory() || R.isPhi())
+    if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
       return true;
 
     // Allocas cannot be hoisted.
@@ -2121,10 +2121,13 @@ static void licm(VPlan &Plan) {
 
   // Hoist any loop invariant recipes from the vector loop region to the
   // preheader. Preform a shallow traversal of the vector loop region, to
-  // exclude recipes in replicate regions. Since the vector loop region is
-  // guaranteed to execute, if the vector pre-header is, we don't need to check
-  // speculation safety.
+  // exclude recipes in replicate regions.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+
+  // Since the vector loop region is guaranteed to execute, if the vector
+  // pre-header is, we don't need to check speculation safety.
+  assert(Preheader->getSingleSuccessor() == LoopRegion &&
+         "Expected vector prehader's successor to be the vector loop region");
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {

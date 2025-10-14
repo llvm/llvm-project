@@ -19,8 +19,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %catch
   %i.07 = phi i32 [ 0, %catch ], [ %inc, %for.body ]
-  %tofp = uitofp i32 %i.07 to double
-  %call = call double @floor(double %tofp) #1 [ "funclet"(token %1) ]
+  %call = call double @floor(double 1.0) #1 [ "funclet"(token %1) ]
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %inc, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
