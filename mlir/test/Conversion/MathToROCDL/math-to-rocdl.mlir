@@ -670,4 +670,3 @@ func.func @clampf_bf16(%x: bf16, %lo: bf16, %hi: bf16) -> bf16 {
   // CHECK: math.clampf {{.*}} : bf16
   // CHECK-NOT: rocdl.fmed3
 }
-
