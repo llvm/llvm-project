@@ -418,3 +418,54 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
                             ixlenimm:$twiden)>;
   def PseudoSF_VTDISCARD : RISCVVPseudo<(outs), (ins), []>;
 }
+
+class VPatXSfmmTileStore<string intrinsic_name,
+                         string inst_name,
+                         int log2sew> :
+  Pat<(!cast<Intrinsic>(intrinsic_name)
+       (XLenVT GPR:$rs2),
+       (XLenVT GPR:$rs1),
+       (XLenVT AVL:$tn)),
+      (!cast<Instruction>(inst_name)
+       (XLenVT GPR:$rs2),
+       (XLenVT GPR:$rs1),
+       GPR:$tn, log2sew, 1)>;
+
+class VPatXSfmmTileMove_T_V<string intrinsic_name,
+                            string inst_name,
+                            ValueType reg_type,
+                            int log2sew> :
+  Pat<(!cast<Intrinsic>(intrinsic_name)
+                    (XLenVT GPR:$rs1),
+                    (reg_type VRM8:$vs2),
+                    (XLenVT AVL:$atn)),
+      (!cast<Instruction>(inst_name)
+       (XLenVT GPR:$rs1),
+       (reg_type VRM8:$vs2),
+       GPR:$atn, log2sew, 1)>;
+
+class VPatXSfmmTileMove_V_T<string intrinsic_name,
+                            string inst_name,
+                            ValueType result_type,
+                            int log2sew> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                    (XLenVT GPR:$rs1),
+                    (XLenVT AVL:$atn))),
+      (!cast<Instruction>(inst_name)
+       (XLenVT GPR:$rs1),
+       GPR:$atn, log2sew, 1)>;
+
+class VPatXSfmmVTDiscard<string intrinsic_name,
+                         string inst_name> :
+  Pat<(!cast<Intrinsic>(intrinsic_name)),
+      (!cast<Instruction>(inst_name))>;
+
+foreach eew = [8, 16, 32, 64] in
+  def : VPatXSfmmTileStore<"int_riscv_sf_vste" # eew, "PseudoSF_VSTE" # eew, !logtwo(eew)>;
+
+foreach vti = [VI8M8, VI16M8, VI32M8, VI64M8, VF16M8, VF32M8, VF64M8, VBF16M8] in {
+  def : VPatXSfmmTileMove_T_V<"int_riscv_sf_vtmv_t_v", "PseudoSF_VTMV_T_V", vti.Vector, vti.Log2SEW>;
+  def : VPatXSfmmTileMove_V_T<"int_riscv_sf_vtmv_v_t", "PseudoSF_VTMV_V_T", vti.Vector, vti.Log2SEW>;
+}
+
+def : VPatXSfmmVTDiscard<"int_riscv_sf_vtdiscard", "PseudoSF_VTDISCARD">;
