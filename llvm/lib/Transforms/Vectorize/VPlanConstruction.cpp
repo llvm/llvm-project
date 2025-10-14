@@ -433,8 +433,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // We are about to replace the branch to exit the region. Remove the original
   // BranchOnCond, if there is any.
   DebugLoc LatchDL = DL;
-  if (!LatchVPBB->empty() &&
-      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue()))) {
+  if (!LatchVPBB->empty() && match(&LatchVPBB->back(), m_BranchOnCond())) {
     LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
     LatchVPBB->getTerminator()->eraseFromParent();
   }
@@ -480,8 +479,7 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
 
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
                                PredicatedScalarEvolution &PSE, Loop *TheLoop) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
 
   auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
   canonicalHeaderAndLatch(HeaderVPBB, VPDT);
@@ -623,8 +621,7 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan,
 }
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
   for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
@@ -756,6 +753,42 @@ void VPlanTransforms::addMinimumIterationCheck(
   }
 }
 
+void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
+    VPlan &Plan, Value *TripCount, Value *VectorTripCount,
+    bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
+    unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE) {
+  // Add the minimum iteration check for the epilogue vector loop.
+  VPValue *TC = Plan.getOrAddLiveIn(TripCount);
+  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
+  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
+      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
+  VPValue *Count = Builder.createNaryOp(
+      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
+      DebugLoc::getUnknown(), "n.vec.remaining");
+
+  // Generate code to check if the loop's trip count is less than VF * UF of
+  // the vector epilogue loop.
+  auto P = RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  auto *CheckMinIters = Builder.createICmp(
+      P, Count, VFxUF, DebugLoc::getUnknown(), "min.epilog.iters.check");
+  VPInstruction *Branch =
+      Builder.createNaryOp(VPInstruction::BranchOnCond, CheckMinIters);
+
+  // We assume the remaining `Count` is equally distributed in
+  // [0, MainLoopStep)
+  // So the probability for `Count < EpilogueLoopStep` should be
+  // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+  // TODO: Improve the estimate by taking the estimated trip count into
+  // consideration.
+  unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+  const uint32_t Weights[] = {EstimatedSkipCount,
+                              MainLoopStep - EstimatedSkipCount};
+  MDBuilder MDB(Plan.getContext());
+  MDNode *BranchWeights =
+      MDB.createBranchWeights(Weights, /*IsExpected=*/false);
+  Branch->addMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
     auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
@@ -804,8 +837,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
     if (RedPhiR)
       return false;
-    if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+    if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Cur->getRecurrenceKind())) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -825,10 +858,9 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   if (!MinMaxOp)
     return false;
 
-  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
-  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+             RedPhiR->getRecurrenceKind()) &&
          "unsupported reduction");
-  (void)RedPhiRK;
 
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all
@@ -840,8 +872,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
            Plan.getVectorLoopRegion()->getEntryBasicBlock())) {
     auto *VPBB = cast<VPBasicBlock>(VPB);
     for (auto &R : *VPBB) {
-      if (R.mayWriteToMemory() &&
-          !match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+      if (R.mayWriteToMemory() && !match(&R, m_BranchOnCount()))
         return false;
     }
   }

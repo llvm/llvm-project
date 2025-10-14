@@ -6794,7 +6794,9 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(Oversized, 10);
+    Diag(Loc, diag::err_array_too_large) << toString(
+        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
+        /*UpperCase=*/false, /*InsertSeparators=*/true);
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;
@@ -11039,17 +11041,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
     }
-
-    // Variadic functions, other than a *declaration* of printf, are not allowed
-    // in device-side CUDA code, unless someone passed
-    // -fcuda-allow-variadic-functions.
-    if (!getLangOpts().CUDAAllowVariadicFunctions && NewFD->isVariadic() &&
-        (NewFD->hasAttr<CUDADeviceAttr>() ||
-         NewFD->hasAttr<CUDAGlobalAttr>()) &&
-        !(II && II->isStr("printf") && NewFD->isExternC() &&
-          !D.isFunctionDefinition())) {
-      Diag(NewFD->getLocation(), diag::err_variadic_device_fn);
-    }
   }
 
   MarkUnusedFileScopedDecl(NewFD);
@@ -14646,7 +14637,7 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 
   Declarator D(DS, ParsedAttributesView::none(), DeclaratorContext::ForInit);
   D.SetIdentifier(Ident, IdentLoc);
-  D.takeAttributes(Attrs);
+  D.takeAttributesAppending(Attrs);
 
   D.AddTypeInfo(DeclaratorChunk::getReference(0, IdentLoc, /*lvalue*/ false),
                 IdentLoc);
@@ -18907,8 +18898,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 
@@ -20807,7 +20797,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
   // SYCL functions can be template, so we check if they have appropriate
   // attribute prior to checking if it is a template.
-  if (LangOpts.SYCLIsDevice && FD->hasAttr<DeviceKernelAttr>())
+  if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelAttr>())
     return FunctionEmissionStatus::Emitted;
 
   // Templates are emitted when they're instantiated.

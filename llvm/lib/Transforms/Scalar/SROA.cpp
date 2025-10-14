@@ -2961,6 +2961,7 @@ public:
         isa<FixedVectorType>(NewAI.getAllocatedType())
             ? cast<FixedVectorType>(NewAI.getAllocatedType())->getElementType()
             : Type::getInt8Ty(NewAI.getContext());
+    unsigned AllocatedEltTySize = DL.getTypeSizeInBits(AllocatedEltTy);
 
     // Helper to check if a type is
     //  1. A fixed vector type
@@ -2991,9 +2992,16 @@ public:
         // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
         //   2. The store is volatile
+        //   3. The total store size is not a multiple of the allocated element
+        //   type size
         if (!IsTypeValidForTreeStructuredMerge(
                 SI->getValueOperand()->getType()) ||
             SI->isVolatile())
+          return std::nullopt;
+        auto *VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+        unsigned NumElts = VecTy->getNumElements();
+        unsigned EltSize = DL.getTypeSizeInBits(VecTy->getElementType());
+        if (NumElts * EltSize % AllocatedEltTySize != 0)
           return std::nullopt;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
                                 SI->getValueOperand());

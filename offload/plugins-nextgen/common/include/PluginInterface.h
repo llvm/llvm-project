@@ -193,7 +193,7 @@ struct InfoTreeNode {
 
   InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
   InfoTreeNode(std::string Key, VariantType Value, std::string Units)
-      : Key(Key), Value(Value), Units(Units) {}
+      : Key(std::move(Key)), Value(Value), Units(std::move(Units)) {}
 
   /// Add a new info entry as a child of this node. The entry requires at least
   /// a key string in \p Key. The value in \p Value is optional and can be any
@@ -202,7 +202,7 @@ struct InfoTreeNode {
   /// use that value for an appropriate olGetDeviceInfo query
   template <typename T = std::monostate>
   InfoTreeNode *add(std::string Key, T Value = T(),
-                    const std::string &Units = std::string(),
+                    std::string Units = std::string(),
                     std::optional<DeviceInfo> DeviceInfoKey = std::nullopt) {
     assert(!Key.empty() && "Invalid info key");
 
@@ -217,7 +217,8 @@ struct InfoTreeNode {
     else
       ValueVariant = std::string{Value};
 
-    auto Ptr = &Children->emplace_back(Key, ValueVariant, Units);
+    auto Ptr =
+        &Children->emplace_back(std::move(Key), ValueVariant, std::move(Units));
 
     if (DeviceInfoKey)
       DeviceInfoMap[*DeviceInfoKey] = Children->size() - 1;
@@ -950,13 +951,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
                      KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
 
-  /// Initialize a __tgt_async_info structure. Related to interop features.
+  /// Initialize a __tgt_async_info structure.
   Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
   virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
-
-  /// Initialize a __tgt_device_info structure. Related to interop features.
-  Error initDeviceInfo(__tgt_device_info *DeviceInfo);
-  virtual Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) = 0;
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1488,10 +1485,6 @@ public:
 
   /// Creates an asynchronous queue for the given plugin.
   int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
-
-  /// Creates device information to be used for diagnostics.
-  int32_t init_device_info(int32_t DeviceId, __tgt_device_info *DeviceInfo,
-                           const char **ErrStr);
 
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);

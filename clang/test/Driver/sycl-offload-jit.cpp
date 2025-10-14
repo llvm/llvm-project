@@ -13,21 +13,21 @@
 // CHK-PHASES-NEXT: 5: compiler, {4}, ir, (device-sycl)
 // CHK-PHASES-NEXT: 6: backend, {5}, ir, (device-sycl)
 // CHK-PHASES-NEXT: 7: offload, "device-sycl (spirv64-unknown-unknown)" {6}, ir
-// CHK-PHASES-NEXT: 8: clang-offload-packager, {7}, image, (device-sycl)
+// CHK-PHASES-NEXT: 8: llvm-offload-binary, {7}, image, (device-sycl)
 // CHK-PHASES-NEXT: 9: offload, "host-sycl (x86_64{{.*}})" {2}, "device-sycl (x86_64{{.*}})" {8}, ir
 // CHK-PHASES-NEXT: 10: backend, {9}, assembler, (host-sycl)
 // CHK-PHASES-NEXT: 11: assembler, {10}, object, (host-sycl)
 // CHK-PHASES-NEXT: 12: clang-linker-wrapper, {11}, image, (host-sycl)
 
 /// Check expected default values for device compilation when using -fsycl as
-/// well as clang-offload-packager inputs.
+/// well as llvm-offload-binary inputs.
 // RUN: %clang -### -fsycl -c --target=x86_64-unknown-linux-gnu %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-DEVICE-TRIPLE %s
 // CHK-DEVICE-TRIPLE: "-cc1"{{.*}} "-triple" "spirv64-unknown-unknown"
 // CHK-DEVICE-TRIPLE-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHK-DEVICE-TRIPLE-SAME: "-fsycl-is-device"
 // CHK-DEVICE-TRIPLE-SAME: "-O2"
-// CHK-DEVICE-TRIPLE: clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=generic,kind=sycl"
+// CHK-DEVICE-TRIPLE: llvm-offload-binary{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=generic,kind=sycl"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.

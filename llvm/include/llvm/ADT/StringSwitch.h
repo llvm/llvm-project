@@ -14,8 +14,10 @@
 #define LLVM_ADT_STRINGSWITCH_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstring>
+#include <initializer_list>
 #include <optional>
 
 namespace llvm {
@@ -84,55 +86,60 @@ public:
     return *this;
   }
 
+  StringSwitch &Cases(std::initializer_list<StringLiteral> CaseStrings,
+                      T Value) {
+    return CasesImpl(Value, CaseStrings);
+  }
+
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, T Value) {
-    return CasesImpl(Value, S0, S1);
+    return CasesImpl(Value, {S0, S1});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       T Value) {
-    return CasesImpl(Value, S0, S1, S2);
+    return CasesImpl(Value, {S0, S1, S2});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3);
+    return CasesImpl(Value, {S0, S1, S2, S3});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, StringLiteral S4, T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3, S4);
+    return CasesImpl(Value, {S0, S1, S2, S3, S4});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, StringLiteral S4, StringLiteral S5,
                       T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3, S4, S5);
+    return CasesImpl(Value, {S0, S1, S2, S3, S4, S5});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, StringLiteral S4, StringLiteral S5,
                       StringLiteral S6, T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3, S4, S5, S6);
+    return CasesImpl(Value, {S0, S1, S2, S3, S4, S5, S6});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, StringLiteral S4, StringLiteral S5,
                       StringLiteral S6, StringLiteral S7, T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3, S4, S5, S6, S7);
+    return CasesImpl(Value, {S0, S1, S2, S3, S4, S5, S6, S7});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, StringLiteral S4, StringLiteral S5,
                       StringLiteral S6, StringLiteral S7, StringLiteral S8,
                       T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3, S4, S5, S6, S7, S8);
+    return CasesImpl(Value, {S0, S1, S2, S3, S4, S5, S6, S7, S8});
   }
 
   StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                       StringLiteral S3, StringLiteral S4, StringLiteral S5,
                       StringLiteral S6, StringLiteral S7, StringLiteral S8,
                       StringLiteral S9, T Value) {
-    return CasesImpl(Value, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9);
+    return CasesImpl(Value, {S0, S1, S2, S3, S4, S5, S6, S7, S8, S9});
   }
 
   // Case-insensitive case matchers.
@@ -155,23 +162,28 @@ public:
     return *this;
   }
 
+  StringSwitch &CasesLower(std::initializer_list<StringLiteral> CaseStrings,
+                           T Value) {
+    return CasesLowerImpl(Value, CaseStrings);
+  }
+
   StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, T Value) {
-    return CasesLowerImpl(Value, S0, S1);
+    return CasesLowerImpl(Value, {S0, S1});
   }
 
   StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                            T Value) {
-    return CasesLowerImpl(Value, S0, S1, S2);
+    return CasesLowerImpl(Value, {S0, S1, S2});
   }
 
   StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                            StringLiteral S3, T Value) {
-    return CasesLowerImpl(Value, S0, S1, S2, S3);
+    return CasesLowerImpl(Value, {S0, S1, S2, S3});
   }
 
   StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
                            StringLiteral S3, StringLiteral S4, T Value) {
-    return CasesLowerImpl(Value, S0, S1, S2, S3, S4);
+    return CasesLowerImpl(Value, {S0, S1, S2, S3, S4});
   }
 
   [[nodiscard]] R Default(T Value) {
@@ -180,10 +192,15 @@ public:
     return Value;
   }
 
-  [[nodiscard]] operator R() {
-    assert(Result && "Fell off the end of a string-switch");
-    return std::move(*Result);
+  /// Declare default as unreachable, making sure that all cases were handled.
+  [[nodiscard]] R DefaultUnreachable(
+      const char *Message = "Fell off the end of a string-switch") {
+    if (Result)
+      return std::move(*Result);
+    llvm_unreachable(Message);
   }
+
+  [[nodiscard]] operator R() { return DefaultUnreachable(); }
 
 private:
   // Returns true when `Str` matches the `S` argument, and stores the result.
@@ -205,16 +222,21 @@ private:
     return false;
   }
 
-  template <typename... Args> StringSwitch &CasesImpl(T &Value, Args... Cases) {
+  StringSwitch &CasesImpl(T &Value,
+                          std::initializer_list<StringLiteral> Cases) {
     // Stop matching after the string is found.
-    (... || CaseImpl(Value, Cases));
+    for (StringLiteral S : Cases)
+      if (CaseImpl(Value, S))
+        break;
     return *this;
   }
 
-  template <typename... Args>
-  StringSwitch &CasesLowerImpl(T &Value, Args... Cases) {
+  StringSwitch &CasesLowerImpl(T &Value,
+                               std::initializer_list<StringLiteral> Cases) {
     // Stop matching after the string is found.
-    (... || CaseLowerImpl(Value, Cases));
+    for (StringLiteral S : Cases)
+      if (CaseLowerImpl(Value, S))
+        break;
     return *this;
   }
 };

@@ -605,7 +605,7 @@ define i32 @extract_v4i32_select(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %c
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
@@ -634,7 +634,7 @@ define i32 @extract_v4i32_select_const(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x 
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI23_0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -1114,16 +1114,10 @@ entry:
 }
 
 define ptr @v3ext(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
-; CHECK-SD-LABEL: v3ext:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr d0, [sp]
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v3ext:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr x0, [sp]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v3ext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x0, [sp]
+; CHECK-NEXT:    ret
 entry:
   %c = extractelement <3 x ptr> %x, i32 2
   ret ptr %c

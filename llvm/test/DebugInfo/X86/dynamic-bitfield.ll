@@ -27,7 +27,7 @@ source_filename = "bitfield.c"
 !6 = !{}
 !7 = !{!0, !2}
 !8 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "PackedBits", file: !5, line: 3, size: 40, elements: !9)
-!9 = !{!10, !12, !16}
+!9 = !{!10, !12, !16, !21}
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !8, file: !5, line: 5, baseType: !11, size: 8)
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"a"
@@ -60,5 +60,14 @@ source_filename = "bitfield.c"
 ; CHECK:      DW_AT_bit_size             [DW_FORM_exprloc]	(DW_OP_lit27)
 ; CHECK-NEXT: DW_AT_data_bit_offset      [DW_FORM_exprloc]	(DW_OP_lit13)
 ; CHECK-NOT:  DW_AT_data_member_location
-; CHECK: DW_TAG
 !20 = !{!"clang version 3.9.0 (trunk 267633)"}
+!21 = !DIDerivedType(tag: DW_TAG_member, name: "d", scope: !8, file: !5, line: 7, baseType: !13, offset: !DIExpression(DW_OP_constu, 15), flags: DIFlagBitField)
+; CHECK: DW_TAG_member
+; CHECK-NEXT: DW_AT_name{{.*}}"d"
+; CHECK-NOT:  DW_TAG
+; CHECK-NOT:  DW_AT_bit_offset
+; CHECK-NOT:  DW_AT_byte_size
+; CHECK-NOT:  DW_AT_bit_size
+; CHECK:      DW_AT_data_bit_offset      [DW_FORM_exprloc]	(DW_OP_lit15)
+; CHECK-NOT:  DW_AT_data_member_location
+; CHECK: DW_TAG

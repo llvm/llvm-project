@@ -913,8 +913,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
 
     if (e->getType()->isAnyComplexType()) {
-      cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
-      lv = LValue();
+      emitComplexPrePostIncDec(e, lv, kind, /*isPre=*/true);
     } else {
       emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
     }
@@ -1109,8 +1108,9 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   return lv;
 }
 
-LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e) {
-  cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e);
+LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
+                                               llvm::StringRef name) {
+  cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e, name);
   assert(globalOp.getAlignment() && "expected alignment for string literal");
   unsigned align = *(globalOp.getAlignment());
   mlir::Value addr =
@@ -1185,10 +1185,16 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_BuiltinFnToFnPtr:
     llvm_unreachable("builtin functions are handled elsewhere");
 
+  case CK_Dynamic: {
+    LValue lv = emitLValue(e->getSubExpr());
+    Address v = lv.getAddress();
+    const auto *dce = cast<CXXDynamicCastExpr>(e);
+    return makeNaturalAlignAddrLValue(emitDynamicCast(v, dce), e->getType());
+  }
+
   // These are never l-values; just use the aggregate emission code.
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
-  case CK_Dynamic:
   case CK_ToUnion:
   case CK_BaseToDerived:
   case CK_AddressSpaceConversion:
@@ -1916,8 +1922,7 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
   LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
   switch (getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgm.errorNYI(loc, "convertTempToRValue: complex type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitLoadOfComplex(lvalue, loc));
   case cir::TEK_Aggregate:
     cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
     return RValue::get(nullptr);
@@ -2054,8 +2059,8 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   // CIR uses its own alloca address space rather than follow the target data
   // layout like original CodeGen. The data layout awareness should be done in
   // the lowering pass instead.
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType localVarPtrTy = builder.getPointerTo(ty);
+  cir::PointerType localVarPtrTy =
+      builder.getPointerTo(ty, getCIRAllocaAddressSpace());
   mlir::IntegerAttr alignIntAttr = cgm.getSize(alignment);
 
   mlir::Value addr;
@@ -2372,6 +2377,21 @@ mlir::Value CIRGenFunction::emitScalarConstant(
     return {};
   }
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
+}
+
+LValue CIRGenFunction::emitPredefinedLValue(const PredefinedExpr *e) {
+  const StringLiteral *sl = e->getFunctionName();
+  assert(sl != nullptr && "No StringLiteral name in PredefinedExpr");
+  auto fn = cast<cir::FuncOp>(curFn);
+  StringRef fnName = fn.getName();
+  fnName.consume_front("\01");
+  std::array<StringRef, 2> nameItems = {
+      PredefinedExpr::getIdentKindName(e->getIdentKind()), fnName};
+  std::string gvName = llvm::join(nameItems, ".");
+  if (isa_and_nonnull<BlockDecl>(curCodeDecl))
+    cgm.errorNYI(e->getSourceRange(), "predefined lvalue in block");
+
+  return emitStringLiteralLValue(sl, gvName);
 }
 
 /// An LValue is a candidate for having its loads and stores be made atomic if

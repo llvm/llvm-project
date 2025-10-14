@@ -33,7 +33,7 @@ clang-proto-fuzzer
 A |protobuf fuzzer| that compiles valid C++ programs generated from a protobuf
 class that describes a subset of the C++ language.
 
-This fuzzer accepts clang command line options after `ignore_remaining_args=1`.
+This fuzzer accepts clang command-line options after `ignore_remaining_args=1`.
 For example, the following command will fuzz clang with a higher optimization
 level:
 
@@ -106,7 +106,7 @@ llvm-opt-fuzzer
 
 A |LLVM IR fuzzer| aimed at finding bugs in optimization passes.
 
-It receives optimization pipeline and runs it for each fuzzer input.
+It receives an optimization pipeline and runs it for each fuzzer input.
 
 Interface of this fuzzer almost directly mirrors ``llvm-isel-fuzzer``. Both
 ``mtriple`` and ``passes`` arguments are required. Passes are specified in a
@@ -117,7 +117,7 @@ this format in the doxygen for ``PassBuilder::parsePassPipeline``.
 
    % bin/llvm-opt-fuzzer <corpus-dir> -ignore_remaining_args=1 -mtriple x86_64 -passes instcombine
 
-Similarly to the ``llvm-isel-fuzzer`` arguments in some predefined configurations
+Similarly to the ``llvm-isel-fuzzer``, arguments in some predefined configurations
 might be embedded directly into the binary file name:
 
 .. code-block:: shell
@@ -176,7 +176,7 @@ mutations that a fuzzer in LLVM might want.
 Generic Random Fuzzing
 ----------------------
 
-The most basic form of input mutation is to use the built in mutators of
+The most basic form of input mutation is to use the built-in mutators of
 LibFuzzer. These simply treat the input corpus as a bag of bits and make random
 mutations. This type of fuzzer is good for stressing the surface layers of a
 program, and is good at testing things like lexers, parsers, or binary
@@ -244,7 +244,7 @@ by adding the following two flags to your CMake invocation:
           to avoid building the sanitizers themselves with sanitizers enabled.
 
 .. note:: You may run into issues if you build with BFD ld, which is the
-          default linker on many unix systems. These issues are being tracked
+          default linker on many Unix systems. These issues are being tracked
           in https://llvm.org/PR34636.
 
 Continuously Running and Finding Bugs
@@ -280,6 +280,6 @@ your fuzzer can be built and tested when not built against libFuzzer.
 
 There is also some handling of the CMake config for fuzzers, where you should
 use the ``add_llvm_fuzzer`` to set up fuzzer targets. This function works
-similarly to functions such as ``add_llvm_tool``, but they take care of linking
+similarly to functions such as ``add_llvm_tool``, but it takes care of linking
 to LibFuzzer when appropriate and can be passed the ``DUMMY_MAIN`` argument to
 enable standalone testing.

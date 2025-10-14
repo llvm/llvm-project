@@ -108,7 +108,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
       State.NextToken->Previous->getPreviousNonComment();
-  if (!LBrace || !LBrace->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
+  if (!LBrace || LBrace->isNoneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
       LBrace->is(BK_Block) || LBrace->is(TT_DictLiteral) ||
       LBrace->Next->is(TT_DesignatedInitializerPeriod)) {
     return 0;
@@ -177,7 +177,7 @@ static unsigned CodePointsBetween(const FormatToken *Begin,
 void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // FIXME: At some point we might want to do this for other lists, too.
   if (!Token->MatchingParen ||
-      !Token->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
+      Token->isNoneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
     return;
   }
 

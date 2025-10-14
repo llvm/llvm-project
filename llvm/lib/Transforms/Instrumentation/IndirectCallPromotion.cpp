@@ -55,11 +55,11 @@ using namespace llvm;
 STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
+namespace llvm {
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
-namespace llvm {
 extern cl::opt<bool> EnableVTableProfileUse;
-}
+} // namespace llvm
 
 // Command line option to disable indirect-call promotion with the default as
 // false. This is for debug purpose.
@@ -672,8 +672,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
       createBranchWeights(CB.getContext(), Count, TotalCount - Count));
 
   if (AttachProfToDirectCall)
-    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)},
-                     /*IsExpected=*/false);
+    setFittedBranchWeights(NewInst, {Count},
+                           /*IsExpected=*/false);
 
   using namespace ore;
 

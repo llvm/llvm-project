@@ -6,7 +6,7 @@
 RWStructuredBuffer<float> RWSB1, RWSB2;
 RasterizerOrderedStructuredBuffer<float> ROSB1, ROSB2;
 
-// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0) }
+// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0), target("dx.RawBuffer", float, 1, 0) }
 
 export void TestIncrementCounter() {
 // CHECK: define void @_Z20TestIncrementCounterv()

@@ -273,8 +273,7 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      MAKE_MLIR_PYTHON_QUALNAME("ir.Context");
+  static constexpr const char kTypeDescription[] = "Context";
   static PyMlirContext &resolve();
 };
 
@@ -500,8 +499,7 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      MAKE_MLIR_PYTHON_QUALNAME("ir.Location");
+  static constexpr const char kTypeDescription[] = "Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -671,7 +669,7 @@ public:
   /// Creates a PyOperation from the MlirOperation wrapped by a capsule.
   /// Ownership of the underlying MlirOperation is taken by calling this
   /// function.
-  static nanobind::object createFromCapsule(nanobind::object capsule);
+  static nanobind::object createFromCapsule(const nanobind::object &capsule);
 
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
@@ -843,6 +841,8 @@ public:
   PyInsertionPoint(const PyBlock &block);
   /// Creates an insertion point positioned before a reference operation.
   PyInsertionPoint(PyOperationBase &beforeOperationBase);
+  /// Creates an insertion point positioned before a reference operation.
+  PyInsertionPoint(PyOperationRef beforeOperationRef);
 
   /// Shortcut to create an insertion point at the beginning of the block.
   static PyInsertionPoint atBlockBegin(PyBlock &block);
@@ -1020,7 +1020,7 @@ public:
   /// Note that PyAttribute instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAttribute
   /// is taken by calling this function.
-  static PyAttribute createFromCapsule(nanobind::object capsule);
+  static PyAttribute createFromCapsule(const nanobind::object &capsule);
 
   nanobind::object maybeDownCast();
 
@@ -1101,10 +1101,12 @@ public:
           return DerivedTy::isaFunction(otherAttr);
         },
         nanobind::arg("other"));
-    cls.def_prop_ro("type", [](PyAttribute &attr) {
-      return PyType(attr.getContext(), mlirAttributeGetType(attr))
-          .maybeDownCast();
-    });
+    cls.def_prop_ro(
+        "type",
+        [](PyAttribute &attr) -> nanobind::typed<nanobind::object, PyType> {
+          return PyType(attr.getContext(), mlirAttributeGetType(attr))
+              .maybeDownCast();
+        });
     cls.def_prop_ro_static(
         "static_typeid",
         [](nanobind::object & /*class*/) -> PyTypeID {

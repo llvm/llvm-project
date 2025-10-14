@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=i386-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c %s -flax-vector-conversions=none -ffreestanding -triple=i386-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=i386-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+
+
 #include <immintrin.h>
 
 __m128i test_mm_madd52hi_epu64(__m128i __X, __m128i __Y, __m128i __Z) {

@@ -21,6 +21,7 @@ unittest("ADTTests") {
     "BitTest.cpp",
     "BitVectorTest.cpp",
     "BitmaskEnumTest.cpp",
+    "BitsetTest.cpp",
     "BreadthFirstIteratorTest.cpp",
     "BumpPtrListTest.cpp",
     "CoalescingBitVectorTest.cpp",

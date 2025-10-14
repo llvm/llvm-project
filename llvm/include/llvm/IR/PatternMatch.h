@@ -259,48 +259,27 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
   return match_combine_and<LTy, RTy>(L, R);
 }
 
-struct apint_match {
-  const APInt *&Res;
+template <typename APTy> struct ap_match {
+  static_assert(std::is_same_v<APTy, APInt> || std::is_same_v<APTy, APFloat>);
+  using ConstantTy =
+      std::conditional_t<std::is_same_v<APTy, APInt>, ConstantInt, ConstantFP>;
+
+  const APTy *&Res;
   bool AllowPoison;
 
-  apint_match(const APInt *&Res, bool AllowPoison)
+  ap_match(const APTy *&Res, bool AllowPoison)
       : Res(Res), AllowPoison(AllowPoison) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (auto *CI = dyn_cast<ConstantTy>(V)) {
       Res = &CI->getValue();
       return true;
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         if (auto *CI =
-                dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowPoison))) {
+                dyn_cast_or_null<ConstantTy>(C->getSplatValue(AllowPoison))) {
           Res = &CI->getValue();
-          return true;
-        }
-    return false;
-  }
-};
-// Either constexpr if or renaming ConstantFP::getValueAPF to
-// ConstantFP::getValue is needed to do it via single template
-// function for both apint/apfloat.
-struct apfloat_match {
-  const APFloat *&Res;
-  bool AllowPoison;
-
-  apfloat_match(const APFloat *&Res, bool AllowPoison)
-      : Res(Res), AllowPoison(AllowPoison) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (auto *CI = dyn_cast<ConstantFP>(V)) {
-      Res = &CI->getValueAPF();
-      return true;
-    }
-    if (V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI =
-                dyn_cast_or_null<ConstantFP>(C->getSplatValue(AllowPoison))) {
-          Res = &CI->getValueAPF();
           return true;
         }
     return false;
@@ -309,36 +288,36 @@ struct apfloat_match {
 
 /// Match a ConstantInt or splatted ConstantVector, binding the
 /// specified pointer to the contained APInt.
-inline apint_match m_APInt(const APInt *&Res) {
+inline ap_match<APInt> m_APInt(const APInt *&Res) {
   // Forbid poison by default to maintain previous behavior.
-  return apint_match(Res, /* AllowPoison */ false);
+  return ap_match<APInt>(Res, /* AllowPoison */ false);
 }
 
 /// Match APInt while allowing poison in splat vector constants.
-inline apint_match m_APIntAllowPoison(const APInt *&Res) {
-  return apint_match(Res, /* AllowPoison */ true);
+inline ap_match<APInt> m_APIntAllowPoison(const APInt *&Res) {
+  return ap_match<APInt>(Res, /* AllowPoison */ true);
 }
 
 /// Match APInt while forbidding poison in splat vector constants.
-inline apint_match m_APIntForbidPoison(const APInt *&Res) {
-  return apint_match(Res, /* AllowPoison */ false);
+inline ap_match<APInt> m_APIntForbidPoison(const APInt *&Res) {
+  return ap_match<APInt>(Res, /* AllowPoison */ false);
 }
 
 /// Match a ConstantFP or splatted ConstantVector, binding the
 /// specified pointer to the contained APFloat.
-inline apfloat_match m_APFloat(const APFloat *&Res) {
+inline ap_match<APFloat> m_APFloat(const APFloat *&Res) {
   // Forbid undefs by default to maintain previous behavior.
-  return apfloat_match(Res, /* AllowPoison */ false);
+  return ap_match<APFloat>(Res, /* AllowPoison */ false);
 }
 
 /// Match APFloat while allowing poison in splat vector constants.
-inline apfloat_match m_APFloatAllowPoison(const APFloat *&Res) {
-  return apfloat_match(Res, /* AllowPoison */ true);
+inline ap_match<APFloat> m_APFloatAllowPoison(const APFloat *&Res) {
+  return ap_match<APFloat>(Res, /* AllowPoison */ true);
 }
 
 /// Match APFloat while forbidding poison in splat vector constants.
-inline apfloat_match m_APFloatForbidPoison(const APFloat *&Res) {
-  return apfloat_match(Res, /* AllowPoison */ false);
+inline ap_match<APFloat> m_APFloatForbidPoison(const APFloat *&Res) {
+  return ap_match<APFloat>(Res, /* AllowPoison */ false);
 }
 
 template <int64_t Val> struct constantint_match {
@@ -1027,7 +1006,7 @@ struct bind_const_intval_ty {
 
   template <typename ITy> bool match(ITy *V) const {
     const APInt *ConstInt;
-    if (!apint_match(ConstInt, /*AllowPoison=*/false).match(V))
+    if (!ap_match<APInt>(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
     if (ConstInt->getActiveBits() > 64)
       return false;
@@ -2205,6 +2184,18 @@ inline PtrToIntSameSize_match<OpTy> m_PtrToIntSameSize(const DataLayout &DL,
   return PtrToIntSameSize_match<OpTy>(DL, Op);
 }
 
+/// Matches PtrToAddr.
+template <typename OpTy>
+inline CastOperator_match<OpTy, Instruction::PtrToAddr>
+m_PtrToAddr(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::PtrToAddr>(Op);
+}
+
+/// Matches PtrToInt or PtrToAddr.
+template <typename OpTy> inline auto m_PtrToIntOrAddr(const OpTy &Op) {
+  return m_CombineOr(m_PtrToInt(Op), m_PtrToAddr(Op));
+}
+
 /// Matches IntToPtr.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::IntToPtr>
@@ -2792,6 +2783,14 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
 m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
              const Opnd3 &Op3) {
   return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2, Op3);
+}
+
+/// Matches MaskedStore Intrinsic.
+template <typename Opnd0, typename Opnd1, typename Opnd2, typename Opnd3>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
+m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
+              const Opnd3 &Op3) {
+  return m_Intrinsic<Intrinsic::masked_store>(Op0, Op1, Op2, Op3);
 }
 
 /// Matches MaskedGather Intrinsic.

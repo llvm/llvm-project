@@ -1388,7 +1388,7 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 // Floating-point vselects:
 // 11.15. Vector Integer Merge Instructions
 // 13.15. Vector Floating-Point Merge Instruction
-foreach fvti = AllFloatVectors in {
+foreach fvti = AllFloatAndBF16Vectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
@@ -1397,7 +1397,12 @@ foreach fvti = AllFloatVectors in {
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask VMV0:$vm),
                    fvti.AVL, fvti.Log2SEW)>;
+  }
+}
 
+foreach fvti = AllFloatVectors in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
                                     (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
                                     fvti.RegClass:$rs2)),
@@ -1412,9 +1417,7 @@ foreach fvti = AllFloatVectors in {
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
   }
-}
 
-foreach fvti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
                                     (SplatFPOp fvti.ScalarRegClass:$rs1),

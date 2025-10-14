@@ -1343,9 +1343,10 @@ class X86_64ABIInfo : public ABIInfo {
   }
 
   bool returnCXXRecordGreaterThan128InMem() const {
-    // Clang <= 20.0 did not do this.
+    // Clang <= 20.0 did not do this, and PlayStation does not do this.
     if (getContext().getLangOpts().getClangABICompat() <=
-        LangOptions::ClangABI::Ver20)
+            LangOptions::ClangABI::Ver20 ||
+        getTarget().getTriple().isPS())
       return false;
 
     return true;

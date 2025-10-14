@@ -275,7 +275,7 @@ bool Dependence::isAnti() const {
 // if no subscript in the source or destination mention the induction
 // variable associated with the loop at this level.
 // Leave this out of line, so it will serve as a virtual method anchor
-bool Dependence::isScalar(unsigned level, bool isSameSD) const { return false; }
+bool Dependence::isScalar(unsigned level, bool IsSameSD) const { return false; }
 
 //===----------------------------------------------------------------------===//
 // FullDependence methods
@@ -351,38 +351,38 @@ bool FullDependence::normalize(ScalarEvolution *SE) {
 
 // getDirection - Returns the direction associated with a particular common or
 // SameSD level.
-unsigned FullDependence::getDirection(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Direction;
+unsigned FullDependence::getDirection(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Direction;
 }
 
 // Returns the distance (or NULL) associated with a particular common or
 // SameSD level.
-const SCEV *FullDependence::getDistance(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Distance;
+const SCEV *FullDependence::getDistance(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Distance;
 }
 
 // Returns true if a particular regular or SameSD level is scalar; that is,
 // if no subscript in the source or destination mention the induction variable
 // associated with the loop at this level.
-bool FullDependence::isScalar(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Scalar;
+bool FullDependence::isScalar(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Scalar;
 }
 
 // Returns true if peeling the first iteration from this regular or SameSD
 // loop level will break this dependence.
-bool FullDependence::isPeelFirst(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).PeelFirst;
+bool FullDependence::isPeelFirst(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).PeelFirst;
 }
 
 // Returns true if peeling the last iteration from this regular or SameSD
 // loop level will break this dependence.
-bool FullDependence::isPeelLast(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).PeelLast;
+bool FullDependence::isPeelLast(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).PeelLast;
 }
 
 // Returns true if splitting loop will break the dependence.
-bool FullDependence::isSplitable(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Splitable;
+bool FullDependence::isSplitable(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Splitable;
 }
 
 // inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
@@ -691,7 +691,7 @@ void Dependence::dump(raw_ostream &OS) const {
     dumpImp(OS);
     unsigned SameSDLevels = getSameSDLevels();
     if (SameSDLevels > 0) {
-      OS << "! / assuming " << SameSDLevels << " loop level(s) fused: ";
+      OS << " / assuming " << SameSDLevels << " loop level(s) fused: ";
       dumpImp(OS, true);
     }
   }
@@ -706,13 +706,13 @@ void Dependence::dump(raw_ostream &OS) const {
 
 // For debugging purposes. Dumps a dependence to OS with or without considering
 // the SameSD levels.
-void Dependence::dumpImp(raw_ostream &OS, bool isSameSD) const {
+void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   bool Splitable = false;
   unsigned Levels = getLevels();
   unsigned SameSDLevels = getSameSDLevels();
   bool OnSameSD = false;
   unsigned LevelNum = Levels;
-  if (isSameSD)
+  if (IsSameSD)
     LevelNum += SameSDLevels;
   OS << " [";
   for (unsigned II = 1; II <= LevelNum; ++II) {

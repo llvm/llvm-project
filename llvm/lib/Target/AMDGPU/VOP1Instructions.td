@@ -314,9 +314,10 @@ let SubtargetPredicate = HasGFX950Insts, OtherPredicates = [HasBF16ConversionIns
   defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
 }
 let SubtargetPredicate = isGFX1250Plus, OtherPredicates = [HasBF16ConversionInsts] in {
-  defm V_CVT_F32_BF16_gfx1250 : VOP1Inst_t16_with_profiles <"v_cvt_f32_bf16_gfx1250", VOP_F32_BF16,
-                                                            VOPProfile_CVT_F32_BF16_gfx1250_t16,
-                                                            VOPProfile_CVT_F32_BF16_gfx1250_fake16>;
+  let True16Predicate  = UseRealTrue16Insts in
+    defm V_CVT_F32_BF16_gfx1250_t16 : VOP1Inst <"V_CVT_F32_BF16_gfx1250_t16", VOPProfile_CVT_F32_BF16_gfx1250_t16>;
+  let True16Predicate  = UseFakeTrue16Insts in
+    defm V_CVT_F32_BF16_gfx1250_fake16 : VOP1Inst <"V_CVT_F32_BF16_gfx1250_fake16", VOPProfile_CVT_F32_BF16_gfx1250_fake16>;
 }
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
@@ -899,6 +900,7 @@ class VOP1_DPP16_Gen<bits<8> op, VOP1_DPP_Pseudo ps, GFXGen Gen, VOPProfile p = 
   let DecoderNamespace = Gen.DecoderNamespace;
   let OtherPredicates = !listconcat(ps.OtherPredicates,
                                     !if(p.HasExt64BitDPP, [HasDPALU_DPP], []));
+  let True16Predicate = ps.True16Predicate;
 }
 
 class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
@@ -921,6 +923,7 @@ class VOP1_DPP8_Gen<bits<8> op, VOP1_Pseudo ps, GFXGen Gen, VOPProfile p = ps.Pf
     VOP1_DPP8<op, ps, p> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let DecoderNamespace = Gen.DecoderNamespace;
+  let True16Predicate = ps.True16Predicate;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1149,7 +1152,7 @@ defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250<0x049>;
 defm V_TANH_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
-defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
+defm V_CVT_F32_BF16_gfx1250  : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16">;
 defm V_SAT_PK4_I4_I8         : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x073>;
 defm V_SAT_PK4_U4_U8         : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x074>;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
@@ -1561,8 +1564,7 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus]
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let OtherPredicates = [isGFX8Plus, p] in {
+let OtherPredicates = [isGFX8Plus, NotUseRealTrue16Insts] in {
 def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)

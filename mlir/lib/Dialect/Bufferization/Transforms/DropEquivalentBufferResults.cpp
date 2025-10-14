@@ -55,16 +55,6 @@ static func::ReturnOp getAssumedUniqueReturnOp(func::FuncOp funcOp) {
   return returnOp;
 }
 
-/// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(CallOpInterface callOp) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<func::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
-}
-
 LogicalResult
 mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
   IRRewriter rewriter(module.getContext());
@@ -72,7 +62,8 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
   DenseMap<func::FuncOp, DenseSet<func::CallOp>> callerMap;
   // Collect the mapping of functions to their call sites.
   module.walk([&](func::CallOp callOp) {
-    if (func::FuncOp calledFunc = getCalledFunction(callOp)) {
+    if (func::FuncOp calledFunc =
+            dyn_cast_or_null<func::FuncOp>(callOp.resolveCallable())) {
       callerMap[calledFunc].insert(callOp);
     }
   });

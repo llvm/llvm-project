@@ -6996,6 +6996,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                getValue(I.getArgOperand(0)),
                                getValue(I.getArgOperand(1)),
                                getValue(I.getArgOperand(2)), Flags));
+    } else if (TLI.isOperationLegalOrCustom(ISD::FMULADD, VT)) {
+      // TODO: Support splitting the vector.
+      setValue(&I, DAG.getNode(ISD::FMULADD, sdl,
+                               getValue(I.getArgOperand(0)).getValueType(),
+                               getValue(I.getArgOperand(0)),
+                               getValue(I.getArgOperand(1)),
+                               getValue(I.getArgOperand(2)), Flags));
     } else {
       // TODO: Intrinsic calls should have fast-math-flags.
       SDValue Mul = DAG.getNode(
@@ -8103,10 +8110,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_add: {
-    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      visitTargetIntrinsic(I, Intrinsic);
-      return;
-    }
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
     setValue(&I,
