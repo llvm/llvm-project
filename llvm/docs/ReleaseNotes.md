@@ -169,6 +169,9 @@ Changes to LLDB
 
 * LLDB can now set breakpoints, show backtraces, and display variables when
   debugging Wasm with supported runtimes (WAMR and V8).
+* LLDB no longer stops processes by default when receiving SIGWINCH signals 
+  (window resize events) on Linux. This is the default on other Unix platforms.
+
 
 Changes to BOLT
 ---------------------------------
