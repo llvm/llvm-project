@@ -12279,7 +12279,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     APInt MinIndex(ElemBitWidth, 0);
     APInt MinVal = Source.getVectorElt(0).getInt();
-    for (unsigned I = 0; I != SourceLen; ++I) {
+    for (unsigned I = 1; I != SourceLen; ++I) {
       APInt Val = Source.getVectorElt(I).getInt();
       if (MinVal.ugt(Val)) {
         MinVal = Val;
