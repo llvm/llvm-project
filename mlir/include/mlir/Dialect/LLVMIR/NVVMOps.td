@@ -283,24 +283,7 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
 
     // Verify the range attribute satisfies LLVM ConstantRange constructor requirements.
     ::llvm::LogicalResult $cppClass::verify() {
-      auto rangeAttr = getRange();
-      if (!rangeAttr)
-        return ::mlir::success(); // No range specified, validation passes
-      
-      const ::llvm::APInt &lower = rangeAttr->getLower();
-      const ::llvm::APInt &upper = rangeAttr->getUpper();
-      
-      // Check LLVM ConstantRange constructor condition
-      if (lower == upper && !lower.isMaxValue() && !lower.isMinValue()) {
-        unsigned bitWidth = lower.getBitWidth();
-        ::llvm::APInt minVal = ::llvm::APInt::getMinValue(bitWidth);
-        ::llvm::APInt maxVal = ::llvm::APInt::getMaxValue(bitWidth);
-        return emitOpError("invalid range attribute: Lower == Upper, but they aren't min (")
-               << ::llvm::toString(minVal, 10, false) << ") or max (" 
-               << ::llvm::toString(maxVal, 10, false) << ") value! This is an invalid constant range.";
-      }
-      
-      return ::mlir::success();
+      return verifyConstantRangeAttr(getOperation(), getRange());
     }
   }];
 
