@@ -5044,7 +5044,6 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 
   unsigned Opc = N->getOpcode();
   bool IsDiv = (ISD::SDIV == Opc) || (ISD::UDIV == Opc);
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // X / undef -> undef
   // X % undef -> undef
@@ -5076,7 +5075,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   // division-by-zero or remainder-by-zero, so assume the divisor is 1.
   // TODO: Similarly, if we're zero-extending a boolean divisor, then assume
   // it's a 1.
-  if ((N1C && N1C->isOne()) || (VT.getScalarType() == MVT::i1))
+  if (isOneOrOneSplat(N1) || (VT.getScalarType() == MVT::i1))
     return IsDiv ? N0 : DAG.getConstant(0, DL, VT);
 
   return SDValue();
