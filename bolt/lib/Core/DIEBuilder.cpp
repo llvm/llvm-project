@@ -584,7 +584,8 @@ DWARFDie DIEBuilder::resolveDIEReference(
   if ((RefCU =
            getUnitForOffset(*this, *DwarfContext, TmpRefOffset, AttrSpec))) {
     /// Trying to add to current working set in case it's cross CU reference.
-    registerUnit(*RefCU, true);
+    if (!registerUnit(*RefCU, true))
+      return DWARFDie();
     DWARFDataExtractor DebugInfoData = RefCU->getDebugInfoExtractor();
     if (DwarfDebugInfoEntry.extractFast(*RefCU, &TmpRefOffset, DebugInfoData,
                                         RefCU->getNextUnitOffset(), 0)) {
@@ -1008,12 +1009,14 @@ static uint64_t getHash(const DWARFUnit &DU) {
   return DU.getOffset();
 }
 
-void DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
+bool DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
+  if (!BC.isValidDwarfUnit(DU))
+    return false;
   auto IterGlobal = AllProcessed.insert(getHash(DU));
   // If DU is already in a current working set or was already processed we can
   // skip it.
   if (!IterGlobal.second)
-    return;
+    return true;
   if (getState().Type == ProcessingType::DWARF4TUs) {
     getState().DWARF4TUVector.push_back(&DU);
   } else if (getState().Type == ProcessingType::DWARF5TUs) {
@@ -1034,6 +1037,7 @@ void DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
   if (getState().DUList.size() == getState().CloneUnitCtxMap.size())
     getState().CloneUnitCtxMap.emplace_back();
   getState().DUList.push_back(&DU);
+  return true;
 }
 
 std::optional<uint32_t> DIEBuilder::getUnitId(const DWARFUnit &DU) {

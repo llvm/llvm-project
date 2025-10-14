@@ -270,24 +270,262 @@ void mlir::tosa::printVariableOpTypeOrInitialValue(
   }
 }
 
+namespace {
+
+// parse attributes with special handling for tosa enum attributes
+template <typename EnumType>
+ParseResult parseAttrEntryWithEnumHandling(OpAsmParser &parser,
+                                           NamedAttrList &outAttrs) {
+  llvm::StringRef name;
+  if (parser.parseOptionalKeyword(&name) || parser.parseEqual())
+    return failure();
+
+  // special handling: rounding_mode accepts a *bare* RoundingMode enum
+  // keyword.
+  llvm::StringRef kw;
+  if constexpr (std::is_same_v<EnumType, tosa::RoundingMode>) {
+    if (name == "rounding_mode" &&
+        succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeRoundingMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid rounding_mode value: " << kw;
+      auto attr = RoundingModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+  // special handling: mode accepts a *bare* ResizeMode enum keyword.
+  if constexpr (std::is_same_v<EnumType, tosa::ResizeMode>) {
+    if (name == "mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeResizeMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid resize mode value: " << kw;
+      auto attr = ResizeModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+  // special handling: nan_mode accepts a *bare* NanPropagationMode enum
+  // keyword.
+  if constexpr (std::is_same_v<EnumType, tosa::NanPropagationMode>) {
+    if (name == "nan_mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeNanPropagationMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid nan_mode value: " << kw;
+      auto attr = NanPropagationModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+
+  // Default path: parse any normal attribute literal, including fully qualified
+  // enum keyword
+  Attribute attr;
+  return parser.parseAttribute(attr, name, outAttrs);
+}
+
+template <typename EnumType>
+ParseResult parseWithEnumHandling(OpAsmParser &parser, OperationState &result) {
+  // parse operands
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> operands;
+  if (parser.parseCommaSeparatedList(
+          [&]() { return parser.parseOperand(operands.emplace_back()); }))
+    return failure();
+
+  // Parse { attr-dict } with special handling for enum bare token
+  NamedAttrList attrs;
+  if (succeeded(parser.parseOptionalLBrace()) &&
+      failed(parser.parseOptionalRBrace())) {
+    do {
+      if (parseAttrEntryWithEnumHandling<EnumType>(parser, attrs))
+        return failure();
+    } while (succeeded(parser.parseOptionalComma()));
+    if (parser.parseRBrace())
+      return failure();
+  }
+
+  FunctionType fnTy;
+  if (parser.parseColonType(fnTy))
+    return failure();
+
+  // Resolve operands and types
+  if (failed(parser.resolveOperands(operands, fnTy.getInputs(),
+                                    parser.getCurrentLocation(),
+                                    result.operands)))
+    return failure();
+
+  result.addTypes(fnTy.getResult(0));
+  result.addAttributes(attrs);
+
+  return success();
+}
+
+void printNamedAttr(OpAsmPrinter &parser, const NamedAttribute namedAttr) {
+  parser << namedAttr.getName().strref() << " = ";
+  auto attr = namedAttr.getValue();
+  if (auto roundingModeAttr = dyn_cast<tosa::RoundingModeAttr>(attr)) {
+    parser << roundingModeAttr.getValue();
+  } else if (auto resizeModeAttr = dyn_cast<tosa::ResizeModeAttr>(attr)) {
+    parser << resizeModeAttr.getValue();
+  } else if (auto nanPropagationModeAttr =
+                 dyn_cast<tosa::NanPropagationModeAttr>(attr)) {
+    parser << nanPropagationModeAttr.getValue();
+  } else {
+    parser.printAttribute(attr);
+  }
+}
+
+// print with special handling for default valued NanPropagationMode attribute
+void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
+  parser << " ";
+  parser.printOperands(op->getOperands());
+
+  NamedAttrList toPrint(op->getAttrs());
+  // remove default NanPropagate attribute
+  const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
+  for (auto attr : op->getAttrs()) {
+    if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
+      if (nanAttr.getValue() == kDefaultNanValue) {
+        // elide from toPrint
+        toPrint.erase(attr.getName());
+        break;
+      }
+    }
+  }
+
+  if (!toPrint.empty()) {
+    parser << " {";
+    llvm::interleaveComma(toPrint, parser, [&](const NamedAttribute namedAttr) {
+      printNamedAttr(parser, namedAttr);
+    });
+    parser << "}";
+  }
+
+  parser << " : ";
+  parser.printFunctionalType(op);
+}
+
+// print with special handling for enums: RoundingMode, ResizeMode
+void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
+  parser << " ";
+  parser.printOperands(op->getOperands());
+
+  if (!op->getAttrs().empty()) {
+    parser << " {";
+    llvm::interleaveComma(op->getAttrs(), parser,
+                          [&](const NamedAttribute namedAttr) {
+                            printNamedAttr(parser, namedAttr);
+                          });
+    parser << "}";
+  }
+
+  parser << " : ";
+  parser.printFunctionalType(op);
+}
+
+} // namespace
+
+ParseResult RescaleOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
+}
+
+void RescaleOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ApplyScaleOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
+}
+
+void ApplyScaleOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ResizeOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::ResizeMode>(parser, result);
+}
+
+void ResizeOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ArgMaxOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ArgMaxOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MaxPool2dOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaxPool2dOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ClampOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ClampOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MaximumOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaximumOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MinimumOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MinimumOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ReduceMaxOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ReduceMaxOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ReduceMinOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ReduceMinOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
 
-std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
+static std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
   if (lhs % rhs != 0)
     return std::nullopt;
   return lhs / rhs;
 }
 
-Type getStorageElementTypeOrSelf(Type type) {
+static Type getStorageElementTypeOrSelf(Type type) {
   auto srcType = getElementTypeOrSelf(type);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
     srcType = quantType.getStorageType();
   return srcType;
 }
 
-Type getStorageElementTypeOrSelf(Value value) {
+static Type getStorageElementTypeOrSelf(Value value) {
   return getStorageElementTypeOrSelf(value.getType());
 }
 
@@ -667,56 +905,29 @@ static inline LogicalResult errorIfShapeNotSizeOne(Operation *op, Type type) {
   return shapeAdaptor.getNumElements() == 1 ? success() : failure();
 }
 
-// Returns the first declaration point prior to this operation or failure if
-// not found.
-static FailureOr<tosa::VariableOp> findVariableDecl(Operation *op,
-                                                    StringRef symName) {
-  ModuleOp module = op->getParentOfType<ModuleOp>();
-  tosa::VariableOp varOp = nullptr;
-
-  // TODO: Adopt SymbolTable trait to Varible ops.
-  // Currently, the variable's definition point is searched via walk(),
-  // starting from the top-level ModuleOp and stopping at the point of use. Once
-  // TOSA control flow and variable extensions reach the complete state, may
-  // leverage MLIR's Symbol Table functionality to look up symbol and enhance
-  // the search to a TOSA specific graph traversal over the IR structure.
-  module.walk([&](Operation *tempOp) {
-    // Reach this op itself.
-    if (tempOp == op) {
-      return WalkResult::interrupt();
-    }
-
-    if (auto tosaOp = dyn_cast<tosa::VariableOp>(tempOp)) {
-      if (symName == tosaOp.getName()) {
-        varOp = tosaOp;
-        return WalkResult::interrupt();
-      }
-    }
-
-    return WalkResult::advance();
-  });
-
-  if (varOp)
-    return varOp;
-
-  return failure();
-}
-
 template <typename T>
 static LogicalResult verifyVariableOpErrorIf(T op, Type type, StringRef name) {
-  StringRef symName = op.getName();
-  FailureOr<tosa::VariableOp> varOp = findVariableDecl(op, symName);
-  if (failed(varOp))
+  Operation *symTableOp =
+      op->template getParentWithTrait<OpTrait::SymbolTable>();
+  if (!symTableOp)
+    // If the operation is not the scope of a symbol table, we cannot
+    // verify it against it's declaration.
+    return success();
+
+  SymbolTable symTable(symTableOp);
+  const auto varOp = symTable.lookup<tosa::VariableOp>(op.getName());
+
+  // Verify prior declaration
+  if (!varOp)
     return op->emitOpError("'")
-           << symName << "' has not been declared by 'tosa.variable'";
+           << op.getName() << "' has not been declared by 'tosa.variable'";
 
   // Verify type and shape
-  auto variableType = getVariableType(varOp.value());
+  auto variableType = getVariableType(varOp);
   if (errorIfTypeOrShapeMismatch(op, type, name, variableType,
                                  "the input tensor")
           .failed())
     return failure();
-
   return success();
 }
 
@@ -1180,7 +1391,7 @@ static void buildVariableOp(OpBuilder &builder, OperationState &result,
   ArrayRef<int64_t> shape = shapedType.getShape();
   auto varShapeAttr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
 
-  result.addAttribute("name", nameAttr);
+  result.addAttribute("sym_name", nameAttr);
   result.addAttribute("var_shape", varShapeAttr);
   result.addAttribute("type", elementTypeAttr);
   result.addAttribute("initial_value", initialValue);
@@ -1605,12 +1816,6 @@ LogicalResult MatMulOp::verify() {
       return emitOpError("expect quantized operands to have same widths, got ")
              << aQuantWidth << " and " << bQuantWidth;
     }
-  } else {
-    // non-quantized element types
-    if (aElementType != bElementType) {
-      return emitOpError("expect same element type for inputs a and b, got ")
-             << aElementType << " and " << bElementType;
-    }
   }
 
   // check a_zp and b_zp
@@ -1951,11 +2156,13 @@ LogicalResult tosa::TableOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::TableOp::verify() {
-  TensorType inputType = getInput1().getType();
-  TensorType outputType = getOutput().getType();
+  const TensorType inputType = getInput1().getType();
+  const TensorType outputType = getOutput().getType();
 
-  if (inputType.hasRank() && outputType.hasRank() &&
-      inputType.getRank() != outputType.getRank())
+  if (!inputType.hasRank() || !outputType.hasRank())
+    return success();
+
+  if (inputType.getRank() != outputType.getRank())
     return emitOpError()
            << "expected input tensor rank to equal result tensor rank";
 
@@ -2161,9 +2368,10 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
       }
     }
 
-    int64_t newShapeElementsNum = std::accumulate(
-        shapeValues.begin(), shapeValues.end(), 1LL,
-        [](int64_t acc, int64_t dim) { return (dim > 0) ? acc * dim : acc; });
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
+          return (dim > 0) ? acc * dim : acc;
+        });
     bool isStaticNewShape =
         llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
     if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
@@ -2816,7 +3024,7 @@ static LogicalResult verifyReduceOp(T op) {
     int64_t inputRank = inputType.getRank();
     // We allow for a special case where the input/output shape has rank 0 and
     // axis is also 0.
-    if (reduceAxis >= inputRank && !(reduceAxis == 0 && inputRank == 0)) {
+    if (reduceAxis >= inputRank && (reduceAxis != 0 || inputRank != 0)) {
       op.emitOpError("expect input tensor rank (")
           << inputRank << ") to be larger than reduce axis (" << reduceAxis
           << ")";
@@ -2830,7 +3038,7 @@ static LogicalResult verifyReduceOp(T op) {
           "expect output tensor rank to be equal to input tensor rank");
       return failure();
     }
-    if (reduceAxis >= outputRank && !(reduceAxis == 0 && outputRank == 0)) {
+    if (reduceAxis >= outputRank && (reduceAxis != 0 || outputRank != 0)) {
       op.emitOpError("expect output tensor rank (")
           << outputRank << ") to be larger than reduce axis (" << reduceAxis
           << ")";
@@ -3785,19 +3993,27 @@ LogicalResult IfOp::verify() {
           .failed())
     return failure();
 
-  auto thenYield = cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, thenYield.getInputs(),
-                                 "'then_graph' results", getOutputList(),
-                                 "'output_list'")
-          .failed())
-    return failure();
+  // MLIR will verify the absence of the terminator for us if otherwise.
+  if (getThenGraph().front().mightHaveTerminator()) {
+    auto thenYield =
+        dyn_cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
+    if (thenYield && errorIfTypeOrShapeMismatch(
+                         *this, thenYield.getInputs(), "'then_graph' results",
+                         getOutputList(), "'output_list'")
+                         .failed())
+      return failure();
+  }
 
-  auto elseYield = cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, elseYield.getInputs(),
-                                 "'else_graph' results", getOutputList(),
-                                 "'output_list'")
-          .failed())
-    return failure();
+  // MLIR will verify the absence of the terminator for us if otherwise.
+  if (getElseGraph().front().mightHaveTerminator()) {
+    auto elseYield =
+        dyn_cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
+    if (elseYield && errorIfTypeOrShapeMismatch(
+                         *this, elseYield.getInputs(), "'else_graph' results",
+                         getOutputList(), "'output_list'")
+                         .failed())
+      return failure();
+  }
 
   auto condType = getCondition().getType();
   if (errorIfShapeNotSizeOne(*this, condType).failed())
@@ -3825,16 +4041,26 @@ LogicalResult WhileOp::verify() {
           .failed())
     return failure();
 
-  auto bodyYield = cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
-                                 "'body_graph' results", getInputList(),
-                                 "'input_list'")
-          .failed())
-    return failure();
+  if (getBodyGraph().front().mightHaveTerminator()) {
+    auto bodyYield =
+        dyn_cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
+    if (bodyYield && errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
+                                                "'body_graph' results",
+                                                getInputList(), "'input_list'")
+                         .failed())
+      return failure();
+  }
 
   // Condition block output must be a single element tensor with a single bool
   // value.
-  auto condYield = cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (!getCondGraph().front().mightHaveTerminator())
+    return success();
+
+  auto condYield =
+      dyn_cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (!condYield)
+    return success();
+
   if (condYield.getInputs().size() != 1)
     return emitOpError() << "require 'cond_graph' only have one result";
 
@@ -3865,7 +4091,7 @@ LogicalResult ReverseOp::verify() {
     int64_t inputRank = inputType.getRank();
     // We allow for a special case where the input/output shape has rank 0 and
     // axis is also 0.
-    if (reverseAxis >= inputRank && !(reverseAxis == 0 && inputRank == 0))
+    if (reverseAxis >= inputRank && (reverseAxis != 0 || inputRank != 0))
       return emitOpError("expect input tensor rank (")
              << inputRank << ") to be larger than reverse axis (" << reverseAxis
              << ")";
@@ -3875,7 +4101,7 @@ LogicalResult ReverseOp::verify() {
     if (inputType.hasRank() && outputRank != inputType.getRank())
       return emitOpError(
           "expect output tensor rank to be equal to input tensor rank");
-    if (reverseAxis >= outputRank && !(reverseAxis == 0 && outputRank == 0))
+    if (reverseAxis >= outputRank && (reverseAxis != 0 || outputRank != 0))
       return emitOpError("expect output tensor rank (")
              << outputRank << ") to be larger than reverse axis ("
              << reverseAxis << ")";
@@ -3904,16 +4130,6 @@ LogicalResult tosa::SelectOp::verify() {
     return emitOpError("expect element type of bool for input1, got ")
            << predicateElementType;
   }
-
-  return success();
-}
-
-LogicalResult tosa::VariableOp::verify() {
-  StringRef symName = getName();
-  FailureOr<tosa::VariableOp> varOp = findVariableDecl(*this, symName);
-  if (succeeded(varOp))
-    return emitOpError("illegal to have multiple declaration of '")
-           << symName << "'";
 
   return success();
 }
@@ -4090,7 +4306,7 @@ LogicalResult tosa::ConstShapeOp::verify() {
   // check that number of elements in values attr equal to rank of result shape
   auto count = getValues().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();
-  if (!(count == rank || (count == 1 && rank == 0))) {
+  if (count != rank && (count != 1 || rank != 0)) {
     return emitOpError("expect number of elements in attribute values (")
            << count << ") to be equal to the rank (" << rank
            << ") for the result shape type";

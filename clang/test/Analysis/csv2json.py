@@ -44,7 +44,7 @@ def csv_to_json_dict(csv_filepath):
     """
     try:
         with open(csv_filepath, "r", encoding="utf-8") as csvfile:
-            reader = csv.reader(csvfile)
+            reader = csv.reader(csvfile, skipinitialspace=True)
 
             # Read the header row (column names)
             try:
@@ -58,12 +58,13 @@ def csv_to_json_dict(csv_filepath):
                 json.dumps({}, indent=2)
                 return
 
-            other_column_names = [name.strip() for name in header[1:]]
+            header_length = len(header)
+            other_column_names = header[1:]
 
             data_dict = {}
 
             for row in reader:
-                if len(row) != len(header):
+                if len(row) != header_length:
                     raise csv.Error("Inconsistent CSV file")
                     exit(1)
 

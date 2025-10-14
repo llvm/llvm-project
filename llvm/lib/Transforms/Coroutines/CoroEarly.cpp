@@ -38,7 +38,7 @@ public:
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };
-}
+} // namespace
 
 // Replace a direct call to coro.resume or coro.destroy with an indirect call to
 // an address returned by coro.subfn.addr intrinsic. This is done so that
@@ -132,7 +132,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
 
     // Create a Noop function that does nothing.
     Function *NoopFn = Function::createWithDefaultAttr(
-        FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
+        FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
     NoopFn->setCallingConv(CallingConv::Fast);

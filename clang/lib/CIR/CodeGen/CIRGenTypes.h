@@ -130,6 +130,13 @@ public:
   /// Get the CIR function type for \arg Info.
   cir::FuncType getFunctionType(const CIRGenFunctionInfo &info);
 
+  cir::FuncType getFunctionType(clang::GlobalDecl gd);
+
+  /// Get the CIR function type for use in a vtable, given a CXXMethodDecl. If
+  /// the method has an incomplete return type, and/or incomplete argument
+  /// types, this will return the opaque type.
+  cir::FuncType getFunctionTypeForVTable(clang::GlobalDecl gd);
+
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
   //     of a function declaration or definition,
@@ -168,7 +175,8 @@ public:
 
   const CIRGenFunctionInfo &arrangeCXXConstructorCall(
       const CallArgList &args, const clang::CXXConstructorDecl *d,
-      clang::CXXCtorType ctorKind, bool passProtoArgs = true);
+      clang::CXXCtorType ctorKind, unsigned extraPrefixArgs,
+      unsigned extraSuffixArgs, bool passProtoArgs = true);
 
   const CIRGenFunctionInfo &
   arrangeCXXMethodCall(const CallArgList &args,

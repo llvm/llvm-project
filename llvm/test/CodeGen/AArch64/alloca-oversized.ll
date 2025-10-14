@@ -10,10 +10,7 @@ define void @test_oversized(ptr %dst, i32 %cond) {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #2305843009213693952 // =0x2000000000000000
-; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    sub x9, x29, #32
-; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel x8, x9, x8, eq
 ; CHECK-NEXT:    str x8, [x0]

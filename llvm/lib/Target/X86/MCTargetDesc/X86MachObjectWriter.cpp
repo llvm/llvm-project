@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -354,8 +355,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   unsigned Type = MachO::GENERIC_RELOC_VANILLA;
 
   // See <reloc.h>.
-  const MCSymbol *A = Target.getAddSym();
-
+  auto *A = static_cast<const MCSymbolMachO *>(Target.getAddSym());
   if (!A->getFragment()) {
     reportError(Fixup.getLoc(),
                 "symbol '" + A->getName() +

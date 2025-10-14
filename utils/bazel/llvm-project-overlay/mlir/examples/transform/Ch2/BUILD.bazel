@@ -1,6 +1,7 @@
 # Description:
 #   MLIR Tutorial
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 licenses(["notice"])
