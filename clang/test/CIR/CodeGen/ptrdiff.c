@@ -6,9 +6,9 @@
 int addrcmp(const void* a, const void* b) {
   // CIR-LABEL: addrcmp
   // CIR: %[[R:.*]] = cir.ptr_diff
-  // CIR: cir.cast integral  %[[R]] : !s64i -> !s32
+  // CIR: cir.cast integral %[[R]] : !s64i -> !s32i
 
-  // LLVM-LABEL: addrcmp
+  // LLVM-LABEL: define dso_local i32 @addrcmp(
   // LLVM: %[[PTR_A:.*]] = ptrtoint ptr {{.*}} to i64
   // LLVM: %[[PTR_B:.*]] = ptrtoint ptr {{.*}} to i64
   // LLVM: %[[SUB:.*]] = sub i64 %[[PTR_A]], %[[PTR_B]]
@@ -19,14 +19,17 @@ int addrcmp(const void* a, const void* b) {
 
 unsigned long long test_ptr_diff(int *a, int* b) {
   // CIR-LABEL: test_ptr_diff
-  // CIR: %[[D:.*]] = cir.ptr_diff{{.*}} : !cir.ptr<!s32i> -> !u64i
-  // CIR: cir.return %[[D]] : !u64i
+  // CIR: %[[D:.*]] = cir.ptr_diff {{.*}} : !cir.ptr<!s32i> -> !s64i
+  // CIR: %[[U:.*]] = cir.cast integral %[[D]] : !s64i -> !u64i
+  // CIR: cir.return {{.*}} : !u64i
 
-  // LLVM-LABEL: @_Z13test_ptr_diffPiS_
+  // LLVM-LABEL: define dso_local i64 @test_ptr_diff(
   // LLVM: %[[IA:.*]] = ptrtoint ptr %{{.*}} to i64
   // LLVM: %[[IB:.*]] = ptrtoint ptr %{{.*}} to i64
   // LLVM: %[[SUB:.*]] = sub i64 %[[IA]], %[[IB]]
-  // LLVM: %[[Q:.*]] = sdiv exact i64 %[[SUB]], 4
-  // LLVM: ret i64 %[[Q]]
+  // LLVM: %[[Q:.*]] = sdiv{{( exact)?}} i64 %[[SUB]], 4
+  // LLVM: store i64 %[[Q]], ptr %[[RETADDR:.*]], align
+  // LLVM: %[[RETLOAD:.*]] = load i64, ptr %[[RETADDR]], align
+  // LLVM: ret i64 %[[RETLOAD]]
   return a - b;
 }

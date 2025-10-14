@@ -1499,8 +1499,8 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-uint64_t CIRToLLVMPtrDiffOpLowering::getTypeSize(mlir::Type type,
-                                                 mlir::Operation &op) const {
+static uint64_t getTypeSize(mlir::Type type,
+                                                 mlir::Operation &op)  {
   mlir::DataLayout layout(op.getParentOfType<mlir::ModuleOp>());
   // For LLVM purposes we treat void as u8.
   if (isa<cir::VoidType>(type))
