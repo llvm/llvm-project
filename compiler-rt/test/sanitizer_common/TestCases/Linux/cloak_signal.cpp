@@ -38,7 +38,8 @@ int main(int argc, char *argv[]) {
   fflush(stdout);
 
   // Trying to organically segfault by dereferencing a pointer can be tricky
-  // in builds with assertions.
+  // in builds with assertions. Additionally, some older platforms may SIGBUS
+  // instead.
   raise(SIGSEGV);
   // CUSTOM: Custom signal handler
   // SANITIZER: Sanitizer:DEADLYSIGNAL
