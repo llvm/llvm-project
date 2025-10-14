@@ -5360,41 +5360,44 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
     // function to link the two variables in the runtime and then both the
     // reference pointer and the pointer are assigned in the kernel argument
     // structure for the host.
-    if (mapData.IsDeclareTarget[i]) {
-      // If the original map value is a constant, then we have to make sure all
-      // of it's uses within the current kernel/function that we are going to
-      // rewrite are converted to instructions, as we will be altering the old
-      // use (OriginalValue) from a constant to an instruction, which will be
-      // illegal and ICE the compiler if the user is a constant expression of
-      // some kind e.g. a constant GEP.
-      if (auto *constant = dyn_cast<llvm::Constant>(mapData.OriginalValue[i]))
-        convertUsersOfConstantsToInstructions(constant, func, false);
+    if (!mapData.IsDeclareTarget[i])
+      continue;
+    // If the original map value is a constant, then we have to make sure all
+    // of it's uses within the current kernel/function that we are going to
+    // rewrite are converted to instructions, as we will be altering the old
+    // use (OriginalValue) from a constant to an instruction, which will be
+    // illegal and ICE the compiler if the user is a constant expression of
+    // some kind e.g. a constant GEP.
+    if (auto *constant = dyn_cast<llvm::Constant>(mapData.OriginalValue[i]))
+      convertUsersOfConstantsToInstructions(constant, func, false);
 
-      // The users iterator will get invalidated if we modify an element,
-      // so we populate this vector of uses to alter each user on an
-      // individual basis to emit its own load (rather than one load for
-      // all).
-      llvm::SmallVector<llvm::User *> userVec;
-      for (llvm::User *user : mapData.OriginalValue[i]->users())
-        userVec.push_back(user);
+    // The users iterator will get invalidated if we modify an element,
+    // so we populate this vector of uses to alter each user on an
+    // individual basis to emit its own load (rather than one load for
+    // all).
+    llvm::SmallVector<llvm::User *> userVec;
+    for (llvm::User *user : mapData.OriginalValue[i]->users())
+      userVec.push_back(user);
 
-      for (llvm::User *user : userVec) {
-        if (auto *insn = dyn_cast<llvm::Instruction>(user)) {
-          if (insn->getFunction() == func) {
-            auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
-            llvm::Value *substitute = mapData.BasePointers[i];
-            if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
-                                                         : mapOp.getVarPtr())) {
-              builder.SetCurrentDebugLocation(insn->getDebugLoc());
-              auto *load = builder.CreateLoad(
-                  mapData.BasePointers[i]->getType(), mapData.BasePointers[i]);
-              load->moveBefore(insn);
-              substitute = load;
-            }
-            user->replaceUsesOfWith(mapData.OriginalValue[i], substitute);
-          }
-        }
+    for (llvm::User *user : userVec) {
+      auto *insn = dyn_cast<llvm::Instruction>(user);
+      if (!insn || insn->getFunction() != func)
+        continue;
+      auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
+      llvm::Value *substitute = mapData.BasePointers[i];
+      if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
+                                                   : mapOp.getVarPtr()) ||
+          (isDeclareTargetTo(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
+                                                  : mapOp.getVarPtr()) &&
+           moduleTranslation.getOpenMPBuilder()
+               ->Config.hasRequiresUnifiedSharedMemory())) {
+        builder.SetCurrentDebugLocation(insn->getDebugLoc());
+        auto *load = builder.CreateLoad(mapData.BasePointers[i]->getType(),
+                                        mapData.BasePointers[i]);
+        load->moveBefore(insn);
+        substitute = load;
       }
+      user->replaceUsesOfWith(mapData.OriginalValue[i], substitute);
     }
   }
 }
@@ -6314,15 +6317,19 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
           gVal->getType(), gVal);
 
       if (ompBuilder->Config.isTargetDevice() &&
-          (attribute.getCaptureClause().getValue() !=
-               mlir::omp::DeclareTargetCaptureClause::to ||
+          ((attribute.getCaptureClause().getValue() !=
+                mlir::omp::DeclareTargetCaptureClause::to &&
+            attribute.getCaptureClause().getValue() !=
+                mlir::omp::DeclareTargetCaptureClause::enter) ||
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
+        llvm::Type *ptrTy = gVal->getType();
+        if (ompBuilder->Config.hasRequiresUnifiedSharedMemory())
+          ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
             ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-            gVal->getType(), /*GlobalInitializer*/ nullptr,
-            /*VariableLinkage*/ nullptr);
+            ptrTy, /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr);
       }
     }
   }
