@@ -1,16 +1,13 @@
-; RUN: llc -O3 -mcpu=gfx942 < %s | FileCheck %s
+; RUN: llc -mcpu=gfx942 < %s | FileCheck %s
 ; CHECK: v_add_f32_e32
 ; CHECK-NEXT: ;;#ASMSTART
 ; CHECK-NEXT: v_mfma_f64
 ; CHECK-NEXT: ;;#ASMEND
 ; CHECK: v_add_f32_e32
 ; ModuleID = '<stdin>'
-source_filename = "llvm-link"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 target triple = "amdgcn-amd-amdhsa"
 
 @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_bffb86447932ec40 to ptr)], section "llvm.metadata"
-@__hip_cuid_bffb86447932ec40 = addrspace(1) global i8 0
 
 ; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @_Z17group4_sum_floaatPfPKfi(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %length) local_unnamed_addr #0 {
@@ -28,18 +25,18 @@ if.then:                                          ; preds = %entry
   %mul3 = shl nsw i32 %add, 2
   %idx.ext4 = sext i32 %mul3 to i64
   %add.ptr5 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %idx.ext4
-  %2 = load <2 x float>, ptr addrspace(1) %add.ptr5, align 16, !tbaa !0
+  %2 = load <2 x float>, ptr addrspace(1) %add.ptr5, align 16
   %a20 = add i64 %idx.ext4, 2
   %a21 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %a20
-  %a22 = load <2 x float>, ptr addrspace(1) %a21, align 16, !tbaa !0
+  %a22 = load <2 x float>, ptr addrspace(1) %a21, align 16
   %3 = extractelement <2 x float> %a22, i64 1
   %4 = extractelement <2 x float> %2, i64 0
-  %5 = tail call contract noundef float asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %2, <2 x float> %a22) #3, !srcloc !3
+  %5 = tail call contract noundef float asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %2, <2 x float> %a22) #3
   %6 = extractelement <2 x float> %2, i64 1
   %7 = extractelement <2 x float> %a22, i64 0
   %add6 = fadd contract float %6, %7
   %add7 = fadd contract float %5, %add6
-  store float %add7, ptr addrspace(1) %add.ptr, align 4, !tbaa !4
+  store float %add7, ptr addrspace(1) %add.ptr, align 4
   tail call void @llvm.amdgcn.sched.group.barrier(i32 16, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 5, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 16, i32 1, i32 0)
@@ -65,10 +62,3 @@ attributes #0 = { convergent mustprogress norecurse nounwind "amdgpu-agpr-alloc"
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { convergent nocallback nofree nounwind willreturn }
 attributes #3 = { convergent nounwind memory(none) }
-
-!0 = !{!1, !1, i64 0}
-!1 = !{!"omnipotent char", !2, i64 0}
-!2 = !{!"Simple C++ TBAA"}
-!3 = !{i64 129}
-!4 = !{!5, !5, i64 0}
-!5 = !{!"float", !1, i64 0}
