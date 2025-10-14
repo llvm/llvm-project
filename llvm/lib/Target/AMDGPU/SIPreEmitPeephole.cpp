@@ -665,6 +665,8 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   MachineOperand DstOp = I.getOperand(0);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
+  assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() &&
+         "Unsupported Opcode");
   // V_MOV_B32 does not support source modifiers. Without source modifiers, we
   // cannot be faithful to the packed instruction semantics in few cases. This
   // is true when the packed instruction has NEG and NEG_HI modifiers. We should
