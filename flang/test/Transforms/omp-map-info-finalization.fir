@@ -335,7 +335,6 @@ func.func @_QPreuse_alloca(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = 
 // CHECK:       return
 
 
-
 omp.private {type = firstprivate} @boxchar.privatizer : !fir.boxchar<1> copy {
   ^bb0(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>):
     omp.yield(%arg0 : !fir.boxchar<1>)

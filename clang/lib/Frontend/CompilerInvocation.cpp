@@ -533,9 +533,9 @@ static T extractMaskValue(T KeyPath) {
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
     ARGS, DIAGS, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS,         \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,        \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX)                                                               \
+    METAVAR, VALUES, SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
@@ -551,8 +551,9 @@ static T extractMaskValue(T KeyPath) {
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
     CONSUMER, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS, \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
-    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
-    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+    SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     [&](const auto &Extracted) {                                               \
       if (ALWAYS_EMIT ||                                                       \
@@ -1481,34 +1482,6 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
   return Buffer;
 }
 
-// Set the profile kind using fprofile-instrument-use-path.
-static void setPGOUseInstrumentor(CodeGenOptions &Opts,
-                                  const Twine &ProfileName,
-                                  llvm::vfs::FileSystem &FS,
-                                  DiagnosticsEngine &Diags) {
-  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName, FS);
-  if (auto E = ReaderOrErr.takeError()) {
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "Error in reading profile %0: %1");
-    llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-      Diags.Report(DiagID) << ProfileName.str() << EI.message();
-    });
-    return;
-  }
-  std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
-    std::move(ReaderOrErr.get());
-  // Currently memprof profiles are only added at the IR level. Mark the profile
-  // type as IR in that case as well and the subsequent matching needs to detect
-  // which is available (might be one or both).
-  if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
-    if (PGOReader->hasCSIRLevelProfile())
-      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileCSIRInstr);
-    else
-      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
-  } else
-    Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileClangInstr);
-}
-
 void CompilerInvocation::setDefaultPointerAuthOptions(
     PointerAuthOptions &Opts, const LangOptions &LangOpts,
     const llvm::Triple &Triple) {
@@ -1867,6 +1840,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   for (StringRef Sanitizer :
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
+
+  if (Opts.AllocTokenMax)
+    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
+                std::to_string(*Opts.AllocTokenMax));
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2379,6 +2356,15 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     } else {
       Opts.AllowRuntimeCheckSkipHotCutoff = A;
     }
+  }
+
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
+    StringRef S = Arg->getValue();
+    uint64_t Value = 0;
+    if (S.getAsInteger(0, Value))
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+    else
+      Opts.AllocTokenMax = Value;
   }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
@@ -5219,16 +5205,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
   }
 
-  // Set PGOOptions. Need to create a temporary VFS to read the profile
-  // to determine the PGO type.
-  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty()) {
-    auto FS =
-        createVFSFromOverlayFiles(Res.getHeaderSearchOpts().VFSOverlayFiles,
-                                  Diags, llvm::vfs::getRealFileSystem());
-    setPGOUseInstrumentor(Res.getCodeGenOpts(),
-                          Res.getCodeGenOpts().ProfileInstrumentUsePath, *FS,
-                          Diags);
-  }
+  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty() &&
+      Res.getCodeGenOpts().getProfileUse() ==
+          llvm::driver::ProfileInstrKind::ProfileNone)
+    Diags.Report(diag::err_drv_profile_instrument_use_path_with_no_kind);
 
   FixupInvocation(Res, Diags, Args, DashX);
 

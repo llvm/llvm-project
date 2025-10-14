@@ -83,7 +83,7 @@ enum tgt_map_type {
   OMP_TGT_MAPTYPE_DESCRIPTOR = 0x4000,
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
-  OMP_TGT_MAPTYPE_ATTACH = 0x10000,
+  OMP_TGT_MAPTYPE_ATTACH = 0x8000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1

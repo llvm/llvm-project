@@ -111,7 +111,7 @@ DwarfUnit::~DwarfUnit() {
 }
 
 int64_t DwarfUnit::getDefaultLowerBound() const {
-  switch (getLanguage()) {
+  switch (getSourceLanguage()) {
   default:
     break;
 
@@ -722,12 +722,25 @@ void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
   addDIEEntry(Entity, Attribute, DIEEntry(*getOrCreateTypeDIE(Ty)));
 }
 
+// FIXME: change callsites to use the new DW_LNAME_ language codes.
+llvm::dwarf::SourceLanguage DwarfUnit::getSourceLanguage() const {
+  const auto &Lang = getLanguage();
+
+  if (!Lang.hasVersionedName())
+    return static_cast<llvm::dwarf::SourceLanguage>(Lang.getName());
+
+  return llvm::dwarf::toDW_LANG(
+             static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()),
+             Lang.getVersion())
+      .value_or(llvm::dwarf::DW_LANG_hi_user);
+}
+
 std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
   if (!Context)
     return "";
 
   // FIXME: Decide whether to implement this for non-C++ languages.
-  if (!dwarf::isCPlusPlus((dwarf::SourceLanguage)getLanguage()))
+  if (!dwarf::isCPlusPlus(getSourceLanguage()))
     return "";
 
   std::string CS;
@@ -963,7 +976,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
 
   // Add prototype flag if we're dealing with a C language and the function has
   // been prototyped.
-  if (isPrototyped && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
+  if (isPrototyped && dwarf::isC(getSourceLanguage()))
     addFlag(Buffer, dwarf::DW_AT_prototyped);
 
   // Add a DW_AT_calling_convention if this has an explicit convention.
@@ -1459,7 +1472,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   // Add the prototype if we have a prototype and we have a C like
   // language.
-  if (SP->isPrototyped() && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
+  if (SP->isPrototyped() && dwarf::isC(getSourceLanguage()))
     addFlag(SPDie, dwarf::DW_AT_prototyped);
 
   if (SP->isObjCDirect())
@@ -1711,8 +1724,7 @@ DIE *DwarfUnit::getIndexTyDie() {
   addString(*IndexTyDie, dwarf::DW_AT_name, Name);
   addUInt(*IndexTyDie, dwarf::DW_AT_byte_size, std::nullopt, sizeof(int64_t));
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
-          dwarf::getArrayIndexTypeEncoding(
-              (dwarf::SourceLanguage)getLanguage()));
+          dwarf::getArrayIndexTypeEncoding(getSourceLanguage()));
   DD->addAccelType(*this, CUNode->getNameTableKind(), Name, *IndexTyDie,
                    /*Flags*/ 0);
   return IndexTyDie;

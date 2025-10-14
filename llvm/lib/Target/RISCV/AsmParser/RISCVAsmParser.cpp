@@ -1659,6 +1659,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -1, (1 << 5) - 1,
         "immediate must be non-zero in the range");
+  case Match_InvalidXSfmmVType: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return generateXSfmmVTypeError(ErrorLoc);
+  }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return generateVTypeError(ErrorLoc);
@@ -1688,7 +1692,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 25) - 1);
   // HACK: See comment before `BareSymbolQC_E_LI` in RISCVInstrInfoXqci.td.
   case Match_InvalidBareSymbolQC_E_LI:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   // END HACK
   case Match_InvalidBareSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,

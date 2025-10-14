@@ -337,7 +337,9 @@ struct SGPRSpillBuilder {
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour(),
-                            ST.getAMDGPUDwarfFlavour()),
+                            ST.getAMDGPUDwarfFlavour(),
+                            /*PC=*/0,
+                            ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()),
       WaveTransformCF(AMDGPUTargetMachine::EnableWaveTransformCF) {
 
@@ -1141,12 +1143,7 @@ SIRegisterInfo::getPointerRegClass(unsigned Kind) const {
 
 const TargetRegisterClass *
 SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
-  if (isAGPRClass(RC) && !ST.hasGFX90AInsts())
-    return getEquivalentVGPRClass(RC);
-  if (RC == &AMDGPU::SCC_CLASSRegClass)
-    return getWaveMaskRegClass();
-
-  return RC;
+  return RC == &AMDGPU::SCC_CLASSRegClass ? &AMDGPU::SReg_32RegClass : RC;
 }
 
 static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
@@ -2656,7 +2653,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
               AMDGPU::M0)
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case AMDGPU::SI_SPILL_V16_RESTORE:
     case AMDGPU::SI_SPILL_V32_RESTORE:
