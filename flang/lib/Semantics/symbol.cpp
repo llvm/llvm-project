@@ -74,10 +74,10 @@ llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
   if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
     os << " OmpRequirements:(";
-    if (const common::OmpMemoryOrderType *atmo{x.ompAtomicDefaultMemOrder()}) {
+    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
       os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
                 llvm::omp::Clause::OMPC_atomic_default_mem_order))
-         << '(' << parser::ToLowerCaseLetters(EnumToString(*atmo)) << ')';
+         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
       if (x.has_ompRequires()) {
         os << ',';
       }
