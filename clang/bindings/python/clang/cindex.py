@@ -2368,7 +2368,7 @@ class Cursor(Structure):
         Check if the function is inlined
         """
         assert self.kind == TypeKind.FUNCTIONPROTO
-        return bool(conf.lib.clang_Cursor_isFunctionInlined(self))  # type: ignore [no-any-return]
+        return conf.lib.clang_Cursor_isFunctionInlined(self)  # type: ignore [no-any-return]
 
     @cursor_null_guard
     def has_attrs(self) -> bool:
@@ -4316,7 +4316,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_isAnonymous", [Cursor], bool),
     ("clang_Cursor_isAnonymousRecordDecl", [Cursor], bool),
     ("clang_Cursor_isBitField", [Cursor], bool),
-    ("clang_Cursor_isFunctionInlined", [Cursor], c_uint),
+    ("clang_Cursor_isFunctionInlined", [Cursor], bool),
     ("clang_Location_isInSystemHeader", [SourceLocation], bool),
     ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
     ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),
