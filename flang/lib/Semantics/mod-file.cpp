@@ -378,9 +378,9 @@ static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
       symbol.details())};
 
   if (order) {
-    llvm::omp::Clause atmo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
+    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
     os << "!$omp requires "
-       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(atmo))
+       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
        << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
   }
   if (reqs) {
