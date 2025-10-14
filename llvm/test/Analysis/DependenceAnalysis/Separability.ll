@@ -182,7 +182,7 @@ define void @sep2(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx12, align 4 --> Dst: store i32 %conv, ptr %arrayidx12, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 S 0 0]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx12, align 4 --> Dst: %0 = load i32, ptr %arrayidx19, align 4
-; CHECK-NEXT:    da analyze - flow [> * * -10]!
+; CHECK-NEXT:    da analyze - flow [* * * <>]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx12, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx19, align 4 --> Dst: %0 = load i32, ptr %arrayidx19, align 4
@@ -262,9 +262,9 @@ for.end28:                                        ; preds = %for.inc26
 define void @sep3(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'sep3'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx13, align 4 --> Dst: store i32 %conv, ptr %arrayidx13, align 4
-; CHECK-NEXT:    da analyze - consistent output [0 S 0 0]!
+; CHECK-NEXT:    da analyze - output [0 S 0 0]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx13, align 4 --> Dst: %0 = load i32, ptr %arrayidx20, align 4
-; CHECK-NEXT:    da analyze - flow [> * * *]!
+; CHECK-NEXT:    da analyze - flow [* * * *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx13, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx20, align 4 --> Dst: %0 = load i32, ptr %arrayidx20, align 4
