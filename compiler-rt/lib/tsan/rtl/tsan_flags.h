@@ -16,7 +16,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_deadlock_detector_interface.h"
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
 enum LockDuringWriteSetting {
   kLockDuringAllWrites,
   kNoLockDuringWritesCurrentProcess,
