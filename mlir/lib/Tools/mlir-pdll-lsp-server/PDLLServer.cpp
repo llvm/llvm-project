@@ -31,6 +31,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
 
 using namespace mlir;
