@@ -179,12 +179,11 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
 
     if (auto gpuMod = addr->getParentOfType<mlir::gpu::GPUModuleOp>()) {
       auto global = gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
-      if (global) {
-        replaceWithAddrOfOrASCast(
-            rewriter, addr->getLoc(), global.getAddrSpace(),
-            getProgramAddressSpace(rewriter), global.getSymName(),
-            convertType(addr.getType()), addr);
-      }
+      assert(global && "Expect global in gpu module");
+      replaceWithAddrOfOrASCast(rewriter, addr->getLoc(), global.getAddrSpace(),
+                                getProgramAddressSpace(rewriter),
+                                global.getSymName(),
+                                convertType(addr.getType()), addr);
       return mlir::success();
     }
 
