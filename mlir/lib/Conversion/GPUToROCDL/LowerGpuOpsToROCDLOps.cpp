@@ -484,5 +484,5 @@ void mlir::populateGpuToROCDLConversionPatterns(
                GPUSubgroupBroadcastOpToROCDL>(converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
-  populateMathToROCDLConversionPatterns(converter, patterns, chipset);
+  populateMathToROCDLConversionPatterns(converter, patterns);
 }
