@@ -288,7 +288,8 @@ jobs:
     - name: Dump logs
       if: failure() && runner.os == 'Windows'
       run: |
-        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
+        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
+#        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
 
   upload-release-binaries:
     name: "Upload Release Binaries"
