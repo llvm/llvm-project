@@ -191,6 +191,8 @@ C23 Feature Support
 - Added ``FLT_SNAN``, ``DBL_SNAN``, and ``LDBL_SNAN`` to Clang's ``<float.h>``
   header in C23 and later modes. This implements
   `WG14 N2710 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2710.htm>`_.
+- Fixed accepting as compatible unnamed tag types with the same fields within
+  the same translation unit but from different types.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -435,6 +437,7 @@ Bug Fixes to C++ Support
 - Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
 - Fixed a mismatched lambda scope bug when propagating up ``consteval`` within nested lambdas. (#GH145776)
+- Disallow immediate escalation in destructors. (#GH109096)
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
@@ -641,6 +644,8 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
 - Added support for 'omp fuse' directive.
+- Updated parsing and semantic analysis support for ``nowait`` clause to accept
+  optional argument in OpenMP >= 60.
 
 Improvements
 ^^^^^^^^^^^^

@@ -93,7 +93,8 @@ bool tryToFindPtrOrigin(
     if (auto *call = dyn_cast<CallExpr>(E)) {
       if (auto *Callee = call->getCalleeDecl()) {
         if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
-            Callee->hasAttr<NSReturnsRetainedAttr>()) {
+            Callee->hasAttr<NSReturnsRetainedAttr>() ||
+            Callee->hasAttr<NSReturnsAutoreleasedAttr>()) {
           return callback(E, true);
         }
       }
