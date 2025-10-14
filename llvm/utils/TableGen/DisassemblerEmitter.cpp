@@ -123,10 +123,7 @@ static void emitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
 
-  StringRef PredicateNamespace = Target.getName();
-  if (PredicateNamespace == "Thumb")
-    PredicateNamespace = "ARM";
-  EmitDecoder(Records, OS, PredicateNamespace);
+  EmitDecoder(Records, OS);
 }
 
 cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");

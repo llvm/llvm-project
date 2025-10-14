@@ -16,6 +16,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -67,7 +68,8 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
 // OperationFolder
 //===----------------------------------------------------------------------===//
 
-LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
+LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate,
+                                         int maxIterations) {
   if (inPlaceUpdate)
     *inPlaceUpdate = false;
 
@@ -86,7 +88,7 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
 
   // Try to fold the operation.
   SmallVector<Value, 8> results;
-  if (failed(tryToFold(op, results)))
+  if (failed(tryToFold(op, results, maxIterations)))
     return failure();
 
   // Check to see if the operation was just updated in place.
@@ -224,10 +226,19 @@ bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(Operation *op,
-                                         SmallVectorImpl<Value> &results) {
+                                         SmallVectorImpl<Value> &results,
+                                         int maxIterations) {
   SmallVector<OpFoldResult, 8> foldResults;
-  if (failed(op->fold(foldResults)) ||
-      failed(processFoldResults(op, results, foldResults)))
+  if (failed(op->fold(foldResults)))
+    return failure();
+  int count = 1;
+  do {
+    LDBG() << "Folded in place #" << count
+           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  } while (count++ < maxIterations && foldResults.empty() &&
+           succeeded(op->fold(foldResults)));
+
+  if (failed(processFoldResults(op, results, foldResults)))
     return failure();
   return success();
 }

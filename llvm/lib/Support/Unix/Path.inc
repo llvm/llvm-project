@@ -600,6 +600,11 @@ std::error_code resize_file(int FD, uint64_t Size) {
   return std::error_code();
 }
 
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  // On Unix, this is the same as `resize_file`.
+  return resize_file(FD, Size);
+}
+
 static int convertAccessMode(AccessMode Mode) {
   switch (Mode) {
   case AccessMode::Exist:
@@ -874,6 +879,12 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 void mapped_file_region::unmapImpl() {
   if (Mapping)
     ::munmap(Mapping, Size);
+}
+
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
 }
 
 void mapped_file_region::dontNeedImpl() {
@@ -1224,13 +1235,21 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   return NumRead;
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
     struct flock Lock;
     memset(&Lock, 0, sizeof(Lock));
-    Lock.l_type = F_WRLCK;
+    switch (Kind) {
+    case LockKind::Exclusive:
+      Lock.l_type = F_WRLCK;
+      break;
+    case LockKind::Shared:
+      Lock.l_type = F_RDLCK;
+      break;
+    }
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
@@ -1239,15 +1258,24 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
     int Error = errno;
     if (Error != EACCES && Error != EAGAIN)
       return std::error_code(Error, std::generic_category());
+    if (Timeout.count() == 0)
+      break;
     usleep(1000);
   } while (std::chrono::steady_clock::now() < End);
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD) {
+std::error_code lockFile(int FD, LockKind Kind) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = F_WRLCK;
+  switch (Kind) {
+  case LockKind::Exclusive:
+    Lock.l_type = F_WRLCK;
+    break;
+  case LockKind::Shared:
+    Lock.l_type = F_RDLCK;
+    break;
+  }
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;

@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 // We are not using MinimalElementType.h because MinimalElementType is not
-// default consructible and uninitialized storage does not work in constexpr.
+// default constructible and uninitialized storage does not work in constexpr.
 
 // Same as MinimalElementType but with a defaulted default constructor
 struct MyMinimalElementType {

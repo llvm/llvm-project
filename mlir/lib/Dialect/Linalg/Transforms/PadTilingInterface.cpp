@@ -141,7 +141,7 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
       projectedDims.flip(paddingDim);
       AffineMap projectedMap =
           mlir::projectDims(partialIndexingMap, projectedDims,
-                            /*compressDims=*/true);
+                            /*compressDimsFlag=*/true);
 
       // If we are padding to the next multiple of, compose with ceil(sz) * sz.
       OpFoldResult paddingDimOfr;
@@ -263,11 +263,11 @@ static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 
-FailureOr<TilingInterface>
-linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
-                          const PadTilingInterfaceOptions &constOptions,
-                          SmallVector<tensor::PadOp> &padOps,
-                          PadSizeComputationFunction computePaddingSizeFun) {
+FailureOr<TilingInterface> linalg::rewriteAsPaddedOp(
+    RewriterBase &rewriter, TilingInterface opToPad,
+    const PadTilingInterfaceOptions &constOptions,
+    SmallVector<tensor::PadOp> &padOps,
+    const PadSizeComputationFunction &computePaddingSizeFun) {
   LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
 
   Location loc = opToPad.getLoc();

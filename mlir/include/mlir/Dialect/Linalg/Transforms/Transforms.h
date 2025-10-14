@@ -649,7 +649,7 @@ FailureOr<TilingInterface>
 rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
                   const PadTilingInterfaceOptions &constOptions,
                   SmallVector<tensor::PadOp> &padOps,
-                  PadSizeComputationFunction computePaddingSizeFun =
+                  const PadSizeComputationFunction &computePaddingSizeFun =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
@@ -1650,8 +1650,12 @@ protected:
 /// Rewrites a linalg::PackOp into a sequence of:
 ///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
 ///     tensor::InsertSliceOp ops.
+/// (InsertSliceOp is rank-expanding).
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::PackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is packed.
+///
+/// In addition, assumes that the un-tiled-outer-dims are not permuted.
 ///
 /// Before:
 /// ```
@@ -1687,10 +1691,13 @@ struct DecomposeOuterUnitDimsPackOpPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
+/// Rewrites a linalg::UnPackOp into a sequence of:
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+/// (ExtractSliceOp is rank-reducing).
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::UnPackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is
+/// unpacked.
 ///
 /// Before:
 /// ```
@@ -1858,6 +1865,7 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
+/// Note: currently limited to Tensor semantics only.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
@@ -1914,7 +1922,15 @@ void populateElementwiseOpsFusionPatterns(
 using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
+/// The function also has an option to allow the patterns to propagate with
+/// poison padding if requested by the caller.
 void populateDataLayoutPropagationPatterns(
+    RewritePatternSet &patterns,
+    const ControlPropagationFn &controlPackUnPackPropagation,
+    bool PoisonPaddingOk = false);
+
+/// Patterns to sink extract slice across other operations.
+void populateExtractSliceSinkingPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation);
 
@@ -1962,9 +1978,8 @@ void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
     RewritePatternSet &patterns);
 
-/// Patterns to convert from one named op to another. These can be seen as
-/// canonicalizations of named ops into another named op.
-void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
+/// Patterns to simplify depthwise convolutions.
+void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors via reassociative reshape ops.

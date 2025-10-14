@@ -11,6 +11,7 @@
 
 #include "AMDGPURegBankLegalizeRules.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
@@ -107,6 +108,7 @@ private:
   void splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
   void widenLoad(MachineInstr &MI, LLT WideTy, LLT MergeTy = LLT());
+  void widenMMOToS32(GAnyLoad &MI) const;
 
   void lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
@@ -121,6 +123,7 @@ private:
   void lowerSplitTo32(MachineInstr &MI);
   void lowerSplitTo32Select(MachineInstr &MI);
   void lowerSplitTo32SExtInReg(MachineInstr &MI);
+  void lowerUnpackMinMax(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU

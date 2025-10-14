@@ -3190,6 +3190,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             F.Kind == MK_ImplicitModule)
           N = ForceValidateUserInputs ? NumUserInputs : 0;
 
+        if (N != 0)
+          Diag(diag::remark_module_validation)
+              << N << F.ModuleName << F.FileName;
+
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
           if (!IF.getFile() || IF.isOutOfDate())
@@ -5987,7 +5991,7 @@ bool ASTReader::readASTFileControlBlock(
                 AdditionalPathBuf, UnresolvedFilename, ModuleDir);
             Filename = *FilenameBuf;
           }
-          shouldContinue = Listener.visitInputFile(
+          shouldContinue = Listener.visitInputFileAsRequested(
               *FilenameAsRequestedBuf, Filename, isSystemFile, Overridden,
               /*IsExplicitModule=*/false);
           break;
@@ -7500,6 +7504,11 @@ void TypeLocReader::VisitSubstTemplateTypeParmPackTypeLoc(
   TL.setNameLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitSubstBuiltinTemplatePackTypeLoc(
+    SubstBuiltinTemplatePackTypeLoc TL) {
+  TL.setNameLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
   SourceLocation ElaboratedKeywordLoc = readSourceLocation();
@@ -7525,20 +7534,6 @@ void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   TL.setElaboratedKeywordLoc(readSourceLocation());
   TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setNameLoc(readSourceLocation());
-}
-
-void TypeLocReader::VisitDependentTemplateSpecializationTypeLoc(
-       DependentTemplateSpecializationTypeLoc TL) {
-  TL.setElaboratedKeywordLoc(readSourceLocation());
-  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
-  TL.setTemplateKeywordLoc(readSourceLocation());
-  TL.setTemplateNameLoc(readSourceLocation());
-  TL.setLAngleLoc(readSourceLocation());
-  TL.setRAngleLoc(readSourceLocation());
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    TL.setArgLocInfo(I,
-                     Reader.readTemplateArgumentLocInfo(
-                         TL.getTypePtr()->template_arguments()[I].getKind()));
 }
 
 void TypeLocReader::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -11003,8 +10998,9 @@ void ASTReader::diagnoseOdrViolations() {
 }
 
 void ASTReader::StartedDeserializing() {
-  if (++NumCurrentElementsDeserializing == 1 && ReadTimer.get())
-    ReadTimer->startTimer();
+  if (llvm::Timer *T = ReadTimer.get();
+      ++NumCurrentElementsDeserializing == 1 && T)
+    ReadTimeRegion.emplace(T);
 }
 
 void ASTReader::FinishedDeserializing() {
@@ -11062,8 +11058,7 @@ void ASTReader::FinishedDeserializing() {
           (void)UndeducedFD->getMostRecentDecl();
       }
 
-      if (ReadTimer)
-        ReadTimer->stopTimer();
+      ReadTimeRegion.reset();
 
       diagnoseOdrViolations();
     }
@@ -11223,6 +11218,9 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   case llvm::omp::OMPC_partial:
     C = OMPPartialClause::CreateEmpty(Context);
+    break;
+  case llvm::omp::OMPC_looprange:
+    C = OMPLoopRangeClause::CreateEmpty(Context);
     break;
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
@@ -11627,6 +11625,14 @@ void OMPClauseReader::VisitOMPPartialClause(OMPPartialClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
+void OMPClauseReader::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  C->setFirst(Record.readSubExpr());
+  C->setCount(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setFirstLoc(Record.readSourceLocation());
+  C->setCountLoc(Record.readSourceLocation());
+}
+
 void OMPClauseReader::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   C->setAllocator(Record.readExpr());
   C->setLParenLoc(Record.readSourceLocation());
@@ -11641,6 +11647,9 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultKind(static_cast<llvm::omp::DefaultKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
   C->setDefaultKindKwLoc(Record.readSourceLocation());
+  C->setDefaultVariableCategory(
+      Record.readEnum<OpenMPDefaultClauseVariableCategory>());
+  C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -11837,6 +11846,7 @@ void OMPClauseReader::VisitOMPSeverityClause(OMPSeverityClause *C) {
 }
 
 void OMPClauseReader::VisitOMPMessageClause(OMPMessageClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setMessageString(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
@@ -12852,9 +12862,12 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
 
-    llvm::SmallVector<VarDecl *> RecipeList;
-    for (unsigned I = 0; I < VarList.size(); ++I)
-      RecipeList.push_back(readDeclAs<VarDecl>());
+    llvm::SmallVector<OpenACCPrivateRecipe> RecipeList;
+    for (unsigned I = 0; I < VarList.size(); ++I) {
+      static_assert(sizeof(OpenACCPrivateRecipe) == 1 * sizeof(int *));
+      VarDecl *Alloca = readDeclAs<VarDecl>();
+      RecipeList.push_back({Alloca});
+    }
 
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
                                         VarList, RecipeList, EndLoc);
@@ -12876,6 +12889,7 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     llvm::SmallVector<OpenACCFirstPrivateRecipe> RecipeList;
     for (unsigned I = 0; I < VarList.size(); ++I) {
+      static_assert(sizeof(OpenACCFirstPrivateRecipe) == 2 * sizeof(int *));
       VarDecl *Recipe = readDeclAs<VarDecl>();
       VarDecl *RecipeTemp = readDeclAs<VarDecl>();
       RecipeList.push_back({Recipe, RecipeTemp});
@@ -12996,8 +13010,29 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    llvm::SmallVector<OpenACCReductionRecipeWithStorage> RecipeList;
+
+    for (unsigned I = 0; I < VarList.size(); ++I) {
+      VarDecl *Recipe = readDeclAs<VarDecl>();
+
+      static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                    3 * sizeof(int *));
+
+      llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe> Combiners;
+      unsigned NumCombiners = readInt();
+      for (unsigned I = 0; I < NumCombiners; ++I) {
+        VarDecl *LHS = readDeclAs<VarDecl>();
+        VarDecl *RHS = readDeclAs<VarDecl>();
+        Expr *Op = readExpr();
+
+        Combiners.push_back({LHS, RHS, Op});
+      }
+
+      RecipeList.push_back({Recipe, Combiners});
+    }
+
     return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
-                                          VarList, EndLoc);
+                                          VarList, RecipeList, EndLoc);
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);

@@ -3,24 +3,25 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 float test_cvtsh_ss(unsigned short a) {
   // CHECK-LABEL: test_cvtsh_ss
-  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 1
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 2
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 3
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 4
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 5
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 6
-  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 7
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: fpext <4 x half> %{{.*}} to <4 x float>
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: [[CONV:%.*]] = fpext half %{{.*}} to float
+  // CHECK: ret float [[CONV]]
   return _cvtsh_ss(a);
 }
+
+TEST_CONSTEXPR(_cvtsh_ss(0x0000) == 0.0f);
+TEST_CONSTEXPR(_cvtsh_ss(0x4500) == 5.0f);
+TEST_CONSTEXPR(_cvtsh_ss(0xC000) == -2.0f);
 
 unsigned short test_cvtss_sh(float a) {
   // CHECK-LABEL: test_cvtss_sh
@@ -33,9 +34,14 @@ unsigned short test_cvtss_sh(float a) {
   return _cvtss_sh(a, 0);
 }
 
+TEST_CONSTEXPR(match_m128(
+    _mm_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0, 0, 0, 0)), 
+    1.0f, 2.0f, 3.0f, 4.0f
+));
+
 __m128 test_mm_cvtph_ps(__m128i a) {
   // CHECK-LABEL: test_mm_cvtph_ps
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: fpext <4 x half> %{{.*}} to <4 x float>
   return _mm_cvtph_ps(a);
 }
@@ -45,6 +51,10 @@ __m256 test_mm256_cvtph_ps(__m128i a) {
   // CHECK: fpext <8 x half> %{{.*}} to <8 x float>
   return _mm256_cvtph_ps(a);
 }
+TEST_CONSTEXPR(match_m256(
+    _mm256_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0x4500, 0x3800, 0xC000, 0x0000)), 
+    1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 0.5f, -2.0f, 0.0f
+));
 
 __m128i test_mm_cvtps_ph(__m128 a) {
   // CHECK-LABEL: test_mm_cvtps_ph

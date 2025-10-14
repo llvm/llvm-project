@@ -1293,6 +1293,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
 bool4 isinf(float4);
 
 //===----------------------------------------------------------------------===//
+// isnan builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T isnan(T x)
+/// \brief Determines if the specified value \a x  is Not a Number.
+/// \param x The specified input value.
+///
+/// Returns a value of the same size as the input, with a value set
+/// to True if the x parameter is NaN or QNaN. Otherwise, False.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool isnan(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool2 isnan(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool3 isnan(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool4 isnan(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool isnan(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool2 isnan(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool3 isnan(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool4 isnan(float4);
+
+//===----------------------------------------------------------------------===//
 // lerp builtins
 //===----------------------------------------------------------------------===//
 
@@ -2190,10 +2223,10 @@ float4 sqrt(float4);
 // step builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn T step(T x, T y)
+/// \fn T step(T y, T x)
 /// \brief Returns 1 if the x parameter is greater than or equal to the y
-/// parameter; otherwise, 0. vector. \param x [in] The first floating-point
-/// value to compare. \param y [in] The first floating-point value to compare.
+/// parameter; otherwise, 0. vector. \param y [in] The first floating-point
+/// value to compare. \param x [in] The second floating-point value to compare.
 ///
 /// Step is based on the following formula: (x >= y) ? 1 : 0
 
@@ -2805,7 +2838,7 @@ float4 radians(float4);
 /// call.
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
-void GroupMemoryBarrierWithGroupSync(void);
+__attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

@@ -545,6 +545,15 @@ define void @masked_expand_compress_intrinsics(ptr %0, <7 x i1> %1, <7 x float> 
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @masked_expand_compress_intrinsics_with_alignment
+define void @masked_expand_compress_intrinsics_with_alignment(ptr %0, <7 x i1> %1, <7 x float> %2) {
+  ; CHECK: %[[val1:.+]] = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {}, {}]}> : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+  %4 = call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %0, <7 x i1> %1, <7 x float> %2)
+  ; CHECK: "llvm.intr.masked.compressstore"(%[[val1]], %{{.*}}, %{{.*}}) <{arg_attrs = [{}, {llvm.align = 8 : i64}, {}]}> : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
+  call void @llvm.masked.compressstore.v7f32(<7 x float> %4, ptr align 8 %0, <7 x i1> %1)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @annotate_intrinsics
 define void @annotate_intrinsics(ptr %var, ptr %ptr, i16 %int, ptr %annotation, ptr %fileName, i32 %line, ptr %args) {
   ; CHECK: "llvm.intr.var.annotation"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> ()
@@ -558,12 +567,11 @@ define void @annotate_intrinsics(ptr %var, ptr %ptr, i16 %int, ptr %annotation, 
 
 ; CHECK-LABEL:  llvm.func @trap_intrinsics
 define void @trap_intrinsics() {
-  ; CHECK: "llvm.intr.trap"() : () -> ()
+  ; CHECK: llvm.intr.trap
   call void @llvm.trap()
-  ; CHECK: "llvm.intr.debugtrap"() : () -> ()
+  ; CHECK: llvm.intr.debugtrap
   call void @llvm.debugtrap()
-  ; CHECK: "llvm.intr.ubsantrap"()
-  ; CHECK-SAME: failureKind = 1
+  ; CHECK: llvm.intr.ubsantrap <{failureKind = 1 : i8}>
   call void @llvm.ubsantrap(i8 1)
   ret void
 }
@@ -725,12 +733,12 @@ define void @assume(i1 %true) {
 }
 
 ; CHECK-LABEL: @assume_with_opbundles
-; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
-define void @assume_with_opbundles(i1 %true, ptr %p) {
+define void @assume_with_opbundles(ptr %p) {
+  ; CHECK: %[[TRUE:.+]] = llvm.mlir.constant(true) : i1
   ; CHECK: %[[ALIGN:.+]] = llvm.mlir.constant(8 : i32) : i32
   ; CHECK:  llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i32)] : i1
-  call void @llvm.assume(i1 %true) ["align"(ptr %p, i32 8)]
+  call void @llvm.assume(i1 true) ["align"(ptr %p, i32 8)]
   ret void
 }
 
@@ -821,7 +829,7 @@ define void @coro_suspend(i32 %0, i1 %1, ptr %2) {
 ; CHECK-LABEL:  llvm.func @coro_end
 define void @coro_end(ptr %0, i1 %1) {
   ; CHECK:  llvm.intr.coro.end
-  call i1 @llvm.coro.end(ptr %0, i1 %1, token none)
+  call void @llvm.coro.end(ptr %0, i1 %1, token none)
   ret void
 }
 
@@ -1288,7 +1296,7 @@ declare i64 @llvm.coro.align.i64()
 declare i32 @llvm.coro.align.i32()
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
 declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)

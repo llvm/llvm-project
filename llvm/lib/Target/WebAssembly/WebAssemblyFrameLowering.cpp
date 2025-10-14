@@ -278,7 +278,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const TargetRegisterClass *PtrRC =
-      MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+      MRI.getTargetRegisterInfo()->getPointerRegClass();
   unsigned SPReg = getSPReg(MF);
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
@@ -349,7 +349,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
     SPReg = FI->getBasePointerVreg();
   } else if (StackSize) {
     const TargetRegisterClass *PtrRC =
-        MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+        MRI.getTargetRegisterInfo()->getPointerRegClass();
     Register OffsetReg = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, InsertPt, DL, TII->get(getOpcConst(MF)), OffsetReg)
         .addImm(StackSize);

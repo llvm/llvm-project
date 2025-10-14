@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -637,9 +638,8 @@ InstructionCost TargetTransformInfo::getScalarizationOverhead(
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
-    ArrayRef<const Value *> Args, ArrayRef<Type *> Tys,
-    TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getOperandsScalarizationOverhead(Args, Tys, CostKind);
+    ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getOperandsScalarizationOverhead(Tys, CostKind);
 }
 
 bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
@@ -1130,6 +1130,15 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getIndexedVectorInstrCostFromEnd(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+    unsigned Index) const {
+  InstructionCost Cost =
+      TTIImpl->getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind, Index);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getInsertExtractValueCost(
     unsigned Opcode, TTI::TargetCostKind CostKind) const {
   assert((Opcode == Instruction::InsertValue ||
@@ -1230,10 +1239,11 @@ unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
   return TTIImpl->getNumberOfParts(Tp);
 }
 
-InstructionCost
-TargetTransformInfo::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                               const SCEV *Ptr) const {
-  InstructionCost Cost = TTIImpl->getAddressComputationCost(PtrTy, SE, Ptr);
+InstructionCost TargetTransformInfo::getAddressComputationCost(
+    Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+    TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1274,9 +1284,10 @@ InstructionCost TargetTransformInfo::getExtendedReductionCost(
 }
 
 InstructionCost TargetTransformInfo::getMulAccReductionCost(
-    bool IsUnsigned, Type *ResTy, VectorType *Ty,
+    bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
     TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getMulAccReductionCost(IsUnsigned, ResTy, Ty, CostKind);
+  return TTIImpl->getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, Ty,
+                                         CostKind);
 }
 
 InstructionCost
@@ -1393,8 +1404,9 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
-bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
-  return TTIImpl->preferFixedOverScalableIfEqualCost();
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost(
+    bool IsEpilogue) const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost(IsEpilogue);
 }
 
 bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
@@ -1412,6 +1424,10 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {
   return TTIImpl->preferEpilogueVectorization();
+}
+
+bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {
+  return TTIImpl->shouldConsiderVectorizationRegPressure();
 }
 
 TargetTransformInfo::VPLegalization

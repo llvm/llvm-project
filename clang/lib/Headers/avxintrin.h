@@ -50,28 +50,19 @@ typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
-                 __min_vector_width__(256)))
-#define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
-                 __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
 #else
-#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS128
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
 #endif
 
 /* Arithmetic */
@@ -1411,9 +1402,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    64-bit element in operand \a __b is copied to the same position in the
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c) {
   return (__m256d)__builtin_ia32_blendvpd256(
     (__v4df)__a, (__v4df)__b, (__v4df)__c);
 }
@@ -1439,9 +1429,8 @@ _mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
 ///    corresponding 32-bit element in operand \a __b is copied to the same
 ///    position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c) {
   return (__m256)__builtin_ia32_blendvps256(
     (__v8sf)__a, (__v8sf)__b, (__v8sf)__c);
 }
@@ -2182,9 +2171,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32].
 /// \returns A 256-bit vector of [4 x double] containing the converted values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_cvtepi32_pd(__m128i __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtepi32_pd(__m128i __a) {
   return (__m256d)__builtin_convertvector((__v4si)__a, __v4df);
 }
 
@@ -2197,9 +2185,8 @@ _mm256_cvtepi32_pd(__m128i __a)
 /// \param __a
 ///    A 256-bit integer vector.
 /// \returns A 256-bit vector of [8 x float] containing the converted values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_cvtepi32_ps(__m256i __a)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtepi32_ps(__m256i __a) {
   return (__m256)__builtin_convertvector((__v8si)__a, __v8sf);
 }
 
@@ -2248,9 +2235,8 @@ _mm256_cvtps_epi32(__m256 __a)
 /// \param __a
 ///    A 128-bit vector of [4 x float].
 /// \returns A 256-bit vector of [4 x double] containing the converted values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_cvtps_pd(__m128 __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtps_pd(__m128 __a) {
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
@@ -2325,10 +2311,9 @@ _mm256_cvttps_epi32(__m256 __a)
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \returns A 64 bit double containing the first element of the input vector.
-static __inline double __DEFAULT_FN_ATTRS
-_mm256_cvtsd_f64(__m256d __a)
-{
- return __a[0];
+static __inline double __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtsd_f64(__m256d __a) {
+  return __a[0];
 }
 
 /// Returns the first element of the input vector of [8 x i32].
@@ -2341,11 +2326,10 @@ _mm256_cvtsd_f64(__m256d __a)
 /// \param __a
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 32 bit integer containing the first element of the input vector.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_cvtsi256_si32(__m256i __a)
-{
- __v8si __b = (__v8si)__a;
- return __b[0];
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtsi256_si32(__m256i __a) {
+  __v8si __b = (__v8si)__a;
+  return __b[0];
 }
 
 /// Returns the first element of the input vector of [8 x float].
@@ -2358,10 +2342,9 @@ _mm256_cvtsi256_si32(__m256i __a)
 /// \param __a
 ///    A 256-bit vector of [8 x float].
 /// \returns A 32 bit float containing the first element of the input vector.
-static __inline float __DEFAULT_FN_ATTRS
-_mm256_cvtss_f32(__m256 __a)
-{
- return __a[0];
+static __inline float __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtss_f32(__m256 __a) {
+  return __a[0];
 }
 
 /* Vector replicate */
@@ -2556,9 +2539,8 @@ _mm256_unpacklo_ps(__m256 __a, __m256 __b) {
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns the ZF flag in the EFLAGS register.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testz_pd(__m128d __a, __m128d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testz_pd(__m128d __a,
+                                                                 __m128d __b) {
   return __builtin_ia32_vtestzpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -2585,9 +2567,8 @@ _mm_testz_pd(__m128d __a, __m128d __b)
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns the CF flag in the EFLAGS register.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testc_pd(__m128d __a, __m128d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testc_pd(__m128d __a,
+                                                                 __m128d __b) {
   return __builtin_ia32_vtestcpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -2615,9 +2596,8 @@ _mm_testc_pd(__m128d __a, __m128d __b)
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testnzc_pd(__m128d __a, __m128d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_testnzc_pd(__m128d __a, __m128d __b) {
   return __builtin_ia32_vtestnzcpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -2644,9 +2624,8 @@ _mm_testnzc_pd(__m128d __a, __m128d __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testz_ps(__m128 __a, __m128 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testz_ps(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_vtestzps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2673,9 +2652,8 @@ _mm_testz_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testc_ps(__m128 __a, __m128 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testc_ps(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_vtestcps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2703,9 +2681,8 @@ _mm_testc_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS128
-_mm_testnzc_ps(__m128 __a, __m128 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_testnzc_ps(__m128 __a,
+                                                                   __m128 __b) {
   return __builtin_ia32_vtestnzcps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2732,9 +2709,8 @@ _mm_testnzc_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double].
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testz_pd(__m256d __a, __m256d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testz_pd(__m256d __a,
+                                                                 __m256d __b) {
   return __builtin_ia32_vtestzpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -2761,9 +2737,8 @@ _mm256_testz_pd(__m256d __a, __m256d __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double].
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testc_pd(__m256d __a, __m256d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testc_pd(__m256d __a,
+                                                                 __m256d __b) {
   return __builtin_ia32_vtestcpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -2791,9 +2766,8 @@ _mm256_testc_pd(__m256d __a, __m256d __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testnzc_pd(__m256d __a, __m256d __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testnzc_pd(__m256d __a, __m256d __b) {
   return __builtin_ia32_vtestnzcpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -2820,9 +2794,8 @@ _mm256_testnzc_pd(__m256d __a, __m256d __b)
 /// \param __b
 ///    A 256-bit vector of [8 x float].
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testz_ps(__m256 __a, __m256 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testz_ps(__m256 __a,
+                                                                 __m256 __b) {
   return __builtin_ia32_vtestzps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2849,9 +2822,8 @@ _mm256_testz_ps(__m256 __a, __m256 __b)
 /// \param __b
 ///    A 256-bit vector of [8 x float].
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testc_ps(__m256 __a, __m256 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testc_ps(__m256 __a,
+                                                                 __m256 __b) {
   return __builtin_ia32_vtestcps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2879,9 +2851,8 @@ _mm256_testc_ps(__m256 __a, __m256 __b)
 /// \param __b
 ///    A 256-bit vector of [8 x float].
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testnzc_ps(__m256 __a, __m256 __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_testnzc_ps(__m256 __a,
+                                                                   __m256 __b) {
   return __builtin_ia32_vtestnzcps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2905,9 +2876,8 @@ _mm256_testnzc_ps(__m256 __a, __m256 __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns the ZF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testz_si256(__m256i __a, __m256i __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testz_si256(__m256i __a, __m256i __b) {
   return __builtin_ia32_ptestz256((__v4di)__a, (__v4di)__b);
 }
 
@@ -2931,9 +2901,8 @@ _mm256_testz_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns the CF flag.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testc_si256(__m256i __a, __m256i __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testc_si256(__m256i __a, __m256i __b) {
   return __builtin_ia32_ptestc256((__v4di)__a, (__v4di)__b);
 }
 
@@ -2958,9 +2927,8 @@ _mm256_testc_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns 1 if both the ZF and CF flags are set to 0, otherwise returns 0.
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_testnzc_si256(__m256i __a, __m256i __b)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_testnzc_si256(__m256i __a, __m256i __b) {
   return __builtin_ia32_ptestnzc256((__v4di)__a, (__v4di)__b);
 }
 
@@ -4586,9 +4554,8 @@ _mm256_castsi128_si256(__m128i __a)
 ///    A 128-bit vector of [2 x double].
 /// \returns A 256-bit floating-point vector of [4 x double]. The lower 128 bits
 ///    contain the value of the parameter. The upper 128 bits are set to zero.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_zextpd128_pd256(__m128d __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_zextpd128_pd256(__m128d __a) {
   return __builtin_shufflevector((__v2df)__a, (__v2df)_mm_setzero_pd(), 0, 1, 2, 3);
 }
 
@@ -4604,9 +4571,8 @@ _mm256_zextpd128_pd256(__m128d __a)
 ///    A 128-bit vector of [4 x float].
 /// \returns A 256-bit floating-point vector of [8 x float]. The lower 128 bits
 ///    contain the value of the parameter. The upper 128 bits are set to zero.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_zextps128_ps256(__m128 __a)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_zextps128_ps256(__m128 __a) {
   return __builtin_shufflevector((__v4sf)__a, (__v4sf)_mm_setzero_ps(), 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
@@ -4622,9 +4588,8 @@ _mm256_zextps128_ps256(__m128 __a)
 ///    A 128-bit integer vector.
 /// \returns A 256-bit integer vector. The lower 128 bits contain the value of
 ///    the parameter. The upper 128 bits are set to zero.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_zextsi128_si256(__m128i __a)
-{
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_zextsi128_si256(__m128i __a) {
   return __builtin_shufflevector((__v2di)__a, (__v2di)_mm_setzero_si128(), 0, 1, 2, 3);
 }
 
@@ -4839,9 +4804,8 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    128 bits of the result.
 /// \returns A 256-bit floating-point vector of [8 x float] containing the
 ///    concatenated result.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_set_m128 (__m128 __hi, __m128 __lo)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_set_m128(__m128 __hi, __m128 __lo) {
   return (__m256) __builtin_shufflevector((__v4sf)__lo, (__v4sf)__hi, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
@@ -4860,9 +4824,8 @@ _mm256_set_m128 (__m128 __hi, __m128 __lo)
 ///    128 bits of the result.
 /// \returns A 256-bit floating-point vector of [4 x double] containing the
 ///    concatenated result.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_set_m128d (__m128d __hi, __m128d __lo)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_set_m128d(__m128d __hi, __m128d __lo) {
   return (__m256d) __builtin_shufflevector((__v2df)__lo, (__v2df)__hi, 0, 1, 2, 3);
 }
 
@@ -4880,9 +4843,8 @@ _mm256_set_m128d (__m128d __hi, __m128d __lo)
 ///    A 128-bit integer vector to be copied to the lower 128 bits of the
 ///    result.
 /// \returns A 256-bit integer vector containing the concatenated result.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_set_m128i (__m128i __hi, __m128i __lo)
-{
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_set_m128i(__m128i __hi, __m128i __lo) {
   return (__m256i) __builtin_shufflevector((__v2di)__lo, (__v2di)__hi, 0, 1, 2, 3);
 }
 
@@ -4903,9 +4865,8 @@ _mm256_set_m128i (__m128i __hi, __m128i __lo)
 ///    128 bits of the result.
 /// \returns A 256-bit floating-point vector of [8 x float] containing the
 ///    concatenated result.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_setr_m128 (__m128 __lo, __m128 __hi)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_setr_m128(__m128 __lo, __m128 __hi) {
   return _mm256_set_m128(__hi, __lo);
 }
 
@@ -4926,9 +4887,8 @@ _mm256_setr_m128 (__m128 __lo, __m128 __hi)
 ///    128 bits of the result.
 /// \returns A 256-bit floating-point vector of [4 x double] containing the
 ///    concatenated result.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_setr_m128d (__m128d __lo, __m128d __hi)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_setr_m128d(__m128d __lo, __m128d __hi) {
   return (__m256d)_mm256_set_m128d(__hi, __lo);
 }
 
@@ -4947,9 +4907,8 @@ _mm256_setr_m128d (__m128d __lo, __m128d __hi)
 ///    A 128-bit integer vector to be copied to the upper 128 bits of the
 ///    result.
 /// \returns A 256-bit integer vector containing the concatenated result.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_setr_m128i (__m128i __lo, __m128i __hi)
-{
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_setr_m128i(__m128i __lo, __m128i __hi) {
   return (__m256i)_mm256_set_m128i(__hi, __lo);
 }
 

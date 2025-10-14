@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// pointers.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order.html
 class NondeterministicPointerIterationOrderCheck : public ClangTidyCheck {
 public:
   NondeterministicPointerIterationOrderCheck(StringRef Name,

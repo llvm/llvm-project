@@ -11,7 +11,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 17, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
@@ -19,7 +19,6 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -29,7 +28,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP2]], <16 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP8]], align 1
@@ -42,9 +41,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP11]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP14]], 2
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP15]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -58,15 +55,13 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP26:%.*]] = mul <vscale x 2 x i64> [[TMP25]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> [[BROADCAST_SPLAT4]], [[TMP26]]
-; CHECK-NEXT:    [[TMP27:%.*]] = mul i64 1, [[TMP17]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP27]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP17]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -76,7 +71,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP23]], <vscale x 2 x i32> [[TMP29]])
+; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX7]]
 ; CHECK-NEXT:    store <vscale x 2 x i8> zeroinitializer, ptr [[TMP32]], align 1
@@ -147,7 +142,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 17, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
@@ -155,7 +150,6 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -165,7 +159,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP2]], <16 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP26]], align 1
@@ -178,9 +172,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP11]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP14]], 2
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP15]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -194,15 +186,13 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP38:%.*]] = mul <vscale x 2 x i64> [[TMP25]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> [[BROADCAST_SPLAT4]], [[TMP38]]
-; CHECK-NEXT:    [[TMP39:%.*]] = mul i64 1, [[TMP17]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP39]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP17]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -212,7 +202,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP23]], <vscale x 2 x i32> [[TMP29]])
+; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX7]]
 ; CHECK-NEXT:    store <vscale x 2 x i8> zeroinitializer, ptr [[TMP32]], align 1
@@ -279,8 +269,8 @@ exit:
 define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(ptr noalias %A, ptr noalias %B, ptr noalias %C, ptr noalias %D, ptr noalias %E, ptr noalias %F, ptr noalias %G, ptr noalias %H, ptr noalias %I, ptr noalias %J, ptr noalias %K, ptr %L) #1 {
 ; CHECK-LABEL: define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]], ptr noalias [[E:%.*]], ptr noalias [[F:%.*]], ptr noalias [[G:%.*]], ptr noalias [[H:%.*]], ptr noalias [[I:%.*]], ptr noalias [[J:%.*]], ptr noalias [[K:%.*]], ptr [[L:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -320,12 +310,11 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 8, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 8, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_J1:%.*]] = getelementptr i64, ptr [[J]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L_J:%.*]] = load i64, ptr [[GEP_J1]], align 8
 ; CHECK-NEXT:    [[L_TRUNC:%.*]] = trunc i64 [[L_J]] to i16

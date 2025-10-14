@@ -235,6 +235,35 @@ class CompleteTagDeclsScope : public ClangASTImporter::NewDeclListener {
   clang::ASTContext *m_src_ctx;
   ClangASTImporter &importer;
 
+  void CompleteDecl(
+      Decl *decl,
+      lldb_private::ClangASTImporter::ASTContextMetadata const &to_context_md) {
+    // The decl that should be completed has to be imported into the target
+    // context from some other context.
+    assert(to_context_md.hasOrigin(decl));
+    // We should only complete decls coming from the source context.
+    assert(to_context_md.getOrigin(decl).ctx == m_src_ctx);
+
+    Decl *original_decl = to_context_md.getOrigin(decl).decl;
+
+    // Complete the decl now.
+    TypeSystemClang::GetCompleteDecl(m_src_ctx, original_decl);
+    if (auto *tag_decl = dyn_cast<TagDecl>(decl)) {
+      if (auto *original_tag_decl = dyn_cast<TagDecl>(original_decl)) {
+        if (original_tag_decl->isCompleteDefinition()) {
+          m_delegate->ImportDefinitionTo(tag_decl, original_tag_decl);
+          tag_decl->setCompleteDefinition(true);
+        }
+      }
+
+      tag_decl->setHasExternalLexicalStorage(false);
+      tag_decl->setHasExternalVisibleStorage(false);
+    } else if (auto *container_decl = dyn_cast<ObjCContainerDecl>(decl)) {
+      container_decl->setHasExternalLexicalStorage(false);
+      container_decl->setHasExternalVisibleStorage(false);
+    }
+  }
+
 public:
   /// Constructs a CompleteTagDeclsScope.
   /// \param importer The ClangASTImporter that we should observe.
@@ -257,30 +286,7 @@ public:
       NamedDecl *decl = m_decls_to_complete.pop_back_val();
       m_decls_already_completed.insert(decl);
 
-      // The decl that should be completed has to be imported into the target
-      // context from some other context.
-      assert(to_context_md->hasOrigin(decl));
-      // We should only complete decls coming from the source context.
-      assert(to_context_md->getOrigin(decl).ctx == m_src_ctx);
-
-      Decl *original_decl = to_context_md->getOrigin(decl).decl;
-
-      // Complete the decl now.
-      TypeSystemClang::GetCompleteDecl(m_src_ctx, original_decl);
-      if (auto *tag_decl = dyn_cast<TagDecl>(decl)) {
-        if (auto *original_tag_decl = dyn_cast<TagDecl>(original_decl)) {
-          if (original_tag_decl->isCompleteDefinition()) {
-            m_delegate->ImportDefinitionTo(tag_decl, original_tag_decl);
-            tag_decl->setCompleteDefinition(true);
-          }
-        }
-
-        tag_decl->setHasExternalLexicalStorage(false);
-        tag_decl->setHasExternalVisibleStorage(false);
-      } else if (auto *container_decl = dyn_cast<ObjCContainerDecl>(decl)) {
-        container_decl->setHasExternalLexicalStorage(false);
-        container_decl->setHasExternalVisibleStorage(false);
-      }
+      CompleteDecl(decl, *to_context_md);
 
       to_context_md->removeOrigin(decl);
     }
@@ -365,6 +371,16 @@ clang::Decl *ClangASTImporter::DeportDecl(clang::ASTContext *dst_ctx,
   return result;
 }
 
+bool ClangASTImporter::CanImport(const Decl *d) {
+  if (!d)
+    return false;
+  if (isa<TagDecl>(d))
+    return GetDeclOrigin(d).Valid();
+  if (isa<ObjCInterfaceDecl>(d))
+    return GetDeclOrigin(d).Valid();
+  return false;
+}
+
 bool ClangASTImporter::CanImport(const CompilerType &type) {
   if (!ClangUtil::IsClangType(type))
     return false;
@@ -374,23 +390,10 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
 
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
-  case clang::Type::Record: {
-    const clang::CXXRecordDecl *cxx_record_decl =
-        qual_type->getAsCXXRecordDecl();
-    if (cxx_record_decl) {
-      if (GetDeclOrigin(cxx_record_decl).Valid())
-        return true;
-    }
-  } break;
-
-  case clang::Type::Enum: {
-    auto *enum_decl = llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl();
-    if (enum_decl) {
-      if (GetDeclOrigin(enum_decl).Valid())
-        return true;
-    }
-  } break;
-
+  case clang::Type::Record:
+    return CanImport(qual_type->getAsCXXRecordDecl());
+  case clang::Type::Enum:
+    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl());
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
     const clang::ObjCObjectType *objc_class_type =
@@ -400,10 +403,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
           objc_class_type->getInterface();
       // We currently can't complete objective C types through the newly added
       // ASTContext because it only supports TagDecl objects right now...
-      if (class_interface_decl) {
-        if (GetDeclOrigin(class_interface_decl).Valid())
-          return true;
-      }
+      return CanImport(class_interface_decl);
     }
   } break;
 
@@ -1048,6 +1048,16 @@ ClangASTImporter::MapCompleter::~MapCompleter() = default;
 
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
+  // FIXME: The Minimal import mode of clang::ASTImporter does not correctly
+  // import Lambda definitions. Work around this for now by not importing
+  // lambdas at all. This is most likely encountered when importing decls from
+  // the `std` module (not from debug-info), where lambdas can be defined in
+  // inline function bodies. Those will be imported by LLDB.
+  if (const auto *CXX = llvm::dyn_cast<clang::CXXRecordDecl>(From))
+    if (CXX->isLambda())
+      return llvm::make_error<ASTImportError>(
+          ASTImportError::UnsupportedConstruct);
+
   if (m_std_handler) {
     std::optional<Decl *> D = m_std_handler->Import(From);
     if (D) {
@@ -1370,6 +1380,18 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
              from, m_source_ctx, &to->getASTContext());
   }
 
+  if (auto *to_namespace_decl = dyn_cast<NamespaceDecl>(to)) {
+    m_main.BuildNamespaceMap(to_namespace_decl);
+    to_namespace_decl->setHasExternalVisibleStorage();
+  }
+
+  MarkDeclImported(from, to);
+}
+
+void ClangASTImporter::ASTImporterDelegate::MarkDeclImported(Decl *from,
+                                                             Decl *to) {
+  Log *log = GetLog(LLDBLog::Expressions);
+
   if (auto *to_tag_decl = dyn_cast<TagDecl>(to)) {
     to_tag_decl->setHasExternalLexicalStorage();
     to_tag_decl->getPrimaryContext()->setMustBuildLookupTable();
@@ -1382,11 +1404,6 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
         (to_tag_decl->hasExternalVisibleStorage() ? " Visible" : ""),
         (from_tag_decl->isCompleteDefinition() ? "complete" : "incomplete"),
         (to_tag_decl->isCompleteDefinition() ? "complete" : "incomplete"));
-  }
-
-  if (auto *to_namespace_decl = dyn_cast<NamespaceDecl>(to)) {
-    m_main.BuildNamespaceMap(to_namespace_decl);
-    to_namespace_decl->setHasExternalVisibleStorage();
   }
 
   if (auto *to_container_decl = dyn_cast<ObjCContainerDecl>(to)) {
