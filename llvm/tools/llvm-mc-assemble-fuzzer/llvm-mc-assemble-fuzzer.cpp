@@ -31,6 +31,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -142,6 +143,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   static const std::vector<std::string> NoIncludeDirs;
   SrcMgr.setIncludeDirs(NoIncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   static std::string ArchName;
   std::string Error;

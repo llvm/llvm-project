@@ -21,8 +21,8 @@ bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
   // this reliance, we could drop all of this.
   SrcMgr = SourceMgr();
   SrcMgr.takeSourceBuffersFrom(InputSrcMgr);
-  SrcMgr.setVirtualFileSystem(InputSrcMgr.getVirtualFileSystem());
   SrcMgr.setIncludeDirs(InputSrcMgr.getIncludeDirs());
+  SrcMgr.setVirtualFileSystem(InputSrcMgr.getVirtualFileSystem());
   SrcMgr.setDiagHandler(InputSrcMgr.getDiagHandler(),
                         InputSrcMgr.getDiagContext());
 
