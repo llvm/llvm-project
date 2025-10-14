@@ -36,6 +36,8 @@ LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
   if (dot_num > IPV4_MAX_DOT_NUM)
     return 0;
 
+  // converts the Internet host address cp from the IPv4 numbers-and-dots
+  // notation into binary form (in network byte order)
   unsigned long result = 0;
   for (int i = 0; i <= dot_num; ++i) {
     unsigned long max_part =
