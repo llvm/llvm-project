@@ -2018,7 +2018,7 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
                       const TargetMachine &>) {                                \
       if (!TM)                                                                 \
         return make_error<StringError>(                                        \
-            formatv("Pass '{0}' requires TargetMachine", Name).str(),          \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
             inconvertibleErrorCode());                                         \
     }                                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(CREATE_PASS));               \
@@ -2141,7 +2141,7 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
                       const TargetMachine &>) {                                \
       if (!TM)                                                                 \
         return make_error<StringError>(                                        \
-            formatv("Pass '{0}' requires TargetMachine", Name).str(),          \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
             inconvertibleErrorCode());                                         \
     }                                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(CREATE_PASS));               \
@@ -2240,7 +2240,7 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
                       const TargetMachine &>) {                                \
       if (!TM)                                                                 \
         return make_error<StringError>(                                        \
-            formatv("Pass '{0}' requires TargetMachine", Name).str(),          \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
             inconvertibleErrorCode());                                         \
     }                                                                          \
     FPM.addPass(CREATE_PASS);                                                  \
@@ -2261,7 +2261,7 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
                       const TargetMachine &>) {                                \
       if (!TM)                                                                 \
         return make_error<StringError>(                                        \
-            formatv("Pass '{0}' requires TargetMachine", Name).str(),          \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
             inconvertibleErrorCode());                                         \
     }                                                                          \
     FPM.addPass(                                                               \
