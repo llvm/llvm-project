@@ -6417,8 +6417,18 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
   case scSequentialUMinExpr:
     return GetGCDMultiple(cast<SCEVNAryExpr>(S));
   case scUnknown: {
-    // ask ValueTracking for known bits
+    // Ask ValueTracking for known bits. SCEVUnknown only become available at
+    // the point their underlying IR instruction has been defined. If CtxI was
+    // not provided, use:
+    // * the first instruction in the entry block if it is an argument
+    // * the instruction itself otherwise.
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
+    if (!CtxI) {
+      if (isa<Argument>(U->getValue()))
+        CtxI = &*F.getEntryBlock().begin();
+      else if (auto *I = dyn_cast<Instruction>(U->getValue()))
+        CtxI = I;
+    }
     unsigned Known =
         computeKnownBits(U->getValue(), getDataLayout(), &AC, CtxI, &DT)
             .countMinTrailingZeros();

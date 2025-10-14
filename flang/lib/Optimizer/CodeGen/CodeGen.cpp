@@ -176,6 +176,17 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::AddrOfOp addr, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+
+    if (auto gpuMod = addr->getParentOfType<mlir::gpu::GPUModuleOp>()) {
+      auto global = gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
+      assert(global && "Expect global in gpu module");
+      replaceWithAddrOfOrASCast(rewriter, addr->getLoc(), global.getAddrSpace(),
+                                getProgramAddressSpace(rewriter),
+                                global.getSymName(),
+                                convertType(addr.getType()), addr);
+      return mlir::success();
+    }
+
     auto global = addr->getParentOfType<mlir::ModuleOp>()
                       .lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
     replaceWithAddrOfOrASCast(
@@ -3231,7 +3242,8 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 
     if (global.getDataAttr() &&
         *global.getDataAttr() == cuf::DataAttribute::Constant)
-      TODO(global.getLoc(), "CUDA Fortran CONSTANT variable code generation");
+      g.setAddrSpace(
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant));
 
     rewriter.eraseOp(global);
     return mlir::success();

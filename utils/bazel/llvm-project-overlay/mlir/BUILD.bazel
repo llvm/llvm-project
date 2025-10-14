@@ -4159,6 +4159,7 @@ cc_library(
         ":MathToLibm",
         ":MathToROCDL",
         ":MathToSPIRV",
+        ":MathToXeVM",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
@@ -7045,6 +7046,33 @@ cc_library(
         ":ROCDLDialect",
         ":TransformUtils",
         ":VectorDialect",
+    ],
+)
+
+cc_library(
+    name = "MathToXeVM",
+    srcs = glob([
+        "lib/Conversion/MathToXeVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/MathToXeVM/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/MathToXeVM",
+    ],
+    deps = [
+        ":ArithAttrToLLVMConversion",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+        ":Transforms",
+        ":XeVMDialect",
+        "//llvm:Support",
     ],
 )
 
