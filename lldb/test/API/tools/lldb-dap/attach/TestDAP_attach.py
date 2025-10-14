@@ -12,15 +12,18 @@ import time
 
 
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
-    def spawn_and_wait(self, program, delay):
-        time.sleep(delay)
+    def spawn(self, args):
         self.process = subprocess.Popen(
-            [program],
+            args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
         )
+
+    def spawn_and_wait(self, program, delay):
+        time.sleep(delay)
+        self.spawn([program])
         self.process.wait()
 
     def continue_and_verify_pid(self):
@@ -33,13 +36,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         Tests attaching to a process by process ID.
         """
         program = self.build_and_create_debug_adapter_for_attach()
-        self.process = subprocess.Popen(
-            [program],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
+        self.spawn([program])
         self.attach(pid=self.process.pid)
         self.continue_and_verify_pid()
 
@@ -53,13 +50,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         pid_file_path = lldbutil.append_to_process_working_directory(
             self, "pid_file_%d" % (int(time.time()))
         )
-        self.process = subprocess.Popen(
-            [program, pid_file_path],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
+        self.spawn([program, pid_file_path])
         lldbutil.wait_for_file_on_target(self, pid_file_path)
 
         self.attach(program=program)
