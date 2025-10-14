@@ -14,7 +14,6 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-const char CASBackedFile::ID = 0;
 const char CASBackedFileSystem::ID = 0;
 
 llvm::Expected<std::pair<std::unique_ptr<llvm::MemoryBuffer>, cas::ObjectRef>>
