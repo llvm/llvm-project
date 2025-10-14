@@ -18,32 +18,17 @@ define i64 @func_abs_sym() nounwind {
 
 ; CHECK-LABEL: func_abs_sym_in_range
 define i64 @func_abs_sym_in_range() nounwind {
-  ; CHECK: movq $abs_sym_in_range, %rax
+  ;; The absolute_symbol range fits in 32 bits but we still use movabs
+  ;; since there's no benefit to using the sign extending instruction
+  ;; with absolute symbols.
+  ; CHECK: movabsq $abs_sym_in_range, %rax
   %1 = ptrtoint ptr @abs_sym_in_range to i64
-  ret i64 %1
-}
-
-; CHECK-LABEL: func_abs_sym_min_out_of_range
-define i64 @func_abs_sym_min_out_of_range() nounwind {
-  ; CHECK: movabsq $abs_sym_min_out_of_range, %rax
-  %1 = ptrtoint ptr @abs_sym_min_out_of_range to i64
-  ret i64 %1
-}
-
-; CHECK-LABEL: func_abs_sym_max_out_of_range
-define i64 @func_abs_sym_max_out_of_range() nounwind {
-  ; CHECK: movabsq $abs_sym_max_out_of_range, %rax
-  %1 = ptrtoint ptr @abs_sym_max_out_of_range to i64
   ret i64 %1
 }
 
 @no_abs_sym = external hidden global [0 x i8]
 @abs_sym = external hidden global [0 x i8], !absolute_symbol !0
 @abs_sym_in_range = external hidden global [0 x i8], !absolute_symbol !1
-@abs_sym_min_out_of_range = external hidden global [0 x i8], !absolute_symbol !2
-@abs_sym_max_out_of_range = external hidden global [0 x i8], !absolute_symbol !3
 
 !0 = !{i64 -1, i64 -1}  ;; Full range
-!1 = !{i64 -2147483648, i64 2147483648}  ;; Note the upper bound is exclusive.
-!2 = !{i64 -2147483649, i64 2147483648}  ;; Min is one below -2^31
-!3 = !{i64 -2147483648, i64 2147483649}  ;; Max is one above 2^31-1
+!1 = !{i64 -2147483648, i64 2147483648}  ;; In range
