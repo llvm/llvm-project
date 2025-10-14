@@ -84,9 +84,9 @@ struct ClampFOpConversion final
   amdgpu::Chipset chipset;
 };
 
-static void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
-                                        RewritePatternSet &patterns,
-                                        amdgpu::Chipset chipset) {
+void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
+                                 RewritePatternSet &patterns,
+                                 amdgpu::Chipset chipset) {
 
   patterns.add<ClampFOpConversion>(converter, chipset);
 }
@@ -183,12 +183,20 @@ struct ConvertMathToROCDLPass final
 void ConvertMathToROCDLPass::runOnOperation() {
   auto m = getOperation();
   MLIRContext *ctx = m.getContext();
-  FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
 
   RewritePatternSet patterns(&getContext());
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
-  populateMathToROCDLConversionPatterns(converter, patterns, *maybeChipset);
+
+  // Only populate chipset-dependent patterns if chipset is specified
+  if (!chipset.empty()) {
+    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
+    if (failed(maybeChipset)) {
+      return signalPassFailure();
+    }
+    populateMathToROCDLConversionPatterns(converter, patterns, *maybeChipset);
+  }
+
   ConversionTarget target(getContext());
   target
       .addLegalDialect<BuiltinDialect, func::FuncDialect, vector::VectorDialect,
