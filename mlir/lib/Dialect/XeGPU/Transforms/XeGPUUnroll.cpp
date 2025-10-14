@@ -687,7 +687,7 @@ struct UnrollLoadGatherOpWithOffset
       auto newOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newValueTy, op.getSource(), o, m,
           rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr());
+          op.getL2HintAttr(), op.getL3HintAttr(), op.getLayoutAttr());
       newOps.push_back(newOp);
     }
 
@@ -783,7 +783,7 @@ struct UnrollStoreScatterOpWithOffsets
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
                                     rewriter.getI64IntegerAttr(chunkSize),
                                     op.getL1HintAttr(), op.getL2HintAttr(),
-                                    op.getL3HintAttr());
+                                    op.getL3HintAttr(), op.getLayoutAttr());
     }
 
     rewriter.eraseOp(op);

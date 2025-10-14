@@ -109,6 +109,8 @@ std::string xegpu::getLayoutName(const OpOperand &operand) {
 }
 
 std::string xegpu::getLayoutName(const OpResult result) {
+  if (isa<xegpu::LoadGatherOp, xegpu::StoreScatterOp>(result.getOwner()))
+    return "layout";
   const StringRef prefix = "layout_result_";
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
@@ -141,6 +143,9 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
       return storeOp.getLayoutAttr();
 
+    if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
+      return loadGatherOp.getLayoutAttr();
+
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -167,6 +172,12 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
 
   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
     return storeOp.getLayoutAttr();
+
+  // if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(op))
+  //   return loadGatherOp.getDistributeLayout();
+
+  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
+    return storeScatterOp.getDistributeLayout();
 
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
@@ -196,7 +207,7 @@ template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
 void xegpu::setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
-    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(nestOp))
+    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp, xegpu::LoadGatherOp, xegpu::StoreScatterOp>(nestOp))
       return;
 
     for (OpOperand &opr : nestOp->getOpOperands()) {
@@ -216,6 +227,8 @@ void xegpu::removeLayoutAttr(const T &operandOrResult) {
   std::string name = xegpu::getLayoutName(operandOrResult);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->removeAttr(name);
+  if (isa<xegpu::StoreMatrixOp, xegpu::LoadGatherOp>(owner) && owner->hasAttrOfType<DistributeLayoutAttr>("layout"))
+    owner->removeAttr("layout");
 }
 
 // Explicit instantiation for OpResult
