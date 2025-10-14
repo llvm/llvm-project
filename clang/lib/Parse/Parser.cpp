@@ -2320,11 +2320,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                                  ? Sema::ModuleDeclKind::Interface
                                  : Sema::ModuleDeclKind::Implementation;
 
-  assert((Tok.is(tok::kw_module) ||
-          (Tok.is(tok::identifier) &&
-           Tok.getIdentifierInfo()->isStr(
-               tok::getKeywordSpelling(tok::kw_module)))) &&
-         "not a module declaration");
+  assert(Tok.is(tok::kw_module) && "not a module declaration");
 
   SourceLocation ModuleLoc = ConsumeToken();
 
@@ -2406,7 +2402,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   SourceLocation ExportLoc;
   TryConsumeToken(tok::kw_export, ExportLoc);
 
-  assert((AtLoc.isInvalid() ? Tok.isOneOf(tok::kw_import, tok::identifier)
+  assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);

@@ -352,6 +352,8 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   // Add the 'import' and 'module' contextual keywords.
   get("import").setModulesImport(true);
   get("module").setModulesDeclaration(true);
+  get("__preprocessed_import").setModulesImport(true);
+  get("__preprocessed_module").setModulesDeclaration(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the
@@ -465,6 +467,11 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   unsigned Len = getLength();
   if (Len < 2) return tok::pp_not_keyword;
   const char *Name = getNameStart();
+
+  if (Name[0] == '_' && isModulesImport())
+    return tok::pp___preprocessed_import;
+  if (Name[0] == '_' && isModulesDeclaration())
+    return tok::pp___preprocessed_module;
 
   // clang-format off
   switch (HASH(Len, Name[0], Name[2])) {

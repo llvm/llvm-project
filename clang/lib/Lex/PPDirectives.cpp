@@ -1287,6 +1287,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_pragma:
       case tok::pp_embed:
       case tok::pp_module:
+      case tok::pp___preprocessed_module:
+      case tok::pp___preprocessed_import:
         Diag(Result, diag::err_embedded_directive)
             << Introducer.isModuleContextualKeyword(getLangOpts(),
                                                     /*AllowExport=*/false)
@@ -1385,7 +1387,10 @@ void Preprocessor::HandleDirective(Token &Result) {
     case tok::pp_pragma:
       return HandlePragmaDirective({PIK_HashPragma, Introducer.getLocation()});
     case tok::pp_module:
+    case tok::pp___preprocessed_module:
       return HandleCXXModuleDirective(Result);
+    case tok::pp___preprocessed_import:
+      return HandleCXXImportDirective(Result);
     // GNU Extensions.
     case tok::pp_import:
       if (Introducer.isModuleContextualKeyword(getLangOpts(),
@@ -4120,6 +4125,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     Lex(Tok);
     [[fallthrough]];
   case tok::identifier: {
+    bool LeadingSpace = Tok.hasLeadingSpace();
     unsigned NumToksInDirective = DirToks.size();
     if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path)) {
       if (Tok.isNot(tok::eod))
@@ -4136,6 +4142,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     DirToks.back().setKind(tok::annot_module_name);
     DirToks.back().setAnnotationRange(NameLoc->getRange());
     DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+    DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
     DirToks.push_back(Tok);
 
     bool IsValid =
@@ -4271,6 +4278,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.push_back(Tok);
     break;
   case tok::identifier: {
+    bool LeadingSpace = Tok.hasLeadingSpace();
     unsigned NumToksInDirective = DirToks.size();
 
     // C++ [cpp.module]p3: Any preprocessing tokens after the module
@@ -4293,6 +4301,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.back().setKind(tok::annot_module_name);
     DirToks.back().setAnnotationRange(NameLoc->getRange());
     DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+    DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
     DirToks.push_back(Tok);
 
     // C++20 [cpp.module]p
@@ -4301,6 +4310,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     if (Tok.is(tok::colon)) {
       NumToksInDirective = DirToks.size();
       LexUnexpandedToken(Tok);
+      LeadingSpace = Tok.hasLeadingSpace();
       if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition,
                                 /*AllowMacroExpansion=*/false,
                                 /*IsPartition=*/true)) {
@@ -4317,6 +4327,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
       DirToks.back().setKind(tok::annot_module_name);
       DirToks.back().setAnnotationRange(NameLoc->getRange());
       DirToks.back().setAnnotationValue(static_cast<void *>(PartitionLoc));
+      DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
       DirToks.push_back(Tok);
     }
 

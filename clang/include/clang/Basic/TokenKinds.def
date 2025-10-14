@@ -135,6 +135,8 @@ PPKEYWORD(embed)
 
 // C++20 Module Directive
 PPKEYWORD(module)
+PPKEYWORD(__preprocessed_module)
+PPKEYWORD(__preprocessed_import)
 
 // GNU Extensions.
 PPKEYWORD(import)

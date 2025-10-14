@@ -192,3 +192,9 @@ export module M
 //--- cwg2947_example6.cpp
 export module M; int // expected-warning {{extra tokens at end of 'module' directive}}
   n;                         // OK
+
+//--- preprocessed_module_file.cpp
+export module M;
+struct import {};
+#define EMPTY
+EMPTY import foo;

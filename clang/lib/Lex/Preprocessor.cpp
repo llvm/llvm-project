@@ -35,6 +35,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/CodeCompletionHandler.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -61,6 +62,7 @@
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -578,6 +580,11 @@ void Preprocessor::EnterMainSourceFile() {
     // export module M; // error: module declaration must occur
     //                  //        at the start of the translation unit.
     if (getLangOpts().CPlusPlusModules) {
+      std::optional<StringRef> Input =
+          getSourceManager().getBufferDataOrNone(MainFileID);
+      if (Input)
+        MainFileIsPreprocessedModuleFile =
+            clang::isPreprocessedModuleFile(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
       addPPCallbacks(std::move(Tracer));
@@ -1207,6 +1214,15 @@ bool Preprocessor::HandleModuleContextualKeyword(
     LastTokenWasExportKeyword = {Result, TokAtPhysicalStartOfLine};
     return false;
   }
+
+  /// Trait 'module' and 'import' as a identifier when the main file is a
+  /// preprocessed module file. We only allow '__preprocessed_module' and
+  /// '__preprocessed_import' in this context.
+  IdentifierInfo *II = Result.getIdentifierInfo();
+  if (isPreprocessedModuleFile() &&
+      (II->isStr(tok::getKeywordSpelling(tok::kw_import)) ||
+       II->isStr(tok::getKeywordSpelling(tok::kw_module))))
+    return false;
 
   if (LastTokenWasExportKeyword.isValid()) {
     // The export keyword was not at the start of line, it's not a

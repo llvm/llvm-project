@@ -1216,4 +1216,41 @@ TEST(MinimizeSourceToDependencyDirectivesTest, TokensBeforeEOF) {
   EXPECT_STREQ("#ifndef A\n#define A\n#endif\n<TokBeforeEOF>\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, PreprocessedModule) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("export __preprocessed_module M;\n"
+                                           "struct import {};\n"
+                                           "import foo;\n"
+                                           "__preprocessed_import bar;\n",
+                                           Out));
+  EXPECT_STREQ("export __preprocessed_module M;\n"
+               "__preprocessed_import bar;\n",
+               Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, ScanningPreprocessedModuleFile) {
+  StringRef Source = R"(
+    export __preprocessed_module M;
+    struct import {};
+    import foo;
+    )";
+
+  ASSERT_TRUE(clang::isPreprocessedModuleFile(Source));
+
+  Source = R"(
+    export module M;
+    struct import {};
+    import foo;
+    )";
+
+  ASSERT_FALSE(clang::isPreprocessedModuleFile(Source));
+
+  Source = R"(
+    __preprocessed_import foo;
+    )";
+  ASSERT_TRUE(clang::isPreprocessedModuleFile(Source));
+}
+
 } // end anonymous namespace

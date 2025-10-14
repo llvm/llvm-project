@@ -1183,6 +1183,9 @@ private:
   /// Whether tokens are being skipped until the through header is seen.
   bool SkippingUntilPCHThroughHeader = false;
 
+  /// Whether the main file is preprocessed module file.
+  bool MainFileIsPreprocessedModuleFile = false;
+
   /// \{
   /// Cache of macro expanders to reduce malloc traffic.
   enum { TokenLexerCacheSize = 8 };
@@ -1834,6 +1837,12 @@ public:
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
+
+  /// Whether the main file is preprocessed module file.
+  bool isPreprocessedModuleFile() const {
+    return MainFileIsPreprocessedModuleFile;
+  }
+
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                              SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
