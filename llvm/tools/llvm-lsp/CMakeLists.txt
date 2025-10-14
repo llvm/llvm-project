@@ -14,4 +14,4 @@ add_llvm_tool(llvm-lsp-server
   Protocol.cpp
 )
 
-target_compile_features(llvm-lsp-server PRIVATE cxx_std_23)
+target_compile_features(llvm-lsp-server PRIVATE cxx_std_20)

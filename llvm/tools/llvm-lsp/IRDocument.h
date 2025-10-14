@@ -37,10 +37,10 @@ public:
   static std::optional<std::string>
   basicBlockIdFormatter(const llvm::BasicBlock *BB,
                         const llvm::AsmParserContext &ParserContext) {
-    return ParserContext.getBlockLocation(BB).transform([](const auto &Loc) {
-      return llvm::formatv("range_{0}_{1}_{2}_{3}", Loc.Start.Line,
-                           Loc.Start.Col, Loc.End.Line, Loc.End.Col);
-    });
+    if (auto Loc = ParserContext.getBlockLocation(BB))
+      return llvm::formatv("range_{0}_{1}_{2}_{3}", Loc->Start.Line,
+                           Loc->Start.Col, Loc->End.Line, Loc->End.Col);
+    return std::nullopt;
   }
 
   static std::optional<llvm::FileLocRange>
