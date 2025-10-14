@@ -417,6 +417,7 @@ size_t Dex::estimateMemoryUsage() const {
   Bytes += Refs.getMemorySize();
   Bytes += RevRefs.size() * sizeof(RevRef);
   Bytes += Relations.getMemorySize();
+  Bytes += ReverseRelations.getMemorySize();
   return Bytes + BackingDataSize;
 }
 

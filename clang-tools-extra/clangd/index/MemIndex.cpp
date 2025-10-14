@@ -155,7 +155,8 @@ MemIndex::indexedFiles() const {
 
 size_t MemIndex::estimateMemoryUsage() const {
   return Index.getMemorySize() + Refs.getMemorySize() +
-         Relations.getMemorySize() + BackingDataSize;
+         Relations.getMemorySize() + ReverseRelations.getMemorySize() +
+         BackingDataSize;
 }
 
 } // namespace clangd
