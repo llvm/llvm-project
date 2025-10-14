@@ -65,18 +65,18 @@ void StaticDataProfileInfo::addConstantProfileCount(
 }
 
 StaticDataProfileInfo::StaticDataHotness
-StaticDataProfileInfo::getSectionHotnessUsingProfileCount(
+StaticDataProfileInfo::getConstantHotnessUsingProfileCount(
     const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const {
-  // The accummulated counter shows the constant is hot. Return 'hot' whether
-  // this variable is seen by unprofiled functions or not.
+  // The accummulated counter shows the constant is hot. Return enum 'hot'
+  // whether this variable is seen by unprofiled functions or not.
   if (PSI->isHotCount(Count))
     return StaticDataHotness::Hot;
   // The constant is not hot, and seen by unprofiled functions. We don't want to
   // assign it to unlikely sections, even if the counter says 'cold'. So return
-  // an empty prefix before checking whether the counter is cold.
+  // enum 'LukewarmOrUnknown'.
   if (ConstantWithoutCounts.count(C))
     return StaticDataHotness::LukewarmOrUnknown;
-  // The accummulated counter shows the constant is cold. Return 'unlikely'.
+  // The accummulated counter shows the constant is cold so return enum 'cold'.
   if (PSI->isColdCount(Count))
     return StaticDataHotness::Cold;
 
@@ -87,20 +87,18 @@ StaticDataProfileInfo::StaticDataHotness
 StaticDataProfileInfo::getSectionHotnessUsingDataAccessProfile(
     std::optional<StringRef> MaybeSectionPrefix) const {
   if (!MaybeSectionPrefix)
-    return StaticDataProfileInfo::StaticDataHotness::LukewarmOrUnknown;
+    return StaticDataHotness::LukewarmOrUnknown;
   StringRef Prefix = *MaybeSectionPrefix;
   assert((Prefix == "hot" || Prefix == "unlikely") &&
          "Expect section_prefix to be one of hot or unlikely");
-  return Prefix == "hot" ? StaticDataProfileInfo::StaticDataHotness::Hot
-                         : StaticDataProfileInfo::StaticDataHotness::Cold;
+  return Prefix == "hot" ? StaticDataHotness::Hot : StaticDataHotness::Cold;
 }
 
-StringRef StaticDataProfileInfo::hotnessToStr(
-    StaticDataProfileInfo::StaticDataHotness Hotness) const {
+StringRef StaticDataProfileInfo::hotnessToStr(StaticDataHotness Hotness) const {
   switch (Hotness) {
-  case StaticDataProfileInfo::StaticDataHotness::Cold:
+  case StaticDataHotness::Cold:
     return "unlikely";
-  case StaticDataProfileInfo::StaticDataHotness::Hot:
+  case StaticDataHotness::Hot:
     return "hot";
   default:
     return "";
@@ -144,7 +142,7 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
 
       // Both data access profiles and PGO counters are available. Use the
       // hotter one.
-      auto HotnessFromPGO = getSectionHotnessUsingProfileCount(C, PSI, *Count);
+      auto HotnessFromPGO = getConstantHotnessUsingProfileCount(C, PSI, *Count);
       StaticDataHotness GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
       if (HotnessFromDataAccessProf == StaticDataHotness::Hot ||
           HotnessFromPGO == StaticDataHotness::Hot) {
@@ -169,8 +167,7 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
   }
   if (!Count)
     return "";
-
-  return hotnessToStr(getSectionHotnessUsingProfileCount(C, PSI, *Count));
+  return hotnessToStr(getConstantHotnessUsingProfileCount(C, PSI, *Count));
 }
 
 bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {

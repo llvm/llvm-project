@@ -47,15 +47,17 @@ public:
   LLVM_ABI std::optional<uint64_t>
   getConstantProfileCount(const Constant *C) const;
 
-  enum class StaticDataHotness : uint8_t {
-    Cold = 0,
-    LukewarmOrUnknown = 1,
-    Hot = 2,
+  /// Use signed enums for enum value comparison, and make 'LukewarmOrUnknown'
+  /// as 0 so any accidentally uninitialized value will default to unknown.
+  enum class StaticDataHotness : int8_t {
+    Cold = -1,
+    LukewarmOrUnknown = 0,
+    Hot = 1,
   };
 
   /// Return the hotness of the constant \p C based on its profile count \p
   /// Count.
-  LLVM_ABI StaticDataHotness getSectionHotnessUsingProfileCount(
+  LLVM_ABI StaticDataHotness getConstantHotnessUsingProfileCount(
       const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const;
 
   /// Return the hotness based on section prefix \p SectionPrefix.
