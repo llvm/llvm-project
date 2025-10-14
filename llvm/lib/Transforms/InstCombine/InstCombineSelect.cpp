@@ -544,8 +544,18 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
                                          Swapped ? OOp : C, "", &SI);
-    if (isa<FPMathOperator>(&SI))
-      cast<Instruction>(NewSel)->setFastMathFlags(FMF);
+    if (isa<FPMathOperator>(&SI)) {
+      FastMathFlags NewSelFMF = FMF;
+      // We cannot propagate ninf from the original select, because OOp may be
+      // inf and the flag only guarantees that FalseVal (op OOp) is never
+      // infinity.
+      // Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
+      // Specifically, if the original select has both ninf and nnan, we can
+      // safely propagate the flag.
+      NewSelFMF.setNoInfs(TVI->hasNoInfs() ||
+                          (NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
+      cast<Instruction>(NewSel)->setFastMathFlags(NewSelFMF);
+    }
     NewSel->takeName(TVI);
     BinaryOperator *BO =
         BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
@@ -2969,10 +2979,14 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
-    return SelectInst::Create(Op,
-                              IsAnd ? V : ConstantInt::getTrue(Op->getType()),
-                              IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL)) {
+    Instruction *MDFrom = nullptr;
+    if (!ProfcheckDisableMetadataFixes)
+      MDFrom = &SI;
+    return SelectInst::Create(
+        Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
+        IsAnd ? ConstantInt::getFalse(Op->getType()) : V, "", nullptr, MDFrom);
+  }
   return nullptr;
 }
 

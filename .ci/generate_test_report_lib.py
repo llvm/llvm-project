@@ -98,6 +98,23 @@ def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
         )
     return output
 
+def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
+    failures = {}
+    for results in junit_objects:
+        for testsuite in results:
+            for test in testsuite:
+                if (
+                    not test.is_passed
+                    and test.result
+                    and isinstance(test.result[0], Failure)
+                ):
+                    if failures.get(testsuite.name) is None:
+                        failures[testsuite.name] = []
+                    failures[testsuite.name].append(
+                        (test.classname + "/" + test.name, test.result[0].text)
+                    )
+    return failures
+
 
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
@@ -113,7 +130,7 @@ def generate_report(
     size_limit=1024 * 1024,
     list_failures=True,
 ):
-    failures = {}
+    failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
     tests_failed = 0
@@ -123,18 +140,6 @@ def generate_report(
             tests_run += testsuite.tests
             tests_skipped += testsuite.skipped
             tests_failed += testsuite.failures
-
-            for test in testsuite:
-                if (
-                    not test.is_passed
-                    and test.result
-                    and isinstance(test.result[0], Failure)
-                ):
-                    if failures.get(testsuite.name) is None:
-                        failures[testsuite.name] = []
-                    failures[testsuite.name].append(
-                        (test.classname + "/" + test.name, test.result[0].text)
-                    )
 
     report = [f"# {title}", ""]
 
@@ -258,7 +263,7 @@ def generate_report(
     return report
 
 
-def generate_report_from_files(title, return_code, build_log_files):
+def load_info_from_files(build_log_files):
     junit_files = [
         junit_file for junit_file in build_log_files if junit_file.endswith(".xml")
     ]
@@ -271,6 +276,9 @@ def generate_report_from_files(title, return_code, build_log_files):
             ninja_logs.append(
                 [log_line.strip() for log_line in ninja_log_file_handle.readlines()]
             )
-    return generate_report(
-        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
-    )
+    return [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
+
+
+def generate_report_from_files(title, return_code, build_log_files):
+    junit_objects, ninja_logs = load_info_from_files(build_log_files)
+    return generate_report(title, return_code, junit_objects, ninja_logs)
