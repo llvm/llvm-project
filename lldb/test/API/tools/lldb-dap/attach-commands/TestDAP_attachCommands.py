@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import time
 
+
 class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_commands(self):
