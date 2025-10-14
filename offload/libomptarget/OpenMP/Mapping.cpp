@@ -59,8 +59,9 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
     bool IsValid = HDTT.HstPtrEnd == (uintptr_t)HstPtrBegin + Size &&
                    HDTT.TgtPtrBegin == (uintptr_t)TgtPtrBegin;
     if (IsValid) {
-      DP("Attempt to re-associate the same device ptr+offset with the same "
-         "host ptr, nothing to do\n");
+      DPIF(MAP,
+           "Attempt to re-associate the same device ptr+offset with the same "
+           "host ptr, nothing to do\n");
       return OFFLOAD_SUCCESS;
     }
     REPORT("Not allowed to re-associate a different device ptr+offset with "
@@ -80,12 +81,14 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
                /*UseHoldRefCount=*/false, /*Name=*/nullptr,
                /*IsRefCountINF=*/true))
            .first->HDTT;
-  DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD
-     ", HstEnd=" DPxMOD ", TgtBegin=" DPxMOD ", DynRefCount=%s, "
-     "HoldRefCount=%s\n",
-     DPxPTR(NewEntry.HstPtrBase), DPxPTR(NewEntry.HstPtrBegin),
-     DPxPTR(NewEntry.HstPtrEnd), DPxPTR(NewEntry.TgtPtrBegin),
-     NewEntry.dynRefCountToStr().c_str(), NewEntry.holdRefCountToStr().c_str());
+  DPIF(MAP,
+       "Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD
+       ", HstEnd=" DPxMOD ", TgtBegin=" DPxMOD ", DynRefCount=%s, "
+       "HoldRefCount=%s\n",
+       DPxPTR(NewEntry.HstPtrBase), DPxPTR(NewEntry.HstPtrBegin),
+       DPxPTR(NewEntry.HstPtrEnd), DPxPTR(NewEntry.TgtPtrBegin),
+       NewEntry.dynRefCountToStr().c_str(),
+       NewEntry.holdRefCountToStr().c_str());
   (void)NewEntry;
 
   // Notify the plugin about the new mapping.
@@ -114,7 +117,7 @@ int MappingInfoTy::disassociatePtr(void *HstPtrBegin) {
   }
 
   if (HDTT.isDynRefCountInf()) {
-    DP("Association found, removing it\n");
+    DPIF(MAP, "Association found, removing it\n");
     void *Event = HDTT.getEvent();
     delete &HDTT;
     if (Event)
@@ -135,8 +138,8 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
   uintptr_t HP = (uintptr_t)HstPtrBegin;
   LookupResult LR;
 
-  DP("Looking up mapping(HstPtrBegin=" DPxMOD ", Size=%" PRId64 ")...\n",
-     DPxPTR(HP), Size);
+  DPIF(MAP, "Looking up mapping(HstPtrBegin=" DPxMOD ", Size=%" PRId64 ")...\n",
+       DPxPTR(HP), Size);
 
   if (HDTTMap->empty())
     return LR;
@@ -185,12 +188,14 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
     }
 
     if (LR.Flags.ExtendsBefore) {
-      DP("WARNING: Pointer is not mapped but section extends into already "
-         "mapped data\n");
+      DPIF(MAP,
+           "WARNING: Pointer is not mapped but section extends into already "
+           "mapped data\n");
     }
     if (LR.Flags.ExtendsAfter) {
-      DP("WARNING: Pointer is already mapped but section extends beyond mapped "
-         "region\n");
+      DPIF(MAP, "WARNING: Pointer is already mapped but section extends beyond "
+                "mapped "
+                "region\n");
     }
   }
 
@@ -269,17 +274,19 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
            "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
            "memory\n",
            DPxPTR((uintptr_t)HstPtrBegin), Size);
-      DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
-         "memory\n",
-         DPxPTR((uintptr_t)HstPtrBegin), Size);
+      DPIF(MAP,
+           "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+           "memory\n",
+           DPxPTR((uintptr_t)HstPtrBegin), Size);
       LR.TPR.Flags.IsPresent = false;
       LR.TPR.Flags.IsHostPointer = true;
       LR.TPR.TargetPointer = HstPtrBegin;
     }
   } else if (HasPresentModifier) {
-    DP("Mapping required by 'present' map type modifier does not exist for "
-       "HstPtrBegin=" DPxMOD ", Size=%" PRId64 "\n",
-       DPxPTR(HstPtrBegin), Size);
+    DPIF(MAP,
+         "Mapping required by 'present' map type modifier does not exist for "
+         "HstPtrBegin=" DPxMOD ", Size=%" PRId64 "\n",
+         DPxPTR(HstPtrBegin), Size);
     MESSAGE("device mapping required by 'present' map type modifier does not "
             "exist for host address " DPxMOD " (%" PRId64 " bytes)",
             DPxPTR(HstPtrBegin), Size);
@@ -342,14 +349,15 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     };
     if (LR.TPR.getEntry()->foreachShadowPointerInfo(FailOnPtrFound) ==
         OFFLOAD_FAIL) {
-      DP("Multiple new mappings of %" PRId64 " bytes detected (hst:" DPxMOD
-         ") -> (tgt:" DPxMOD ")\n",
-         Size, DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
+      DPIF(MAP,
+           "Multiple new mappings of %" PRId64 " bytes detected (hst:" DPxMOD
+           ") -> (tgt:" DPxMOD ")\n",
+           Size, DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
       return std::move(LR.TPR);
     }
 
-    DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n", Size,
-       DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
+    DPIF(MAP, "Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
+         Size, DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
 
     int Ret = Device.submitData(LR.TPR.TargetPointer, HstPtrBegin, Size,
                                 AsyncInfo, LR.TPR.getEntry());
@@ -444,9 +452,10 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
-    DP("Get HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
-       "memory\n",
-       DPxPTR((uintptr_t)HstPtrBegin), Size);
+    DPIF(MAP,
+         "Get HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+         "memory\n",
+         DPxPTR((uintptr_t)HstPtrBegin), Size);
     LR.TPR.Flags.IsPresent = false;
     LR.TPR.Flags.IsHostPointer = true;
     LR.TPR.TargetPointer = HstPtrBegin;
@@ -501,9 +510,10 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
                                          int64_t Size) {
   assert(Entry && "Trying to deallocate a null entry.");
 
-  DP("Deleting tgt data " DPxMOD " of size %" PRId64 " by freeing allocation "
-     "starting at " DPxMOD "\n",
-     DPxPTR(Entry->TgtPtrBegin), Size, DPxPTR(Entry->TgtAllocBegin));
+  DPIF(MAP,
+       "Deleting tgt data " DPxMOD " of size %" PRId64 " by freeing allocation "
+       "starting at " DPxMOD "\n",
+       DPxPTR(Entry->TgtPtrBegin), Size, DPxPTR(Entry->TgtAllocBegin));
 
   void *Event = Entry->getEvent();
   if (Event && Device.destroyEvent(Event) != OFFLOAD_SUCCESS) {

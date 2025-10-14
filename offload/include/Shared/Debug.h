@@ -40,6 +40,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 /// 32-Bit field data attributes controlling information presented to the user.
@@ -62,6 +63,38 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
 
+/// 32-bit field attributes controlling debug trace/dump
+enum DebugInfoType : uint32_t {
+  /// Generic plugin/runtime interface/management
+  DEBUG_INFOTYPE_RTL = 0x0001,
+  /// Generic device activity
+  DEBUG_INFOTYPE_DEVICE = 0x0002,
+  /// Module preparation
+  DEBUG_INFOTYPE_MODULE = 0x0004,
+  /// Kernel preparation and invocation
+  DEBUG_INFOTYPE_KERNEL = 0x0008,
+  /// Memory allocation/deallocation or related activities
+  DEBUG_INFOTYPE_MEMORY = 0x0010,
+  /// Data-mapping activities
+  DEBUG_INFOTYPE_MAP = 0x0020,
+  /// Data-copying or similar activities
+  DEBUG_INFOTYPE_COPY = 0x0040,
+  /// OpenMP interop
+  DEBUG_INFOTYPE_INTEROP = 0x0080,
+  /// Tool interface
+  DEBUG_INFOTYPE_TOOL = 0x0100,
+  /// Backend API tracing
+  DEBUG_INFOTYPE_API = 0x0200,
+  /// All
+  DEBUG_INFOTYPE_ALL = 0xffffffff,
+};
+
+/// Debug option struct to support both numeric and string value
+struct DebugOptionTy {
+  uint32_t Level;
+  uint32_t Type;
+};
+
 inline std::atomic<uint32_t> &getInfoLevelInternal() {
   static std::atomic<uint32_t> InfoLevel;
   static std::once_flag Flag{};
@@ -75,16 +108,48 @@ inline std::atomic<uint32_t> &getInfoLevelInternal() {
 
 inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
 
-inline uint32_t getDebugLevel() {
-  static uint32_t DebugLevel = 0;
-  static std::once_flag Flag{};
-  std::call_once(Flag, []() {
-    if (char *EnvStr = getenv("LIBOMPTARGET_DEBUG"))
-      DebugLevel = std::stoi(EnvStr);
-  });
-
-  return DebugLevel;
+inline DebugOptionTy &getDebugOption() {
+  static DebugOptionTy DebugOption = []() {
+    DebugOptionTy OptVal{0, 0};
+    char *EnvStr = getenv("LIBOMPTARGET_DEBUG");
+    if (!EnvStr || *EnvStr == '0')
+      return OptVal; // undefined or explicitly defined as zero
+    OptVal.Level = std::atoi(EnvStr);
+    if (OptVal.Level)
+      return OptVal; // defined as numeric value
+    // Check string value of the option
+    std::istringstream Tokens(EnvStr);
+    for (std::string Token; std::getline(Tokens, Token, ',');) {
+      if (Token == "rtl")
+        OptVal.Type |= DEBUG_INFOTYPE_RTL;
+      else if (Token == "device")
+        OptVal.Type |= DEBUG_INFOTYPE_DEVICE;
+      else if (Token == "module")
+        OptVal.Type |= DEBUG_INFOTYPE_MODULE;
+      else if (Token == "kernel")
+        OptVal.Type |= DEBUG_INFOTYPE_KERNEL;
+      else if (Token == "memory")
+        OptVal.Type |= DEBUG_INFOTYPE_MEMORY;
+      else if (Token == "map")
+        OptVal.Type |= DEBUG_INFOTYPE_MAP;
+      else if (Token == "copy")
+        OptVal.Type |= DEBUG_INFOTYPE_COPY;
+      else if (Token == "interop")
+        OptVal.Type |= DEBUG_INFOTYPE_INTEROP;
+      else if (Token == "tool")
+        OptVal.Type |= DEBUG_INFOTYPE_TOOL;
+      else if (Token == "api")
+        OptVal.Type |= DEBUG_INFOTYPE_API;
+      else if (Token == "all")
+        OptVal.Type |= DEBUG_INFOTYPE_ALL;
+    }
+    return OptVal;
+  }();
+  return DebugOption;
 }
+
+inline uint32_t getDebugLevel() { return getDebugOption().Level; }
+inline uint32_t getDebugType() { return getDebugOption().Type; }
 
 #undef USED
 #undef GCC_VERSION
@@ -154,18 +219,25 @@ inline uint32_t getDebugLevel() {
     fprintf(stderr, __VA_ARGS__);                                              \
   }
 
-/// Emit a message for debugging
-#define DP(...)                                                                \
+/// Check if debug option is turned on for `Type`
+#define DPSET(Type)                                                            \
+  ((getDebugType() & DEBUG_INFOTYPE_##Type) || getDebugLevel() > 0)
+
+/// Emit a message for debugging if related to `Type`
+#define DPIF(Type, ...)                                                        \
   do {                                                                         \
-    if (getDebugLevel() > 0) {                                                 \
+    if (DPSET(Type)) {                                                         \
       DEBUGP(DEBUG_PREFIX, __VA_ARGS__);                                       \
     }                                                                          \
   } while (false)
 
+/// Emit a message for debugging
+#define DP(...) DPIF(ALL, __VA_ARGS__);
+
 /// Emit a message for debugging or failure if debugging is disabled
 #define REPORT(...)                                                            \
   do {                                                                         \
-    if (getDebugLevel() > 0) {                                                 \
+    if (DPSET(ALL)) {                                                          \
       DP(__VA_ARGS__);                                                         \
     } else {                                                                   \
       FAILURE_MESSAGE(__VA_ARGS__);                                            \
@@ -174,15 +246,45 @@ inline uint32_t getDebugLevel() {
 #else
 #define DEBUGP(prefix, ...)                                                    \
   {}
+#define DPSET(Type) false
+#define DPIF(Type, ...)                                                        \
+  {                                                                            \
+  }
 #define DP(...)                                                                \
   {}
 #define REPORT(...) FAILURE_MESSAGE(__VA_ARGS__);
 #endif // OMPTARGET_DEBUG
 
+#ifdef OMPTARGET_DEBUG
+// Convert `OpenMPInfoType` to corresponding `DebugInfoType`
+inline bool debugInfoEnabled(OpenMPInfoType InfoType) {
+  switch (InfoType) {
+  case OMP_INFOTYPE_KERNEL_ARGS:
+    [[fallthrough]];
+  case OMP_INFOTYPE_PLUGIN_KERNEL:
+    return DPSET(KERNEL);
+  case OMP_INFOTYPE_MAPPING_EXISTS:
+    [[fallthrough]];
+  case OMP_INFOTYPE_DUMP_TABLE:
+    [[fallthrough]];
+  case OMP_INFOTYPE_MAPPING_CHANGED:
+    [[fallthrough]];
+  case OMP_INFOTYPE_EMPTY_MAPPING:
+    return DPSET(MAP);
+  case OMP_INFOTYPE_DATA_TRANSFER:
+    return DPSET(COPY);
+  case OMP_INFOTYPE_ALL:
+    return DPSET(ALL);
+  }
+}
+#else
+#define debugInfoEnabled(InfoType) false
+#endif // OMPTARGET_DEBUG
+
 /// Emit a message giving the user extra information about the runtime if
 #define INFO(_flags, _id, ...)                                                 \
   do {                                                                         \
-    if (getDebugLevel() > 0) {                                                 \
+    if (debugInfoEnabled(_flags)) {                                            \
       DEBUGP(DEBUG_PREFIX, __VA_ARGS__);                                       \
     } else if (getInfoLevel() & _flags) {                                      \
       INFO_MESSAGE(_id, __VA_ARGS__);                                          \

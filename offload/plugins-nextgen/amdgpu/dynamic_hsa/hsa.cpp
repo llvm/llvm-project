@@ -93,7 +93,7 @@ static bool checkForHSA() {
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", HsaLib, ErrMsg.c_str());
+    DPIF(RTL, "Unable to load library '%s': %s!\n", HsaLib, ErrMsg.c_str());
     return false;
   }
 
@@ -102,10 +102,10 @@ static bool checkForHSA() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, HsaLib);
+      DPIF(RTL, "Unable to find '%s' in '%s'!\n", Sym, HsaLib);
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    DPIF(RTL, "Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
 
     *dlwrap::pointer(I) = P;
   }

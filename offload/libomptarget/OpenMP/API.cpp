@@ -76,7 +76,7 @@ EXTERN int omp_get_num_devices(void) {
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   size_t NumDevices = PM->getNumDevices();
 
-  DP("Call to omp_get_num_devices returning %zd\n", NumDevices);
+  DPIF(DEVICE, "Call to omp_get_num_devices returning %zd\n", NumDevices);
 
   return NumDevices;
 }
@@ -86,7 +86,7 @@ EXTERN int omp_get_device_num(void) {
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   int HostDevice = omp_get_initial_device();
 
-  DP("Call to omp_get_device_num returning %d\n", HostDevice);
+  DPIF(DEVICE, "Call to omp_get_device_num returning %d\n", HostDevice);
 
   return HostDevice;
 }
@@ -95,7 +95,7 @@ EXTERN int omp_get_initial_device(void) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   int HostDevice = omp_get_num_devices();
-  DP("Call to omp_get_initial_device returning %d\n", HostDevice);
+  DPIF(DEVICE, "Call to omp_get_initial_device returning %d\n", HostDevice);
   return HostDevice;
 }
 
@@ -166,16 +166,17 @@ EXTERN void llvm_omp_target_unlock_mem(void *Ptr, int DeviceNum) {
 EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_is_present for device %d and address " DPxMOD "\n",
-     DeviceNum, DPxPTR(Ptr));
+  DPIF(MAP,
+       "Call to omp_target_is_present for device %d and address " DPxMOD "\n",
+       DeviceNum, DPxPTR(Ptr));
 
   if (!Ptr) {
-    DP("Call to omp_target_is_present with NULL ptr, returning false\n");
+    DPIF(MAP, "Call to omp_target_is_present with NULL ptr, returning false\n");
     return false;
   }
 
   if (DeviceNum == omp_get_initial_device()) {
-    DP("Call to omp_target_is_present on host, returning true\n");
+    DPIF(MAP, "Call to omp_target_is_present on host, returning true\n");
     return true;
   }
 
@@ -192,7 +193,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
                                                    /*UpdateRefCount=*/false,
                                                    /*UseHoldRefCount=*/false);
   int Rc = TPR.isPresent();
-  DP("Call to omp_target_is_present returns %d\n", Rc);
+  DPIF(MAP, "Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
 }
 
@@ -203,15 +204,16 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                          ";src_dev=" + std::to_string(SrcDevice) +
                          ";size=" + std::to_string(Length));
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_memcpy, dst device %d, src device %d, "
-     "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
-     "src offset %zu, length %zu\n",
-     DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DstOffset, SrcOffset,
-     Length);
+  DPIF(COPY,
+       "Call to omp_target_memcpy, dst device %d, src device %d, "
+       "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
+       "src offset %zu, length %zu\n",
+       DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DstOffset, SrcOffset,
+       Length);
 
   if (!Dst || !Src || Length <= 0) {
     if (Length == 0) {
-      DP("Call to omp_target_memcpy with zero length, nothing to do\n");
+      DPIF(COPY, "Call to omp_target_memcpy with zero length, nothing to do\n");
       return OFFLOAD_SUCCESS;
     }
 
@@ -225,12 +227,12 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
 
   if (SrcDevice == omp_get_initial_device() &&
       DstDevice == omp_get_initial_device()) {
-    DP("copy from host to host\n");
+    DPIF(COPY, "copy from host to host\n");
     const void *P = memcpy(DstAddr, SrcAddr, Length);
     if (P == NULL)
       Rc = OFFLOAD_FAIL;
   } else if (SrcDevice == omp_get_initial_device()) {
-    DP("copy from host to device\n");
+    DPIF(COPY, "copy from host to device\n");
     auto DstDeviceOrErr = PM->getDevice(DstDevice);
     if (!DstDeviceOrErr)
       FATAL_MESSAGE(DstDevice, "%s",
@@ -238,7 +240,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
     AsyncInfoTy AsyncInfo(*DstDeviceOrErr);
     Rc = DstDeviceOrErr->submitData(DstAddr, SrcAddr, Length, AsyncInfo);
   } else if (DstDevice == omp_get_initial_device()) {
-    DP("copy from device to host\n");
+    DPIF(COPY, "copy from device to host\n");
     auto SrcDeviceOrErr = PM->getDevice(SrcDevice);
     if (!SrcDeviceOrErr)
       FATAL_MESSAGE(SrcDevice, "%s",
@@ -246,7 +248,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
     AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
     Rc = SrcDeviceOrErr->retrieveData(DstAddr, SrcAddr, Length, AsyncInfo);
   } else {
-    DP("copy from device to device\n");
+    DPIF(COPY, "copy from device to device\n");
     auto SrcDeviceOrErr = PM->getDevice(SrcDevice);
     if (!SrcDeviceOrErr)
       FATAL_MESSAGE(SrcDevice, "%s",
@@ -278,7 +280,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
     free(Buffer);
   }
 
-  DP("omp_target_memcpy returns %d\n", Rc);
+  DPIF(COPY, "omp_target_memcpy returns %d\n", Rc);
   return Rc;
 }
 
@@ -301,12 +303,12 @@ static int libomp_target_memcpy_async_task(int32_t Gtid, kmp_task_t *Task) {
         Args->DstOffsets, Args->SrcOffsets, Args->DstDimensions,
         Args->SrcDimensions, Args->DstDevice, Args->SrcDevice);
 
-    DP("omp_target_memcpy_rect returns %d\n", Rc);
+    DPIF(COPY, "omp_target_memcpy_rect returns %d\n", Rc);
   } else {
     Rc = omp_target_memcpy(Args->Dst, Args->Src, Args->Length, Args->DstOffset,
                            Args->SrcOffset, Args->DstDevice, Args->SrcDevice);
 
-    DP("omp_target_memcpy returns %d\n", Rc);
+    DPIF(COPY, "omp_target_memcpy returns %d\n", Rc);
   }
 
   // Release the arguments object
@@ -380,8 +382,9 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
                                int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_memset, device %d, device pointer %p, size %zu\n",
-     DeviceNum, Ptr, NumBytes);
+  DPIF(COPY,
+       "Call to omp_target_memset, device %d, device pointer %p, size %zu\n",
+       DeviceNum, Ptr, NumBytes);
 
   // Behave as a no-op if N==0 or if Ptr is nullptr (as a useful implementation
   // of unspecified behavior, see OpenMP spec).
@@ -390,7 +393,7 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
   }
 
   if (DeviceNum == omp_get_initial_device()) {
-    DP("filling memory on host via memset");
+    DPIF(COPY, "filling memory on host via memset");
     memset(Ptr, ByteVal, NumBytes); // ignore return value, memset() cannot fail
   } else {
     // TODO: replace the omp_target_memset() slow path with the fast path.
@@ -410,12 +413,12 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
       // If the omp_target_alloc has failed, let's just not do anything.
       // omp_target_memset does not have any good way to fail, so we
       // simply avoid a catastrophic failure of the process for now.
-      DP("omp_target_memset failed to fill memory due to error with "
-         "omp_target_alloc");
+      DPIF(COPY, "omp_target_memset failed to fill memory due to error with "
+                 "omp_target_alloc");
     }
   }
 
-  DP("omp_target_memset returns %p\n", Ptr);
+  DPIF(COPY, "omp_target_memset returns %p\n", Ptr);
   return Ptr;
 }
 
@@ -423,8 +426,10 @@ EXTERN void *omp_target_memset_async(void *Ptr, int ByteVal, size_t NumBytes,
                                      int DeviceNum, int DepObjCount,
                                      omp_depend_t *DepObjList) {
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_memset_async, device %d, device pointer %p, size %zu",
-     DeviceNum, Ptr, NumBytes);
+  DPIF(
+      COPY,
+      "Call to omp_target_memset_async, device %d, device pointer %p, size %zu",
+      DeviceNum, Ptr, NumBytes);
 
   // Behave as a no-op if N==0 or if Ptr is nullptr (as a useful implementation
   // of unspecified behavior, see OpenMP spec).
@@ -450,11 +455,12 @@ EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
                          ";src_dev=" + std::to_string(SrcDevice) +
                          ";size=" + std::to_string(Length));
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_memcpy_async, dst device %d, src device %d, "
-     "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
-     "src offset %zu, length %zu\n",
-     DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DstOffset, SrcOffset,
-     Length);
+  DPIF(COPY,
+       "Call to omp_target_memcpy_async, dst device %d, src device %d, "
+       "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
+       "src offset %zu, length %zu\n",
+       DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DstOffset, SrcOffset,
+       Length);
 
   // Check the source and dest address
   if (Dst == nullptr || Src == nullptr)
@@ -468,7 +474,7 @@ EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
   int Rc = libomp_helper_task_creation(Args, &libomp_target_memcpy_async_task,
                                        DepObjCount, DepObjList);
 
-  DP("omp_target_memcpy_async returns %d\n", Rc);
+  DPIF(COPY, "omp_target_memcpy_async returns %d\n", Rc);
   return Rc;
 }
 
@@ -479,17 +485,19 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                        const size_t *DstDimensions, const size_t *SrcDimensions,
                        int DstDevice, int SrcDevice) {
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_memcpy_rect, dst device %d, src device %d, "
-     "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
-     "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
-     "volume " DPxMOD ", element size %zu, num_dims %d\n",
-     DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DPxPTR(DstOffsets),
-     DPxPTR(SrcOffsets), DPxPTR(DstDimensions), DPxPTR(SrcDimensions),
-     DPxPTR(Volume), ElementSize, NumDims);
+  DPIF(COPY,
+       "Call to omp_target_memcpy_rect, dst device %d, src device %d, "
+       "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
+       "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
+       "volume " DPxMOD ", element size %zu, num_dims %d\n",
+       DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DPxPTR(DstOffsets),
+       DPxPTR(SrcOffsets), DPxPTR(DstDimensions), DPxPTR(SrcDimensions),
+       DPxPTR(Volume), ElementSize, NumDims);
 
   if (!(Dst || Src)) {
-    DP("Call to omp_target_memcpy_rect returns max supported dimensions %d\n",
-       INT_MAX);
+    DPIF(COPY,
+         "Call to omp_target_memcpy_rect returns max supported dimensions %d\n",
+         INT_MAX);
     return INT_MAX;
   }
 
@@ -522,13 +530,14 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
           DstDimensions + 1, SrcDimensions + 1, DstDevice, SrcDevice);
 
       if (Rc) {
-        DP("Recursive call to omp_target_memcpy_rect returns unsuccessfully\n");
+        DPIF(COPY, "Recursive call to omp_target_memcpy_rect returns "
+                   "unsuccessfully\n");
         return Rc;
       }
     }
   }
 
-  DP("omp_target_memcpy_rect returns %d\n", Rc);
+  DPIF(COPY, "omp_target_memcpy_rect returns %d\n", Rc);
   return Rc;
 }
 
@@ -542,18 +551,20 @@ EXTERN int omp_target_memcpy_rect_async(
                          ";size=" + std::to_string(ElementSize) +
                          ";num_dims=" + std::to_string(NumDims));
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_memcpy_rect_async, dst device %d, src device %d, "
-     "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
-     "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
-     "volume " DPxMOD ", element size %zu, num_dims %d\n",
-     DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DPxPTR(DstOffsets),
-     DPxPTR(SrcOffsets), DPxPTR(DstDimensions), DPxPTR(SrcDimensions),
-     DPxPTR(Volume), ElementSize, NumDims);
+  DPIF(COPY,
+       "Call to omp_target_memcpy_rect_async, dst device %d, src device %d, "
+       "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
+       "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
+       "volume " DPxMOD ", element size %zu, num_dims %d\n",
+       DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DPxPTR(DstOffsets),
+       DPxPTR(SrcOffsets), DPxPTR(DstDimensions), DPxPTR(SrcDimensions),
+       DPxPTR(Volume), ElementSize, NumDims);
 
   // Need to check this first to not return OFFLOAD_FAIL instead
   if (!Dst && !Src) {
-    DP("Call to omp_target_memcpy_rect returns max supported dimensions %d\n",
-       INT_MAX);
+    DPIF(COPY,
+         "Call to omp_target_memcpy_rect returns max supported dimensions %d\n",
+         INT_MAX);
     return INT_MAX;
   }
 
@@ -570,7 +581,7 @@ EXTERN int omp_target_memcpy_rect_async(
   int Rc = libomp_helper_task_creation(Args, &libomp_target_memcpy_async_task,
                                        DepObjCount, DepObjList);
 
-  DP("omp_target_memcpy_rect_async returns %d\n", Rc);
+  DPIF(COPY, "omp_target_memcpy_rect_async returns %d\n", Rc);
   return Rc;
 }
 
@@ -579,9 +590,10 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
                                     int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
-     "device_ptr " DPxMOD ", size %zu, device_offset %zu, device_num %d\n",
-     DPxPTR(HostPtr), DPxPTR(DevicePtr), Size, DeviceOffset, DeviceNum);
+  DPIF(MAP,
+       "Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
+       "device_ptr " DPxMOD ", size %zu, device_offset %zu, device_num %d\n",
+       DPxPTR(HostPtr), DPxPTR(DevicePtr), Size, DeviceOffset, DeviceNum);
 
   if (!HostPtr || !DevicePtr || Size <= 0) {
     REPORT("Call to omp_target_associate_ptr with invalid arguments\n");
@@ -606,16 +618,17 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
 
   int Rc = DeviceOrErr->getMappingInfo().associatePtr(
       const_cast<void *>(HostPtr), const_cast<void *>(DeviceAddr), Size);
-  DP("omp_target_associate_ptr returns %d\n", Rc);
+  DPIF(MAP, "omp_target_associate_ptr returns %d\n", Rc);
   return Rc;
 }
 
 EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
-     "device_num %d\n",
-     DPxPTR(HostPtr), DeviceNum);
+  DPIF(MAP,
+       "Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
+       "device_num %d\n",
+       DPxPTR(HostPtr), DeviceNum);
 
   if (!HostPtr) {
     REPORT("Call to omp_target_associate_ptr with invalid host_ptr\n");
@@ -639,15 +652,15 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
 
   int Rc = DeviceOrErr->getMappingInfo().disassociatePtr(
       const_cast<void *>(HostPtr));
-  DP("omp_target_disassociate_ptr returns %d\n", Rc);
+  DPIF(MAP, "omp_target_disassociate_ptr returns %d\n", Rc);
   return Rc;
 }
 
 EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", device_num %d.\n",
-     DPxPTR(Ptr), DeviceNum);
+  DPIF(MAP, "Call to omp_get_mapped_ptr with ptr " DPxMOD ", device_num %d.\n",
+       DPxPTR(Ptr), DeviceNum);
 
   if (!Ptr) {
     REPORT("Call to omp_get_mapped_ptr with nullptr.\n");
@@ -656,13 +669,13 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
 
   int NumDevices = omp_get_initial_device();
   if (DeviceNum == NumDevices) {
-    DP("Device %d is initial device, returning Ptr " DPxMOD ".\n", DeviceNum,
-       DPxPTR(Ptr));
+    DPIF(MAP, "Device %d is initial device, returning Ptr " DPxMOD ".\n",
+         DeviceNum, DPxPTR(Ptr));
     return const_cast<void *>(Ptr);
   }
 
   if (NumDevices <= DeviceNum) {
-    DP("DeviceNum %d is invalid, returning nullptr.\n", DeviceNum);
+    DPIF(MAP, "DeviceNum %d is invalid, returning nullptr.\n", DeviceNum);
     return nullptr;
   }
 
@@ -675,12 +688,13 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
                                                    /*UpdateRefCount=*/false,
                                                    /*UseHoldRefCount=*/false);
   if (!TPR.isPresent()) {
-    DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
-       DPxPTR(Ptr), DeviceNum);
+    DPIF(MAP, "Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
+         DPxPTR(Ptr), DeviceNum);
     return nullptr;
   }
 
-  DP("omp_get_mapped_ptr returns " DPxMOD ".\n", DPxPTR(TPR.TargetPointer));
+  DPIF(MAP, "omp_get_mapped_ptr returns " DPxMOD ".\n",
+       DPxPTR(TPR.TargetPointer));
 
   return TPR.TargetPointer;
 }

@@ -200,11 +200,12 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
                                      interop_spec_t *Prefers,
                                      interop_ctx_t *Ctx, dep_pack_t *Deps) {
 
-  DP("Call to %s with device_num %" PRId64 ", interop type %" PRId32
-     ", number of preferred specs %" PRId32 "%s%s\n",
-     __func__, DeviceNum, InteropType, NumPrefers,
-     Ctx->flags.implicit ? " (implicit)" : "",
-     Ctx->flags.nowait ? " (nowait)" : "");
+  DPIF(INTEROP,
+       "Call to %s with device_num %" PRId64 ", interop type %" PRId32
+       ", number of preferred specs %" PRId32 "%s%s\n",
+       __func__, DeviceNum, InteropType, NumPrefers,
+       Ctx->flags.implicit ? " (implicit)" : "",
+       Ctx->flags.nowait ? " (nowait)" : "");
 
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED)
     return omp_interop_none;
@@ -217,8 +218,9 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 
   if (InteropType == kmp_interop_type_targetsync) {
     if (Ctx->flags.nowait)
-      DP("Warning: nowait flag on interop creation not supported yet. "
-         "Ignored\n");
+      DPIF(INTEROP,
+           "Warning: nowait flag on interop creation not supported yet. "
+           "Ignored\n");
     if (Deps)
       __kmpc_omp_wait_deps(LocRef, gtid, Deps->ndeps, Deps->deplist,
                            Deps->ndeps_noalias, Deps->noalias_deplist);
@@ -226,9 +228,10 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr) {
-    DP("Couldn't find device %" PRId64
-       " while constructing interop object: %s\n",
-       DeviceNum, toString(DeviceOrErr.takeError()).c_str());
+    DPIF(INTEROP,
+         "Couldn't find device %" PRId64
+         " while constructing interop object: %s\n",
+         DeviceNum, toString(DeviceOrErr.takeError()).c_str());
     return omp_interop_none;
   }
   auto &Device = *DeviceOrErr;
@@ -236,12 +239,14 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   auto InteropSpec = Device.RTL->select_interop_preference(
       DeviceNum, InteropType, NumPrefers, Prefers);
   if (InteropSpec.fr_id == tgt_fr_none) {
-    DP("Interop request not supported by device %" PRId64 "\n", DeviceNum);
+    DPIF(INTEROP, "Interop request not supported by device %" PRId64 "\n",
+         DeviceNum);
     return omp_interop_none;
   }
-  DP("Selected interop preference is fr_id=%s%s impl_attrs=%" PRId64 "\n",
-     getForeignRuntimeIdToStr((tgt_foreign_runtime_id_t)InteropSpec.fr_id),
-     InteropSpec.attrs.inorder ? " inorder" : "", InteropSpec.impl_attrs);
+  DPIF(INTEROP,
+       "Selected interop preference is fr_id=%s%s impl_attrs=%" PRId64 "\n",
+       getForeignRuntimeIdToStr((tgt_foreign_runtime_id_t)InteropSpec.fr_id),
+       InteropSpec.attrs.inorder ? " inorder" : "", InteropSpec.impl_attrs);
 
   if (Ctx->flags.implicit) {
     // This is a request for an RTL managed interop object.
@@ -250,17 +255,19 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
       if (iop->isCompatibleWith(InteropType, InteropSpec, DeviceNum, gtid)) {
         Interop = iop;
         Interop->markDirty();
-        DP("Reused interop " DPxMOD " from device number %" PRId64
-           " for gtid %" PRId32 "\n",
-           DPxPTR(Interop), DeviceNum, gtid);
+        DPIF(INTEROP,
+             "Reused interop " DPxMOD " from device number %" PRId64
+             " for gtid %" PRId32 "\n",
+             DPxPTR(Interop), DeviceNum, gtid);
         return Interop;
       }
     }
   }
 
   Interop = Device.RTL->create_interop(DeviceNum, InteropType, &InteropSpec);
-  DP("Created an interop " DPxMOD " from device number %" PRId64 "\n",
-     DPxPTR(Interop), DeviceNum);
+  DPIF(INTEROP,
+       "Created an interop " DPxMOD " from device number %" PRId64 "\n",
+       DPxPTR(Interop), DeviceNum);
 
   if (Ctx->flags.implicit) {
     // register the new implicit interop in the RTL
@@ -277,16 +284,18 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 int __tgt_interop_use60(ident_t *LocRef, omp_interop_val_t *Interop,
                         interop_ctx_t *Ctx, dep_pack_t *Deps) {
   bool Nowait = Ctx->flags.nowait;
-  DP("Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n", __func__,
-     DPxPTR(Interop), Nowait);
+  DPIF(INTEROP, "Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n",
+       __func__, DPxPTR(Interop), Nowait);
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return OFFLOAD_FAIL;
 
   if (Interop->interop_type == kmp_interop_type_targetsync) {
     if (Deps) {
       if (Nowait) {
-        DP("Warning: nowait flag on interop use with dependences not supported"
-           "yet. Ignored\n");
+        DPIF(
+            INTEROP,
+            "Warning: nowait flag on interop use with dependences not supported"
+            "yet. Ignored\n");
         Nowait = false;
       }
 
@@ -318,15 +327,16 @@ int __tgt_interop_use60(ident_t *LocRef, omp_interop_val_t *Interop,
 
 int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
                           interop_ctx_t *Ctx, dep_pack_t *Deps) {
-  DP("Call to %s with interop " DPxMOD "\n", __func__, DPxPTR(Interop));
+  DPIF(INTEROP, "Call to %s with interop " DPxMOD "\n", __func__,
+       DPxPTR(Interop));
 
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return OFFLOAD_FAIL;
 
   if (Interop->interop_type == kmp_interop_type_targetsync) {
     if (Ctx->flags.nowait)
-      DP("Warning: nowait flag on interop destroy not supported "
-         "yet. Ignored\n");
+      DPIF(INTEROP, "Warning: nowait flag on interop destroy not supported "
+                    "yet. Ignored\n");
     if (Deps) {
       __kmpc_omp_wait_deps(LocRef, Ctx->gtid, Deps->ndeps, Deps->deplist,
                            Deps->ndeps_noalias, Deps->noalias_deplist);
@@ -346,9 +356,10 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
 EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
                                                 ompx_interop_cb_t *CB,
                                                 void *Data) {
-  DP("Call to %s with interop " DPxMOD ", property callback " DPxMOD
-     "and data " DPxMOD "\n",
-     __func__, DPxPTR(Interop), DPxPTR(CB), DPxPTR(Data));
+  DPIF(INTEROP,
+       "Call to %s with interop " DPxMOD ", property callback " DPxMOD
+       "and data " DPxMOD "\n",
+       __func__, DPxPTR(Interop), DPxPTR(CB), DPxPTR(Data));
 
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return omp_irc_other;
@@ -433,7 +444,7 @@ int32_t omp_interop_val_t::sync_barrier(DeviceTy &Device) {
     FATAL_MESSAGE(device_id, "Interop sync barrier failed for %p object\n",
                   this);
   }
-  DP("Calling completion callbacks for " DPxMOD "\n", DPxPTR(this));
+  DPIF(INTEROP, "Calling completion callbacks for " DPxMOD "\n", DPxPTR(this));
   runCompletionCbs();
   return OFFLOAD_SUCCESS;
 }
@@ -454,8 +465,9 @@ void syncImplicitInterops(int Gtid, void *Event) {
   if (PM->InteropTbl.size() == 0)
     return;
 
-  DP("target_sync: syncing interops for gtid %" PRId32 ", event " DPxMOD "\n",
-     Gtid, DPxPTR(Event));
+  DPIF(INTEROP,
+       "target_sync: syncing interops for gtid %" PRId32 ", event " DPxMOD "\n",
+       Gtid, DPxPTR(Event));
 
   for (auto iop : PM->InteropTbl) {
     if (iop->async_info && iop->async_info->Queue && iop->isOwnedBy(Gtid) &&
@@ -491,7 +503,7 @@ void syncImplicitInterops(int Gtid, void *Event) {
 }
 
 void InteropTblTy::clear() {
-  DP("Clearing Interop Table\n");
+  DPIF(INTEROP, "Clearing Interop Table\n");
   PerThreadTable::clear([](auto &IOP) {
     auto DeviceOrErr = IOP->getDevice();
     if (!DeviceOrErr) {

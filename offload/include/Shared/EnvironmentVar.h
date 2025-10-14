@@ -61,7 +61,8 @@ public:
       IsPresent = StringParser::parse<Ty>(EnvStr, Data);
 
       if (!IsPresent) {
-        DP("Ignoring invalid value %s for envar %s\n", EnvStr, Name.data());
+        DPIF(RTL, "Ignoring invalid value %s for envar %s\n", EnvStr,
+             Name.data());
         Data = Default;
       }
     }
@@ -180,12 +181,13 @@ inline llvm::Error Envar<Ty>::init(llvm::StringRef Name, GetterFunctor Getter,
         // not present and reset to the getter value (default).
         IsPresent = false;
         Data = Default;
-        DP("Setter of envar %s failed, resetting to %s\n", Name.data(),
-           std::to_string(Data).data());
+        DPIF(RTL, "Setter of envar %s failed, resetting to %s\n", Name.data(),
+             std::to_string(Data).data());
         consumeError(std::move(Err));
       }
     } else {
-      DP("Ignoring invalid value %s for envar %s\n", EnvStr, Name.data());
+      DPIF(RTL, "Ignoring invalid value %s for envar %s\n", EnvStr,
+           Name.data());
       Data = Default;
     }
   } else {

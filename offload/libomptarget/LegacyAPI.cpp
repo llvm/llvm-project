@@ -180,7 +180,8 @@ EXTERN int __tgt_target_teams_nowait_mapper(
 EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
                                                 uint64_t LoopTripcount) {
   TIMESCOPE_WITH_IDENT(Loc);
-  DP("WARNING: __kmpc_push_target_tripcount has been deprecated and is a noop");
+  DPIF(RTL, "WARNING: __kmpc_push_target_tripcount has been deprecated and is "
+            "a noop");
 }
 
 EXTERN void __kmpc_push_target_tripcount(int64_t DeviceId,

@@ -79,7 +79,7 @@ class MemoryManagerTy {
   static int findBucket(size_t Size) {
     const size_t F = floorToPowerOfTwo(Size);
 
-    DP("findBucket: Size %zu is floored to %zu.\n", Size, F);
+    DPIF(MEMORY, "findBucket: Size %zu is floored to %zu.\n", Size, F);
 
     int L = 0, H = NumBuckets - 1;
     while (H - L > 1) {
@@ -94,7 +94,7 @@ class MemoryManagerTy {
 
     assert(L >= 0 && L < NumBuckets && "L is out of range");
 
-    DP("findBucket: Size %zu goes to bucket %d\n", Size, L);
+    DPIF(MEMORY, "findBucket: Size %zu goes to bucket %d\n", Size, L);
 
     return L;
   }
@@ -192,8 +192,9 @@ class MemoryManagerTy {
     // We cannot get memory from the device. It might be due to OOM. Let's
     // free all memory in FreeLists and try again.
     if (TgtPtr == nullptr) {
-      DP("Failed to get memory on device. Free all memory in FreeLists and "
-         "try again.\n");
+      DPIF(MEMORY,
+           "Failed to get memory on device. Free all memory in FreeLists and "
+           "try again.\n");
       TgtPtrOrErr = freeAndAllocate(Size, HstPtr);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
@@ -201,8 +202,9 @@ class MemoryManagerTy {
     }
 
     if (TgtPtr == nullptr)
-      DP("Still cannot get memory on device probably because the device is "
-         "OOM.\n");
+      DPIF(MEMORY,
+           "Still cannot get memory on device probably because the device is "
+           "OOM.\n");
 
     return TgtPtr;
   }
@@ -235,21 +237,23 @@ public:
     if (Size == 0)
       return nullptr;
 
-    DP("MemoryManagerTy::allocate: size %zu with host pointer " DPxMOD ".\n",
-       Size, DPxPTR(HstPtr));
+    DPIF(MEMORY,
+         "MemoryManagerTy::allocate: size %zu with host pointer " DPxMOD ".\n",
+         Size, DPxPTR(HstPtr));
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
     if (Size > SizeThreshold) {
-      DP("%zu is greater than the threshold %zu. Allocate it directly from "
-         "device\n",
-         Size, SizeThreshold);
+      DPIF(MEMORY,
+           "%zu is greater than the threshold %zu. Allocate it directly from "
+           "device\n",
+           Size, SizeThreshold);
       auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
-      DP("Got target pointer " DPxMOD ". Return directly.\n",
-         DPxPTR(*TgtPtrOrErr));
+      DPIF(MEMORY, "Got target pointer " DPxMOD ". Return directly.\n",
+           DPxPTR(*TgtPtrOrErr));
 
       return *TgtPtrOrErr;
     }
@@ -272,12 +276,14 @@ public:
     }
 
     if (NodePtr != nullptr)
-      DP("Find one node " DPxMOD " in the bucket.\n", DPxPTR(NodePtr));
+      DPIF(MEMORY, "Find one node " DPxMOD " in the bucket.\n",
+           DPxPTR(NodePtr));
 
     // We cannot find a valid node in FreeLists. Let's allocate on device and
     // create a node for it.
     if (NodePtr == nullptr) {
-      DP("Cannot find a node in the FreeLists. Allocate on device.\n");
+      DPIF(MEMORY,
+           "Cannot find a node in the FreeLists. Allocate on device.\n");
       // Allocate one on device
       auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
       if (!TgtPtrOrErr)
@@ -294,8 +300,9 @@ public:
         NodePtr = &Itr.first->second;
       }
 
-      DP("Node address " DPxMOD ", target pointer " DPxMOD ", size %zu\n",
-         DPxPTR(NodePtr), DPxPTR(TgtPtr), Size);
+      DPIF(MEMORY,
+           "Node address " DPxMOD ", target pointer " DPxMOD ", size %zu\n",
+           DPxPTR(NodePtr), DPxPTR(TgtPtr), Size);
     }
 
     assert(NodePtr && "NodePtr should not be nullptr at this point");
@@ -305,7 +312,8 @@ public:
 
   /// Deallocate memory pointed by \p TgtPtr
   Error free(void *TgtPtr) {
-    DP("MemoryManagerTy::free: target memory " DPxMOD ".\n", DPxPTR(TgtPtr));
+    DPIF(MEMORY, "MemoryManagerTy::free: target memory " DPxMOD ".\n",
+         DPxPTR(TgtPtr));
 
     NodeTy *P = nullptr;
 
@@ -322,14 +330,15 @@ public:
 
     // The memory is not managed by the manager
     if (P == nullptr) {
-      DP("Cannot find its node. Delete it on device directly.\n");
+      DPIF(MEMORY, "Cannot find its node. Delete it on device directly.\n");
       return deleteOnDevice(TgtPtr);
     }
 
     // Insert the node to the free list
     const int B = findBucket(P->Size);
 
-    DP("Found its node " DPxMOD ". Insert it to bucket %d.\n", DPxPTR(P), B);
+    DPIF(MEMORY, "Found its node " DPxMOD ". Insert it to bucket %d.\n",
+         DPxPTR(P), B);
 
     {
       std::lock_guard<std::mutex> G(FreeListLocks[B]);
@@ -352,8 +361,8 @@ public:
     size_t Threshold = MemoryManagerThreshold.get();
 
     if (MemoryManagerThreshold.isPresent() && Threshold == 0) {
-      DP("Disabled memory manager as user set "
-         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.\n");
+      DPIF(MEMORY, "Disabled memory manager as user set "
+                   "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.\n");
       return std::make_pair(0, false);
     }
 
