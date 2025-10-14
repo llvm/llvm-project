@@ -619,10 +619,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
   if (isa<CXXConstructorDecl>(gd.getDecl()) ||
-      isa<CXXDestructorDecl>(gd.getDecl())) {
-    cgm.errorNYI(SourceLocation(),
-                 "arrangeGlobalDeclaration for C++ constructor or destructor");
-  }
+      isa<CXXDestructorDecl>(gd.getDecl()))
+    return arrangeCXXStructorDeclaration(gd);
 
   return arrangeFunctionDeclaration(fd);
 }

@@ -182,8 +182,6 @@ protected:
   static constexpr size_t additionalSizeToAllocImpl(size_t SizeSoFar) {
     return SizeSoFar;
   }
-
-  template <bool CheckAlignment> static void verifyTrailingObjectsAlignment() {}
 };
 
 } // end namespace trailing_objects_internal
@@ -203,10 +201,7 @@ class TrailingObjects
 
   template <typename... Tys> class Foo {};
 
-  typedef trailing_objects_internal::TrailingObjectsImpl<
-      trailing_objects_internal::MaxAlignment<TrailingTys...>, BaseTy,
-      TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...>
-      ParentType;
+  using ParentType = typename TrailingObjects::TrailingObjectsImpl;
   using TrailingObjectsBase = trailing_objects_internal::TrailingObjectsBase;
 
   using ParentType::getTrailingObjectsImpl;

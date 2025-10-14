@@ -184,6 +184,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
 
 def DistinctObjectsOp : MemRef_Op<"distinct_objects", [
       Pure,
+      DistinctObjectsTrait,
       DeclareOpInterfaceMethods<InferTypeOpInterface>
       // ViewLikeOpInterface TODO: ViewLikeOpInterface only supports a single argument
     ]> {
@@ -1414,7 +1415,14 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
     instruction cache.
   }];
 
-  let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
+  // The memref argument is labeled with a side effect to enforce a
+  // relative ordering of the prefetch and other memory operations targeting
+  // that memory stream.
+  // We need it to be a write otherwise the operation would be trivially removed
+  // since it does not produce a value.
+
+  let arguments = (ins Arg<AnyMemRef, "prefetch address", [MemWrite]> :$memref,
+                       Variadic<Index>:$indices,
                        BoolAttr:$isWrite,
                        ConfinedAttr<I32Attr, [IntMinValue<0>,
                                           IntMaxValue<3>]>:$localityHint,

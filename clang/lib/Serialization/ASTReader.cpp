@@ -3190,6 +3190,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             F.Kind == MK_ImplicitModule)
           N = ForceValidateUserInputs ? NumUserInputs : 0;
 
+        if (N != 0)
+          Diag(diag::remark_module_validation)
+              << N << F.ModuleName << F.FileName;
+
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
           if (!IF.getFile() || IF.isOutOfDate())
@@ -11684,7 +11688,10 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
-void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
@@ -13006,12 +13013,25 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
-    llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
+    llvm::SmallVector<OpenACCReductionRecipeWithStorage> RecipeList;
 
     for (unsigned I = 0; I < VarList.size(); ++I) {
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
       VarDecl *Recipe = readDeclAs<VarDecl>();
-      RecipeList.push_back({Recipe});
+
+      static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                    3 * sizeof(int *));
+
+      llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe> Combiners;
+      unsigned NumCombiners = readInt();
+      for (unsigned I = 0; I < NumCombiners; ++I) {
+        VarDecl *LHS = readDeclAs<VarDecl>();
+        VarDecl *RHS = readDeclAs<VarDecl>();
+        Expr *Op = readExpr();
+
+        Combiners.push_back({LHS, RHS, Op});
+      }
+
+      RecipeList.push_back({Recipe, Combiners});
     }
 
     return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,

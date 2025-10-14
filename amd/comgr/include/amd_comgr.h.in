@@ -1634,17 +1634,11 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC = 0x2,
   /**
-   * Link a collection of bitcodes, bundled bitcodes, and bundled bitcode
-   * archives in @p into a single composite (unbundled) bitcode @p.
+   * Link a collection of bitcodes in @p into a single composite bitcode @p.
    * Any device library bc data object must be explicitly added to @p input if
    * needed.
    *
-   * Return @p AMD_COMGR_STATUS_ERROR if the link or unbundling fails.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if IsaName is not set in @p info and does not match the isa name
-   * of all bc data objects in @p input, or if the Name field is not set for
-   * any DataObject in the input set.
+   * Return @p AMD_COMGR_STATUS_ERROR if the link fails.
    */
   AMD_COMGR_ACTION_LINK_BC_TO_BC = 0x3,
   /**

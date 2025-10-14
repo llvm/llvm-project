@@ -69,6 +69,23 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+static bool addRPathCmdArg(const llvm::opt::ArgList &Args,
+                           ArgStringList &CmdArgs,
+                           const std::string pathCandidate,
+                           bool onlyIfPathExists = true) {
+  SmallString<0> simplifiedPathCandidate(pathCandidate);
+  llvm::sys::path::remove_dots(simplifiedPathCandidate, true);
+
+  bool pathExists = llvm::sys::fs::exists(simplifiedPathCandidate);
+
+  if (onlyIfPathExists && !pathExists)
+    return false;
+
+  CmdArgs.push_back("-rpath");
+  CmdArgs.push_back(Args.MakeArgString(simplifiedPathCandidate));
+  return pathExists;
+}
+
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
   if (Args.hasArg(clang::driver::options::OPT_pg) &&
@@ -1281,6 +1298,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-call-graph-section"));
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
   if (!StatsFile.empty())
@@ -1386,12 +1408,8 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
   // one of the LIBRARY_PATH directories.
   ArgStringList EnvLibraryPaths;
   addDirectoryList(Args, EnvLibraryPaths, "", "LIBRARY_PATH");
-  for (auto &EnvLibraryPath : EnvLibraryPaths) {
-    if (llvm::sys::fs::exists(EnvLibraryPath)) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(EnvLibraryPath));
-    }
-  }
+  for (auto &EnvLibraryPath : EnvLibraryPaths)
+    addRPathCmdArg(Args, CmdArgs, EnvLibraryPath);
 
   if (Args.hasFlag(options::OPT_fopenmp_implicit_rpath,
                    options::OPT_fno_openmp_implicit_rpath, true)) {
@@ -1400,46 +1418,33 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
     SmallString<256> DefaultLibPath =
         llvm::sys::path::parent_path(TC.getDriver().Dir);
     llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
-    if (TC.getSanitizerArgs(Args).needsAsanRt()) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(TC.getCompilerRTPath()));
-    }
+    if (TC.getSanitizerArgs(Args).needsAsanRt())
+      addRPathCmdArg(Args, CmdArgs, TC.getCompilerRTPath(),
+                     /*onlyIfPathExists=*/false);
 
     // In case LibSuffix was not built, try lib
     std::string CandidateRPath_suf = D.Dir + "/../" + LibSuffix;
-    CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(CandidateRPath_suf.c_str()));
-
     // Add lib directory in case LibSuffix does not exist
     std::string CandidateRPath_lib = D.Dir + "/../lib";
-    if ((!llvm::sys::fs::exists(CandidateRPath_suf)) &&
-        (llvm::sys::fs::exists(CandidateRPath_lib))) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(CandidateRPath_lib.c_str()));
-    }
+    if (!addRPathCmdArg(Args, CmdArgs, CandidateRPath_suf,
+                        /*onlyIfPathExists=*/false))
+      addRPathCmdArg(Args, CmdArgs, CandidateRPath_lib);
 
     std::string rocmPath =
         Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ).str();
     if (rocmPath.size() != 0) {
       std::string rocmPath_lib = rocmPath + "/lib";
       std::string rocmPath_suf = rocmPath + "/" + LibSuffix;
-      if (llvm::sys::fs::exists(rocmPath_suf)) {
-        CmdArgs.push_back("-rpath");
-        CmdArgs.push_back(Args.MakeArgString(rocmPath_suf.c_str()));
-      } else if (llvm::sys::fs::exists(rocmPath_lib)) {
-        CmdArgs.push_back("-rpath");
-        CmdArgs.push_back(Args.MakeArgString(rocmPath_lib.c_str()));
-      }
+      if (!addRPathCmdArg(Args, CmdArgs, rocmPath_suf))
+        addRPathCmdArg(Args, CmdArgs, rocmPath_lib);
     }
 
     // Add Default lib path to ensure llvm dynamic library is picked up for
     // lib-debug/lib-perf
-    if (LibSuffix != "lib" && llvm::sys::fs::exists(DefaultLibPath)){
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(DefaultLibPath.c_str()));
-    }
+    if (LibSuffix != "lib")
+      addRPathCmdArg(Args, CmdArgs, DefaultLibPath.c_str());
 
-     if (llvm::find_if(CmdArgs, [](StringRef str) {
+    if (llvm::find_if(CmdArgs, [](StringRef str) {
           return !str.compare("--enable-new-dtags");
         }) == CmdArgs.end())
       CmdArgs.push_back("--disable-new-dtags");
@@ -1479,10 +1484,8 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
     CandidateRPaths.emplace_back(*CandidateRPath);
 
   for (const auto &CandidateRPath : CandidateRPaths) {
-    if (TC.getVFS().exists(CandidateRPath)) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
-    }
+    if (TC.getVFS().exists(CandidateRPath))
+      addRPathCmdArg(Args, CmdArgs, CandidateRPath, /*onlyIfPathExists=*/false);
   }
 }
 
@@ -2373,7 +2376,7 @@ static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
     return 0;
 
   unsigned Value = 0;
-  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 5 ||
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 6 ||
       Value < 2)
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
@@ -2386,13 +2389,14 @@ unsigned tools::DwarfVersionNum(StringRef ArgValue) {
       .Case("-gdwarf-3", 3)
       .Case("-gdwarf-4", 4)
       .Case("-gdwarf-5", 5)
+      .Case("-gdwarf-6", 6)
       .Default(0);
 }
 
 const Arg *tools::getDwarfNArg(const ArgList &Args) {
   return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
                          options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-                         options::OPT_gdwarf);
+                         options::OPT_gdwarf_6, options::OPT_gdwarf);
 }
 
 unsigned tools::getDwarfVersion(const ToolChain &TC,

@@ -8,12 +8,19 @@ struct DefaultOperators {
   bool b;
 };
 
+struct DefaultOperatorsNoFloats {
+  int i;
+  unsigned int u;
+  bool b;
+};
+
 template<typename T>
 void acc_combined() {
   T someVar;
   T someVarArr[5];
+  struct DefaultOperatorsNoFloats someVarNoFloats;
+  struct DefaultOperatorsNoFloats someVarArrNoFloats[5];
 #pragma acc parallel loop reduction(+:someVar)
-  for(int i=0;i < 5; ++i);
 // CHECK: acc.reduction.recipe @reduction_add__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <add> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
@@ -39,6 +46,7 @@ void acc_combined() {
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: }
+  for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(*:someVar)
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_mul__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <mul> init {
@@ -121,86 +129,67 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(&:someVar)
-
-// CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <iand> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+#pragma acc parallel loop reduction(&:someVarNoFloats)
+// CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTS24DefaultOperatorsNoFloats : !cir.ptr<!rec_DefaultOperatorsNoFloats> reduction_operator <iand> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats>{{.*}})
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperatorsNoFloats, !cir.ptr<!rec_DefaultOperatorsNoFloats>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_DefaultOperators> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_DefaultOperators> {{.*}})
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats> {{.*}})
 // TODO OpenACC: Expecting combination operation here
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: }
-  for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(|:someVar)
-// CHECK-NEXT: acc.reduction.recipe @reduction_ior__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <ior> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+  for(int i = 0; i < 5; ++i);
+#pragma acc parallel loop reduction(|:someVarNoFloats)
+// CHECK-NEXT: acc.reduction.recipe @reduction_ior__ZTS24DefaultOperatorsNoFloats : !cir.ptr<!rec_DefaultOperatorsNoFloats> reduction_operator <ior> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats>{{.*}})
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperatorsNoFloats, !cir.ptr<!rec_DefaultOperatorsNoFloats>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_DefaultOperators> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_DefaultOperators> {{.*}})
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats> {{.*}})
 // TODO OpenACC: Expecting combination operation here
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: }
-  for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(^:someVar)
-// CHECK-NEXT: acc.reduction.recipe @reduction_xor__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <xor> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+  for(int i = 0; i < 5; ++i);
+#pragma acc parallel loop reduction(^:someVarNoFloats)
+// CHECK-NEXT: acc.reduction.recipe @reduction_xor__ZTS24DefaultOperatorsNoFloats : !cir.ptr<!rec_DefaultOperatorsNoFloats> reduction_operator <xor> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats>{{.*}})
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperatorsNoFloats, !cir.ptr<!rec_DefaultOperatorsNoFloats>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_DefaultOperators> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_DefaultOperators> {{.*}})
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats> {{.*}}) 
 // TODO OpenACC: Expecting combination operation here
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(&&:someVar)
@@ -266,7 +255,7 @@ void acc_combined() {
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[LAST_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride %[[DECAY]], %[[LAST_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
@@ -285,7 +274,7 @@ void acc_combined() {
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride(%[[TEMP_LOAD]] : !cir.ptr<!rec_DefaultOperators>, %[[ONE]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
@@ -323,7 +312,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ONE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[ONE_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -341,7 +330,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[TWO_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -360,7 +349,7 @@ void acc_combined() {
 //
 //
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[THREE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[THREE_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -378,7 +367,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[FOUR_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -425,7 +414,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[LEAST_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[LEAST_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[LEAST_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -443,7 +432,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[TWO_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -462,7 +451,7 @@ void acc_combined() {
 //
 //
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[THREE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[THREE_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -480,7 +469,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[FOUR_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -527,7 +516,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[LARGEST_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[LARGEST_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[LARGEST_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -545,7 +534,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[TWO_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -564,7 +553,7 @@ void acc_combined() {
 //
 //
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[THREE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[THREE_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -582,7 +571,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[FOUR_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -606,194 +595,152 @@ void acc_combined() {
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: }
-  for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(&:someVarArr)
-// CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <iand> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[DECAY]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+  for(int i = 0; i < 5; ++i);
+#pragma acc parallel loop reduction(&:someVarArrNoFloats)
+// CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <iand> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}})
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[DECAY]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[DECAY]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[DECAY]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[DECAY]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[DECAY]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[DECAY]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[DECAY]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ALL_ONES_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ALL_ONES_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[ALL_ONES_IDX]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[TWO_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO_IDX]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 //
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[THREE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[THREE_IDX]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[FOUR_IDX]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[NEXT_ELT]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(|:someVarArr)
-// CHECK-NEXT: acc.reduction.recipe @reduction_ior__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <ior> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, ["arrayinit.temp"]
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
+#pragma acc parallel loop reduction(|:someVarArrNoFloats)
+// CHECK-NEXT: acc.reduction.recipe @reduction_ior__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <ior> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}})
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>, ["arrayinit.temp"]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[LAST_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride %[[DECAY]], %[[LAST_IDX]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: cir.do {
-// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>, !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[TEMP_LOAD]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride(%[[TEMP_LOAD]] : !cir.ptr<!rec_DefaultOperators>, %[[ONE]] : !s64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
+// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
-// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_DefaultOperators>, !cir.bool
+// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>, !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.bool
 // CHECK-NEXT: cir.condition(%[[CMP]]) 
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: }
-  for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(^:someVarArr)
-// CHECK-NEXT: acc.reduction.recipe @reduction_xor__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <xor> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, ["arrayinit.temp"]
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
+  for(int i = 0; i < 5; ++i);
+#pragma acc parallel loop reduction(^:someVarArrNoFloats)
+// CHECK-NEXT: acc.reduction.recipe @reduction_xor__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <xor> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}})
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>, ["arrayinit.temp"]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[LAST_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride %[[DECAY]], %[[LAST_IDX]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: cir.do {
-// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>, !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[TEMP_LOAD]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride(%[[TEMP_LOAD]] : !cir.ptr<!rec_DefaultOperators>, %[[ONE]] : !s64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
+// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !s64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
-// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_DefaultOperators>, !cir.bool
+// CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperatorsNoFloats>>, !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_DefaultOperatorsNoFloats>, !cir.bool
 // CHECK-NEXT: cir.condition(%[[CMP]]) 
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(&&:someVarArr)
@@ -818,7 +765,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ONE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[ONE_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -836,7 +783,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[TWO_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -855,7 +802,7 @@ void acc_combined() {
 //
 //
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[THREE_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[THREE_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -873,7 +820,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
-// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[FOUR_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[NEXT_ELT]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -906,7 +853,7 @@ void acc_combined() {
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[LAST_IDX]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride %[[DECAY]], %[[LAST_IDX]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_DefaultOperators>>, !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
@@ -926,7 +873,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride(%[[TEMP_LOAD]] : !cir.ptr<!rec_DefaultOperators>, %[[ONE]] : !s64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_DefaultOperators>, !s64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_DefaultOperators>, !cir.ptr<!cir.ptr<!rec_DefaultOperators>>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
@@ -961,7 +908,7 @@ void acc_combined() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperators>, !u64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -1009,7 +956,7 @@ void acc_combined() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperators>, !u64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -1057,7 +1004,7 @@ void acc_combined() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperators>, !u64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -1105,7 +1052,7 @@ void acc_combined() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperators>, !u64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -1135,10 +1082,10 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(&:someVarArr[2])
-// CHECK-NEXT: acc.reduction.recipe @reduction_iand__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <iand> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+#pragma acc parallel loop reduction(&:someVarArrNoFloats[2])
+// CHECK-NEXT: acc.reduction.recipe @reduction_iand__Bcnt1__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <iand> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init"]
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1152,21 +1099,15 @@ void acc_combined() {
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !u64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.fp<0xFF{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #true
 // CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
@@ -1179,14 +1120,14 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(|:someVarArr[2])
-// CHECK-NEXT: acc.reduction.recipe @reduction_ior__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <ior> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+#pragma acc parallel loop reduction(|:someVarArrNoFloats[2])
+// CHECK-NEXT: acc.reduction.recipe @reduction_ior__Bcnt1__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <ior> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init"]
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1200,21 +1141,15 @@ void acc_combined() {
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !u64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
@@ -1227,14 +1162,14 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(^:someVarArr[2])
-// CHECK-NEXT: acc.reduction.recipe @reduction_xor__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <xor> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+#pragma acc parallel loop reduction(^:someVarArrNoFloats[2])
+// CHECK-NEXT: acc.reduction.recipe @reduction_xor__Bcnt1__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <xor> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init"]
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1248,21 +1183,15 @@ void acc_combined() {
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperatorsNoFloats>, !u64i) -> !cir.ptr<!rec_DefaultOperatorsNoFloats>
+// CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!u32i>
+// CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
-// CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
+// CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][2] {name = "b"} : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
@@ -1275,8 +1204,8 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
-// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
+// CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(&&:someVarArr[2])
@@ -1297,7 +1226,7 @@ void acc_combined() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperators>, !u64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -1345,7 +1274,7 @@ void acc_combined() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> -> !cir.ptr<!rec_DefaultOperators>
-// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_DefaultOperators>, %[[ITR_LOAD]] : !u64i), !cir.ptr<!rec_DefaultOperators>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_DefaultOperators>, !u64i) -> !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -1384,11 +1313,11 @@ void acc_combined() {
   for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(min:someVarArr[1:1])
   for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(&:someVarArr[1:1])
-  for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(|:someVarArr[1:1])
-  for(int i=0;i < 5; ++i);
-#pragma acc parallel loop reduction(^:someVarArr[1:1])
+#pragma acc parallel loop reduction(&:someVarArrNoFloats[1:1])
+  for(int i = 0; i < 5; ++i);
+#pragma acc parallel loop reduction(|:someVarArrNoFloats[1:1])
+  for(int i = 0; i < 5; ++i);
+#pragma acc parallel loop reduction(^:someVarArrNoFloats[1:1])
   for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(&&:someVarArr[1:1])
   for(int i=0;i < 5; ++i);

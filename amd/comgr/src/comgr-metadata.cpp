@@ -651,7 +651,7 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  uint64_t NumOfCodeObjects;
+  uint64_t NumOfCodeObjects = 0;
   if (auto EC = Reader.readInteger(NumOfCodeObjects)) {
     return AMD_COMGR_STATUS_ERROR;
   }
@@ -664,9 +664,9 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
   // For each code object, extract BundleEntryID information, and check that
   // against each ISA in the QueryList
   for (uint64_t I = 0; I < NumOfCodeObjects; I++) {
-    uint64_t BundleEntryCodeObjectSize;
-    uint64_t BundleEntryCodeObjectOffset;
-    uint64_t BundleEntryIDSize;
+    uint64_t BundleEntryCodeObjectSize = 0;
+    uint64_t BundleEntryCodeObjectOffset = 0;
+    uint64_t BundleEntryIDSize = 0;
     StringRef BundleEntryID;
 
     if (auto EC = Reader.readInteger(BundleEntryCodeObjectOffset)) {
