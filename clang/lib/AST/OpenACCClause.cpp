@@ -509,7 +509,7 @@ OpenACCReductionClause *OpenACCReductionClause::Create(
     ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
     SourceLocation EndLoc) {
   size_t NumCombiners = llvm::accumulate(
-      Recipes, 0, [](size_t Num, const OpenACCReductionRecipe &R) {
+      Recipes, 0, [](size_t Num, const OpenACCReductionRecipeWithStorage &R) {
         return Num + R.CombinerRecipes.size();
       });
 
