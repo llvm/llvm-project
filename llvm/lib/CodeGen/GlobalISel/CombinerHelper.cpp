@@ -391,19 +391,6 @@ void CombinerHelper::applyCombineConcatVectors(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchCombineShuffleToBuildVector(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
-         "Invalid instruction");
-  auto &Shuffle = cast<GShuffleVector>(MI);
-
-  Register SrcVec1 = Shuffle.getSrc1Reg();
-  Register SrcVec2 = Shuffle.getSrc2Reg();
-
-  LLT SrcVec1Type = MRI.getType(SrcVec1);
-  LLT SrcVec2Type = MRI.getType(SrcVec2);
-  return SrcVec1Type.isVector() && SrcVec2Type.isVector();
-}
-
 void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
   auto &Shuffle = cast<GShuffleVector>(MI);
 
@@ -535,11 +522,9 @@ bool CombinerHelper::matchCombineShuffleVector(
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
   Register Src1 = MI.getOperand(1).getReg();
   LLT SrcType = MRI.getType(Src1);
-  // As bizarre as it may look, shuffle vector can actually produce
-  // scalar! This is because at the IR level a <1 x ty> shuffle
-  // vector is perfectly valid.
-  unsigned DstNumElts = DstType.isVector() ? DstType.getNumElements() : 1;
-  unsigned SrcNumElts = SrcType.isVector() ? SrcType.getNumElements() : 1;
+
+  unsigned DstNumElts = DstType.getNumElements();
+  unsigned SrcNumElts = SrcType.getNumElements();
 
   // If the resulting vector is smaller than the size of the source
   // vectors being concatenated, we won't be able to replace the
@@ -556,7 +541,7 @@ bool CombinerHelper::matchCombineShuffleVector(
   //
   // TODO: If the size between the source and destination don't match
   //       we could still emit an extract vector element in that case.
-  if (DstNumElts < 2 * SrcNumElts && DstNumElts != 1)
+  if (DstNumElts < 2 * SrcNumElts)
     return false;
 
   // Check that the shuffle mask can be broken evenly between the
@@ -616,39 +601,6 @@ void CombinerHelper::applyCombineShuffleVector(
     Builder.buildMergeLikeInstr(NewDstReg, Ops);
 
   replaceRegWith(MRI, DstReg, NewDstReg);
-  MI.eraseFromParent();
-}
-
-bool CombinerHelper::matchShuffleToExtract(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
-         "Invalid instruction kind");
-
-  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-  return Mask.size() == 1;
-}
-
-void CombinerHelper::applyShuffleToExtract(MachineInstr &MI) const {
-  Register DstReg = MI.getOperand(0).getReg();
-  Builder.setInsertPt(*MI.getParent(), MI);
-
-  int I = MI.getOperand(3).getShuffleMask()[0];
-  Register Src1 = MI.getOperand(1).getReg();
-  LLT Src1Ty = MRI.getType(Src1);
-  int Src1NumElts = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
-  Register SrcReg;
-  if (I >= Src1NumElts) {
-    SrcReg = MI.getOperand(2).getReg();
-    I -= Src1NumElts;
-  } else if (I >= 0)
-    SrcReg = Src1;
-
-  if (I < 0)
-    Builder.buildUndef(DstReg);
-  else if (!MRI.getType(SrcReg).isVector())
-    Builder.buildCopy(DstReg, SrcReg);
-  else
-    Builder.buildExtractVectorElementConstant(DstReg, SrcReg, I);
-
   MI.eraseFromParent();
 }
 
@@ -8369,7 +8321,7 @@ bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
     return false;
 
   ArrayRef<int> Mask = Shuffle.getMask();
-  const unsigned NumSrcElems = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+  const unsigned NumSrcElems = Src1Ty.getNumElements();
 
   bool TouchesSrc1 = false;
   bool TouchesSrc2 = false;

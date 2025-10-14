@@ -1201,25 +1201,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return llvm::is_contained(
             {v8s8, v16s8, v4s16, v8s16, v2s32, v4s32, v2s64}, DstTy);
       })
-      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors) or scalar
-      // destinations, we just want those lowered into G_BUILD_VECTOR or
-      // G_EXTRACT_ELEMENT.
-      .lowerIf([=](const LegalityQuery &Query) {
-        return !Query.Types[0].isVector() || !Query.Types[1].isVector();
-      })
       .moreElementsIf(
           [](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
-                   Query.Types[0].getNumElements() >
-                       Query.Types[1].getNumElements();
+            return Query.Types[0].getNumElements() >
+                   Query.Types[1].getNumElements();
           },
           changeTo(1, 0))
       .moreElementsToNextPow2(0)
       .moreElementsIf(
           [](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
-                   Query.Types[0].getNumElements() <
-                       Query.Types[1].getNumElements();
+            return Query.Types[0].getNumElements() <
+                   Query.Types[1].getNumElements();
           },
           changeTo(0, 1))
       .widenScalarOrEltToNextPow2OrMinSize(0, 8)
