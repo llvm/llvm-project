@@ -2457,26 +2457,27 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
     }
 
     // Set options.
-    TilingInterface paddedOp;
     PadTilingInterfaceOptions options;
     options.setPaddingValues(paddingValues)
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
-    // Apply padding.
-    SmallVector<tensor::PadOp> newPadOps;
-    FailureOr<TilingInterface> maybePaddedOp = rewriteAsPaddedOp(
-        rewriter, cast<TilingInterface>(targetOp.getOperation()), options,
-        newPadOps);
-    if (failed(maybePaddedOp)) {
+    auto maybePadOps = rewriteAsPaddedOp(
+        rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
+    if (failed(maybePadOps)) {
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
 
+    const auto &[paddedOperands, paddedOp, slicedResults] = *maybePadOps;
+
     // Set transform results.
-    paddedOps.push_back(cast<TilingInterface>(maybePaddedOp->getOperation()));
-    padOps.append(newPadOps.begin(), newPadOps.end());
+    paddedOps.push_back(paddedOp);
+    padOps.append(paddedOperands.begin(), paddedOperands.end());
+
+    // erase targetOp:
+    rewriter.replaceOp(targetOp.getOperation(), slicedResults);
   }
 
   results.set(cast<OpResult>(getPadded()), paddedOps);
