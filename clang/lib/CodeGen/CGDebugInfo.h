@@ -408,6 +408,16 @@ private:
   /// Create a new lexical block node and push it on the stack.
   void CreateLexicalBlock(SourceLocation Loc);
 
+  /// All locations handled by CGDebugInfo are refined locations because this
+  /// is more suitable for debugging than pure spelling or expansion locations.
+  ///
+  /// Refined locations do not point into macro definitions. If a source
+  /// location is part of a macro argument expansion, its refined location is
+  /// the spelling location of the argument. If a source location is part of a
+  /// macro body, its refined location is the expansion location.
+  ///
+  /// This allows debuggers to show the macro invocation site or the argument
+  /// site, but not the macro definition body.
   SourceLocation getRefinedSpellingLocation(SourceLocation Loc) const;
 
   /// If target-specific LLVM \p AddressSpace directly maps to target-specific
