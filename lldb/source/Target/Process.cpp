@@ -1971,6 +1971,34 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
   }
 }
 
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                          llvm::MutableArrayRef<uint8_t> buffer) {
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;
+
+  for (auto [addr, len] : ranges) {
+    // This is either a programmer error, or a protocol violation.
+    // In production builds, gracefully fail.
+    assert(buffer.size() >= len);
+    if (buffer.size() < len) {
+      results.push_back(buffer.take_front(0));
+      continue;
+    }
+
+    Status status;
+    size_t num_bytes_read =
+        ReadMemoryFromInferior(addr, buffer.data(), len, status);
+    // FIXME: ReadMemoryFromInferior promises to return 0 in case of errors, but
+    // it doesn't; it never checks for errors.
+    if (status.Fail())
+      num_bytes_read = 0;
+    results.push_back(buffer.take_front(num_bytes_read));
+    buffer = buffer.drop_front(num_bytes_read);
+  }
+
+  return results;
+}
+
 void Process::DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                              const uint8_t *buf, size_t size,
                              AddressRanges &matches, size_t alignment,
