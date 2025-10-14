@@ -457,3 +457,63 @@ loop.i.latch:
 exit:
   ret void
 }
+
+; In the following case, the computation `offset = offset_i + j` will not wrap,
+; but `offset_i += 1024` will wrap both in a signed sense and an unsigned
+; sense. We cannot prove the monotonicity in this case.
+;
+; offset_i = (1ULL << 63) - 256;
+; for (i = 0; i < (1ULL << 62); i++, offset_i += 1024)
+;   for (j = 0; j < 32; j++) {
+;     offset = offset_i + j;
+;
+;     // The value of `offset` is positive in a signed sense.
+;     if (offset < (1ULL << 63))
+;       a[offset] = 0;
+;   }
+;
+define void @outer_loop_may_wrap(ptr %a) {
+; CHECK-LABEL: 'outer_loop_may_wrap'
+; CHECK-NEXT:  Monotonicity check:
+; CHECK-NEXT:    Inst: store i8 0, ptr %gep, align 1
+; CHECK-NEXT:      Expr: {{\{\{}}9223372036854775552,+,1024}<%loop.i.header>,+,1}<nuw><nsw><%loop.j.header>
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {9223372036854775552,+,1024}<%loop.i.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
+; CHECK-NEXT:    da analyze - confused!
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %subscript.i = phi i64 [ 9223372036854775552, %entry ], [ %subscript.i.next, %loop.i.latch ]  ; The initial value is 2^63 - 256
+  br label %loop.j.header
+
+loop.j.header:
+  %j = phi i64 [ 0, %loop.i.header ], [ %j.inc, %loop.j.latch ]
+  %subscript = phi i64 [ %subscript.i, %loop.i.header ], [ %subscript.next, %loop.j.latch ]
+  %cond = icmp sge i64 %subscript, 0
+  br i1 %cond, label %if.then, label %loop.j.latch
+
+if.then:
+  %gep = getelementptr inbounds i8, ptr %a, i64 %subscript
+  store i8 0, ptr %gep
+  br label %loop.j.latch
+
+loop.j.latch:
+  %j.inc = add nuw nsw i64 %j, 1
+  %subscript.next = add nuw nsw i64 %subscript, 1
+  %ec.j = icmp eq i64 %j.inc, 32
+  br i1 %ec.j, label %loop.i.latch, label %loop.j.header
+
+loop.i.latch:
+  %i.inc = add nuw nsw i64 %i, 1
+  %subscript.i.next = add i64 %subscript.i, 1024
+  %ec.i = icmp eq i64 %i.inc, 4611686018427387904  ; 2^62
+  br i1 %ec.i, label %exit, label %loop.i.header
+
+exit:
+  ret void
+}
