@@ -47,7 +47,7 @@ typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
 namespace __sanitizer {
 
-static atomic_uint8_t signal_handler_is_from_sanitizer[64];
+[[maybe_unused]] static atomic_uint8_t signal_handler_is_from_sanitizer[64];
 
 u32 GetUid() {
   return getuid();
