@@ -34,16 +34,15 @@ private:
   raw_ostream &OS;
 };
 
-// Simple RAII helper for emitting header inclusion guard (i.e,
-// ifndef-define-endif).
-class InclusionGuardEmitter {
+// Simple RAII helper for emitting header include guard (ifndef-define-endif).
+class IncludeGuardEmitter {
 public:
-  InclusionGuardEmitter(raw_ostream &OS, StringRef Name)
+  IncludeGuardEmitter(raw_ostream &OS, StringRef Name)
       : Name(Name.str()), OS(OS) {
     OS << "#ifndef " << Name << "\n"
        << "#define " << Name << "\n\n";
   }
-  ~InclusionGuardEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
+  ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n"; }
 
 private:
   std::string Name;

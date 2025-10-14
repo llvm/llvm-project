@@ -266,7 +266,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     return;
 
   StringRef Lang = DirLang.getName();
-  InclusionGuardEmitter IncGuard(OS, (Twine("LLVM_") + Lang + "_INC").str());
+  IncludeGuardEmitter IncGuard(OS, (Twine("LLVM_") + Lang + "_INC").str());
 
   OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
 
