@@ -2598,7 +2598,13 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                       return std::make_pair(ctorAttr.getName(),
                                             ctorAttr.getPriority());
                     });
-  assert(!cir::MissingFeatures::opGlobalDtorList());
+  // Emit the llvm.global_dtors array.
+  buildCtorDtorList(module, cir::CIRDialect::getGlobalDtorsAttrName(),
+                    "llvm.global_dtors", [](mlir::Attribute attr) {
+                      auto dtorAttr = mlir::cast<cir::GlobalDtorAttr>(attr);
+                      return std::make_pair(dtorAttr.getName(),
+                                            dtorAttr.getPriority());
+                    });
 }
 
 mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(

@@ -15,6 +15,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -1720,6 +1721,43 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
+  auto parseGlobalDtorCtor =
+      [&](StringRef keyword,
+          llvm::function_ref<void(std::optional<int> prio)> createAttr)
+      -> mlir::LogicalResult {
+    if (mlir::succeeded(parser.parseOptionalKeyword(keyword))) {
+      std::optional<int> priority;
+      if (mlir::succeeded(parser.parseOptionalLParen())) {
+        auto parsedPriority = mlir::FieldParser<int>::parse(parser);
+        if (mlir::failed(parsedPriority))
+          return parser.emitError(parser.getCurrentLocation(),
+                                  "failed to parse 'priority', of type 'int'");
+        priority = parsedPriority.value_or(int());
+        // Parse literal ')'
+        if (parser.parseRParen())
+          return failure();
+      }
+      createAttr(priority);
+    }
+    return success();
+  };
+
+  if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> priority) {
+        mlir::IntegerAttr globalCtorPriorityAttr =
+            builder.getI32IntegerAttr(priority.value_or(65535));
+        state.addAttribute(getGlobalCtorPriorityAttrName(state.name),
+                           globalCtorPriorityAttr);
+      }).failed())
+    return failure();
+
+  if (parseGlobalDtorCtor("global_dtor", [&](std::optional<int> priority) {
+        mlir::IntegerAttr globalDtorPriorityAttr =
+            builder.getI32IntegerAttr(priority.value_or(65535));
+        state.addAttribute(getGlobalDtorPriorityAttrName(state.name),
+                           globalDtorPriorityAttr);
+      }).failed())
+    return failure();
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1799,6 +1837,18 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
     p << ")";
+  }
+
+  if (auto globalCtorPriority = getGlobalCtorPriority()) {
+    p << " global_ctor";
+    if (globalCtorPriority.value() != 65535)
+      p << "(" << globalCtorPriority.value() << ")";
+  }
+
+  if (auto globalDtorPriority = getGlobalDtorPriority()) {
+    p << " global_dtor";
+    if (globalDtorPriority.value() != 65535)
+      p << "(" << globalDtorPriority.value() << ")";
   }
 
   // Print the body if this is not an external function.
