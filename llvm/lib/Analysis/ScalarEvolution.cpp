@@ -1774,7 +1774,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
   {
     const SCEV *LHS;
     const SCEV *RHS;
-    if (matchURem(Op, LHS, RHS))
+    if (match(Op, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), *this)))
       return getURemExpr(getZeroExtendExpr(LHS, Ty, Depth + 1),
                          getZeroExtendExpr(RHS, Ty, Depth + 1));
   }
@@ -2699,17 +2699,12 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   }
 
   // Canonicalize (-1 * urem X, Y) + X --> (Y * X/Y)
-  if (Ops.size() == 2) {
-    const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(Ops[0]);
-    if (Mul && Mul->getNumOperands() == 2 &&
-        Mul->getOperand(0)->isAllOnesValue()) {
-      const SCEV *X;
-      const SCEV *Y;
-      if (matchURem(Mul->getOperand(1), X, Y) && X == Ops[1]) {
-        return getMulExpr(Y, getUDivExpr(X, Y));
-      }
-    }
-  }
+  const SCEV *Y;
+  if (Ops.size() == 2 &&
+      match(Ops[0],
+            m_scev_Mul(m_scev_AllOnes(),
+                       m_scev_URem(m_scev_Specific(Ops[1]), m_SCEV(Y), *this))))
+    return getMulExpr(Y, getUDivExpr(Ops[1], Y));
 
   // Skip past any other cast SCEVs.
   while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scAddExpr)
@@ -15410,65 +15405,6 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
     }
 }
 
-// Match the mathematical pattern A - (A / B) * B, where A and B can be
-// arbitrary expressions. Also match zext (trunc A to iB) to iY, which is used
-// for URem with constant power-of-2 second operands.
-// It's not always easy, as A and B can be folded (imagine A is X / 2, and B is
-// 4, A / B becomes X / 8).
-bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
-                                const SCEV *&RHS) {
-  if (Expr->getType()->isPointerTy())
-    return false;
-
-  // Try to match 'zext (trunc A to iB) to iY', which is used
-  // for URem with constant power-of-2 second operands. Make sure the size of
-  // the operand A matches the size of the whole expressions.
-  if (match(Expr, m_scev_ZExt(m_scev_Trunc(m_SCEV(LHS))))) {
-    Type *TruncTy = cast<SCEVZeroExtendExpr>(Expr)->getOperand()->getType();
-    // Bail out if the type of the LHS is larger than the type of the
-    // expression for now.
-    if (getTypeSizeInBits(LHS->getType()) > getTypeSizeInBits(Expr->getType()))
-      return false;
-    if (LHS->getType() != Expr->getType())
-      LHS = getZeroExtendExpr(LHS, Expr->getType());
-    RHS = getConstant(APInt(getTypeSizeInBits(Expr->getType()), 1)
-                      << getTypeSizeInBits(TruncTy));
-    return true;
-  }
-  const auto *Add = dyn_cast<SCEVAddExpr>(Expr);
-  if (Add == nullptr || Add->getNumOperands() != 2)
-    return false;
-
-  const SCEV *A = Add->getOperand(1);
-  const auto *Mul = dyn_cast<SCEVMulExpr>(Add->getOperand(0));
-
-  if (Mul == nullptr)
-    return false;
-
-  const auto MatchURemWithDivisor = [&](const SCEV *B) {
-    // (SomeExpr + (-(SomeExpr / B) * B)).
-    if (Expr == getURemExpr(A, B)) {
-      LHS = A;
-      RHS = B;
-      return true;
-    }
-    return false;
-  };
-
-  // (SomeExpr + (-1 * (SomeExpr / B) * B)).
-  if (Mul->getNumOperands() == 3 && isa<SCEVConstant>(Mul->getOperand(0)))
-    return MatchURemWithDivisor(Mul->getOperand(1)) ||
-           MatchURemWithDivisor(Mul->getOperand(2));
-
-  // (SomeExpr + ((-SomeExpr / B) * B)) or (SomeExpr + ((SomeExpr / B) * -B)).
-  if (Mul->getNumOperands() == 2)
-    return MatchURemWithDivisor(Mul->getOperand(1)) ||
-           MatchURemWithDivisor(Mul->getOperand(0)) ||
-           MatchURemWithDivisor(getNegativeSCEV(Mul->getOperand(1))) ||
-           MatchURemWithDivisor(getNegativeSCEV(Mul->getOperand(0)));
-  return false;
-}
-
 ScalarEvolution::LoopGuards
 ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
   BasicBlock *Header = L->getHeader();
@@ -15689,20 +15625,18 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     if (Predicate == CmpInst::ICMP_EQ && match(RHS, m_scev_Zero())) {
       // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
       // explicitly express that.
-      const SCEV *URemLHS = nullptr;
+      const SCEVUnknown *URemLHS = nullptr;
       const SCEV *URemRHS = nullptr;
-      if (SE.matchURem(LHS, URemLHS, URemRHS)) {
-        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
-          auto I = RewriteMap.find(LHSUnknown);
-          const SCEV *RewrittenLHS =
-              I != RewriteMap.end() ? I->second : LHSUnknown;
-          RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
-          const auto *Multiple =
-              SE.getMulExpr(SE.getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
-          RewriteMap[LHSUnknown] = Multiple;
-          ExprsToRewrite.push_back(LHSUnknown);
-          return;
-        }
+      if (match(LHS,
+                m_scev_URem(m_SCEVUnknown(URemLHS), m_SCEV(URemRHS), SE))) {
+        auto I = RewriteMap.find(URemLHS);
+        const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : URemLHS;
+        RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
+        const auto *Multiple =
+            SE.getMulExpr(SE.getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
+        RewriteMap[URemLHS] = Multiple;
+        ExprsToRewrite.push_back(URemLHS);
+        return;
       }
     }
 

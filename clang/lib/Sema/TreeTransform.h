@@ -1865,6 +1865,17 @@ public:
                                                        LParenLoc, Num);
   }
 
+  /// Build a new OpenMP 'nowait' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPNowaitClause(Expr *Condition, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPNowaitClause(StartLoc, EndLoc,
+                                                      LParenLoc, Condition);
+  }
+
   /// Build a new OpenMP 'private' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -10612,8 +10623,14 @@ TreeTransform<Derived>::TransformOMPDetachClause(OMPDetachClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPNowaitClause(OMPNowaitClause *C) {
-  // No need to rebuild this clause, no template-dependent parameters.
-  return C;
+  ExprResult Cond;
+  if (auto *Condition = C->getCondition()) {
+    Cond = getDerived().TransformExpr(Condition);
+    if (Cond.isInvalid())
+      return nullptr;
+  }
+  return getDerived().RebuildOMPNowaitClause(Cond.get(), C->getBeginLoc(),
+                                             C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -12374,7 +12391,7 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
     const OpenACCReductionClause &C) {
   SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());
   SmallVector<Expr *> ValidVars;
-  llvm::SmallVector<OpenACCReductionRecipe> Recipes;
+  llvm::SmallVector<OpenACCReductionRecipeWithStorage> Recipes;
 
   for (const auto [Var, OrigRecipe] :
        llvm::zip(TransformedVars, C.getRecipes())) {
@@ -12384,7 +12401,7 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
       ValidVars.push_back(Res.get());
 
       if (OrigRecipe.isSet())
-        Recipes.push_back(OrigRecipe);
+        Recipes.emplace_back(OrigRecipe.AllocaDecl, OrigRecipe.CombinerRecipes);
       else
         Recipes.push_back(Self.getSema().OpenACC().CreateReductionInitRecipe(
             C.getReductionOp(), Res.get()));
