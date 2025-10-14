@@ -52,7 +52,7 @@ private:
   ValueObject *m_tree = nullptr;
   size_t m_num_elements = 0;
   ValueObject *m_next_element = nullptr;
-  std::vector<std::pair<ValueObject *, uint64_t>> m_elements_cache;
+  std::vector<ValueObject *> m_elements_cache;
 };
 
 class LibCxxUnorderedMapIteratorSyntheticFrontEnd
@@ -192,26 +192,25 @@ lldb::ValueObjectSP lldb_private::formatters::
           return nullptr;
       }
     }
-    m_elements_cache.push_back(
-        {value_sp.get(), hash_sp->GetValueAsUnsigned(0)});
+    m_elements_cache.push_back(value_sp.get());
     m_next_element = node_sp->GetChildMemberWithName("__next_").get();
     if (!m_next_element || m_next_element->GetValueAsUnsigned(0) == 0)
       m_next_element = nullptr;
   }
 
-  std::pair<ValueObject *, uint64_t> val_hash = m_elements_cache[idx];
-  if (!val_hash.first)
+  ValueObject *val_hash = m_elements_cache[idx];
+  if (!val_hash)
     return lldb::ValueObjectSP();
   StreamString stream;
   stream.Printf("[%" PRIu64 "]", (uint64_t)idx);
   DataExtractor data;
   Status error;
-  val_hash.first->GetData(data, error);
+  val_hash->GetData(data, error);
   if (error.Fail())
     return lldb::ValueObjectSP();
   const bool thread_and_frame_only_if_stopped = true;
-  ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(
-      thread_and_frame_only_if_stopped);
+  ExecutionContext exe_ctx =
+      val_hash->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
   return CreateValueObjectFromData(stream.GetString(), data, exe_ctx,
                                    m_element_type);
 }
