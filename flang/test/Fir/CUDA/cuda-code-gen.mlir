@@ -287,19 +287,28 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 
 // -----
 
-fir.global @_QMkernelsEinitial_val {data_attr = #cuf.cuda<constant>} : i32 {
-  %0 = fir.zero_bits i32
-  fir.has_value %0 : i32
-}
-func.func @_QMkernelsPassign(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
-  %1 = fir.address_of(@_QMkernelsEinitial_val) : !fir.ref<i32>
-  %14 = fir.load %1 : !fir.ref<i32>
-  fir.store %14 to %arg0 : !fir.ref<i32>
-  return
+module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  gpu.module @cuda_device_mod [#nvvm.target<chip = "sm_90", features = "+ptx75", link = ["/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12/libdevice_nvhpc_cuda_builtin_intrinsics_runtime.10.bc", "/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12/libdevice_nvhpc_utils_runtime.10.bc", "/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12/libdevice_nvhpc_cuda_cpp_builtins.10.bc", "/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12/libdevice_nvhpc_cuda_runtime.10.bc", "/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12/libdevice_nvhpc_cuda_runtime_cc90.10.bc", "/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12/libdevice_nvhpc_utils_runtime_cc90.10.bc", "/proj/ng/Linux_x86_64/dev/compilers/lib/nvvm-next/12//libdevice_nvhpc_cuda_runtime_builtins_cc90.10.bc", "/proj/ng/Linux_x86_64/dev/cuda/12.9/nvvm/libdevice/libdevice.10.bc"]>] attributes {llvm.data_layout = "e-p:64:64:64-p3:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"} {
+    fir.global @_QMkernelsEinitial_val {data_attr = #cuf.cuda<constant>} : i32 {
+      %0 = fir.zero_bits i32
+      fir.has_value %0 : i32
+    }
+    gpu.func @_QMkernelsPassign(%arg0: !fir.ref<!fir.array<?xi32>>) kernel {
+      %c-1 = arith.constant -1 : index
+      %c1_i32 = arith.constant 1 : i32
+      %0 = arith.constant 1 : i32
+      %1 = arith.addi %0, %c1_i32 : i32
+      %2 = fir.address_of(@_QMkernelsEinitial_val) : !fir.ref<i32>
+      %4 = fir.load %2 : !fir.ref<i32>
+      %5 = fir.convert %1 : (i32) -> i64
+      %6 = fircg.ext_array_coor %arg0(%c-1)<%5> : (!fir.ref<!fir.array<?xi32>>, index, i64) -> !fir.ref<i32>
+      fir.store %4 to %6 : !fir.ref<i32>
+      gpu.return
+    }
+  }
 }
 
-// CHECK: llvm.mlir.global external @_QMkernelsEinitial_val() {addr_space = 4 : i32} : i32 
-// CHECK-LABEL: llvm.func @_QMkernelsPassign
+// CHECK: llvm.mlir.global external @_QMkernelsEinitial_val() {addr_space = 4 : i32} : i32
+// CHECK-LABEL:  gpu.func @_QMkernelsPassign
 // CHECK: %[[ADDROF:.*]] = llvm.mlir.addressof @_QMkernelsEinitial_val : !llvm.ptr<4>
 // CHECK: %{{.*}} = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<4> to !llvm.ptr
-
