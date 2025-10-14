@@ -962,12 +962,9 @@ bool llvm::setLoopEstimatedTripCount(
   if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  MDBuilder MDB(LatchBranch->getContext());
-
   // Set/Update profile metadata.
-  LatchBranch->setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createBranchWeights(BackedgeTakenWeight, LatchExitWeight));
+  setBranchWeights(*LatchBranch, {BackedgeTakenWeight, LatchExitWeight},
+                   /*IsExpected=*/false);
 
   return true;
 }
@@ -1008,10 +1005,8 @@ bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
   BranchProbability Prob1 = P.getCompl();
   if (!ForFirstTarget)
     std::swap(Prob0, Prob1);
-  MDBuilder MDB(B->getContext());
-  B->setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createBranchWeights(Prob0.getNumerator(), Prob1.getNumerator()));
+  setBranchWeights(*B, {Prob0.getNumerator(), Prob1.getNumerator()},
+                   /*IsExpected=*/false);
   return true;
 }
 
