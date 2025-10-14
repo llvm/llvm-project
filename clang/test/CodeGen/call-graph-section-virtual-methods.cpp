@@ -12,7 +12,7 @@
 class Base {
   public:
     // FT-LABEL: define {{.*}} @_ZN4Base2vfEPc(
-    // FT: {{.*}} !type [[F_TVF:![0-9]+]]
+    // FT-SAME: {{.*}} !type [[F_TVF:![0-9]+]]
     virtual int vf(char *a) { return 0; };
   };
   

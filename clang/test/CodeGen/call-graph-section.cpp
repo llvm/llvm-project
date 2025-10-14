@@ -21,39 +21,39 @@ public:
   int *(*fp)(char *, float *);
 
   // FT-LABEL: define {{.*}} i32 @_ZN4Cls22f1Ecfd(
-  // FT: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
   int f1(char a, float b, double c) { return 0; }
 
   // FT-LABEL: define {{.*}} ptr @_ZN4Cls22f2EPcPfPd(
-  // FT: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
   int *f2(char *a, float *b, double *c) { return 0; }
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f3E4Cls1(
-  // FT: {{.*}} !type [[F_TCLS2F3F4:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F3F4:![0-9]+]]
   void f3(Cls1 a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f4E4Cls1(
-  // FT: {{.*}} !type [[F_TCLS2F3F4]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F3F4]]
   void f4(const Cls1 a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f5EP4Cls1(
-  // FT: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
   void f5(Cls1 *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f6EPK4Cls1(
-  // FT: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
   void f6(const Cls1 *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f7ER4Cls1(
-  // FT: {{.*}} !type [[F_TCLS2F7:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F7:![0-9]+]]
   void f7(Cls1 &a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f8ERK4Cls1(
-  // FT: {{.*}} !type [[F_TCLS2F8:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F8:![0-9]+]]
   void f8(const Cls1 &a) {}
 
   // FT-LABEL: define {{.*}} void @_ZNK4Cls22f9Ev(
-  // FT: {{.*}} !type [[F_TCLS2F9:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F9:![0-9]+]]
   void f9() const {}
 };
 

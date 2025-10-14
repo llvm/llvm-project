@@ -17,27 +17,27 @@ template <class T>
 class Cls2 {
 public:
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f1Ev(
-  // FT: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
   void f1() {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f2ES0_(
-  // FT: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
   void f2(T a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f3EPS0_(
-  // FT: {{.*}} !type [[F_TCLS2F3:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F3:![0-9]+]]
   void f3(T *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f4EPKS0_(
-  // FT: {{.*}} !type [[F_TCLS2F4:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F4:![0-9]+]]
   void f4(const T *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f5ERS0_(
-  // FT: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
   void f5(T &a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f6ERKS0_(
-  // FT: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
   void f6(const T &a) {}
 
   // Mixed type function pointer member
@@ -58,6 +58,7 @@ template <class T>
 T *T_func(T a, T *b, const T *c, T &d, const T &e) { return b; }
 
 // CST-LABEL: define {{.*}} @_Z3foov
+// CST-SAME: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
 void foo() {
   // Methods for Cls2<Cls1> is checked above within the template description.
   Cls2<Cls1> Obj;
@@ -98,7 +99,7 @@ void foo() {
 }
 
 // CST-LABEL: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_(
-// CST: {{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
+// CST-SAME: {{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
 
 // CST: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
 // CST: [[F_TFUNC_CLS1_CT]] = !{[[F_TFUNC_CLS1:![0-9]+]]}
