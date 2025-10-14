@@ -721,6 +721,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 }
 
 static UnsignedEPStat PathRunningTime("PathRunningTime");
+static UnsignedEPStat SyntaxRunningTime("SyntaxRunningTime");
 
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
@@ -759,6 +760,8 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       SyntaxCheckTimer->stopTimer();
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
       CheckerEndTime -= CheckerStartTime;
+      FunctionSummaries.findOrInsertSummary(D)->second.SyntaxRunningTime =
+          std::lround(CheckerEndTime.getWallTime() * 1000);
       DisplayTime(CheckerEndTime);
       if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
         AnalyzerTimers->clear();
@@ -776,6 +779,36 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   }
 }
 
+namespace {
+template <typename DeclT>
+static clang::Decl *preferDefinitionImpl(clang::Decl *D) {
+  if (auto *X = dyn_cast<DeclT>(D))
+    if (auto *Def = X->getDefinition())
+      return Def;
+  return D;
+}
+
+template <> clang::Decl *preferDefinitionImpl<ObjCMethodDecl>(clang::Decl *D) {
+  if (const auto *X = dyn_cast<ObjCMethodDecl>(D)) {
+    for (auto *I : X->redecls())
+      if (I->hasBody())
+        return I;
+  }
+  return D;
+}
+
+static Decl *getDefinitionOrCanonicalDecl(Decl *D) {
+  assert(D);
+  D = D->getCanonicalDecl();
+  D = preferDefinitionImpl<VarDecl>(D);
+  D = preferDefinitionImpl<FunctionDecl>(D);
+  D = preferDefinitionImpl<TagDecl>(D);
+  D = preferDefinitionImpl<ObjCMethodDecl>(D);
+  assert(D);
+  return D;
+}
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // Path-sensitive checking.
 //===----------------------------------------------------------------------===//
@@ -791,6 +824,16 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   // See if the LiveVariables analysis scales.
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
+
+  const Decl *DefDecl = getDefinitionOrCanonicalDecl(D);
+
+  // Get the SyntaxRunningTime from the function summary, because it is computed
+  // during the AM_Syntax analysis, which is done at a different point in time
+  // and in different order, but always before AM_Path.
+  if (const auto *Summary = FunctionSummaries.findSummary(DefDecl);
+      Summary && Summary->SyntaxRunningTime.has_value()) {
+    SyntaxRunningTime.set(*Summary->SyntaxRunningTime);
+  }
 
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
