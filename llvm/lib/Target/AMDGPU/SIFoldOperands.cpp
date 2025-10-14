@@ -1746,30 +1746,29 @@ bool SIFoldOperandsImpl::tryFoldArithmetic(MachineInstr &MI) const {
   };
 
   switch (Opc) {
-    default:
+  default:
+    return false;
+  case AMDGPU::V_AND_B32_e64:
+  case AMDGPU::V_AND_B32_e32: {
+    std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
+    if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
       return false;
-    case AMDGPU::V_AND_B32_e64:
-    case AMDGPU::V_AND_B32_e32: {
-      std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
-      if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
-        return false;
 
-      MachineOperand &Src1Op = MI.getOperand(2);
-      MachineInstr *SrcDef = MRI->getVRegDef(Src1Op.getReg());
-      if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
-        return false;
+    MachineOperand &Src1Op = MI.getOperand(2);
+    MachineInstr *SrcDef = MRI->getVRegDef(Src1Op.getReg());
+    if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
+      return false;
 
-      return replaceAndFold(MI.getOperand(0), Src1Op, MI);
-    }
-    case AMDGPU::V_ADD_U32_e64:
-    case AMDGPU::V_ADD_U32_e32: {
-      std::optional<int64_t> Src0Imm =
-          getImmOrMaterializedImm(MI.getOperand(1));
-      if (!Src0Imm || *Src0Imm != 0 || !MI.getOperand(2).isReg())
-        return false;
+    return replaceAndFold(MI.getOperand(0), Src1Op, MI);
+  }
+  case AMDGPU::V_ADD_U32_e64:
+  case AMDGPU::V_ADD_U32_e32: {
+    std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
+    if (!Src0Imm || *Src0Imm != 0 || !MI.getOperand(2).isReg())
+      return false;
 
-      return replaceAndFold(MI.getOperand(0), MI.getOperand(2), MI);
-    }
+    return replaceAndFold(MI.getOperand(0), MI.getOperand(2), MI);
+  }
   }
 
   return false;
