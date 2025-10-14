@@ -247,6 +247,7 @@ jobs:
         echo "int main(int argc, char** argv) { return 0; }" >> test.cpp
         ${{ steps.setup-stage.outputs.build-prefix }}/build/bin/clang++ -### -fuse-ld=lld -stdlib=libc++ -Wl,--verbose test.cpp
         ls -ltr  ${{ steps.setup-stage.outputs.build-prefix }}/build/lib/*
+        ${{ steps.setup-stage.outputs.build-prefix }}/build/bin/clang++  -fuse-ld=lld -stdlib=libc++ -Wl,--verbose test.cpp
 
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
