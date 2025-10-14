@@ -374,11 +374,12 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   // Make sure there is DWARF to convert first.
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
       Obj,
-      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process, nullptr,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
+      nullptr,
       /*DWPName=*/"",
       /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
       /*WarningHandler=*/WithColor::defaultWarningHandler,
-      /*ThreadSafe*/ true);
+      /*ThreadSafe*/true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
