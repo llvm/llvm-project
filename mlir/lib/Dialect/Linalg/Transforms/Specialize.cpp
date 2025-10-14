@@ -237,150 +237,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
-static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
-  if (isaConv1DOp(genericOp)) return "linalg.conv_1d";
-  return "";
-}
-
-static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
-  if (isaDepthwiseConv1DNcwCwOp(genericOp))
-    return "linalg.depthwise_conv_1d_ncw_cw";
-  if (isaDepthwiseConv1DNwcWcOp(genericOp))
-    return "linalg.depthwise_conv_1d_nwc_wc";
-  if (isaConv2DOp(genericOp))
-    return "linalg.conv_2d";
-  if (isaPoolingNcwMaxOp(genericOp))
-    return "linalg.pooling_ncw_max";
-  if (isaPoolingNcwSumOp(genericOp))
-    return "linalg.pooling_ncw_sum";
-  if (isaPoolingNwcMaxOp(genericOp))
-    return "linalg.pooling_nwc_max";
-  if (isaPoolingNwcMinOp(genericOp))
-    return "linalg.pooling_nwc_min";
-  if (isaPoolingNwcSumOp(genericOp))
-    return "linalg.pooling_nwc_sum";
-  return "";
-}
-
-static std::string inferBasedOnRank5ConvIteratorTypes(GenericOp genericOp) {
-  if (isaDepthwiseConv1DNwcWcmOp(genericOp))
-    return "linalg.depthwise_conv_1d_nwc_wcm";
-  if (isaConv1DNwcWcfOp(genericOp))
-    return "linalg.conv_1d_nwc_wcf";
-  if (isaConv1DNcwFcwOp(genericOp))
-    return "linalg.conv_1d_ncw_fcw";
-  return "";
-}
-
-static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
-  if (isaDepthwiseConv2DNchwChwOp(genericOp))
-    return "linalg.depthwise_conv_2d_nchw_chw";
-  if (isaDepthwiseConv2DNhwcHwcOp(genericOp))
-    return "linalg.depthwise_conv_2d_nhwc_hwc";
-  if (isaDepthwiseConv2DNhwcHwcQOp(genericOp))
-    return "linalg.depthwise_conv_2d_nhwc_hwc_q";
-  if (isaConv3DOp(genericOp))
-    return "linalg.conv_3d";
-  if (isaPoolingNchwMaxOp(genericOp))
-    return "linalg.pooling_nchw_max";
-  if (isaPoolingNchwSumOp(genericOp))
-    return "linalg.pooling_nchw_sum";
-  if (isaPoolingNhwcMaxOp(genericOp))
-    return "linalg.pooling_nhwc_max";
-  if (isaPoolingNhwcMinOp(genericOp))
-    return "linalg.pooling_nhwc_min";
-  if (isaPoolingNhwcSumOp(genericOp))
-    return "linalg.pooling_nhwc_sum";
-  if (isaPoolingNhwcMaxUnsignedOp(genericOp))
-    return "linalg.pooling_nhwc_max_unsigned";
-  if (isaPoolingNhwcMinUnsignedOp(genericOp))
-    return "linalg.pooling_nhwc_min_unsigned";
-  return "";
-}
-
-static std::string inferBasedOnRank7ConvIteratorTypes(GenericOp genericOp) {
-  if (isaConv2DNhwcFhwcOp(genericOp))
-    return "linalg.conv_2d_nhwc_fhwc";
-  if (isaConv2DNhwcHwcfOp(genericOp))
-    return "linalg.conv_2d_nhwc_hwcf";
-  if (isaConv2DNchwFchwOp(genericOp))
-    return "linalg.conv_2d_nchw_fchw";
-  if (isaConv2DNhwcFhwcQOp(genericOp))
-    return "linalg.conv_2d_nhwc_fhwc_q";
-  if (isaConv2DNchwFchwQOp(genericOp))
-    return "linalg.conv_2d_nchw_fchw_q";
-  if (isaConv2DNhwcHwcfQOp(genericOp))
-    return "linalg.conv_2d_nhwc_hwcf_q";
-  if (isaDepthwiseConv2DNhwcHwcmOp(genericOp))
-    return "linalg.depthwise_conv_2d_nhwc_hwcm";
-  if (isaDepthwiseConv2DNhwcHwcmQOp(genericOp))
-    return "linalg.depthwise_conv_2d_nhwc_hwcm_q";
-  return "";
-}
-
-static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
-  if (isaConv2DNgchwFgchwOp(genericOp))
-    return "linalg.conv_2d_ngchw_fgchw";
-  if (isaConv2DNgchwGfchwOp(genericOp))
-    return "linalg.conv_2d_ngchw_gfchw";
-  if (isaConv2DNgchwGfchwQOp(genericOp))
-    return "linalg.conv_2d_ngchw_gfchw_q";
-  if (isaConv2DNhwgcGfhwcOp(genericOp))
-    return "linalg.conv_2d_nhwgc_gfhwc";
-  if (isaConv2DNhwgcGfhwcQOp(genericOp))
-    return "linalg.conv_2d_nhwgc_gfhwc_q";
-  if (isaDepthwiseConv3DNcdhwCdhwOp(genericOp))
-    return "linalg.depthwise_conv_3d_ncdhw_cdhw";
-  if (isaDepthwiseConv3DNdhwcDhwcOp(genericOp))
-    return "linalg.depthwise_conv_3d_ndhwc_dhwc";
-  if (isaPoolingNdhwcMaxOp(genericOp))
-    return "linalg.pooling_ndhwc_max";
-  if (isaPoolingNdhwcMinOp(genericOp))
-    return "linalg.pooling_ndhwc_min";
-  if (isaPoolingNdhwcSumOp(genericOp))
-    return "linalg.pooling_ndhwc_sum";
-  return "";
-}
-
-static std::string inferBasedOnRank9ConvIteratorTypes(GenericOp genericOp) {
-  if (isaConv3DNcdhwFcdhwOp(genericOp))
-    return "linalg.conv_3d_ncdhw_fcdhw";
-  if (isaConv3DNdhwcDhwcfOp(genericOp))
-    return "linalg.conv_3d_ndhwc_dhwcf";
-  if (isaConv3DNdhwcDhwcfQOp(genericOp))
-    return "linalg.conv_3d_ndhwc_dhwcf_q";
-  if (isaDepthwiseConv3DNdhwcDhwcmOp(genericOp))
-    return "linalg.depthwise_conv_3d_ndhwc_dhwcm";
-  return "";
-}
-
-static std::string inferConvolutionKind(GenericOp genericOp) {
-  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
-  unsigned totalIterators = iteratorTypes.size();
-  switch(totalIterators) {
-    case 2:
-      return inferBasedOnRank2ConvIteratorTypes(genericOp);
-    case 4:
-      return inferBasedOnRank4ConvIteratorTypes(genericOp);
-    case 5:
-      return inferBasedOnRank5ConvIteratorTypes(genericOp);
-    case 6:
-      return inferBasedOnRank6ConvIteratorTypes(genericOp);
-    case 7:
-      return inferBasedOnRank7ConvIteratorTypes(genericOp);
-    case 8:
-      return inferBasedOnRank8ConvIteratorTypes(genericOp);
-    case 9:
-      return inferBasedOnRank9ConvIteratorTypes(genericOp);
-  }
-  return "";
-}
-
-// Converts linalg.generic to named linalg.*conv* where possible.
-static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
-                                                        GenericOp genericOp) {
-  std::string convKind = inferConvolutionKind(genericOp);
-  if (convKind == "") return failure();
+template <typename ConvOpTy>
+static FailureOr<LinalgOp> specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp, ArrayRef<int64_t> dilations, ArrayRef<int64_t> strides) {
   SmallVector<Value> inputs = genericOp.getDpsInputs();
   ValueRange outputs = genericOp.getDpsInits();
   SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
@@ -388,99 +246,160 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
                                       ? TypeRange(ValueRange(outputs))
                                       : TypeRange{};
   LinalgOp namedOp;
-  if (convKind == "linalg.conv_1d") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv1DOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_1d_nwc_wcf") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv1DNwcWcfOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_1d_ncw_fcw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv1DNcwFcwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_1d_ncw_cw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNcwCwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_1d_nwc_wc") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNwcWcOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_1d_nwc_wcm") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNwcWcmOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nhwc_fhwc") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcFhwcOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nhwc_hwcf") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nchw_fchw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNchwFchwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nhwc_fhwc_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcFhwcQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nchw_fchw_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNchwFchwQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_ngchw_fgchw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwFgchwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_ngchw_gfchw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwGfchwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_ngchw_gfchw_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwGfchwQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nhwgc_gfhwc") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwgcGfhwcOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nhwc_hwcf_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_2d_nhwgc_gfhwc_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwgcGfhwcQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_2d_nchw_chw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNchwChwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwc") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwcm") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcmOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwcm_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcmQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwc_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_3d") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_3d_ncdhw_fcdhw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DNcdhwFcdhwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_3d_ndhwc_dhwcf") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DNdhwcDhwcfOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.conv_3d_ndhwc_dhwcf_q") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DNdhwcDhwcfQOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_3d_ndhwc_dhwcm") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_3d_ncdhw_cdhw") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv3DNcdhwCdhwOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.depthwise_conv_3d_ndhwc_dhwc") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv3DNdhwcDhwcOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nchw_max") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNchwMaxOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nchw_sum") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNchwSumOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nhwc_max") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nhwc_min") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMinOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nhwc_sum") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcSumOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nhwc_max_unsigned") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxUnsignedOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nhwc_min_unsigned") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMinUnsignedOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_ncw_max") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNcwMaxOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_ncw_sum") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNcwSumOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nwc_max") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNwcMaxOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nwc_min") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNwcMinOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_nwc_sum") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNwcSumOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_ndhwc_max") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNdhwcMaxOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_ndhwc_min") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNdhwcMinOp>(genericOp, resultTypes, inputs, outputs);
-  } else if (convKind == "linalg.pooling_ndhwc_sum") {
-    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNdhwcSumOp>(genericOp, resultTypes, inputs, outputs);
+  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> || std::is_same_v<ConvOpTy, linalg::Conv2DOp> || std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes, inputs, outputs);
+  } else {
+    Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
+    Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
   }
   return namedOp;
+}
 
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank2ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaConv1DOp(genericOp)) return specializeToConvOp<linalg::Conv1DOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank4ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaDepthwiseConv1DNcwCwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv1DNcwCwOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv1DNwcWcOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DOp(genericOp))
+    return specializeToConvOp<linalg::Conv2DOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNcwMaxOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNcwMaxOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNcwSumOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNcwSumOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNwcMaxOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNwcMaxOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNwcMinOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNwcMinOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNwcSumOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNwcSumOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank5ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaDepthwiseConv1DNwcWcmOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcmOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv1DNwcWcfOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv1DNwcWcfOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv1DNcwFcwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv1DNcwFcwOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank6ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaDepthwiseConv2DNchwChwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv2DNchwChwOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv2DNhwcHwcOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv2DNhwcHwcQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcQOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv3DOp(genericOp))
+    return specializeToConvOp<linalg::Conv3DOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNchwMaxOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNchwMaxOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNchwSumOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNchwSumOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNhwcMaxOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNhwcMaxOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNhwcMinOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNhwcMinOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNhwcSumOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNhwcSumOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNhwcMaxUnsignedOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNhwcMaxUnsignedOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNhwcMinUnsignedOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNhwcMinUnsignedOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank7ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaConv2DNhwcFhwcOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNhwcFhwcOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNhwcHwcfOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNhwcHwcfOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNchwFchwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNchwFchwOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNhwcFhwcQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNhwcFhwcQOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNchwFchwQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNchwFchwQOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNhwcHwcfQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNhwcHwcfQOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv2DNhwcHwcmOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcmOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv2DNhwcHwcmQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv2DNhwcHwcmQOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank8ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaConv2DNgchwFgchwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNgchwFgchwOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNgchwGfchwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNgchwGfchwOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNgchwGfchwQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNgchwGfchwQOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNhwgcGfhwcOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNhwgcGfhwcOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv2DNhwgcGfhwcQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv2DNhwgcGfhwcQOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv3DNcdhwCdhwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv3DNcdhwCdhwOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv3DNdhwcDhwcOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNdhwcMaxOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNdhwcMaxOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNdhwcMinOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNdhwcMinOp>(rewriter, genericOp, dilations, strides);
+  if (isaPoolingNdhwcSumOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::PoolingNdhwcSumOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank9ConvIteratorTypes(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+  if (isaConv3DNcdhwFcdhwOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv3DNcdhwFcdhwOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv3DNdhwcDhwcfOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv3DNdhwcDhwcfOp>(rewriter, genericOp, dilations, strides);
+  if (isaConv3DNdhwcDhwcfQOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::Conv3DNdhwcDhwcfQOp>(rewriter, genericOp, dilations, strides);
+  if (isaDepthwiseConv3DNdhwcDhwcmOp(genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(rewriter, genericOp, dilations, strides);
+  return failure();
+}
+
+// Converts linalg.generic to named linalg.*conv* where possible.
+static FailureOr<LinalgOp> inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  unsigned totalIterators = iteratorTypes.size();
+  switch(totalIterators) {
+    case 2:
+      return inferAndSpecializeBasedOnRank2ConvIteratorTypes(rewriter, genericOp);
+    case 4:
+      return inferAndSpecializeBasedOnRank4ConvIteratorTypes(rewriter, genericOp);
+    case 5:
+      return inferAndSpecializeBasedOnRank5ConvIteratorTypes(rewriter, genericOp);
+    case 6:
+      return inferAndSpecializeBasedOnRank6ConvIteratorTypes(rewriter, genericOp);
+    case 7:
+      return inferAndSpecializeBasedOnRank7ConvIteratorTypes(rewriter, genericOp);
+    case 8:
+      return inferAndSpecializeBasedOnRank8ConvIteratorTypes(rewriter, genericOp);
+    case 9:
+      return inferAndSpecializeBasedOnRank9ConvIteratorTypes(rewriter, genericOp);
+  }
   return failure();
 }
 
@@ -566,7 +485,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
 
   // Convolution - e.g. *conv*
   if (isaConvolutionOpInterface(genericOp)) {
-    return specializeLinalgConvolutions(rewriter, genericOp);
+    return inferAndSpecializeToConvolutionOp(rewriter, genericOp);
   }
   return failure();
 }
