@@ -4899,3 +4899,63 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   for (const auto &Line : ExpectedDumpLines)
     EXPECT_TRUE(DumpStr.find(Line) != std::string::npos);
 }
+
+TEST(GSYMTest, TestUnableToLocateDWO) {
+  // Test that llvm-gsymutil will not produce "uanble to locate DWO file" for
+  // Apple binaries. Apple uses DW_AT_GNU_dwo_id for non split DWARF purposes
+  // and this makes llvm-gsymutil create warnings and errors.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name        ("main.cpp")
+  //               DW_AT_language    (DW_LANG_C)
+  //               DW_AT_GNU_dwo_id  (0xfffffffe)
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - main.cpp
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_GNU_dwo_id
+              Form:            DW_FORM_data4
+  debug_info:
+    - Length:          0x11
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0xFFFFFFFE
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
+  GsymCreator GC;
+  // Make a DWARF transformer that is MachO (Apple) to avoid warnings about
+  // not finding DWO files.
+  DwarfTransformer DT(*DwarfContext, GC, /*LDCS=*/false, /*MachO*/ true);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
+
+  // Make sure this warning is not in the binary
+  std::string warn("warning: Unable to retrieve DWO .debug_info section for");
+  EXPECT_TRUE(errors.find(warn) == std::string::npos);
+}
