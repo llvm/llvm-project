@@ -237,6 +237,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
+/// Utility to create a `genericOp` with a convolution op of type `ConvOpTy` with `dilations` and `strides`.
 template <typename ConvOpTy>
 static FailureOr<LinalgOp> specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp, ArrayRef<int64_t> dilations, ArrayRef<int64_t> strides) {
   SmallVector<Value> inputs = genericOp.getDpsInputs();
@@ -380,7 +381,7 @@ static FailureOr<LinalgOp> inferAndSpecializeBasedOnRank9ConvIteratorTypes(Rewri
   return failure();
 }
 
-// Converts linalg.generic to named linalg.*conv* where possible.
+// Converts linalg.generic to named linalg.*conv/pooling* where possible. To improve the search speed, the convolution ops have been segregated based on the rank of iterator types array.
 static FailureOr<LinalgOp> inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
   SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
   unsigned totalIterators = iteratorTypes.size();
@@ -483,7 +484,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     return specializeLinalgContractions(rewriter, genericOp);
   }
 
-  // Convolution - e.g. *conv*
+  // Convolution - e.g. *conv/pooling*
   if (isaConvolutionOpInterface(genericOp)) {
     return inferAndSpecializeToConvolutionOp(rewriter, genericOp);
   }

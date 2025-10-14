@@ -319,6 +319,11 @@ static bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim, int64_
   return false;
 }
 
+/// Given an array of AffineMaps `indexingMaps` verify the following :-
+///   indexingMaps[0].getResult(iDim) == 
+///         indexingMaps[1].getResult(fDim) * <CST_1> +
+///         indexingMaps[n-1].getResult(oDim) * <CST_2>
+///  where, CST_1 and CST_2 can be any constant.
 static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim, unsigned fDim, unsigned oDim,
   int64_t& dilation, int64_t& stride) {
   unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
@@ -348,10 +353,13 @@ static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim, un
   return false;
 }
 
+/// Given an array of AffineMaps `indexingMaps` verify the following :-
+///   indexingMaps[aIndex].getResult(aDim) == indexingMaps[bIndex].getResult(bDim)
 static bool matchConvDimExprPattern(ArrayAttr indexingMaps, unsigned aIndex, unsigned aDim, unsigned bIndex, unsigned bDim) {
   return getAffineMapDim(indexingMaps, aIndex, aDim) == getAffineMapDim(indexingMaps, bIndex, bDim);
 }
 
+/// Give an array of AffineMaps, verify each map to be of the corresponding `expectedSize`.
 static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps, ArrayRef<int64_t> expectedSizes) {
   if (indexingMaps.size() != expectedSizes.size()) return false;
 
@@ -362,6 +370,7 @@ static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps, ArrayRef<int64_t>
   return true;
 }
 
+/// Utility to update `dilations` and `strides` by copy the corresponding data from `tempDilations` and `tempStrides`.
 static bool updateConvDilationsAndStrides(SmallVector<int64_t>* dilations, SmallVector<int64_t>* strides, ArrayRef<int64_t> tempDilations, ArrayRef<int64_t> tempStrides) {
   if (!(dilations && strides))
     return true;
