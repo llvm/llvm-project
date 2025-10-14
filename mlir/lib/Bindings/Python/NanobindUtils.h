@@ -357,7 +357,7 @@ public:
     // that should throw in a non-terminal way, so we forgo further
     // exception marshalling.
     // See: https://github.com/pybind/nanobind/issues/2842
-    auto heap_type = reinterpret_cast<PyHeapTypeObject *>(clazz.ptr());
+    auto *heap_type = reinterpret_cast<PyHeapTypeObject *>(clazz.ptr());
     assert(heap_type->ht_type.tp_flags & Py_TPFLAGS_HEAPTYPE &&
            "must be heap type");
     heap_type->as_sequence.sq_length = +[](PyObject *rawSelf) -> Py_ssize_t {

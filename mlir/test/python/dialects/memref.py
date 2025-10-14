@@ -249,3 +249,20 @@ def testSubViewOpInferReturnTypeExtensiveSlicing():
             check_strides_offset(memref.subview(mem3, (0, 0), (4, 4), (1, 1)), golden_mem[0:4, 0:4])
             check_strides_offset(memref.subview(mem3, (4, 4), (4, 4), (1, 1)), golden_mem[4:8, 4:8])
             # fmt: on
+
+# CHECK-LABEL: TEST: testExtractStridedMetadataOp
+@run
+def testExtractStridedMetadataOp():
+    S = ShapedType.get_dynamic_size()
+    shape = [S] * 4
+    with Context() as ctx, Location.unknown(ctx):
+        dynamc_memref_t = T.memref(
+            *shape,
+            element_type=T.f32(),
+            layout=StridedLayoutAttr.get(offset=S, strides=shape, context=ctx)
+        )
+        module = Module.create()
+        with InsertionPoint(module.body):
+            A = memref.alloc(dynamc_memref_t, [], [])
+            A_base, A_offset, A_sizes, A_strides = memref.extract_strided_metadata(A)
+
