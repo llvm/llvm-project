@@ -1200,6 +1200,18 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     return;
   }
 
+  bool IsNonUniform =
+      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
+  if (StorageClass == SPIRV::StorageClass::StorageClass::StorageBuffer) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageBufferArrayNonUniformIndexingEXT);
+    else
+      Handler.addRequirements(
+          SPIRV::Capability::StorageBufferArrayDynamicIndexing);
+    return;
+  }
+
   Register PointeeTypeReg = ResTypeInst->getOperand(2).getReg();
   MachineInstr *PointeeType = MRI.getUniqueVRegDef(PointeeTypeReg);
   if (PointeeType->getOpcode() != SPIRV::OpTypeImage &&
@@ -1208,8 +1220,6 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     return;
   }
 
-  bool IsNonUniform =
-      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
   if (isUniformTexelBuffer(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
