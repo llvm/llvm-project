@@ -606,15 +606,15 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
       Constraint.mappingOccurenceList();
   // The empty MLTAL situation should only occur when evaluating non-dependent
   // constraints.
-  if (!MLTAL.getNumSubstitutedLevels())
-    MLTAL.addOuterTemplateArguments(TD, {}, /*Final=*/false);
-  SubstitutedOuterMost =
-      llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
+  if (MLTAL.getNumSubstitutedLevels())
+    SubstitutedOuterMost =
+        llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
     TemplateArgument Arg;
     if (Used[I])
-      Arg = CTAI.SugaredConverted[MappedIndex++];
+      Arg = S.Context.getCanonicalTemplateArgument(
+          CTAI.SugaredConverted[MappedIndex++]);
     if (I < SubstitutedOuterMost.size()) {
       SubstitutedOuterMost[I] = Arg;
       Offset = I + 1;
@@ -626,8 +626,10 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   if (Offset < SubstitutedOuterMost.size())
     SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
 
-  MLTAL.replaceOutermostTemplateArguments(TD, SubstitutedOuterMost);
-  return std::move(MLTAL);
+  MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOuterMost,
+                                                    /*Final=*/false);
+  return std::move(SubstitutedTemplateArgs);
 }
 
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
