@@ -87,21 +87,21 @@ class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits),
-            /*requiresFastmath=*/0,
+            /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
             /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_zero_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
                    I1Attr:$is_zero_poison);
 }
 
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
-    /*requiresFastmath=*/0,
+    /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
     /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_int_min_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
                    I1Attr:$is_int_min_poison);
 }
 
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
-  /*requiresFastmath=*/0,
+  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
@@ -184,6 +184,15 @@ def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
+def LLVM_SincosOp : LLVM_TwoResultIntrOp<"sincos", [], [0],
+  [Pure], /*requiresFastmath=*/1> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+      "functional-type(operands, results)";
+  let hasVerifier = 1;
+}
 
 def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
 def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
@@ -360,8 +369,8 @@ def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end">;
 
 def LLVM_InvariantStartOp : LLVM_OneResultIntrOp<"invariant.start", [], [1],
     [DeclareOpInterfaceMethods<PromotableOpInterface>],
-    /*requiresFastmath=*/0, /*immArgPositions=*/[0],
-    /*immArgAttrNames=*/["size"]> {
+    /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
+    /*immArgPositions=*/[0], /*immArgAttrNames=*/["size"]> {
   let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
   let results = (outs LLVM_DefaultPointer:$res);
   let assemblyFormat = "$size `,` $ptr attr-dict `:` qualified(type($ptr))";
@@ -412,6 +421,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                                !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
                                true : []),
                            /*requiresFastmath=*/0,
+                           /*requiresArgAndResultAttrs=*/0,
                            /*immArgPositions=*/[],
                            /*immArgAttrNames=*/[]> {
   dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
@@ -589,7 +599,7 @@ def LLVM_ExpectOp
 def LLVM_ExpectWithProbabilityOp
   : LLVM_OneResultIntrOp<"expect.with.probability", [], [0],
                          [Pure, AllTypesMatch<["val", "expected", "res"]>],
-                         /*requiresFastmath=*/0,
+                         /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                          /*immArgPositions=*/[2], /*immArgAttrNames=*/["prob"]> {
   let arguments = (ins AnySignlessInteger:$val,
                        AnySignlessInteger:$expected,
@@ -672,22 +682,6 @@ def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
 
 class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     : LLVM_IntrOp<name, [], [], traits, 0> {
-  let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
-    if(!builder.getCurrentDebugLocation())
-      return success();
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::LLVMContext &ctx = module->getContext();
-    llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::}]
-       # !subst(".", "_", name) # [{);
-    builder.CreateCall(fn, {
-        llvm::MetadataAsValue::get(ctx,
-            llvm::ValueAsMetadata::get(moduleTranslation.lookupValue(opInst.getOperand(0)))),
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($varInfo)),
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateExpression($locationExpr)),
-      });
-  }];
   let mlirBuilder = [{
     // Add debug intrindic to the list of intrinsics that need to be converted once the
     // full function was converted.
@@ -710,6 +704,22 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     LLVM_DILocalVariableAttr:$varInfo,
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
+  let llvmBuilder = [{
+    // Debug records without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
+                     llvm::cast<llvm::DILocalVariable>(
+                         moduleTranslation.translateDebugInfo($varInfo)),
+                     moduleTranslation.translateExpression($locationExpr),
+                     moduleTranslation.translateLoc(opInst.getLoc(), scope),
+                     builder.GetInsertPoint());
+  }];
 }
 
 def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
@@ -720,22 +730,41 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     LLVM_DILocalVariableAttr:$varInfo,
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
+  let llvmBuilder = [{
+    // Debug records without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDbgValueIntrinsic(
+        moduleTranslation.lookupValue(opInst.getOperand(0)),
+        llvm::cast<llvm::DILocalVariable>(
+            moduleTranslation.translateDebugInfo($varInfo)),
+        moduleTranslation.translateExpression($locationExpr),
+        moduleTranslation.translateLoc(opInst.getLoc(), scope),
+        builder.GetInsertPoint());
+  }];
 }
 
 def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   let summary = "Relates the program to a debug information label.";
   let arguments = (ins LLVM_DILabelAttr:$label);
   let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
+    // Debug records without debug locations are invalid.
     if(!builder.getCurrentDebugLocation())
       return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
     llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::LLVMContext &ctx = module->getContext();
-    llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::dbg_label);
-    builder.CreateCall(fn, {
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
-      });
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertLabel(
+        llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
+        moduleTranslation.translateLoc(opInst.getLoc(), scope),
+        builder.GetInsertPoint());
   }];
   let mlirBuilder = [{
     DILabelAttr labelAttr = $_label_attr($label);
@@ -825,7 +854,7 @@ class LLVM_VecReductionAccBase<string mnem, Type element>
                            /*overloadedResults=*/[],
                            /*overloadedOperands=*/[1],
                            /*traits=*/[Pure, SameOperandsAndResultElementType],
-                           /*equiresFastmath=*/1>,
+                           /*requiresFastmath=*/1>,
       Arguments<(ins element:$start_value,
                      LLVM_VectorOf<element>:$input,
                      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags)>;
@@ -980,17 +1009,17 @@ def LLVM_GetActiveLaneMaskOp
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
-                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
+                   Optional<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
-    auto *inst = $pass_thru.empty() ? builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask) :
+    auto *inst = $pass_thru ? builder.CreateMaskedLoad(
+        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru) :
       builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
+        $_resultType, $data, llvm::Align($alignment), $mask);
     $res = inst;
   }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
@@ -1069,14 +1098,36 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 }
 
 /// Create a call to Masked Expand Load intrinsic.
-def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
-  let arguments = (ins LLVM_AnyPointer, LLVM_VectorOf<I1>, LLVM_AnyVector);
+def LLVM_masked_expandload
+  : LLVM_OneResultIntrOp<"masked.expandload", [0], [],
+  /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
+  /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
+  dag args = (ins LLVM_AnyPointer:$ptr,
+                       LLVM_VectorOf<I1>:$mask,
+                       LLVM_AnyVector:$passthru);
+
+  let arguments = !con(args, baseArgs);
+
+  let builders = [
+    OpBuilder<(ins "TypeRange":$resTy, "Value":$ptr, "Value":$mask, "Value":$passthru, CArg<"uint64_t", "1">:$align)>
+  ];
 }
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
-  let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0],
+  /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+  /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
+  /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
+  dag args = (ins LLVM_AnyVector:$value,
+                       LLVM_AnyPointer:$ptr,
+                       LLVM_VectorOf<I1>:$mask);
+
+  let arguments = !con(args, baseArgs);
+
+  let builders = [
+    OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask, CArg<"uint64_t", "1">:$align)>
+  ];
 }
 
 //
@@ -1120,9 +1171,13 @@ def LLVM_Annotation
 // Trap intrinsics.
 //
 
-def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap">;
+def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap"> {
+  let assemblyFormat = "attr-dict";
+}
 
-def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap">;
+def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap"> {
+  let assemblyFormat = "attr-dict";
+}
 
 def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*overloadedOperands=*/[], /*traits=*/[],
@@ -1130,6 +1185,8 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[0], /*immArgAttrNames=*/["failureKind"]> {
   let arguments = (ins I8Attr:$failureKind);
+
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 /// Create a call to vscale intrinsic.
@@ -1155,7 +1212,7 @@ def LLVM_vector_insert
                   PredOpTrait<"it is not inserting scalable into fixed-length vectors.",
                     CPred<"!isScalableVectorType($srcvec.getType()) || "
                           "isScalableVectorType($dstvec.getType())">>],
-                  /*requiresFastmath=*/0,
+                  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                   /*immArgPositions=*/[2], /*immArgAttrNames=*/["pos"]> {
   let arguments = (ins LLVM_AnyVector:$dstvec, LLVM_AnyVector:$srcvec,
                        I64Attr:$pos);
@@ -1189,7 +1246,7 @@ def LLVM_vector_extract
                   PredOpTrait<"it is not extracting scalable from fixed-length vectors.",
                     CPred<"!isScalableVectorType($res.getType()) || "
                           "isScalableVectorType($srcvec.getType())">>],
-                  /*requiresFastmath=*/0,
+                  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                   /*immArgPositions=*/[1], /*immArgAttrNames=*/["pos"]> {
   let arguments = (ins LLVM_AnyVector:$srcvec, I64Attr:$pos);
   let results = (outs LLVM_AnyVector:$res);

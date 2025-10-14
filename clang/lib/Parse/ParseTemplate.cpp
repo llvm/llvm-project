@@ -196,7 +196,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
   ParsingDeclSpec DS(*this, &DiagsFromTParams);
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              getDeclSpecContextFromDeclaratorContext(Context));
@@ -1309,6 +1309,8 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
       }
     }
   }
+
+  Result = Actions.ActOnTemplateTemplateArgument(Result);
 
   // If this is a pack expansion, build it as such.
   if (EllipsisLoc.isValid() && !Result.isInvalid())

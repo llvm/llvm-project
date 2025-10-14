@@ -360,7 +360,7 @@ func.func @fat_raw_buffer_cast_easy(%m: memref<8xi32>) -> memref<8xi32, #amdgpu.
 // CHECK-SAME: cacheSwizzleStride(%{{[^)]*}})
 // CHECK-SAME: boundsCheck(false)
 // CHECK-SAME: resetOffset
-func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1], offset: ?>>, %validBytes: i32, %cacheSwizzle: i14) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1], offset: ?>>, %validBytes: i64, %cacheSwizzle: i14) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
   %ret = amdgpu.fat_raw_buffer_cast %m validBytes(%validBytes) cacheSwizzleStride(%cacheSwizzle) boundsCheck(false) resetOffset
     : memref<8xi32, strided<[1], offset: ?>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
   func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
@@ -521,6 +521,20 @@ func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> 
 func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
   // CHECK: amdgpu.swizzle_bitmode
   %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : f32
+  func.return %0 : f32
+}
+
+// CHECK-LABEL: func @permlane16_swap
+func.func @permlane16_swap(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.permlane_swap
+  %0 = amdgpu.permlane_swap %arg0 16 : f32
+  func.return %0 : f32
+}
+
+// CHECK-LABEL: func @permlane32_swap
+func.func @permlane32_swap(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.permlane_swap
+  %0 = amdgpu.permlane_swap %arg0 32 : f32
   func.return %0 : f32
 }
 

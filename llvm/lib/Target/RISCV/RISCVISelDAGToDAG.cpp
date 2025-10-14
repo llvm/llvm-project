@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -676,49 +677,6 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
-bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
-  // Supported only in Xqcibm for now.
-  if (!Subtarget->hasVendorXqcibm())
-    return false;
-
-  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-  if (!N1C)
-    return false;
-
-  int32_t C1 = N1C->getSExtValue();
-  if (!isShiftedMask_32(C1) || isInt<12>(C1))
-    return false;
-
-  // INSBI will clobber the input register in N0. Bail out if we need a copy to
-  // preserve this value.
-  SDValue N0 = Node->getOperand(0);
-  if (!N0.hasOneUse())
-    return false;
-
-  // If C1 is a shifted mask (but can't be formed as an ORI),
-  // use a bitfield insert of -1.
-  // Transform (or x, C1)
-  //        -> (qc.insbi x, -1, width, shift)
-  const unsigned Leading = llvm::countl_zero((uint32_t)C1);
-  const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
-  const unsigned Width = 32 - Leading - Trailing;
-
-  // If Zbs is enabled and it is a single bit set we can use BSETI which
-  // can be compressed to C_BSETI when Xqcibm in enabled.
-  if (Width == 1 && Subtarget->hasStdExtZbs())
-    return false;
-
-  SDLoc DL(Node);
-  MVT VT = Node->getSimpleValueType(0);
-
-  SDValue Ops[] = {N0, CurDAG->getSignedTargetConstant(-1, DL, VT),
-                   CurDAG->getTargetConstant(Width, DL, VT),
-                   CurDAG->getTargetConstant(Trailing, DL, VT)};
-  SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
-  ReplaceNode(Node, BitIns);
-  return true;
-}
-
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
@@ -1005,7 +963,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  bool HasBitTest = Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
+  bool HasBitTest = Subtarget->hasBEXTILike();
 
   switch (Opcode) {
   case ISD::Constant: {
@@ -1337,9 +1295,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::OR: {
-    if (trySignedBitfieldInsertInMask(Node))
-      return;
-
     if (tryShrinkShlLogicImm(Node))
       return;
 
@@ -1644,7 +1599,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue()) &&
+        !(C1 == 0xffff && Subtarget->hasStdExtZbb()) &&
+        !(C1 == 0xffffffff && Subtarget->hasStdExtZba())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
@@ -2853,6 +2810,65 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
+bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
+  switch (User->getOpcode()) {
+  default:
+    return false;
+  case ISD::LOAD:
+  case RISCVISD::LD_RV32:
+  case ISD::ATOMIC_LOAD:
+    break;
+  case ISD::STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<StoreSDNode>(User)->getValue() == Add)
+      return false;
+    break;
+  case RISCVISD::SD_RV32:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
+      return false;
+    break;
+  case ISD::ATOMIC_STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    break;
+  }
+
+  return true;
+}
+
+// To prevent SelectAddrRegImm from folding offsets that conflict with the
+// fusion of PseudoMovAddr, check if the offset of every use of a given address
+// is within the alignment.
+bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
+                                                  Align Alignment) {
+  assert(Addr->getOpcode() == RISCVISD::ADD_LO);
+  for (auto *User : Addr->users()) {
+    // If the user is a load or store, then the offset is 0 which is always
+    // within alignment.
+    if (isRegImmLoadOrStore(User, Addr))
+      continue;
+
+    if (CurDAG->isBaseWithConstantOffset(SDValue(User, 0))) {
+      int64_t CVal = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (!isInt<12>(CVal) || Alignment <= CVal)
+        return false;
+
+      // Make sure all uses are foldable load/stores.
+      for (auto *AddUser : User->users())
+        if (!isRegImmLoadOrStore(AddUser, SDValue(User, 0)))
+          return false;
+
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2862,9 +2878,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
+    bool CanFold = true;
+    // Unconditionally fold if operand 1 is not a global address (e.g.
+    // externsymbol)
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = commonAlignment(
+          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
+      if (!areOffsetsWithinAlignment(Addr, Alignment))
+        CanFold = false;
+    }
+    if (CanFold) {
+      Base = Addr.getOperand(0);
+      Offset = Addr.getOperand(1);
+      return true;
+    }
   }
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
@@ -2882,7 +2910,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal)) {
+          if ((CVal == 0 || Alignment > CVal) &&
+              areOffsetsWithinAlignment(Base, Alignment)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -3080,9 +3109,7 @@ static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
     // If we have a SHXADD instruction, prefer that over reassociating an ADDI.
     assert(Shift.getOpcode() == ISD::SHL);
     unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-    if ((ShiftAmt <= 3 &&
-         (Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa())) ||
-        (ShiftAmt >= 4 && ShiftAmt <= 7 && Subtarget.hasVendorXqciac()))
+    if (Subtarget.hasShlAdd(ShiftAmt))
       return false;
 
     // All users of the ADDI should be load/store.
@@ -3885,6 +3912,15 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
+    case RISCV::TH_EXT:
+    case RISCV::TH_EXTU: {
+      unsigned Msb = User->getConstantOperandVal(1);
+      unsigned Lsb = User->getConstantOperandVal(2);
+      // Behavior of Msb < Lsb is not well documented.
+      if (Msb >= Lsb && Bits > Msb)
+        break;
+      return false;
+    }
     }
   }
 

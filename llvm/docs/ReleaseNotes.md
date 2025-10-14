@@ -1,6 +1,9 @@
 <!-- This document is written in Markdown and uses extra directives provided by
 MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 LLVM {{env.config.release}} Release Notes
 =========================================
 
@@ -72,6 +75,10 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
+  profile data to guide the machine outliner
+  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
+
 Changes to Vectorizers
 ----------------------------------------
 
@@ -109,9 +116,17 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* The loop vectorizer now performs tail folding by default on RISC-V, which
+  removes the need for a scalar epilogue loop. To restore the previous behaviour
+  use `-prefer-predicate-over-epilogue=scalar-epilogue`.
 * `llvm-objdump` now has basic support for switching between disassembling code
   and data using mapping symbols such as `$x` and `$d`. Switching architectures
   using `$x` with an architecture string suffix is not yet supported.
+* Ssctr and Smctr extensions are no longer experimental.
+* Add support for Zvfbfa (Additional BF16 vector compute support)
+* Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
+* Add support for Zvfofp8min (OFP8 conversion extension)
+* Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -131,6 +146,9 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
+* Allow `LLVMGetVolatile` to work with any kind of Instruction.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -143,11 +161,18 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* `llvm-readelf` now dumps all hex format values in lower-case mode.
+* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
+* Support for `%T` in lit has been removed.
+
 Changes to LLDB
 ---------------------------------
 
 * LLDB can now set breakpoints, show backtraces, and display variables when
   debugging Wasm with supported runtimes (WAMR and V8).
+* The `show-progress` setting, which became a NOOP with the introduction of the
+  statusline, now defaults to off and controls using OSC escape codes to show a
+  native progress bar in supporting terminals like Ghostty and ConEmu.
 
 Changes to BOLT
 ---------------------------------
@@ -157,6 +182,10 @@ Changes to Sanitizers
 
 Other Changes
 -------------
+
+* Introduces the `AllocToken` pass, an instrumentation pass providing tokens to
+  memory allocators enabling various heap organization strategies, such as heap
+  partitioning.
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================

@@ -54,6 +54,8 @@ using namespace llvm;
 STATISTIC(NumOfPGOMemOPOpt, "Number of memop intrinsics optimized.");
 STATISTIC(NumOfPGOMemOPAnnotate, "Number of memop intrinsics annotated.");
 
+namespace llvm {
+
 // The minimum call count to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::init(1000),
@@ -92,6 +94,8 @@ cl::opt<bool>
 static cl::opt<unsigned>
     MemOpMaxOptSize("memop-value-prof-max-opt-size", cl::Hidden, cl::init(128),
                     cl::desc("Optimize the memop size <= this value"));
+
+} // end namespace llvm
 
 namespace {
 
@@ -432,7 +436,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   Updates.clear();
 
   if (MaxCount)
-    setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
+    setProfMetadata(SI, CaseCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << *BB << "\n");
   LLVM_DEBUG(dbgs() << *DefaultBB << "\n");

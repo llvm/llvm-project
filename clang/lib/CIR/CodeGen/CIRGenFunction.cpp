@@ -206,8 +206,10 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
-                             /*insertIntoFnEntryBlock=*/false);
+    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
+                                  /*insertIntoFnEntryBlock=*/false);
+    fnRetAlloca = addr;
+    returnValue = Address(addr, alignment);
   }
 }
 
@@ -215,7 +217,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
   assert(isa<NamedDecl>(var) && "Needs a named decl");
-  assert(!cir::MissingFeatures::cgfSymbolTable());
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
   auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
   assert(allocaOp && "expected cir::AllocaOp");
@@ -224,6 +226,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  symbolTable.insert(var, allocaOp);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -338,10 +342,15 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  if (!cgf.curFn.getFunctionType().hasVoidReturn()) {
+  // If we are on a coroutine, add the coro_end builtin call.
+  assert(!cir::MissingFeatures::coroEndBuiltinCall());
+
+  auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
+  assert(fn && "emitReturn from non-function");
+  if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = builder.create<cir::LoadOp>(
-        loc, cgf.curFn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+        loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return builder.create<cir::ReturnOp>(loc,
                                          llvm::ArrayRef(value.getResult()));
   }
@@ -354,12 +363,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
                                   QualType returnType) {
   // We can't just discard the return value for a record type with a complex
   // destructor or a non-trivially copyable type.
-  if (const RecordType *recordType =
-          returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
-            recordType->getOriginalDecl()->getDefinitionOrSelf()))
-      return classDecl->hasTrivialDestructor();
-  }
+  if (const auto *classDecl = returnType->getAsCXXRecordDecl())
+    return classDecl->hasTrivialDestructor();
   return returnType.isTriviallyCopyableType(astContext);
 }
 
@@ -405,6 +410,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+  curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
 
@@ -457,7 +463,38 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     const auto *md = cast<CXXMethodDecl>(d);
     if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
-      cgm.errorNYI(loc, "lambda call operator");
+      // We're in a lambda.
+      auto fn = dyn_cast<cir::FuncOp>(curFn);
+      assert(fn && "lambda in non-function region");
+      fn.setLambda(true);
+
+      // Figure out the captures.
+      md->getParent()->getCaptureFields(lambdaCaptureFields,
+                                        lambdaThisCaptureField);
+      if (lambdaThisCaptureField) {
+        // If the lambda captures the object referred to by '*this' - either by
+        // value or by reference, make sure CXXThisValue points to the correct
+        // object.
+
+        // Get the lvalue for the field (which is a copy of the enclosing object
+        // or contains the address of the enclosing object).
+        LValue thisFieldLValue =
+            emitLValueForLambdaField(lambdaThisCaptureField);
+        if (!lambdaThisCaptureField->getType()->isPointerType()) {
+          // If the enclosing object was captured by value, just use its
+          // address. Sign this pointer.
+          cxxThisValue = thisFieldLValue.getPointer();
+        } else {
+          // Load the lvalue pointed to by the field, since '*this' was captured
+          // by reference.
+          cxxThisValue =
+              emitLoadOfLValue(thisFieldLValue, SourceLocation()).getValue();
+        }
+      }
+      for (auto *fd : md->getParent()->fields()) {
+        if (fd->hasCapturedVLAType())
+          cgm.errorNYI(loc, "lambda captured VLA type");
+      }
     } else {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
@@ -485,13 +522,13 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
-  auto result = mlir::LogicalResult::success();
-  if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
-    emitCompoundStmtWithoutScope(*block);
-  else
-    result = emitStmt(body, /*useCurrentScope=*/true);
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
 
-  return result;
+  if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
+    return emitCompoundStmtWithoutScope(*block);
+
+  return emitStmt(body, /*useCurrentScope=*/true);
 }
 
 static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
@@ -531,6 +568,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   FunctionArgList args;
   QualType retTy = buildFunctionArgList(gd, args);
 
+  // Create a scope in the symbol table to hold variable declarations.
+  SymTableScopeTy varScope(symbolTable);
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
@@ -545,7 +584,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
-      getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
+      // The lambda static invoker function is special, because it forwards or
+      // clones the body of the function call operator (but is actually
+      // static).
+      emitLambdaStaticInvokeBody(cast<CXXMethodDecl>(funcDecl));
     } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
                (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
                 cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
@@ -554,7 +596,6 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
-        fn.erase();
         return nullptr;
       }
     } else {
@@ -637,7 +678,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    RunCleanupsScope dtorEpilogue(*this);
+    enterDtorCleanups(dtor, Dtor_Deleting);
+    if (haveInsertPoint()) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+    }
     return;
   }
 
@@ -648,7 +695,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 
   assert(!cir::MissingFeatures::sanitizers());
-  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Enter the epilogue cleanups.
+  RunCleanupsScope dtorEpilogue(*this);
 
   // If this is the complete variant, just invoke the base variant;
   // the epilogue will destruct the virtual bases.  But we can't do
@@ -656,6 +705,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (dtorType) {
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor");
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
@@ -665,7 +716,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     assert((body || getTarget().getCXXABI().isMicrosoft()) &&
            "can't emit a dtor without a body for non-Microsoft ABIs");
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for virtual bases.
+    enterDtorCleanups(dtor, Dtor_Complete);
 
     if (!isTryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
@@ -680,7 +732,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for fields and non-virtual bases.
+    enterDtorCleanups(dtor, Dtor_Base);
+
     assert(!cir::MissingFeatures::vtableInitialization());
 
     if (isTryBody) {
@@ -698,7 +752,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     break;
   }
 
-  assert(!cir::MissingFeatures::dtorCleanups());
+  // Jump out through the epilogue cleanups.
+  dtorEpilogue.forceCleanup();
 
   // Exit the try if applicable.
   if (isTryBody)
@@ -749,7 +804,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     args.push_back(param);
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
-    assert(!cir::MissingFeatures::cxxabiStructorImplicitParam());
+    cgm.getCXXABI().addImplicitStructorParams(*this, retTy, args);
 
   return retTy;
 }
@@ -775,6 +830,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
     return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
@@ -796,6 +853,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   case Expr::CStyleCastExprClass:
@@ -805,6 +864,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }
 }
 
@@ -826,14 +887,9 @@ std::string CIRGenFunction::getCounterAggTmpAsString() {
 void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
                                             QualType ty) {
   // Ignore empty classes in C++.
-  if (getLangOpts().CPlusPlus) {
-    if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getOriginalDecl())
-              ->getDefinitionOrSelf()
-              ->isEmpty())
-        return;
-    }
-  }
+  if (getLangOpts().CPlusPlus)
+    if (const auto *rd = ty->getAsCXXRecordDecl(); rd && rd->isEmpty())
+      return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
   if (builder.isInt8Ty(destPtr.getElementType())) {
@@ -1071,6 +1127,12 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
     }
   } while (type->isVariablyModifiedType());
+}
+
+Address CIRGenFunction::emitVAListRef(const Expr *e) {
+  if (getContext().getBuiltinVaListType()->isArrayType())
+    return emitPointerWithAlignment(e);
+  return emitLValue(e).getAddress();
 }
 
 } // namespace clang::CIRGen

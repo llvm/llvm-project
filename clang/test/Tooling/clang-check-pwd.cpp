@@ -1,3 +1,5 @@
+// REQUIRES: symlinks
+
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: echo "[{\"directory\":\".\",\"command\":\"clang++ -c %t/test.cpp\",\"file\":\"%t/test.cpp\"}]" | sed -e 's/\\/\\\\/g' > %t/compile_commands.json

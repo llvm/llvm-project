@@ -1083,7 +1083,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
          "expected uninitialised source range");
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
@@ -1155,7 +1155,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     }
 
     DS.abort();
-    DS.takeAttributesFrom(Attrs);
+    DS.takeAttributesAppendingingFrom(Attrs);
 
     const char *PrevSpec = nullptr;
     unsigned DiagID;
@@ -1418,6 +1418,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // parameter list was specified.
     CurTemplateDepthTracker.addDepth(1);
 
+  // Late attributes are parsed in the same scope as the function body.
+  if (LateParsedAttrs)
+    ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
+
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
@@ -1441,10 +1445,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
   } else
     Actions.ActOnDefaultCtorInitializers(Res);
-
-  // Late attributes are parsed in the same scope as the function body.
-  if (LateParsedAttrs)
-    ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
 
   return ParseFunctionStatementBody(Res, BodyScope);
 }
@@ -2363,9 +2363,10 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    if (!Introducer.isFirstPPToken()) {
+    if (ImportState != Sema::ModuleImportState::FirstDecl ||
+        Introducer.hasSeenNoTrivialPPDirective()) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
-        << SourceRange(StartLoc, SemiLoc);
+          << SourceRange(StartLoc, SemiLoc);
       return nullptr;
     }
     if (MDK == Sema::ModuleDeclKind::Interface) {
@@ -2420,7 +2421,8 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
-                                 ImportState, Introducer.isFirstPPToken());
+                                 ImportState,
+                                 Introducer.hasSeenNoTrivialPPDirective());
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,

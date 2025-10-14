@@ -82,6 +82,16 @@ public:
   /// Dependence::DVEntry - Each level in the distance/direction vector
   /// has a direction (or perhaps a union of several directions), and
   /// perhaps a distance.
+  /// The dependency information could be across a single loop level or across
+  /// two separate levels that have the same trip count and nesting depth,
+  /// which helps to provide information for loop fusion candidation.
+  /// For example, loops b and c have the same iteration count and depth:
+  ///    for (a = ...) {
+  ///      for (b = 0; b < 10; b++) {
+  ///      }
+  ///      for (c = 0; c < 10; c++) {
+  ///      }
+  ///    }
   struct DVEntry {
     enum : unsigned char {
       NONE = 0,
@@ -144,12 +154,25 @@ public:
   /// source and destination of the dependence.
   virtual unsigned getLevels() const { return 0; }
 
-  /// getDirection - Returns the direction associated with a particular level.
-  virtual unsigned getDirection(unsigned Level) const { return DVEntry::ALL; }
+  /// getSameSDLevels - Returns the number of separate SameSD loops surrounding
+  /// the source and destination of the dependence.
+  virtual unsigned getSameSDLevels() const { return 0; }
 
-  /// getDistance - Returns the distance (or NULL) associated with a particular
-  /// level.
-  virtual const SCEV *getDistance(unsigned Level) const { return nullptr; }
+  /// getDVEntry - Returns the DV entry associated with a regular or a
+  /// SameSD level
+  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const;
+
+  /// getDirection - Returns the direction associated with a particular
+  /// common or SameSD level.
+  virtual unsigned getDirection(unsigned Level, bool SameSD = false) const {
+    return DVEntry::ALL;
+  }
+
+  /// getDistance - Returns the distance (or NULL) associated with a
+  /// particular common or SameSD level.
+  virtual const SCEV *getDistance(unsigned Level, bool SameSD = false) const {
+    return nullptr;
+  }
 
   /// Check if the direction vector is negative. A negative direction
   /// vector means Src and Dst are reversed in the actual program.
@@ -162,21 +185,32 @@ public:
   virtual bool normalize(ScalarEvolution *SE) { return false; }
 
   /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this loop will break this dependence.
-  virtual bool isPeelFirst(unsigned Level) const { return false; }
+  /// this regular or SameSD loop level will break this dependence.
+  virtual bool isPeelFirst(unsigned Level, bool SameSD = false) const {
+    return false;
+  }
 
   /// isPeelLast - Returns true if peeling the last iteration from
-  /// this loop will break this dependence.
-  virtual bool isPeelLast(unsigned Level) const { return false; }
+  /// this regular or SameSD loop level will break this dependence.
+  virtual bool isPeelLast(unsigned Level, bool SameSD = false) const {
+    return false;
+  }
 
-  /// isSplitable - Returns true if splitting this loop will break the
-  /// dependence.
-  virtual bool isSplitable(unsigned Level) const { return false; }
+  /// isSplitable - Returns true if splitting the loop will break
+  /// the dependence.
+  virtual bool isSplitable(unsigned Level, bool SameSD = false) const {
+    return false;
+  }
 
-  /// isScalar - Returns true if a particular level is scalar; that is,
-  /// if no subscript in the source or destination mention the induction
-  /// variable associated with the loop at this level.
-  virtual bool isScalar(unsigned Level) const;
+  /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
+  /// performed across two separate loop nests that have the Same Iteration and
+  /// Depth.
+  virtual bool inSameSDLoops(unsigned Level) const { return false; }
+
+  /// isScalar - Returns true if a particular regular or SameSD level is
+  /// scalar; that is, if no subscript in the source or destination mention
+  /// the induction variable associated with the loop at this level.
+  virtual bool isScalar(unsigned Level, bool SameSD = false) const;
 
   /// getNextPredecessor - Returns the value of the NextPredecessor field.
   const Dependence *getNextPredecessor() const { return NextPredecessor; }
@@ -197,6 +231,10 @@ public:
 
   /// dump - For debugging purposes, dumps a dependence to OS.
   void dump(raw_ostream &OS) const;
+
+  /// dumpImp - For debugging purposes. Dumps a dependence to OS with or
+  /// without considering the SameSD levels.
+  void dumpImp(raw_ostream &OS, bool IsSameSD = false) const;
 
 protected:
   Instruction *Src, *Dst;
@@ -238,13 +276,31 @@ public:
   /// source and destination of the dependence.
   unsigned getLevels() const override { return Levels; }
 
+  /// getSameSDLevels - Returns the number of separate SameSD loops surrounding
+  /// the source and destination of the dependence.
+  unsigned getSameSDLevels() const override { return SameSDLevels; }
+
+  /// getDVEntry - Returns the DV entry associated with a regular or a
+  /// SameSD level.
+  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const {
+    if (!IsSameSD) {
+      assert(0 < Level && Level <= Levels && "Level out of range");
+      return DV[Level - 1];
+    } else {
+      assert(Levels < Level &&
+             Level <= static_cast<unsigned>(Levels) + SameSDLevels &&
+             "isSameSD level out of range");
+      return DVSameSD[Level - Levels - 1];
+    }
+  }
+
   /// getDirection - Returns the direction associated with a particular
-  /// level.
-  unsigned getDirection(unsigned Level) const override;
+  /// common or SameSD level.
+  unsigned getDirection(unsigned Level, bool SameSD = false) const override;
 
   /// getDistance - Returns the distance (or NULL) associated with a
-  /// particular level.
-  const SCEV *getDistance(unsigned Level) const override;
+  /// particular common or SameSD level.
+  const SCEV *getDistance(unsigned Level, bool SameSD = false) const override;
 
   /// Check if the direction vector is negative. A negative direction
   /// vector means Src and Dst are reversed in the actual program.
@@ -257,27 +313,34 @@ public:
   bool normalize(ScalarEvolution *SE) override;
 
   /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this loop will break this dependence.
-  bool isPeelFirst(unsigned Level) const override;
+  /// this regular or SameSD loop level will break this dependence.
+  bool isPeelFirst(unsigned Level, bool SameSD = false) const override;
 
   /// isPeelLast - Returns true if peeling the last iteration from
-  /// this loop will break this dependence.
-  bool isPeelLast(unsigned Level) const override;
+  /// this regular or SameSD loop level will break this dependence.
+  bool isPeelLast(unsigned Level, bool SameSD = false) const override;
 
   /// isSplitable - Returns true if splitting the loop will break
   /// the dependence.
-  bool isSplitable(unsigned Level) const override;
+  bool isSplitable(unsigned Level, bool SameSD = false) const override;
 
-  /// isScalar - Returns true if a particular level is scalar; that is,
-  /// if no subscript in the source or destination mention the induction
-  /// variable associated with the loop at this level.
-  bool isScalar(unsigned Level) const override;
+  /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
+  /// performed across two separate loop nests that have the Same Iteration and
+  /// Depth.
+  bool inSameSDLoops(unsigned Level) const override;
+
+  /// isScalar - Returns true if a particular regular or SameSD level is
+  /// scalar; that is, if no subscript in the source or destination mention
+  /// the induction variable associated with the loop at this level.
+  bool isScalar(unsigned Level, bool SameSD = false) const override;
 
 private:
   unsigned short Levels;
+  unsigned short SameSDLevels;
   bool LoopIndependent;
   bool Consistent; // Init to true, then refine.
   std::unique_ptr<DVEntry[]> DV;
+  std::unique_ptr<DVEntry[]> DVSameSD; // DV entries on SameSD levels
   friend class DependenceInfo;
 };
 
@@ -406,7 +469,8 @@ private:
     const SCEV *A;
     const SCEV *B;
     const SCEV *C;
-    const Loop *AssociatedLoop;
+    const Loop *AssociatedSrcLoop;
+    const Loop *AssociatedDstLoop;
 
   public:
     /// isEmpty - Return true if the constraint is of kind Empty.
@@ -450,19 +514,27 @@ private:
     /// Otherwise assert.
     LLVM_ABI const SCEV *getD() const;
 
-    /// getAssociatedLoop - Returns the loop associated with this constraint.
-    LLVM_ABI const Loop *getAssociatedLoop() const;
+    /// getAssociatedSrcLoop - Returns the source loop associated with this
+    /// constraint.
+    LLVM_ABI const Loop *getAssociatedSrcLoop() const;
+
+    /// getAssociatedDstLoop - Returns the destination loop associated with
+    /// this constraint.
+    LLVM_ABI const Loop *getAssociatedDstLoop() const;
 
     /// setPoint - Change a constraint to Point.
     LLVM_ABI void setPoint(const SCEV *X, const SCEV *Y,
-                           const Loop *CurrentLoop);
+                           const Loop *CurrentSrcLoop,
+                           const Loop *CurrentDstLoop);
 
     /// setLine - Change a constraint to Line.
     LLVM_ABI void setLine(const SCEV *A, const SCEV *B, const SCEV *C,
-                          const Loop *CurrentLoop);
+                          const Loop *CurrentSrcLoop,
+                          const Loop *CurrentDstLoop);
 
     /// setDistance - Change a constraint to Distance.
-    LLVM_ABI void setDistance(const SCEV *D, const Loop *CurrentLoop);
+    LLVM_ABI void setDistance(const SCEV *D, const Loop *CurrentSrcLoop,
+                              const Loop *CurrentDstLoop);
 
     /// setEmpty - Change a constraint to Empty.
     LLVM_ABI void setEmpty();
@@ -474,6 +546,12 @@ private:
     /// out to OS.
     LLVM_ABI void dump(raw_ostream &OS) const;
   };
+
+  /// Returns true if two loops have the Same iteration Space and Depth. To be
+  /// more specific, two loops have SameSD if they are in the same nesting
+  /// depth and have the same backedge count. SameSD stands for Same iteration
+  /// Space and Depth.
+  bool haveSameSD(const Loop *SrcLoop, const Loop *DstLoop) const;
 
   /// establishNestingLevels - Examines the loop nesting of the Src and Dst
   /// instructions and establishes their shared loops. Sets the variables
@@ -525,9 +603,21 @@ private:
   ///     e - 5
   ///     f - 6
   ///     g - 7 = MaxLevels
+  /// SameSDLevels counts the number of levels after common levels that are
+  /// not common but have the same iteration space and depth. Internally this
+  /// is checked using haveSameSD. Assume that in this code fragment, levels c
+  /// and e have the same iteration space and depth, but levels d and f does
+  /// not. Then SameSDLevels is set to 1. In that case the level numbers for the
+  /// previous code look like
+  ///     a   - 1
+  ///     b   - 2
+  ///     c,e - 3 = CommonLevels
+  ///     d   - 4 = SrcLevels
+  ///     f   - 5
+  ///     g   - 6 = MaxLevels
   void establishNestingLevels(const Instruction *Src, const Instruction *Dst);
 
-  unsigned CommonLevels, SrcLevels, MaxLevels;
+  unsigned CommonLevels, SrcLevels, MaxLevels, SameSDLevels;
 
   /// mapSrcLoop - Given one of the loops containing the source, return
   /// its level index in our numbering scheme.
@@ -652,9 +742,9 @@ private:
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction and distance.
   bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                     const SCEV *DstConst, const Loop *CurrentLoop,
-                     unsigned Level, FullDependence &Result,
-                     Constraint &NewConstraint) const;
+                     const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                     const Loop *CurrentDstLoop, unsigned Level,
+                     FullDependence &Result, Constraint &NewConstraint) const;
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -667,9 +757,9 @@ private:
   /// Set consistent to false.
   /// Marks the dependence as splitable.
   bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentLoop,
-                           unsigned Level, FullDependence &Result,
-                           Constraint &NewConstraint,
+                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                           const Loop *CurrentDstLoop, unsigned Level,
+                           FullDependence &Result, Constraint &NewConstraint,
                            const SCEV *&SplitIter) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
@@ -683,8 +773,9 @@ private:
   /// Set consistent to false.
   bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                     const SCEV *SrcConst, const SCEV *DstConst,
-                    const Loop *CurrentLoop, unsigned Level,
-                    FullDependence &Result, Constraint &NewConstraint) const;
+                    const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
+                    unsigned Level, FullDependence &Result,
+                    Constraint &NewConstraint) const;
 
   /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -697,8 +788,9 @@ private:
   /// Set consistent to false.
   /// If loop peeling will break the dependence, mark appropriately.
   bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentLoop,
-                          unsigned Level, FullDependence &Result,
+                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                          const Loop *CurrentDstLoop, unsigned Level,
+                          FullDependence &Result,
                           Constraint &NewConstraint) const;
 
   /// weakZeroDstSIVtest - Tests the weak-zero SIV subscript pair
@@ -712,8 +804,9 @@ private:
   /// Set consistent to false.
   /// If loop peeling will break the dependence, mark appropriately.
   bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentLoop,
-                          unsigned Level, FullDependence &Result,
+                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                          const Loop *CurrentDstLoop, unsigned Level,
+                          FullDependence &Result,
                           Constraint &NewConstraint) const;
 
   /// exactRDIVtest - Tests the RDIV subscript pair for dependence.
@@ -764,6 +857,25 @@ private:
   /// negative parts for later use.
   CoefficientInfo *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                     const SCEV *&Constant) const;
+
+  /// Given \p Expr of the form
+  ///
+  ///   c_0*X_0*i_0 + c_1*X_1*i_1 + ...c_n*X_n*i_n + C
+  ///
+  /// compute
+  ///
+  ///   RunningGCD = gcd(RunningGCD, c_0, c_1, ..., c_n)
+  ///
+  /// where c_0, c_1, ..., and c_n are the constant values. The result is stored
+  /// in \p RunningGCD. Also, the initial value of \p RunningGCD affects the
+  /// result. If we find a term like (c_k * X_k * i_k), where i_k is the
+  /// induction variable of \p CurLoop, c_k is stored in \p CurLoopCoeff and not
+  /// included in the GCD computation. Returns false if we fail to find a
+  /// constant coefficient for some loop, e.g., when a term like (X+Y)*i is
+  /// present. Otherwise returns true.
+  bool accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
+                                 const SCEV *&CurLoopCoeff,
+                                 APInt &RunningGCD) const;
 
   /// getPositivePart - X^+ = max(X, 0).
   const SCEV *getPositivePart(const SCEV *X) const;

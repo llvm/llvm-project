@@ -582,15 +582,22 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
+  } else if (I->USR == GlobalNamespaceID)
+    FileName = "index";
+  else if (I->IT == InfoType::IT_namespace) {
+    for (const auto &NS : I->Namespace) {
+      FileName += NS.Name;
+      FileName += "_";
+    }
+    FileName += I->Name;
+  } else
     FileName = I->Name;
-  else
-    FileName = I->getFileBaseName();
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
+// FIXME: Revert back to creating nested directories for namespaces instead of
+// putting everything in a flat directory structure.
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {
@@ -600,7 +607,9 @@ Error JSONGenerator::generateDocs(
     Info *Info = Group.getValue().get();
 
     SmallString<128> Path;
-    sys::path::native(RootDir, Path);
+    auto RootDirStr = RootDir.str() + "/json";
+    StringRef JSONDir = StringRef(RootDirStr);
+    sys::path::native(JSONDir, Path);
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())

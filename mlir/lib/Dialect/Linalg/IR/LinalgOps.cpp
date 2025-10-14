@@ -1570,40 +1570,50 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-// Retrieve the operation from the body, if it is the only one (except
-// yield) and if it gets the same amount of arguments as the body does.
-// If initFirst flag is enabled, we check that init takes the first position in
-// operands of payload.
-static Operation *findPayloadOp(Block *body, bool initFirst = false) {
-  if (body->getOperations().size() != 2)
-    return nullptr;
-  Operation &payload = body->getOperations().front();
-  assert(isa<YieldOp>(body->getOperations().back()));
+static bool canUseShortForm(Block *body, bool initFirst = false) {
+  // Check if the body can be printed in short form. The following 4 conditions
+  // must be satisfied:
 
+  // 1) The body must contain exactly 2 operations: the payload op and a yield.
+  if (body->getOperations().size() != 2)
+    return false;
+  Operation &payload = body->getOperations().front();
+
+  // 2) The payload op must have the same number of operands as the number of
+  //    block arguments.
   if (payload.getNumOperands() == 0 ||
       payload.getNumOperands() != body->getNumArguments())
-    return nullptr;
+    return false;
+
+  // 3) If `initFirst` is true (e.g., for reduction ops), the init block
+  //    must be the first operand of the payload op, otherwise, the operands
+  //    must match the block arguments in order.
   if (initFirst) {
     // check init
     if (payload.getOperands().back() != body->getArgument(0))
-      return nullptr;
+      return false;
     // check rest
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments().drop_front())) {
       if (bbArg != operand)
-        return nullptr;
+        return false;
     }
   } else {
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments())) {
       if (bbArg != operand)
-        return nullptr;
+        return false;
     }
   }
-  return &payload;
+
+  // 4) The `yield` operand must be the result of the payload op.
+  auto yieldOp = cast<YieldOp>(body->getTerminator());
+  return yieldOp.getNumOperands() == 1 &&
+         yieldOp.getOperand(0).getDefiningOp() &&
+         yieldOp.getOperand(0).getDefiningOp() == &payload;
 }
 
-void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
+static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   SmallVector<StringRef> elidedAttrs;
   std::string attrToElide;
   p << " { " << payloadOp->getName().getStringRef();
@@ -1622,15 +1632,15 @@ void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
 
 void MapOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper);
-  if (payloadOp) {
-    printShortForm(p, payloadOp);
+  bool useShortForm = canUseShortForm(mapper);
+  if (useShortForm) {
+    printShortForm(p, &mapper->getOperations().front());
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   p.printOptionalAttrDict((*this)->getAttrs());
 
-  if (!payloadOp) {
+  if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
     p.printNewline();
@@ -1829,15 +1839,15 @@ static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
 
 void ReduceOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper, /*initFirst=*/true);
-  if (payloadOp) {
-    printShortForm(p, payloadOp);
+  bool useShortForm = canUseShortForm(mapper, /*initFirst=*/true);
+  if (useShortForm) {
+    printShortForm(p, &mapper->getOperations().front());
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
-  if (!payloadOp) {
+  if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
     p.printNewline();
@@ -3870,7 +3880,7 @@ bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   return expr.isFunctionOfDim(bcastMap.getNumDims() - 1);
 }
 
-FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
+static FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
   if (parser.parseOptionalKeyword("indexing_maps"))
     return ArrayAttr{
         nullptr}; // Success in case indexing_maps was not provided.
@@ -5262,11 +5272,18 @@ ArrayRef<int64_t> PackOp::getAllOuterDims() {
 
 SmallVector<int64_t> PackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto packedShape = getDestType().getShape();
+  SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
+  // Recover the original order of the outer dims.
+  SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
+  invertPermutationVector(outerDimPermInv);
+  if (!outerDimPermInv.empty())
+    applyPermutationToVector(outerDims, outerDimPermInv);
+
+  // Collect the outer dims corresponding to the tilled inner dims.
   for (auto index : innerDimsPos)
-    res.push_back(packedShape[index]);
+    res.push_back(outerDims[index]);
 
   return res;
 }
@@ -5296,6 +5313,32 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     } else if (inputShape[pos] % (*constantTile) != 0) {
       return true;
     }
+  }
+  return false;
+}
+
+bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
+                                       ArrayRef<int64_t> innerDimsPos,
+                                       ArrayRef<int64_t> outputShape,
+                                       ArrayRef<int64_t> outerDimsPerm,
+                                       ArrayRef<OpFoldResult> innerTiles) {
+  SmallVector<int64_t> outputTileSizes(
+      outputShape.take_front(inputShape.size()));
+  if (!outerDimsPerm.empty()) {
+    assert(outerDimsPerm.size() == outputTileSizes.size() &&
+           "expected output and outer_dims_perm to have same size");
+    applyPermutationToVector(outputTileSizes,
+                             invertPermutationVector(outerDimsPerm));
+  }
+  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
+    if (ShapedType::isDynamic(inputShape[pos]) ||
+        ShapedType::isDynamic(outputTileSizes[pos]))
+      return true;
+    std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
+    if (!constantTile)
+      return true;
+    if (inputShape[pos] % (*constantTile) != 0)
+      return true;
   }
   return false;
 }
@@ -5464,7 +5507,7 @@ PackOp PackOp::createTransposedClone(OpBuilder &b, Location loc,
 
 /// Returns true if the tiles and the tiled dims are constant.
 template <typename OpTy>
-bool areTilesAndTiledDimsAllConstant(OpTy op) {
+static bool areTilesAndTiledDimsAllConstant(OpTy op) {
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
                 "applies to only pack or unpack operations");
   ShapedType packedType = (std::is_same<OpTy, PackOp>::value)
@@ -5573,14 +5616,13 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
   // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
-    if (unPackOp.getSourceType() != packOp.getDestType())
-      return failure();
-    if (packOp.getPaddingValue() ||
-        !hasSameInnerOuterAttribute(packOp, unPackOp) ||
-        !haveSameTiles(packOp, unPackOp))
-      return failure();
-    rewriter.replaceOp(packOp, unPackOp.getSource());
-    return success();
+    if (unPackOp.getSourceType() == packOp.getDestType() &&
+        !packOp.getPaddingValue() &&
+        hasSameInnerOuterAttribute(packOp, unPackOp) &&
+        haveSameTiles(packOp, unPackOp)) {
+      rewriter.replaceOp(packOp, unPackOp.getSource());
+      return success();
+    }
   }
 
   // Fold optional PaddingValue operand away if padding is not needed.
@@ -5767,11 +5809,18 @@ ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
 
 SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto packedShape = getSourceType().getShape();
+  SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
+  // Recover the original order of the outer dims.
+  SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
+  invertPermutationVector(outerDimPermInv);
+  if (!outerDimPermInv.empty())
+    applyPermutationToVector(outerDims, outerDimPermInv);
+
+  // Collect the outer dims corresponding to the tilled inner dims.
   for (auto index : innerDimsPos)
-    res.push_back(packedShape[index]);
+    res.push_back(outerDims[index]);
 
   return res;
 }

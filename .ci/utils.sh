@@ -24,8 +24,10 @@ function at-exit {
   retcode=$?
 
   mkdir -p artifacts
+  sccache --show-stats
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${MONOREPO_ROOT}"/*.log artifacts/ || :
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
@@ -33,7 +35,7 @@ function at-exit {
 
   if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
-      $retcode "${BUILD_DIR}"/test-results.*.xml "${BUILD_DIR}"/ninja*.log \
+      $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
   fi
 }
@@ -50,3 +52,11 @@ function start-group {
     echo "Starting $groupname"
   fi
 }
+
+export PIP_BREAK_SYSTEM_PACKAGES=1
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+
+# The ARM64 builders run on AWS and don't have access to the GCS cache.
+if [[ "$GITHUB_ACTIONS" != "" ]] && [[ "$RUNNER_ARCH" != "ARM64" ]]; then
+  python .ci/cache_lit_timing_files.py download
+fi

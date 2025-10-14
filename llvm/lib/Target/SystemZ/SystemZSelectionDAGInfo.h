@@ -61,8 +61,7 @@ public:
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src,
-                          MachinePointerInfo SrcPtrInfo) const override;
+                          SDValue Src, const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrnlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,

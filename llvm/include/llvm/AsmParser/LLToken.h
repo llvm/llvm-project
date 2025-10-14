@@ -187,6 +187,9 @@ enum Kind {
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
+  kw_cheriot_compartmentcallcc,
+  kw_cheriot_compartmentcalleecc,
+  kw_cheriot_librarycallcc,
 
   // Attributes:
   kw_attributes,
@@ -485,27 +488,28 @@ enum Kind {
   SummaryID,  // ^42
 
   // String valued tokens (StrVal).
-  LabelStr,         // foo:
-  GlobalVar,        // @foo @"foo"
-  ComdatVar,        // $foo
-  LocalVar,         // %foo %"foo"
-  MetadataVar,      // !foo
-  StringConstant,   // "foo"
-  DwarfTag,         // DW_TAG_foo
-  DwarfAttEncoding, // DW_ATE_foo
-  DwarfVirtuality,  // DW_VIRTUALITY_foo
-  DwarfLang,        // DW_LANG_foo
-  DwarfCC,          // DW_CC_foo
-  EmissionKind,     // lineTablesOnly
-  NameTableKind,    // GNU
-  FixedPointKind,   // Fixed point
-  DwarfOp,          // DW_OP_foo
-  DIFlag,           // DIFlagFoo
-  DISPFlag,         // DISPFlagFoo
-  DwarfMacinfo,     // DW_MACINFO_foo
-  ChecksumKind,     // CSK_foo
-  DbgRecordType,    // dbg_foo
-  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
+  LabelStr,            // foo:
+  GlobalVar,           // @foo @"foo"
+  ComdatVar,           // $foo
+  LocalVar,            // %foo %"foo"
+  MetadataVar,         // !foo
+  StringConstant,      // "foo"
+  DwarfTag,            // DW_TAG_foo
+  DwarfAttEncoding,    // DW_ATE_foo
+  DwarfVirtuality,     // DW_VIRTUALITY_foo
+  DwarfLang,           // DW_LANG_foo
+  DwarfSourceLangName, // DW_LNAME_foo
+  DwarfCC,             // DW_CC_foo
+  EmissionKind,        // lineTablesOnly
+  NameTableKind,       // GNU
+  FixedPointKind,      // Fixed point
+  DwarfOp,             // DW_OP_foo
+  DIFlag,              // DIFlagFoo
+  DISPFlag,            // DISPFlagFoo
+  DwarfMacinfo,        // DW_MACINFO_foo
+  ChecksumKind,        // CSK_foo
+  DbgRecordType,       // dbg_foo
+  DwarfEnumKind,       // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,
