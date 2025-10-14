@@ -2997,6 +2997,75 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Shift = ImmAPS.getZExtValue();
+
+  const Pointer &Concat = S.Stk.pop<Pointer>();
+  if (!Concat.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned NumElems = Concat.getNumElems();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = Concat.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (I + Shift < NumElems)
+        Dst.elem<T>(I) = Concat.elem<T>(I + Shift);
+      else
+        Dst.elem<T>(I) = T();
+    }
+  });
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_x86_palignr(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call, unsigned ID) {
+  assert(Call->getNumArgs() == 3);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
+  uint64_t Shift = ImmAPS.getZExtValue();
+
+  const Pointer &VecB = S.Stk.pop<Pointer>();
+  if (!VecB.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &VecA = S.Stk.pop<Pointer>();
+  if (!VecA.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = VecA.getFieldDesc()->getPrimType();
+
+  unsigned LenA = VecA.getNumElems();
+  unsigned LenB = VecB.getNumElems();
+
+  assert(LenA == LenB && (LenA % 16 == 0));
+
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != LenA; ++I) {
+      if (I + Shift < LenA) {
+        Dst.elem<T>(I) = VecB.elem<T>(I + Shift);
+      } else if (I + Shift < LenA + LenB) {
+        Dst.elem<T>(I) = VecA.elem<T>(I + Shift - LenA);
+      } else {
+        Dst.elem<T>(I) = T();
+      }
+    }
+  });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3936,6 +4005,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+    return interp__builtin_x86_psrldq_byteshift(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_palignr128:
+  case X86::BI__builtin_ia32_palignr256:
+  case X86::BI__builtin_ia32_palignr512:
+    return interp__builtin_x86_palignr(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

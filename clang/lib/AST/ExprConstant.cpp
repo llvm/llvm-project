@@ -12494,6 +12494,68 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(Elems.data(), NumElems), E);
   }
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift: {
+    assert(E->getNumArgs() == 2);
+
+    APValue Concat;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Concat) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    unsigned VecLen = Concat.getVectorLength();
+    unsigned Shift = Imm.getZExtValue();
+
+    SmallVector<APValue> ResultElements;
+    for (unsigned I = 0; I < VecLen; ++I) {
+      if (I + Shift < VecLen) {
+        ResultElements.push_back(Concat.getVectorElt(I + Shift));
+      } else {
+        APSInt Zero(8, /*isUnsigned=*/true);
+        Zero = 0;
+        ResultElements.push_back(APValue(Zero));
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_palignr128:
+  case X86::BI__builtin_ia32_palignr256:
+  case X86::BI__builtin_ia32_palignr512: {
+    assert(E->getNumArgs() == 3);
+
+    APValue VecA, VecB;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
+        !EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    if (!VecA.isVector() || !VecB.isVector())
+      return false;
+
+    unsigned LenA = VecA.getVectorLength();
+    unsigned LenB = VecB.getVectorLength();
+    assert(LenA == LenB && (LenA % 16 == 0));
+
+    unsigned Shift = Imm.getZExtValue();
+    SmallVector<APValue> ResultElements;
+    for (unsigned I = 0; I < LenA; ++I) {
+      if (I + Shift < LenA) {
+        ResultElements.push_back(VecB.getVectorElt(I + Shift));
+      } else if (I + Shift < LenA + LenB) {
+        ResultElements.push_back(VecA.getVectorElt(I + Shift - LenA));
+      } else {
+        APSInt Zero(/*BitWidth=*/8, /*isUnsigned=*/true);
+        Zero = 0;
+        ResultElements.push_back(APValue(Zero));
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
