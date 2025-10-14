@@ -67,12 +67,6 @@ struct ClampFOpConversion final
           op, "fmed3 only supports f16 and f32 types");
     }
 
-    // V_MED3_F16/F32 only exists in gfx9+ architectures
-    if (chipset.majorVersion < 9) {
-      return rewriter.notifyMatchFailure(
-          op, ("pre-gfx9 (gfx" + std::to_string(chipset.majorVersion) +
-               "): V_MED_F16 / V_MED3_F32 not supported."));
-    }
     // Handle multi-dimensional vectors (converted to LLVM arrays)
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(resultType)) {
       // Handle multi-dimensional vectors (converted to LLVM arrays)
@@ -100,7 +94,10 @@ void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
                                  RewritePatternSet &patterns,
                                  amdgpu::Chipset chipset) {
 
-  patterns.add<ClampFOpConversion>(converter, chipset);
+  // V_MED3_F16/F32 only exists in gfx9+ architectures
+  if (chipset.majorVersion >= 9) {
+    patterns.add<ClampFOpConversion>(converter, chipset);
+  }
 }
 
 void mlir::populateMathToROCDLConversionPatterns(
