@@ -15761,6 +15761,22 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           const SCEV *OneAlignedUp =
               GetNextSCEVDividesByDivisor(One, DividesBy);
           To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);
+        } else {
+          if (LHS->getType()->isPointerTy()) {
+            LHS = SE.getLosslessPtrToIntExpr(LHS);
+            RHS = SE.getLosslessPtrToIntExpr(RHS);
+            if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
+              break;
+          }
+          auto AddSubRewrite = [&](const SCEV *A, const SCEV *B) {
+            const SCEV *Sub = SE.getMinusSCEV(A, B);
+            const SCEV *OneAlignedUp = GetNextSCEVDividesByDivisor(
+                SE.getOne(From->getType()), SE.getConstantMultiple(Sub));
+            AddRewrite(Sub, Sub, SE.getUMaxExpr(Sub, OneAlignedUp));
+          };
+          AddSubRewrite(LHS, RHS);
+          AddSubRewrite(RHS, LHS);
+          continue;
         }
         break;
       default:
