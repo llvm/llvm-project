@@ -183,8 +183,7 @@ public:
 
   /// Finds all relations (O, P, S) stored in the index such that S is among
   /// Req.Subjects and P is Req.Predicate, and invokes \p Callback for (S, O) in
-  /// each. Currently only allows the OverridenBy relation and only stored in
-  /// memory.
+  /// each. Currently only allows the OverridenBy relation.
   virtual void reverseRelations(
       const RelationsRequest &Req,
       llvm::function_ref<void(const SymbolID &Subject, const Symbol &Object)>
