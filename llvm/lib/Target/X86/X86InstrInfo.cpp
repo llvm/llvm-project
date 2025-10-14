@@ -10779,8 +10779,8 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasAVX())
       return;
 
-    // VPXOR is safe to use because it doesn't affect flags.
-    BuildMI(MBB, Iter, DL, get(X86::VPXORrr), Reg)
+    // VPXORY is safe to use because it doesn't affect flags.
+    BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
   } else if (X86::VR512RegClass.contains(Reg)) {
@@ -10788,8 +10788,8 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasAVX512())
       return;
 
-    // VPXORY is safe to use because it doesn't affect flags.
-    BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
+    // VPXORDZ is safe to use because it doesn't affect flags.
+    BuildMI(MBB, Iter, DL, get(X86::VPXORDZrr), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
