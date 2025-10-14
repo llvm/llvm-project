@@ -177,8 +177,8 @@ TEST(PointeeIteratorTest, Basic) {
   V.push_back(&arr[2]);
   V.push_back(&arr[3]);
 
-  typedef pointee_iterator<SmallVectorImpl<int *>::const_iterator>
-      test_iterator;
+  using test_iterator =
+      pointee_iterator<SmallVectorImpl<int *>::const_iterator>;
 
   test_iterator Begin, End;
   Begin = V.begin();
@@ -218,9 +218,8 @@ TEST(PointeeIteratorTest, SmartPointer) {
   V.push_back(std::make_unique<int>(3));
   V.push_back(std::make_unique<int>(4));
 
-  typedef pointee_iterator<
-      SmallVectorImpl<std::unique_ptr<int>>::const_iterator>
-      test_iterator;
+  using test_iterator =
+      pointee_iterator<SmallVectorImpl<std::unique_ptr<int>>::const_iterator>;
 
   test_iterator Begin, End;
   Begin = V.begin();
