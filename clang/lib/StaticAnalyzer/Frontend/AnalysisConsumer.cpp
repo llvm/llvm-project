@@ -779,7 +779,6 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   }
 }
 
-namespace {
 template <typename DeclT>
 static clang::Decl *preferDefinitionImpl(clang::Decl *D) {
   if (auto *X = dyn_cast<DeclT>(D))
@@ -807,7 +806,6 @@ static Decl *getDefinitionOrCanonicalDecl(Decl *D) {
   assert(D);
   return D;
 }
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // Path-sensitive checking.
