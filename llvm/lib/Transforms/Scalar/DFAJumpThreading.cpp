@@ -122,10 +122,6 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
-static cl::opt<bool>
-    VerifyDomTree("dfa-jumpthread-verify-domtree", cl::Hidden,
-                  cl::desc("Enable or disable dominator tree verification"));
-
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
@@ -1486,7 +1482,7 @@ bool DFAJumpThreading::run(Function &F) {
   verifyFunction(F, &dbgs());
 #endif
 
-  if (VerifyDomTree)
+  if (MadeChanges && VerifyDomInfo)
     assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full) &&
            "Failed to maintain validity of domtree!");
 
