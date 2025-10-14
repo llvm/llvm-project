@@ -2396,3 +2396,11 @@ let SVETargetGuard = "sve2,fp8fma", SMETargetGuard = "ssve-fp8fma" in {
   def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
   def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
 }
+
+let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p2" in {
+  def FMUL_SINGLE_X2 : SInst<"svmul[_single_{d}_x2]", "22d", "hfd", MergeNone, "aarch64_sve_fmul_single_x2", [IsStreaming], []>;
+  def FMUL_SINGLE_X4 : SInst<"svmul[_single_{d}_x4]", "44d", "hfd", MergeNone, "aarch64_sve_fmul_single_x4", [IsStreaming], []>;
+
+  def FMUL_X2 : SInst<"svmul[_{d}_x2]", "222", "hfd", MergeNone, "aarch64_sve_fmul_x2", [IsStreaming], []>;
+  def FMUL_X4 : SInst<"svmul[_{d}_x4]", "444", "hfd", MergeNone, "aarch64_sve_fmul_x4", [IsStreaming], []>;
+}
