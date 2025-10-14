@@ -1458,7 +1458,8 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          HasCalls};
+          HasCalls,
+          false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
