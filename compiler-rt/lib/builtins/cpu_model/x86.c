@@ -104,7 +104,6 @@ enum ProcessorSubtypes {
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
   INTEL_COREI7_DIAMONDRAPIDS,
-  INTEL_COREI7_WILDCATLAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -525,7 +524,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0xd5:
       CPU = "wildcatlake";
       *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_WILDCATLAKE;
+      *Subtype = INTEL_COREI7_PANTHERLAKE;
       break;
 
     // Icelake Xeon:

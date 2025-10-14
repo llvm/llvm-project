@@ -1338,9 +1338,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> PTLFeatures =
     !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
-  // Wildcatlake
-  list<SubtargetFeature> WCLFeatures = PTLFeatures;
-
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
                                                   FeatureAVXVNNIINT16,
