@@ -3109,21 +3109,21 @@ def BuiltinPrintf : Builtin {
 
 def FPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["fprintf"];
-  let Attributes = [NoThrow, PrintfFormat<1>, NonNull<[1]>];
+  let Attributes = [NoThrow, PrintfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def SnPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["snprintf"];
-  let Attributes = [NoThrow, PrintfFormat<2>, NonNull<[2]>];
+  let Attributes = [NoThrow, PrintfFormat<2>, NonNull<[0, 2]>];
   let Prototype = "int(char* restrict, size_t, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def SPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["sprintf"];
-  let Attributes = [NoThrow, PrintfFormat<1>, NonNull<[1]>];
+  let Attributes = [NoThrow, PrintfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(char* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -3137,21 +3137,21 @@ def VPrintf : LibBuiltin<"stdio.h"> {
 
 def VfPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vfprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<1>, NonNull<[1]>];
+  let Attributes = [NoThrow, VPrintfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VsnPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsnprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<2>, NonNull<[2]>];
+  let Attributes = [NoThrow, VPrintfFormat<2>, NonNull<[0, 2]>];
   let Prototype = "int(char* restrict, size_t, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VsPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<1>, NonNull<[1]>];
+  let Attributes = [NoThrow, VPrintfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(char* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -3165,14 +3165,14 @@ def Scanf : LibBuiltin<"stdio.h"> {
 
 def FScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["fscanf"];
-  let Attributes = [ScanfFormat<1>, NonNull<[1]>];
+  let Attributes = [ScanfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def SScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["sscanf"];
-  let Attributes = [ScanfFormat<1>, NonNull<[1]>];
+  let Attributes = [ScanfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(char const* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -3186,14 +3186,14 @@ def VScanf : LibBuiltin<"stdio.h"> {
 
 def VFScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vfscanf"];
-  let Attributes = [VScanfFormat<1>, NonNull<[1]>];
+  let Attributes = [VScanfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VSScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsscanf"];
-  let Attributes = [VScanfFormat<1>, NonNull<[1]>];
+  let Attributes = [VScanfFormat<1>, NonNull<[0, 1]>];
   let Prototype = "int(char const* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }

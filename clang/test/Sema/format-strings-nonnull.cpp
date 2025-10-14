@@ -13,12 +13,15 @@ typedef __builtin_va_list va_list;
 EXTERN_C int printf(const char *, ...);
 EXTERN_C int fprintf(FILE *, const char *restrict, ...);
 EXTERN_C int sprintf(char* restrict, char const* res, ...);
+EXTERN_C int vfprintf(FILE* restrict, char const* res, __builtin_va_list);
 
 EXTERN_C int scanf(char const *restrict, ...);
 EXTERN_C int fscanf(FILE* restrict, char const* res, ...);
+EXTERN_C int sscanf(char const* restrict, char const* res, ...);
 
-void test(FILE *fp) {
+void test(FILE *fp, va_list ap) {
   char buf[256];
+  int num;
 
   __builtin_printf(__null, "x");
   // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
@@ -36,5 +39,11 @@ void test(FILE *fp) {
   // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
 
   fscanf(fp, __null);
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
+
+  vfprintf(__null, "xxd", ap);
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
+
+  sscanf(__null, "%d", &num);
   // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
 }

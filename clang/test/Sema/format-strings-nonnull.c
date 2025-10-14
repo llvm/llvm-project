@@ -25,6 +25,7 @@ int vsscanf(char const* restrict, char const* restrict, __builtin_va_list);
 
 void check_format_string(FILE *fp, va_list ap) {
     char buf[256];
+    int num;
     char* const fmt = NULL;
 
     printf(fmt);
@@ -36,11 +37,13 @@ void check_format_string(FILE *fp, va_list ap) {
     fprintf(fp, NULL, 25);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
-    sprintf(buf, NULL, 42);
+    sprintf(NULL, NULL, 42);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
+    // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
-    snprintf(buf, 10, 0, 42);
+    snprintf(NULL, 10, 0, 42);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
+    // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
     vprintf(fmt, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
@@ -51,15 +54,19 @@ void check_format_string(FILE *fp, va_list ap) {
     vsprintf(buf, nullptr, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
-    vsnprintf(buf, 10, fmt, ap);
+    vsnprintf(NULL, 10, fmt, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
+    // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
     scanf(NULL);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
-    fscanf(fp, nullptr);
+    fscanf(nullptr, nullptr);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
+    // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
+    sscanf(NULL, "%d %s", &num, buf);
+    // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
     sscanf(buf, fmt);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
