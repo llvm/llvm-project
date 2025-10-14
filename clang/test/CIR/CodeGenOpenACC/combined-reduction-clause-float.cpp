@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 template<typename T>
 void acc_combined() {
   T someVar;
@@ -13,7 +13,10 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.float> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.float> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !cir.float
+// CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.float>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -26,7 +29,10 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.float> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.float> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !cir.float
+// CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.float>
 // CHECK-NEXT: }
 
@@ -111,7 +117,31 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[CMP]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !s64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !s64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !cir.float
+// CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHS_STRIDE]]
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -142,7 +172,31 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[CMP]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !s64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !s64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !cir.float
+// CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHS_STRIDE]]
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -302,6 +356,35 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !u64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !u64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !cir.float
+// CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHS_STRIDE]]
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -337,6 +420,35 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !u64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !u64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !cir.float
+// CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHS_STRIDE]]
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -372,6 +484,7 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -407,6 +520,7 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -442,6 +556,7 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
@@ -477,6 +592,7 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
