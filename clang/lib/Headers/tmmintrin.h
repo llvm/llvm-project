@@ -632,8 +632,7 @@ _mm_shuffle_pi8(__m64 __a, __m64 __b) {
   return __trunc64(__builtin_ia32_pshufb128(
       (__v16qi)__builtin_shufflevector((__v2si)(__a), __extension__(__v2si){},
                                        0, 1, 0, 1),
-      (__v16qi)__builtin_shufflevector((__v2si)(__b), __extension__(__v2si){},
-                                       0, 1, 0, 1)));
+      (__v16qi)__zext128(__b)));
 }
 
 /// For each 8-bit integer in the first source operand, perform one of

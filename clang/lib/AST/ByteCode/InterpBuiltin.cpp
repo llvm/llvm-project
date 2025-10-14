@@ -2722,15 +2722,8 @@ static bool interp__builtin_ia32_pshufb(InterpState &S, CodePtr OpPC,
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   unsigned NumElems = Dst.getNumElems();
-  PrimType ElemT = Dst.getFieldDesc()->getPrimType();
-  unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
-
-  assert(NumElems == 16 || NumElems == 32 || NumElems == 64);
   assert(NumElems == Control.getNumElems());
   assert(NumElems == Dst.getNumElems());
-
-  if (ElemBits != 8)
-    return false;
 
   for (unsigned Idx = 0; Idx != NumElems; ++Idx) {
     uint8_t Ctlb = static_cast<uint8_t>(Control.elem<int8_t>(Idx));

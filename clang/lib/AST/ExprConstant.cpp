@@ -11629,12 +11629,8 @@ static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
 
   QualType ElemT = VT->getElementType();
   unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
-
-  if (ElemBits != 8)
-    return false;
   unsigned NumElts = VT->getNumElements();
-  if (NumElts != 16 && NumElts != 32 && NumElts != 64)
-    return false;
+  bool DestUnsigned = ElemT->isUnsignedIntegerOrEnumerationType();
 
   SmallVector<APValue, 64> ResultElements;
   ResultElements.reserve(NumElts);
@@ -11642,10 +11638,10 @@ static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
   for (unsigned Idx = 0; Idx != NumElts; ++Idx) {
     APValue CtlVal = ControlVec.getVectorElt(Idx);
     APSInt CtlByte = CtlVal.getInt();
-    uint8_t Ctl = static_cast<uint8_t>(CtlByte.getZExtValue() & 0xFF);
+    uint8_t Ctl = static_cast<uint8_t>(CtlByte.getZExtValue());
 
     if (Ctl & 0x80) {
-      APSInt Zero(ElemBits, /*isUnsigned*/ false);
+      APSInt Zero(ElemBits, DestUnsigned);
       Zero = 0;
       ResultElements.push_back(APValue(Zero));
     } else {
