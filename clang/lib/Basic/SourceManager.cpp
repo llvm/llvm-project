@@ -915,6 +915,20 @@ SourceLocation SourceManager::getSpellingLocSlowCase(SourceLocation Loc) const {
   return Loc;
 }
 
+SourceLocation
+SourceManager::getRefinedSpellingLocSlowCase(SourceLocation Loc) const {
+  do {
+    FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
+    const ExpansionInfo &Expansion = getSLocEntry(LocInfo.first).getExpansion();
+    if (Expansion.isMacroArgExpansion()) {
+      Loc = Expansion.getSpellingLoc().getLocWithOffset(LocInfo.second);
+    } else {
+      Loc = Expansion.getExpansionLocStart();
+    }
+  } while (!Loc.isFileID());
+  return Loc;
+}
+
 SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
   do {
     if (isMacroArgExpansion(Loc))
