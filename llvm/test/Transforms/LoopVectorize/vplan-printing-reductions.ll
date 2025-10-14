@@ -1080,3 +1080,93 @@ exit:
   %red.next.lcssa = phi i64 [ %red.next, %loop ]
   ret i64 %red.next.lcssa
 }
+
+; A reduce.add(ext(mul(ext(A), ext(B)))) can't be turned into an
+; ExtMulAccReduction VPExpressionRecipe since the mul has two users.
+; It can however be turned into an ExtendedReduction since that one doesn't
+; modify the mul's operands.
+define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
+; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<%0> = VF * UF
+; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT:  vp<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (1 + %n)
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%3> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:    WIDEN-CAST ir<%conv> = sext ir<%b> to i32
+; CHECK-NEXT:    WIDEN ir<%mul> = mul ir<%conv>, ir<%conv>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT vp<%4> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%res2> = phi vp<%3>, vp<%5>
+; CHECK-NEXT:      CLONE ir<%load> = load ir<%a>
+; CHECK-NEXT:      WIDEN-CAST ir<%load.ext> = sext ir<%load> to i32
+; CHECK-NEXT:      WIDEN-CAST ir<%load.ext.ext> = sext ir<%load.ext> to i64
+; CHECK-NEXT:      EXPRESSION vp<%5> = ir<%res2> + reduce.add (ir<%mul> zext to i64)
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%4>, vp<%0>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%7> = compute-reduction-result ir<%res2>, vp<%5>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-element ir<%load.ext.ext>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%2>, vp<%1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %add.lcssa = phi i64 [ %add, %loop ] (extra operand: vp<%7> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%1>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ vp<%vector.recur.extract>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<%7>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
+; CHECK-NEXT:    IR   %res2 = phi i64 [ 0, %entry ], [ %add, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %load = load i16, ptr %a, align 2
+; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    IR   %conv = sext i16 %b to i32
+; CHECK-NEXT:    IR   %mul = mul i32 %conv, %conv
+; CHECK-NEXT:    IR   %mul.ext = zext i32 %mul to i64
+; CHECK-NEXT:    IR   %add = add i64 %res2, %mul.ext
+; CHECK-NEXT:    IR   %second_use = or i32 %mul, %c
+; CHECK-NEXT:    IR   %load.ext = sext i16 %load to i32
+; CHECK-NEXT:    IR   %load.ext.ext = sext i32 %load.ext to i64
+; CHECK-NEXT:    IR   %exitcond740.not = icmp eq i64 %iv, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ]
+  %res2 = phi i64 [ 0, %entry ], [ %add, %loop ]
+  %load = load i16, ptr %a, align 2
+  %iv.next = add i64 %iv, 1
+  %conv = sext i16 %b to i32
+  %mul = mul i32 %conv, %conv
+  %mul.ext = zext i32 %mul to i64
+  %add = add i64 %res2, %mul.ext
+  %second_use = or i32 %mul, %c ; this value is otherwise unused, but that's sufficient for the test
+  %load.ext = sext i16 %load to i32
+  %load.ext.ext = sext i32 %load.ext to i64
+  %exitcond740.not = icmp eq i64 %iv, %n
+  br i1 %exitcond740.not, label %exit, label %loop
+
+exit:
+  ret i64 %add
+}

@@ -8072,6 +8072,15 @@ bool VPRecipeBuilder::getScaledReductions(
   if (Op == PHI)
     std::swap(Op, PhiOp);
 
+  using namespace llvm::PatternMatch;
+  // If Op is an extend, then it's still a valid partial reduction if the
+  // extended mul fulfills the other requirements.
+  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
+  // reduction since the inner extends will be widened. We already have oneUse
+  // checks on the inner extends so widening them is safe.
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_Value(), m_Value()))))
+    Op = cast<Instruction>(Op)->getOperand(0);
+
   // Try and get a scaled reduction from the first non-phi operand.
   // If one is found, we use the discovered reduction instruction in
   // place of the accumulator for costing.
@@ -8087,8 +8096,6 @@ bool VPRecipeBuilder::getScaledReductions(
   }
   if (PhiOp != PHI)
     return false;
-
-  using namespace llvm::PatternMatch;
 
   // If the update is a binary operator, check both of its operands to see if
   // they are extends. Otherwise, see if the update comes directly from an
