@@ -1689,6 +1689,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
       // y = add x, 0 -> y = copy x
       MI->removeOperand(Src1Idx);
       mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      return true;
     }
   }
 
