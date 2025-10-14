@@ -20,8 +20,8 @@
 # TODO: Update this test to use objdump or obj2yaml once we support
 # --add-section in objcopy. See issue:
 # https://github.com/llvm/llvm-project/issues/162159.
-# PSV0-CONTENTS: 0000000 34 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# PSV0-CONTENTS: 0000010 00 00 00 00 00 00 00 00 ff ff ff ff 05 00 00 00
+# PSV0-CONTENTS: 0000 34 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# PSV0-CONTENTS: 0010 00 00 00 00 00 00 00 00 ff ff ff ff 05 00 00 00
 
 --- !dxcontainer
 Header:
