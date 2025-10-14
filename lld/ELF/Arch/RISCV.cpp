@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -38,6 +39,10 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  template <class ELFT> void scanSection1(InputSectionBase &);
+  void scanSection(InputSectionBase &) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -278,6 +283,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
   case R_RISCV_NONE:
+  case R_RISCV_VENDOR:
     return R_NONE;
   case R_RISCV_32:
   case R_RISCV_64:
@@ -1476,3 +1482,80 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 }
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
+
+class RISCVRelocScan : public RelocScan {
+public:
+  StringRef rvVendor;
+
+  RISCVRelocScan(Ctx &ctx, InputSectionBase *sec = nullptr)
+      : RelocScan(ctx, sec) {}
+  template <class ELFT, class RelTy>
+  void scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
+            int64_t addend);
+};
+
+template <class ELFT, class RelTy>
+void RISCVRelocScan::scan(typename Relocs<RelTy>::const_iterator &it,
+                          RelType type, int64_t addend) {
+  const RelTy &rel = *it;
+  uint32_t symIndex = rel.getSymbol(false);
+  Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
+
+  if (type == R_RISCV_VENDOR) {
+    if (!rvVendor.empty())
+      Err(ctx) << "found consecutive R_RISCV_VENDOR relocations";
+    rvVendor = sym.getName();
+    return;
+  } else if (!rvVendor.empty()) {
+    Err(ctx) << getErrorLoc(ctx, sec->content().data() + it->r_offset)
+             << "unknown vendor-specific relocation (" << type.v
+             << ") in vendor namespace \"" << rvVendor << "\" against symbol "
+             << &sym;
+    return;
+  }
+
+  RelocScan::scan<ELFT, RelTy>(it, type, addend);
+}
+
+template <class ELFT, class RelTy>
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RISCVRelocScan rs(ctx, &sec);
+  // Many relocations end up in sec.relocations.
+  sec.relocations.reserve(rels.size());
+
+  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
+  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
+  SmallVector<RelTy, 0> storage;
+  if (ctx.arg.emachine == EM_S390)
+    rels = sortRels(rels, storage);
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    auto type = it->getType(false);
+    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  }
+
+  // Sort relocations by offset for more efficient searching for
+  // R_RISCV_PCREL_HI20, ALIGN relocations, R_PPC64_ADDR64 and the
+  // branch-to-branch optimization.
+  if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
+      (ctx.arg.emachine == EM_PPC64 && sec.name == ".toc") ||
+      ctx.arg.branchToBranch)
+    llvm::stable_sort(sec.relocs(),
+                      [](const Relocation &lhs, const Relocation &rhs) {
+                        return lhs.offset < rhs.offset;
+                      });
+}
+
+template <class ELFT> void RISCV::scanSection1(InputSectionBase &sec) {
+  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+  if (rels.areRelocsCrel())
+    scanSectionImpl<ELFT>(sec, rels.crels);
+  else if (rels.areRelocsRel())
+    scanSectionImpl<ELFT>(sec, rels.rels);
+  else
+    scanSectionImpl<ELFT>(sec, rels.relas);
+}
+
+void RISCV::scanSection(InputSectionBase &sec) {
+  invokeELFT(scanSection1, sec);
+}
