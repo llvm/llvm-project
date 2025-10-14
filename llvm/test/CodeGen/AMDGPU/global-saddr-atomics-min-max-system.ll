@@ -102,6 +102,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -113,6 +114,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -213,6 +215,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -224,6 +227,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -315,6 +319,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_max_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -415,6 +420,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_max_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -537,9 +543,11 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_gt_i64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -553,6 +561,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -664,9 +673,11 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_gt_i64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -680,6 +691,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -779,9 +791,11 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_gt_i64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -891,9 +905,11 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_gt_i64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1010,6 +1026,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1021,6 +1038,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -1121,6 +1139,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1132,6 +1151,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -1223,6 +1243,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_min_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1323,6 +1344,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_min_i32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1445,9 +1467,11 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_le_i64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1461,6 +1485,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -1572,9 +1597,11 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_le_i64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1588,6 +1615,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -1687,9 +1715,11 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_le_i64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1799,9 +1829,11 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_le_i64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1918,6 +1950,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -1929,6 +1962,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -2029,6 +2063,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2040,6 +2075,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -2131,6 +2167,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_max_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2231,6 +2268,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_max_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2353,9 +2391,11 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2369,6 +2409,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -2480,9 +2521,11 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2496,6 +2539,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -2595,9 +2639,11 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2707,9 +2753,11 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2826,6 +2874,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2837,6 +2886,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_cbranch_execnz .LBB24_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -2937,6 +2987,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -2948,6 +2999,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB25_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3039,6 +3091,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_min_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -3139,6 +3192,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_min_u32_e32 v4, v5, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], v[4:5], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -3261,9 +3315,11 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -3277,6 +3333,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3388,9 +3445,11 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc, v[9:10], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v8, v2, v10, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v7, v1, v9, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[5:6], v[7:10], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -3404,6 +3463,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3503,9 +3563,11 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
@@ -3615,9 +3677,11 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc, v[5:6], v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v3, v1, v5, vcc
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[3:4], v[7:8], v[3:6], off offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS

@@ -9,7 +9,7 @@
 /// Fuzzing test for llvm-libc hashtable implementations.
 ///
 //===----------------------------------------------------------------------===//
-#include "include/llvm-libc-types/ENTRY.h"
+#include "hdr/types/ENTRY.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/HashTable/table.h"

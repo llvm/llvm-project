@@ -12,12 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceDistinctMetadata.h"
-#include "Delta.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/InstIterator.h"
-#include <algorithm>
 #include <queue>
 
 using namespace llvm;
@@ -118,8 +114,8 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
   }
 }
 
-static void extractDistinctMetadataFromModule(Oracle &O,
-                                              ReducerWorkItem &WorkItem) {
+void llvm::reduceDistinctMetadataDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   MDTuple *TemporaryTuple =
       MDTuple::getDistinct(Program.getContext(), SmallVector<Metadata *, 1>{});
@@ -134,9 +130,4 @@ static void extractDistinctMetadataFromModule(Oracle &O,
   }
   for (NamedMDNode &NamedNode : Program.named_metadata())
     cleanUpTemporaries(NamedNode, TemporaryTuple, Program);
-}
-
-void llvm::reduceDistinctMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDistinctMetadataFromModule,
-               "Reducing Distinct Metadata");
 }

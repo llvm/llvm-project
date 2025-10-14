@@ -21,11 +21,11 @@
 #include "formatting.h"
 #include "type.h"
 #include "variable.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Support/Fortran.h"
 #include <algorithm>
 #include <list>
 #include <tuple>
@@ -566,9 +566,9 @@ private:
   using Conversions = std::tuple<Convert<Result, TypeCategory::Integer>,
       Convert<Result, TypeCategory::Real>,
       Convert<Result, TypeCategory::Unsigned>>;
-  using Operations =
-      std::tuple<Parentheses<Result>, Negate<Result>, Add<Result>,
-          Subtract<Result>, Multiply<Result>, Divide<Result>, Extremum<Result>>;
+  using Operations = std::tuple<Parentheses<Result>, Negate<Result>,
+      Add<Result>, Subtract<Result>, Multiply<Result>, Divide<Result>,
+      Power<Result>, Extremum<Result>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 

@@ -14,9 +14,18 @@ include "llvm/Target/Target.td"
 
 // LoongArch is divided into two versions, the 32-bit version (LA32) and the
 // 64-bit version (LA64).
+
+// LoongArch 32-bit is divided into two variants, the reduced 32-bit variant
+// (LA32R) and the standard 32-bit variant (LA32S).
+def Feature32S
+    : SubtargetFeature<"32s", "Has32S", "true",
+                       "LA32 Standard Basic Instruction Extension">;
+def Has32S : Predicate<"Subtarget->has32S()">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasLA64", "true",
-                       "LA64 Basic Integer and Privilege Instruction Set">;
+                       "LA64 Basic Integer and Privilege Instruction Set",
+                       [Feature32S]>;
 def Feature32Bit
     : SubtargetFeature<"32bit", "HasLA32", "true",
                        "LA32 Basic Integer and Privilege Instruction Set">;
@@ -30,7 +39,7 @@ def IsLA32
                          "LA32 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;
-def LA64 : HwMode<"+64bit", [IsLA64]>;
+def LA64 : HwMode<[IsLA64]>;
 
 // Single Precision floating point
 def FeatureBasicF
@@ -109,24 +118,24 @@ def FeatureRelax
 // Floating point approximation operation
 def FeatureFrecipe
     : SubtargetFeature<"frecipe", "HasFrecipe", "true",
-                       "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
+                       "Support frecipe.{s/d} and frsqrte.{s/d} instructions">;
 def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
 
 // Atomic memory swap and add instructions for byte and half word
 def FeatureLAM_BH
     : SubtargetFeature<"lam-bh", "HasLAM_BH", "true",
-                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
+                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions">;
 def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
 
 // Atomic memory compare and swap instructions for byte, half word, word and double word
 def FeatureLAMCAS
     : SubtargetFeature<"lamcas", "HasLAMCAS", "true",
-                        "Support amcas[_db].{b/h/w/d}.">;
+                        "Support amcas[_db].{b/h/w/d}">;
 def HasLAMCAS : Predicate<"Subtarget->hasLAMCAS()">;
 
 def FeatureLD_SEQ_SA
     : SubtargetFeature<"ld-seq-sa", "HasLD_SEQ_SA", "true",
-                        "Don't use load-load barrier (dbar 0x700).">;
+                        "Don't use a same-address load-load barrier (dbar 0x700)">;
 def HasLD_SEQ_SA : Predicate<"Subtarget->hasLD_SEQ_SA()">;
 
 // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.

@@ -8,12 +8,12 @@
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
-// CHECK-LABEL: func @insert_slice_fun
+// CHECK-LABEL: func private @insert_slice_fun
 //  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
-func.func @insert_slice_fun(
+func.func private @insert_slice_fun(
     %A0 : tensor<?xf32> {bufferization.writable = false},
     %A1 : tensor<?xf32> {bufferization.writable = true},
     %t0 : tensor<4xf32> {bufferization.writable = false},
@@ -331,14 +331,36 @@ func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
 // -----
 
 //       CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0 + 5)>
-// CHECK-LABEL: func.func @cast_retains_buffer_layout(
+// CHECK-LABEL: func.func private @cast_retains_buffer_layout(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
 //       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, #[[$map]]> to memref<10xf32, #[[$map]]>
 //       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[1], offset: 7>>
 //       CHECK:   return %[[slice]]
-func.func @cast_retains_buffer_layout(
+func.func private @cast_retains_buffer_layout(
     %t: tensor<?xf32>
         {bufferization.buffer_layout = affine_map<(d0) -> (d0 + 5)>},
+    %sz: index)
+  -> (tensor<10xf32>, tensor<?xf32>)
+{
+  %casted = tensor.cast %t : tensor<?xf32> to tensor<10xf32>
+  %slice = tensor.extract_slice %casted[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+
+  // Note: The %casted return type is folded away because both buffers are
+  // equivalent. Therefore, we currently loose some static type information
+  // in the caller.
+  return %casted, %slice : tensor<10xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func private @cast_retains_buffer_layout_strided(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[1], offset: 5>>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
+//       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, strided<[1], offset: 5>> to memref<10xf32, strided<[1], offset: 5>>
+//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, strided<[1], offset: 5>> to memref<?xf32, strided<[1], offset: 7>>
+//       CHECK:   return %[[slice]]
+func.func private @cast_retains_buffer_layout_strided(
+    %t: tensor<?xf32>
+        {bufferization.buffer_layout = strided<[1], offset: 5>},
     %sz: index)
   -> (tensor<10xf32>, tensor<?xf32>)
 {
@@ -394,6 +416,33 @@ func.func @tensor.reshape() -> tensor<2x2x5xf32> {
 
   // CHECK: return %[[RESHAPED]]
   return %reshaped : tensor<2x2x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_reshape_aliasing
+//  CHECK-SAME:  (%[[ARG0:.+]]: index, %[[ARG1:.+]]: index)
+func.func @tensor_reshape_aliasing(%arg0: index, %arg1: index) -> tensor<?x?xf32> {
+  %t1_static = arith.constant dense<0.> : tensor<10xf32>
+  // CHECK-DAG: %[[T1:.+]] = memref.cast
+  %t1 = tensor.cast %t1_static : tensor<10xf32> to tensor<?xf32>
+
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+
+  // CHECK-DAG: %[[SHAPE:.+]] = memref.alloc() {{.*}} : memref<2xindex>
+  %shape = bufferization.alloc_tensor() : tensor<2xindex>
+  // CHECK: memref.store %[[ARG0]], %[[SHAPE]][%[[C0]]]
+  %shape.0 = tensor.insert %arg0 into %shape[%c0] : tensor<2xindex>
+  // CHECK: memref.store %[[ARG1]], %[[SHAPE]][%[[C1]]]
+  %shape.1 = tensor.insert %arg1 into %shape.0[%c1] : tensor<2xindex>
+
+  // CHECK: %[[RESHAPED:.+]] = memref.reshape %[[T1]](%[[SHAPE]])
+  %reshaped = tensor.reshape %t1(%shape.1) : (tensor<?xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  // CHECK: return %[[RESHAPED]]
+  return %reshaped : tensor<?x?xf32>
 }
 
 // -----

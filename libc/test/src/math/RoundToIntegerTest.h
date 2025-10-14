@@ -55,7 +55,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, FloatType input,
                       IntType expected, bool expectError) {
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
@@ -127,8 +127,8 @@ public:
     test_one_input(func, FloatType(-1.0), IntType(-1), false);
     test_one_input(func, FloatType(10.0), IntType(10), false);
     test_one_input(func, FloatType(-10.0), IntType(-10), false);
-    test_one_input(func, FloatType(1234.0), IntType(1234), false);
-    test_one_input(func, FloatType(-1234.0), IntType(-1234), false);
+    test_one_input(func, FloatType(1232.0), IntType(1232), false);
+    test_one_input(func, FloatType(-1232.0), IntType(-1232), false);
 
     // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR

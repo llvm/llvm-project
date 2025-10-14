@@ -3,13 +3,19 @@
 ; RUN: opt < %s -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux -mattr=+fullfp16 | FileCheck %s --check-prefixes=CHECK,FULLFP16
 
 define half @reduce_fast_half2(<2 x half> %vec2) {
-; CHECK-LABEL: define half @reduce_fast_half2(
-; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
-; CHECK-NEXT:    ret half [[ADD1]]
+; NOFP16-LABEL: define half @reduce_fast_half2(
+; NOFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOFP16-NEXT:  [[ENTRY:.*:]]
+; NOFP16-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
+; NOFP16-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
+; NOFP16-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
+; NOFP16-NEXT:    ret half [[ADD1]]
+;
+; FULLFP16-LABEL: define half @reduce_fast_half2(
+; FULLFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
+; FULLFP16-NEXT:  [[ENTRY:.*:]]
+; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> [[VEC2]])
+; FULLFP16-NEXT:    ret half [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <2 x half> %vec2, i64 0
@@ -20,7 +26,7 @@ entry:
 
 define half @reduce_half2(<2 x half> %vec2) {
 ; CHECK-LABEL: define half @reduce_half2(
-; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
@@ -81,10 +87,9 @@ define half @reduce_fast_half8(<8 x half> %vec8) {
 ; NOFP16-SAME: <8 x half> [[VEC8:%.*]]) #[[ATTR0]] {
 ; NOFP16-NEXT:  [[ENTRY:.*:]]
 ; NOFP16-NEXT:    [[TMP0:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; NOFP16-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP0]])
 ; NOFP16-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; NOFP16-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP2]])
-; NOFP16-NEXT:    [[OP_RDX3:%.*]] = fadd fast half [[TMP1]], [[TMP3]]
+; NOFP16-NEXT:    [[RDX_OP:%.*]] = fadd fast <4 x half> [[TMP0]], [[TMP2]]
+; NOFP16-NEXT:    [[OP_RDX3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[RDX_OP]])
 ; NOFP16-NEXT:    ret half [[OP_RDX3]]
 ;
 ; FULLFP16-LABEL: define half @reduce_fast_half8(
@@ -270,9 +275,7 @@ define float @reduce_fast_float2(<2 x float> %vec2) {
 ; CHECK-LABEL: define float @reduce_fast_float2(
 ; CHECK-SAME: <2 x float> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x float> [[VEC2]], i64 0
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[VEC2]], i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[ELT1]], [[ELT0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[VEC2]])
 ; CHECK-NEXT:    ret float [[ADD1]]
 ;
 entry:
@@ -410,9 +413,7 @@ define double @reduce_fast_double2(<2 x double> %vec2) {
 ; CHECK-LABEL: define double @reduce_fast_double2(
 ; CHECK-SAME: <2 x double> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x double> [[VEC2]], i64 0
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x double> [[VEC2]], i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[ELT1]], [[ELT0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[VEC2]])
 ; CHECK-NEXT:    ret double [[ADD1]]
 ;
 entry:
@@ -553,8 +554,9 @@ define float @reduce_fast_float_case2(ptr %a, ptr %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[TMP1]], i64 0)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP2]], <4 x float> [[TMP0]], i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RED3:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP3]])
 ; CHECK-NEXT:    ret float [[RED3]]
 ;
@@ -716,29 +718,29 @@ define float @reduce_float_case3(ptr %a) {
 ; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds float, ptr [[A]], i32 5
 ; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr inbounds float, ptr [[A]], i32 6
 ; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds float, ptr [[A]], i32 7
-; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[LOAD3:%.*]] = load float, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[LOAD5:%.*]] = load float, ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[LOAD6:%.*]] = load float, ptr [[GEP4]], align 4
-; CHECK-NEXT:    [[LOAD7:%.*]] = load float, ptr [[GEP5]], align 4
-; CHECK-NEXT:    [[LOAD8:%.*]] = load float, ptr [[GEP6]], align 4
-; CHECK-NEXT:    [[LOAD9:%.*]] = load float, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[LOAD3:%.*]] = load float, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP4]], align 4
+; CHECK-NEXT:    [[LOAD5:%.*]] = load float, ptr [[GEP5]], align 4
+; CHECK-NEXT:    [[LOAD6:%.*]] = load float, ptr [[GEP6]], align 4
+; CHECK-NEXT:    [[LOAD7:%.*]] = load float, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[LOG:%.*]] = call float @llvm.log.f32(float [[LOAD]])
+; CHECK-NEXT:    [[LOG1:%.*]] = call float @llvm.log.f32(float [[LOAD1]])
 ; CHECK-NEXT:    [[LOG2:%.*]] = call float @llvm.log.f32(float [[LOAD2]])
 ; CHECK-NEXT:    [[LOG3:%.*]] = call float @llvm.log.f32(float [[LOAD3]])
 ; CHECK-NEXT:    [[LOG4:%.*]] = call float @llvm.log.f32(float [[LOAD4]])
 ; CHECK-NEXT:    [[LOG5:%.*]] = call float @llvm.log.f32(float [[LOAD5]])
 ; CHECK-NEXT:    [[LOG6:%.*]] = call float @llvm.log.f32(float [[LOAD6]])
 ; CHECK-NEXT:    [[LOG7:%.*]] = call float @llvm.log.f32(float [[LOAD7]])
-; CHECK-NEXT:    [[LOG8:%.*]] = call float @llvm.log.f32(float [[LOAD8]])
-; CHECK-NEXT:    [[LOG9:%.*]] = call float @llvm.log.f32(float [[LOAD9]])
-; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[LOG2]], [[LOG3]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[LOG]], [[LOG1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[ADD1]], [[LOG2]]
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[ADD2]], [[LOG3]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd float [[ADD3]], [[LOG4]]
 ; CHECK-NEXT:    [[ADD5:%.*]] = fadd float [[ADD4]], [[LOG5]]
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[ADD5]], [[LOG6]]
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd float [[ADD6]], [[LOG7]]
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd float [[ADD8]], [[LOG8]]
-; CHECK-NEXT:    [[ADD7:%.*]] = fadd float [[ADD9]], [[LOG9]]
+; CHECK-NEXT:    [[ADD7:%.*]] = fadd float [[ADD6]], [[LOG7]]
 ; CHECK-NEXT:    ret float [[ADD7]]
 ;
 entry:

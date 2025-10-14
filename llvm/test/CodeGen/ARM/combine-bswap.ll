@@ -23,7 +23,7 @@ define i64 @bs_or_rhs_bs64(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    rev r1, r1
 ; CHECK-NEXT:    rev r0, r0
 ; CHECK-NEXT:    orrs r2, r1
-; CHECK-NEXT:    orr.w r1, r0, r3
+; CHECK-NEXT:    orr.w r1, r3, r0
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
   %1 = tail call i64 @llvm.bswap.i64(i64 %b)

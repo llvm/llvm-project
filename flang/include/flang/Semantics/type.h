@@ -9,10 +9,10 @@
 #ifndef FORTRAN_SEMANTICS_TYPE_H_
 #define FORTRAN_SEMANTICS_TYPE_H_
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Support/Fortran.h"
 #include <algorithm>
 #include <iosfwd>
 #include <map>
@@ -120,7 +120,9 @@ public:
   bool IsEquivalentInInterface(const ParamValue &that) const {
     return (category_ == that.category_ &&
         expr_.has_value() == that.expr_.has_value() &&
-        (!expr_ || evaluate::AreEquivalentInInterface(*expr_, *that.expr_)));
+        (!expr_ ||
+            evaluate::AreEquivalentInInterface(*expr_, *that.expr_)
+                .value_or(false)));
   }
   std::string AsFortran() const;
 
@@ -284,6 +286,9 @@ public:
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
   bool HasDefaultInitialization(
+      bool ignoreAllocatable = false, bool ignorePointer = true) const;
+  std::optional<std::string> // component path suitable for error messages
+  ComponentWithDefaultInitialization(
       bool ignoreAllocatable = false, bool ignorePointer = true) const;
   bool HasDestruction() const;
 

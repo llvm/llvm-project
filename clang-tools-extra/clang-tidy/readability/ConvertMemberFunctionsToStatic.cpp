@@ -1,4 +1,4 @@
-//===--- ConvertMemberFunctionsToStatic.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +17,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+namespace {
 
 AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
 
@@ -69,10 +71,12 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
   } UsageOfThis;
 
   // TraverseStmt does not modify its argument.
-  UsageOfThis.TraverseStmt(const_cast<Stmt *>(Node.getBody()));
+  UsageOfThis.TraverseStmt(Node.getBody());
 
   return UsageOfThis.Used;
 }
+
+} // namespace
 
 void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -81,7 +85,8 @@ void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
           unless(anyOf(
               isExpansionInSystemHeader(), isVirtual(), isStatic(),
               hasTrivialBody(), isOverloadedOperator(), cxxConstructorDecl(),
-              cxxDestructorDecl(), cxxConversionDecl(), isTemplate(),
+              cxxDestructorDecl(), cxxConversionDecl(),
+              isExplicitObjectMemberFunction(), isTemplate(),
               isDependentContext(),
               ofClass(anyOf(
                   isLambda(),

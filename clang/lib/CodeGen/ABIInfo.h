@@ -110,7 +110,8 @@ public:
   /// A convenience method to return an indirect ABIArgInfo with an
   /// expected alignment equal to the ABI alignment of the given type.
   CodeGen::ABIArgInfo
-  getNaturalAlignIndirect(QualType Ty, bool ByVal = true, bool Realign = false,
+  getNaturalAlignIndirect(QualType Ty, unsigned AddrSpace, bool ByVal = true,
+                          bool Realign = false,
                           llvm::Type *Padding = nullptr) const;
 
   CodeGen::ABIArgInfo getNaturalAlignIndirectInReg(QualType Ty,
@@ -131,6 +132,12 @@ public:
   virtual llvm::FixedVectorType *
   getOptimalVectorMemoryType(llvm::FixedVectorType *T,
                              const LangOptions &Opt) const;
+
+  virtual llvm::Value *createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+                                         CodeGenFunction &CGF) const;
+  virtual void createCoercedStore(llvm::Value *Val, Address DstAddr,
+                                  const ABIArgInfo &AI, bool DestIsVolatile,
+                                  CodeGenFunction &CGF) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

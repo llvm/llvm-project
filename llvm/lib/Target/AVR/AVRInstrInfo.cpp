@@ -29,14 +29,14 @@
 
 namespace llvm {
 
-AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
-    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
+AVRInstrInfo::AVRInstrInfo(const AVRSubtarget &STI)
+    : AVRGenInstrInfo(STI, AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
       STI(STI) {}
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   const AVRRegisterInfo &TRI = *STI.getRegisterInfo();
   unsigned Opc;

@@ -6,8 +6,8 @@ module m
     real x
   end type t
  contains
-  subroutine s1(a,b,c)
-    real :: a(*), b(:), c(..)
+  subroutine s1(a,b,c,d)
+    real :: a(*), b(:), c(..), d
     !CHECK: error: DIM=1 dimension is out of range for rank-1 assumed-size array
     integer :: ub1(ubound(a,1))
     !CHECK-NOT: error: DIM=1 dimension is out of range for rank-1 assumed-size array
@@ -23,7 +23,11 @@ module m
     !CHECK: error: DIM=0 dimension must be positive
     integer :: lb4(lbound(c,0))
     !CHECK: error: DIM=666 dimension is too large for any array (maximum rank 15)
-    integer :: lb4(lbound(c,666))
+    integer :: lb5(lbound(c,666))
+    !CHECK: error: 'array=' argument has unacceptable rank 0
+    integer :: lb6(lbound(d,1))
+    !CHECK: error: 'array=' argument has unacceptable rank 0
+    integer :: ub4(ubound(d,1))
   end subroutine
   subroutine s2
     integer, parameter :: array(2,3) = reshape([(j, j=1, 6)], shape(array))
@@ -145,9 +149,9 @@ module m
   subroutine s12(x,y)
     class(t), intent(in) :: x
     class(*), intent(in) :: y
-    !CHERK: error: Must be a constant value
+    !CHECK: error: Must be a constant value
     integer, parameter :: bad1 = storage_size(x)
-    !CHERK: error: Must be a constant value
+    !CHECK: error: Must be a constant value
     integer, parameter :: bad2 = storage_size(y)
   end subroutine
   subroutine s13
@@ -166,6 +170,14 @@ module m
     print *, ibits(0, n, 33)
     !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
     print *, ibits(0, 33, n)
+  end
+  subroutine s15
+    use ieee_arithmetic, only: ieee_flag_type, ieee_underflow, ieee_support_flag
+    type(ieee_flag_type) :: f1 = ieee_underflow, f2
+    !CHECK: portability: specification expression refers to local object 'f1' (initialized and saved)
+    integer ok(merge(kind(1),-1,ieee_support_flag(f1, x)))
+    !CHECK: error: Invalid specification expression: reference to local entity 'f2'
+    integer bad(merge(kind(1),-1,ieee_support_flag(f2, x)))
   end
   subroutine warnings
     use ieee_arithmetic, only: ieee_scalb

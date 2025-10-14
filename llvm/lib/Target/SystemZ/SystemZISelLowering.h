@@ -222,6 +222,11 @@ enum NodeType : unsigned {
   VSRA_BY_SCALAR,
   VROTL_BY_SCALAR,
 
+  // Concatenate the vectors in the first two operands, shift them left/right
+  // bitwise by the third operand, and take the first/last half of the result.
+  SHL_DOUBLE_BIT,
+  SHR_DOUBLE_BIT,
+
   // For each element of the output type, sum across all sub-elements of
   // operand 0 belonging to the corresponding element, and add in the
   // rightmost sub-element of the corresponding element of operand 1.
@@ -233,6 +238,11 @@ enum NodeType : unsigned {
   VAC, VSBI,
   // Compute carry/borrow indication for add/subtract with carry/borrow.
   VACCC, VSBCBI,
+
+  // High-word multiply-and-add.
+  VMAH, VMALH,
+  // Widen and multiply even/odd vector elements.
+  VME, VMLE, VMO, VMLO,
 
   // Compare integer vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VICMPE is for equality, VICMPH for "signed greater than"
@@ -420,10 +430,10 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
   }
-  MVT getVectorIdxTy(const DataLayout &DL) const override {
+  unsigned getVectorIdxWidth(const DataLayout &DL) const override {
     // Only the lower 12 bits of an element index are used, so we don't
     // want to clobber the upper 32 bits of a GPR unnecessarily.
-    return MVT::i32;
+    return 32;
   }
   TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
     const override {
@@ -500,10 +510,11 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
   bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const override;
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
@@ -512,14 +523,28 @@ public:
                             bool MathUsed) const override {
     // Form add and sub with overflow intrinsics regardless of any extra
     // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64;
+    return VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128;
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
-  bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
+  bool preferSelectsOverBooleanArithmetic(EVT VT) const override {
+    return true;
+  }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  // This function currently returns cost for srl/ipm/cc sequence for merging.
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                const Value *Rhs) const override;
+
+  // Handle Lowering flag assembly outputs.
+  SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
+                                      const SDLoc &DL,
+                                      const AsmOperandInfo &Constraint,
+                                      SelectionDAG &DAG) const override;
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
@@ -617,6 +642,9 @@ public:
                    bool IsSigned, SDLoc DL, bool DoesNotReturn,
                    bool IsReturnValueUsed) const;
 
+  SDValue useLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, MVT VT, SDValue Arg,
+                     SDLoc DL, SDValue Chain, bool IsStrict) const;
+
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -658,6 +686,7 @@ public:
   }
 
   unsigned getStackProbeSize(const MachineFunction &MF) const;
+  bool hasAndNot(SDValue Y) const override;
 
 private:
   const SystemZSubtarget &Subtarget;
@@ -710,6 +739,8 @@ private:
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
                               unsigned Opcode) const;
@@ -731,6 +762,14 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
+  SDValue lowerFSHL(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFSHR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerLoadF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerStoreF16(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
@@ -754,10 +793,14 @@ private:
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineFCOPYSIGN(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
 
@@ -815,13 +858,17 @@ private:
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
-  bool isFullyInternal(const Function *Fn) const;
+private:
+  bool isInternal(const Function *Fn) const;
+  mutable std::map<const Function *, bool> IsInternalCache;
   void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const Function *F, SDValue Callee) const;
   void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const Function *F) const;
-  bool verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               bool IsInternal) const;
+  bool
+  verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+
+public:
 };
 
 struct SystemZVectorConstantInfo {

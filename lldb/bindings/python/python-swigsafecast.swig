@@ -9,6 +9,10 @@ PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb) 
   return ToSWIGHelper(value_sb.release(), SWIGTYPE_p_lldb__SBValue);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBCommandReturnObject> result_up) {
+  return ToSWIGHelper(result_up.release(), SWIGTYPE_p_lldb__SBCommandReturnObject);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ValueObjectSP value_sp) {
   return ToSWIGWrapper(std::unique_ptr<lldb::SBValue>(new lldb::SBValue(value_sp)));
 }
@@ -136,6 +140,10 @@ PythonObject SWIGBridge::ToSWIGWrapper(
 PythonObject SWIGBridge::ToSWIGWrapper(
     std::unique_ptr<lldb::SBModuleSpec> module_spec_sb) {
   return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::DescriptionLevel level) {
+  return PythonInteger((int64_t) level);
 }
 
 } // namespace python

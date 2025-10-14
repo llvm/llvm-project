@@ -635,3 +635,29 @@ define i32 @test_rotl_and_neg_wrong_mask(i32 %x, i32 %shamt) {
   %or = or i32 %shl, %shr
   ret i32 %or
 }
+
+declare void @use(i16)
+
+; Make sure the reused result does not produce poison.
+
+define i16 @fshl_concat_vector_may_produce_poison(i4 %x, i12 %y) {
+; CHECK-LABEL: @fshl_concat_vector_may_produce_poison(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i4 [[X:%.*]]
+; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i4 [[X_FR]] to i16
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i16 [[ZEXT_X]], 12
+; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i12 [[Y:%.*]] to i16
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i16 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    call void @use(i16 [[XY]])
+; CHECK-NEXT:    [[YX:%.*]] = call i16 @llvm.fshl.i16(i16 [[XY]], i16 [[XY]], i16 4)
+; CHECK-NEXT:    ret i16 [[YX]]
+;
+  %x.fr = freeze i4 %x
+  %zext.x = zext i4 %x.fr to i16
+  %slx = shl nuw nsw i16 %zext.x, 12
+  %zext.y = zext i12 %y to i16
+  %xy = or disjoint i16 %slx, %zext.y
+  call void @use(i16 %xy)
+  %sly = shl nuw i16 %zext.y, 4
+  %yx = or disjoint i16 %sly, %zext.x
+  ret i16 %yx
+}

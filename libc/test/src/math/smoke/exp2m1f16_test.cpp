@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/exp2m1f16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,8 +16,6 @@
 using LlvmLibcExp2m1f16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcExp2m1f16Test, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp2m1f16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -38,13 +37,11 @@ TEST_F(LlvmLibcExp2m1f16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp2m1f16Test, Overflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp2m1f16(max_normal),
                               FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  float16 x = 16.0;
+  float16 x = LIBC_NAMESPACE::fputil::cast<float16>(16.0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
       inf, LIBC_NAMESPACE::exp2m1f16(x), FE_OVERFLOW | FE_INEXACT);
@@ -64,14 +61,14 @@ TEST_F(LlvmLibcExp2m1f16Test, Overflow) {
 }
 
 TEST_F(LlvmLibcExp2m1f16Test, ResultNearNegOne) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(-1.0, LIBC_NAMESPACE::exp2m1f16(neg_max_normal),
                               FE_INEXACT);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.ffcp-1, LIBC_NAMESPACE::exp2m1f16(-11.0));
+  EXPECT_FP_EQ_ALL_ROUNDING(
+      -0x1.ffcp-1,
+      LIBC_NAMESPACE::exp2m1f16(LIBC_NAMESPACE::fputil::cast<float16>(-11.0)));
 
-  float16 x = -12.0;
+  float16 x = LIBC_NAMESPACE::fputil::cast<float16>(-12.0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
       -1.0, LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);

@@ -8,9 +8,9 @@
 
 ; var1 is removed, var2 stays because it's in compiler.used
 ; CHECK-NOT: @var1
-; CHECK: @var2 = addrspace(3) global float undef
-@var1 = addrspace(3) global i32 undef
-@var2 = addrspace(3) global float undef
+; CHECK: @var2 = addrspace(3) global float poison
+@var1 = addrspace(3) global i32 poison
+@var2 = addrspace(3) global float poison
 
 ; constant variables are left to the optimizer / error diagnostics
 ; CHECK: @const_undef = addrspace(3) constant i32 undef
@@ -24,8 +24,8 @@
 @with_init = addrspace(3) global i64 0
 
 ; Only local addrspace variables are transformed
-; CHECK: @addr4 = addrspace(4) global i64 undef
-@addr4 = addrspace(4) global i64 undef
+; CHECK: @addr4 = addrspace(4) global i64 poison
+@addr4 = addrspace(4) global i64 poison
 
 ; Assign to self is treated as any other initializer, i.e. ignored by this pass
 ; CHECK: @toself = addrspace(3) global ptr addrspace(3) @toself, align 8

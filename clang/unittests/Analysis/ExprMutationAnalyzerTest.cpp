@@ -86,9 +86,7 @@ mutatedBy(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
 }
 
 std::string removeSpace(std::string s) {
-  s.erase(std::remove_if(s.begin(), s.end(),
-                         [](char c) { return llvm::isSpace(c); }),
-          s.end());
+  llvm::erase_if(s, llvm::isSpace);
   return s;
 }
 
@@ -868,6 +866,19 @@ TEST(ExprMutationAnalyzerTest, TemplateWithArrayToPointerDecay) {
   const auto ResultsY =
       match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
   EXPECT_THAT(mutatedBy(ResultsY, AST.get()), ElementsAre("y"));
+}
+
+TEST(ExprMutationAnalyzerTest, T1) {
+  const auto AST = buildASTFromCodeWithArgs(
+      "template <class T> struct vector { T &operator[](int t); };"
+      "template <typename T> void func() {"
+      "  vector<int> x;"
+      "  x[T{}] = 3;"
+      "}",
+      {"-fno-delayed-template-parsing"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
 }
 
 // section: special case: all created references are non-mutating themself
@@ -1738,6 +1749,13 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByInitToNonConst) {
         match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
     EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
   }
+  {
+    const std::string Code = "void f() { int* x = nullptr; int*& b = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
 }
 
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByAssignToNonConst) {
@@ -1770,6 +1788,14 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgument) {
   {
     const std::string Code =
         "void b(int *); void f() { int* x = nullptr; b(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "void b(int *&); void f() { int* x = nullptr; b(x); }";
     auto AST = buildASTFromCodeWithArgs(Code, {});
     auto Results =
         match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
@@ -1868,6 +1894,14 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByExplicitCastToNonConst) {
   {
     const std::string Code =
         "void f() { int* x = nullptr; static_cast<int*>(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "void f() { int* x = nullptr; static_cast<int*&>(x); }";
     auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
     auto Results =
         match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());

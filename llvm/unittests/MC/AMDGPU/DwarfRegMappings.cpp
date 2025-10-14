@@ -32,13 +32,14 @@ createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   InitializeAMDGPUTarget();
 
   std::string Error;
-  const Target *T = TargetRegistry::lookupTarget(TStr, Error);
+  Triple TT(TStr);
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T)
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-      TStr, CPU, FS, Options, std::nullopt, std::nullopt));
+  return std::unique_ptr<TargetMachine>(
+      T->createTargetMachine(TT, CPU, FS, Options, std::nullopt, std::nullopt));
 }
 
 TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {

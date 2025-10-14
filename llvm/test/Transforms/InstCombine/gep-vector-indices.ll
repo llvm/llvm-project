@@ -12,14 +12,38 @@ define ptr @vector_splat_indices_v2i64_ext0(ptr %a) {
   ret ptr %res
 }
 
-define ptr @vector_splat_indices_nxv2i64_ext0(ptr %a) {
-; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0(
+define ptr @vector_splat_indices_nxv2i64_ext0_inbounds(ptr %a) {
+; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_inbounds(
 ; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
   %splatof4 = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   %gep = getelementptr inbounds i32, ptr %a, <vscale x 2 x i64> %splatof4
+  %res = extractelement <vscale x 2 x ptr> %gep, i32 0
+  ret ptr %res
+}
+
+define ptr @vector_splat_indices_nxv2i64_ext0_nuw(ptr %a) {
+; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_nuw(
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr nuw i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
+  %splatof4 = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %gep = getelementptr nuw i32, ptr %a, <vscale x 2 x i64> %splatof4
+  %res = extractelement <vscale x 2 x ptr> %gep, i32 0
+  ret ptr %res
+}
+
+define ptr @vector_splat_indices_nxv2i64_ext0_nusw(ptr %a) {
+; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_nusw(
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr nusw nuw i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
+  %splatof4 = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %gep = getelementptr nusw i32, ptr %a, <vscale x 2 x i64> %splatof4
   %res = extractelement <vscale x 2 x ptr> %gep, i32 0
   ret ptr %res
 }

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -34,7 +35,7 @@ using llvm::Record;
 using llvm::RecordKeeper;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
@@ -239,12 +240,16 @@ static const char *const discardableAttrHelperDecl = R"(
 static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
   // Emit all nested namespaces.
   {
-    NamespaceEmitter nsEmitter(os, dialect);
+    DialectNamespaceEmitter nsEmitter(os, dialect);
 
     // Emit the start of the decl.
     std::string cppName = dialect.getCppClassName();
     StringRef superClassName =
         dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
+
+    tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
+                                       dialect.getDescription(),
+                                       /*terminateCmment=*/false);
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
                         superClassName);
 
@@ -352,7 +357,7 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
        << "::" << cppClassName << ")\n";
 
   // Emit all nested namespaces.
-  NamespaceEmitter nsEmitter(os, dialect);
+  DialectNamespaceEmitter nsEmitter(os, dialect);
 
   /// Build the list of dependent dialects.
   std::string dependentDialectRegistrations;

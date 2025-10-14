@@ -20,6 +20,9 @@ add_flang_library(FortranSemantics
   check-io.cpp
   check-namelist.cpp
   check-nullify.cpp
+  check-omp-atomic.cpp
+  check-omp-loop.cpp
+  check-omp-metadirective.cpp
   check-omp-structure.cpp
   check-purity.cpp
   check-return.cpp
@@ -29,16 +32,18 @@ add_flang_library(FortranSemantics
   compute-offsets.cpp
   data-to-inits.cpp
   definable.cpp
+  dump-expr.cpp
   expression.cpp
   mod-file.cpp
+  openmp-dsa.cpp
   openmp-modifiers.cpp
+  openmp-utils.cpp
   pointer-assignment.cpp
   program-tree.cpp
-  resolve-labels.cpp
   resolve-directives.cpp
-  resolve-names-utils.cpp
+  resolve-labels.cpp
   resolve-names.cpp
-  rewrite-directives.cpp
+  resolve-names-utils.cpp
   rewrite-parse-tree.cpp
   runtime-type-info.cpp
   scope.cpp
@@ -53,7 +58,7 @@ add_flang_library(FortranSemantics
   omp_gen
 
   LINK_LIBS
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
 
@@ -62,4 +67,13 @@ add_flang_library(FortranSemantics
   FrontendOpenMP
   FrontendOpenACC
   TargetParser
+)
+
+target_precompile_headers(FortranSemantics PRIVATE
+  [["flang/Semantics/semantics.h"]]
+  [["flang/Semantics/type.h"]]
+  [["flang/Semantics/openmp-modifiers.h"]]
+  [["flang/Semantics/expression.h"]]
+  [["flang/Semantics/tools.h"]]
+  [["flang/Semantics/symbol.h"]]
 )

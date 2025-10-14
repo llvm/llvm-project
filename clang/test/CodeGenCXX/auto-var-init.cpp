@@ -1342,6 +1342,7 @@ TEST_UNINIT(base, base);
 // ZERO-O1-NOT: !annotation
 
 TEST_BRACES(base, base);
+// ZERO-LABEL: @test_base_braces()
 // CHECK-LABEL: @test_base_braces()
 // CHECK:       %braces = alloca %struct.base, align [[ALIGN:[0-9]*]]
 // CHECK-NEXT:  call void @llvm.memset{{.*}}(ptr align [[ALIGN]] %{{.*}}, i8 0, i64 8, i1 false)

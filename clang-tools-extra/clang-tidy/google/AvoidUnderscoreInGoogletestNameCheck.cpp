@@ -1,4 +1,4 @@
-//===--- AvoidUnderscoreInGoogletestNameCheck.cpp - clang-tidy --*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"

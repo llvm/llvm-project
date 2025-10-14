@@ -27,6 +27,8 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
+#include <atomic>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-pseudo"
@@ -51,8 +53,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -2144,7 +2145,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
 
 static void CMSEPopCalleeSaves(const TargetInstrInfo &TII,
                                MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI, int JumpReg,
+                               MachineBasicBlock::iterator MBBI,
                                bool Thumb1Only) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   if (Thumb1Only) {
@@ -2418,7 +2419,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       CMSERestoreFPRegs(MBB, MBBI, DL, OriginalClearRegs); // restore FP registers
 
-      CMSEPopCalleeSaves(*TII, MBB, MBBI, JumpReg, AFI->isThumb1OnlyFunction());
+      CMSEPopCalleeSaves(*TII, MBB, MBBI, AFI->isThumb1OnlyFunction());
 
       MI.eraseFromParent();
       return true;
@@ -2543,9 +2544,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
     case ARM::Int_eh_sjlj_dispatchsetup: {
       MachineFunction &MF = *MI.getParent()->getParent();
-      const ARMBaseInstrInfo *AII =
-        static_cast<const ARMBaseInstrInfo*>(TII);
-      const ARMBaseRegisterInfo &RI = AII->getRegisterInfo();
+      const ARMBaseRegisterInfo &RI = TII->getRegisterInfo();
       // For functions using a base pointer, we rematerialize it (via the frame
       // pointer) here since eh.sjlj.setjmp and eh.sjlj.longjmp don't do it
       // for us. Otherwise, expand to nothing.

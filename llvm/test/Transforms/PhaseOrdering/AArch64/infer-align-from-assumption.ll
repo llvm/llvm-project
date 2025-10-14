@@ -7,7 +7,7 @@ declare void @llvm.assume(i1 noundef)
 
 define i32 @earlycse_entry(ptr %p) {
 ; CHECK-LABEL: define i32 @earlycse_entry(
-; CHECK-SAME: ptr nocapture [[P:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr captures(none) [[P:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_I]], i64 4) ]
 ; CHECK-NEXT:    [[L_ASSUME_ALIGNED_I_I:%.*]] = load i32, ptr [[L_I]], align 4
@@ -30,7 +30,7 @@ define i32 @earlycse_entry(ptr %p) {
 
 define i32 @earlycse_fn1(ptr %p) {
 ; CHECK-LABEL: define i32 @earlycse_fn1(
-; CHECK-SAME: ptr nocapture [[P:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr captures(none) [[P:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L]], i64 4) ]
 ; CHECK-NEXT:    [[L_ASSUME_ALIGNED_I:%.*]] = load i32, ptr [[L]], align 4
@@ -50,7 +50,7 @@ define i32 @earlycse_fn1(ptr %p) {
 
 define i32 @load_assume_aligned(ptr %p) {
 ; CHECK-LABEL: define i32 @load_assume_aligned(
-; CHECK-SAME: ptr [[P:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 4) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @swap(i32 [[DOT0_COPYLOAD]])
@@ -66,7 +66,7 @@ declare i32 @swap(i32)
 
 define void @sroa_align_entry(ptr %p) {
 ; CHECK-LABEL: define void @sroa_align_entry(
-; CHECK-SAME: ptr [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD_I_I_I:%.*]] = load i64, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[DOT0_COPYLOAD_I_I_I]] to ptr
@@ -82,7 +82,7 @@ define void @sroa_align_entry(ptr %p) {
 
 define ptr @sroa_fn1(ptr %p) {
 ; CHECK-LABEL: define ptr @sroa_fn1(
-; CHECK-SAME: ptr nocapture readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L]], i64 8) ]
 ; CHECK-NEXT:    [[L_FN3_I_I:%.*]] = load i64, ptr [[L]], align 8
@@ -96,7 +96,7 @@ define ptr @sroa_fn1(ptr %p) {
 
 define ptr @sroa_fn2(ptr %p) {
 ; CHECK-LABEL: define ptr @sroa_fn2(
-; CHECK-SAME: ptr [[P:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD_I_I:%.*]] = load i64, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[DOT0_COPYLOAD_I_I]] to ptr
@@ -109,7 +109,7 @@ define ptr @sroa_fn2(ptr %p) {
 
 define i64 @sroa_fn3(ptr %0) {
 ; CHECK-LABEL: define i64 @sroa_fn3(
-; CHECK-SAME: ptr [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 8) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD_I:%.*]] = load i64, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    ret i64 [[DOT0_COPYLOAD_I]]

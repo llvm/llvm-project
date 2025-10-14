@@ -1,0 +1,8 @@
+{
+  "setjmp": {
+    "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
+      "value": false,
+      "doc": "Avoid setjmp saving the value of x18, and longjmp restoring it. The Apple AArch64 ABI specifies that this register is reserved and should not be used"
+    }
+  }
+}
