@@ -176,7 +176,7 @@ llvm::raw_ostream &operator<<(
       os << x;
     }
   }
-  os << static_cast<const WithOmpDeclarative&>(x);
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -608,7 +608,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
       common::visitors{
           [&](const UnknownDetails &) {},
           [&](const MainProgramDetails &x) {
-            os << static_cast<const WithOmpDeclarative&>(x);
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const ModuleDetails &x) {
             if (x.isSubmodule()) {
@@ -628,7 +628,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             if (x.isDefaultPrivate()) {
               os << " isDefaultPrivate";
             }
-            os << static_cast<const WithOmpDeclarative&>(x);
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());
