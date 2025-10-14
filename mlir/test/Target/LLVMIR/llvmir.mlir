@@ -2555,6 +2555,17 @@ llvm.func @always_inline() attributes { always_inline } {
 
 // -----
 
+// CHECK-LABEL: @inline_hint
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @inline_hint() attributes { inline_hint } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: inlinehint
+
+// -----
+
 // CHECK-LABEL: @optimize_none
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @optimize_none() attributes { no_inline, optimize_none } {
