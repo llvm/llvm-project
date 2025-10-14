@@ -27,7 +27,7 @@ public:
   /// then you need to make sure the breakpoints don't get deleted out from
   /// under you.  To do that, pass true for preserving, and so long as there is
   /// a location for a given breakpoint in the collection, the breakpoint will
-  /// not get destroyed. 
+  /// not get destroyed.
   BreakpointLocationCollection(bool preserving = false);
 
   ~BreakpointLocationCollection();
@@ -178,9 +178,9 @@ private:
   struct RefCountedBPSP {
     RefCountedBPSP(lldb::BreakpointSP in_bp_sp) : ref_cnt(1), bp_sp(in_bp_sp) {}
     uint64_t ref_cnt;
-    lldb::BreakpointSP bp_sp; 
+    lldb::BreakpointSP bp_sp;
   };
-  std::map<lldb::break_id_t, RefCountedBPSP> m_preserved_bps; 
+  std::map<lldb::break_id_t, RefCountedBPSP> m_preserved_bps;
 
 public:
   typedef llvm::iterator_range<collection::const_iterator>

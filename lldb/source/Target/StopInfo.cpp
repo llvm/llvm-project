@@ -94,7 +94,7 @@ public:
       : StopInfo(thread, break_id), m_should_stop(false),
         m_should_stop_is_valid(false), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_all_internal(false), m_was_one_shot(false), 
+        m_was_all_internal(false), m_was_one_shot(false),
         m_async_stopped_locs(true) {
     StoreBPInfo();
   }
@@ -103,7 +103,7 @@ public:
       : StopInfo(thread, break_id), m_should_stop(should_stop),
         m_should_stop_is_valid(true), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_all_internal(false), m_was_one_shot(false), 
+        m_was_all_internal(false), m_was_one_shot(false),
         m_async_stopped_locs(true) {
     StoreBPInfo();
   }

@@ -17,8 +17,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 // BreakpointLocationCollection constructor
-BreakpointLocationCollection::BreakpointLocationCollection(bool preserving) : 
-    m_preserving_bkpts(preserving) {}
+BreakpointLocationCollection::BreakpointLocationCollection(bool preserving)
+    : m_preserving_bkpts(preserving) {}
 
 // Destructor
 BreakpointLocationCollection::~BreakpointLocationCollection() = default;
@@ -35,8 +35,8 @@ void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
       auto entry = m_preserved_bps.find(bp_id);
       if (entry == m_preserved_bps.end())
         m_preserved_bps.emplace(bp_id, RefCountedBPSP(bkpt.shared_from_this()));
-    else
-      entry->second.ref_cnt++;
+      else
+        entry->second.ref_cnt++;
     }
   }
 }
@@ -48,8 +48,8 @@ bool BreakpointLocationCollection::Remove(lldb::break_id_t bp_id,
   if (pos != m_break_loc_collection.end()) {
     if (m_preserving_bkpts) {
       auto entry = m_preserved_bps.find(bp_id);
-      assert(entry != m_preserved_bps.end() 
-        && "Breakpoint added to base but not preserving map.");
+      assert(entry != m_preserved_bps.end() &&
+             "Breakpoint added to base but not preserving map.");
       if (--entry->second.ref_cnt == 0)
         m_preserved_bps.erase(entry);
     }

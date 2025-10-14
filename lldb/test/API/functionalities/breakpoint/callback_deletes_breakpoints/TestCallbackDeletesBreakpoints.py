@@ -31,8 +31,10 @@ class TestBreakpointDeletionInCallback(TestBase):
         # Now set a breakpoint on "I did something" several times
         #
         bkpt_numbers = []
-        for idx in range(0,5):
-            bkpt_numbers.append(lldbutil.run_break_set_by_source_regexp(self, "// Deletable location"))
+        for idx in range(0, 5):
+            bkpt_numbers.append(
+                lldbutil.run_break_set_by_source_regexp(self, "// Deletable location")
+            )
 
         # And add commands to the third one to delete two others:
         deleter = target.FindBreakpointByID(bkpt_numbers[2])
@@ -51,11 +53,11 @@ class TestBreakpointDeletionInCallback(TestBase):
         self.assertEqual(len(stop_data), 10)
         # We should have been able to get break ID's and locations for all the
         # breakpoints that we originally hit, but some won't be around anymore:
-        for idx in range(0,5):
-            bkpt_id = stop_data[idx*2]
+        for idx in range(0, 5):
+            bkpt_id = stop_data[idx * 2]
             print(f"{idx}: {bkpt_id}")
             self.assertIn(bkpt_id, bkpt_numbers, "Found breakpoints are right")
-            loc_id = stop_data[idx*2 + 1]
+            loc_id = stop_data[idx * 2 + 1]
             self.assertEqual(loc_id, 1, "All breakpoints have one location")
             bkpt = target.FindBreakpointByID(bkpt_id)
             if bkpt_id in deleted_ids:
