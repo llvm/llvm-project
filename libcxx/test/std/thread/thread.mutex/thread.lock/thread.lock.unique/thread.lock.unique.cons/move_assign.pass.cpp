@@ -24,13 +24,22 @@ int main(int, char**) {
   std::unique_lock<checking_mutex> lk0(m0);
   std::unique_lock<checking_mutex> lk1(m1);
 
+  // Test self move assignment for lk0.
+  lk0 = std::move(lk0);
+  assert(lk0.mutex() == std::addressof(m0));
+  assert(lk0.owns_lock() == true);
+
   auto& result = (lk1 = std::move(lk0));
 
   assert(&result == &lk1);
   assert(lk1.mutex() == std::addressof(m0));
   assert(lk1.owns_lock());
   assert(lk0.mutex() == nullptr);
-  assert(!lk0.owns_lock());
+  assert(lk0.owns_lock() == false);
 
+  // Test self move assignment for lk1
+  lk1 = std::move(lk1);
+  assert(lk1.mutex() == std::addressof(m0));
+  assert(lk1.owns_lock() == true);
   return 0;
 }
