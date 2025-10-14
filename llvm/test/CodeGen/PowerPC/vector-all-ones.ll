@@ -13,7 +13,7 @@
 ; followed by subtraction operation.
 
 ; Function for the vector type v2i64 `a + {1, 1}`
-define dso_local noundef <2 x i64> @test_v2i64(<2 x i64> noundef %a) {
+define <2 x i64> @test_v2i64(<2 x i64> %a) {
 ; CHECK-LABEL: test_v2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw v3, 1
@@ -26,7 +26,7 @@ entry:
 }
 
 ; Function for the vector type v4i32 `a + {1, 1, 1, 1}`
-define dso_local noundef <4 x i32> @test_v4i32(<4 x i32> %a) {
+define <4 x i32> @test_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: test_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw v3, 1
@@ -38,7 +38,7 @@ entry:
 }
 
 ; Function for the vector type v8i16 `a + {1, 1, 1, 1, 1, 1, 1, 1}`
-define dso_local noundef <8 x i16> @test_v8i16(<8 x i16> noundef %a) {
+define <8 x i16> @test_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: test_v8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltish v3, 1
@@ -50,7 +50,7 @@ entry:
 }
 
 ; Function for the vector type v16i8 `a + {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}`
-define dso_local noundef <16 x i8> @test_16i8(<16 x i8> noundef %a) {
+define <16 x i8> @test_16i8(<16 x i8> %a) {
 ; CHECK-LABEL: test_16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v3, 1
