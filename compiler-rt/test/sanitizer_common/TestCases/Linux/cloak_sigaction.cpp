@@ -42,8 +42,9 @@ int main(int argc, char *argv[]) {
 
   fflush(stdout);
 
-  char *c = (char *)0x123;
-  printf("%d\n", *c);
+  // Trying to organically segfault by dereferencing a pointer can be tricky
+  // in builds with assertions.
+  raise(SIGSEGV);
   // CUSTOM: Custom signal handler
   // SANITIZER: Sanitizer:DEADLYSIGNAL
 
