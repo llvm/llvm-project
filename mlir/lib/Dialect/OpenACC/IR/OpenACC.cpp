@@ -1019,8 +1019,8 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
 /// Returns the init block on success, or nullptr on failure.
 /// Sets needsFree to indicate if the allocated memory requires deallocation.
 static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
-                                               Value var, StringRef varName,
-                                               ValueRange bounds, Type varType,
+                                               Type varType, StringRef varName,
+                                               ValueRange bounds,
                                                bool &needsFree) {
   // Create init block with arguments: original value + bounds
   SmallVector<Type> argTypes{varType};
@@ -1070,8 +1070,8 @@ static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
 /// Returns the copy block on success, or nullptr on failure.
 /// TODO: Handle MappableType - it does not yet have a copy API.
 static std::unique_ptr<Block> createCopyRegion(OpBuilder &builder, Location loc,
-                                               ValueRange bounds,
-                                               Type varType) {
+                                               Type varType,
+                                               ValueRange bounds) {
   // Create copy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> copyArgTypes{varType, varType};
@@ -1114,9 +1114,9 @@ static std::unique_ptr<Block> createCopyRegion(OpBuilder &builder, Location loc,
 /// Create and populate a destroy region for privatization recipes.
 /// Returns the destroy block on success, or nullptr if not needed.
 static std::unique_ptr<Block> createDestroyRegion(OpBuilder &builder,
-                                                  Location loc, Value allocRes,
-                                                  ValueRange bounds,
-                                                  Type varType) {
+                                                  Location loc, Type varType,
+                                                  Value allocRes,
+                                                  ValueRange bounds) {
   // Create destroy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> destroyArgTypes{varType, varType};
@@ -1199,7 +1199,7 @@ LogicalResult acc::PrivateRecipeOp::verifyRegions() {
 
 std::optional<PrivateRecipeOp>
 PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
-                                   StringRef recipeName, Value var,
+                                   StringRef recipeName, Type varType,
                                    StringRef varName, ValueRange bounds) {
 
   // Check if a symbol with this name already exists in the symbol table.
@@ -1209,8 +1209,6 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
       SymbolTable::lookupNearestSymbolFrom(
           parentOp, mlir::StringAttr::get(builder.getContext(), varName)))
     return std::nullopt;
-
-  Type varType = var.getType();
 
   // First, validate that we can handle this variable type
   bool isMappable = isa<MappableType>(varType);
@@ -1228,7 +1226,7 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
 
   bool needsFree = false;
   auto initBlock =
-      createInitRegion(builder, loc, var, varName, bounds, varType, needsFree);
+      createInitRegion(builder, loc, varType, varName, bounds, needsFree);
   if (!initBlock)
     return std::nullopt;
 
@@ -1239,7 +1237,7 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     auto yieldOp = cast<acc::YieldOp>(initBlock->getTerminator());
     Value allocRes = yieldOp.getOperand(0);
 
-    destroyBlock = createDestroyRegion(builder, loc, allocRes, bounds, varType);
+    destroyBlock = createDestroyRegion(builder, loc, varType, allocRes, bounds);
     if (!destroyBlock)
       return std::nullopt;
   }
@@ -1289,7 +1287,7 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
 
 std::optional<FirstprivateRecipeOp>
 FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
-                                        StringRef recipeName, Value var,
+                                        StringRef recipeName, Type varType,
                                         StringRef varName, ValueRange bounds) {
 
   // Check if a symbol with this name already exists in the symbol table.
@@ -1299,8 +1297,6 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
       SymbolTable::lookupNearestSymbolFrom(
           parentOp, mlir::StringAttr::get(builder.getContext(), varName)))
     return std::nullopt;
-
-  Type varType = var.getType();
 
   // First, validate that we can handle this variable type
   bool isMappable = isa<MappableType>(varType);
@@ -1318,11 +1314,11 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
 
   bool needsFree = false;
   auto initBlock =
-      createInitRegion(builder, loc, var, varName, bounds, varType, needsFree);
+      createInitRegion(builder, loc, varType, varName, bounds, needsFree);
   if (!initBlock)
     return std::nullopt;
 
-  auto copyBlock = createCopyRegion(builder, loc, bounds, varType);
+  auto copyBlock = createCopyRegion(builder, loc, varType, bounds);
   if (!copyBlock)
     return std::nullopt;
 
@@ -1333,7 +1329,7 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     auto yieldOp = cast<acc::YieldOp>(initBlock->getTerminator());
     Value allocRes = yieldOp.getOperand(0);
 
-    destroyBlock = createDestroyRegion(builder, loc, allocRes, bounds, varType);
+    destroyBlock = createDestroyRegion(builder, loc, varType, allocRes, bounds);
     if (!destroyBlock)
       return std::nullopt;
   }

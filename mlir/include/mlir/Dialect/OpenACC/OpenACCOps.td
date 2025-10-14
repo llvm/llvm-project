@@ -1328,7 +1328,7 @@ def OpenACC_PrivateRecipeOp
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
         ::llvm::StringRef recipeName,
-        ::mlir::Value var,
+        ::mlir::Type varType,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
   }];
@@ -1438,7 +1438,7 @@ def OpenACC_FirstprivateRecipeOp
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
         ::llvm::StringRef recipeName,
-        ::mlir::Value var,
+        ::mlir::Type varType,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
   }];
