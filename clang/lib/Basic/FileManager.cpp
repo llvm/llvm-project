@@ -585,17 +585,17 @@ FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
   return getBufferImpl(FilePath);
 }
 
-llvm::ErrorOr<std::optional<cas::ObjectRef>>
+llvm::ErrorOr<cas::ObjectRef>
 FileManager::getObjectRefForFileContent(const Twine &Filename) {
   auto getObjectRefImpl =
-      [&](const Twine &Name) -> llvm::ErrorOr<std::optional<cas::ObjectRef>> {
+      [&](const Twine &Name) -> llvm::ErrorOr<cas::ObjectRef> {
     auto F = FS->openFileForRead(Name);
     if (!F)
       return F.getError();
 
     auto *CASFile = dyn_cast<llvm::cas::CASBackedFile>(F->get());
     if (!CASFile)
-      return std::nullopt;
+      return std::make_error_code(std::errc::not_supported);
 
     return CASFile->getObjectRefForContent();
   };

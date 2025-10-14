@@ -700,7 +700,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     if (PPOpts.ImplicitPCHInclude.empty())
       return Error::success(); // no need for additional work.
 
-    llvm::ErrorOr<std::optional<cas::ObjectRef>> CASContents =
+    llvm::ErrorOr<cas::ObjectRef> CASContents =
         FM.getObjectRefForFileContent(PPOpts.ImplicitPCHInclude);
     if (!CASContents)
       return llvm::errorCodeToError(CASContents.getError());
@@ -710,7 +710,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       PCHFilename = PPOpts.ImplicitPCHInclude;
 
     auto PCHFile =
-        cas::IncludeTree::File::create(DB, PCHFilename, **CASContents);
+        cas::IncludeTree::File::create(DB, PCHFilename, *CASContents);
     if (!PCHFile)
       return PCHFile.takeError();
     PCHRef = PCHFile->getRef();
@@ -897,15 +897,14 @@ Expected<cas::ObjectRef> IncludeTreeBuilder::addToFileList(FileManager &FM,
     Filename = PathStorage;
   }
 
-  llvm::ErrorOr<std::optional<cas::ObjectRef>> CASContents =
+  llvm::ErrorOr<cas::ObjectRef> CASContents =
       FM.getObjectRefForFileContent(Filename);
   if (!CASContents)
     return llvm::errorCodeToError(CASContents.getError());
-  assert(*CASContents);
 
   auto addFile = [&](StringRef Filename) -> Expected<cas::ObjectRef> {
     assert(!Filename.empty());
-    auto FileNode = createIncludeFile(Filename, **CASContents);
+    auto FileNode = createIncludeFile(Filename, *CASContents);
     if (!FileNode)
       return FileNode.takeError();
     IncludedFiles.push_back(

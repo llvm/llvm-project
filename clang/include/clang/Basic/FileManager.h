@@ -279,7 +279,7 @@ public:
   /// for its contents if supported by the file system, and then closes the
   /// file. If both the buffer and its `cas::ObjectRef` are needed use \p
   /// getBufferForFile to avoid the extra file lookup.
-  llvm::ErrorOr<std::optional<cas::ObjectRef>>
+  llvm::ErrorOr<cas::ObjectRef>
   getObjectRefForFileContent(const Twine &Filename);
 
 private:
