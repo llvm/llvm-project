@@ -1499,6 +1499,40 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
+    cir::PtrDiffOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto dstTy = mlir::cast<cir::IntType>(op.getType());
+  auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+
+  auto lhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
+                                                     adaptor.getLhs());
+  auto rhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
+                                                     adaptor.getRhs());
+
+  auto diff =
+      rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), llvmDstTy, lhs, rhs);
+
+  cir::PointerType ptrTy = op.getLhs().getType();
+  auto typeSize = getTypeSize(ptrTy.getPointee(), *op);
+
+  // Avoid silly division by 1.
+  auto resultVal = diff.getResult();
+  if (typeSize != 1) {
+    auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), llvmDstTy, typeSize);
+
+    if (dstTy.isUnsigned())
+      resultVal =
+          rewriter.create<mlir::LLVM::UDivOp>(op.getLoc(), diff, typeSizeVal);
+    else
+      resultVal =
+          rewriter.create<mlir::LLVM::SDivOp>(op.getLoc(), diff, typeSizeVal);
+  }
+  rewriter.replaceOp(op, resultVal);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMExpectOpLowering::matchAndRewrite(
     cir::ExpectOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

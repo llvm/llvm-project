@@ -16,3 +16,17 @@ int addrcmp(const void* a, const void* b) {
   // LLVM: trunc i64 %[[SUB]] to i32
   return *(const void**)a - *(const void**)b;
 }
+
+unsigned long long test_ptr_diff(int *a, int* b) {
+  // CIR-LABEL: test_ptr_diff
+  // CIR: %[[D:.*]] = cir.ptr_diff{{.*}} : !cir.ptr<!s32i> -> !u64i
+  // CIR: cir.return %[[D]] : !u64i
+
+  // LLVM-LABEL: @_Z13test_ptr_diffPiS_
+  // LLVM: %[[IA:.*]] = ptrtoint ptr %{{.*}} to i64
+  // LLVM: %[[IB:.*]] = ptrtoint ptr %{{.*}} to i64
+  // LLVM: %[[SUB:.*]] = sub i64 %[[IA]], %[[IB]]
+  // LLVM: %[[Q:.*]] = sdiv exact i64 %[[SUB]], 4
+  // LLVM: ret i64 %[[Q]]
+  return a - b;
+}

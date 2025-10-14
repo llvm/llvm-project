@@ -1735,8 +1735,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   //
   // See more in `EmitSub` in CGExprScalar.cpp.
   assert(!cir::MissingFeatures::ptrDiffOp());
-  cgf.cgm.errorNYI("ptrdiff");
-  return {};
+  return builder.create<cir::PtrDiffOp>(cgf.getLoc(ops.loc), cgf.PtrDiffTy, ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
