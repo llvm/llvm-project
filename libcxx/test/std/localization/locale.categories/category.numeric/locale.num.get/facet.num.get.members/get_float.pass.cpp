@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The fix for LWG2381 (https://github.com/llvm/llvm-project/pull/77948) changed
-// behavior of FP parsing, while Apple back-deployment targets remain broken due
-// to the dylib.
-// UNSUPPORTED: using-built-library-before-llvm-19
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
+// The fix for LWG2381 (https://github.com/llvm/llvm-project/pull/77948) changed behavior of
+// FP parsing. This requires 3e15c97fa3812993bdc319827a5c6d867b765ae8 in the dylib.
+// XFAIL: using-built-library-before-llvm-19
 
 // <locale>
 
@@ -330,6 +332,66 @@ int main(int, char**)
         assert(base(iter) == str+1);
         assert(err == ios.goodbit);
         assert(v == 2);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = ".5";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 2);
+      assert(err == ios.goodbit);
+      assert(v == 0.5f);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = "-.5";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 3);
+      assert(err == ios.goodbit);
+      assert(v == -0.5f);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = ".5E1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 4);
+      assert(err == ios.goodbit);
+      assert(v == 5.0f);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = "-.5e+1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 6);
+      assert(err == ios.goodbit);
+      assert(v == -5.0f);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = ".625E-1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 7);
+      assert(err == ios.goodbit);
+      assert(v == 0.0625f);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = "-.3125e-1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 9);
+      assert(err == ios.goodbit);
+      assert(v == -0.03125f);
     }
 
   return 0;

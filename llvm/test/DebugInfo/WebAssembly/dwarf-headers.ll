@@ -12,11 +12,10 @@
 ; RUN:     -filetype=obj -O0 -mtriple= < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
 
-; RUN: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
+; RUN: llc -split-dwarf-file=foo.dwo \
 ; RUN:     -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple= < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-5
-; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-5
 
 ; This test is derived from test/CodeGen/X86/dwarf-headers.ll
 
@@ -76,15 +75,15 @@
 ;
 ; O-5: .debug_info contents:
 ; O-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_skeleton, abbr_offset
-; O-5-SAME:        DWO_id = 0xccd7e58ef8bf4aa6
+; O-5-SAME:        DWO_id = [[HASH:0x[0-9a-f]*]]
 ; O-5: 0x00000014: DW_TAG_skeleton_unit
 ;
-; DWO-5: .debug_info.dwo contents:
-; DWO-5: 0x00000000: Type Unit: {{.*}} version = 0x0005, unit_type = DW_UT_split_type, abbr_offset
-; DWO-5: 0x00000018: DW_TAG_type_unit
-; DWO-5: 0x00000035: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset
-; DWO-5-SAME:        DWO_id = 0xccd7e58ef8bf4aa6
-; DWO-5: 0x00000049: DW_TAG_compile_unit
+; O-5: .debug_info.dwo contents:
+; O-5: 0x00000000: Type Unit: {{.*}} version = 0x0005, unit_type = DW_UT_split_type, abbr_offset
+; O-5: 0x00000018: DW_TAG_type_unit
+; O-5: 0x00000035: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset
+; O-5-SAME:        DWO_id = [[HASH]]
+; O-5: 0x00000049: DW_TAG_compile_unit
 
 
 ; ModuleID = 't.cpp'

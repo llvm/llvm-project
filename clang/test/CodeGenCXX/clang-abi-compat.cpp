@@ -160,3 +160,15 @@ template <typename T> void test10(typename T::Y::a, typename T::Y::b, float*, fl
 // PRE15: @_Z6test10I1XEvNT_1Y1aENS1_1Y1bEPfS4_
 // V15:   @_Z6test10I1XEvNT_1Y1aENS2_1bEPfS5_
 template void test10<X>(int, int, float*, float*);
+
+namespace test_substitution {
+struct S { int f(void *, void *); };
+
+typedef int (S::*s_func)(void *, void *);
+
+// clang used to incorrectly emit 'S0_' for the second 'void *' parameter type
+// when targeting older ABIs because of a bug in the mangler.
+
+// CHECK-LABEL: define dso_local void @_ZN17test_substitution4foo1EMNS_1SEFiPvS1_E(
+void foo1(s_func s) {}
+}

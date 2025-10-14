@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 5.1
 ! Check OpenMP construct validity for the following directives:
@@ -16,7 +14,6 @@ program main
   !$omp parallel num_threads(x1)
   !$omp end parallel
 
-  !ERROR: COPYPRIVATE clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive 
   !$omp single copyprivate(x2, /blk1/)
   !$omp end single
 

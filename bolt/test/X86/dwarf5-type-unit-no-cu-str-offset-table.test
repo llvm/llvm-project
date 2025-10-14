@@ -3,11 +3,11 @@
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-basic-cu.s -o %tmain.o
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-types-no-cu.s -o %thelper.o
 # RUN: %clang %cflags %tmain.o %thelper.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.exe | FileCheck -check-prefix=PRE-BOLT %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt | FileCheck -check-prefix=POST-BOLT %s
 
-## This test checks we correclty re-generate .debug_str_offsets when there are type units that have an offset not shared with CU.
+## This test checks we correctly re-generate .debug_str_offsets when there are type units that have an offset not shared with CU.
 
 # PRE-BOLT: .debug_str_offsets contents
 # PRE-BOLT-NEXT: Contribution size = 24, Format = DWARF32, Version = 5

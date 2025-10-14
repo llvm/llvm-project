@@ -6,16 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// In macosx10.9 to macosx10.14, streams are provided in the dylib AND they
-// have a bug in how they handle null-termination in case of errors (see D40677).
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
-
 // <istream>
 
 // basic_istream<charT,traits>& getline(char_type* s, streamsize n, char_type delim);
 
 #include <istream>
 #include <cassert>
+#include <streambuf>
 
 #include "test_macros.h"
 

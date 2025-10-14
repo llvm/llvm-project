@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -119,6 +120,23 @@ bool IsValidCloning(const MachineFunction &MF,
           return false;
         }
       }
+      if (PathBB->isMachineBlockAddressTaken()) {
+        // Avoid cloning blocks which have their address taken since we can't
+        // rewire branches to those blocks as easily.
+        WithColor::warning()
+            << "block #" << BBID
+            << " has its machine block address taken in function "
+            << MF.getName() << "\n";
+        return false;
+      }
+      if (PathBB->isInlineAsmBrIndirectTarget()) {
+        // Similarly for branches to the block within an asm goto.
+        WithColor::warning()
+            << "block #" << BBID
+            << " is a branch target of an 'asm goto' in function "
+            << MF.getName() << "\n";
+        return false;
+      }
     }
 
     if (I != ClonePath.size() - 1 && !PathBB->empty() &&
@@ -189,9 +207,7 @@ bool ApplyCloning(MachineFunction &MF,
   }
   return AnyPathsCloned;
 }
-} // end anonymous namespace
 
-namespace llvm {
 class BasicBlockPathCloning : public MachineFunctionPass {
 public:
   static char ID;
@@ -211,7 +227,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // namespace llvm
+} // namespace
 
 char BasicBlockPathCloning::ID = 0;
 INITIALIZE_PASS_BEGIN(

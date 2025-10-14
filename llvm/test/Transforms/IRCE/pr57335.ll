@@ -2,7 +2,7 @@
 ; RUN: opt -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; Make sure we don't crash.
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: test
 bb:
   %tmp = icmp ult i32 0, undef
@@ -41,7 +41,7 @@ bb17:                                             ; preds = %bb12
 
 bb20:                                             ; preds = %bb17
   %tmp21 = add nuw nsw i32 %tmp7, 2
-  br i1 undef, label %bb22, label %bb2
+  br i1 %arg, label %bb22, label %bb2
 
 bb22:                                             ; preds = %bb20
   %tmp23 = phi i32 [ %tmp18, %bb20 ]

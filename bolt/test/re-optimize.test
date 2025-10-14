@@ -1,7 +1,7 @@
-# Check that we detect re-optimization attempt.
+## Check that we detect re-optimization attempt.
 
-# This test uses the clang driver without target flags and will only succeed
-# on Linux systems where the host triple matches the target.
+## This test uses the clang driver without target flags and will only succeed
+## on Linux systems where the host triple matches the target.
 REQUIRES: system-linux
 
 RUN: %clang %cflags %S/Inputs/icf-jump-tables.c -o %t.exe

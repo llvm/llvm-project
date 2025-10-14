@@ -38,8 +38,10 @@ liveins:
 frameInfo:
   maxAlignment:    1
   localFrameSize:  32
-  savePoint:       '%bb.2'
-  restorePoint:    '%bb.2'
+  savePoint:
+    - point:           '%bb.2'
+  restorePoint:
+    - point:           '%bb.2'
 stack:
   - { id: 0, size: 32, alignment: 1, local-offset: -32 }
 machineFunctionInfo:
@@ -99,6 +101,7 @@ body:             |
   ; CHECK-NEXT:   SB killed renamable $x12, $x2, 14 :: (store (s8) into %stack.0 + 14)
   ; CHECK-NEXT:   SB killed renamable $x13, $x2, 13 :: (store (s8) into %stack.0 + 13)
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 32
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
   ; CHECK-NEXT:   PseudoRET

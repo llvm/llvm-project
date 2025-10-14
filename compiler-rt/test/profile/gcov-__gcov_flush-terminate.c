@@ -8,7 +8,6 @@
 // RUN: llvm-cov gcov -t gcov-__gcov_flush-terminate.gcda | FileCheck %s
 
 // CHECK:             -:    0:Runs:1
-// CHECK-NEXT:        -:    0:Programs:1
 
 void __gcov_dump(void);
 void __gcov_reset(void);

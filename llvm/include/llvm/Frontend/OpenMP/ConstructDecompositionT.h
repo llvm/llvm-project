@@ -56,7 +56,7 @@ namespace detail {
 template <typename Container, typename Predicate>
 typename std::remove_reference_t<Container>::iterator
 find_unique(Container &&container, Predicate &&pred) {
-  auto first = std::find_if(container.begin(), container.end(), pred);
+  auto first = llvm::find_if(container, pred);
   if (first == container.end())
     return first;
   auto second = std::find_if(std::next(first), container.end(), pred);
@@ -236,6 +236,11 @@ private:
                    const ClauseTy *);
   bool applyClause(const tomp::clause::NowaitT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
+  bool
+  applyClause(const tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy> &clause,
+              const ClauseTy *);
+  bool applyClause(const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
+                   const ClauseTy *);
 
   uint32_t version;
   llvm::omp::Directive construct;
@@ -371,9 +376,8 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 // anything and return false, otherwise return true.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *node) {
-  auto unique = detail::find_unique(leafs, [=](const auto &dirInfo) {
-    return llvm::omp::isAllowedClauseForDirective(dirInfo.id, node->id,
-                                                  version);
+  auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
+    return llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version);
   });
 
   if (unique != leafs.end()) {
@@ -438,8 +442,8 @@ bool ConstructDecompositionT<C, H>::applyToAll(const ClauseTy *node) {
 }
 
 template <typename C, typename H>
-template <typename Clause>
-bool ConstructDecompositionT<C, H>::applyClause(Clause &&clause,
+template <typename Specific>
+bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
                                                 const ClauseTy *node) {
   // The default behavior is to find the unique directive to which the
   // given clause may be applied. If there are no such directives, or
@@ -704,6 +708,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
                      tomp::clause::MapT<TypeTy, IdTy, ExprTy>{
                          {/*MapType=*/MapType::Tofrom,
                           /*MapTypeModifier=*/std::nullopt,
+                          /*RefModifier=*/std::nullopt,
                           /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
                           /*LocatorList=*/std::move(tofrom)}});
       dirTarget->clauses.push_back(map);
@@ -791,25 +796,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // assigned to which leaf constructs.
 
   // [5.2:340:33]
-  auto canMakePrivateCopy = [](llvm::omp::Clause id) {
-    switch (id) {
-    // Clauses with "privatization" property:
-    case llvm::omp::Clause::OMPC_firstprivate:
-    case llvm::omp::Clause::OMPC_in_reduction:
-    case llvm::omp::Clause::OMPC_lastprivate:
-    case llvm::omp::Clause::OMPC_linear:
-    case llvm::omp::Clause::OMPC_private:
-    case llvm::omp::Clause::OMPC_reduction:
-    case llvm::omp::Clause::OMPC_task_reduction:
-      return true;
-    default:
-      return false;
-    }
-  };
-
   bool applied = applyIf(node, [&](const auto &leaf) {
     return llvm::any_of(leaf.clauses, [&](const ClauseTy *n) {
-      return canMakePrivateCopy(n->id);
+      return llvm::omp::isPrivatizingClause(n->id);
     });
   });
 
@@ -914,8 +903,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
            /*ReductionIdentifiers=*/std::get<ReductionIdentifiers>(clause.t),
            /*List=*/objects}});
 
-  ReductionModifier effective =
-      modifier.has_value() ? *modifier : ReductionModifier::Default;
+  ReductionModifier effective = modifier.value_or(ReductionModifier::Default);
   bool effectiveApplied = false;
   // Walk over the leaf constructs starting from the innermost, and apply
   // the clause as required by the spec.
@@ -982,8 +970,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_map,
           tomp::clause::MapT<TypeTy, IdTy, ExprTy>{
               {/*MapType=*/MapType::Tofrom, /*MapTypeModifier=*/std::nullopt,
-               /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-               /*LocatorList=*/std::move(tofrom)}});
+               /*RefModifier=*/std::nullopt, /*Mapper=*/std::nullopt,
+               /*Iterator=*/std::nullopt, /*LocatorList=*/std::move(tofrom)}});
 
       dirTarget->clauses.push_back(map);
       applied = true;
@@ -1102,8 +1090,26 @@ bool ConstructDecompositionT<C, H>::applyClause(
   return applyToOutermost(node);
 }
 
+template <typename C, typename H>
+bool ConstructDecompositionT<C, H>::applyClause(
+    const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *node) {
+  return applyToOutermost(node);
+}
+
+template <typename C, typename H>
+bool ConstructDecompositionT<C, H>::applyClause(
+    const tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *node) {
+  return applyToAll(node);
+}
+
 template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   bool success = true;
+
+  auto isImplicit = [this](const ClauseTy *node) {
+    return llvm::is_contained(llvm::make_pointer_range(implicit), node);
+  };
 
   for (llvm::omp::Directive leaf :
        llvm::omp::getLeafConstructsOrSelf(construct))
@@ -1144,9 +1150,10 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   for (const ClauseTy *node : nodes) {
     if (skip(node))
       continue;
-    success =
-        success &&
+    bool result =
         std::visit([&](auto &&s) { return applyClause(s, node); }, node->u);
+    if (!isImplicit(node))
+      success = success && result;
   }
 
   // Apply "allocate".

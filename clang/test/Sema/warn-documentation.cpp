@@ -1524,3 +1524,15 @@ F &f = FF; ///< \return none
 // expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
 
 } // namespace PR42844
+
+#if __cplusplus >= 201402L
+namespace GH144775 {
+/// @brief primary template
+/// @tparam T type
+template <class T, class = void> constexpr auto var = T{};
+
+/// @brief variable template partial specialization
+/// @tparam T type
+template <typename T> constexpr auto var<T> = T{};
+} // namespace GH144775
+#endif

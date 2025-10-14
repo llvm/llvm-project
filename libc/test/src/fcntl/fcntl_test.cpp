@@ -7,18 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/stdio_macros.h"
 #include "hdr/types/struct_flock.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
+#include "src/unistd/getpid.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
 #include <sys/stat.h> // For S_IRWXU
 
-TEST(LlvmLibcFcntlTest, FcntlDupfd) {
+using LlvmLibcFcntlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcFcntlTest, FcntlDupfd) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE_NAME = "testdata/fcntl_dup.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
@@ -40,7 +43,7 @@ TEST(LlvmLibcFcntlTest, FcntlDupfd) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd3), Succeeds(0));
 }
 
-TEST(LlvmLibcFcntlTest, FcntlGetFl) {
+TEST_F(LlvmLibcFcntlTest, FcntlGetFl) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE_NAME = "testdata/fcntl_getfl.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
@@ -56,7 +59,7 @@ TEST(LlvmLibcFcntlTest, FcntlGetFl) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
-TEST(LlvmLibcFcntlTest, FcntlSetFl) {
+TEST_F(LlvmLibcFcntlTest, FcntlSetFl) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE_NAME = "testdata/fcntl_setfl.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
@@ -91,7 +94,7 @@ TEST(LlvmLibcFcntlTest, FcntlSetFl) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
-TEST(LlvmLibcFcntlTest, FcntlGetLkRead) {
+TEST_F(LlvmLibcFcntlTest, FcntlGetLkRead) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE_NAME = "testdata/fcntl_getlkread.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
@@ -123,7 +126,7 @@ TEST(LlvmLibcFcntlTest, FcntlGetLkRead) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
-TEST(LlvmLibcFcntlTest, FcntlGetLkWrite) {
+TEST_F(LlvmLibcFcntlTest, FcntlGetLkWrite) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE_NAME = "testdata/fcntl_getlkwrite.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
@@ -151,5 +154,33 @@ TEST(LlvmLibcFcntlTest, FcntlGetLkWrite) {
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(retVal, -1);
 
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+}
+
+TEST_F(LlvmLibcFcntlTest, UseAfterClose) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_use_after_close.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(fd, F_GETFL));
+  ASSERT_ERRNO_EQ(EBADF);
+}
+
+TEST_F(LlvmLibcFcntlTest, SetGetOwnerTest) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  pid_t pid = LIBC_NAMESPACE::getpid();
+  ASSERT_GT(pid, -1);
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_set_get_owner.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(fd, 0);
+  int ret = LIBC_NAMESPACE::fcntl(fd, F_SETOWN, pid);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(ret, -1);
+  int ret2 = LIBC_NAMESPACE::fcntl(fd, F_GETOWN);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(ret2, pid);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }

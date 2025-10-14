@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 
 ! OpenMP Version 4.5
@@ -62,9 +60,16 @@ program omp_simd
   !$omp end simd
 
   !ERROR: 'd' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
+  !WARNING: Alignment is not a power of 2, Aligned clause will be ignored [-Wopen-mp-usage]
   !$omp simd aligned(d:100)
   do i = 1, 100
     d(i) = i
+  end do
+
+  !WARNING: Alignment is not a power of 2, Aligned clause will be ignored [-Wopen-mp-usage]
+  !$omp simd aligned(b:65)
+  do i = 1, 100
+    b(i) = i
   end do
 
 end program omp_simd

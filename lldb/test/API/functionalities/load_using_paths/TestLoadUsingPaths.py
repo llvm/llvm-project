@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that SBProcess.LoadImageUsingPaths works correctly.
 """
 
@@ -35,7 +35,7 @@ class LoadUsingPathsTestCase(TestBase):
     @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @expectedFlakeyNetBSD
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr45894")
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr45894")
     def test_load_using_paths(self):
         """Test that we can load a module by providing a set of search paths."""
         if self.platformIsDarwin():

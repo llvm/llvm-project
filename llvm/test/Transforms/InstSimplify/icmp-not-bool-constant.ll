@@ -7,7 +7,7 @@
 
 define <2 x i1> @eq_t_not(<2 x i1> %a) {
 ; CHECK-LABEL: @eq_t_not(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[NOT]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -71,7 +71,7 @@ define <2 x i1> @ne_t_not_poison(<2 x i1> %a) {
 
 define <2 x i1> @ne_f_not(<2 x i1> %a) {
 ; CHECK-LABEL: @ne_f_not(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[NOT]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -90,7 +90,7 @@ define <2 x i1> @ugt_t_not(<2 x i1> %a) {
 
 define <2 x i1> @ugt_f_not(<2 x i1> %a) {
 ; CHECK-LABEL: @ugt_f_not(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[NOT]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -181,7 +181,7 @@ define <2 x i1> @slt_t_not(<2 x i1> %a) {
 
 define <2 x i1> @slt_f_not(<2 x i1> %a) {
 ; CHECK-LABEL: @slt_f_not(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[NOT]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -191,7 +191,7 @@ define <2 x i1> @slt_f_not(<2 x i1> %a) {
 
 define <2 x i1> @uge_t_not(<2 x i1> %a) {
 ; CHECK-LABEL: @uge_t_not(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[NOT]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -201,7 +201,7 @@ define <2 x i1> @uge_t_not(<2 x i1> %a) {
 
 define <2 x i1> @uge_f_not(<2 x i1> %a) {
 ; CHECK-LABEL: @uge_f_not(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
   %r = icmp uge <2 x i1> %not, <i1 false, i1 false>
@@ -210,7 +210,7 @@ define <2 x i1> @uge_f_not(<2 x i1> %a) {
 
 define <2 x i1> @ule_t_not(<2 x i1> %a) {
 ; CHECK-LABEL: @ule_t_not(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
   %r = icmp ule <2 x i1> %not, <i1 true, i1 true>
@@ -246,7 +246,7 @@ define <2 x i1> @ule_f_not_poison(<2 x i1> %a) {
 
 define <2 x i1> @sge_t_not(<2 x i1> %a) {
 ; CHECK-LABEL: @sge_t_not(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
   %r = icmp sge <2 x i1> %not, <i1 true, i1 true>
@@ -282,7 +282,7 @@ define <2 x i1> @sge_f_not_poison(<2 x i1> %a) {
 
 define <2 x i1> @sle_t_not(<2 x i1> %a) {
 ; CHECK-LABEL: @sle_t_not(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[NOT]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -292,7 +292,7 @@ define <2 x i1> @sle_t_not(<2 x i1> %a) {
 
 define <2 x i1> @sle_f_not(<2 x i1> %a) {
 ; CHECK-LABEL: @sle_f_not(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
   %r = icmp sle <2 x i1> %not, <i1 false, i1 false>

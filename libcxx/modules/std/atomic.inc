@@ -22,7 +22,7 @@ export namespace std {
 
   // [atomics.ref.generic], class template atomic_ref
   // [atomics.ref.pointer], partial specialization for pointers
-  // using std::atomic_ref _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_ref _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.types.generic], class template atomic
   using std::atomic _LIBCPP_USING_IF_EXISTS;
@@ -60,7 +60,7 @@ export namespace std {
   using std::atomic_char _LIBCPP_USING_IF_EXISTS;
   using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
   using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
   using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
 #endif
   using std::atomic_int _LIBCPP_USING_IF_EXISTS;
@@ -73,7 +73,7 @@ export namespace std {
   using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
   using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
   using std::atomic_ushort _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
 #endif
 

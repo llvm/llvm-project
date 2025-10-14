@@ -19,12 +19,16 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
+#include "bolt/Passes/InsertNegateRAStatePass.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Passes/LoopInversionPass.h"
+#include "bolt/Passes/MCF.h"
+#include "bolt/Passes/MarkRAStates.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Passes/ProfileQualityStats.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
@@ -50,8 +54,12 @@ namespace opts {
 extern cl::opt<bool> PrintAll;
 extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
+extern bool shouldDumpDot(const bolt::BinaryFunction &Function);
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 static cl::opt<bool>
 DynoStatsAll("dyno-stats-all",
@@ -62,9 +70,6 @@ static cl::opt<bool>
     EliminateUnreachable("eliminate-unreachable",
                          cl::desc("eliminate unreachable code"), cl::init(true),
                          cl::cat(BoltOptCategory));
-
-cl::opt<bool> ICF("icf", cl::desc("fold functions with identical code"),
-                  cl::cat(BoltOptCategory));
 
 static cl::opt<bool> JTFootprintReductionFlag(
     "jt-footprint-reduction",
@@ -89,6 +94,11 @@ static cl::opt<bool>
 PrintAfterLowering("print-after-lowering",
   cl::desc("print function after instruction lowering"),
   cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintEstimateEdgeCounts(
+    "print-estimate-edge-counts",
+    cl::desc("print function after edge counts are set for no-LBR profile"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintFinalized("print-finalized",
@@ -118,6 +128,11 @@ static cl::opt<bool> PrintJTFootprintReduction(
     "print-after-jt-footprint-reduction",
     cl::desc("print function after jt-footprint-reduction pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
+
+static cl::opt<bool>
+    PrintAdrRelaxation("print-adr-relaxation",
+                       cl::desc("print functions after ADR Relaxation pass"),
+                       cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintLongJmp("print-longjmp",
@@ -235,7 +250,9 @@ static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
 
 static cl::opt<bool> StringOps(
     "inline-memcpy",
-    cl::desc("inline memcpy using 'rep movsb' instruction (X86-only)"),
+    cl::desc(
+        "inline memcpy using size-specific optimized instructions "
+        "(X86: 'rep movsb', AArch64: width-optimized register operations)"),
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool> StripRepRet(
@@ -257,6 +274,16 @@ static cl::opt<bool> CMOVConversionFlag("cmov-conversion",
                                         cl::ReallyHidden,
                                         cl::cat(BoltOptCategory));
 
+static cl::opt<bool> ShortenInstructions("shorten-instructions",
+                                         cl::desc("shorten instructions"),
+                                         cl::init(true),
+                                         cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    UpdateBranchProtection("update-branch-protection",
+                           cl::desc("Rewrites pac-ret DWARF CFI instructions "
+                                    "(AArch64-only, on by default)"),
+                           cl::init(true), cl::Hidden, cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -324,7 +351,7 @@ Error BinaryFunctionPassManager::runPasses() {
 
       Function.print(BC.outs(), Message);
 
-      if (opts::DumpDotAll)
+      if (opts::shouldDumpDot(Function))
         Function.dumpGraphForPass(PassIdName);
     }
   }
@@ -334,8 +361,13 @@ Error BinaryFunctionPassManager::runPasses() {
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  const DynoStats InitialDynoStats =
-      getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
+  if (BC.isAArch64())
+    Manager.registerPass(std::make_unique<MarkRAStates>());
+
+  Manager.registerPass(
+      std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
+
+  Manager.registerPass(std::make_unique<DynoStatsSetPass>());
 
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
@@ -361,6 +393,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
+  Manager.registerPass(std::make_unique<PrintProfileQualityStats>(NeverPrint));
+
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
@@ -370,7 +404,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   else if (opts::Hugify)
     Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
 
-  Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
+  Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint),
+                       opts::ShortenInstructions);
 
   Manager.registerPass(std::make_unique<RemoveNops>(NeverPrint),
                        !opts::KeepNops);
@@ -382,7 +417,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
                          opts::StripRepRet);
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
-                       opts::ICF);
+                       opts::ICF != IdenticalCodeFolding::ICFLevel::None);
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),
@@ -407,7 +442,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<Inliner>(PrintInline));
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
-                       opts::ICF);
+                       opts::ICF != IdenticalCodeFolding::ICFLevel::None);
 
   Manager.registerPass(std::make_unique<PLTCall>(PrintPLT));
 
@@ -447,10 +482,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<SplitFunctions>(PrintSplit));
 
   // Print final dyno stats right while CFG and instruction analysis are intact.
-  Manager.registerPass(
-      std::make_unique<DynoStatsPrintPass>(
-          InitialDynoStats, "after all optimizations before SCTC and FOP"),
-      opts::PrintDynoStats || opts::DynoStatsAll);
+  Manager.registerPass(std::make_unique<DynoStatsPrintPass>(
+                           "after all optimizations before SCTC and FOP"),
+                       opts::PrintDynoStats || opts::DynoStatsAll);
 
   // Add the StokeInfo pass, which extract functions for stoke optimization and
   // get the liveness information for them
@@ -477,13 +511,20 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
+  // Patch original function entries
+  if (BC.HasRelocations)
+    Manager.registerPass(std::make_unique<PatchEntries>());
+
   if (BC.isAArch64()) {
-    Manager.registerPass(std::make_unique<ADRRelaxationPass>());
+    Manager.registerPass(
+        std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
 
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+
+    Manager.registerPass(std::make_unique<InsertNegateRAState>());
   }
 
   // This pass should always run last.*
@@ -502,10 +543,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   // Assign each function an output section.
   Manager.registerPass(std::make_unique<AssignSections>());
-
-  // Patch original function entries
-  if (BC.HasRelocations)
-    Manager.registerPass(std::make_unique<PatchEntries>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

@@ -4,7 +4,7 @@
 // Test that we can set simple breakpoints using PDB on any platform.
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/break-by-function.lldbinit | FileCheck %s
 
 // Use different indentation style for each overload so that the starting
@@ -50,9 +50,9 @@ int main(int argc, char **argv) {
 // CHECK:      1: name = 'main', locations = 1
 // CHECK:        1.1: where = break-by-function.cpp.tmp.exe`main + {{[0-9]+}}
 // CHECK:      2: name = 'OvlGlobalFn', locations = 3
-// CHECK:        2.1: where = break-by-function.cpp.tmp.exe`OvlGlobalFn + {{[0-9]+}}
-// CHECK:        2.2: where = break-by-function.cpp.tmp.exe`OvlGlobalFn
-// CHECK:        2.3: where = break-by-function.cpp.tmp.exe`OvlGlobalFn + {{[0-9]+}}
+// CHECK:        2.1: where = break-by-function.cpp.tmp.exe`int OvlGlobalFn(int) + {{[0-9]+}}
+// CHECK:        2.2: where = break-by-function.cpp.tmp.exe`int OvlGlobalFn(int, int)
+// CHECK:        2.3: where = break-by-function.cpp.tmp.exe`int OvlGlobalFn(int, int, int) + {{[0-9]+}}
 // CHECK:      3: name = 'StaticFn', locations = 1
 // CHECK:        3.1: where = break-by-function.cpp.tmp.exe`StaticFn + {{[0-9]+}}
 // CHECK:      4: name = 'DoesntExist', locations = 0 (pending)

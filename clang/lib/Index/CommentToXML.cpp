@@ -11,7 +11,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -546,7 +545,8 @@ public:
   void visitParagraphComment(const ParagraphComment *C);
 
   void appendParagraphCommentWithKind(const ParagraphComment *C,
-                                      StringRef Kind);
+                                      StringRef ParagraphKind,
+                                      StringRef PrependBodyText);
 
   void visitBlockCommandComment(const BlockCommandComment *C);
   void visitParamCommandComment(const ParamCommandComment *C);
@@ -680,15 +680,15 @@ CommentASTToXMLConverter::visitHTMLEndTagComment(const HTMLEndTagComment *C) {
   Result << ">&lt;/" << C->getTagName() << "&gt;</rawHTML>";
 }
 
-void
-CommentASTToXMLConverter::visitParagraphComment(const ParagraphComment *C) {
-  appendParagraphCommentWithKind(C, StringRef());
+void CommentASTToXMLConverter::visitParagraphComment(
+    const ParagraphComment *C) {
+  appendParagraphCommentWithKind(C, StringRef(), StringRef());
 }
 
 void CommentASTToXMLConverter::appendParagraphCommentWithKind(
-                                  const ParagraphComment *C,
-                                  StringRef ParagraphKind) {
-  if (C->isWhitespace())
+    const ParagraphComment *C, StringRef ParagraphKind,
+    StringRef PrependBodyText) {
+  if (C->isWhitespace() && PrependBodyText.empty())
     return;
 
   if (ParagraphKind.empty())
@@ -696,8 +696,11 @@ void CommentASTToXMLConverter::appendParagraphCommentWithKind(
   else
     Result << "<Para kind=\"" << ParagraphKind << "\">";
 
-  for (Comment::child_iterator I = C->child_begin(), E = C->child_end();
-       I != E; ++I) {
+  if (!PrependBodyText.empty())
+    Result << PrependBodyText << " ";
+
+  for (Comment::child_iterator I = C->child_begin(), E = C->child_end(); I != E;
+       ++I) {
     visit(*I);
   }
   Result << "</Para>";
@@ -706,8 +709,15 @@ void CommentASTToXMLConverter::appendParagraphCommentWithKind(
 void CommentASTToXMLConverter::visitBlockCommandComment(
     const BlockCommandComment *C) {
   StringRef ParagraphKind;
+  StringRef ExceptionType;
 
-  switch (C->getCommandID()) {
+  const unsigned CommandID = C->getCommandID();
+  const CommandInfo *Info = Traits.getCommandInfo(CommandID);
+  if (Info->IsThrowsCommand && C->getNumArgs() > 0) {
+    ExceptionType = C->getArgText(0);
+  }
+
+  switch (CommandID) {
   case CommandTraits::KCI_attention:
   case CommandTraits::KCI_author:
   case CommandTraits::KCI_authors:
@@ -732,7 +742,8 @@ void CommentASTToXMLConverter::visitBlockCommandComment(
     break;
   }
 
-  appendParagraphCommentWithKind(C->getParagraph(), ParagraphKind);
+  appendParagraphCommentWithKind(C->getParagraph(), ParagraphKind,
+                                 ExceptionType);
 }
 
 void CommentASTToXMLConverter::visitParamCommandComment(
@@ -887,7 +898,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
     {
       // Print line and column number.
       SourceLocation Loc = DI->CurrentDecl->getLocation();
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
       FileID FID = LocInfo.first;
       unsigned FileOffset = LocInfo.second;
 

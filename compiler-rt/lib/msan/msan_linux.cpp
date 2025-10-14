@@ -42,7 +42,7 @@ namespace __msan {
 void ReportMapRange(const char *descr, uptr beg, uptr size) {
   if (size > 0) {
     uptr end = beg + size - 1;
-    VPrintf(1, "%s : 0x%zx - 0x%zx\n", descr, beg, end);
+    VPrintf(1, "%s : %p-%p\n", descr, (void *)beg, (void *)end);
   }
 }
 
@@ -51,8 +51,8 @@ static bool CheckMemoryRangeAvailability(uptr beg, uptr size, bool verbose) {
     uptr end = beg + size - 1;
     if (!MemoryRangeIsAvailable(beg, end)) {
       if (verbose)
-        Printf("FATAL: Memory range 0x%zx - 0x%zx is not available.\n", beg,
-               end);
+        Printf("FATAL: MemorySanitizer: Shadow range %p-%p is not available.\n",
+               (void *)beg, (void *)end);
       return false;
     }
   }
@@ -72,8 +72,9 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range 0x%zx - 0x%zx (%s).\n", beg,
-             end, name);
+      Printf(
+          "FATAL: MemorySanitizer: Cannot protect memory range %p-%p (%s).\n",
+          (void *)beg, (void *)end, name);
       return false;
     }
   }
@@ -189,7 +190,15 @@ bool InitShadowWithReExec(bool init_origins) {
               "possibly due to high-entropy ASLR.\n"
               "Re-execing with fixed virtual address space.\n"
               "N.B. reducing ASLR entropy is preferable.\n");
-      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+
+      if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
+        Printf(
+            "FATAL: MemorySanitizer: unable to disable ASLR (perhaps "
+            "sandboxing is enabled?).\n");
+        Printf("FATAL: Please rerun without sandboxing and/or ASLR.\n");
+        Die();
+      }
+
       ReExec();
     }
 #  endif
@@ -292,6 +301,7 @@ void MsanTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
+  ScopedBlockSignals block(nullptr);
   msan_current_thread = nullptr;
   // Make sure that signal handler can not see a stale current thread pointer.
   atomic_signal_fence(memory_order_seq_cst);
@@ -300,6 +310,7 @@ void MsanTSDDtor(void *tsd) {
 #  endif
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   // Usually we lock ThreadRegistry, but msan does not have one.
   LockAllocator();
   StackDepotLockBeforeFork();
@@ -311,6 +322,7 @@ static void AfterFork(bool fork_child) {
   StackDepotUnlockAfterFork(fork_child);
   UnlockAllocator();
   // Usually we unlock ThreadRegistry, but msan does not have one.
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {

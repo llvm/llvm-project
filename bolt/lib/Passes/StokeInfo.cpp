@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/StokeInfo.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-cl::OptionCategory StokeOptCategory("STOKE pass options");
+static cl::OptionCategory StokeOptCategory("STOKE pass options");
 
 static cl::opt<std::string>
 StokeOutputDataFilename("stoke-out",

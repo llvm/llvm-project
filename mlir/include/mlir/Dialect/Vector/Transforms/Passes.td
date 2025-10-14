@@ -11,11 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def VectorBufferize : Pass<"vector-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize Vector dialect ops";
-  let constructor = "mlir::vector::createVectorBufferizePass()";
-}
-
 def LowerVectorMaskPass : Pass<"lower-vector-mask", "func::FuncOp"> {
   let summary = "Lower 'vector.mask' operations";
   let constructor = "mlir::vector::createLowerVectorMaskPass()";
@@ -37,6 +32,11 @@ def LowerVectorMultiReduction : Pass<"lower-vector-multi-reduction", "func::Func
                        "Lower multi_reduction into outer-parallel and inner-reduction ops.")
         )}]>
   ];
+}
+
+def LowerVectorToFromElementsToShuffleTree
+  : Pass<"lower-vector-to-from-elements-to-shuffle-tree", "func::FuncOp"> {
+  let summary = "Lower `vector.to_elements` and `vector.from_elements` to a tree of `vector.shuffle` operations";
 }
 
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES

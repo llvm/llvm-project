@@ -5,14 +5,12 @@
 define void @vec3_vectorize_call(ptr %Colour, float %0) {
 ; NON-POW2-LABEL: @vec3_vectorize_call(
 ; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP1:%.*]] = load float, ptr [[COLOUR:%.*]], align 4
-; NON-POW2-NEXT:    [[ARRAYIDX91_I:%.*]] = getelementptr float, ptr [[COLOUR]], i64 1
-; NON-POW2-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX91_I]], align 4
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i32 2
-; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> [[TMP3]], float [[TMP1]], i32 0
-; NON-POW2-NEXT:    [[TMP5:%.*]] = insertelement <3 x float> [[TMP4]], float [[TMP2]], i32 1
-; NON-POW2-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP5]], <3 x float> zeroinitializer, <3 x float> zeroinitializer)
-; NON-POW2-NEXT:    store <3 x float> [[TMP6]], ptr [[COLOUR]], align 4
+; NON-POW2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[COLOUR:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i32 2
+; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
+; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> [[TMP3]], <3 x i32> <i32 3, i32 4, i32 2>
+; NON-POW2-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP4]], <3 x float> zeroinitializer, <3 x float> zeroinitializer)
+; NON-POW2-NEXT:    store <3 x float> [[TMP5]], ptr [[COLOUR]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @vec3_vectorize_call(

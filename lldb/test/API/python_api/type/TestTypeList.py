@@ -6,7 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test import lldbplatformutil
 
 class TypeAndTypeListTestCase(TestBase):
     def setUp(self):
@@ -132,7 +132,7 @@ class TypeAndTypeListTestCase(TestBase):
                         "my_type_is_named has a named type",
                     )
                     self.assertTrue(field.type.IsAggregateType())
-                elif field.name == None:
+                elif field.name is None:
                     self.assertTrue(
                         field.type.IsAnonymousType(), "Nameless type is not anonymous"
                     )
@@ -248,7 +248,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertEqual(myint_arr_element_type, myint_type)
 
         # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
-        if configuration.dwarf_version >= 4:
+        if int(lldbplatformutil.getDwarfVersion()) >= 4:
             enum_type = target.FindFirstType("EnumType")
             self.assertTrue(enum_type)
             self.DebugSBType(enum_type)

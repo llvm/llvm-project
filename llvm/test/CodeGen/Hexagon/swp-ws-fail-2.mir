@@ -1,0 +1,75 @@
+# REQUIRES: asserts
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
+
+# CHECK: Physical registers are not supported in window scheduling!
+# CHECK: The WindowScheduler failed to initialize!
+
+---
+name:            exp_approx_top_six
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %0:intregs = COPY $r2
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r0
+    %3:predregs = C2_cmpeqi %2, 0
+    J2_jumpt killed %3, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %4:intregs = A2_tfrsi 1065353216
+    %5:hvxvr = V6_lvsplatw killed %4
+    %6:intregs = A2_tfrsi 1056964608
+    %7:hvxvr = V6_lvsplatw killed %6
+    %8:intregs = A2_tfrsi 1042983595
+    %9:hvxvr = V6_lvsplatw killed %8
+    %10:intregs = A2_tfrsi 1026206379
+    %11:hvxvr = V6_lvsplatw killed %10
+    %12:intregs = A2_tfrsi 1007192201
+    %13:hvxvr = V6_lvsplatw killed %12
+    %14:intregs = A2_tfrsi 985008993
+    %15:hvxvr = V6_lvsplatw killed %14
+    %16:intregs = A2_addi %2, 31
+    %17:intregs = S2_lsr_i_r %16, 5
+    %18:intregs = COPY %17
+    J2_loop0r %bb.3, %18, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.2:
+    PS_jmpret $r31, implicit-def dead $pc
+
+  bb.3 (machine-block-address-taken):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+
+    %19:intregs = PHI %1, %bb.1, %20, %bb.3
+    %21:intregs = PHI %0, %bb.1, %22, %bb.3
+    %23:hvxvr, %20:intregs = V6_vL32b_pi %19, 128
+    %24:hvxvr = V6_vmpyowh_rnd %23, %23
+    %25:hvxvr = V6_vmpyowh_rnd %24, %23
+    %26:hvxvr = V6_vmpyowh_rnd %25, %23
+    %27:hvxvr = V6_vmpyowh_rnd %26, %23
+    %28:hvxvr = V6_vmpyowh_rnd %27, %23
+    %29:hvxvr = V6_vmpyowh_rnd %7, %24
+    %30:hvxvr = V6_vmpyowh_rnd %9, %25
+    %31:hvxvr = V6_vmpyowh_rnd %11, %26
+    %32:hvxvr = V6_vmpyowh_rnd %13, %27
+    %33:hvxvr = V6_vmpyowh_rnd %15, killed %28
+    %34:hvxvr = V6_vaddw %5, %23
+    %35:hvxvr = V6_vaddw killed %34, killed %29
+    %36:hvxvr = V6_vaddw killed %35, killed %30
+    %37:hvxvr = V6_vaddw killed %36, killed %31
+    %38:hvxvr = V6_vaddw killed %37, killed %32
+    %39:hvxvr = V6_vaddw killed %38, killed %33
+    ; To check the implicitly defined phiscal register within loop kernel.
+    dead %40:intregs = A2_abssat %18, implicit-def dead $usr_ovf
+    %22:intregs = V6_vS32b_pi %21, 128, killed %39
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+...

@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_ARM_ARMSELECTIONDAGINFO_H
 
 #include "MCTargetDesc/ARMAddressingModes.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
@@ -37,6 +37,8 @@ namespace ARM_AM {
 
 class ARMSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align Alignment,

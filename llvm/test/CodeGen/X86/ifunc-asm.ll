@@ -8,14 +8,14 @@ entry:
 ; ELF:             .type foo_resolver,@function
 ; ELF-NEXT:    foo_resolver:
 
-; MACHO:           .p2align 4, 0x90
+; MACHO:           .p2align 4
 ; MACHO-NEXT:  _foo_resolver
 
 
 @foo_ifunc = ifunc i32 (i32), ptr @foo_resolver
 ; ELF:             .globl foo_ifunc
 ; ELF-NEXT:        .type foo_ifunc,@gnu_indirect_function
-; ELF-NEXT:        .set foo_ifunc, foo_resolver
+; ELF-NEXT:        foo_ifunc = foo_resolver
 
 ; MACHO:           .section __DATA,__data
 ; MACHO-NEXT:      .p2align 3, 0x0
@@ -23,10 +23,10 @@ entry:
 ; MACHO-NEXT:      .quad _foo_ifunc.stub_helper
 ; MACHO-NEXT:      .section __TEXT,__text,regular,pure_instructions
 ; MACHO-NEXT:      .globl _foo_ifunc
-; MACHO-NEXT:      .p2align 0, 0x90
+; MACHO-NEXT:      .p2align 0
 ; MACHO-NEXT:  _foo_ifunc:
 ; MACHO-NEXT:      jmpl   *_foo_ifunc.lazy_pointer(%rip)
-; MACHO-NEXT:      .p2align 0, 0x90
+; MACHO-NEXT:      .p2align 0
 ; MACHO-NEXT:  _foo_ifunc.stub_helper:
 ; MACHO-NEXT:      pushq   %rax
 ; MACHO-NEXT:      pushq   %rdi

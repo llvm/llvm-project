@@ -8,9 +8,11 @@ set(LLVM_LINK_COMPONENTS
   RISCVDesc
   RISCVInfo
   Analysis
+  AsmParser
   CodeGen
   Core
   MC
+  Passes
   SelectionDAG
   TargetParser
   )
@@ -18,6 +20,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_target_unittest(RISCVTests
   MCInstrAnalysisTest.cpp
   RISCVInstrInfoTest.cpp
+  RISCVSelectionDAGTest.cpp
   )
-
-set_property(TARGET RISCVTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

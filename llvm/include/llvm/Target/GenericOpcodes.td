@@ -86,6 +86,27 @@ def G_TRUNC : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Truncate the signed operand to a signed result with saturation.
+def G_TRUNC_SSAT_S : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+// Truncate the signed operand to an unsigned result with saturation.
+def G_TRUNC_SSAT_U : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+// Truncate the unsigned operand to an unsigned result with saturation.
+def G_TRUNC_USAT_U : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_IMPLICIT_DEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
@@ -99,15 +120,21 @@ def G_PHI : GenericInstruction {
 }
 
 def G_FRAME_INDEX : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src2);
   let hasSideEffects = false;
 }
 
 def G_GLOBAL_VALUE : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src);
   let hasSideEffects = false;
+}
+
+def G_PTRAUTH_GLOBAL_VALUE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$addr, i32imm:$key, type1:$addrdisc, i64imm:$disc);
+  let hasSideEffects = 0;
 }
 
 def G_CONSTANT_POOL : GenericInstruction {
@@ -380,6 +407,22 @@ def G_ASHR : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic absolute difference signed.
+def G_ABDS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+// Generic absolute difference unsigned.
+def G_ABDU : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
 /// fshl(X,Y,Z): (X << (Z % bitwidth)) | (Y >> (bitwidth - (Z % bitwidth)))
 def G_FSHL : GenericInstruction {
@@ -421,6 +464,20 @@ def G_ICMP : GenericInstruction {
 def G_FCMP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$tst, type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+// Generic signed three-way comparison.
+def G_SCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+// Generic unsigned three-way comparison.
+def G_UCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
@@ -749,6 +806,18 @@ def G_UITOFP : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_FPTOSI_SAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+def G_FPTOUI_SAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_FABS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
@@ -837,6 +906,21 @@ def G_FMAXIMUM : GenericInstruction {
   let isCommutable = true;
 }
 
+/// G_FMINIMUMNUM/G_FMAXIMUMNUM - IEEE-754 2019 minimumNumber/maximumNumber
+def G_FMINIMUMNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+def G_FMAXIMUMNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 //------------------------------------------------------------------------------
 // Floating Point Binary ops.
 //------------------------------------------------------------------------------
@@ -894,6 +978,13 @@ def G_FDIV : GenericInstruction {
 def G_FREM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+
+/// Generic FP modf
+def G_FMODF : GenericInstruction {
+  let OutOperandList = (outs type0:$dst1, type0:$dst2);
+  let InOperandList = (ins type0:$src1);
   let hasSideEffects = false;
 }
 
@@ -988,8 +1079,64 @@ def G_FSIN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point combined sine and cosine.
+def G_FSINCOS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst1, type0:$dst2);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point tangent of a value.
 def G_FTAN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arccosine of a value.
+def G_FACOS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arcsine of a value.
+def G_FASIN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN2 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic cosine of a value.
+def G_FCOSH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic sine of a value.
+def G_FSINH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic tangent of a value.
+def G_FTANH : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
   let hasSideEffects = false;
@@ -1127,6 +1274,18 @@ def G_READSTEADYCOUNTER : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_GET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_SET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
@@ -1247,8 +1406,12 @@ def G_ATOMICRMW_FADD : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
+def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;
+def G_ATOMICRMW_USUB_SAT : G_ATOMICRMW_OP;
 
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
@@ -1465,7 +1628,7 @@ def G_INSERT_SUBVECTOR : GenericInstruction {
 // Generic extract subvector.
 def G_EXTRACT_SUBVECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, untyped_imm_0:$idx);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$idx);
   let hasSideEffects = false;
 }
 
@@ -1497,6 +1660,20 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$val);
+  let hasSideEffects = false;
+}
+
+// Generic stepvector.
+def G_STEP_VECTOR: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$step);
+  let hasSideEffects = false;
+}
+
+// Generic masked compress.
+def G_VECTOR_COMPRESS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$mask, type0:$passthru);
   let hasSideEffects = false;
 }
 

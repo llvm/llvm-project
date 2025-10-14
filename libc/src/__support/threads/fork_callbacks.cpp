@@ -9,11 +9,12 @@
 #include "fork_callbacks.h"
 
 #include "src/__support/CPP/mutex.h" // lock_guard
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h> // For size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -33,7 +34,10 @@ class AtForkCallbackManager {
   size_t next_index;
 
 public:
-  constexpr AtForkCallbackManager() : mtx(false, false, false), next_index(0) {}
+  constexpr AtForkCallbackManager()
+      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+            /*pshared=*/false),
+        next_index(0) {}
 
   bool register_triple(const ForkCallbackTriple &triple) {
     cpp::lock_guard lock(mtx);
@@ -88,4 +92,4 @@ void invoke_prepare_callbacks() { cb_manager.invoke_prepare(); }
 
 void invoke_parent_callbacks() { cb_manager.invoke_parent(); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

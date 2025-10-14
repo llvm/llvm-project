@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "startup/linux/do_start.h"
@@ -14,7 +15,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -49,7 +50,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
                                          MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   // We cannot check the return value with MAP_FAILED as that is the return
   // of the mmap function and not the mmap syscall.
-  if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.page_size)
+  if (!linux_utils::is_valid_mmap(mmap_ret_val))
     syscall_impl<long>(SYS_exit, 1);
   uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
   uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
@@ -71,4 +72,4 @@ bool set_thread_ptr(uintptr_t val) {
   LIBC_INLINE_ASM("mv tp, %0\n\t" : : "r"(val));
   return true;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

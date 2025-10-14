@@ -38,3 +38,11 @@ Options
     #define IS_SIGNED(T) std::is_signed<T>::value
 
   Defaults to `false`. 
+
+
+Limitations
+-----------
+
+Does not currently diagnose uses of type traits with nested name
+specifiers (e.g. ``std::chrono::is_clock``,
+``std::chrono::treat_as_floating_point``).

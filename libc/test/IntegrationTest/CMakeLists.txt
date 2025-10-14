@@ -1,3 +1,7 @@
+set(arch_specific_deps)
+if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  set(arch_specific_deps libc.src.sys.auxv.getauxval)
+endif()
 add_object_library(
   test
   SRCS
@@ -7,5 +11,8 @@ add_object_library(
   HDRS
     test.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.atomic
+    ${arch_specific_deps}
 )

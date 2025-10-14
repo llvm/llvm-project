@@ -39,7 +39,7 @@ define i1 @p0() {
 define <2 x i1> @p1_vec_splat() {
 ; CHECK-LABEL: @p1_vec_splat(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
-; CHECK-NEXT:    [[RET:%.*]] = icmp sgt <2 x i8> [[X]], <i8 3, i8 3>
+; CHECK-NEXT:    [[RET:%.*]] = icmp sgt <2 x i8> [[X]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %x = call <2 x i8> @gen2x8()
@@ -125,8 +125,7 @@ define i1 @oneuse0() {
 
 define i1 @c0(i8 %x) {
 ; CHECK-LABEL: @c0(
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = icmp sgt i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 3

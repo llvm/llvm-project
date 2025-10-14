@@ -18,6 +18,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -32,6 +33,7 @@ template <class ELFT> struct Elf_Sym_Impl;
 template <class ELFT> struct Elf_Dyn_Impl;
 template <class ELFT> struct Elf_Phdr_Impl;
 template <class ELFT, bool isRela> struct Elf_Rel_Impl;
+template <bool Is64> struct Elf_Crel_Impl;
 template <class ELFT> struct Elf_Verdef_Impl;
 template <class ELFT> struct Elf_Verdaux_Impl;
 template <class ELFT> struct Elf_Verneed_Impl;
@@ -62,6 +64,7 @@ public:
   using Phdr = Elf_Phdr_Impl<ELFType<E, Is64>>;
   using Rel = Elf_Rel_Impl<ELFType<E, Is64>, false>;
   using Rela = Elf_Rel_Impl<ELFType<E, Is64>, true>;
+  using Crel = Elf_Crel_Impl<Is64>;
   using Relr = packed<uint>;
   using Verdef = Elf_Verdef_Impl<ELFType<E, Is64>>;
   using Verdaux = Elf_Verdaux_Impl<ELFType<E, Is64>>;
@@ -117,6 +120,7 @@ using ELF64BE = ELFType<llvm::endianness::big, true>;
   using Elf_Phdr = typename ELFT::Phdr;                                        \
   using Elf_Rel = typename ELFT::Rel;                                          \
   using Elf_Rela = typename ELFT::Rela;                                        \
+  using Elf_Crel = typename ELFT::Crel;                                        \
   using Elf_Relr = typename ELFT::Relr;                                        \
   using Elf_Verdef = typename ELFT::Verdef;                                    \
   using Elf_Verdaux = typename ELFT::Verdaux;                                  \
@@ -384,7 +388,8 @@ struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
 template <endianness Endianness>
 struct Elf_Rel_Impl<ELFType<Endianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, false)
-  static const bool IsRela = false;
+  static const bool HasAddend = false;
+  static const bool IsCrel = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Word r_info;   // Symbol table index and type of relocation to apply
 
@@ -420,14 +425,16 @@ template <endianness Endianness>
 struct Elf_Rel_Impl<ELFType<Endianness, false>, true>
     : public Elf_Rel_Impl<ELFType<Endianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, false)
-  static const bool IsRela = true;
+  static const bool HasAddend = true;
+  static const bool IsCrel = false;
   Elf_Sword r_addend; // Compute value for relocatable field by adding this
 };
 
 template <endianness Endianness>
 struct Elf_Rel_Impl<ELFType<Endianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, true)
-  static const bool IsRela = false;
+  static const bool HasAddend = false;
+  static const bool IsCrel = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Xword r_info;  // Symbol table index and type of relocation to apply
 
@@ -473,8 +480,28 @@ template <endianness Endianness>
 struct Elf_Rel_Impl<ELFType<Endianness, true>, true>
     : public Elf_Rel_Impl<ELFType<Endianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, true)
-  static const bool IsRela = true;
+  static const bool HasAddend = true;
+  static const bool IsCrel = false;
   Elf_Sxword r_addend; // Compute value for relocatable field by adding this.
+};
+
+// In-memory representation. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel_Impl {
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
+  static const bool HasAddend = true;
+  static const bool IsCrel = true;
+  uint r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
+
+  // Dummy bool parameter is for compatibility with Elf_Rel_Impl.
+  uint32_t getType(bool) const { return r_type; }
+  uint32_t getSymbol(bool) const { return r_symidx; }
+  void setSymbolAndType(uint32_t s, unsigned char t, bool) {
+    r_symidx = s;
+    r_type = t;
+  }
 };
 
 template <class ELFT>
@@ -804,6 +831,8 @@ struct BBAddrMap {
     bool BBFreq : 1;
     bool BrProb : 1;
     bool MultiBBRange : 1;
+    bool OmitBBEntries : 1;
+    bool CallsiteEndOffsets : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -814,7 +843,9 @@ struct BBAddrMap {
       return (static_cast<uint8_t>(FuncEntryCount) << 0) |
              (static_cast<uint8_t>(BBFreq) << 1) |
              (static_cast<uint8_t>(BrProb) << 2) |
-             (static_cast<uint8_t>(MultiBBRange) << 3);
+             (static_cast<uint8_t>(MultiBBRange) << 3) |
+             (static_cast<uint8_t>(OmitBBEntries) << 4) |
+             (static_cast<uint8_t>(CallsiteEndOffsets) << 5);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -822,7 +853,8 @@ struct BBAddrMap {
     static Expected<Features> decode(uint8_t Val) {
       Features Feat{
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
-          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3))};
+          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
+          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5))};
       if (Feat.encode() != Val)
         return createStringError(
             std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
@@ -831,9 +863,11 @@ struct BBAddrMap {
     }
 
     bool operator==(const Features &Other) const {
-      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange) ==
+      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
+                      OmitBBEntries, CallsiteEndOffsets) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
-                      Other.MultiBBRange);
+                      Other.MultiBBRange, Other.OmitBBEntries,
+                      Other.CallsiteEndOffsets);
     }
   };
 
@@ -884,13 +918,19 @@ struct BBAddrMap {
     uint32_t Size = 0;   // Size of the basic block.
     Metadata MD = {false, false, false, false,
                    false}; // Metdata for this basic block.
+    // Offsets of end of call instructions, relative to the basic block start.
+    SmallVector<uint32_t, 1> CallsiteEndOffsets;
 
-    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD)
-        : ID(ID), Offset(Offset), Size(Size), MD(MD){};
+    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD,
+            SmallVector<uint32_t, 1> CallsiteEndOffsets)
+        : ID(ID), Offset(Offset), Size(Size), MD(MD),
+          CallsiteEndOffsets(std::move(CallsiteEndOffsets)) {}
+
+    UniqueBBID getID() const { return {ID, 0}; }
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&
-             MD == Other.MD;
+             MD == Other.MD && CallsiteEndOffsets == Other.CallsiteEndOffsets;
     }
 
     bool hasReturn() const { return MD.HasReturn; }

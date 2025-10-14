@@ -1,8 +1,6 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! OpenMP Version 5.2
 ! Inherited from 2.11.3 allocate Directive
 ! If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a
@@ -24,10 +22,12 @@ subroutine allocate()
     trait(1)%value = default_mem_fb
     custom_allocator = omp_init_allocator(omp_default_mem_space, 1, trait)
 
+    !ERROR: List items must be declared in the same scoping unit in which the ALLOCATORS directive appears
     !$omp allocators allocate(omp_default_mem_alloc: a)
         allocate(a)
 
     !ERROR: If list items within the ALLOCATORS directive have the SAVE attribute, are a common block name, or are declared in the scope of a module, then only predefined memory allocator parameters can be used in the allocator clause
+    !ERROR: List items must be declared in the same scoping unit in which the ALLOCATORS directive appears
     !$omp allocators allocate(custom_allocator: b)
         allocate(b)
 end subroutine

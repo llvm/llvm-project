@@ -47,15 +47,18 @@ UdtRecordCompleter::UdtRecordCompleter(
   CVType cvt = m_index.tpi().getType(m_id.index);
   switch (cvt.kind()) {
   case LF_ENUM:
+    m_cvr.er.Options = ClassOptions::None;
     llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, m_cvr.er));
     break;
   case LF_UNION:
+    m_cvr.ur.Options = ClassOptions::None;
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, m_cvr.ur));
     m_layout.bit_size = m_cvr.ur.getSize() * 8;
     m_record.record.kind = Member::Union;
     break;
   case LF_CLASS:
   case LF_STRUCTURE:
+    m_cvr.cr.Options = ClassOptions::None;
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, m_cvr.cr));
     m_layout.bit_size = m_cvr.cr.getSize() * 8;
     m_record.record.kind = Member::Struct;
@@ -108,9 +111,8 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), nullptr, method_ct,
-      access_type, attrs.isVirtual(), attrs.isStatic(), false, false, false,
-      is_artificial);
+      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct, access_type,
+      attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
 }
@@ -363,7 +365,7 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
         parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
-        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, &metadata);
+        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);

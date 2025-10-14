@@ -6,12 +6,15 @@
 // RUN: %clang --target=x86_64-sie-ps5 -### %s -flto=thin -flto-jobs=5 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-THIN-JOBS-ACTION < %t %s
 //
+// RUN: %clang --target=x86_64-sie-ps5 -### %s -flto-jobs=5 2> %t
+// RUN: FileCheck -check-prefix=CHECK-LINK-THIN-JOBS-ACTION < %t %s
+//
 // CHECK-LINK-THIN-JOBS-ACTION: "-plugin-opt=jobs=5"
 //
 // RUN: %clang --target=x86_64-scei-ps4 -### %s -flto=thin -flto-jobs=5 2> %t
 // RUN: FileCheck -check-prefix=CHECK-PS4-LINK-THIN-JOBS-ACTION < %t %s
 //
-// CHECK-PS4-LINK-THIN-JOBS-ACTION: "-lto-thin-debug-options= -generate-arange-section -threads=5"
+// CHECK-PS4-LINK-THIN-JOBS-ACTION: "-lto-debug-options= -threads=5"
 
 // RUN: %clang --target=x86_64-apple-darwin13.3.0 -### %s -flto=thin -flto-jobs=5 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-THIN-JOBS2-ACTION < %t %s

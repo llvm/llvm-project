@@ -1786,7 +1786,7 @@ blake3_hash_many_avx2:
         vmovdqu xmmword ptr [rbx+0x10], xmm1
         jmp     4b
 
-.section .rodata
+.section .rdata
 .p2align  6
 ADD0:
         .long  0, 1, 2, 3, 4, 5, 6, 7

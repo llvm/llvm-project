@@ -6,34 +6,52 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
+#include "hdr/errno_macros.h" // For ERANGE
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
-#include "src/errno/libc_errno.h" // For ERANGE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 template <class T> struct ExpandedFloat {
   typename fputil::FPBits<T>::StorageType mantissa;
   int32_t exponent;
 };
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 template <class T> struct FloatConvertReturn {
   ExpandedFloat<T> num = {0, 0};
   int error = 0;
@@ -89,11 +107,11 @@ eisel_lemire(ExpandedFloat<T> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
+  uint32_t clz = static_cast<uint32_t>(cpp::countl_zero<StorageType>(mantissa));
   mantissa <<= clz;
 
-  int32_t exp2 =
-      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - clz;
+  int32_t exp2 = exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS -
+                 static_cast<int32_t>(clz);
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -176,7 +194,10 @@ eisel_lemire(ExpandedFloat<T> init_num,
   return output;
 }
 
-#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+// TODO: Re-enable eisel-lemire for long double is double double once it's
+// properly supported.
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
+    !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
 template <>
 LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
@@ -184,7 +205,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   using FPBits = typename fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
 
-  StorageType mantissa = init_num.mantissa;
+  UInt128 mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   // Exp10 Range
@@ -203,7 +224,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
+  int32_t clz = static_cast<int32_t>(cpp::countl_zero(mantissa)) -
+                ((sizeof(UInt128) - sizeof(StorageType)) * CHAR_BIT);
   mantissa <<= clz;
 
   int32_t exp2 =
@@ -254,9 +276,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // Shifting to 65 bits for 80 bit floats and 113 bits for 128 bit floats
   uint32_t msb =
       static_cast<uint32_t>(final_approx_upper >> (FPBits::STORAGE_LEN - 1));
-  StorageType final_mantissa =
-      final_approx_upper >>
-      (msb + FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3));
+  UInt128 final_mantissa = final_approx_upper >> (msb + FPBits::STORAGE_LEN -
+                                                  (FPBits::FRACTION_LEN + 3));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -293,11 +314,12 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   ExpandedFloat<long double> output;
-  output.mantissa = final_mantissa;
+  output.mantissa = static_cast<StorageType>(final_mantissa);
   output.exponent = exp2;
   return output;
 }
-#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&
+       // !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
 // 10^n. This tells us how much we can safely shift without overshooting.
@@ -499,6 +521,18 @@ public:
   static constexpr long double MAX_EXACT_INT =
       10384593717069655257060992658440191.0L;
 };
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+// TODO: Add proper double double type support here, currently using constants
+// for double since it should be safe.
+template <> class ClingerConsts<long double> {
+public:
+  static constexpr double POWERS_OF_TEN_ARRAY[] = {
+      1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+      1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
+  static constexpr int32_t EXACT_POWERS_OF_TEN = 22;
+  static constexpr int32_t DIGITS_IN_MANTISSA = 15;
+  static constexpr double MAX_EXACT_INT = 9007199254740991.0;
+};
 #else
 #error "Unknown long double type"
 #endif
@@ -523,11 +557,10 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 
   FPBits result;
   T float_mantissa;
-  if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
-    float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
-        Sign::POS, 0,
-        fputil::DyadicFloat<128>::MantissaType(
-            {uint64_t(mantissa), uint64_t(mantissa >> 64)})));
+  if constexpr (is_big_int_v<StorageType> || sizeof(T) > sizeof(uint64_t)) {
+    float_mantissa =
+        (static_cast<T>(uint64_t(mantissa >> 64)) * static_cast<T>(0x1.0p64)) +
+        static_cast<T>(uint64_t(mantissa));
   } else {
     float_mantissa = static_cast<T>(mantissa);
   }
@@ -591,7 +624,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   }
 
   ExpandedFloat<T> output;
-  output.mantissa = result.get_mantissa();
+  output.mantissa = result.get_explicit_mantissa();
   output.exponent = result.get_biased_exponent();
   return output;
 }
@@ -635,6 +668,11 @@ template <> LIBC_INLINE constexpr int32_t get_lower_bound<double>() {
   return -(309 + 15 + 20);
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a mantissa and base 10 exponent and converts it into its closest
 // floating point type T equivalient. First we try the Eisel-Lemire algorithm,
 // then if that fails then we fall back to a more accurate algorithm for
@@ -714,6 +752,11 @@ LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
   return output;
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a mantissa and base 2 exponent and converts it into its closest
 // floating point type T equivalient. Since the exponent is already in the right
 // form, this is mostly just shifting and rounding. This is used for hexadecimal
@@ -758,7 +801,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 
   // Handle subnormals.
   if (biased_exponent <= 0) {
-    amount_to_shift_right += 1 - biased_exponent;
+    amount_to_shift_right += static_cast<uint32_t>(1 - biased_exponent);
     biased_exponent = 0;
 
     if (amount_to_shift_right > FPBits::STORAGE_LEN) {
@@ -865,7 +908,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isdigit(src[index])) {
-      uint32_t digit = src[index] - '0';
+      uint32_t digit = static_cast<uint32_t>(b36_char_to_int(src[index]));
       seen_digit = true;
 
       if (mantissa < bitstype_max_div_by_base) {
@@ -912,7 +955,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       if (result.has_error())
         output.error = result.error;
       int32_t add_to_exponent = result.value;
-      index += result.parsed_len;
+      index += static_cast<size_t>(result.parsed_len);
 
       // Here we do this operation as int64 to avoid overflow.
       int64_t temp_exponent = static_cast<int64_t>(exponent) +
@@ -976,7 +1019,7 @@ hexadecimal_string_to_float(const char *__restrict src,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isalnum(src[index])) {
-      uint32_t digit = b36_char_to_int(src[index]);
+      uint32_t digit = static_cast<uint32_t>(b36_char_to_int(src[index]));
       if (digit < BASE)
         seen_digit = true;
       else
@@ -1026,7 +1069,7 @@ hexadecimal_string_to_float(const char *__restrict src,
         output.error = result.error;
 
       int32_t add_to_exponent = result.value;
-      index += result.parsed_len;
+      index += static_cast<size_t>(result.parsed_len);
 
       // Here we do this operation as int64 to avoid overflow.
       int64_t temp_exponent = static_cast<int64_t>(exponent) +
@@ -1091,7 +1134,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 
   int error = 0;
 
-  ptrdiff_t index = first_non_whitespace(src) - src;
+  size_t index = first_non_whitespace(src);
 
   if (src[index] == '+' || src[index] == '-') {
     sign = src[index];
@@ -1159,13 +1202,11 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       index += 3;
       StorageType nan_mantissa = 0;
       // this handles the case of `NaN(n-character-sequence)`, where the
-      // n-character-sequence is made of 0 or more letters and numbers in any
-      // order.
+      // n-character-sequence is made of 0 or more letters, numbers, or
+      // underscore characters in any order.
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        // Apparently it's common for underscores to also be accepted. No idea
-        // why, but it's causing fuzz failures.
         while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {
@@ -1203,12 +1244,14 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   // special 80 bit long doubles. Otherwise it should be inlined out.
   set_implicit_bit<T>(result);
 
-  return {result.get_val(), index, error};
+  return {result.get_val(), static_cast<ptrdiff_t>(index), error};
 }
 
 template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+
+  LIBC_CRASH_ON_NULLPTR(arg);
 
   FPBits result;
   int error = 0;
@@ -1226,6 +1269,6 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

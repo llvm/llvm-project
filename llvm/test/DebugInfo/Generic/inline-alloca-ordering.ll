@@ -1,5 +1,4 @@
-; RUN: opt %s --passes=inline -o - -S | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt %s --passes=inline -o - -S --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt %s --passes=inline -o - -S | FileCheck %s --implicit-check-not=dbg_value
 
 ;; The inliner, specially, hoists all alloca instructions into the entry block
 ;; of the calling function. Ensure that it doesn't accidentally transfer the
@@ -19,10 +18,9 @@
 ; CHECK-NEXT: %1 = alloca [65 x i32], align 16
 ; CHECK-NEXT: call void @ext()
 ; CHECK-NEXT: call void @llvm.lifetime.start.p0(
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !DIExpression()), !dbg !12
+; CHECK-NEXT: #dbg_value(i32 0, !10, !DIExpression(), !12
 ; CHECK-NEXT: call void @init(ptr %1)
 
-; CHECK: declare void @llvm.dbg.value(metadata,
 
 declare void @ext()
 declare void @init(ptr)

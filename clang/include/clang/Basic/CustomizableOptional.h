@@ -70,15 +70,6 @@ public:
 
   void reset() { Storage.reset(); }
 
-  LLVM_DEPRECATED("Use &*X instead.", "&*X")
-  constexpr const T *getPointer() const { return &Storage.value(); }
-  LLVM_DEPRECATED("Use &*X instead.", "&*X")
-  T *getPointer() { return &Storage.value(); }
-  LLVM_DEPRECATED("std::optional::value is throwing. Use *X instead", "*X")
-  constexpr const T &value() const & { return Storage.value(); }
-  LLVM_DEPRECATED("std::optional::value is throwing. Use *X instead", "*X")
-  T &value() & { return Storage.value(); }
-
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
   constexpr const T *operator->() const { return &Storage.value(); }
@@ -90,20 +81,10 @@ public:
     return has_value() ? operator*() : std::forward<U>(alt);
   }
 
-  LLVM_DEPRECATED("std::optional::value is throwing. Use *X instead", "*X")
-  T &&value() && { return std::move(Storage.value()); }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
     return has_value() ? std::move(operator*()) : std::forward<U>(alt);
-  }
-
-  // Allow conversion to std::optional<T>.
-  explicit operator std::optional<T> &() const & {
-    return *this ? **this : std::optional<T>();
-  }
-  explicit operator std::optional<T> &&() const && {
-    return *this ? std::move(**this) : std::optional<T>();
   }
 };
 

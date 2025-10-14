@@ -10,10 +10,9 @@ define <8 x i7> @vdivu_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroe
 ; CHECK-LABEL: vdivu_vv_v8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v9, v9, a1
-; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vand.vx v9, v9, a1, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    vdivu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.udiv.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
@@ -611,14 +610,15 @@ define <2 x i64> @vdivu_vx_v2i64(<2 x i64> %va, i64 %b, <2 x i1> %m, i32 zeroext
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v9, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v2i64:
@@ -637,14 +637,15 @@ define <2 x i64> @vdivu_vx_v2i64_unmasked(<2 x i64> %va, i64 %b, i32 zeroext %ev
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v2i64_unmasked:
@@ -685,14 +686,15 @@ define <4 x i64> @vdivu_vx_v4i64(<4 x i64> %va, i64 %b, <4 x i1> %m, i32 zeroext
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v10, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v4i64:
@@ -711,14 +713,15 @@ define <4 x i64> @vdivu_vx_v4i64_unmasked(<4 x i64> %va, i64 %b, i32 zeroext %ev
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v4i64_unmasked:
@@ -759,14 +762,15 @@ define <8 x i64> @vdivu_vx_v8i64(<8 x i64> %va, i64 %b, <8 x i1> %m, i32 zeroext
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v12, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v8i64:
@@ -785,14 +789,15 @@ define <8 x i64> @vdivu_vx_v8i64_unmasked(<8 x i64> %va, i64 %b, i32 zeroext %ev
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v8i64_unmasked:
@@ -833,14 +838,15 @@ define <16 x i64> @vdivu_vx_v16i64(<16 x i64> %va, i64 %b, <16 x i1> %m, i32 zer
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v16i64:
@@ -859,14 +865,15 @@ define <16 x i64> @vdivu_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vdivu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vdivu_vx_v16i64_unmasked:
@@ -878,4 +885,69 @@ define <16 x i64> @vdivu_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext 
   %vb = shufflevector <16 x i64> %elt.head, <16 x i64> poison, <16 x i32> zeroinitializer
   %v = call <16 x i64> @llvm.vp.udiv.v16i64(<16 x i64> %va, <16 x i64> %vb, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i64> %v
+}
+
+
+define <8 x i8> @vdivu_vv_v8i8_unmasked_avl3(<8 x i8> %va, <8 x i8> %b) {
+; CHECK-LABEL: vdivu_vv_v8i8_unmasked_avl3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf2, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <8 x i8> @llvm.vp.udiv.v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> splat (i1 true), i32 3)
+  ret <8 x i8> %v
+}
+
+define <8 x i8> @vdivu_vv_v8i8_unmasked_avl7(<8 x i8> %va, <8 x i8> %b) {
+; CHECK-LABEL: vdivu_vv_v8i8_unmasked_avl7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <8 x i8> @llvm.vp.udiv.v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> splat (i1 true), i32 7)
+  ret <8 x i8> %v
+}
+
+declare <3 x i8> @llvm.vp.udiv.v3i8(<3 x i8>, <3 x i8>, <3 x i1>, i32)
+
+define <3 x i8> @vdivu_vv_v3i8_unmasked(<3 x i8> %va, <3 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vdivu_vv_v3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.udiv.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> splat (i1 true), i32 %evl)
+  ret <3 x i8> %v
+}
+
+define <3 x i8> @vdivu_vv_v3i8_unmasked_avl3(<3 x i8> %va, <3 x i8> %b) {
+; CHECK-LABEL: vdivu_vv_v3i8_unmasked_avl3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.udiv.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> splat (i1 true), i32 3)
+  ret <3 x i8> %v
+}
+
+declare <7 x i8> @llvm.vp.udiv.v7i8(<7 x i8>, <7 x i8>, <7 x i1>, i32)
+
+define <7 x i8> @vdivu_vv_v7i8_unmasked(<7 x i8> %va, <7 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vdivu_vv_v7i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <7 x i8> @llvm.vp.udiv.v7i8(<7 x i8> %va, <7 x i8> %b, <7 x i1> splat (i1 true), i32 %evl)
+  ret <7 x i8> %v
+}
+
+define <7 x i8> @vdivu_vv_v7i8_unmasked_avl7(<7 x i8> %va, <7 x i8> %b) {
+; CHECK-LABEL: vdivu_vv_v7i8_unmasked_avl7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <7 x i8> @llvm.vp.udiv.v7i8(<7 x i8> %va, <7 x i8> %b, <7 x i1> splat (i1 true), i32 7)
+  ret <7 x i8> %v
 }

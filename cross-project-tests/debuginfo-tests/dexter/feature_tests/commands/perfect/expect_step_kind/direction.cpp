@@ -10,7 +10,7 @@
 // TODO: The dbgeng debugger does not support column step reporting at present.
 // XFAIL: system-windows
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: direction.cpp:
 

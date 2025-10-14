@@ -7,10 +7,9 @@
 // XFAIL: ubsan,tsan
 // XFAIL: android && asan
 
-// RUN: DIR=%t_workdir
-// RUN: rm -rf $DIR
-// RUN: mkdir -p $DIR
-// RUN: cd $DIR
+// RUN: rm -rf %t_workdir
+// RUN: mkdir -p %t_workdir
+// RUN: cd %t_workdir
 
 // RUN: echo -e "src:*\nfun:*"     > al_all.txt
 // RUN: echo -e ""                 > al_none.txt
@@ -27,8 +26,8 @@
 // RUN: echo 'section "__sancov_cntrs"'                                                                             >  patterns.txt
 // RUN: echo '%[0-9]\+ = load i8, ptr @__sancov_gen_' >> patterns.txt
 // RUN: echo 'store i8 %[0-9]\+, ptr @__sancov_gen_'  >> patterns.txt
-// RUN: echo '%[0-9]\+ = load i8, ptr getelementptr inbounds (\[[0-9]\+ x i8\], ptr @__sancov_gen_' >> patterns.txt
-// RUN: echo 'store i8 %[0-9]\+, ptr getelementptr inbounds (\[[0-9]\+ x i8\], ptr @__sancov_gen_'  >> patterns.txt
+// RUN: echo '%[0-9]\+ = load i8, ptr getelementptr (\[[0-9]\+ x i8\], ptr @__sancov_gen_' >> patterns.txt
+// RUN: echo 'store i8 %[0-9]\+, ptr getelementptr (\[[0-9]\+ x i8\], ptr @__sancov_gen_'  >> patterns.txt
 
 // Check indirect-calls
 // RUN: echo 'call void @__sanitizer_cov_trace_pc_indir'                                                            >> patterns.txt
@@ -82,7 +81,7 @@
 // RUN: %clangxx -O0 %s -S -o - -emit-llvm -fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table -fsanitize-coverage-allowlist=al_bar.txt  -fsanitize-coverage-ignorelist=bl_bar.txt   2>&1 | not grep -f patterns.txt
 
 // RUN: cd -
-// RUN: rm -rf $DIR
+// RUN: rm -rf %t_workdir
 
 // foo has 3 instrumentation points, 0 indirect call, 1 comparison point
 

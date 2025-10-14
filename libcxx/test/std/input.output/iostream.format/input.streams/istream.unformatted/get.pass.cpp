@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
-
 // <istream>
 
 // int_type get();
 
 #include <istream>
 #include <cassert>
+#include <streambuf>
+
 #include "test_macros.h"
 
 template <class CharT>

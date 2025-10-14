@@ -1,8 +1,6 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! OpenMP Version 5.2
 ! 6.7 allocators construct
 ! A list item that appears in an allocate clause must appear as

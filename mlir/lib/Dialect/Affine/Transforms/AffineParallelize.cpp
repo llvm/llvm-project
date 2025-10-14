@@ -18,13 +18,11 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Passes.h.inc"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/Support/Debug.h"
-#include <deque>
 
 namespace mlir {
 namespace affine {
@@ -42,6 +40,8 @@ namespace {
 /// Convert all parallel affine.for op into 1-D affine.parallel op.
 struct AffineParallelize
     : public affine::impl::AffineParallelizeBase<AffineParallelize> {
+  using AffineParallelizeBase<AffineParallelize>::AffineParallelizeBase;
+
   void runOnOperation() override;
 };
 
@@ -89,9 +89,4 @@ void AffineParallelize::runOnOperation() {
                               << loop);
     }
   }
-}
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::affine::createAffineParallelizePass() {
-  return std::make_unique<AffineParallelize>();
 }

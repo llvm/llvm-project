@@ -10,15 +10,21 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, epoll_create, ([[maybe_unused]] int size)) {
 #ifdef SYS_epoll_create
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_epoll_create, size);
 #elif defined(SYS_epoll_create1)
+  if (size == 0) {
+    libc_errno = EINVAL;
+    return -1;
+  }
+
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_epoll_create1, 0);
 #else
 #error                                                                         \
@@ -35,4 +41,4 @@ LLVM_LIBC_FUNCTION(int, epoll_create, ([[maybe_unused]] int size)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

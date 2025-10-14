@@ -1,0 +1,66 @@
+## Test zero dumping when a data mapping symbol is active.
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
+# RUN: llvm-objdump -t -d %t | FileCheck %s
+
+# CHECK:      SYMBOL TABLE:
+# CHECK-NEXT: 0000000000000000 l       .text  0000000000000000 $d
+# CHECK-NEXT: 000000000000000c l       .text  0000000000000000 $x
+# CHECK-NEXT: 0000000000000010 l       .text  0000000000000000 $d
+
+# CHECK:      0000000000000000 <_start>:
+# CHECK-NEXT:                 ...
+# CHECK-NEXT:        8: 01 00 00 00   .word   0x00000001
+# CHECK-NEXT:        c: d503201f      nop
+# CHECK-NEXT:                 ...
+# CHECK-NEXT:       18: d503201f      nop
+# CHECK-NEXT:                 ...
+# CHECK-NEXT:       2c: d503201f      nop
+# CHECK-NEXT:                 ...
+# CHECK-NEXT:       48: d503201f      nop
+
+# RUN: llvm-objdump -d -z %t | FileCheck %s --check-prefix=ZERO
+
+# ZERO:      0000000000000000 <_start>:
+# ZERO-NEXT:        0: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:        4: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:        8: 01 00 00 00   .word   0x00000001
+# ZERO-NEXT:        c: d503201f      nop
+# ZERO-NEXT:       10: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:       14: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:       18: d503201f      nop
+
+## Check we do not skip zeroes blocks if have relocations pointed to these places.
+# RUN: llvm-objdump -d -r %t | FileCheck %s --check-prefix=RELOC
+
+# RELOC:      0000000000000000 <_start>:
+# RELOC-NEXT:                 ...
+# RELOC-NEXT:        8: 01 00 00 00   .word   0x00000001
+# RELOC-NEXT:        c: d503201f      nop
+# RELOC-NEXT:                 ...
+# RELOC-NEXT:       18: d503201f      nop
+# RELOC-NEXT:       1c: 00 00 00 00   .word   0x00000000
+# RELOC-NEXT:                 000000000000001c:  R_AARCH64_ABS64      x1
+# RELOC-NEXT:                 ...
+# RELOC-NEXT:       2c: d503201f      nop
+# RELOC-NEXT:                 ...
+# RELOC-NEXT:       38: 00 00 00 00   .word   0x00000000
+# RELOC-NEXT:                 0000000000000038:  R_AARCH64_ABS64      x2
+# RELOC-NEXT:                 ...
+# RELOC-NEXT:       48: d503201f      nop
+
+.globl _start
+_start:
+  .space 8
+  .long 1
+  nop
+  .space 8
+  nop
+
+  .quad x1
+  .space 8
+  nop
+
+  .space 8
+  .quad x2
+  .space 8
+  nop

@@ -130,12 +130,12 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU, bool IsTop) {
   // Now see if there are no other dependencies to instructions already
   // in the packet.
   if (IsTop) {
-    for (unsigned i = 0, e = Packet.size(); i != e; ++i)
-      if (hasDependence(Packet[i], SU))
+    for (const SUnit *U : Packet)
+      if (hasDependence(U, SU))
         return false;
   } else {
-    for (unsigned i = 0, e = Packet.size(); i != e; ++i)
-      if (hasDependence(SU, Packet[i]))
+    for (const SUnit *U : Packet)
+      if (hasDependence(SU, U))
         return false;
   }
   return true;
@@ -297,9 +297,6 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
     HighPressureSets[i] =
         ((float)MaxPressure[i] > ((float)Limit * RPThreshold));
   }
-
-  assert((!ForceTopDown || !ForceBottomUp) &&
-         "-misched-topdown incompatible with -misched-bottomup");
 }
 
 VLIWResourceModel *ConvergingVLIWScheduler::createVLIWResourceModel(
@@ -954,7 +951,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  if (ForceTopDown) {
+  if (PreRADirection == MISched::TopDown) {
     SU = Top.pickOnlyChoice();
     if (!SU) {
       SchedCandidate TopCand;
@@ -965,7 +962,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
       SU = TopCand.SU;
     }
     IsTopNode = true;
-  } else if (ForceBottomUp) {
+  } else if (PreRADirection == MISched::BottomUp) {
     SU = Bot.pickOnlyChoice();
     if (!SU) {
       SchedCandidate BotCand;

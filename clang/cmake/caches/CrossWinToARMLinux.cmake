@@ -8,12 +8,21 @@
 # NOTE: the build requires a development ARM Linux root filesystem to use
 # proper target platform depended library and header files.
 #
+# The build generates a proper clang configuration file with stored
+# --sysroot argument for specified target triple. Also it is possible
+# to specify configuration path via CMake arguments, such as
+#   -DCLANG_CONFIG_FILE_USER_DIR=<full-path-to-clang-configs>
+# and/or
+#   -DCLANG_CONFIG_FILE_SYSTEM_DIR=<full-path-to-clang-configs>
+#
+# See more details here: https://clang.llvm.org/docs/UsersManual.html#configuration-files
+#
 # Configure:
 #  cmake -G Ninja ^
-#       -DTOOLCHAIN_TARGET_TRIPLE=armv7-unknown-linux-gnueabihf ^
+#       -DTOOLCHAIN_TARGET_TRIPLE=aarch64-unknown-linux-gnu ^
+#       -DTOOLCHAIN_TARGET_SYSROOTFS=<path-to-develop-arm-linux-root-fs> ^
+#       -DTOOLCHAIN_SHARED_LIBS=OFF ^ 
 #       -DCMAKE_INSTALL_PREFIX=../install ^
-#       -DDEFAULT_SYSROOT=<path-to-develop-arm-linux-root-fs> ^
-#       -DLLVM_AR=<llvm_obj_root>/bin/llvm-ar[.exe] ^
 #       -DCMAKE_CXX_FLAGS="-D__OPTIMIZE__" ^
 #       -DREMOTE_TEST_HOST="<hostname>" ^
 #       -DREMOTE_TEST_USER="<ssh_user_name>" ^
@@ -42,10 +51,6 @@
 get_filename_component(LLVM_PROJECT_DIR
                        "${CMAKE_CURRENT_LIST_DIR}/../../../"
                        ABSOLUTE)
-
-if (NOT DEFINED DEFAULT_SYSROOT)
-  message(WARNING "DEFAULT_SYSROOT must be specified for the cross toolchain build.")
-endif()
 
 if (NOT DEFINED LLVM_ENABLE_ASSERTIONS)
   set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
@@ -78,6 +83,24 @@ endif()
 
 message(STATUS "Toolchain target triple: ${TOOLCHAIN_TARGET_TRIPLE}")
 
+if (DEFINED TOOLCHAIN_TARGET_SYSROOTFS)
+  message(STATUS "Toolchain target sysroot: ${TOOLCHAIN_TARGET_SYSROOTFS}")
+  # Store the --sysroot argument for the compiler-rt test flags.
+  set(sysroot_flags --sysroot='${TOOLCHAIN_TARGET_SYSROOTFS}')
+  # Generate the clang configuration file for the specified target triple
+  # and store --sysroot in this file.
+  file(WRITE "${CMAKE_BINARY_DIR}/bin/${TOOLCHAIN_TARGET_TRIPLE}.cfg" ${sysroot_flags})
+endif()
+
+# Build the shared libraries for libc++/libc++abi/libunwind.
+if (NOT DEFINED TOOLCHAIN_SHARED_LIBS)
+  set(TOOLCHAIN_SHARED_LIBS OFF)
+endif()
+# Enable usage of the static libunwind and libc++abi libraries.
+if (NOT DEFINED TOOLCHAIN_USE_STATIC_LIBS)
+  set(TOOLCHAIN_USE_STATIC_LIBS ON)
+endif()
+
 if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
   if ("${TOOLCHAIN_TARGET_TRIPLE}" MATCHES "^(armv|arm32)+")
     set(LLVM_TARGETS_TO_BUILD "ARM" CACHE STRING "")
@@ -89,11 +112,17 @@ endif()
 
 message(STATUS "Toolchain target to build: ${LLVM_TARGETS_TO_BUILD}")
 
+# Allow to override libc++ ABI version (1 is default).
+if (NOT DEFINED LIBCXX_ABI_VERSION)
+  set(LIBCXX_ABI_VERSION 1)
+endif()
+
+message(STATUS "Toolchain's Libc++ ABI version: ${LIBCXX_ABI_VERSION}")
+
 if (NOT DEFINED CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 endif()
 
-set(CMAKE_CROSSCOMPILING                    ON CACHE BOOL "")
 set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRING "")
 # Required if COMPILER_RT_DEFAULT_TARGET_ONLY is ON
 set(CMAKE_C_COMPILER_TARGET                 "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
@@ -109,8 +138,15 @@ set(CLANG_DEFAULT_OBJCOPY                   "llvm-objcopy" CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB                     "compiler-rt" CACHE STRING "")
 set(CLANG_DEFAULT_UNWINDLIB                 "libunwind" CACHE STRING "")
 
-if(WIN32)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY            "MultiThreaded" CACHE STRING "")
+if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY AND WIN32)
+  #Note: Always specify MT DLL for the LLDB build configurations on Windows host.
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY            "MultiThreadedDebugDLL" CACHE STRING "")
+  else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY            "MultiThreadedDLL" CACHE STRING "")
+  endif()
+  # Grab all ucrt/vcruntime related DLLs into the binary installation folder.
+  set(CMAKE_INSTALL_UCRT_LIBRARIES          ON CACHE BOOL "")
 endif()
 
 # Set up RPATH for the target runtime/builtin libraries.
@@ -122,10 +158,18 @@ endif()
 set(LLVM_BUILTIN_TARGETS                    "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                         "Linux" CACHE STRING "")
-set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_LLVM_CMAKE_DIR                            "${LLVM_PROJECT_DIR}/llvm/cmake/modules" CACHE PATH "")
+
+if (DEFINED TOOLCHAIN_TARGET_COMPILER_FLAGS)
+  foreach(lang C;CXX;ASM)
+    set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_${lang}_FLAGS         "${TOOLCHAIN_TARGET_COMPILER_FLAGS}" CACHE STRING "")
+  endforeach()
+endif()
+foreach(type SHARED;MODULE;EXE)
+  set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_${type}_LINKER_FLAGS    "-fuse-ld=lld" CACHE STRING "")
+endforeach()
 
 set(LLVM_RUNTIME_TARGETS                    "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR      ON CACHE BOOL "")
@@ -133,9 +177,17 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR      ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LLVM_ENABLE_RUNTIMES                      "${LLVM_ENABLE_RUNTIMES}" CACHE STRING "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                         "Linux" CACHE STRING "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
+
+if (DEFINED TOOLCHAIN_TARGET_COMPILER_FLAGS)
+  foreach(lang C;CXX;ASM)
+    set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_${lang}_FLAGS         "${TOOLCHAIN_TARGET_COMPILER_FLAGS}" CACHE STRING "")
+  endforeach()
+endif()
+foreach(type SHARED;MODULE;EXE)
+  set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_${type}_LINKER_FLAGS    "-fuse-ld=lld" CACHE STRING "")
+endforeach()
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_BUILTINS                ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_SANITIZERS              OFF CACHE BOOL "")
@@ -150,23 +202,31 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_CAN_EXECUTE_TESTS           
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_USE_BUILTINS_LIBRARY          ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_CXX_LIBRARY                   libcxx CACHE STRING "")
-# Tell Clang to seach C++ headers alongside with the just-built binaries for the C++ compiler-rt tests.
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_TEST_COMPILER_CFLAGS          "--stdlib=libc++" CACHE STRING "")
-
+# The compiler-rt tests disable the clang configuration files during the execution by setting CLANG_NO_DEFAULT_CONFIG=1
+# and drops out the --sysroot from there. Provide it explicity via the test flags here if target sysroot has been specified.
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_TEST_COMPILER_CFLAGS          "--stdlib=libc++ ${sysroot_flags}" CACHE STRING "")
+  
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_USE_COMPILER_RT                 ON CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_ENABLE_SHARED                   OFF CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_ENABLE_SHARED                   ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_USE_LLVM_UNWINDER               ON CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_STATIC_UNWINDER          ON CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_STATIC_UNWINDER          ${TOOLCHAIN_USE_STATIC_LIBS} CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_USE_COMPILER_RT                 ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS   OFF CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_SHARED                   OFF CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_SHARED                   ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_USE_COMPILER_RT                    ON CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_SHARED                      OFF CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ABI_VERSION                        2 CACHE STRING "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_SHARED                      ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ABI_VERSION                        ${LIBCXX_ABI_VERSION} CACHE STRING "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
+# Merge libc++ and libc++abi libraries into the single libc++ library file.
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY          ${TOOLCHAIN_USE_STATIC_LIBS} CACHE BOOL "")
+# Forcely disable the libc++ benchmarks on Windows build hosts
+# (current benchmark test configuration does not support the cross builds there).
+if (WIN32)
+  set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_INCLUDE_BENCHMARKS               OFF CACHE BOOL "")
+endif(WIN32)
 
 # Avoid searching for the python3 interpreter during the runtimes configuration for the cross builds.
 # It starts searching the python3 package using the target's sysroot path, that usually is not compatible with the build host.

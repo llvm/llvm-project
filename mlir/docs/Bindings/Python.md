@@ -51,7 +51,10 @@ python -m pip install --upgrade pip
 # packages will be installed there.
 python -m pip install -r mlir/python/requirements.txt
 
-# Now run `cmake`, `ninja`, et al.
+# Now run your build command with `cmake`, `ninja`, et al.
+
+# Run mlir tests. For example, to run python bindings tests only using ninja:
+ninja check-mlir-python
 ```
 
 For interactive use, it is sufficient to add the
@@ -213,13 +216,28 @@ added to an attached operation, they need to be re-parented to the containing
 module).
 
 Due to the validity and parenting accounting needs, `PyOperation` is the owner
-for regions and blocks and needs to be a top-level type that we can count on not
-aliasing. This let's us do things like selectively invalidating instances when
-mutations occur without worrying that there is some alias to the same operation
-in the hierarchy. Operations are also the only entity that are allowed to be in
-a detached state, and they are interned at the context level so that there is
-never more than one Python `mlir.ir.Operation` object for a unique
-`MlirOperation`, regardless of how it is obtained.
+for regions and blocks. Operations are also the only entities which are allowed to be in
+a detached state.
+
+**Note**: Multiple `PyOperation` objects (i.e., the Python objects themselves) can alias a single `mlir::Operation`. 
+This means, for example, if you have `py_op1` and `py_op2` which wrap the same `mlir::Operation op` 
+and you somehow transform `op` (e.g., you run a pass on `op`) then walking the MLIR AST via either/or `py_op1`, `py_op2`
+will reflect the same MLIR AST. This is perfectly safe and supported. What is not supported is invalidating any 
+operation while there exist multiple Python objects wrapping that operation **and then manipulating those wrappers**. 
+For example if `py_op1` and `py_op2` wrap the same operation under a root `py_op3` and then `py_op3` is 
+transformed such that the operation referenced (by `py_op1`, `py_op2`) is erased. Then `py_op1`, `py_op2` 
+become "undefined" in a sense; manipulating them in any way is "formally forbidden". Note, this also applies to 
+`SymbolTable` mutation, which is considered a transformation of the root `SymbolTable`-supporting operation for the 
+purposes of the discussion here. Metaphorically, one can think of this similarly to how STL container iterators are invalidated once the container itself is changed. The "best practices" recommendation is to structure your code such that 
+
+1. First, query/manipulate various Python wrapper objects `py_op1`, `py_op2`, `py_op3`, etc.;
+2. Second, transform the AST/erase operations/etc. via a single root object;
+3. Invalidate all queried nodes (e.g., using `op._set_invalid()`).
+
+Ideally this should be done in a function body so that step (3) corresponds to the end of the function and there are no 
+risks of Python wrapper objects leaking/living longer than necessary. In summary, you should scope your changes based on 
+nesting i.e., change leaf nodes first before going up in hierarchy, and only in very rare cases query nested ops post
+modifying a parent op.
 
 The C/C++ API allows for Region/Block to also be detached, but it simplifies the
 ownership model a lot to eliminate that possibility in this API, allowing the
@@ -234,11 +252,6 @@ With the way it is now, we can avoid having a global live list for regions and
 blocks. We may end up needing an op-local one at some point TBD, depending on
 how hard it is to guarantee how mutations interact with their Python peer
 objects. We can cross that bridge easily when we get there.
-
-Module, when used purely from the Python API, can't alias anyway, so we can use
-it as a top-level ref type without a live-list for interning. If the API ever
-changes such that this cannot be guaranteed (i.e. by letting you marshal a
-native-defined Module in), then there would need to be a live table for it too.
 
 ## User-level API
 
@@ -859,7 +872,7 @@ mutually exclusive with a more complete mapping of the backing constructs.
 
 ## Testing
 
-Tests should be added in the `test/Bindings/Python` directory and should
+Tests should be added in the `mlir/test/python` directory and should
 typically be `.py` files that have a lit run line.
 
 We use `lit` and `FileCheck` based tests:
@@ -1035,7 +1048,7 @@ class ConstantOp(_ods_ir.OpView):
     ...
 ```
 
-expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`). 
+expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`).
 Thus, a natural extension is a builder that accepts a MLIR type and a Python value and instantiates the appropriate `TypedAttr`:
 
 ```python
@@ -1138,12 +1151,14 @@ attributes and types must connect to the relevant C APIs for building and
 inspection, which must be provided first. Bindings for `Attribute` and `Type`
 subclasses can be defined using
 [`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)
-utilities that mimic pybind11 API for defining functions and properties. These
-bindings are to be included in a separate pybind11 module. The utilities also
-provide automatic casting between C API handles `MlirAttribute` and `MlirType`
-and their Python counterparts so that the C API handles can be used directly in
-binding implementations. The methods and properties provided by the bindings
-should follow the principles discussed above.
+or
+[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
+utilities that mimic pybind11/nanobind API for defining functions and
+properties. These bindings are to be included in a separate module. The
+utilities also provide automatic casting between C API handles `MlirAttribute`
+and `MlirType` and their Python counterparts so that the C API handles can be
+used directly in binding implementations. The methods and properties provided by
+the bindings should follow the principles discussed above.
 
 The attribute and type bindings for a dialect can be located in
 `lib/Bindings/Python/Dialect<Name>.cpp` and should be compiled into a separate
@@ -1173,13 +1188,130 @@ which can be `import`ed  from the main dialect file, i.e.
 `python/mlir/dialects/<dialect-namespace>/passes.py` if it is undesirable to
 make the passes available along with the dialect.
 
-
 ### Other functionality
 
 Dialect functionality other than IR objects or passes, such as helper functions,
 can be exposed to Python similarly to attributes and types. C API is expected to
 exist for this functionality, which can then be wrapped using pybind11 and
-`[include/mlir/Bindings/Python/PybindAdaptors.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)`
+[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h),
+or nanobind and
+[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
 utilities to connect to the rest of Python API. The bindings can be located in a
-separate pybind11 module or in the same module as attributes and types, and
+separate module or in the same module as attributes and types, and
 loaded along with the dialect.
+
+
+## Extending MLIR in Python
+
+The MLIR Python bindings provide support for defining custom components in Python,
+mainly including dialects, passes, and rewrite patterns.
+The following sections outline how each of these can be implemented.
+
+### Dialects
+
+Dialects can be defined through the IRDL dialect bindings in Python.
+The IRDL bindings offer a `load_dialects` function that
+converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
+For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).
+
+### Passes
+
+Passes can be defined as Python callables via the `PassManager.add` API.
+In such case, the callable is wrapped as an `mlir::Pass` internally and
+executed as part of the pass pipeline when `PassManager.run` is invoked.
+In the callable, the `op` parameter represents the current operation being transformed,
+while the `pass_` parameter provides access to the current `Pass` object,
+allowing actions such as `signalPassFailure()`.
+The lifetime of the callable is extended at least until the `PassManager` is destroyed.
+The following example code demonstrates how to define Python passes.
+
+```python
+def demo_pass(op, pass_):
+    # do something with the given op
+    pass
+
+pm = PassManager('any')
+pm.add(demo_pass)
+pm.add('some-cpp-defined-passes')
+...
+pm.run(some_op)
+```
+
+### Rewrite Patterns
+
+Rewrite patterns can be registered via the `add` method
+of `mlir.rewrite.RewritePatternSet` in Python.
+This method takes the operation type to be rewritten
+and a Python callable that defines the *match and rewrite* logic.
+Note that the Python callable should be defined so that
+the rewrite is applied if and only if the match succeeds,
+which corresponds to the return value being castable to `False`.
+
+The `RewritePatternSet` can be converted into
+a `FrozenRewritePatternSet` using the `freeze` method,
+which can be applied to an operation through
+the greedy pattern driver using `apply_patterns_and_fold_greedily`.
+The following example demonstrates the typical usage:
+
+```python
+def to_muli(op, rewriter):
+    with rewriter.ip:
+        new_op = arith.muli(op.lhs, op.rhs, loc=op.location)
+    rewriter.replace_op(op, new_op)
+
+patterns = RewritePatternSet()
+patterns.add(arith.AddIOp, to_muli)  # Rewrite arith.addi into arith.muli
+patterns.add(...)
+frozen = patterns.freeze()
+
+module = ...
+apply_patterns_and_fold_greedily(module, frozen)
+```
+
+The PDL dialect bindings also enable defining and generating rewrite patterns in Python.
+The `mlir.rewrite.PDLModule` class accepts a module containing `pdl.pattern` ops,
+which can be transformed into a `FrozenRewritePatternSet` using the `freeze` method.
+This frozen set can then be applied to an operation
+using the greedy rewrite pattern driver via `apply_patterns_and_fold_greedily`.
+For further information, see [the PDL dialect documentation](/docs/Dialects/PDLOps/).
+
+
+## Free-threading (No-GIL) support
+
+Free-threading or no-GIL support refers to CPython interpreter (>=3.13) with Global Interpreter Lock made optional. For details on the topic, please check [PEP-703](https://peps.python.org/pep-0703/) and this [Python free-threading guide](https://py-free-threading.github.io/).
+
+MLIR Python bindings are free-threading compatible with exceptions (discussed below) in the following sense: it is safe to work in multiple threads with **independent** contexts. Below we show an example code of safe usage:
+
+```python
+# python3.13t example.py
+import concurrent.futures
+
+import mlir.dialects.arith as arith
+from mlir.ir import Context, Location, Module, IntegerType, InsertionPoint
+
+
+def func(py_value):
+    with Context() as ctx:
+        module = Module.create(loc=Location.file("foo.txt", 0, 0))
+
+        dtype = IntegerType.get_signless(64)
+        with InsertionPoint(module.body), Location.name("a"):
+            arith.constant(dtype, py_value)
+
+    return module
+
+
+num_workers = 8
+with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    futures = []
+    for i in range(num_workers):
+        futures.append(executor.submit(func, i))
+    assert len(list(f.result() for f in futures)) == num_workers
+```
+
+The exceptions to the free-threading compatibility:
+- IR printing is unsafe, e.g. when using `PassManager` with `PassManager.enable_ir_printing()` which calls thread-unsafe `llvm::raw_ostream`.
+- Usage of `Location.emit_error` is unsafe (due to thread-unsafe `llvm::raw_ostream`).
+- Usage of `Module.dump` is unsafe (due to thread-unsafe `llvm::raw_ostream`).
+- Usage of `mlir.dialects.transform.interpreter` is unsafe.
+- Usage of `mlir.dialects.gpu` and `gpu-module-to-binary` is unsafe.

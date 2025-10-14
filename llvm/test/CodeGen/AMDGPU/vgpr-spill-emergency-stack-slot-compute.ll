@@ -1,9 +1,9 @@
 ; XFAIL: *
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
-; RUN: llc  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
-; RUN: llc  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
+; RUN: llc  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
+; RUN: llc  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
 
 ; This ends up using all 256 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -347,7 +347,7 @@ bb145:                                            ; preds = %bb12
   %tmp147 = bitcast float %tmp95 to i32
   %tmp148 = add i32 %tmp11, %tmp147
   %tmp149 = bitcast i32 %tmp148 to float
-  %tmp150 = insertelement <128 x float> undef, float %tmp91, i32 0
+  %tmp150 = insertelement <128 x float> poison, float %tmp91, i32 0
   %tmp151 = insertelement <128 x float> %tmp150, float %tmp90, i32 1
   %tmp152 = insertelement <128 x float> %tmp151, float %tmp89, i32 2
   %tmp153 = insertelement <128 x float> %tmp152, float %tmp87, i32 3

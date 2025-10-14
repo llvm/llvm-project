@@ -39,9 +39,10 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_HEADER:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/mod_header.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/mod_header.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "ModHeader"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -65,9 +66,10 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/mod_tu.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/mod_tu.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "ModTU"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

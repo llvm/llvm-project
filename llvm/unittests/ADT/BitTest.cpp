@@ -247,6 +247,29 @@ TEST(BitTest, BitWidth) {
   EXPECT_EQ(64, llvm::bit_width(uint64_t(0xffffffffffffffffull)));
 }
 
+TEST(BitTest, BitWidthConstexpr) {
+  static_assert(llvm::bit_width_constexpr(0u) == 0);
+  static_assert(llvm::bit_width_constexpr(1u) == 1);
+  static_assert(llvm::bit_width_constexpr(2u) == 2);
+  static_assert(llvm::bit_width_constexpr(3u) == 2);
+  static_assert(llvm::bit_width_constexpr(4u) == 3);
+  static_assert(llvm::bit_width_constexpr(5u) == 3);
+  static_assert(llvm::bit_width_constexpr(6u) == 3);
+  static_assert(llvm::bit_width_constexpr(7u) == 3);
+  static_assert(llvm::bit_width_constexpr(8u) == 4);
+
+  static_assert(llvm::bit_width_constexpr(255u) == 8);
+  static_assert(llvm::bit_width_constexpr(256u) == 9);
+  static_assert(llvm::bit_width_constexpr(257u) == 9);
+
+  static_assert(
+      llvm::bit_width_constexpr(std::numeric_limits<uint16_t>::max()) == 16);
+  static_assert(
+      llvm::bit_width_constexpr(std::numeric_limits<uint32_t>::max()) == 32);
+  static_assert(
+      llvm::bit_width_constexpr(std::numeric_limits<uint64_t>::max()) == 64);
+}
+
 TEST(BitTest, CountlZero) {
   uint8_t Z8 = 0;
   uint16_t Z16 = 0;
@@ -297,6 +320,14 @@ TEST(BitTest, CountrZero) {
   EXPECT_EQ(1, llvm::countr_zero(NZ16));
   EXPECT_EQ(1, llvm::countr_zero(NZ32));
   EXPECT_EQ(1, llvm::countr_zero(NZ64));
+
+  EXPECT_EQ(0, llvm::countr_zero(uint8_t(1)));
+  EXPECT_EQ(3, llvm::countr_zero(uint8_t(8)));
+  EXPECT_EQ(7, llvm::countr_zero(uint8_t(128)));
+
+  EXPECT_EQ(0, llvm::countr_zero(uint16_t(1)));
+  EXPECT_EQ(8, llvm::countr_zero(uint16_t(256)));
+  EXPECT_EQ(15, llvm::countr_zero(uint16_t(32768)));
 }
 
 TEST(BitTest, CountlOne) {

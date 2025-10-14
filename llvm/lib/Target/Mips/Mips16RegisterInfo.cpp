@@ -11,24 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips16RegisterInfo.h"
-#include "Mips.h"
 #include "Mips16InstrInfo.h"
 #include "MipsInstrInfo.h"
-#include "MipsMachineFunction.h"
-#include "MipsSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -37,7 +28,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips16-registerinfo"
 
-Mips16RegisterInfo::Mips16RegisterInfo() = default;
+Mips16RegisterInfo::Mips16RegisterInfo(const MipsSubtarget &STI)
+    : MipsRegisterInfo(STI) {}
 
 bool Mips16RegisterInfo::requiresRegisterScavenging
   (const MachineFunction &MF) const {

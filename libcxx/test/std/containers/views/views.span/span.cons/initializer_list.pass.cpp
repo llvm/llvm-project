@@ -34,7 +34,7 @@ static_assert(!ConstElementType<std::span<int>>);
 static_assert(ConstElementType<std::span<const int, 94>>);
 static_assert(!ConstElementType<std::span<int, 94>>);
 
-// Constructor constraings
+// Constructor constraints
 
 template <typename I, typename T, std::size_t... N>
 concept HasInitializerListCtr = requires(I il) { std::span<T, N...>{il}; };
@@ -93,9 +93,9 @@ constexpr bool test() {
 
 // Test P2447R4 "Annex C examples"
 
-constexpr int three(std::span<void* const> sp) { return sp.size(); }
+constexpr int three(std::span<void* const> sp) { return static_cast<int>(sp.size()); }
 
-constexpr int four(std::span<const std::any> sp) { return sp.size(); }
+constexpr int four(std::span<const std::any> sp) { return static_cast<int>(sp.size()); }
 
 bool test_P2447R4_annex_c_examples() {
   // 1. Overload resolution is affected

@@ -17,7 +17,7 @@ define i32 @test(ptr %0, ptr %1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i8> [[TMP12]], i32 0
 ; CHECK-NEXT:    [[DOTNEG:%.*]] = sext i8 [[TMP13]] to i32
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i8> [[TMP12]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP15]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[DOTNEG]], [[TMP8]]
 ; CHECK-NEXT:    ret i32 [[TMP10]]
 ;

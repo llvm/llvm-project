@@ -97,7 +97,7 @@ define void @test3(i1 %c, i1 %c2) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2:%.*]], i64 [[SEL]], i64 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SEL2]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[SEL2]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    call void @use() [ "deopt"(i64 2) ]
@@ -122,7 +122,7 @@ define void @test4(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i64 0, [[SEL]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i64 [[ADD1]], [[SEL2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ADD2]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[ADD2]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    call void @use() [ "deopt"(i64 2) ]

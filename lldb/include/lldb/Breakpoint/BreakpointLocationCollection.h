@@ -111,7 +111,8 @@ public:
   ///
   /// \return
   ///    \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context);
+  bool ShouldStop(StoppointCallbackContext *context,
+                  BreakpointLocationCollection &stopped_bp_locs);
 
   /// Print a description of the breakpoint locations in this list
   /// to the stream \a s.
@@ -165,8 +166,7 @@ private:
   mutable std::mutex m_collection_mutex;
 
 public:
-  typedef AdaptedIterable<collection, lldb::BreakpointLocationSP,
-                          vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       BreakpointLocationCollectionIterable;
   BreakpointLocationCollectionIterable BreakpointLocations() {
     return BreakpointLocationCollectionIterable(m_break_loc_collection);

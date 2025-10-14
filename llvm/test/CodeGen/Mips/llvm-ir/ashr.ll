@@ -382,53 +382,40 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -32
 ; MIPS-NEXT:    .cfi_def_cfa_offset 32
-; MIPS-NEXT:    swl $7, 28($sp)
-; MIPS-NEXT:    swl $6, 24($sp)
 ; MIPS-NEXT:    sra $1, $4, 31
-; MIPS-NEXT:    swl $5, 20($sp)
-; MIPS-NEXT:    swl $4, 16($sp)
-; MIPS-NEXT:    swl $1, 12($sp)
-; MIPS-NEXT:    swl $1, 8($sp)
-; MIPS-NEXT:    swl $1, 4($sp)
-; MIPS-NEXT:    swl $1, 0($sp)
-; MIPS-NEXT:    addiu $2, $sp, 0
-; MIPS-NEXT:    swr $7, 31($sp)
-; MIPS-NEXT:    swr $6, 27($sp)
-; MIPS-NEXT:    swr $5, 23($sp)
-; MIPS-NEXT:    swr $4, 19($sp)
-; MIPS-NEXT:    swr $1, 15($sp)
-; MIPS-NEXT:    swr $1, 11($sp)
-; MIPS-NEXT:    swr $1, 7($sp)
-; MIPS-NEXT:    swr $1, 3($sp)
-; MIPS-NEXT:    addiu $1, $2, 16
+; MIPS-NEXT:    sw $7, 28($sp)
+; MIPS-NEXT:    sw $6, 24($sp)
+; MIPS-NEXT:    sw $5, 20($sp)
+; MIPS-NEXT:    sw $4, 16($sp)
+; MIPS-NEXT:    sw $1, 12($sp)
+; MIPS-NEXT:    sw $1, 8($sp)
+; MIPS-NEXT:    sw $1, 4($sp)
+; MIPS-NEXT:    sw $1, 0($sp)
+; MIPS-NEXT:    addiu $1, $sp, 0
+; MIPS-NEXT:    addiu $1, $1, 16
 ; MIPS-NEXT:    lw $2, 60($sp)
 ; MIPS-NEXT:    srl $3, $2, 3
-; MIPS-NEXT:    andi $3, $3, 15
+; MIPS-NEXT:    andi $3, $3, 12
 ; MIPS-NEXT:    subu $1, $1, $3
-; MIPS-NEXT:    lwl $3, 4($1)
-; MIPS-NEXT:    lwr $3, 7($1)
-; MIPS-NEXT:    sll $4, $3, 1
-; MIPS-NEXT:    lwl $5, 8($1)
-; MIPS-NEXT:    lwr $5, 11($1)
-; MIPS-NEXT:    andi $2, $2, 7
-; MIPS-NEXT:    not $6, $2
-; MIPS-NEXT:    srlv $7, $5, $2
-; MIPS-NEXT:    sllv $4, $4, $6
+; MIPS-NEXT:    lw $3, 4($1)
+; MIPS-NEXT:    lw $5, 8($1)
+; MIPS-NEXT:    srlv $4, $5, $2
+; MIPS-NEXT:    sll $6, $3, 1
+; MIPS-NEXT:    andi $7, $2, 31
+; MIPS-NEXT:    xori $7, $7, 31
+; MIPS-NEXT:    sllv $6, $6, $7
 ; MIPS-NEXT:    srlv $3, $3, $2
-; MIPS-NEXT:    lwl $6, 0($1)
-; MIPS-NEXT:    lwr $6, 3($1)
-; MIPS-NEXT:    sll $8, $6, 1
-; MIPS-NEXT:    xori $9, $2, 31
-; MIPS-NEXT:    sllv $8, $8, $9
-; MIPS-NEXT:    or $3, $3, $8
-; MIPS-NEXT:    or $4, $7, $4
-; MIPS-NEXT:    lwl $7, 12($1)
-; MIPS-NEXT:    lwr $7, 15($1)
-; MIPS-NEXT:    srlv $1, $7, $2
+; MIPS-NEXT:    lw $8, 0($1)
+; MIPS-NEXT:    sll $9, $8, 1
+; MIPS-NEXT:    sllv $9, $9, $7
+; MIPS-NEXT:    or $3, $3, $9
+; MIPS-NEXT:    or $4, $4, $6
+; MIPS-NEXT:    lw $1, 12($1)
+; MIPS-NEXT:    srlv $1, $1, $2
 ; MIPS-NEXT:    sll $5, $5, 1
-; MIPS-NEXT:    sllv $5, $5, $9
+; MIPS-NEXT:    sllv $5, $5, $7
 ; MIPS-NEXT:    or $5, $1, $5
-; MIPS-NEXT:    srav $2, $6, $2
+; MIPS-NEXT:    srav $2, $8, $2
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $sp, $sp, 32
 ;
@@ -436,53 +423,40 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -32
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32-NEXT:    swl $7, 28($sp)
-; MIPS32-NEXT:    swl $6, 24($sp)
 ; MIPS32-NEXT:    sra $1, $4, 31
-; MIPS32-NEXT:    swl $5, 20($sp)
-; MIPS32-NEXT:    swl $4, 16($sp)
-; MIPS32-NEXT:    swl $1, 12($sp)
-; MIPS32-NEXT:    swl $1, 8($sp)
-; MIPS32-NEXT:    swl $1, 4($sp)
-; MIPS32-NEXT:    swl $1, 0($sp)
-; MIPS32-NEXT:    addiu $2, $sp, 0
-; MIPS32-NEXT:    swr $7, 31($sp)
-; MIPS32-NEXT:    swr $6, 27($sp)
-; MIPS32-NEXT:    swr $5, 23($sp)
-; MIPS32-NEXT:    swr $4, 19($sp)
-; MIPS32-NEXT:    swr $1, 15($sp)
-; MIPS32-NEXT:    swr $1, 11($sp)
-; MIPS32-NEXT:    swr $1, 7($sp)
-; MIPS32-NEXT:    swr $1, 3($sp)
-; MIPS32-NEXT:    addiu $1, $2, 16
+; MIPS32-NEXT:    sw $7, 28($sp)
+; MIPS32-NEXT:    sw $6, 24($sp)
+; MIPS32-NEXT:    sw $5, 20($sp)
+; MIPS32-NEXT:    sw $4, 16($sp)
+; MIPS32-NEXT:    sw $1, 12($sp)
+; MIPS32-NEXT:    sw $1, 8($sp)
+; MIPS32-NEXT:    sw $1, 4($sp)
+; MIPS32-NEXT:    sw $1, 0($sp)
+; MIPS32-NEXT:    addiu $1, $sp, 0
+; MIPS32-NEXT:    addiu $1, $1, 16
 ; MIPS32-NEXT:    lw $2, 60($sp)
 ; MIPS32-NEXT:    srl $3, $2, 3
-; MIPS32-NEXT:    andi $3, $3, 15
+; MIPS32-NEXT:    andi $3, $3, 12
 ; MIPS32-NEXT:    subu $1, $1, $3
-; MIPS32-NEXT:    lwl $3, 4($1)
-; MIPS32-NEXT:    lwr $3, 7($1)
-; MIPS32-NEXT:    sll $4, $3, 1
-; MIPS32-NEXT:    lwl $5, 8($1)
-; MIPS32-NEXT:    lwr $5, 11($1)
-; MIPS32-NEXT:    andi $2, $2, 7
-; MIPS32-NEXT:    not $6, $2
-; MIPS32-NEXT:    srlv $7, $5, $2
-; MIPS32-NEXT:    sllv $4, $4, $6
+; MIPS32-NEXT:    lw $3, 4($1)
+; MIPS32-NEXT:    lw $5, 8($1)
+; MIPS32-NEXT:    srlv $4, $5, $2
+; MIPS32-NEXT:    sll $6, $3, 1
+; MIPS32-NEXT:    andi $7, $2, 31
+; MIPS32-NEXT:    xori $7, $7, 31
+; MIPS32-NEXT:    sllv $6, $6, $7
 ; MIPS32-NEXT:    srlv $3, $3, $2
-; MIPS32-NEXT:    lwl $6, 0($1)
-; MIPS32-NEXT:    lwr $6, 3($1)
-; MIPS32-NEXT:    sll $8, $6, 1
-; MIPS32-NEXT:    xori $9, $2, 31
-; MIPS32-NEXT:    sllv $8, $8, $9
-; MIPS32-NEXT:    or $3, $3, $8
-; MIPS32-NEXT:    or $4, $7, $4
-; MIPS32-NEXT:    lwl $7, 12($1)
-; MIPS32-NEXT:    lwr $7, 15($1)
-; MIPS32-NEXT:    srlv $1, $7, $2
+; MIPS32-NEXT:    lw $8, 0($1)
+; MIPS32-NEXT:    sll $9, $8, 1
+; MIPS32-NEXT:    sllv $9, $9, $7
+; MIPS32-NEXT:    or $3, $3, $9
+; MIPS32-NEXT:    or $4, $4, $6
+; MIPS32-NEXT:    lw $1, 12($1)
+; MIPS32-NEXT:    srlv $1, $1, $2
 ; MIPS32-NEXT:    sll $5, $5, 1
-; MIPS32-NEXT:    sllv $5, $5, $9
+; MIPS32-NEXT:    sllv $5, $5, $7
 ; MIPS32-NEXT:    or $5, $1, $5
-; MIPS32-NEXT:    srav $2, $6, $2
+; MIPS32-NEXT:    srav $2, $8, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    addiu $sp, $sp, 32
 ;
@@ -490,52 +464,40 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; 32R2:       # %bb.0: # %entry
 ; 32R2-NEXT:    addiu $sp, $sp, -32
 ; 32R2-NEXT:    .cfi_def_cfa_offset 32
-; 32R2-NEXT:    swl $7, 28($sp)
-; 32R2-NEXT:    swl $6, 24($sp)
-; 32R2-NEXT:    swl $5, 20($sp)
 ; 32R2-NEXT:    sra $1, $4, 31
-; 32R2-NEXT:    swl $4, 16($sp)
-; 32R2-NEXT:    swl $1, 12($sp)
-; 32R2-NEXT:    swl $1, 8($sp)
-; 32R2-NEXT:    swl $1, 4($sp)
-; 32R2-NEXT:    swl $1, 0($sp)
-; 32R2-NEXT:    swr $7, 31($sp)
-; 32R2-NEXT:    swr $6, 27($sp)
-; 32R2-NEXT:    swr $5, 23($sp)
-; 32R2-NEXT:    swr $4, 19($sp)
-; 32R2-NEXT:    swr $1, 15($sp)
-; 32R2-NEXT:    swr $1, 11($sp)
-; 32R2-NEXT:    swr $1, 7($sp)
-; 32R2-NEXT:    swr $1, 3($sp)
+; 32R2-NEXT:    sw $7, 28($sp)
+; 32R2-NEXT:    sw $6, 24($sp)
+; 32R2-NEXT:    sw $5, 20($sp)
+; 32R2-NEXT:    sw $4, 16($sp)
+; 32R2-NEXT:    sw $1, 12($sp)
+; 32R2-NEXT:    sw $1, 8($sp)
+; 32R2-NEXT:    sw $1, 4($sp)
+; 32R2-NEXT:    sw $1, 0($sp)
 ; 32R2-NEXT:    addiu $1, $sp, 0
 ; 32R2-NEXT:    addiu $1, $1, 16
 ; 32R2-NEXT:    lw $2, 60($sp)
-; 32R2-NEXT:    ext $3, $2, 3, 4
+; 32R2-NEXT:    srl $3, $2, 3
+; 32R2-NEXT:    andi $3, $3, 12
 ; 32R2-NEXT:    subu $1, $1, $3
-; 32R2-NEXT:    lwl $3, 4($1)
-; 32R2-NEXT:    lwr $3, 7($1)
-; 32R2-NEXT:    sll $4, $3, 1
-; 32R2-NEXT:    lwl $5, 8($1)
-; 32R2-NEXT:    lwr $5, 11($1)
-; 32R2-NEXT:    andi $2, $2, 7
-; 32R2-NEXT:    not $6, $2
-; 32R2-NEXT:    srlv $7, $5, $2
-; 32R2-NEXT:    sllv $4, $4, $6
+; 32R2-NEXT:    lw $3, 4($1)
+; 32R2-NEXT:    lw $5, 8($1)
+; 32R2-NEXT:    srlv $4, $5, $2
+; 32R2-NEXT:    sll $6, $3, 1
+; 32R2-NEXT:    andi $7, $2, 31
+; 32R2-NEXT:    xori $7, $7, 31
+; 32R2-NEXT:    sllv $6, $6, $7
 ; 32R2-NEXT:    srlv $3, $3, $2
-; 32R2-NEXT:    lwl $6, 0($1)
-; 32R2-NEXT:    lwr $6, 3($1)
-; 32R2-NEXT:    sll $8, $6, 1
-; 32R2-NEXT:    xori $9, $2, 31
-; 32R2-NEXT:    sllv $8, $8, $9
-; 32R2-NEXT:    or $3, $3, $8
-; 32R2-NEXT:    or $4, $7, $4
-; 32R2-NEXT:    lwl $7, 12($1)
-; 32R2-NEXT:    lwr $7, 15($1)
-; 32R2-NEXT:    srlv $1, $7, $2
+; 32R2-NEXT:    lw $8, 0($1)
+; 32R2-NEXT:    sll $9, $8, 1
+; 32R2-NEXT:    sllv $9, $9, $7
+; 32R2-NEXT:    or $3, $3, $9
+; 32R2-NEXT:    or $4, $4, $6
+; 32R2-NEXT:    lw $1, 12($1)
+; 32R2-NEXT:    srlv $1, $1, $2
 ; 32R2-NEXT:    sll $5, $5, 1
-; 32R2-NEXT:    sllv $5, $5, $9
+; 32R2-NEXT:    sllv $5, $5, $7
 ; 32R2-NEXT:    or $5, $1, $5
-; 32R2-NEXT:    srav $2, $6, $2
+; 32R2-NEXT:    srav $2, $8, $2
 ; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    addiu $sp, $sp, 32
 ;
@@ -555,28 +517,28 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; 32R6-NEXT:    addiu $1, $sp, 0
 ; 32R6-NEXT:    addiu $1, $1, 16
 ; 32R6-NEXT:    lw $2, 60($sp)
-; 32R6-NEXT:    ext $3, $2, 3, 4
+; 32R6-NEXT:    srl $3, $2, 3
+; 32R6-NEXT:    andi $3, $3, 12
 ; 32R6-NEXT:    subu $1, $1, $3
 ; 32R6-NEXT:    lw $3, 4($1)
-; 32R6-NEXT:    sll $4, $3, 1
 ; 32R6-NEXT:    lw $5, 8($1)
-; 32R6-NEXT:    andi $2, $2, 7
-; 32R6-NEXT:    not $6, $2
-; 32R6-NEXT:    srlv $7, $5, $2
-; 32R6-NEXT:    sllv $4, $4, $6
+; 32R6-NEXT:    srlv $4, $5, $2
+; 32R6-NEXT:    sll $6, $3, 1
+; 32R6-NEXT:    andi $7, $2, 31
+; 32R6-NEXT:    xori $7, $7, 31
+; 32R6-NEXT:    sllv $6, $6, $7
 ; 32R6-NEXT:    srlv $3, $3, $2
-; 32R6-NEXT:    lw $6, 0($1)
-; 32R6-NEXT:    sll $8, $6, 1
-; 32R6-NEXT:    xori $9, $2, 31
-; 32R6-NEXT:    sllv $8, $8, $9
-; 32R6-NEXT:    or $3, $3, $8
-; 32R6-NEXT:    or $4, $7, $4
+; 32R6-NEXT:    lw $8, 0($1)
+; 32R6-NEXT:    sll $9, $8, 1
+; 32R6-NEXT:    sllv $9, $9, $7
+; 32R6-NEXT:    or $3, $3, $9
+; 32R6-NEXT:    or $4, $4, $6
 ; 32R6-NEXT:    lw $1, 12($1)
 ; 32R6-NEXT:    srlv $1, $1, $2
 ; 32R6-NEXT:    sll $5, $5, 1
-; 32R6-NEXT:    sllv $5, $5, $9
+; 32R6-NEXT:    sllv $5, $5, $7
 ; 32R6-NEXT:    or $5, $1, $5
-; 32R6-NEXT:    srav $2, $6, $2
+; 32R6-NEXT:    srav $2, $8, $2
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    addiu $sp, $sp, 32
 ;
@@ -656,53 +618,37 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    swp $16, 32($sp)
 ; MMR3-NEXT:    .cfi_offset 17, -4
 ; MMR3-NEXT:    .cfi_offset 16, -8
-; MMR3-NEXT:    swl $7, 28($sp)
-; MMR3-NEXT:    swl $6, 24($sp)
-; MMR3-NEXT:    swl $5, 20($sp)
 ; MMR3-NEXT:    sra $1, $4, 31
-; MMR3-NEXT:    swl $4, 16($sp)
-; MMR3-NEXT:    swl $1, 12($sp)
-; MMR3-NEXT:    swl $1, 8($sp)
-; MMR3-NEXT:    swl $1, 4($sp)
-; MMR3-NEXT:    swl $1, 0($sp)
-; MMR3-NEXT:    swr $7, 31($sp)
-; MMR3-NEXT:    swr $6, 27($sp)
-; MMR3-NEXT:    swr $5, 23($sp)
-; MMR3-NEXT:    swr $4, 19($sp)
-; MMR3-NEXT:    swr $1, 15($sp)
-; MMR3-NEXT:    swr $1, 11($sp)
-; MMR3-NEXT:    swr $1, 7($sp)
-; MMR3-NEXT:    swr $1, 3($sp)
+; MMR3-NEXT:    swp $6, 24($sp)
+; MMR3-NEXT:    swp $4, 16($sp)
+; MMR3-NEXT:    sw $1, 12($sp)
+; MMR3-NEXT:    sw $1, 8($sp)
+; MMR3-NEXT:    sw $1, 4($sp)
+; MMR3-NEXT:    sw $1, 0($sp)
 ; MMR3-NEXT:    addiur1sp $2, 0
 ; MMR3-NEXT:    addiur2 $2, $2, 16
 ; MMR3-NEXT:    lw $3, 68($sp)
-; MMR3-NEXT:    ext $4, $3, 3, 4
-; MMR3-NEXT:    subu16 $2, $2, $4
-; MMR3-NEXT:    lwl $7, 4($2)
-; MMR3-NEXT:    lwr $7, 7($2)
-; MMR3-NEXT:    sll16 $4, $7, 1
-; MMR3-NEXT:    lwl $5, 8($2)
-; MMR3-NEXT:    lwr $5, 11($2)
-; MMR3-NEXT:    andi16 $6, $3, 7
-; MMR3-NEXT:    not16 $3, $6
-; MMR3-NEXT:    andi16 $3, $3, 31
-; MMR3-NEXT:    srlv $16, $5, $6
-; MMR3-NEXT:    sllv $4, $4, $3
-; MMR3-NEXT:    srlv $17, $7, $6
-; MMR3-NEXT:    lwl $7, 0($2)
-; MMR3-NEXT:    lwr $7, 3($2)
-; MMR3-NEXT:    sll16 $3, $7, 1
-; MMR3-NEXT:    xori $1, $6, 31
+; MMR3-NEXT:    srl16 $4, $3, 3
+; MMR3-NEXT:    andi $4, $4, 12
+; MMR3-NEXT:    subu16 $5, $2, $4
+; MMR3-NEXT:    lwp $6, 4($5)
+; MMR3-NEXT:    andi16 $2, $3, 31
+; MMR3-NEXT:    srlv $16, $7, $2
+; MMR3-NEXT:    sll16 $3, $6, 1
+; MMR3-NEXT:    xori $1, $2, 31
+; MMR3-NEXT:    sllv $4, $3, $1
+; MMR3-NEXT:    srlv $6, $6, $2
+; MMR3-NEXT:    lw16 $17, 0($5)
+; MMR3-NEXT:    sll16 $3, $17, 1
 ; MMR3-NEXT:    sllv $3, $3, $1
-; MMR3-NEXT:    or16 $3, $17
+; MMR3-NEXT:    or16 $3, $6
 ; MMR3-NEXT:    or16 $4, $16
-; MMR3-NEXT:    lwl $8, 12($2)
-; MMR3-NEXT:    lwr $8, 15($2)
-; MMR3-NEXT:    srlv $2, $8, $6
-; MMR3-NEXT:    sll16 $5, $5, 1
+; MMR3-NEXT:    lw16 $5, 12($5)
+; MMR3-NEXT:    srlv $6, $5, $2
+; MMR3-NEXT:    sll16 $5, $7, 1
 ; MMR3-NEXT:    sllv $5, $5, $1
-; MMR3-NEXT:    or16 $5, $2
-; MMR3-NEXT:    srav $2, $7, $6
+; MMR3-NEXT:    or16 $5, $6
+; MMR3-NEXT:    srav $2, $17, $2
 ; MMR3-NEXT:    lwp $16, 32($sp)
 ; MMR3-NEXT:    addiusp 40
 ; MMR3-NEXT:    jrc $ra
@@ -714,40 +660,39 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR6-NEXT:    sw $16, 36($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:    .cfi_offset 16, -4
 ; MMR6-NEXT:    sra $1, $4, 31
-; MMR6-NEXT:    sw $7, 32($sp)
-; MMR6-NEXT:    sw $6, 28($sp)
-; MMR6-NEXT:    sw $5, 24($sp)
-; MMR6-NEXT:    sw $4, 20($sp)
-; MMR6-NEXT:    sw $1, 16($sp)
+; MMR6-NEXT:    sw $7, 28($sp)
+; MMR6-NEXT:    sw $6, 24($sp)
+; MMR6-NEXT:    sw $5, 20($sp)
+; MMR6-NEXT:    sw $4, 16($sp)
 ; MMR6-NEXT:    sw $1, 12($sp)
 ; MMR6-NEXT:    sw $1, 8($sp)
 ; MMR6-NEXT:    sw $1, 4($sp)
-; MMR6-NEXT:    addiu $2, $sp, 4
+; MMR6-NEXT:    sw $1, 0($sp)
+; MMR6-NEXT:    addiu $2, $sp, 0
 ; MMR6-NEXT:    addiur2 $2, $2, 16
 ; MMR6-NEXT:    lw $3, 68($sp)
-; MMR6-NEXT:    ext $4, $3, 3, 4
-; MMR6-NEXT:    subu16 $5, $2, $4
-; MMR6-NEXT:    lw16 $4, 4($5)
-; MMR6-NEXT:    sll16 $6, $4, 1
-; MMR6-NEXT:    lw16 $7, 8($5)
-; MMR6-NEXT:    andi16 $2, $3, 7
-; MMR6-NEXT:    not16 $3, $2
-; MMR6-NEXT:    andi16 $3, $3, 31
-; MMR6-NEXT:    srlv $1, $7, $2
-; MMR6-NEXT:    sllv $6, $6, $3
-; MMR6-NEXT:    srlv $3, $4, $2
-; MMR6-NEXT:    lw16 $16, 0($5)
+; MMR6-NEXT:    srl16 $4, $3, 3
+; MMR6-NEXT:    andi $4, $4, 12
+; MMR6-NEXT:    subu16 $2, $2, $4
+; MMR6-NEXT:    lw16 $4, 4($2)
+; MMR6-NEXT:    lw16 $5, 8($2)
+; MMR6-NEXT:    andi16 $6, $3, 31
+; MMR6-NEXT:    srlv $1, $5, $6
+; MMR6-NEXT:    sll16 $3, $4, 1
+; MMR6-NEXT:    xori $7, $6, 31
+; MMR6-NEXT:    sllv $8, $3, $7
+; MMR6-NEXT:    srlv $3, $4, $6
+; MMR6-NEXT:    lw16 $16, 0($2)
 ; MMR6-NEXT:    sll16 $4, $16, 1
-; MMR6-NEXT:    xori $8, $2, 31
-; MMR6-NEXT:    sllv $4, $4, $8
+; MMR6-NEXT:    sllv $4, $4, $7
 ; MMR6-NEXT:    or $3, $3, $4
-; MMR6-NEXT:    or $4, $1, $6
-; MMR6-NEXT:    lw16 $5, 12($5)
-; MMR6-NEXT:    srlv $1, $5, $2
-; MMR6-NEXT:    sll16 $5, $7, 1
-; MMR6-NEXT:    sllv $5, $5, $8
-; MMR6-NEXT:    or $5, $1, $5
-; MMR6-NEXT:    srav $2, $16, $2
+; MMR6-NEXT:    or $4, $1, $8
+; MMR6-NEXT:    lw16 $2, 12($2)
+; MMR6-NEXT:    srlv $1, $2, $6
+; MMR6-NEXT:    sll16 $2, $5, 1
+; MMR6-NEXT:    sllv $2, $2, $7
+; MMR6-NEXT:    or $5, $1, $2
+; MMR6-NEXT:    srav $2, $16, $6
 ; MMR6-NEXT:    lw $16, 36($sp) # 4-byte Folded Reload
 ; MMR6-NEXT:    addiu $sp, $sp, 40
 ; MMR6-NEXT:    jrc $ra

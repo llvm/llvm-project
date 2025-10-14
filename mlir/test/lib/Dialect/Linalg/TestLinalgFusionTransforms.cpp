@@ -24,7 +24,6 @@ using namespace mlir::linalg;
 
 static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
   OpBuilder b(f);
-  DenseSet<Operation *> eraseSet;
 
   // Save original Linalg ops, we only want to make a pass over those.
   SmallVector<LinalgOp, 8> linalgOps;
@@ -48,21 +47,13 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
         if (failed(info))
           continue;
         auto *originalOp = info->originalProducer.getOperation();
-        auto *originalOpInLinalgOpsVector =
-            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
+        auto *originalOpInLinalgOpsVector = llvm::find(linalgOps, originalOp);
         *originalOpInLinalgOpsVector = info->fusedProducer;
         // Don't mark for erasure in the tensor case, let DCE handle this.
         changed = true;
       }
     }
   }
-  // The `fuseProducerOfBuffer` function performs structural checks and in
-  // particular that no covering read or write exist between the consumer and
-  // the producer. As a consequence, the only fusions that may occur preserve
-  // subsequent dependences and are guaranteed by construction to produce the
-  // whole view. We may thus erase the producer once it is fused.
-  for (auto *e : eraseSet)
-    e->erase();
 
   return changed ? success() : failure();
 }
@@ -92,7 +83,7 @@ struct TestLinalgGreedyFusion
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createCSEPass());
     do {
-      (void)applyPatternsAndFoldGreedily(getOperation(), frozenPatterns);
+      (void)applyPatternsGreedily(getOperation(), frozenPatterns);
       if (failed(runPipeline(pm, getOperation())))
         this->signalPassFailure();
     } while (succeeded(fuseLinalgOpsGreedily(getOperation())));

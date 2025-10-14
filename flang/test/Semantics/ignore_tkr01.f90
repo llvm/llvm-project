@@ -53,13 +53,13 @@ module m
 
     subroutine t9(x)
 !dir$ ignore_tkr x
-!WARNING: !DIR$ IGNORE_TKR should not apply to an allocatable or pointer
+!WARNING: !DIR$ IGNORE_TKR should not apply to an allocatable or pointer [-Wignore-tkr-usage]
       real, intent(in), allocatable :: x
     end
 
     subroutine t10(x)
 !dir$ ignore_tkr x
-!WARNING: !DIR$ IGNORE_TKR should not apply to an allocatable or pointer
+!WARNING: !DIR$ IGNORE_TKR should not apply to an allocatable or pointer [-Wignore-tkr-usage]
       real, intent(in), pointer :: x
     end
 
@@ -88,7 +88,12 @@ module m
 
     subroutine t14(x)
 !dir$ ignore_tkr(r) x
-!WARNING: !DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor
+!WARNING: !DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor [-Wignore-tkr-usage]
+      real x(:)
+    end
+
+    module subroutine t24(x)
+!dir$ ignore_tkr(t) x
       real x(:)
     end
 
@@ -140,7 +145,7 @@ module m
 
   subroutine t22(x)
 !dir$ ignore_tkr(r) x
-!WARNING: !DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array
+!WARNING: !DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array [-Wignore-tkr-usage]
     real x(..)
   end
 
@@ -156,6 +161,14 @@ subroutine bad1(x)
 !dir$ ignore_tkr x
 !ERROR: !DIR$ IGNORE_TKR may apply only in an interface or a module procedure
   real, intent(in) :: x
+end
+
+submodule(m) subm
+ contains
+  module subroutine t24(x)
+!dir$ ignore_tkr(t) x
+    real x(:)
+  end
 end
 
 program test
@@ -185,7 +198,7 @@ program test
   !ERROR: Actual argument type 'INTEGER(4)' is not compatible with dummy argument type 'REAL(4)'
   call t3(1)
   call t3(dx)
-  !ERROR: passing Hollerith or character literal as if it were BOZ
+  !ERROR: passing Hollerith or character literal as if it were BOZ [-Whollerith-or-character-as-boz]
   call t3('a')
   !ERROR: Actual argument type 'COMPLEX(4)' is not compatible with dummy argument type 'REAL(4)'
   call t3((1.,2.))

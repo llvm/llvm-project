@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp
 
 ! 2.15.3 Data-Sharing Attribute Clauses
@@ -12,7 +10,7 @@
   !$omp parallel do  firstprivate(a) lastprivate(a)
   !DEF: /MainProgram1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-     !DEF: /MainProgram1/OtherConstruct1/a (OmpFirstPrivate, OmpLastPrivate) HostAssoc REAL(4)
+     !DEF: /MainProgram1/OtherConstruct1/a (OmpFirstPrivate, OmpLastPrivate, OmpExplicit) HostAssoc REAL(4)
      a = 2.
   end do
 end program

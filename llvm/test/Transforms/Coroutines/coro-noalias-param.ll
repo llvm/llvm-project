@@ -19,12 +19,12 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret void  
 }
 
 ; check that the noalias attribute is removed from the argument
-; CHECK: define void @f(ptr nocapture readonly align 8 %a)
+; CHECK: define void @f(ptr readonly align 8 captures(none) %a)
 
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
@@ -33,7 +33,7 @@ declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
 declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)
-declare i1 @llvm.coro.end(ptr, i1, token) 
+declare void @llvm.coro.end(ptr, i1, token) 
 
 declare noalias ptr @malloc(i32)
 declare void @print(i32)

@@ -4,7 +4,7 @@
 
 // Test that there is only one FileAttribute generated for multiple functions
 // in the same file.
-module attributes {} {
+module {
   func.func @_QPs1() {
     return loc(#loc2)
   } loc(#loc1)

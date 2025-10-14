@@ -43,7 +43,7 @@ define float @asm_changes_mode(float %x, float %y) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   INLINEASM &"; maybe defs mode", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"; maybe defs mode", 1 /* sideeffect attdialect */, implicit-def $mode
   ; CHECK-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -54,4 +54,4 @@ define float @asm_changes_mode(float %x, float %y) #0 {
 
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 
-attributes #0 = { strictfp "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"  }
+attributes #0 = { strictfp "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"  }

@@ -269,8 +269,8 @@ BB1:
 v_nop_e64
 BB2:
 s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1
-// VI: s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
-// VI-NEXT: ;   fixup A - offset: 4, value: (BB2+4)-BB1, kind: FK_Data_4
+// VI: s_sub_u32 vcc_lo, vcc_lo, BB2+4-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
+// VI-NEXT: ;   fixup A - offset: 4, value: BB2+4-BB1, kind: FK_Data_4
 s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295
 // VI: s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295 ; encoding: [0x6a,0xff,0x6a,0x80,A,A,A,A]
 // VI-NEXT: ;   fixup A - offset: 4, value: (BB2-BB1)&4294967295, kind: FK_Data_4
@@ -337,4 +337,4 @@ v_sin_f32 v0, -s1000
 
 xnack_mask_lo=1
 v_sin_f32 v0, xnack_mask_lo
-// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: xnack_mask_lo register not available on this GPU

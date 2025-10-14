@@ -446,3 +446,200 @@ int h(int x) {
 }
 
 #endif
+
+
+namespace GH91308 {
+    constexpr void f(auto) {
+        static_assert(false);
+    }
+    using R1 = decltype(&f<int>);
+}
+
+namespace GH94935 {
+
+consteval void f(int) {}
+consteval void undef(int); // expected-note {{declared here}}
+
+template<typename T>
+struct G {
+    void g() {
+        GH94935::f(T::fn());
+        GH94935::f(T::undef2());  // expected-error {{call to consteval function 'GH94935::f' is not a constant expression}} \
+                                  // expected-note  {{undefined function 'undef2' cannot be used in a constant expression}}
+        GH94935::undef(T::fn());  // expected-error {{call to consteval function 'GH94935::undef' is not a constant expression}} \
+                                  // expected-note  {{undefined function 'undef' cannot be used in a constant expression}}
+    }
+};
+
+struct X {
+    static consteval int fn() { return 0; }
+    static consteval int undef2();  // expected-note {{declared here}}
+
+};
+
+void test() {
+    G<X>{}.g(); // expected-note {{instantiation}}
+}
+
+
+template<typename T>
+void g() {
+    auto l = []{
+        ::f(T::fn());
+    };
+}
+
+struct Y {
+    static int fn();
+};
+
+template void g<Y>();
+
+}
+
+namespace GH112677 {
+
+class ConstEval {
+ public:
+  consteval ConstEval(int); // expected-note 2{{declared here}}
+};
+
+struct TemplateCtor {
+    ConstEval val;
+    template <class Anything = int> constexpr
+    TemplateCtor(int arg) : val(arg) {} // expected-note {{undefined constructor 'ConstEval'}}
+};
+struct C : TemplateCtor {
+    using TemplateCtor::TemplateCtor; // expected-note {{in call to 'TemplateCtor<int>(0)'}}
+};
+
+C c(0); // expected-note{{in implicit initialization for inherited constructor of 'C'}}
+// expected-error@-1 {{call to immediate function 'GH112677::C::TemplateCtor' is not a constant expression}}
+
+struct SimpleCtor { constexpr SimpleCtor(int) {}};
+struct D : SimpleCtor {
+    int y = 10;
+    ConstEval x = y; // expected-note {{undefined constructor 'ConstEval'}}
+    using SimpleCtor::SimpleCtor;
+    //expected-note@-1 {{'SimpleCtor' is an immediate constructor because the default initializer of 'x' contains a call to a consteval constructor 'ConstEval' and that call is not a constant expression}}
+};
+
+D d(0); // expected-note {{in implicit initialization for inherited constructor of 'D'}}
+// expected-error@-1 {{call to immediate function 'GH112677::D::SimpleCtor' is not a constant expression}}
+
+}
+
+namespace GH123405 {
+
+consteval void fn() {}
+
+template <typename>
+constexpr auto tfn(int) {
+    auto p = &fn;  // expected-note {{'tfn<int>' is an immediate function because its body evaluates the address of a consteval function 'fn'}}
+    return p;
+}
+
+void g() {
+   int a; // expected-note {{declared here}}
+   tfn<int>(a); // expected-error {{call to immediate function 'GH123405::tfn<int>' is not a constant expression}}\
+                // expected-note {{read of non-const variable 'a' is not allowed in a constant expression}}
+}
+} // namespace GH123405
+
+namespace GH118000 {
+consteval int baz() { return 0;}
+struct S {
+    int mSize = baz();
+};
+
+consteval void bar() {
+    S s;
+}
+
+void foo() {
+    S s;
+}
+} // namespace GH118000
+
+namespace GH119046 {
+
+template <typename Cls> constexpr auto tfn(int) {
+  return (unsigned long long)(&Cls::sfn);
+  //expected-note@-1 {{'tfn<GH119046::S>' is an immediate function because its body evaluates the address of a consteval function 'sfn'}}
+};
+struct S { static consteval void sfn() {} };
+
+int f() {
+  int a = 0; // expected-note{{declared here}}
+  return tfn<S>(a);
+  //expected-error@-1 {{call to immediate function 'GH119046::tfn<GH119046::S>' is not a constant expression}}
+  //expected-note@-2 {{read of non-const variable 'a' is not allowed in a constant expression}}
+}
+}
+
+#if __cplusplus >= 202302L
+namespace GH135281 {
+  struct B {
+    const void* p;
+    consteval B() : p{this} {}
+  };
+  B b;
+  B b2{};
+  B &&b3{};
+  void f() {
+    static B b4;
+    B b5; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+          // expected-note {{pointer to temporary is not a constant expression}} \
+          // expected-note {{temporary created here}}
+  }
+  template<typename T> T temp_var_uninit;
+  template<typename T> T temp_var_brace_init{};
+  B* b6 = &temp_var_uninit<B>;
+  B* b7 = &temp_var_brace_init<B>;
+  B* b8 = &temp_var_brace_init<B&&>;
+  template<typename T> void f2() {
+    static T b9;
+    T b10; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+           // expected-note {{pointer to temporary is not a constant expression}} \
+           // expected-note {{temporary created here}}
+    static B b11;
+    B b12; // expected-error 2 {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+           // expected-note 2 {{pointer to temporary is not a constant expression}} \
+           // expected-note 2 {{temporary created here}}
+  }
+  void (*ff)() = f2<B>; // expected-note {{instantiation of function template specialization}}
+}
+#endif
+
+namespace GH145776 {
+
+void runtime_only() {}
+consteval void comptime_only() {}
+
+void fn() {
+  []() {
+    runtime_only();
+    []() {
+      &comptime_only;
+    }();
+  }();
+}
+
+}
+
+
+namespace GH109096 {
+consteval void undefined();
+template <typename T>
+struct scope_exit {
+    T t;
+    constexpr ~scope_exit() { t(); }
+    // expected-error@-1 {{call to immediate function 'GH109096::(anonymous class)::operator()' is not a constant expression}} \
+    // expected-note@-1 {{implicit use of 'this' pointer is only allowed within the evaluation}}
+};
+
+scope_exit guard( // expected-note {{in instantiation of member function}}
+    []() { undefined(); }
+);
+
+}

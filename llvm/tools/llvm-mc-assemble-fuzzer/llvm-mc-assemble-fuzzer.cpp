@@ -131,10 +131,6 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
 
 
 int AssembleOneInput(const uint8_t *Data, size_t Size) {
-  const bool ShowInst = false;
-  const bool AsmVerbose = false;
-  const bool UseDwarfDirectory = true;
-
   Triple TheTriple(Triple::normalize(TripleName));
 
   SourceMgr SrcMgr;
@@ -160,7 +156,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   if (!MRI) {
-    errs() << "Unable to create target register info!";
+    errs() << "Unable to create target register info!\n";
     abort();
   }
 
@@ -168,12 +164,16 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI) {
-    errs() << "Unable to create target asm info!";
+    errs() << "Unable to create target asm info!\n";
     abort();
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+  if (!STI) {
+    errs() << "Unable to create subtargettarget info!\n";
+    abort();
+  }
 
   MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
@@ -182,8 +182,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   const unsigned OutputAsmVariant = 0;
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-  MCInstPrinter *IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-      *MAI, *MCII, *MRI);
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
   if (!IP) {
     errs()
       << "error: unable to create instruction printer for target triple '"
@@ -204,9 +204,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCStreamer> Str;
 
   if (FileType == OFT_AssemblyFile) {
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), AsmVerbose,
-                                           UseDwarfDirectory, IP, std::move(CE),
-                                           std::move(MAB), ShowInst));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
+                                           std::move(CE), std::move(MAB)));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");
 
@@ -233,9 +232,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
-        MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE),
+        *STI));
   }
   const int Res = AssembleInput(ProgName, TheTarget, SrcMgr, Ctx, *Str, *MAI, *STI,
       *MCII, MCOptions);

@@ -17,6 +17,7 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
+#include <limits>
 #include <random>
 #include <type_traits>
 
@@ -33,10 +34,12 @@ constexpr struct {
     {1, 1, 1},
     {2, 3, 1},
     {2, 4, 2},
+    {11, 9, 1},
     {36, 17, 1},
-    {36, 18, 18}
-};
-
+    {36, 18, 18},
+    {25, 30, 5},
+    {24, 16, 8},
+    {124, 100, 4}};
 
 template <typename Input1, typename Input2, typename Output>
 constexpr bool test0(int in1, int in2, int out)
@@ -57,22 +60,26 @@ T basic_gcd_(T m, T n) {
 template <typename T>
 T basic_gcd(T m, T n) {
   using Tp = std::make_unsigned_t<T>;
-  if (m < 0 && m != std::numeric_limits<T>::min())
-    m = -m;
-  if (n < 0 && n != std::numeric_limits<T>::min())
-    n = -n;
+  if constexpr (std::is_signed_v<T>) {
+    if (m < 0 && m != std::numeric_limits<T>::min())
+      m = -m;
+    if (n < 0 && n != std::numeric_limits<T>::min())
+      n = -n;
+  }
   return basic_gcd_(static_cast<Tp>(m), static_cast<Tp>(n));
 }
 
 template <typename Input>
 void do_fuzzy_tests() {
   std::mt19937 gen(1938);
-  std::uniform_int_distribution<Input> distrib;
+  using DistIntType         = std::conditional_t<sizeof(Input) == 1, int, Input>; // See N4981 [rand.req.genl]/1.5
+  constexpr Input max_input = std::numeric_limits<Input>::max();
+  std::uniform_int_distribution<DistIntType> distrib(0, max_input);
 
   constexpr int nb_rounds = 10000;
   for (int i = 0; i < nb_rounds; ++i) {
-    Input n = distrib(gen);
-    Input m = distrib(gen);
+    Input n = static_cast<Input>(distrib(gen));
+    Input m = static_cast<Input>(distrib(gen));
     assert(std::gcd(n, m) == basic_gcd(n, m));
   }
 }

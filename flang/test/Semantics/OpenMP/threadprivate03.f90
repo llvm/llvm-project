@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -pedantic
 ! OpenMP Version 5.1
 ! Check OpenMP construct validity for the following directives:
@@ -12,11 +10,11 @@ program main
   use mod1
   integer, parameter :: i = 1
 
-  !ERROR: The module name or main program name cannot be in a THREADPRIVATE directive
+  !ERROR: The module name cannot be in a THREADPRIVATE directive
   !$omp threadprivate(mod1)
 
-  !PORTABILITY: Name 'main' declared in a main program should not have the same name as the main program
-  !ERROR: The module name or main program name cannot be in a THREADPRIVATE directive
+  ! This is now allowed, since "main" is implicitly declared symbol,
+  ! separate from the main program symbol.
   !$omp threadprivate(main)
 
   !ERROR: The entity with PARAMETER attribute cannot be in a THREADPRIVATE directive

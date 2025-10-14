@@ -21,6 +21,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorOr.h"
+#include <regex>
 
 #define DEBUG_TYPE "bolt-linux"
 
@@ -89,6 +91,34 @@ static cl::opt<bool>
 
 } // namespace opts
 
+/// Linux kernel version
+struct LKVersion {
+  LKVersion() {}
+  LKVersion(unsigned Major, unsigned Minor, unsigned Rev)
+      : Major(Major), Minor(Minor), Rev(Rev) {}
+
+  bool operator<(const LKVersion &Other) const {
+    return std::make_tuple(Major, Minor, Rev) <
+           std::make_tuple(Other.Major, Other.Minor, Other.Rev);
+  }
+
+  bool operator>(const LKVersion &Other) const { return Other < *this; }
+
+  bool operator<=(const LKVersion &Other) const { return !(*this > Other); }
+
+  bool operator>=(const LKVersion &Other) const { return !(*this < Other); }
+
+  bool operator==(const LKVersion &Other) const {
+    return Major == Other.Major && Minor == Other.Minor && Rev == Other.Rev;
+  }
+
+  bool operator!=(const LKVersion &Other) const { return !(*this == Other); }
+
+  unsigned Major{0};
+  unsigned Minor{0};
+  unsigned Rev{0};
+};
+
 /// Linux Kernel supports stack unwinding using ORC (oops rewind capability).
 /// ORC state at every IP can be described by the following data structure.
 struct ORCState {
@@ -123,7 +153,33 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ORCState &E) {
 
 namespace {
 
+/// Extension to DataExtractor that supports reading addresses stored in
+/// PC-relative format.
+class AddressExtractor : public DataExtractor {
+  uint64_t DataAddress;
+
+public:
+  AddressExtractor(StringRef Data, uint64_t DataAddress, bool IsLittleEndian,
+                   uint8_t AddressSize)
+      : DataExtractor(Data, IsLittleEndian, AddressSize),
+        DataAddress(DataAddress) {}
+
+  /// Extract 32-bit PC-relative address/pointer.
+  uint64_t getPCRelAddress32(Cursor &C) {
+    const uint64_t Base = DataAddress + C.tell();
+    return Base + (int32_t)getU32(C);
+  }
+
+  /// Extract 64-bit PC-relative address/pointer.
+  uint64_t getPCRelAddress64(Cursor &C) {
+    const uint64_t Base = DataAddress + C.tell();
+    return Base + (int64_t)getU64(C);
+  }
+};
+
 class LinuxKernelRewriter final : public MetadataRewriter {
+  LKVersion LinuxKernelVersion;
+
   /// Information required for updating metadata referencing an instruction.
   struct InstructionFixup {
     BinarySection &Section; // Section referencing the instruction.
@@ -225,6 +281,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
   static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
 
+  Error detectLinuxKernelVersion();
+
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
 
@@ -273,7 +331,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
-  Error rewriteAltInstructions();
+  void processAltInstructionsPostCFG();
+  Error tryReadAltInstructions(uint32_t AltInstFeatureSize,
+                               bool AltInstHasPadLen, bool ParseOnly);
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -288,12 +348,12 @@ public:
       : MetadataRewriter("linux-kernel-rewriter", BC) {}
 
   Error preCFGInitializer() override {
+    if (Error E = detectLinuxKernelVersion())
+      return E;
+
     processLKSections();
 
     if (Error E = processSMPLocks())
-      return E;
-
-    if (Error E = readORCTables())
       return E;
 
     if (Error E = readStaticCalls())
@@ -311,6 +371,11 @@ public:
     if (Error E = readAltInstructions())
       return E;
 
+    // Some ORC entries could be linked to alternative instruction
+    // sequences. Hence, we read ORC after .altinstructions.
+    if (Error E = readORCTables())
+      return E;
+
     if (Error E = readPCIFixupTable())
       return E;
 
@@ -324,6 +389,8 @@ public:
     if (Error E = processORCPostCFG())
       return E;
 
+    processAltInstructionsPostCFG();
+
     return Error::success();
   }
 
@@ -331,9 +398,6 @@ public:
     // Since rewriteExceptionTable() can mark functions as non-simple, run it
     // before other rewriters that depend on simple/emit status.
     if (Error E = rewriteExceptionTable())
-      return E;
-
-    if (Error E = rewriteAltInstructions())
       return E;
 
     if (Error E = rewriteParaInstructions())
@@ -367,6 +431,36 @@ public:
   }
 };
 
+Error LinuxKernelRewriter::detectLinuxKernelVersion() {
+  // Check for global and local linux_banner symbol.
+  BinaryData *BD = BC.getBinaryDataByName("linux_banner");
+  if (!BD)
+    BD = BC.getBinaryDataByName("linux_banner/1");
+
+  if (!BD)
+    return createStringError(errc::executable_format_error,
+                             "unable to locate linux_banner");
+
+  const BinarySection &Section = BD->getSection();
+  const std::string S =
+      Section.getContents().substr(BD->getOffset(), BD->getSize()).str();
+
+  const std::regex Re(R"---(Linux version ((\d+)\.(\d+)(\.(\d+))?))---");
+  std::smatch Match;
+  if (std::regex_search(S, Match, Re)) {
+    const unsigned Major = std::stoi(Match[2].str());
+    const unsigned Minor = std::stoi(Match[3].str());
+    const unsigned Rev = Match[5].matched ? std::stoi(Match[5].str()) : 0;
+    LinuxKernelVersion = LKVersion(Major, Minor, Rev);
+    BC.outs() << "BOLT-INFO: Linux kernel version is " << Match[1].str()
+              << "\n";
+    return Error::success();
+  }
+
+  return createStringError(errc::executable_format_error,
+                           "Linux kernel version is unknown: " + S);
+}
+
 void LinuxKernelRewriter::processLKSections() {
   processLKKSymtab();
   processLKKSymtab(true);
@@ -393,7 +487,7 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
   for (uint64_t I = 0; I < SectionSize; I += 4) {
     const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
+    ErrorOr<int64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
     assert(Offset && "Reading valid PC-relative offset for a ksymtab entry");
     const int32_t SignedOffset = *Offset;
     const uint64_t RefAddress = EntryAddress + SignedOffset;
@@ -420,13 +514,13 @@ Error LinuxKernelRewriter::processSMPLocks() {
     return createStringError(errc::executable_format_error,
                              "bad size of .smp_locks section");
 
-  DataExtractor DE = DataExtractor(SMPLocksSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(0);
+  AddressExtractor AE(SMPLocksSection->getContents(), SectionAddress,
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   while (Cursor && Cursor.tell() < SectionSize) {
     const uint64_t Offset = Cursor.tell();
-    const uint64_t IP = SectionAddress + Offset + (int32_t)DE.getU32(Cursor);
+    const uint64_t IP = AE.getPCRelAddress32(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -496,20 +590,17 @@ Error LinuxKernelRewriter::readORCTables() {
     return createStringError(errc::executable_format_error,
                              "ORC entries number mismatch detected");
 
-  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
-  DataExtractor OrcDE = DataExtractor(ORCUnwindSection->getContents(),
-                                      BC.AsmInfo->isLittleEndian(),
-                                      BC.AsmInfo->getCodePointerSize());
-  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getContents(),
-                                     BC.AsmInfo->isLittleEndian(),
-                                     BC.AsmInfo->getCodePointerSize());
+  DataExtractor OrcDE(ORCUnwindSection->getContents(),
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor IPAE(
+      ORCUnwindIPSection->getContents(), ORCUnwindIPSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
   DataExtractor::Cursor ORCCursor(0);
   DataExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
   for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
-    const uint64_t IP =
-        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
-
+    const uint64_t IP = IPAE.getPCRelAddress32(IPCursor);
     // Consume the status of the cursor.
     if (!IPCursor)
       return createStringError(errc::executable_format_error,
@@ -562,11 +653,28 @@ Error LinuxKernelRewriter::readORCTables() {
     if (!BF->hasInstructions())
       continue;
 
-    MCInst *Inst = BF->getInstructionAtOffset(IP - BF->getAddress());
-    if (!Inst)
+    const uint64_t Offset = IP - BF->getAddress();
+    MCInst *Inst = BF->getInstructionAtOffset(Offset);
+    if (!Inst) {
+      // Check if there is an alternative instruction(s) at this IP. Multiple
+      // alternative instructions can take a place of a single original
+      // instruction and each alternative can have a separate ORC entry.
+      // Since ORC table is shared between all alternative sequences, there's
+      // a requirement that only one (out of many) sequences can have an
+      // instruction from the ORC table to avoid ambiguities/conflicts.
+      //
+      // For now, we have limited support for alternatives. I.e. we still print
+      // functions with them, but will not change the code in the output binary.
+      // As such, we can ignore alternative ORC entries. They will be preserved
+      // in the binary, but will not get printed in the instruction stream.
+      Inst = BF->getInstructionContainingOffset(Offset);
+      if (Inst || BC.MIB->hasAnnotation(*Inst, "AltInst"))
+        continue;
+
       return createStringError(
           errc::executable_format_error,
           "no instruction at address 0x%" PRIx64 " in .orc_unwind_ip", IP);
+    }
 
     // Some addresses will have two entries associated with them. The first
     // one being a "weak" section terminator. Since we ignore the terminator,
@@ -836,15 +944,13 @@ Error LinuxKernelRewriter::validateORCTables() {
   if (!ORCUnwindIPSection)
     return Error::success();
 
-  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
-  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getOutputContents(),
-                                     BC.AsmInfo->isLittleEndian(),
-                                     BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor IPCursor(0);
+  AddressExtractor IPAE(
+      ORCUnwindIPSection->getOutputContents(), ORCUnwindIPSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
   for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
-    const uint64_t IP =
-        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
+    const uint64_t IP = IPAE.getPCRelAddress32(IPCursor);
     if (!IPCursor)
       return createStringError(errc::executable_format_error,
                                "out of bounds while reading ORC IP table: %s",
@@ -896,16 +1002,14 @@ Error LinuxKernelRewriter::readStaticCalls() {
                              "static call table size error");
 
   const uint64_t SectionAddress = StaticCallSection->getAddress();
-  DataExtractor DE(StaticCallSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(StaticCallTableAddress - SectionAddress);
+  AddressExtractor AE(StaticCallSection->getContents(), SectionAddress,
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(StaticCallTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t CallAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t CallAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t KeyAddress = AE.getPCRelAddress32(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1007,18 +1111,15 @@ Error LinuxKernelRewriter::readExceptionTable() {
     return createStringError(errc::executable_format_error,
                              "exception table size error");
 
-  const uint64_t SectionAddress = ExceptionsSection->getAddress();
-  DataExtractor DE(ExceptionsSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(0);
+  AddressExtractor AE(
+      ExceptionsSection->getContents(), ExceptionsSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < ExceptionsSection->getSize()) {
-    const uint64_t InstAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t FixupAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Data = DE.getU32(Cursor);
+    const uint64_t InstAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t FixupAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t Data = AE.getU32(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1114,9 +1215,9 @@ Error LinuxKernelRewriter::readParaInstructions() {
   if (!ParavirtualPatchSection)
     return Error::success();
 
-  DataExtractor DE = DataExtractor(ParavirtualPatchSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(ParavirtualPatchSection->getContents(),
+                   BC.AsmInfo->isLittleEndian(),
+                   BC.AsmInfo->getCodePointerSize());
   uint32_t EntryID = 0;
   DataExtractor::Cursor Cursor(0);
   while (Cursor && !DE.eof(Cursor)) {
@@ -1215,15 +1316,14 @@ Error LinuxKernelRewriter::readBugTable() {
     return createStringError(errc::executable_format_error,
                              "bug table size error");
 
-  const uint64_t SectionAddress = BugTableSection->getAddress();
-  DataExtractor DE(BugTableSection->getContents(), BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(0);
+  AddressExtractor AE(
+      BugTableSection->getContents(), BugTableSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < BugTableSection->getSize()) {
     const uint64_t Pos = Cursor.tell();
-    const uint64_t InstAddress =
-        SectionAddress + Pos + (int32_t)DE.getU32(Cursor);
+    const uint64_t InstAddress = AE.getPCRelAddress32(Cursor);
     Cursor.seek(Pos + BUG_TABLE_ENTRY_SIZE);
 
     if (!Cursor)
@@ -1319,29 +1419,83 @@ Error LinuxKernelRewriter::rewriteBugTable() {
 ///	    u8  padlen;         // present in older kernels
 ///   } __packed;
 ///
-/// Note the structures is packed.
+/// Note that the structure is packed.
+///
+/// Since the size of the "feature" field could be either u16 or u32, and
+/// "padlen" presence is unknown, we attempt to parse .altinstructions section
+/// using all possible combinations (four at this time). Since we validate the
+/// contents of the section and its size, the detection works quite well.
+/// Still, we leave the user the opportunity to specify these features on the
+/// command line and skip the guesswork.
 Error LinuxKernelRewriter::readAltInstructions() {
   AltInstrSection = BC.getUniqueSectionByName(".altinstructions");
   if (!AltInstrSection)
     return Error::success();
 
-  const uint64_t Address = AltInstrSection->getAddress();
-  DataExtractor DE = DataExtractor(AltInstrSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  // Presence of "padlen" field.
+  std::vector<bool> PadLenVariants;
+  if (opts::AltInstHasPadLen.getNumOccurrences())
+    PadLenVariants.push_back(opts::AltInstHasPadLen);
+  else
+    PadLenVariants = {false, true};
+
+  // Size (in bytes) variants of "feature" field.
+  std::vector<uint32_t> FeatureSizeVariants;
+  if (opts::AltInstFeatureSize.getNumOccurrences())
+    FeatureSizeVariants.push_back(opts::AltInstFeatureSize);
+  else
+    FeatureSizeVariants = {2, 4};
+
+  for (bool AltInstHasPadLen : PadLenVariants) {
+    for (uint32_t AltInstFeatureSize : FeatureSizeVariants) {
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: trying AltInstHasPadLen = " << AltInstHasPadLen
+               << "; AltInstFeatureSize = " << AltInstFeatureSize << ";\n";
+      });
+      if (Error E = tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
+                                           /*ParseOnly*/ true)) {
+        consumeError(std::move(E));
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Matched .altinstructions format\n");
+
+      if (!opts::AltInstHasPadLen.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstHasPadLen.ArgStr
+                  << '=' << AltInstHasPadLen << '\n';
+
+      if (!opts::AltInstFeatureSize.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstFeatureSize.ArgStr
+                  << '=' << AltInstFeatureSize << '\n';
+
+      return tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
+                                    /*ParseOnly*/ false);
+    }
+  }
+
+  // We couldn't match the format. Read again to properly propagate the error
+  // to the user.
+  return tryReadAltInstructions(opts::AltInstFeatureSize,
+                                opts::AltInstHasPadLen, /*ParseOnly*/ false);
+}
+
+Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
+                                                  bool AltInstHasPadLen,
+                                                  bool ParseOnly) {
+  AddressExtractor AE(
+      AltInstrSection->getContents(), AltInstrSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
-  DataExtractor::Cursor Cursor(0);
-  while (Cursor && !DE.eof(Cursor)) {
-    const uint64_t OrgInstAddress =
-        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t AltInstAddress =
-        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Feature = DE.getUnsigned(Cursor, opts::AltInstFeatureSize);
-    const uint8_t OrgSize = DE.getU8(Cursor);
-    const uint8_t AltSize = DE.getU8(Cursor);
+  while (Cursor && !AE.eof(Cursor)) {
+    const uint64_t OrgInstAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t AltInstAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t Feature = AE.getUnsigned(Cursor, AltInstFeatureSize);
+    const uint8_t OrgSize = AE.getU8(Cursor);
+    const uint8_t AltSize = AE.getU8(Cursor);
 
     // Older kernels may have the padlen field.
-    const uint8_t PadLen = opts::AltInstHasPadLen ? DE.getU8(Cursor) : 0;
+    const uint8_t PadLen = AltInstHasPadLen ? AE.getU8(Cursor) : 0;
 
     if (!Cursor)
       return createStringError(
@@ -1358,7 +1512,7 @@ Error LinuxKernelRewriter::readAltInstructions() {
                 << "\n\tFeature: 0x" << Twine::utohexstr(Feature)
                 << "\n\tOrgSize: " << (int)OrgSize
                 << "\n\tAltSize: " << (int)AltSize << '\n';
-      if (opts::AltInstHasPadLen)
+      if (AltInstHasPadLen)
         BC.outs() << "\tPadLen:  " << (int)PadLen << '\n';
     }
 
@@ -1375,14 +1529,14 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
     BinaryFunction *AltBF =
         BC.getBinaryFunctionContainingAddress(AltInstAddress);
-    if (AltBF && BC.shouldEmit(*AltBF)) {
+    if (!ParseOnly && AltBF && BC.shouldEmit(*AltBF)) {
       BC.errs()
           << "BOLT-WARNING: alternative instruction sequence found in function "
           << *AltBF << '\n';
       AltBF->setIgnored();
     }
 
-    if (!BF || !BC.shouldEmit(*BF))
+    if (!BF || !BF->hasInstructions())
       continue;
 
     if (OrgInstAddress + OrgSize > BF->getAddress() + BF->getSize())
@@ -1396,6 +1550,9 @@ Error LinuxKernelRewriter::readAltInstructions() {
                                "no instruction at address 0x%" PRIx64
                                " referenced by .altinstructions entry %d",
                                OrgInstAddress, EntryID);
+
+    if (ParseOnly)
+      continue;
 
     // There could be more than one alternative instruction sequences for the
     // same original instruction. Annotate each alternative separately.
@@ -1417,18 +1574,18 @@ Error LinuxKernelRewriter::readAltInstructions() {
     }
   }
 
-  BC.outs() << "BOLT-INFO: parsed " << EntryID
-            << " alternative instruction entries\n";
+  if (!ParseOnly)
+    BC.outs() << "BOLT-INFO: parsed " << EntryID
+              << " alternative instruction entries\n";
 
   return Error::success();
 }
 
-Error LinuxKernelRewriter::rewriteAltInstructions() {
-  // Disable output of functions with alt instructions before the rewrite
-  // support is complete.
+void LinuxKernelRewriter::processAltInstructionsPostCFG() {
+  // Disable optimization and output of functions with alt instructions before
+  // the rewrite support is complete. Alt instructions can modify the control
+  // flow, hence we may end up deleting seemingly unreachable code.
   skipFunctionsWithAnnotation("AltInst");
-
-  return Error::success();
 }
 
 /// When the Linux kernel needs to handle an error associated with a given PCI
@@ -1457,19 +1614,17 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
     return createStringError(errc::executable_format_error,
                              "PCI fixup table size error");
 
-  const uint64_t Address = PCIFixupSection->getAddress();
-  DataExtractor DE = DataExtractor(PCIFixupSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(
+      PCIFixupSection->getContents(), PCIFixupSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
-  DataExtractor::Cursor Cursor(0);
-  while (Cursor && !DE.eof(Cursor)) {
-    const uint16_t Vendor = DE.getU16(Cursor);
-    const uint16_t Device = DE.getU16(Cursor);
-    const uint32_t Class = DE.getU32(Cursor);
-    const uint32_t ClassShift = DE.getU32(Cursor);
-    const uint64_t HookAddress =
-        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+  while (Cursor && !AE.eof(Cursor)) {
+    const uint16_t Vendor = AE.getU16(Cursor);
+    const uint16_t Device = AE.getU16(Cursor);
+    const uint32_t Class = AE.getU32(Cursor);
+    const uint32_t ClassShift = AE.getU32(Cursor);
+    const uint64_t HookAddress = AE.getPCRelAddress32(Cursor);
 
     if (!Cursor)
       return createStringError(errc::executable_format_error,
@@ -1574,18 +1729,15 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
                              "static keys jump table size error");
 
   const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
-  DataExtractor DE(StaticKeysJumpSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
+  AddressExtractor AE(StaticKeysJumpSection->getContents(), SectionAddress,
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t JumpAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t TargetAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int64_t)DE.getU64(Cursor);
+    const uint64_t JumpAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t TargetAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t KeyAddress = AE.getPCRelAddress64(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1779,21 +1931,18 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
     return Error::success();
 
   const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
-  DataExtractor DE(StaticKeysJumpSection->getOutputContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
+  AddressExtractor AE(StaticKeysJumpSection->getOutputContents(),
+                      SectionAddress, BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   const BinaryData *Stop = BC.getBinaryDataByName("__stop___jump_table");
   uint32_t EntryID = 0;
   uint64_t NumShort = 0;
   uint64_t NumLong = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t JumpAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t TargetAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int64_t)DE.getU64(Cursor);
+    const uint64_t JumpAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t TargetAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t KeyAddress = AE.getPCRelAddress64(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)

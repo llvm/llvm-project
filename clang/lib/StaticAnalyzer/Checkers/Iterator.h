@@ -165,7 +165,8 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State, SVal Val);
 ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
                                     const IteratorPosition &Pos);
 ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
-                                       const MemRegion *Cont, const Stmt *S,
+                                       const MemRegion *Cont,
+                                       ConstCFGElementRef Elem,
                                        const LocationContext *LCtx,
                                        unsigned blockCount);
 ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,

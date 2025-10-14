@@ -51,22 +51,19 @@ static void validateTargetProfile(
   EXPECT_TRUE(C);
   EXPECT_EQ(Diags.getNumErrors(), NumOfErrors);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(), ExpectError.data());
-  Diags.Clear();
   DiagConsumer->clear();
 }
 
 TEST(DxcModeTest, TargetProfileValidation) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagConsumer);
 
   validateTargetProfile("-Tvs_6_0", "dxilv1.0--shadermodel6.0-vertex",
                         InMemoryFileSystem, Diags);
@@ -88,7 +85,7 @@ TEST(DxcModeTest, TargetProfileValidation) {
                         InMemoryFileSystem, Diags);
   validateTargetProfile("-Tcs_6_8", "dxilv1.8--shadermodel6.8-compute",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tlib_6_x", "dxilv1.8--shadermodel6.15-library",
+  validateTargetProfile("-Tlib_6_x", "dxilv1.9--shadermodel6.15-library",
                         InMemoryFileSystem, Diags);
 
   // Invalid tests.
@@ -106,17 +103,15 @@ TEST(DxcModeTest, TargetProfileValidation) {
 }
 
 TEST(DxcModeTest, ValidatorVersionValidation) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagConsumer);
   Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
       {"clang", "--driver-mode=dxc", "-Tlib_6_7", "foo.hlsl"}));
@@ -156,10 +151,10 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   TranslatedArgs.reset(
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 1u);
-  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
-               "invalid validator version : 0.1\nIf validator major version is "
-               "0, minor version must also be 0.");
-  Diags.Clear();
+  EXPECT_STREQ(
+      DiagConsumer->Errors.back().c_str(),
+      "invalid validator version : 0.1; if validator major version is 0, "
+      "minor version must also be 0");
   DiagConsumer->clear();
 
   Args = TheDriver.ParseArgStrings({"-validator-version", "1"}, false,
@@ -173,9 +168,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 2u);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
-               "invalid validator version : 1\nFormat of validator version is "
-               "\"<major>.<minor>\" (ex:\"1.4\").");
-  Diags.Clear();
+               "invalid validator version : 1; format of validator version is "
+               "\"<major>.<minor>\" (ex:\"1.4\")");
   DiagConsumer->clear();
 
   Args = TheDriver.ParseArgStrings({"-validator-version", "-Tlib_6_7"}, false,
@@ -190,9 +184,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   EXPECT_EQ(Diags.getNumErrors(), 3u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
-      "invalid validator version : -Tlib_6_7\nFormat of validator version is "
-      "\"<major>.<minor>\" (ex:\"1.4\").");
-  Diags.Clear();
+      "invalid validator version : -Tlib_6_7; format of validator version is "
+      "\"<major>.<minor>\" (ex:\"1.4\")");
   DiagConsumer->clear();
 
   Args = TheDriver.ParseArgStrings({"-validator-version", "foo"}, false,
@@ -207,23 +200,23 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   EXPECT_EQ(Diags.getNumErrors(), 4u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
-      "invalid validator version : foo\nFormat of validator version is "
-      "\"<major>.<minor>\" (ex:\"1.4\").");
-  Diags.Clear();
+      "invalid validator version : foo; format of validator version is "
+      "\"<major>.<minor>\" (ex:\"1.4\")");
   DiagConsumer->clear();
 }
 
 TEST(DxcModeTest, DefaultEntry) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   const char *Args[] = {"clang", "--driver-mode=dxc", "-Tcs_6_7", "foo.hlsl"};
 
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*InMemoryFileSystem, DiagOpts);
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;

@@ -26,6 +26,7 @@ unsigned Position::getOperationDepth() const {
 
 //===----------------------------------------------------------------------===//
 // AttributePosition
+//===----------------------------------------------------------------------===//
 
 AttributePosition::AttributePosition(const KeyTy &key) : Base(key) {
   parent = key.first;
@@ -33,6 +34,7 @@ AttributePosition::AttributePosition(const KeyTy &key) : Base(key) {
 
 //===----------------------------------------------------------------------===//
 // OperandPosition
+//===----------------------------------------------------------------------===//
 
 OperandPosition::OperandPosition(const KeyTy &key) : Base(key) {
   parent = key.first;
@@ -40,6 +42,7 @@ OperandPosition::OperandPosition(const KeyTy &key) : Base(key) {
 
 //===----------------------------------------------------------------------===//
 // OperandGroupPosition
+//===----------------------------------------------------------------------===//
 
 OperandGroupPosition::OperandGroupPosition(const KeyTy &key) : Base(key) {
   parent = std::get<0>(key);
@@ -47,6 +50,7 @@ OperandGroupPosition::OperandGroupPosition(const KeyTy &key) : Base(key) {
 
 //===----------------------------------------------------------------------===//
 // OperationPosition
+//===----------------------------------------------------------------------===//
 
 bool OperationPosition::isOperandDefiningOp() const {
   return isa_and_nonnull<OperandPosition, OperandGroupPosition>(parent);

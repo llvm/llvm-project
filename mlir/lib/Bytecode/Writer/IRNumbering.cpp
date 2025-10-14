@@ -9,6 +9,7 @@
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -307,7 +308,7 @@ void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
 }
 
 void IRNumberingState::number(Attribute attr) {
-  auto it = attrs.insert({attr, nullptr});
+  auto it = attrs.try_emplace(attr);
   if (!it.second) {
     ++it.first->second->refCount;
     return;
@@ -474,7 +475,7 @@ void IRNumberingState::number(OperationName opName) {
 }
 
 void IRNumberingState::number(Type type) {
-  auto it = types.insert({type, nullptr});
+  auto it = types.try_emplace(type);
   if (!it.second) {
     ++it.first->second->refCount;
     return;

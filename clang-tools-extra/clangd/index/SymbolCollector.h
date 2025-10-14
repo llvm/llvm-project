@@ -161,7 +161,8 @@ public:
 private:
   const Symbol *addDeclaration(const NamedDecl &, SymbolID,
                                bool IsMainFileSymbol);
-  void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
+  void addDefinition(const NamedDecl &, const Symbol &DeclSymbol,
+                     bool SkipDocCheck);
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
@@ -208,6 +209,7 @@ private:
     SourceLocation Loc;
     FileID FID;
     index::SymbolRoleSet Roles;
+    index::SymbolKind Kind;
     const Decl *Container;
     bool Spelled;
   };

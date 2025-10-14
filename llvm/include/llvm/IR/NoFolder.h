@@ -28,12 +28,13 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// NoFolder - Create "constants" (actually, instructions) with no folding.
-class NoFolder final : public IRBuilderFolder {
-  virtual void anchor();
+class LLVM_ABI NoFolder final : public IRBuilderFolder {
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit NoFolder() = default;
@@ -75,7 +76,7 @@ public:
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
+                 GEPNoWrapFlags NW) const override {
     return nullptr;
   }
 

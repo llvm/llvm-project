@@ -10,9 +10,6 @@ void uses() {
 #pragma acc parallel wait
   while(1);
 
-#pragma acc serial wait()
-  while(1);
-
 #pragma acc kernels wait(getS(), getI())
   while(1);
 
@@ -35,4 +32,8 @@ void uses() {
   // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc parallel wait(devnum:arr : queues: arr, NC, 5)
   while(1);
+
+  // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
+#pragma acc loop wait
+  for(int i = 5; i < 10;++i);
 }

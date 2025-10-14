@@ -5,28 +5,45 @@ on:
     inputs:
       release-version:
         description: 'Release Version'
-        required: true
+        required: false
         type: string
       upload:
         description: 'Upload binaries to the release page'
         required: true
         default: false
         type: boolean
+      runs-on:
+        description: "Runner to use for the build"
+        required: true
+        type: choice
+        # We use ubuntu-22.04 rather than the latest version to make the built
+        # binaries more portable (eg functional aginast older glibc).
+        options:
+          - ubuntu-22.04
+          - ubuntu-22.04-arm
+          - macos-13
+          - macos-14
 
   workflow_call:
     inputs:
       release-version:
         description: 'Release Version'
-        required: true
+        required: false
         type: string
       upload:
         description: 'Upload binaries to the release page'
         required: true
         default: false
         type: boolean
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '0 8 1 * *'
+      runs-on:
+        description: "Runner to use for the build"
+        required: true
+        type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
+
 
 permissions:
   contents: read # Default everything to read-only
@@ -34,30 +51,47 @@ permissions:
 jobs:
   prepare:
     name: Prepare to build binaries
-    runs-on: ubuntu-22.04
-    if: github.repository == 'llvm/llvm-project'
+    runs-on: ${{ inputs.runs-on }}
+    if: github.repository_owner == 'llvm'
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
+      target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
+      ccache: ${{ steps.vars.outputs.ccache }}
+      build-flang: ${{ steps.vars.outputs.build-flang }}
+      release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
+      release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
+      build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
+      test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
 
     steps:
+    # It's good practice to use setup-python, but this is also required on macos-14
+    # due to https://github.com/actions/runner-images/issues/10385
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      with:
+        python-version: '3.13'
+
     - name: Checkout LLVM
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
     - name: Install Dependencies
+      shell: bash
       run: |
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Check Permissions
+      if: github.event_name != 'pull_request'
       env:
         GITHUB_TOKEN: ${{ github.token }}
         USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+      shell: bash
       run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
     - name: Collect Variables
       id: vars
+      shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
       # | X.Y.Z-rcN | ./rcN/llvm-project
@@ -67,240 +101,213 @@ jobs:
       # | X.Y.Z-rcN | -rc N -test-asserts
       # | X.Y.Z     | -final
       run: |
-        tag="${{ github.ref_name }}"
         trimmed=$(echo ${{ inputs.release-version }} | xargs)
-        [[ "$trimmed" != "" ]] && tag="llvmorg-$trimmed"
-        if [ "$tag" = "main" ]; then
-          # If tag is main, then we've been triggered by a scheduled so pass so
-          # use the head commit as the tag.
-          tag=`git rev-parse HEAD`
+        if [ -n "$trimmed" ]; then
+          release_version="$trimmed"
+          ref="llvmorg-$release_version"
+        else
+          release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-$GITHUB_SHA"
+          ref="$GITHUB_SHA"
         fi
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
         else
           upload="false"
         fi
-        bash .github/workflows/set-release-binary-outputs.sh "$tag" "$upload"
+        echo "release-version=$release_version">> $GITHUB_OUTPUT
+        echo "ref=$ref" >> $GITHUB_OUTPUT
+        echo "upload=$upload" >> $GITHUB_OUTPUT
 
-  build-stage1-linux:
-    name: "Build Stage 1 Linux"
+        release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
+        echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
+        echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+
+        target="$RUNNER_OS-$RUNNER_ARCH"
+        # The hendrikmuhs/ccache-action action does not support installing sccache
+        # on arm64 Linux.
+        if [ "$target" = "Linux-ARM64" ]; then
+          echo ccache=ccache >> $GITHUB_OUTPUT
+        else
+          echo ccache=sccache >> $GITHUB_OUTPUT
+        fi
+
+        # The macOS builds try to cross compile some libraries so we need to
+        # add extra CMake args to disable them.
+        # See https://github.com/llvm/llvm-project/issues/99767
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
+          if [ "$RUNNER_ARCH" = "ARM64" ]; then
+            arches=arm64
+          else
+            arches=x86_64
+            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
+            # 2-3 hours to build on macOS, much slower than on Linux.
+            # The long build time causes the release build to time out on x86_64,
+            # so we need to disable flang there.
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
+          fi
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
+        fi
+
+        build_flang="true"
+
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          # The build times out on Windows, so we need to disable LTO.
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+        fi
+
+        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
+        echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
+        case "${{ inputs.runs-on }}" in
+          ubuntu-22.04*)
+            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            test_runs_on=$build_runs_on
+            ;;
+          macos-13)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="macos-13-large"
+            fi
+            test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          macos-14)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="depot-macos-14"
+            fi
+            test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          *)
+            test_runs_on="${{ inputs.runs-on }}"
+            build_runs_on=$test_runs_on
+            ;;
+        esac
+        echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
+        echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
+
+  build-release-package:
+    name: "Build Release Package"
     needs: prepare
-    runs-on: ubuntu-22.04
-    if: github.repository == 'llvm/llvm-project'
+    if: github.repository_owner == 'llvm'
+    runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
+
     - name: Checkout LLVM
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+      uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
 
-    - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
+    - name: Setup Windows
+      if: startsWith(runner.os, 'Windows')
+      uses: llvm/actions/setup-windows@main
       with:
-        max-size: 250M
-        key: sccache-${{ runner.os }}-release
-        variant: sccache
+        arch: amd64
 
-    - name: Build Stage 1 Clang
+    - name: Set Build Prefix
+      id: setup-stage
+      shell: bash
       run: |
-        sudo chown $USER:$USER /mnt/
-        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -S llvm -B /mnt/build
-        ninja -v -C /mnt/build
+        build_prefix=`pwd`
+        if [ "${{ runner.os }}" = "Linux" ]; then
+          sudo chown $USER:$USER /mnt/
+          build_prefix=/mnt/
+        fi
+        echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
-    # We need to create an archive of the build directory, because it has too
-    # many files to upload.
-    - name: Package Build and Source Directories
+    - name: Configure
+      id: build
+      shell: bash
+      env:
+        CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
       run: |
-        tar -c . | zstd -T0 -c > llvm-project.tar.zst
-        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
+        # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
+        # so we need to set some extra cmake flags to disable this.
+        cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+            ${{ needs.prepare.outputs.target-cmake-flags }} \
+            -C clang/cmake/caches/Release.cmake \
+            -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
-    - name: Upload Stage 1 Source
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+    - name: Build
+      shell: bash
+      run: |
+        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
+        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
+        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
+    
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: stage1-source
-        path: llvm-project.tar.zst
-        retention-days: 2
+        name: ${{ runner.os }}-${{ runner.arch }}-release-binary
+        # Due to path differences on Windows when running in bash vs running on node,
+        # we need to search for files in the current workspace.
+        path: |
+          ${{ needs.prepare.outputs.release-binary-filename }}
 
-    - name: Upload Stage 1 Build Dir
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      with:
-        name: stage1-build
-        path: build.tar.zst
-        retention-days: 2
+    - name: Run Tests
+      # These almost always fail so don't let them fail the build and prevent the uploads.
+      continue-on-error: true
+      run: |
+        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
-  build-stage2-linux:
-    name: "Build Stage 2 Linux"
+  upload-release-binaries:
+    name: "Upload Release Binaries"
     needs:
       - prepare
-      - build-stage1-linux
-    runs-on: ubuntu-22.04
-    if: github.repository == 'llvm/llvm-project'
-    steps:
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
-
-    - name: Download Stage 1 Artifacts
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-      with:
-        pattern: stage1-*
-        merge-multiple: true
-
-    - name: Unpack Artifacts
-      run: |
-        tar --zstd -xf llvm-project.tar.zst
-        rm llvm-project.tar.zst
-        sudo chown $USER:$USER /mnt/
-        tar --zstd -C /mnt -xf build.tar.zst
-        rm build.tar.zst
-
-    - name: Build Stage 2
-      run: |
-        ninja -C /mnt/build stage2-instrumented
-
-    # We need to create an archive of the build directory, because it has too
-    # many files to upload.
-    - name: Save Build and Source Directories
-      run: |
-        tar -c . | zstd -T0 -c > llvm-project.tar.zst
-        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
-
-    - name: Upload Stage 2 Source
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      with:
-        name: stage2-source
-        path: ${{ github.workspace }}/llvm-project.tar.zst
-        retention-days: 2
-
-    - name: Upload Stage 2 Build Dir
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      with:
-        name: stage2-build
-        path: ${{ github.workspace }}/build.tar.zst
-        retention-days: 2
-
-
-  build-stage3-linux:
-    name: "Build Stage 3 Linux"
-    needs:
-      - prepare
-      - build-stage2-linux
-    outputs:
-      filename: ${{ steps.package-info.outputs.release-filename }}
-    runs-on: ubuntu-22.04-16x64
-    if: github.repository == 'llvm/llvm-project'
-    steps:
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
-
-    - name: 'Download artifact'
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-      with:
-        pattern: stage2-*
-        merge-multiple: true
-
-    - name: Unpack Artifact
-      run: |
-        tar --zstd -xf llvm-project.tar.zst
-        rm llvm-project.tar.zst
-        sudo chown $USER:$USER /mnt/
-        tar --zstd -C /mnt -xf build.tar.zst
-        rm build.tar.zst
-
-    - name: Build Release Package
-      run: |
-        ninja -C /mnt/build stage2-package
-
-    - id: package-info
-      run: |
-        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.gz"
-        echo "filename=$filename" >> $GITHUB_OUTPUT
-        echo "path=/mnt/build/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
-
-    - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      if: always()
-      with:
-        name: release-binary
-        path: ${{ steps.package-info.outputs.path }}
-
-    # Clean up some build files to reduce size of artifact.
-    - name: Clean Up Build Directory
-      run: |
-        find /mnt/build -iname ${{ steps.package-info.outputs.filename }} -delete
-
-    # We need to create an archive of the build directory, because it has too
-    # many files to upload.
-    - name: Save Build and Source Directories
-      run: |
-        tar -c . | zstd -T0 -c > llvm-project.tar.zst
-        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
-
-    - name: Upload Stage 3 Source
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      with:
-        name: stage3-source
-        path: llvm-project.tar.zst
-        retention-days: 2
-
-    - name: Upload Stage 3 Build Dir
-      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      with:
-        name: stage3-build
-        path: build.tar.zst
-        retention-days: 2
-
-  upload-release-binaries-linux:
-    name: "Upload Linux Release Binaries"
-    needs:
-      - prepare
-      - build-stage3-linux
-    if : ${{ needs.prepare.outputs.upload == 'true' }}
-    runs-on: ubuntu-22.04
+      - build-release-package
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.prepare.outputs.upload == 'true'
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
+      id-token: write     # For artifact attestations
+      attestations: write # For artifact attestations
 
     steps:
-    - name: 'Download artifact'
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+    - name: Checkout Release Scripts
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
-        name: release-binary
+        sparse-checkout: |
+          llvm/utils/release/github-upload-release.py
+          llvm/utils/git/requirements.txt
+        sparse-checkout-cone-mode: false
+
+    - name: 'Download artifact'
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      with:
+        pattern: '*-release-binary'
+        merge-multiple: true
+
+    - name: Attest Build Provenance
+      id: provenance
+      uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+      with:
+        subject-path: ${{ needs.prepare.outputs.release-binary-filename }}
+
+    - name: Rename attestation file
+      run:
+        mv ${{ steps.provenance.outputs.bundle-path }} ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
+
+    - name: Upload Build Provenance
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
+        path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
+
+    - name: Install Python Requirements
+      run: |
+        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Upload Release
+      shell: bash
       run: |
-        sudo apt install python3-github
-        ./llvm-project/llvm/utils/release/github-upload-release.py \
+        ./llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \
-        --files ${{ needs.build-stage3-linux.outputs.release-filename }}
-
-
-  test-stage3-linux:
-    name: "Test Stage 3 Linux"
-    needs:
-      - prepare
-      - build-stage3-linux
-    runs-on: ubuntu-22.04
-    if: github.repository == 'llvm/llvm-project'
-    steps:
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
-
-    - name: 'Download artifact'
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-      with:
-        pattern: stage3-*
-        merge-multiple: true
-
-    - name: Unpack Artifact
-      run: |
-        tar --zstd -xf llvm-project.tar.zst
-        rm llvm-project.tar.zst
-        sudo chown $USER:$USER /mnt/
-        tar --zstd -C /mnt -xf build.tar.zst
-        rm build.tar.zst
-
-    - name: Run Tests
-      run: |
-        ninja -C /mnt/build stage2-check-all
+        --files ${{ needs.prepare.outputs.release-binary-filename }}*

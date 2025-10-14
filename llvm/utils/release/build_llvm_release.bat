@@ -7,7 +7,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -17,6 +17,7 @@ echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
 echo --local-python: use installed Python and does not try to use a specific version (3.10)
+echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
 echo.
@@ -34,6 +35,7 @@ set x64=
 set arm64=
 set skip-checkout=
 set local-python=
+set force-msvc=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -80,7 +82,6 @@ REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
-REM   Visual Studio 2019 SDK and Nuget (for the clang-format plugin),
 REM   Perl (for the OpenMP run-time).
 REM
 REM
@@ -151,8 +152,8 @@ set common_cmake_flags=^
   -DCMAKE_BUILD_TYPE=Release ^
   -DLLVM_ENABLE_ASSERTIONS=OFF ^
   -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON ^
+  -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86;BPF;WebAssembly;RISCV;NVPTX" ^
   -DLLVM_BUILD_LLVM_C_DYLIB=ON ^
-  -DCMAKE_INSTALL_UCRT_LIBRARIES=ON ^
   -DPython3_FIND_REGISTRY=NEVER ^
   -DPACKAGE_VERSION=%package_version% ^
   -DLLDB_RELOCATABLE_PYTHON=1 ^
@@ -163,7 +164,26 @@ set common_cmake_flags=^
   -DCLANG_ENABLE_LIBXML2=OFF ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
+  -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
+
+if "%force-msvc%" == "" (
+  where /q clang-cl
+  if %errorlevel% EQU 0 (
+    where /q lld-link
+    if %errorlevel% EQU 0 (
+      set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
+      
+      set common_cmake_flags=%common_cmake_flags%^
+        -DCMAKE_C_COMPILER=clang-cl.exe ^
+        -DCMAKE_CXX_COMPILER=clang-cl.exe ^
+        -DCMAKE_LINKER=lld-link.exe ^
+        -DLLVM_ENABLE_LLD=ON ^
+        -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+        -DCMAKE_CXX_FLAGS="%common_compiler_flags%"
+    )
+  )
+)
 
 set cmake_profile_flags=""
 
@@ -191,10 +211,11 @@ REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
+  -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
@@ -250,7 +271,7 @@ set cmake_flags=^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
@@ -317,7 +338,7 @@ set "stage0_bin_dir=%build_dir%/build_arm64_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DCLANG_DEFAULT_LINKER=lld ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DCOMPILER_RT_BUILD_PROFILE=OFF ^
@@ -412,6 +433,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
   ../../libxml2-v2.9.12 || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install

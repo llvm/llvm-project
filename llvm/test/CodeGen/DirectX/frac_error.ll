@@ -1,7 +1,8 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation frac does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload Type
+; CHECK: in function frac_double
+; CHECK-SAME: Cannot create Frac operation: Invalid overload type
 
 ; Function Attrs: noinline nounwind optnone
 define noundef double @frac_double(double noundef %a) #0 {

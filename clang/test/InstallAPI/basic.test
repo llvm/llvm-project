@@ -3,13 +3,13 @@
 /// Check basic arguments are captured.
 // RUN: clang-installapi -x objective-c -target arm64-apple-ios13.0.0 \
 // RUN: -fapplication-extension -current_version 1 -compatibility_version 1 \
-// RUN: -install_name /usr/lib/basic.dylib \
+// RUN: -install_name /usr/lib/basic.dylib -dynamiclib \
 // RUN: %t/basic_inputs.json -o %t/basic.tbd 2>&1 | FileCheck %s --allow-empty
 // RUN: llvm-readtapi -compare %t/basic.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
 
 /// Check multiple targets are captured.
 // RUN: clang-installapi -x objective-c -target arm64-apple-ios14.1 -target arm64e-apple-ios14.1 \
-// RUN: -fapplication-extension -install_name /usr/lib/basic.dylib \
+// RUN: -fapplication-extension -install_name /usr/lib/basic.dylib -dynamiclib \
 // RUN: %t/basic_inputs.json -o %t/multi-targets.tbd 2>&1 | FileCheck %s --allow-empty
 // RUN: llvm-readtapi -compare %t/multi-targets.tbd %t/expected-multi.tbd 2>&1 | FileCheck %s --allow-empty
 

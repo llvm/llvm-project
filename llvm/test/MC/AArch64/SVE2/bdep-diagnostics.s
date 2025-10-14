@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sve2-bitperm  2>&1 < %s| FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sve2,+sve-bitperm  2>&1 < %s| FileCheck %s
 
 
 // ------------------------------------------------------------------------- //

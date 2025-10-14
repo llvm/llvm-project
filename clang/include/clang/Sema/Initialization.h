@@ -159,8 +159,9 @@ private:
   };
 
   struct VD {
-    /// The VarDecl, FieldDecl, or BindingDecl being initialized.
-    ValueDecl *VariableOrMember;
+    /// The VarDecl, FieldDecl, TemplateParmDecl, or BindingDecl being
+    /// initialized.
+    NamedDecl *VariableOrMember;
 
     /// When Kind == EK_Member, whether this is an implicit member
     /// initialization in a copy or move constructor. These can perform array
@@ -212,7 +213,7 @@ private:
     struct C Capture;
   };
 
-  InitializedEntity() {};
+  InitializedEntity() {}
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
@@ -291,8 +292,8 @@ public:
   }
 
   /// Create the initialization entity for a template parameter.
-  static InitializedEntity
-  InitializeTemplateParameter(QualType T, NonTypeTemplateParmDecl *Param) {
+  static InitializedEntity InitializeTemplateParameter(QualType T,
+                                                       NamedDecl *Param) {
     InitializedEntity Entity;
     Entity.Kind = EK_TemplateParameter;
     Entity.Type = T;
@@ -603,7 +604,7 @@ private:
     /// Normal context
     IC_Normal,
 
-    /// Normal context, but allows explicit conversion functionss
+    /// Normal context, but allows explicit conversion functions
     IC_ExplicitConvs,
 
     /// Implicit context (value initialization)
@@ -676,11 +677,12 @@ public:
   }
 
   /// Create a direct initialization for a functional cast.
-  static InitializationKind CreateFunctionalCast(SourceRange TypeRange,
+  static InitializationKind CreateFunctionalCast(SourceLocation StartLoc,
+                                                 SourceRange ParenRange,
                                                  bool InitList) {
     return InitializationKind(InitList ? IK_DirectList : IK_Direct,
-                              IC_FunctionalCast, TypeRange.getBegin(),
-                              TypeRange.getBegin(), TypeRange.getEnd());
+                              IC_FunctionalCast, StartLoc,
+                              ParenRange.getBegin(), ParenRange.getEnd());
   }
 
   /// Create a copy initialization.
@@ -1124,6 +1126,9 @@ public:
 
     // A designated initializer was provided for a non-aggregate type.
     FK_DesignatedInitForNonAggregate,
+
+    /// HLSL intialization list flattening failed.
+    FK_HLSLInitListFlatteningFailed,
   };
 
 private:
@@ -1383,6 +1388,11 @@ public:
   void AddOCLZeroOpaqueTypeStep(QualType T);
 
   void AddParenthesizedListInitStep(QualType T);
+
+  /// Only used when initializing structured bindings from an array with
+  /// direct-list-initialization. Unwrap the initializer list to get the array
+  /// for array copy.
+  void AddUnwrapInitListInitStep(InitListExpr *Syntactic);
 
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.

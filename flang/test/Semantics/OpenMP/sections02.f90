@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
 ! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
@@ -21,6 +19,8 @@ program OmpConstructSections01
    !$omp section
    print *, "This is a single statement structured block"
    !$omp section
+   !ERROR: invalid branch into an OpenMP structured block
+   !ERROR: invalid branch leaving an OpenMP structured block
    open (10, file="random-file-name.txt", err=30)
    !ERROR: invalid branch into an OpenMP structured block
    !ERROR: invalid branch leaving an OpenMP structured block

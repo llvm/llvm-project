@@ -16,6 +16,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <optional>
 
@@ -33,7 +34,7 @@ class StackSafetyInfo;
 /// BlockFrequencyInfo for a given function, that can be provided via
 /// a std::function callback. Otherwise, this routine will manually construct
 /// that information.
-ModuleSummaryIndex buildModuleSummaryIndex(
+LLVM_ABI ModuleSummaryIndex buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI,
@@ -45,16 +46,16 @@ class ModuleSummaryIndexAnalysis
     : public AnalysisInfoMixin<ModuleSummaryIndexAnalysis> {
   friend AnalysisInfoMixin<ModuleSummaryIndexAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = ModuleSummaryIndex;
 
-  Result run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the ModuleSummaryIndex object.
-class ModuleSummaryIndexWrapperPass : public ModulePass {
+class LLVM_ABI ModuleSummaryIndexWrapperPass : public ModulePass {
   std::optional<ModuleSummaryIndex> Index;
 
 public:
@@ -76,10 +77,10 @@ public:
 // createModuleSummaryIndexWrapperPass - This pass builds a ModuleSummaryIndex
 // object for the module, to be written to bitcode or LLVM assembly.
 //
-ModulePass *createModuleSummaryIndexWrapperPass();
+LLVM_ABI ModulePass *createModuleSummaryIndexWrapperPass();
 
 /// Legacy wrapper pass to provide the ModuleSummaryIndex object.
-class ImmutableModuleSummaryIndexWrapperPass : public ImmutablePass {
+class LLVM_ABI ImmutableModuleSummaryIndexWrapperPass : public ImmutablePass {
   const ModuleSummaryIndex *Index;
 
 public:
@@ -96,12 +97,12 @@ public:
 // ImmutableModuleSummaryIndexWrapperPass - This pass wrap provided
 // ModuleSummaryIndex object for the module, to be used by other passes.
 //
-ImmutablePass *
+LLVM_ABI ImmutablePass *
 createImmutableModuleSummaryIndexWrapperPass(const ModuleSummaryIndex *Index);
 
 /// Returns true if the instruction could have memprof metadata, used to ensure
 /// consistency between summary analysis and the ThinLTO backend processing.
-bool mayHaveMemprofSummary(const CallBase *CB);
+LLVM_ABI bool mayHaveMemprofSummary(const CallBase *CB);
 
 } // end namespace llvm
 

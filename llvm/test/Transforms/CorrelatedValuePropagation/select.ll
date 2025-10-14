@@ -31,8 +31,8 @@ define i8 @phi_other_edge(i1 %c, i8 %a, i8 %b, i32 %sw) {
 ; CHECK-SAME: (i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i32 [[SW:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[SW]], label [[TEST:%.*]] [
-; CHECK-NEXT:    i32 0, label [[THEN:%.*]]
-; CHECK-NEXT:    i32 1, label [[ELSE:%.*]]
+; CHECK-NEXT:      i32 0, label [[THEN:%.*]]
+; CHECK-NEXT:      i32 1, label [[ELSE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       test:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN]], label [[ELSE]]
@@ -141,7 +141,7 @@ else:
 }
 
 define i8 @not_correlated(i1, i1) {
-; CHECK-LABEL: define i8 @not_correlated
+; CHECK-LABEL: define range(i8 0, 2) i8 @not_correlated
 ; CHECK-SAME: (i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP0]], i8 0, i8 1
@@ -172,7 +172,8 @@ define i32 @PR23752() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 icmp sgt (ptr @b, ptr @c), i32 0, i32 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt ptr @b, @c
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP2]], i32 0, i32 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SEL]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
@@ -183,7 +184,8 @@ entry:
 
 for.body:
   %phi = phi i32 [ 0, %entry ], [ %sel, %for.body ]
-  %sel = select i1 icmp sgt (ptr @b, ptr @c), i32 %phi, i32 1
+  %cmp2 = icmp sgt ptr @b, @c
+  %sel = select i1 %cmp2, i32 %phi, i32 1
   %cmp = icmp ne i32 %sel, 1
   br i1 %cmp, label %for.body, label %if.end
 
@@ -359,7 +361,7 @@ exit:
 }
 
 define i64 @select_cond_may_undef(i32 %a) {
-; CHECK-LABEL: define i64 @select_cond_may_undef
+; CHECK-LABEL: define range(i64 -2147483648, 2147483648) i64 @select_cond_may_undef
 ; CHECK-SAME: (i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[IS_A_NONNEGATIVE:%.*]] = icmp sgt i32 [[A]], 1
 ; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[IS_A_NONNEGATIVE]], i32 [[A]], i32 0

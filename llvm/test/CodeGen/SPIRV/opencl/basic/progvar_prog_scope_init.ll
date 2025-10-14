@@ -10,7 +10,7 @@
 ; CHECK-DAG: %[[#pt2:]] = OpTypePointer CrossWorkgroup %[[#arr2]]
 ; CHECK-DAG: %[[#pt3:]] = OpTypePointer CrossWorkgroup %[[#pt1]]
 ; CHECK-DAG: %[[#a_var]] = OpVariable %[[#pt2]] CrossWorkgroup
-; CHECK-DAG: %[[#const:]] = OpSpecConstantOp %[[#pt1]] 70 %[[#a_var]]
+; CHECK-DAG: %[[#const:]] = OpSpecConstantOp %[[#pt1]] InBoundsPtrAccessChain %[[#a_var]]
 ; CHECK-DAG: %[[#p_var]] = OpVariable %[[#pt3]] CrossWorkgroup %[[#const]]
 @var = addrspace(1) global i8 0, align 1
 @g_var = addrspace(1) global i8 1, align 1

@@ -29,9 +29,11 @@ class LLVM_LIBRARY_VISIBILITY XtensaAsmPrinter : public AsmPrinter {
   const MCSubtargetInfo *STI;
 
 public:
+  static char ID;
+
   explicit XtensaAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), STI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), STI(TM.getMCSubtargetInfo()) {}
 
   StringRef getPassName() const override { return "Xtensa Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
@@ -42,7 +44,17 @@ public:
 
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 
+  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &O) override;
+
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &OS) override;
+
   MCSymbol *GetConstantPoolIndexSymbol(const MachineOperand &MO) const;
+
+  MCSymbol *GetJumpTableSymbol(const MachineOperand &MO) const;
 
   MCOperand LowerSymbolOperand(const MachineOperand &MO,
                                MachineOperand::MachineOperandType MOTy,

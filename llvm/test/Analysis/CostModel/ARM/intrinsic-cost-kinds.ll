@@ -231,22 +231,22 @@ define void @ctlz(i32 %a, <16 x i32> %va) {
 define void @fshl(i32 %a, i32 %b, i32 %c, <16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc) {
 ; THRU-LABEL: 'fshl'
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %s = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'fshl'
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %s = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 250 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'fshl'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %s = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 229 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'fshl'
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %s = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 250 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)

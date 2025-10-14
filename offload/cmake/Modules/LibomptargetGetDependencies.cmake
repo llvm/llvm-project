@@ -3,7 +3,6 @@
 #
 # libffi : required to launch target kernels given function and argument
 #          pointers.
-# CUDA : required to control offloading to NVIDIA GPUs.
 
 include (FindPackageHandleStandardArgs)
 
@@ -44,13 +43,6 @@ find_package(FFI QUIET)
 set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
-# Looking for CUDA...
-################################################################################
-
-find_package(CUDAToolkit QUIET)
-set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDAToolkit_FOUND})
-
-################################################################################
 # Looking for NVIDIA GPUs...
 ################################################################################
 set(LIBOMPTARGET_DEP_CUDA_ARCH "sm_35")
@@ -59,7 +51,7 @@ if(TARGET nvptx-arch)
   get_property(LIBOMPTARGET_NVPTX_ARCH TARGET nvptx-arch PROPERTY LOCATION)
 else()
   find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch
-               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
 
 if(LIBOMPTARGET_NVPTX_ARCH)
@@ -83,7 +75,7 @@ if(TARGET amdgpu-arch)
   get_property(LIBOMPTARGET_AMDGPU_ARCH TARGET amdgpu-arch PROPERTY LOCATION)
 else()
   find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch
-               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
 
 if(LIBOMPTARGET_AMDGPU_ARCH)

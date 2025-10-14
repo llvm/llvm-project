@@ -63,22 +63,22 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T1-NEXT:    adcs r3, r1
 ; CHECK-T1-NEXT:    eors r1, r3
 ; CHECK-T1-NEXT:    bics r1, r2
-; CHECK-T1-NEXT:    asrs r2, r3, #31
+; CHECK-T1-NEXT:    asrs r0, r3, #31
+; CHECK-T1-NEXT:    movs r2, #1
+; CHECK-T1-NEXT:    lsls r2, r2, #31
+; CHECK-T1-NEXT:    eors r2, r0
 ; CHECK-T1-NEXT:    cmp r1, #0
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:    bmi .LBB1_2
+; CHECK-T1-NEXT:    bpl .LBB1_3
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r4
+; CHECK-T1-NEXT:    bpl .LBB1_4
 ; CHECK-T1-NEXT:  .LBB1_2:
-; CHECK-T1-NEXT:    cmp r1, #0
-; CHECK-T1-NEXT:    bmi .LBB1_4
-; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    mov r1, r3
+; CHECK-T1-NEXT:    mov r1, r2
 ; CHECK-T1-NEXT:    pop {r4, pc}
+; CHECK-T1-NEXT:  .LBB1_3:
+; CHECK-T1-NEXT:    mov r0, r4
+; CHECK-T1-NEXT:    bmi .LBB1_2
 ; CHECK-T1-NEXT:  .LBB1_4:
-; CHECK-T1-NEXT:    movs r1, #1
-; CHECK-T1-NEXT:    lsls r1, r1, #31
-; CHECK-T1-NEXT:    eors r2, r1
+; CHECK-T1-NEXT:    mov r2, r3
 ; CHECK-T1-NEXT:    mov r1, r2
 ; CHECK-T1-NEXT:    pop {r4, pc}
 ;

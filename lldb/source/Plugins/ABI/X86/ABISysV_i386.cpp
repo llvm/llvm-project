@@ -13,9 +13,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -27,6 +24,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
 using namespace lldb;
@@ -182,7 +182,8 @@ bool ABISysV_i386::GetArgumentValues(Thread &thread, ValueList &values) const {
 
     // Currently: Support for extracting values with Clang QualTypes only.
     CompilerType compiler_type(value->GetCompilerType());
-    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (bit_size) {
       bool is_signed;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -201,13 +202,13 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                           lldb::ValueObjectSP &new_value_sp) {
   Status error;
   if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
+    error = Status::FromErrorString("Empty value object for return value.");
     return error;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    error.SetErrorString("Null clang type for return value.");
+    error = Status::FromErrorString("Null clang type for return value.");
     return error;
   }
 
@@ -220,7 +221,7 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   bool register_write_successful = true;
 
   if (data_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s",
         data_error.AsCString());
     return error;
@@ -233,7 +234,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (type_flags & eTypeIsPointer) // 'Pointer'
   {
     if (num_bytes != sizeof(uint32_t)) {
-      error.SetErrorString("Pointer to be returned is not 4 bytes wide");
+      error =
+          Status::FromErrorString("Pointer to be returned is not 4 bytes wide");
       return error;
     }
     lldb::offset_t offset = 0;
@@ -318,7 +320,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         else if (num_bytes == 12)
           value_long_dbl = data.GetLongDouble(&offset);
         else {
-          error.SetErrorString("Invalid number of bytes for this return type");
+          error = Status::FromErrorString(
+              "Invalid number of bytes for this return type");
           return error;
         }
         st0_value.SetLongDouble(value_long_dbl);
@@ -330,22 +333,24 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             reg_ctx->WriteRegister(ftag_info, ftag_value);
       } else if (num_bytes == 16) // handles __float128
       {
-        error.SetErrorString("Implementation is missing for this clang type.");
+        error = Status::FromErrorString(
+            "Implementation is missing for this clang type.");
       }
     } else {
       // Neither 'Integral' nor 'Floating Point'. If flow reaches here then
       // check type_flags. This type_flags is not a valid type.
-      error.SetErrorString("Invalid clang type");
+      error = Status::FromErrorString("Invalid clang type");
     }
   } else {
     /* 'Complex Floating Point', 'Packed', 'Decimal Floating Point' and
     'Aggregate' data types
     are yet to be implemented */
-    error.SetErrorString("Currently only Integral and Floating Point clang "
-                         "types are supported.");
+    error = Status::FromErrorString(
+        "Currently only Integral and Floating Point clang "
+        "types are supported.");
   }
   if (!register_write_successful)
-    error.SetErrorString("Register writing failed");
+    error = Status::FromErrorString("Register writing failed");
   return error;
 }
 
@@ -388,7 +393,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
   {
     value.SetValueType(Value::ValueType::Scalar);
     std::optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(&thread);
+        llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (!byte_size)
       return return_valobj_sp;
     bool success = false;
@@ -513,7 +518,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
   } else if (type_flags & eTypeIsVector) // 'Packed'
   {
     std::optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(&thread);
+        llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *vec_reg = reg_ctx->GetRegisterInfoByName("xmm0", 0);
       if (vec_reg == nullptr)
@@ -619,21 +624,20 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectImpl(
 // The saved pc is at CFA-4 (i.e. esp+0)
 // The saved esp is CFA+0
 
-bool ABISysV_i386::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_i386::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_esp;
   uint32_t pc_reg_num = dwarf_eip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 4);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -4, false);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("i386 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 4);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -4, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("i386 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
 // This defines CFA as ebp+8
@@ -641,31 +645,28 @@ bool ABISysV_i386::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
 // The saved ebp is at CFA-8 (i.e. ebp+0)
 // The saved esp is CFA+0
 
-bool ABISysV_i386::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_i386::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = dwarf_ebp;
   uint32_t sp_reg_num = dwarf_esp;
   uint32_t pc_reg_num = dwarf_eip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 4;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("i386 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("i386 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // According to "Register Usage" in reference document (specified on top of

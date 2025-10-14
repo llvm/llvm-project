@@ -397,7 +397,7 @@ define double @frem_negzero_by_x(double %x) {
 
 define <2 x double> @frem_negzero_by_x_vec_poison(<2 x double> %x) {
 ; CHECK-LABEL: @frem_negzero_by_x_vec_poison(
-; CHECK-NEXT:    ret <2 x double> <double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double -0.000000e+00)
 ;
   %r = frem nnan <2 x double> <double poison, double -0.0>, %x
   ret <2 x double> %r
@@ -469,7 +469,7 @@ define float @fdiv_neg_swapped2(float %f) {
 
 define <2 x float> @fdiv_neg_vec_poison_elt(<2 x float> %f) {
 ; CHECK-LABEL: @fdiv_neg_vec_poison_elt(
-; CHECK-NEXT:    ret <2 x float> <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float -1.000000e+00)
 ;
   %neg = fsub <2 x float> <float 0.0, float poison>, %f
   %div = fdiv nnan <2 x float> %f, %neg

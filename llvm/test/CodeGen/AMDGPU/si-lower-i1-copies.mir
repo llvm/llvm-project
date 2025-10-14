@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=si-i1-copies -o - %s | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -passes=si-i1-copies -o - %s | FileCheck -check-prefixes=GCN %s
 
 # GCN-LABEL: name: lcssa_phi
 ---

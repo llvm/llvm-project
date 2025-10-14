@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass is to address a situation that appears after register allocaion
-// evey now and then, namely a register copy from a source that was defined
+// This pass is to address a situation that appears after register allocation
+// every now and then, namely a register copy from a source that was defined
 // as an immediate value in the same block (usually just before the copy).
 //
 // Here is an example of actual code emitted that shows this problem:
@@ -25,37 +25,25 @@
 //    r0 = zxtb(r3)
 //  }
 
-#define DEBUG_TYPE "tfr-cleanup"
+#include "Hexagon.h"
 #include "HexagonTargetMachine.h"
 
-#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
-namespace llvm {
-FunctionPass *createHexagonTfrCleanup();
-void initializeHexagonTfrCleanupPass(PassRegistry &);
-} // namespace llvm
+#define DEBUG_TYPE "tfr-cleanup"
 
 namespace {
 class HexagonTfrCleanup : public MachineFunctionPass {
 public:
   static char ID;
-  HexagonTfrCleanup() : MachineFunctionPass(ID), HII(0), TRI(0) {
-    PassRegistry &R = *PassRegistry::getPassRegistry();
-    initializeHexagonTfrCleanupPass(R);
-  }
+  HexagonTfrCleanup() : MachineFunctionPass(ID), HII(0), TRI(0) {}
   StringRef getPassName() const override { return "Hexagon TFR Cleanup"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -92,11 +80,7 @@ bool HexagonTfrCleanup::isIntReg(unsigned Reg, bool &Is32) {
 // Assign given value V32 to the specified the register R32 in the map. Only
 // 32-bit registers are valid arguments.
 void HexagonTfrCleanup::setReg(unsigned R32, uint32_t V32, ImmediateMap &IMap) {
-  ImmediateMap::iterator F = IMap.find(R32);
-  if (F == IMap.end())
-    IMap.insert(std::make_pair(R32, V32));
-  else
-    F->second = V32;
+  IMap[R32] = V32;
 }
 
 // Retrieve a value of the provided register Reg and store it into Val.
@@ -176,11 +160,8 @@ bool HexagonTfrCleanup::updateImmMap(MachineInstr *MI, ImmediateMap &IMap) {
     if (!Mo->isReg() || !Mo->isDef())
       continue;
     unsigned R = Mo->getReg();
-    for (MCRegAliasIterator AR(R, TRI, true); AR.isValid(); ++AR) {
-      ImmediateMap::iterator F = IMap.find(*AR);
-      if (F != IMap.end())
-        IMap.erase(F);
-    }
+    for (MCRegAliasIterator AR(R, TRI, true); AR.isValid(); ++AR)
+      IMap.erase(*AR);
   }
   return true;
 }
@@ -282,14 +263,14 @@ bool HexagonTfrCleanup::runOnMachineFunction(MachineFunction &MF) {
   // Map: 32-bit register -> immediate value.
   // 64-bit registers are stored through their subregisters.
   ImmediateMap IMap;
-  SlotIndexes *Indexes = this->getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
 
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &B = *I;
+  for (MachineBasicBlock &B : MF) {
     MachineBasicBlock::iterator J, F, NextJ;
     IMap.clear();
     bool Inserted = false, Erased = false;

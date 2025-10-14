@@ -19,8 +19,8 @@ namespace test0 {
 namespace test1 {
   struct Derived : private Base {}; // expected-note 2 {{declared private here}}
   void test() {
-    int (Derived::*d) = data_ptr; // expected-error {{cannot cast private base class 'Base' to 'test1::Derived'}}
-    int (Derived::*m)() = method_ptr; // expected-error {{cannot cast private base class 'Base' to 'test1::Derived'}}
+    int (Derived::*d) = data_ptr; // expected-error {{cannot cast private base class 'Base' to 'Derived'}}
+    int (Derived::*m)() = method_ptr; // expected-error {{cannot cast private base class 'Base' to 'Derived'}}
   }
 };
 
@@ -30,8 +30,8 @@ namespace test2 {
   struct B : Base {};
   struct Derived : A, B {};
   void test() {
-    int (Derived::*d) = data_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'test2::Derived':}}
-    int (Derived::*m)() = method_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'test2::Derived':}}
+    int (Derived::*d) = data_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'Derived':}}
+    int (Derived::*m)() = method_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'Derived':}}
   }
 }
 
@@ -39,8 +39,8 @@ namespace test2 {
 namespace test3 {
   struct Derived : virtual Base {};
   void test() {
-    int (Derived::*d) = data_ptr;  // expected-error {{conversion from pointer to member of class 'Base' to pointer to member of class 'test3::Derived' via virtual base 'Base' is not allowed}}
-    int (Derived::*m)() = method_ptr; // expected-error {{conversion from pointer to member of class 'Base' to pointer to member of class 'test3::Derived' via virtual base 'Base' is not allowed}}
+    int (Derived::*d) = data_ptr;  // expected-error {{conversion from pointer to member of class 'Base' to pointer to member of class 'Derived' via virtual base 'Base' is not allowed}}
+    int (Derived::*m)() = method_ptr; // expected-error {{conversion from pointer to member of class 'Base' to pointer to member of class 'Derived' via virtual base 'Base' is not allowed}}
   }
 }
 
@@ -49,8 +49,8 @@ namespace test4 {
   struct A : Base {};
   struct Derived : Base, virtual A {}; // expected-warning  {{direct base 'Base' is inaccessible due to ambiguity:\n    struct test4::Derived -> Base\n    struct test4::Derived -> A -> Base}}
   void test() {
-    int (Derived::*d) = data_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'test4::Derived':}}
-    int (Derived::*m)() = method_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'test4::Derived':}}
+    int (Derived::*d) = data_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'Derived':}}
+    int (Derived::*m)() = method_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'Derived':}}
   }
 }
 

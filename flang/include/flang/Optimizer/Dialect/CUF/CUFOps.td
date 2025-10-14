@@ -17,6 +17,9 @@
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
+include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/Dialect/GPU/IR/GPUBase.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
@@ -92,12 +95,11 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
   }];
 
   let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-                       Optional<AnyIntegerType>:$stream,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-                       cuf_DataAttributeAttr:$data_attr,
-                       UnitAttr:$hasStat);
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+      Optional<fir_ReferenceType>:$stream,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
 
   let results = (outs AnyIntegerType:$stat);
 
@@ -138,6 +140,17 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   let hasVerifier = 1;
 }
 
+def cuf_SyncDescriptorOp : cuf_Op<"sync_descriptor", []> {
+  let summary =
+      "Synchronize the host and device descriptor of a Fortran pointer";
+
+  let arguments = (ins SymbolRefAttr:$globalName);
+
+  let assemblyFormat = [{
+    $globalName attr-dict
+  }];
+}
+
 def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   let summary = "Represent a data transfer between host and device memory";
 
@@ -152,15 +165,22 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
       a = adev ! transfer device to host
       bdev = adev ! transfer device to device
     ```
+    
+    When the data transfer is done on data hold by descriptors, the LHS data
+    hold by the descriptor are updated. When required, the LHS decriptor is also
+    updated.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$src,
-                       Arg<AnyReferenceLike, "", [MemWrite]>:$dst,
+  let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
+                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
+                       Optional<AnyShapeOrShiftType>:$shape,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
   let assemblyFormat = [{
-    $src `to` $dst attr-dict `:` type(operands)
+    $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
   }];
+
+  let hasVerifier = 1;
 }
 
 def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
@@ -173,26 +193,20 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     ```
       // launch simple kernel with no arguments. bytes and stream value are
       // optional in the chevron notation.
-      cuf.kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+      cuf.kernel_launch @kernel<<<%gx, %gy, %gz, %bx, %by, %bz>>>()
     ```
   }];
 
-  let arguments = (ins
-    SymbolRefAttr:$callee,
-    I32:$grid_x,
-    I32:$grid_y,
-    I32:$grid_z,
-    I32:$block_x,
-    I32:$block_y,
-    I32:$block_z,
-    Optional<I32>:$bytes,
-    Optional<I32>:$stream,
-    Variadic<AnyType>:$args
-  );
+  let arguments = (ins SymbolRefAttr:$callee, I32:$grid_x, I32:$grid_y,
+      I32:$grid_z, I32:$block_x, I32:$block_y, I32:$block_z,
+      Optional<I32>:$bytes, Optional<fir_ReferenceType>:$stream,
+      Variadic<AnyType>:$args, OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs);
 
   let assemblyFormat = [{
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
-        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        $block_y `,` $block_z
+        ( `,` $bytes^ ( `,` $stream^ `:` type($stream) )? )? `>` `>` `>`
         `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
   }];
 
@@ -202,7 +216,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     }
 
     void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+      (*this)->setAttr(getCalleeAttrName(),
+                       llvm::cast<mlir::SymbolRefAttr>(callee));
     }
     mlir::FunctionType getFunctionType();
 
@@ -221,6 +236,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
           *this, getNbNoArgOperand(), getArgs().size() - 1);
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
@@ -236,25 +253,136 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
     represented by a 0 constant value.
   }];
 
-  let arguments = (ins
-    Variadic<I32>:$grid, // empty means `*`
-    Variadic<I32>:$block, // empty means `*`
-    Optional<I32>:$stream,
-    Variadic<Index>:$lowerbound,
-    Variadic<Index>:$upperbound,
-    Variadic<Index>:$step,
-    OptionalAttr<I64Attr>:$n
-  );
+  let arguments = (ins Variadic<I32>:$grid, // empty means `*`
+      Variadic<I32>:$block,                 // empty means `*`
+      Optional<fir_ReferenceType>:$stream, Variadic<Index>:$lowerbound,
+      Variadic<Index>:$upperbound, Variadic<Index>:$step,
+      OptionalAttr<I64Attr>:$n, Variadic<AnyType>:$reduceOperands,
+      OptionalAttr<ArrayAttr>:$reduceAttrs);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
                 custom<CUFKernelValues>($block, type($block))
-        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        ( `,` `stream` `=` $stream^ `:` qualified(type($stream)))? `>` `>` `>`
+        ( `reduce` `(` $reduceOperands^ `:` type($reduceOperands) `:` $reduceAttrs `)` )?
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))
         attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get Number of variadic operands
+    unsigned getNumOperands(unsigned idx) {
+      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
+        getOperandSegmentSizeAttr());
+      return static_cast<unsigned>(segments[idx]);
+    }
+    // Get Number of reduction operands
+    unsigned getNumReduceOperands() {
+      return getNumOperands(7);
+    }
+    /// Does the operation hold operands for reduction variables
+    bool hasReduceOperands() {
+      return getNumReduceOperands() > 0;
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def cuf_RegisterModuleOp : cuf_Op<"register_module", []> {
+  let summary = "Register a CUDA module";
+
+  let arguments = (ins
+    SymbolRefAttr:$name
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `->` type($modulePtr)
+  }];
+
+  let results = (outs LLVM_AnyPointer:$modulePtr);
+}
+
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+  let summary = "Register a CUDA kernel";
+
+  let arguments = (ins
+    SymbolRefAttr:$name,
+    LLVM_AnyPointer:$modulePtr
+  );
+
+  let assemblyFormat = [{
+    $name `(` $modulePtr `:` type($modulePtr) `)`attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    mlir::StringAttr getKernelName();
+    mlir::StringAttr getKernelModuleName();
+  }];
+}
+
+def cuf_DeviceAddressOp : cuf_Op<"device_address", []> {
+  let summary = "Get the device address from a host symbol";
+
+  let arguments = (ins SymbolRefAttr:$hostSymbol);
+
+  let assemblyFormat = [{
+    $hostSymbol attr-dict `->` type($addr)
+  }];
+
+  let results = (outs fir_ReferenceType:$addr);
+}
+
+def cuf_SharedMemoryOp
+    : cuf_Op<"shared_memory", [AttrSizedOperandSegments, Pure]> {
+  let summary = "Get the pointer to the kernel shared memory";
+
+  let description = [{
+    Return the pointer in the shared memory relative to the specified offset.
+  }];
+
+  let arguments = (ins TypeAttr:$in_type, OptionalAttr<StrAttr>:$uniq_name,
+      OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
+      Variadic<AnyIntegerType>:$shape,
+      Optional<AnyIntegerType>:$offset // offset in bytes from the shared memory
+                                       // base address.
+  );
+
+  let results = (outs fir_ReferenceType:$ptr);
+
+  let assemblyFormat = [{
+      (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
+        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Type":$inType,
+      "llvm::StringRef":$uniqName, "llvm::StringRef":$bindcName,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
+  let summary = "Adapt a stream value to a GPU async token";
+
+  let description = [{
+    Cast a stream object reference as a GPU async token. This is useful to be
+    able to connect the stream representation of CUDA Fortran and the async
+    mechanism of the GPU dialect.
+    Later in the lowering this will become a no op.
+  }];
+
+  let arguments = (ins AnyTypeOf<[fir_ReferenceType, LLVM_AnyPointer]>:$stream);
+
+  let results = (outs GPU_AsyncToken:$token);
+
+  let assemblyFormat = [{
+    $stream attr-dict `:` type($stream)
   }];
 
   let hasVerifier = 1;

@@ -845,12 +845,10 @@ define double @sel_constants_frem_constant(i1 %cond) {
 ; ALL-NEXT:  # %bb.1:
 ; ALL-NEXT:    addis 3, 2, .LCPI48_0@toc@ha
 ; ALL-NEXT:    lfd 1, .LCPI48_0@toc@l(3)
-; ALL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; ALL-NEXT:    blr
 ; ALL-NEXT:  .LBB48_2:
 ; ALL-NEXT:    vspltisw 2, -4
 ; ALL-NEXT:    xvcvsxwdp 1, 34
-; ALL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double %sel, 5.1

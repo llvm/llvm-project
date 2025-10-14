@@ -1,5 +1,3 @@
-// UNSUPPORTED: system-aix
-
 // clang-format off
 // RUN: clang-repl "int i = 10;" 'extern "C" int printf(const char*,...);' \
 // RUN:            'auto r1 = printf("i = %d\n", i);' | FileCheck --check-prefix=CHECK-DRIVER %s
@@ -7,6 +5,8 @@
 
 // RUN: cat %s | clang-repl | FileCheck %s
 // RUN: cat %s | clang-repl -Xcc -O2 | FileCheck %s
+// RUN: clang-repl -Xcc -include -Xcc %s | FileCheck %s
+// RUN: clang-repl -Xcc -fsyntax-only -Xcc -include -Xcc %s
 extern "C" int printf(const char *, ...);
 int i = 42;
 auto r1 = printf("i = %d\n", i);
@@ -19,5 +19,3 @@ auto r2 = printf("S[f=%f, m=0x%llx]\n", s.f, reinterpret_cast<unsigned long long
 
 inline int foo() { return 42; }
 int r3 = foo();
-
-%quit

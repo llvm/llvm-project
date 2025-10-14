@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdio_macros.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
@@ -17,12 +18,10 @@
 #include "src/stdio/setvbuf.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 class LlvmLibcFTellTest : public LIBC_NAMESPACE::testing::Test {
 protected:
   void test_with_bufmode(int bufmode) {
-    constexpr char FILENAME[] = "testdata/ftell.test";
+    constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/ftell.test");
     // We will set a special buffer to the file so that we guarantee buffering.
     constexpr size_t BUFFER_SIZE = 1024;
     char buffer[BUFFER_SIZE];

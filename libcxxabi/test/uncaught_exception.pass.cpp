@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // UNSUPPORTED: no-exceptions
 
 // This tests that libc++abi still provides __cxa_uncaught_exception() for
@@ -15,8 +18,7 @@
 // to undefined symbols when linking against a libc++ that re-exports the symbols,
 // but running against a libc++ that doesn't. Fortunately, usage of __cxa_uncaught_exception()
 // in the wild seems to be close to non-existent.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(11|12|13|14)([.][0-9]+)?}}
+// XFAIL: using-built-library-before-llvm-19
 
 #include <cxxabi.h>
 #include <cassert>

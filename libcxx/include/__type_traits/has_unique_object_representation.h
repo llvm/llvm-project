@@ -21,11 +21,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
-    : public integral_constant<bool, __has_unique_object_representations(_Tp)> {};
+struct _LIBCPP_NO_SPECIALIZATIONS has_unique_object_representations
+    : integral_constant<bool, __has_unique_object_representations(_Tp)> {};
 
 template <class _Tp>
-inline constexpr bool has_unique_object_representations_v = __has_unique_object_representations(_Tp);
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool has_unique_object_representations_v =
+    __has_unique_object_representations(_Tp);
 
 #endif
 
