@@ -3353,14 +3353,20 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           0);
       return true;
     }
-    // If the RHS is [-2047,2048], we can use addi with -RHS to produce 0 if the
-    // LHS is equal to the RHS and non-zero otherwise.
+    // If the RHS is [-2047,2048], we can use addi/addiw with -RHS to produce 0
+    // if the LHS is equal to the RHS and non-zero otherwise.
     if (isInt<12>(CVal) || CVal == 2048) {
-      Val = SDValue(
-          CurDAG->getMachineNode(
-              RISCV::ADDI, DL, N->getValueType(0), LHS,
-              CurDAG->getSignedTargetConstant(-CVal, DL, N->getValueType(0))),
-          0);
+      unsigned Opc = RISCV::ADDI;
+      if (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+          cast<VTSDNode>(LHS.getOperand(1))->getVT() == MVT::i32) {
+        Opc = RISCV::ADDIW;
+        LHS = LHS.getOperand(0);
+      }
+
+      Val = SDValue(CurDAG->getMachineNode(Opc, DL, N->getValueType(0), LHS,
+                                           CurDAG->getSignedTargetConstant(
+                                               -CVal, DL, N->getValueType(0))),
+                    0);
       return true;
     }
     if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
