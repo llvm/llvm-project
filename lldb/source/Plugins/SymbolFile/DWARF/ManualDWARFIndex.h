@@ -170,7 +170,7 @@ private:
   llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
   IndexSet<NameToDIE> m_set;
-  bool m_indexed = false;
+  std::once_flag m_indexed_flag;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin
