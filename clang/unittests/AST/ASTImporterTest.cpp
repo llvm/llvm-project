@@ -3323,13 +3323,10 @@ TEST_P(ImportExpr, ImportCXXParenListInitExpr) {
       int val;
       double d;
     };
-    template <int N> struct Container {
-      Node* create() { return new Node(N, 3.14); }
-    };
-    using declToImport = Container<42>;
+    Node* declToImport() { return new Node(2, 3.14); }
   )";
   testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
-             typedefNameDecl(hasName("declToImport")));
+             functionDecl(hasName("declToImport")));
 }
 
 TEST_P(ImportExpr, ImportPseudoObjectExpr) {
