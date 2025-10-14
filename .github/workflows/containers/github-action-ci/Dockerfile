@@ -2,7 +2,7 @@ FROM docker.io/library/ubuntu:24.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base AS stage1-toolchain
-ENV LLVM_VERSION=21.1.1
+ENV LLVM_VERSION=21.1.3
 
 RUN apt-get update && \
     apt-get install -y \
