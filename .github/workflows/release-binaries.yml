@@ -239,7 +239,15 @@ jobs:
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-    
+
+    - name: Debug
+      shell: bash
+      if: always()
+      run: |
+        echo "int main(int argc, char** argv) { return 0; }" >> test.cpp
+        ${{ steps.setup-stage.outputs.build-prefix }}/build/bin/clang++ -### -fuse-ld=lld -stdlib=libc++ -Wl,--verbose test.cpp
+        ls -ltr  ${{ steps.setup-stage.outputs.build-prefix }}/build/lib/*
+
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
