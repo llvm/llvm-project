@@ -7,8 +7,6 @@
 ; ModuleID = '<stdin>'
 target triple = "amdgcn-amd-amdhsa"
 
-@llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_bffb86447932ec40 to ptr)], section "llvm.metadata"
-
 ; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @_Z17group4_sum_floaatPfPKfi(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %length) local_unnamed_addr #0 {
 entry:
