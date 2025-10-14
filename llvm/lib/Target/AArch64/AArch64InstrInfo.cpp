@@ -685,6 +685,55 @@ unsigned AArch64InstrInfo::insertBranch(
   return 2;
 }
 
+bool AArch64InstrInfo::simplifyInstruction(MachineInstr &MI,
+                                           bool &AlteredTerminators) const {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+  case AArch64::TBZW:
+  case AArch64::TBZX:
+    // CBZ XZR -> B
+    if (MI.getOperand(0).getReg() == AArch64::WZR ||
+        MI.getOperand(0).getReg() == AArch64::XZR) {
+      MachineBasicBlock *Target =
+          MI.getOperand(Opc == AArch64::TBZW || Opc == AArch64::TBZX ? 2 : 1)
+              .getMBB();
+      MachineBasicBlock *MBB = MI.getParent();
+      SmallVector<MachineBasicBlock *> Succs(MBB->successors());
+      for (auto *S : Succs)
+        if (S != Target)
+          MBB->removeSuccessor(S);
+      SmallVector<MachineInstr*> DeadInstrs;
+      for (auto It = MI.getIterator(); It != MBB->end(); ++It)
+        DeadInstrs.push_back(&*It);
+      BuildMI(MBB, MI.getDebugLoc(), get(AArch64::B)).addMBB(Target);
+      for (auto It : DeadInstrs)
+        It->eraseFromParent();
+      AlteredTerminators = true;
+      return true;
+    }
+    break;
+  case AArch64::CBNZW:
+  case AArch64::CBNZX:
+  case AArch64::TBNZW:
+  case AArch64::TBNZX:
+    // CBNZ XZR -> nop
+    if (MI.getOperand(0).getReg() == AArch64::WZR ||
+        MI.getOperand(0).getReg() == AArch64::XZR) {
+      MachineBasicBlock *Target =
+          MI.getOperand(Opc == AArch64::TBNZW || Opc == AArch64::TBNZX ? 2 : 1)
+              .getMBB();
+      MI.getParent()->removeSuccessor(Target);
+      MI.eraseFromParent();
+      AlteredTerminators = true;
+      return true;
+    }
+    break;
+  }
+  return false;
+}
+
 // Find the original register that VReg is copied from.
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
   while (Register::isVirtualRegister(VReg)) {
