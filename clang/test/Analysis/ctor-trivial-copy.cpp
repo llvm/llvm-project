@@ -117,3 +117,31 @@ void entrypoint() {
 }
 
 } // namespace trivial_struct_copy
+
+namespace gh153782 {
+
+// Ensure we do not regress on the following use cases.
+// The assumption made on a field in `setPtr` should apply to the returned copy in `func`.
+struct Status { int error; };
+Status getError();
+
+Status setPtr(int **outptr, int* ptr) {
+  Status e = getError();
+  if (e.error != 0) return e; // When assuming the error field is non-zero,
+  *outptr = ptr;              // this is not executed
+  return e;
+}
+
+int func() {
+  int *ptr = nullptr;
+  int x = 42;
+  if (setPtr(&ptr, &x).error == 0) {
+    // The assumption made in get() SHOULD match the assumption about
+    // the returned value, hence the engine SHOULD NOT assume ptr is null.
+    clang_analyzer_dump_val(ptr); // expected-warning {{&x}}
+    return *ptr;
+  }
+  return 0;
+}
+
+} // namespace gh153782
