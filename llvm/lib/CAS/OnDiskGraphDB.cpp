@@ -1311,7 +1311,8 @@ InternalRef OnDiskGraphDB::makeInternalRef(FileOffset IndexOffset) {
 void OnDiskGraphDB::getStandalonePath(StringRef Prefix, const IndexProxy &I,
                                       SmallVectorImpl<char> &Path) const {
   Path.assign(RootPath.begin(), RootPath.end());
-  sys::path::append(Path, Prefix + Twine(I.Offset.get()) + "." + CASFormatVersion);
+  sys::path::append(Path,
+                    Prefix + Twine(I.Offset.get()) + "." + CASFormatVersion);
 }
 
 OnDiskContent StandaloneDataInMemory::getContent() const {
