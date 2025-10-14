@@ -101,6 +101,22 @@ def PrmtMode : Operand<i32> {
 // NVPTX Instruction Predicate Definitions
 //===----------------------------------------------------------------------===//
 
+// Checks PTX version and family-specific and architecture-specific SM versions.
+// For example, sm_100{f/a} and any future variants in the same family will match
+// for any PTX version greater than or equal to `PTXVersion`.
+class PTXWithFamilySMs<int PTXVersion, list<int> SMVersions> :
+  Predicate<"Subtarget->hasPTXWithFamilySMs(" # PTXVersion # ", {" #
+            !interleave(SMVersions, ", ") # "})">;
+
+// Checks PTX version and architecture-specific SM versions.
+// For example, sm_100{a} will match for any PTX version
+// greater than or equal to `PTXVersion`.
+class PTXWithAccelSMs<int PTXVersion, list<int> SMVersions> :
+  Predicate<"Subtarget->hasPTXWithAccelSMs(" # PTXVersion # ", {" #
+            !interleave(SMVersions, ", ") # "})">;
+
+// Helper predicate to call a subtarget method.
+class callSubtarget<string SubtargetMethod> : Predicate<"Subtarget->" # SubtargetMethod # "()">;
 
 def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
 def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;

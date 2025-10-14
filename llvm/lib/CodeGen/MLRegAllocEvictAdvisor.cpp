@@ -97,7 +97,9 @@ static const bool EnableDevelopmentFeatures = false;
 /// this happens only in development mode. It's a no-op otherwise.
 namespace llvm {
 extern cl::opt<unsigned> EvictInterferenceCutoff;
+} // namespace llvm
 
+namespace {
 class RegAllocScoring : public MachineFunctionPass {
 public:
   static char ID;
@@ -124,11 +126,12 @@ public:
   /// Performs this pass
   bool runOnMachineFunction(MachineFunction &) override;
 };
+} // namespace
 
 char RegAllocScoring::ID = 0;
-FunctionPass *createRegAllocScoringPass() { return new RegAllocScoring(); }
-
-} // namespace llvm
+FunctionPass *llvm::createRegAllocScoringPass() {
+  return new RegAllocScoring();
+}
 
 INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
                 "Register Allocation Scoring Pass", false, false)

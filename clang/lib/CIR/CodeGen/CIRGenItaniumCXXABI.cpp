@@ -59,7 +59,11 @@ public:
 
   void addImplicitStructorParams(CIRGenFunction &cgf, QualType &resTy,
                                  FunctionArgList &params) override;
-
+  mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &cgf,
+                                            const CXXDestructorDecl *dd,
+                                            CXXDtorType type,
+                                            bool forVirtualBase,
+                                            bool delegating) override;
   void emitCXXConstructors(const clang::CXXConstructorDecl *d) override;
   void emitCXXDestructors(const clang::CXXDestructorDecl *d) override;
   void emitCXXStructor(clang::GlobalDecl gd) override;
@@ -91,7 +95,10 @@ public:
                                          clang::GlobalDecl gd, Address thisAddr,
                                          mlir::Type ty,
                                          SourceLocation loc) override;
-
+  mlir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
+                                        const CXXDestructorDecl *dtor,
+                                        CXXDtorType dtorType, Address thisAddr,
+                                        DeleteOrMemberCallExpr e) override;
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
@@ -459,6 +466,29 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   if (vtContext.isRelativeLayout()) {
     cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
   }
+}
+
+mlir::Value CIRGenItaniumCXXABI::emitVirtualDestructorCall(
+    CIRGenFunction &cgf, const CXXDestructorDecl *dtor, CXXDtorType dtorType,
+    Address thisAddr, DeleteOrMemberCallExpr expr) {
+  auto *callExpr = dyn_cast<const CXXMemberCallExpr *>(expr);
+  auto *delExpr = dyn_cast<const CXXDeleteExpr *>(expr);
+  assert((callExpr != nullptr) ^ (delExpr != nullptr));
+  assert(callExpr == nullptr || callExpr->arg_begin() == callExpr->arg_end());
+  assert(dtorType == Dtor_Deleting || dtorType == Dtor_Complete);
+
+  GlobalDecl globalDecl(dtor, dtorType);
+  const CIRGenFunctionInfo *fnInfo =
+      &cgm.getTypes().arrangeCXXStructorDeclaration(globalDecl);
+  const cir::FuncType &fnTy = cgm.getTypes().getFunctionType(*fnInfo);
+  auto callee = CIRGenCallee::forVirtual(callExpr, globalDecl, thisAddr, fnTy);
+
+  QualType thisTy =
+      callExpr ? callExpr->getObjectType() : delExpr->getDestroyedType();
+
+  cgf.emitCXXDestructorCall(globalDecl, callee, thisAddr.emitRawPointer(),
+                            thisTy, nullptr, QualType(), nullptr);
+  return nullptr;
 }
 
 void CIRGenItaniumCXXABI::emitVirtualInheritanceTables(
@@ -1504,11 +1534,8 @@ void CIRGenItaniumCXXABI::emitDestructorCall(
     CIRGenFunction &cgf, const CXXDestructorDecl *dd, CXXDtorType type,
     bool forVirtualBase, bool delegating, Address thisAddr, QualType thisTy) {
   GlobalDecl gd(dd, type);
-  if (needsVTTParameter(gd)) {
-    cgm.errorNYI(dd->getSourceRange(), "emitDestructorCall: VTT");
-  }
-
-  mlir::Value vtt = nullptr;
+  mlir::Value vtt =
+      getCXXDestructorImplicitParam(cgf, dd, type, forVirtualBase, delegating);
   ASTContext &astContext = cgm.getASTContext();
   QualType vttTy = astContext.getPointerType(astContext.VoidPtrTy);
   assert(!cir::MissingFeatures::appleKext());
@@ -1538,6 +1565,13 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
 
   // The default behavior is to use atexit. This is handled in lowering
   // prepare. Nothing to be done for CIR here.
+}
+
+mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
+    CIRGenFunction &cgf, const CXXDestructorDecl *dd, CXXDtorType type,
+    bool forVirtualBase, bool delegating) {
+  GlobalDecl gd(dd, type);
+  return cgf.getVTTParameter(gd, forVirtualBase, delegating);
 }
 
 // The idea here is creating a separate block for the throw with an
