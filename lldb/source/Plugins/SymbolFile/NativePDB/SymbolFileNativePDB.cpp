@@ -250,9 +250,9 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
 
   case SimpleTypeKind::None:
   case SimpleTypeKind::NotTranslated:
-  default:
     return "";
   }
+  return "";
 }
 
 static bool IsClassRecord(TypeLeafKind kind) {

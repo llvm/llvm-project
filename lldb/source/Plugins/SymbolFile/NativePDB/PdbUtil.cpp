@@ -991,17 +991,16 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::WideCharacter:
     return lldb::eBasicTypeWChar;
 
-  case SimpleTypeKind::None:
-  case SimpleTypeKind::NotTranslated:
-
   // unsupported
   case SimpleTypeKind::Float48:
   case SimpleTypeKind::Complex16:
   case SimpleTypeKind::Complex48:
   case SimpleTypeKind::Complex128:
-  default:
+  case SimpleTypeKind::NotTranslated:
+  case SimpleTypeKind::None:
     return lldb::eBasicTypeInvalid;
   }
+  return lldb::eBasicTypeInvalid;
 }
 
 size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
@@ -1062,9 +1061,9 @@ size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::Void:
   case SimpleTypeKind::None:
   case SimpleTypeKind::NotTranslated:
-  default:
     return 0;
   }
+  return 0;
 }
 
 PdbTypeSymId lldb_private::npdb::GetBestPossibleDecl(PdbTypeSymId id,
