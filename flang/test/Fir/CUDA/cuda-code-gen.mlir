@@ -284,3 +284,22 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 // CHECK-LABEL: llvm.func @_QQxxx()
 // CHECK: llvm.alloca %{{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
+
+// -----
+
+fir.global @_QMkernelsEinitial_val {data_attr = #cuf.cuda<constant>} : i32 {
+  %0 = fir.zero_bits i32
+  fir.has_value %0 : i32
+}
+func.func @_QMkernelsPassign(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %1 = fir.address_of(@_QMkernelsEinitial_val) : !fir.ref<i32>
+  %14 = fir.load %1 : !fir.ref<i32>
+  fir.store %14 to %arg0 : !fir.ref<i32>
+  return
+}
+
+// CHECK: llvm.mlir.global external @_QMkernelsEinitial_val() {addr_space = 4 : i32} : i32 
+// CHECK-LABEL: llvm.func @_QMkernelsPassign
+// CHECK: %[[ADDROF:.*]] = llvm.mlir.addressof @_QMkernelsEinitial_val : !llvm.ptr<4>
+// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<4> to !llvm.ptr
+
