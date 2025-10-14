@@ -60,36 +60,43 @@ __m128i test_mm_hadd_epi16(__m128i a, __m128i b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_hadd_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_hadd_epi16((__m128i)(__v8hi){1,2,3,4,5,6,7,8}, (__m128i)(__v8hi){17,18,19,20,21,22,23,24}), 3,7,11,15,35,39,43,47));
 
 __m128i test_mm_hadd_epi32(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_hadd_epi32
   // CHECK: call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_hadd_epi32(a, b);
 }
+TEST_CONSTEXPR(match_v4si(_mm_hadd_epi32((__m128i)(__v4si){1,2,3,4}, (__m128i)(__v4si){5,6,7,8}), 3,7,11,15));
 
 __m128i test_mm_hadds_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_hadds_epi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phadd.sw.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_hadds_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_hadds_epi16((__m128i)(__v8hi){30000,30000,-1,2,-3,3,1,4}, (__m128i)(__v8hi){2,6,1,9,-4,16,7,8}), 32767, 1,0,5,8,10,12,15));
+
 
 __m128i test_mm_hsub_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_hsub_epi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_hsub_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_hsub_epi16((__m128i)(__v8hi){20,15,16,12,9,6,4,2}, (__m128i)(__v8hi){3,2,1,1,4,5,0,2}), 5,4,3,2,1,0,-1,-2));
 
 __m128i test_mm_hsub_epi32(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_hsub_epi32
   // CHECK: call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_hsub_epi32(a, b);
 }
+TEST_CONSTEXPR(match_v4si(_mm_hsub_epi32((__m128i)(__v4si){4,3,1,1}, (__m128i)(__v4si){7,5,10,5}), 1,0,2,5));   
 
 __m128i test_mm_hsubs_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_hsubs_epi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phsub.sw.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_hsubs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_hsubs_epi16((__m128i)(__v8hi){32767, -15,16,12,9,6,4,2},(__m128i)(__v8hi){3,2,1,1,4,5,0,2}), 32767,4,3,2,1,0,-1,-2));
 
 __m128i test_mm_maddubs_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_maddubs_epi16

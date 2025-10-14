@@ -525,7 +525,8 @@ std::unique_ptr<WarningsSpecialCaseList>
 WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
                                 std::string &Err) {
   auto WarningSuppressionList = std::make_unique<WarningsSpecialCaseList>();
-  if (!WarningSuppressionList->createInternal(&Input, Err))
+  if (!WarningSuppressionList->createInternal(&Input, Err,
+                                              /*OrderBySize=*/true))
     return nullptr;
   return WarningSuppressionList;
 }

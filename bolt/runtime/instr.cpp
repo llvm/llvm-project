@@ -214,7 +214,7 @@ private:
 /// __bolt_instr_setup, our initialization routine.
 BumpPtrAllocator *GlobalAlloc;
 
-// Base address which we substract from recorded PC values when searching for
+// Base address which we subtract from recorded PC values when searching for
 // indirect call description entries. Needed because indCall descriptions are
 // mapped read-only and contain static addresses. Initialized in
 // __bolt_instr_setup.
@@ -261,7 +261,7 @@ struct SimpleHashTableEntryBase {
     // Currently we have to do it the ugly way because
     // we want every message to be printed atomically via a single call to
     // __write. If we use reportNumber() and others nultiple times, we'll get
-    // garbage in mulithreaded environment
+    // garbage in multithreaded environment
     char Buf[BufSize];
     char *Ptr = Buf;
     Ptr = intToStr(Ptr, __getpid(), 10);
@@ -1585,7 +1585,7 @@ __bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
 /// at user-specified intervals
 void watchProcess() {
   timespec ts, rem;
-  uint64_t Ellapsed = 0ull;
+  uint64_t Elapsed = 0ull;
   int FD = openProfile();
   uint64_t ppid;
   if (__bolt_instr_wait_forks) {
@@ -1615,10 +1615,10 @@ void watchProcess() {
       break;
     }
 
-    if (++Ellapsed < __bolt_instr_sleep_time)
+    if (++Elapsed < __bolt_instr_sleep_time)
       continue;
 
-    Ellapsed = 0;
+    Elapsed = 0;
     __bolt_instr_data_dump(FD);
     if (__bolt_instr_no_counters_clear == false)
       __bolt_instr_clear_counters();

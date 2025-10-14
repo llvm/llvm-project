@@ -7,6 +7,8 @@
 // Note that running the below command with out `lock_during_write` should
 // deadlock (self-lock)
 // RUN: env DYLD_INSERT_LIBRARIES=%t.dylib TSAN_OPTIONS=verbosity=2:lock_during_write=disable_for_current_process %run %t 2>&1 | FileCheck %s
+//
+// UNSUPPORTED: ios
 
 #include <stdio.h>
 

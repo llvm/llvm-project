@@ -31,24 +31,28 @@ __m128d test_mm_hadd_pd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_hadd_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_hadd_pd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), +3.0, +7.0));
 
 __m128 test_mm_hadd_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_hadd_ps
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_hadd_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_hadd_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f,+6.0f,+7.0f,+8.0f}), +3.0f, +7.0f, +11.0f, +15.0f));
 
 __m128d test_mm_hsub_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_hsub_pd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_hsub_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_hsub_pd((__m128d){+1.0, +2.0}, (__m128d){+4.0, +3.0}), -1.0, +1.0));
 
 __m128 test_mm_hsub_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_hsub_ps
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_hsub_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_hsub_ps((__m128){+1.0f, +2.0f, +4.0f, +3.0f}, (__m128){+5.0f,+7.0f,+10.0f,+8.0f}), -1.0f, +1.0f, -2.0f, +2.0f));
 
 __m128i test_mm_lddqu_si128(__m128i const* P) {
   // CHECK-LABEL: test_mm_lddqu_si128

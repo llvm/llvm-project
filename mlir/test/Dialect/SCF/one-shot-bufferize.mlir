@@ -8,11 +8,11 @@
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
-// CHECK-LABEL: func @scf_for_yield_only(
+// CHECK-LABEL: func private @scf_for_yield_only(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 //  CHECK-SAME:   ) -> memref<?xf32> {
-func.func @scf_for_yield_only(
+func.func private @scf_for_yield_only(
     %A : tensor<?xf32> {bufferization.writable = false},
     %B : tensor<?xf32> {bufferization.writable = true},
     %lb : index, %ub : index, %step : index)
@@ -85,11 +85,11 @@ func.func @nested_scf_for(%A : tensor<?xf32> {bufferization.writable = true},
 
 // -----
 
-// CHECK-LABEL: func @scf_for_with_tensor.insert_slice
+// CHECK-LABEL: func private @scf_for_with_tensor.insert_slice
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 //  CHECK-SAME:   %[[B:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 //  CHECK-SAME:   %[[C:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
-func.func @scf_for_with_tensor.insert_slice(
+func.func private @scf_for_with_tensor.insert_slice(
     %A : tensor<?xf32> {bufferization.writable = false},
     %B : tensor<?xf32> {bufferization.writable = true},
     %C : tensor<4xf32> {bufferization.writable = false},
@@ -471,11 +471,11 @@ func.func @scf_while_iter_arg_result_mismatch(%arg0: tensor<5xi1>,
 
 // -----
 
-// CHECK-LABEL: func.func @parallel_insert_slice_no_conflict(
+// CHECK-LABEL: func private @parallel_insert_slice_no_conflict(
 //  CHECK-SAME:     %[[idx:.*]]: index, %[[idx2:.*]]: index,
 //  CHECK-SAME:     %[[arg1:.*]]: memref<?xf32, strided{{.*}}>,
 //  CHECK-SAME:     %[[arg2:.*]]: memref<?xf32, strided{{.*}}>
-func.func @parallel_insert_slice_no_conflict(
+func.func private @parallel_insert_slice_no_conflict(
     %idx: index,
     %idx2: index,
     %arg1: tensor<?xf32> {bufferization.writable = true},

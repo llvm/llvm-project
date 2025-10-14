@@ -145,7 +145,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
       const bool CannotUseREX = BC.MIB->cannotUseREX(Inst);
       const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
 
-      // Disallow substituitions involving regs in implicit uses lists
+      // Disallow substitutions involving regs in implicit uses lists
       for (MCPhysReg ImplicitUse : Desc.implicit_uses()) {
         const size_t RegEC =
             BC.MIB->getAliases(ImplicitUse, false).find_first();
@@ -153,7 +153,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
             std::numeric_limits<decltype(RegScore)::value_type>::min();
       }
 
-      // Disallow substituitions involving regs in implicit defs lists
+      // Disallow substitutions involving regs in implicit defs lists
       for (MCPhysReg ImplicitDef : Desc.implicit_defs()) {
         const size_t RegEC =
             BC.MIB->getAliases(ImplicitDef, false).find_first();
@@ -174,7 +174,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         if (RegEC == 0)
           continue;
 
-        // Disallow substituitions involving regs in instrs that cannot use REX
+        // Disallow substitutions involving regs in instrs that cannot use REX
         // The relationship of X86 registers is shown in the diagram. BL and BH
         // do not have a direct alias relationship. However, if the BH register
         // cannot be swapped, then the BX/EBX/RBX registers cannot be swapped as

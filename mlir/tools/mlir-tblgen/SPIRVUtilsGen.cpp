@@ -259,8 +259,8 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
-  llvm::NamespaceEmitter nsEmitter(os,
-                                   availability.getInterfaceClassNamespace());
+  StringRef cppNamespace = availability.getInterfaceClassNamespace();
+  llvm::NamespaceEmitter nsEmitter(os, cppNamespace);
   os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.
@@ -418,9 +418,15 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
 static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
   StringRef enumName = enumInfo.getEnumClassName();
+  StringRef cppNamespace = enumInfo.getCppNamespace();
   auto enumerants = enumInfo.getAllCases();
 
-  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(cppNamespace, namespaces, "::");
+
+  for (auto ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
   llvm::StringSet<> handledClasses;
 
   // Place all availability specifications to their corresponding
@@ -435,6 +441,9 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
                     enumName);
       handledClasses.insert(className);
     }
+
+  for (auto ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
@@ -450,19 +459,31 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
-  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
+  StringRef cppNamespace = enumInfo.getCppNamespace();
 
-  if (enumInfo.isBitEnum())
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(cppNamespace, namespaces, "::");
+
+  for (auto ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  if (enumInfo.isBitEnum()) {
     emitAvailabilityQueryForBitEnum(enumDef, os);
-  else
+  } else {
     emitAvailabilityQueryForIntEnum(enumDef, os);
+  }
+
+  for (auto ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
+  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
-  for (const Record *def : records.getAllDerivedDefinitions("EnumInfo"))
+  auto defs = records.getAllDerivedDefinitions("EnumInfo");
+  for (const auto *def : defs)
     emitEnumDef(*def, os);
 
   return false;

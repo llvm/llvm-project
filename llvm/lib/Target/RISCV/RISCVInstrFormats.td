@@ -177,13 +177,20 @@ def EltDepsVL        : EltDeps<vl=1, mask=0>;
 def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
-class EEW <bits<2> val> {
+class EEW<bits<2> val> {
   bits<2> Value = val;
 }
 def EEW1     : EEW<0>;
 def EEWSEWx1 : EEW<1>;
 def EEWSEWx2 : EEW<2>;
 def EEWSEWx4 : EEW<3>;
+
+class AltFmtType<bits<2> val> {
+  bits<2> Value = val;
+}
+def DONT_CARE_ALTFMT : AltFmtType<0>;
+def IS_NOT_ALTFMT    : AltFmtType<1>;
+def IS_ALTFMT        : AltFmtType<2>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
@@ -271,8 +278,8 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 0 -> Don't care about altfmt bit in VTYPE.
   // 1 -> Is not altfmt.
   // 2 -> Is altfmt(BF16).
-  bits<2> AltFmtType = 0;
-  let TSFlags{28-27} = AltFmtType;
+  AltFmtType AltFmtType = DONT_CARE_ALTFMT;
+  let TSFlags{28-27} = AltFmtType.Value;
 
   // XSfmmbase
   bit HasTWidenOp = 0;

@@ -364,7 +364,7 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
@@ -375,7 +375,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
@@ -394,7 +394,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
@@ -408,7 +408,7 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)

@@ -837,7 +837,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
-    if (Version < 2 || Version > 3)
+    if (Version < 2 || Version > 4)
       return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                          Twine(static_cast<int>(Version)));
     Feature = Data.getU8(Cur); // Feature byte
@@ -850,6 +850,11 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     if (FeatEnable.CallsiteEndOffsets && Version < 3)
       return createError("version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
                          "callsite offsets feature is enabled: version = " +
+                         Twine(static_cast<int>(Version)) +
+                         " feature = " + Twine(static_cast<int>(Feature)));
+    if (FeatEnable.BBHash && Version < 4)
+      return createError("version should be >= 4 for SHT_LLVM_BB_ADDR_MAP when "
+                         "basic block hash feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
                          " feature = " + Twine(static_cast<int>(Feature)));
     uint32_t NumBlocksInBBRange = 0;
@@ -907,6 +912,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
                           LastCallsiteEndOffset;
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint64_t Hash = FeatEnable.BBHash ? Data.getU64(Cur) : 0;
           Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
               BBAddrMap::BBEntry::Metadata::decode(MD);
           if (!MetadataOrErr) {
@@ -914,7 +920,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             break;
           }
           BBEntries.push_back({ID, Offset + PrevBBEndOffset, Size,
-                               *MetadataOrErr, CallsiteEndOffsets});
+                               *MetadataOrErr, CallsiteEndOffsets, Hash});
           PrevBBEndOffset += Offset + Size;
         }
         TotalNumBlocks += BBEntries.size();

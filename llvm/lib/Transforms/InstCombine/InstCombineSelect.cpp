@@ -2979,10 +2979,14 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
-    return SelectInst::Create(Op,
-                              IsAnd ? V : ConstantInt::getTrue(Op->getType()),
-                              IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL)) {
+    Instruction *MDFrom = nullptr;
+    if (!ProfcheckDisableMetadataFixes)
+      MDFrom = &SI;
+    return SelectInst::Create(
+        Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
+        IsAnd ? ConstantInt::getFalse(Op->getType()) : V, "", nullptr, MDFrom);
+  }
   return nullptr;
 }
 

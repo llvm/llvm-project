@@ -1,8 +1,8 @@
 ## Test the control of aggressiveness of 3-way splitting by -call-scale.
-## When -call-scale=0.0, the tested function is 2-way splitted.
-## When -call-scale=1.0, the tested function is 3-way splitted with 5 blocks
+## When -call-scale=0.0, the tested function is 2-way split.
+## When -call-scale=1.0, the tested function is 3-way split with 5 blocks
 ## in warm because of the increased benefit of shortening the call edges.
-## When -call-scale=1000.0, the tested function is still 3-way splitted with
+## When -call-scale=1000.0, the tested function is still 3-way split with
 ## 5 blocks in warm because cdsplit does not allow hot-warm splitting to break
 ## a fall through branch from a basic block to its most likely successor.
 

@@ -1335,9 +1335,8 @@ def ProcessorFeatures {
     !listconcat(ARLFeatures, ARLSAdditionalFeatures);
 
   // Pantherlake
-  list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
+    !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
 
   // Clearwaterforest

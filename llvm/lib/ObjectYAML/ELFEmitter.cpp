@@ -1465,7 +1465,7 @@ void ELFState<ELFT>::writeSectionContent(
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 3)
+      if (E.Version > 4)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
@@ -1526,6 +1526,12 @@ void ELFState<ELFT>::writeSectionContent(
         }
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
+        if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
+          uint64_t Hash =
+              BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
+          CBA.write<uint64_t>(Hash, ELFT::Endianness);
+          SHeader.sh_size += 8;
+        }
       }
     }
     if (!PGOAnalyses)

@@ -266,8 +266,7 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
-    DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
-                       {DominatorTree::Insert, StartBlock, NewBlock}});
+    DTU->applyUpdates({{DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
     BasicBlock *EndBlock = SIUse->getParent();
     BasicBlock *NewBlockT = BasicBlock::Create(
@@ -1479,9 +1478,12 @@ bool DFAJumpThreading::run(Function &F) {
   DTU->flush();
 
 #ifdef EXPENSIVE_CHECKS
-  assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full));
   verifyFunction(F, &dbgs());
 #endif
+
+  if (MadeChanges && VerifyDomInfo)
+    assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full) &&
+           "Failed to maintain validity of domtree!");
 
   return MadeChanges;
 }

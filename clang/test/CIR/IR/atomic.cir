@@ -5,17 +5,30 @@
 
 cir.func @atomic_xchg(%ptr: !cir.ptr<!s32i>, %val: !s32i) {
   // CHECK-LABEL: @atomic_xchg
-  %0 = cir.atomic.xchg relaxed %ptr, %val : !cir.ptr<!s32i> -> !s32i
-  // CHECK: cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  %1 = cir.atomic.xchg consume %ptr, %val : !cir.ptr<!s32i> -> !s32i
-  // CHECK: cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  %2 = cir.atomic.xchg acquire %ptr, %val : !cir.ptr<!s32i> -> !s32i
-  // CHECK: cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  %3 = cir.atomic.xchg release %ptr, %val : !cir.ptr<!s32i> -> !s32i
-  // CHECK: cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  %4 = cir.atomic.xchg acq_rel %ptr, %val : !cir.ptr<!s32i> -> !s32i
-  // CHECK: cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  %5 = cir.atomic.xchg seq_cst %ptr, %val : !cir.ptr<!s32i> -> !s32i
-  // CHECK: cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  %0 = cir.atomic.xchg relaxed %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %1 = cir.atomic.xchg consume %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %2 = cir.atomic.xchg acquire %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %3 = cir.atomic.xchg release %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %4 = cir.atomic.xchg acq_rel %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %5 = cir.atomic.xchg seq_cst %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  cir.return
+}
+
+cir.func @atomic_cmpxchg(%ptr: !cir.ptr<!s32i>, %expected: !s32i, %desired: !s32i) {
+  // CHECK-LABEL: @atomic_cmpxchg
+  %0, %1 = cir.atomic.cmpxchg success(relaxed) failure(relaxed) %ptr, %expected, %desired : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CHECK: cir.atomic.cmpxchg success(relaxed) failure(relaxed) %{{.+}}, %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  %2, %3 = cir.atomic.cmpxchg weak success(relaxed) failure(relaxed) %ptr, %expected, %desired : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CHECK: cir.atomic.cmpxchg weak success(relaxed) failure(relaxed) %{{.+}}, %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  %4, %5 = cir.atomic.cmpxchg success(seq_cst) failure(acquire) %ptr, %expected, %desired : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CHECK: cir.atomic.cmpxchg success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  %6, %7 = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) %ptr, %expected, %desired : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CHECK: cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   cir.return
 }

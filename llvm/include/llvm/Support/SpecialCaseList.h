@@ -115,7 +115,8 @@ protected:
   // classes.
   LLVM_ABI bool createInternal(const std::vector<std::string> &Paths,
                                vfs::FileSystem &VFS, std::string &Error);
-  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error);
+  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error,
+                               bool OrderBySize = false);
 
   SpecialCaseList() = default;
   SpecialCaseList(SpecialCaseList const &) = delete;
@@ -126,6 +127,8 @@ private:
   class RegexMatcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void preprocess(bool BySize);
+
     LLVM_ABI void
     match(StringRef Query,
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
@@ -144,6 +147,8 @@ private:
   class GlobMatcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void preprocess(bool BySize);
+
     LLVM_ABI void
     match(StringRef Query,
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
@@ -165,6 +170,7 @@ private:
     LLVM_ABI Matcher(bool UseGlobs, bool RemoveDotSlash);
 
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void preprocess(bool BySize);
 
     LLVM_ABI void
     match(StringRef Query,
@@ -206,6 +212,8 @@ protected:
                                        StringRef Category) const;
 
   private:
+    friend class SpecialCaseList;
+    LLVM_ABI void preprocess(bool OrderBySize);
     LLVM_ABI const SpecialCaseList::Matcher *
     findMatcher(StringRef Prefix, StringRef Category) const;
   };
@@ -222,7 +230,7 @@ private:
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
-                      std::string &Error);
+                      std::string &Error, bool OrderBySize);
 };
 
 } // namespace llvm

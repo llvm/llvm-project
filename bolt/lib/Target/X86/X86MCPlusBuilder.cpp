@@ -2715,7 +2715,7 @@ public:
 
     bool FoundOne = false;
 
-    // Iterate only through src operands that arent also dest operands
+    // Iterate only through src operands that aren't also dest operands
     for (unsigned Index = InstDesc.getNumDefs() + (HasLHS ? 1 : 0),
                   E = InstDesc.getNumOperands();
          Index != E; ++Index) {

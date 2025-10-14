@@ -103,7 +103,7 @@ BENCHMARK(BM_BitsetToString<262144>)->Arg(50)->Name("BM_BitsetToString<262144>/U
 BENCHMARK(BM_BitsetToString<524288>)->Arg(50)->Name("BM_BitsetToString<524288>/Uniform (50%)");
 BENCHMARK(BM_BitsetToString<1048576>)->Arg(50)->Name("BM_BitsetToString<1048576>/Uniform (50%)"); // 1 << 20
 
-static void BM_ctor_ull(benchmark::State& state) {
+static void BM_Bitset_ctor_ull(benchmark::State& state) {
   unsigned long long val = (1ULL << state.range(0)) - 1;
   for (auto _ : state) {
     std::bitset<128> b(val);
@@ -111,6 +111,6 @@ static void BM_ctor_ull(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_ctor_ull)->DenseRange(1, 63);
+BENCHMARK(BM_Bitset_ctor_ull)->DenseRange(1, 63);
 
 BENCHMARK_MAIN();

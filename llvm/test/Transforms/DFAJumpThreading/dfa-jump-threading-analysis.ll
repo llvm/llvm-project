@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -S -passes=dfa-jump-threading -debug-only=dfa-jump-threading -disable-output %s 2>&1 | FileCheck %s
-; RUN: opt -S -passes=dfa-jump-threading -print-prof-data %s -o - | FileCheck %s --check-prefix=PROFILE
+; RUN: opt -S -passes=dfa-jump-threading -verify-dom-info=1 -debug-only=dfa-jump-threading -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=dfa-jump-threading -verify-dom-info=1 -print-prof-data %s -o - | FileCheck %s --check-prefix=PROFILE
 
 ; This test checks that the analysis identifies all threadable paths in a
 ; simple CFG. A threadable path includes a list of basic blocks, the exit

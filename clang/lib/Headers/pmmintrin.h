@@ -83,9 +83,8 @@ _mm_addsub_ps(__m128 __a, __m128 __b)
 ///    destination.
 /// \returns A 128-bit vector of [4 x float] containing the horizontal sums of
 ///    both operands.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_hadd_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_hadd_ps(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_haddps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -106,9 +105,8 @@ _mm_hadd_ps(__m128 __a, __m128 __b)
 ///    bits of the destination.
 /// \returns A 128-bit vector of [4 x float] containing the horizontal
 ///    differences of both operands.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_hsub_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_hsub_ps(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_hsubps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -168,9 +166,8 @@ _mm_moveldup_ps(__m128 __a)
 ///    A 128-bit vector of [2 x double] containing the right source operand.
 /// \returns A 128-bit vector of [2 x double] containing the alternating sums
 ///    and differences of both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS
-_mm_addsub_pd(__m128d __a, __m128d __b)
-{
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_addsub_pd(__m128d __a, __m128d __b) {
   return __builtin_ia32_addsubpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -191,9 +188,8 @@ _mm_addsub_pd(__m128d __a, __m128d __b)
 ///    destination.
 /// \returns A 128-bit vector of [2 x double] containing the horizontal sums of
 ///    both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS
-_mm_hadd_pd(__m128d __a, __m128d __b)
-{
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hadd_pd(__m128d __a, __m128d __b) {
   return __builtin_ia32_haddpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -214,9 +210,8 @@ _mm_hadd_pd(__m128d __a, __m128d __b)
 ///    the destination.
 /// \returns A 128-bit vector of [2 x double] containing the horizontal
 ///    differences of both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS
-_mm_hsub_pd(__m128d __a, __m128d __b)
-{
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hsub_pd(__m128d __a, __m128d __b) {
   return __builtin_ia32_hsubpd((__v2df)__a, (__v2df)__b);
 }
 

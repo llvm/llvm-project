@@ -41,8 +41,7 @@ static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
 
 bool FormatToken::isQtProperty() const {
   assert(llvm::is_sorted(QtPropertyKeywords));
-  return std::binary_search(QtPropertyKeywords.begin(),
-                            QtPropertyKeywords.end(), TokenText);
+  return llvm::binary_search(QtPropertyKeywords, TokenText);
 }
 
 // Sorted common C++ non-keyword types.

@@ -432,7 +432,7 @@ public:
     return Analysis->isConditionalBranch(Inst);
   }
 
-  /// Returns true if Inst is a condtional move instruction
+  /// Returns true if Inst is a conditional move instruction
   virtual bool isConditionalMove(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -1564,7 +1564,7 @@ public:
   }
 
   /// Get the default def_in and live_out registers for the function
-  /// Currently only used for the Stoke optimzation
+  /// Currently only used for the Stoke optimization
   virtual void getDefaultDefIn(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }

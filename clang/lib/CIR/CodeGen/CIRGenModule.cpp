@@ -451,13 +451,45 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   setNonAliasAttributes(gd, funcOp);
   assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
 
-  if (funcDecl->getAttr<ConstructorAttr>())
-    errorNYI(funcDecl->getSourceRange(), "constructor attribute");
-  if (funcDecl->getAttr<DestructorAttr>())
-    errorNYI(funcDecl->getSourceRange(), "destructor attribute");
+  auto getPriority = [this](const auto *attr) -> int {
+    Expr *e = attr->getPriority();
+    if (e)
+      return e->EvaluateKnownConstInt(this->getASTContext()).getExtValue();
+    return attr->DefaultPriority;
+  };
+
+  if (const ConstructorAttr *ca = funcDecl->getAttr<ConstructorAttr>())
+    addGlobalCtor(funcOp, getPriority(ca));
+  if (const DestructorAttr *da = funcDecl->getAttr<DestructorAttr>())
+    addGlobalDtor(funcOp, getPriority(da));
 
   if (funcDecl->getAttr<AnnotateAttr>())
     errorNYI(funcDecl->getSourceRange(), "deferredAnnotations");
+}
+
+/// Track functions to be called before main() runs.
+void CIRGenModule::addGlobalCtor(cir::FuncOp ctor,
+                                 std::optional<int> priority) {
+  assert(!cir::MissingFeatures::globalCtorLexOrder());
+  assert(!cir::MissingFeatures::globalCtorAssociatedData());
+
+  // Traditional LLVM codegen directly adds the function to the list of global
+  // ctors. In CIR we just add a global_ctor attribute to the function. The
+  // global list is created in LoweringPrepare.
+  //
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  ctor.setGlobalCtorPriority(priority);
+}
+
+/// Add a function to the list that will be called when the module is unloaded.
+void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
+                                 std::optional<int> priority) {
+  if (codeGenOpts.RegisterGlobalDtorsWithAtExit &&
+      (!getASTContext().getTargetInfo().getTriple().isOSAIX()))
+    errorNYI(dtor.getLoc(), "registerGlobalDtorsWithAtExit");
+
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  dtor.setGlobalDtorPriority(priority);
 }
 
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
