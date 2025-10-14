@@ -14,6 +14,7 @@
 // XFAIL: darwin
 // XFAIL: freebsd
 // XFAIL: windows
+// XFAIL: glibc-no-char8_t-support
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <cuchar>
