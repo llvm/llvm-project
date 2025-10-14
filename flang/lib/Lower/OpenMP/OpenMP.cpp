@@ -4208,18 +4208,17 @@ bool Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
 void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
                                        const semantics::Symbol *symbol) {
   using MlirRequires = mlir::omp::ClauseRequires;
-  using SemaRequires = semantics::WithOmpDeclarative::RequiresFlag;
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::RequiresFlags semaFlags;
+    semantics::WithOmpDeclarative::RequiresClauses reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
             if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
                                             std::decay_t<decltype(details)>>) {
               if (details.has_ompRequires())
-                semaFlags = *details.ompRequires();
+                reqs = *details.ompRequires();
             }
           },
           symbol->details());
@@ -4228,14 +4227,14 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
     // Use pre-populated omp.requires module attribute if it was set, so that
     // the "-fopenmp-force-usm" compiler option is honored.
     MlirRequires mlirFlags = offloadMod.getRequires();
-    if (semaFlags.test(SemaRequires::ReverseOffload))
-      mlirFlags = mlirFlags | MlirRequires::reverse_offload;
-    if (semaFlags.test(SemaRequires::UnifiedAddress))
-      mlirFlags = mlirFlags | MlirRequires::unified_address;
-    if (semaFlags.test(SemaRequires::UnifiedSharedMemory))
-      mlirFlags = mlirFlags | MlirRequires::unified_shared_memory;
-    if (semaFlags.test(SemaRequires::DynamicAllocators))
+    if (reqs.test(llvm::omp::Clause::OMPC_dynamic_allocators))
       mlirFlags = mlirFlags | MlirRequires::dynamic_allocators;
+    if (reqs.test(llvm::omp::Clause::OMPC_reverse_offload))
+      mlirFlags = mlirFlags | MlirRequires::reverse_offload;
+    if (reqs.test(llvm::omp::Clause::OMPC_unified_address))
+      mlirFlags = mlirFlags | MlirRequires::unified_address;
+    if (reqs.test(llvm::omp::Clause::OMPC_unified_shared_memory))
+      mlirFlags = mlirFlags | MlirRequires::unified_shared_memory;
 
     offloadMod.setRequires(mlirFlags);
   }
