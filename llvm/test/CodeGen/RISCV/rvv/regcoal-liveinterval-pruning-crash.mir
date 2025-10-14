@@ -2,10 +2,10 @@
 # RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=register-coalescer -o - %s | FileCheck %s
 
 ---
-name:           pr71023 
+name:           pr71023
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: main
+  ; CHECK-LABEL: name: pr71023
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $v8, $v10

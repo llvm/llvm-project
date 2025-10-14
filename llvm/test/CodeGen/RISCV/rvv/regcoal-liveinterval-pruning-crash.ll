@@ -2,7 +2,7 @@
 ; RUN: llc -O1 -mtriple=riscv64 -mattr=+v < %s | FileCheck %s
 
 define i32 @pr134424(i64 %input_value, i32 %base_value, i1 %cond_flag1, i1 %cond_flag2, i1 %cond_flag3) {
-; CHECK-LABEL: main:
+; CHECK-LABEL: pr134424:
 ; CHECK:       # %bb.0: # %for.body.us.preheader.i
 ; CHECK-NEXT:    andi a3, a3, 1
 ; CHECK-NEXT:    andi a5, a2, 1
