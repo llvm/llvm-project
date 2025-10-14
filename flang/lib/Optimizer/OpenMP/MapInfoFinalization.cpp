@@ -129,6 +129,17 @@ class MapInfoFinalizationPass
     }
   }
 
+  /// Return true if the module has an OpenMP requires clause that includes
+  /// unified_shared_memory.
+  static bool moduleRequiresUSM(mlir::ModuleOp module) {
+    assert(module && "invalid module");
+    if (auto req = module->getAttrOfType<mlir::omp::ClauseRequiresAttr>(
+            "omp.requires"))
+      return mlir::omp::bitEnumContainsAll(
+          req.getValue(), mlir::omp::ClauseRequires::unified_shared_memory);
+    return false;
+  }
+
   /// Create the member map for coordRef and append it (and its index
   /// path) to the provided new* vectors, if it is not already present.
   void appendMemberMapIfNew(
@@ -430,19 +441,8 @@ class MapInfoFinalizationPass
     // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
     // to ensure device-local placement where required by tests relying on USM +
     // close semantics.
-    if (target) {
-      if (auto mod = target->getParentOfType<mlir::ModuleOp>()) {
-        if (mlir::Attribute reqAttr = mod->getAttr("omp.requires")) {
-          if (auto req =
-                  mlir::dyn_cast<mlir::omp::ClauseRequiresAttr>(reqAttr)) {
-            if (mlir::omp::bitEnumContainsAll(
-                    req.getValue(),
-                    mlir::omp::ClauseRequires::unified_shared_memory))
-              flags |= mapFlags::OMP_MAP_CLOSE;
-          }
-        }
-      }
-    }
+    if (moduleRequiresUSM(target->getParentOfType<mlir::ModuleOp>()))
+      flags |= mapFlags::OMP_MAP_CLOSE;
     return llvm::to_underlying(flags);
   }
 
@@ -1258,22 +1258,9 @@ class MapInfoFinalizationPass
       // to ensure device-visible pointer size/behavior in USM scenarios
       // without changing default expectations elsewhere.
       func->walk([&](mlir::omp::MapInfoOp op) {
-        // Check module requires USM; otherwise, leave mappings untouched.
-        auto mod = func->getParentOfType<mlir::ModuleOp>();
-        bool hasUSM = false;
-        if (mod) {
-          if (mlir::Attribute reqAttr = mod->getAttr("omp.requires")) {
-            if (auto req =
-                    mlir::dyn_cast<mlir::omp::ClauseRequiresAttr>(reqAttr)) {
-              hasUSM = mlir::omp::bitEnumContainsAll(
-                  req.getValue(),
-                  mlir::omp::ClauseRequires::unified_shared_memory);
-            }
-          }
-        }
-        if (!hasUSM)
+        // Only expand C_PTR members when unified_shared_memory is required.
+        if (!moduleRequiresUSM(func->getParentOfType<mlir::ModuleOp>()))
           return;
-
         builder.setInsertionPoint(op);
         genCptrMemberMap(op, builder);
       });
