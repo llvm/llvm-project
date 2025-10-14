@@ -41,8 +41,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
               OutputType outputType, std::vector<std::string> &includeDirs,
               bool dumpODS, std::set<std::string> *includedFiles) {
   llvm::SourceMgr sourceMgr;
-  sourceMgr.setFileSystem(llvm::vfs::getRealFileSystem());
   sourceMgr.setIncludeDirs(includeDirs);
+  sourceMgr.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
 
   // If we are dumping ODS information, also enable documentation to ensure the
