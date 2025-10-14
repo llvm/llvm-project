@@ -10,7 +10,6 @@
 
 // The following platforms do not provide mbrtoc8 and c8rtomb so the tests fail
 // XFAIL: target={{.+}}-aix{{.*}}
-// XFAIL: android
 // XFAIL: darwin
 // XFAIL: freebsd
 // XFAIL: windows

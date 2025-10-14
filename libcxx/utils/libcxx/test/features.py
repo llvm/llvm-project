@@ -305,7 +305,7 @@ DEFAULT_FEATURES = [
             int main(void) {
                 char8_t c;
                 mbstate_t s = {0};
-                return (mbrtoc8(&c, "", 0, &s), 0);
+                return mbrtoc8(&c, "", 0, &s);
             }
             """,
         ),
