@@ -301,7 +301,7 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode;
-  VPValue *Op = getOperand(1);
+  VPValue *Op = getVecOp();
   VPRecipeBase *OpR = Op->getDefiningRecipe();
 
   // If the partial reduction is predicated, a select will be operand 1
@@ -331,6 +331,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
       Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
+      if (!Widen)
+        return;
     }
     Opcode = Widen->getOpcode();
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
@@ -351,19 +353,20 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     }
   };
 
-  if (isa<VPWidenCastRecipe>(OpR)) {
+  if (isa_and_nonnull<VPWidenCastRecipe>(OpR)) {
     InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
     ExtAType = GetExtendKind(OpR);
-  } else if (isa<VPReductionPHIRecipe>(OpR)) {
+  } else if (isa_and_nonnull<VPReductionPHIRecipe>(OpR)) {
     auto RedPhiOp1R = getOperand(1)->getDefiningRecipe();
-    if (isa<VPWidenCastRecipe>(RedPhiOp1R)) {
+    if (isa_and_nonnull<VPWidenCastRecipe>(RedPhiOp1R)) {
       InputTypeA = Ctx.Types.inferScalarType(RedPhiOp1R->getOperand(0));
       ExtAType = GetExtendKind(RedPhiOp1R);
-    } else if (auto Widen = dyn_cast<VPWidenRecipe>(RedPhiOp1R))
+    } else if (auto Widen = dyn_cast_if_present<VPWidenRecipe>(RedPhiOp1R))
       HandleWiden(Widen);
-  } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
+  } else if (auto Widen = dyn_cast_if_present<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
-  } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
+  } else if (auto Reduction =
+                 dyn_cast_if_present<VPPartialReductionRecipe>(OpR)) {
     return Reduction->computeCost(VF, Ctx);
   }
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
