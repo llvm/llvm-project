@@ -33,7 +33,7 @@ class TestFrameVarDILMemberOfInheritance(TestBase):
         self.expect_var_path("d.b_", value="2")
         self.expect_var_path("d.c_", value="3")
         self.expect_var_path("d.d_", value="4")
-        self.expect_var_path("d.fa_.a_", value="5")
+        self.expect_var_path("d.fa_.a_", value="6")
 
         self.expect_var_path("plugin.x", value="1")
         self.expect_var_path("plugin.y", value="2")
