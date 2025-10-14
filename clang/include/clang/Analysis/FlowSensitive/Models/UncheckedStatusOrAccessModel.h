@@ -29,9 +29,9 @@ namespace clang::dataflow::statusor_model {
 // The helper functions exported here are for use of downstream vendor
 // extensions of this model.
 
-// Match declation of `absl::StatusOr<T>` and bind `T` to "T".
+// Match declaration of `absl::StatusOr<T>` and bind `T` to "T".
 clang::ast_matchers::DeclarationMatcher statusOrClass();
-// Match declation of `absl::Status`.
+// Match declaration of `absl::Status`.
 clang::ast_matchers::DeclarationMatcher statusClass();
 // Match declaration of `absl::internal_statusor::OperatorBase`.
 clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass();
@@ -41,7 +41,7 @@ clang::ast_matchers::TypeMatcher statusOrType();
 
 // Get RecordStorageLocation for the `Status` contained in the `StatusOr`
 RecordStorageLocation &locForStatus(RecordStorageLocation &StatusOrLoc);
-// Get the StorageLocation OK boolean in the `Status`
+// Get the StorageLocation for the OK boolean in the `Status`
 StorageLocation &locForOk(RecordStorageLocation &StatusLoc);
 // Get the OK boolean in the `Status`, and initialize it if necessary.
 BoolValue &valForOk(RecordStorageLocation &StatusLoc, Environment &Env);
