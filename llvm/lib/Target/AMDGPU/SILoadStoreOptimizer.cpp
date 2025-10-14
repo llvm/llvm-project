@@ -1410,33 +1410,47 @@ SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
   const auto *Src1 = TII->getNamedOperand(*Paired.I, OpName);
 
   // Make sure the generated REG_SEQUENCE has sensibly aligned registers.
-  const TargetRegisterClass *CompatRC0 =
-      TRI->getSubRegisterClass(SuperRC, SubRegIdx0);
-  const TargetRegisterClass *CompatRC1 =
-      TRI->getSubRegisterClass(SuperRC, SubRegIdx1);
-  assert(CompatRC0 && CompatRC1 &&
-         "Cannot find compatible TargetRegisterClass");
+  const TargetRegisterClass *Src0RC = TRI->findCommonRegClass(
+      MRI->getRegClass(Src0->getReg()), Src0->getSubReg(), SuperRC, SubRegIdx0);
+  const TargetRegisterClass *Src1RC = TRI->findCommonRegClass(
+      MRI->getRegClass(Src1->getReg()), Src1->getSubReg(), SuperRC, SubRegIdx1);
+  if (!Src0RC || !Src1RC) {
+    unsigned SuperRCWSize = TRI->getRegSizeInBits(*SuperRC) / 32;
+    unsigned Src1WSizeOffset = CI.Width;
 
-  Register Src0Reg = CompatRC0 == CI.DataRC
-                         ? Src0->getReg()
-                         : MRI->createVirtualRegister(CompatRC0);
-  Register Src1Reg = CompatRC1 == Paired.DataRC
-                         ? Src1->getReg()
-                         : MRI->createVirtualRegister(CompatRC1);
+    auto BMI =
+        BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg);
 
-  if (CompatRC0 != CI.DataRC)
-    BuildMI(*MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Src0Reg)
-        .add(*Src0);
+    unsigned Src0SubReg = Src0->getSubReg();
+    unsigned Src1SubReg = Src1->getSubReg();
+    unsigned It = 0;
+    for (; It < Src1WSizeOffset; ++It) {
+      unsigned ChOffset =
+          Src0SubReg ? TRI->getChannelFromSubReg(Src0SubReg) : 0;
+      unsigned NewSubReg = Src0SubReg ? TRI->getSubRegFromChannel(ChOffset + It)
+                           : CI.Width == 1 ? 0
+                                           : TRI->getSubRegFromChannel(It);
+      BMI.addUse(Src0->getReg(), /*Flags=*/0U, NewSubReg)
+          .addImm(TRI->getSubRegFromChannel(It));
+    }
+    for (; It < SuperRCWSize; ++It) {
+      unsigned ChOffset =
+          Src1SubReg ? TRI->getChannelFromSubReg(Src1SubReg) : 0;
+      unsigned NewSubReg = Src1SubReg ? TRI->getSubRegFromChannel(ChOffset + It)
+                           : Paired.Width == 1
+                               ? 0
+                               : TRI->getSubRegFromChannel(It - CI.Width);
+      BMI.addUse(Src1->getReg(), /*Flags=*/0U, NewSubReg)
+          .addImm(TRI->getSubRegFromChannel(It));
+    }
 
-  if (CompatRC1 != Paired.DataRC)
-    BuildMI(*MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Src1Reg)
-        .add(*Src1);
-
-  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-      .addReg(Src0Reg)
-      .addImm(SubRegIdx0)
-      .addReg(Src1Reg)
-      .addImm(SubRegIdx1);
+  } else {
+    BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+        .add(*Src0)
+        .addImm(SubRegIdx0)
+        .add(*Src1)
+        .addImm(SubRegIdx1);
+  }
 
   return SrcReg;
 }

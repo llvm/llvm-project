@@ -610,11 +610,11 @@ body:             |
     ; GFX10-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed [[REG_SEQUENCE1]], [[REG_SEQUENCE]], 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
     ; GFX10-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
-    ; GFX10-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[REG_SEQUENCE2]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2
-    ; GFX10-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE3]], %subreg.sub0_sub1_sub2, [[COPY3]], %subreg.sub3
+    ; GFX10-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE killed [[REG_SEQUENCE2]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2
+    ; GFX10-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[REG_SEQUENCE3]], %subreg.sub0_sub1_sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed [[REG_SEQUENCE4]], [[REG_SEQUENCE]], 0, 16, 77, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
     ; GFX10-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; GFX10-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[REG_SEQUENCE5]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2
+    ; GFX10-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_96 = REG_SEQUENCE killed [[REG_SEQUENCE5]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed [[REG_SEQUENCE6]], [[REG_SEQUENCE]], 0, 36, 74, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
     %12:vgpr_32 = COPY $vgpr8
     %11:vgpr_32 = COPY $vgpr7
@@ -666,11 +666,11 @@ body:             |
     ; GFX10-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed [[REG_SEQUENCE1]], [[REG_SEQUENCE]], 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
     ; GFX10-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
-    ; GFX10-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[REG_SEQUENCE2]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2
-    ; GFX10-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE3]], %subreg.sub0_sub1_sub2, [[COPY3]], %subreg.sub3
+    ; GFX10-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE killed [[REG_SEQUENCE2]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2
+    ; GFX10-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[REG_SEQUENCE3]], %subreg.sub0_sub1_sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed [[REG_SEQUENCE4]], [[REG_SEQUENCE]], 0, 16, 76, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
     ; GFX10-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; GFX10-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[REG_SEQUENCE5]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2
+    ; GFX10-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_96 = REG_SEQUENCE killed [[REG_SEQUENCE5]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed [[REG_SEQUENCE6]], [[REG_SEQUENCE]], 0, 36, 73, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
     %12:vgpr_32 = COPY $vgpr8
     %11:vgpr_32 = COPY $vgpr7
@@ -722,11 +722,11 @@ body:             |
     ; GFX10-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed [[REG_SEQUENCE1]], [[REG_SEQUENCE]], 0, 4, 62, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
     ; GFX10-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
-    ; GFX10-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[REG_SEQUENCE2]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2
-    ; GFX10-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE3]], %subreg.sub0_sub1_sub2, [[COPY3]], %subreg.sub3
+    ; GFX10-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE killed [[REG_SEQUENCE2]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2
+    ; GFX10-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[REG_SEQUENCE3]], %subreg.sub0_sub1_sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed [[REG_SEQUENCE4]], [[REG_SEQUENCE]], 0, 16, 75, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
     ; GFX10-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; GFX10-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[REG_SEQUENCE5]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2
+    ; GFX10-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_96 = REG_SEQUENCE killed [[REG_SEQUENCE5]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2
     ; GFX10-NEXT: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed [[REG_SEQUENCE6]], [[REG_SEQUENCE]], 0, 36, 72, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
     %12:vgpr_32 = COPY $vgpr8
     %11:vgpr_32 = COPY $vgpr7
