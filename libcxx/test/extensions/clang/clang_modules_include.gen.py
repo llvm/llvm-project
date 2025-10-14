@@ -50,7 +50,7 @@ for header in public_headers:
     print(
         f"""\
 //--- {header}.compile.pass.cpp
-// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -Wno-deprecated
 
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
@@ -62,7 +62,7 @@ for header in public_headers:
 print(
     f"""\
 //--- import_std.compile.pass.mm
-// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -Wno-deprecated
 
 // REQUIRES: clang-modules-build
 
