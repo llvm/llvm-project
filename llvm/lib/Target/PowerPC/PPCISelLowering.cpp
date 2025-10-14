@@ -15697,7 +15697,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
       //     llvm.ppc.altivec.vcmpequb.p TargetConstant:i32<10505>,
       //     Constant:i32<2>, t3, t5
       // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
-      
+
       SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(),
                                    LA->getBasePtr(), LA->getMemOperand());
       SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(),
