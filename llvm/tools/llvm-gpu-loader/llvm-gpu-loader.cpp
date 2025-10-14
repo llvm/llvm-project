@@ -41,28 +41,28 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
                           cl::cat(LoaderCategory));
 
 static cl::opt<unsigned>
-    Threads_x("threads-x", cl::desc("Number of threads in the 'x' dimension"),
-              cl::init(1), cl::cat(LoaderCategory));
+    ThreadsX("threads-x", cl::desc("Number of threads in the 'x' dimension"),
+             cl::init(1), cl::cat(LoaderCategory));
 static cl::opt<unsigned>
-    Threads_y("threads-y", cl::desc("Number of threads in the 'y' dimension"),
-              cl::init(1), cl::cat(LoaderCategory));
+    ThreadsY("threads-y", cl::desc("Number of threads in the 'y' dimension"),
+             cl::init(1), cl::cat(LoaderCategory));
 static cl::opt<unsigned>
-    Threads_z("threads-z", cl::desc("Number of threads in the 'z' dimension"),
-              cl::init(1), cl::cat(LoaderCategory));
-static cl::alias threads("threads", cl::aliasopt(Threads_x),
+    ThreadsZ("threads-z", cl::desc("Number of threads in the 'z' dimension"),
+             cl::init(1), cl::cat(LoaderCategory));
+static cl::alias threads("threads", cl::aliasopt(ThreadsX),
                          cl::desc("Alias for --threads-x"),
                          cl::cat(LoaderCategory));
 
 static cl::opt<unsigned>
-    Blocks_x("blocks-x", cl::desc("Number of blocks in the 'x' dimension"),
-             cl::init(1), cl::cat(LoaderCategory));
+    BlocksX("blocks-x", cl::desc("Number of blocks in the 'x' dimension"),
+            cl::init(1), cl::cat(LoaderCategory));
 static cl::opt<unsigned>
-    Blocks_y("blocks-y", cl::desc("Number of blocks in the 'y' dimension"),
-             cl::init(1), cl::cat(LoaderCategory));
+    BlocksY("blocks-y", cl::desc("Number of blocks in the 'y' dimension"),
+            cl::init(1), cl::cat(LoaderCategory));
 static cl::opt<unsigned>
-    Blocks_z("blocks-z", cl::desc("Number of blocks in the 'z' dimension"),
-             cl::init(1), cl::cat(LoaderCategory));
-static cl::alias Blocks("blocks", cl::aliasopt(Blocks_x),
+    BlocksZ("blocks-z", cl::desc("Number of blocks in the 'z' dimension"),
+            cl::init(1), cl::cat(LoaderCategory));
+static cl::alias Blocks("blocks", cl::aliasopt(BlocksX),
                         cl::desc("Alias for --blocks-x"),
                         cl::cat(LoaderCategory));
 
@@ -263,10 +263,10 @@ int main(int argc, const char **argv, const char **envp) {
   launchKernel(Queue, Device, Program, "_begin", BeginLaunch, BeginArgs);
   OFFLOAD_ERR(olSyncQueue(Queue));
 
-  uint32_t Dims = (Blocks_z > 1) ? 3 : (Blocks_y > 1) ? 2 : 1;
+  uint32_t Dims = (BlocksZ > 1) ? 3 : (BlocksY > 1) ? 2 : 1;
   ol_kernel_launch_size_args_t StartLaunch{Dims,
-                                           {Blocks_x, Blocks_y, Blocks_z},
-                                           {Threads_x, Threads_y, Threads_z},
+                                           {BlocksX, BlocksY, BlocksZ},
+                                           {ThreadsX, ThreadsY, ThreadsZ},
                                            /*SharedMemBytes=*/0};
   StartArgs StartArgs = {DevArgc, DevArgv, DevEnvp, DevRet};
   launchKernel(Queue, Device, Program, "_start", StartLaunch, StartArgs);
