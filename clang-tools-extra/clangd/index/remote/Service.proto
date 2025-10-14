@@ -24,4 +24,6 @@ service SymbolIndex {
   rpc ContainedRefs(ContainedRefsRequest) returns (stream ContainedRefsReply) {}
 
   rpc Relations(RelationsRequest) returns (stream RelationsReply) {}
+
+  rpc ReverseRelations(RelationsRequest) returns (stream RelationsReply) {}
 }
