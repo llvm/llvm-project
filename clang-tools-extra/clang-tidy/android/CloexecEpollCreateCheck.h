@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// epoll_create() is better to be replaced by epoll_create1().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-epoll-create.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-epoll-create.html
 class CloexecEpollCreateCheck : public CloexecCheck {
 public:
   CloexecEpollCreateCheck(StringRef Name, ClangTidyContext *Context)

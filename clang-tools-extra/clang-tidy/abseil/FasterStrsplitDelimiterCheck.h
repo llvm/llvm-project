@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 /// is a single character string literal and replaces it with a character.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/faster-strsplit-delimiter.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/faster-strsplit-delimiter.html
 class FasterStrsplitDelimiterCheck : public ClangTidyCheck {
 public:
   FasterStrsplitDelimiterCheck(StringRef Name, ClangTidyContext *Context)

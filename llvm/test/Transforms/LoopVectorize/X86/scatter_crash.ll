@@ -70,8 +70,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[TMP64:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[IND_END9:%.*]] = add i64 8, [[TMP64]]
 ; CHECK-NEXT:    [[IND_END12:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP6]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -160,8 +159,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[IND_END55:%.*]] = add i64 8, [[TMP42]]
 ; CHECK-NEXT:    [[IND_END58:%.*]] = mul i64 [[N_VEC32]], 2
-; CHECK-NEXT:    [[N_VEC_REMAINING49:%.*]] = sub i64 [[TMP28]], [[N_VEC32]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_VEC_REMAINING49]], 8
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_MOD_VF31]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label %[[VEC_EPILOG_SCALAR_PH40]], label %[[VEC_EPILOG_PH42]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH42]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL51:%.*]] = phi i64 [ [[N_VEC32]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]

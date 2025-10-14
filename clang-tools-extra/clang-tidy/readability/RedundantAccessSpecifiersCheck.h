@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Detects redundant access specifiers inside classes, structs, and unions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-access-specifiers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-access-specifiers.html
 class RedundantAccessSpecifiersCheck : public ClangTidyCheck {
 public:
   RedundantAccessSpecifiersCheck(StringRef Name, ClangTidyContext *Context)

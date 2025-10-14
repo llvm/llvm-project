@@ -90,7 +90,7 @@ class __atomic_semaphore_base {
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __atomic_semaphore_base(ptrdiff_t __count) : __a_(__count) {}
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void release(ptrdiff_t __update = 1) {
+  _LIBCPP_HIDE_FROM_ABI void release(ptrdiff_t __update = 1) {
     auto __old = __a_.fetch_add(__update, memory_order_release);
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= _LIBCPP_SEMAPHORE_MAX - __old, "update is greater than the expected value");
@@ -98,26 +98,25 @@ public:
       __a_.notify_all();
     }
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() {
+  _LIBCPP_HIDE_FROM_ABI void acquire() {
     std::__atomic_wait_unless(__a_, memory_order_relaxed, [this](ptrdiff_t& __old) {
       return __try_acquire_impl(__old);
     });
   }
   template <class _Rep, class _Period>
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
-  try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
+  _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     if (__rel_time == chrono::duration<_Rep, _Period>::zero())
       return try_acquire();
     auto const __poll_fn = [this]() { return try_acquire(); };
     return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
+  _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
     auto __old = __a_.load(memory_order_relaxed);
     return __try_acquire_impl(__old);
   }
 
 private:
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __try_acquire_impl(ptrdiff_t& __old) {
+  _LIBCPP_HIDE_FROM_ABI bool __try_acquire_impl(ptrdiff_t& __old) {
     while (true) {
       if (__old == 0)
         return false;
@@ -151,20 +150,18 @@ public:
   counting_semaphore(const counting_semaphore&)            = delete;
   counting_semaphore& operator=(const counting_semaphore&) = delete;
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void release(ptrdiff_t __update = 1) {
+  _LIBCPP_HIDE_FROM_ABI void release(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update >= 0, "counting_semaphore:release called with a negative value");
     __semaphore_.release(__update);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() { __semaphore_.acquire(); }
+  _LIBCPP_HIDE_FROM_ABI void acquire() { __semaphore_.acquire(); }
   template <class _Rep, class _Period>
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
-  try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
+  _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     return __semaphore_.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
+  _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
   template <class _Clock, class _Duration>
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
-  try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
+  _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
     auto const __current = _Clock::now();
     if (__current >= __abs_time)
       return try_acquire();

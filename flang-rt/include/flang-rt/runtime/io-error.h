@@ -67,6 +67,17 @@ public:
   RT_API_ATTRS int GetIoStat() const { return ioStat_; }
   RT_API_ATTRS bool GetIoMsg(char *, std::size_t);
 
+  // Sets the HasEnd flag so that EOF isn't fatal; used to peek ahead
+  RT_API_ATTRS bool SetHasEnd(bool yes = true) {
+    bool oldValue{(flags_ & hasEnd) != 0};
+    if (yes) {
+      flags_ |= hasEnd;
+    } else {
+      flags_ &= ~hasEnd;
+    }
+    return oldValue;
+  }
+
 private:
   enum Flag : std::uint8_t {
     hasIoStat = 1, // IOSTAT=

@@ -173,6 +173,33 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
+struct bind_const_int {
+  uint64_t &Res;
+
+  bind_const_int(uint64_t &Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    if (!VPV->isLiveIn())
+      return false;
+    Value *V = VPV->getLiveInIRValue();
+    if (!V)
+      return false;
+    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI)
+      return false;
+    if (auto C = CI->getValue().tryZExtValue()) {
+      Res = *C;
+      return true;
+    }
+    return false;
+  }
+};
+
+/// Match a plain integer constant no wider than 64-bits, capturing it if we
+/// match.
+inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;
@@ -317,6 +344,10 @@ m_Freeze(const Op0_t &Op0) {
   return m_VPInstruction<Instruction::Freeze>(Op0);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnCond> m_BranchOnCond() {
+  return m_VPInstruction<VPInstruction::BranchOnCond>();
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::BranchOnCond, Op0_t>
 m_BranchOnCond(const Op0_t &Op0) {
@@ -345,6 +376,10 @@ template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
+}
+
+inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
+  return m_VPInstruction<VPInstruction::BranchOnCount>();
 }
 
 template <typename Op0_t, typename Op1_t>

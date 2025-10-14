@@ -275,7 +275,7 @@ bool Dependence::isAnti() const {
 // if no subscript in the source or destination mention the induction
 // variable associated with the loop at this level.
 // Leave this out of line, so it will serve as a virtual method anchor
-bool Dependence::isScalar(unsigned level, bool isSameSD) const { return false; }
+bool Dependence::isScalar(unsigned level, bool IsSameSD) const { return false; }
 
 //===----------------------------------------------------------------------===//
 // FullDependence methods
@@ -351,45 +351,46 @@ bool FullDependence::normalize(ScalarEvolution *SE) {
 
 // getDirection - Returns the direction associated with a particular common or
 // SameSD level.
-unsigned FullDependence::getDirection(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Direction;
+unsigned FullDependence::getDirection(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Direction;
 }
 
 // Returns the distance (or NULL) associated with a particular common or
 // SameSD level.
-const SCEV *FullDependence::getDistance(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Distance;
+const SCEV *FullDependence::getDistance(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Distance;
 }
 
 // Returns true if a particular regular or SameSD level is scalar; that is,
 // if no subscript in the source or destination mention the induction variable
 // associated with the loop at this level.
-bool FullDependence::isScalar(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Scalar;
+bool FullDependence::isScalar(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Scalar;
 }
 
 // Returns true if peeling the first iteration from this regular or SameSD
 // loop level will break this dependence.
-bool FullDependence::isPeelFirst(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).PeelFirst;
+bool FullDependence::isPeelFirst(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).PeelFirst;
 }
 
 // Returns true if peeling the last iteration from this regular or SameSD
 // loop level will break this dependence.
-bool FullDependence::isPeelLast(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).PeelLast;
+bool FullDependence::isPeelLast(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).PeelLast;
 }
 
 // Returns true if splitting loop will break the dependence.
-bool FullDependence::isSplitable(unsigned Level, bool isSameSD) const {
-  return getDVEntry(Level, isSameSD).Splitable;
+bool FullDependence::isSplitable(unsigned Level, bool IsSameSD) const {
+  return getDVEntry(Level, IsSameSD).Splitable;
 }
 
 // inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
 // performed across two separate loop nests that have the Same iteration space
 // and Depth.
 bool FullDependence::inSameSDLoops(unsigned Level) const {
-  assert(0 < Level && Level <= Levels + SameSDLevels && "Level out of range");
+  assert(0 < Level && Level <= static_cast<unsigned>(Levels) + SameSDLevels &&
+         "Level out of range");
   return Level > Levels;
 }
 
@@ -690,7 +691,7 @@ void Dependence::dump(raw_ostream &OS) const {
     dumpImp(OS);
     unsigned SameSDLevels = getSameSDLevels();
     if (SameSDLevels > 0) {
-      OS << "! / assuming " << SameSDLevels << " loop level(s) fused: ";
+      OS << " / assuming " << SameSDLevels << " loop level(s) fused: ";
       dumpImp(OS, true);
     }
   }
@@ -705,13 +706,13 @@ void Dependence::dump(raw_ostream &OS) const {
 
 // For debugging purposes. Dumps a dependence to OS with or without considering
 // the SameSD levels.
-void Dependence::dumpImp(raw_ostream &OS, bool isSameSD) const {
+void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   bool Splitable = false;
   unsigned Levels = getLevels();
   unsigned SameSDLevels = getSameSDLevels();
   bool OnSameSD = false;
   unsigned LevelNum = Levels;
-  if (isSameSD)
+  if (IsSameSD)
     LevelNum += SameSDLevels;
   OS << " [";
   for (unsigned II = 1; II <= LevelNum; ++II) {
@@ -1179,32 +1180,41 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
   S = SE->getTruncateOrZeroExtend(S, MaxType);
   Size = SE->getTruncateOrZeroExtend(Size, MaxType);
 
-  // Special check for addrecs using BE taken count
-  if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    if (AddRec->isAffine() && AddRec->hasNoSignedWrap()) {
-      const SCEV *BECount = SE->getBackedgeTakenCount(AddRec->getLoop());
-      const SCEV *Start = AddRec->getStart();
-      const SCEV *Step = AddRec->getStepRecurrence(*SE);
-      const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
-      const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
-      const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
+  auto CheckAddRecBECount = [&]() {
+    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+    if (!AddRec || !AddRec->isAffine() || !AddRec->hasNoSignedWrap())
+      return false;
+    const SCEV *BECount = collectUpperBound(AddRec->getLoop(), MaxType);
+    // If the BTC cannot be computed, check the base case for S.
+    if (!BECount || isa<SCEVCouldNotCompute>(BECount))
+      return false;
+    const SCEV *Start = AddRec->getStart();
+    const SCEV *Step = AddRec->getStepRecurrence(*SE);
+    const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
+    const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
+    const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
 
-      // If the value of Step is non-negative and the AddRec is non-wrap, it
-      // reaches its maximum at the last iteration. So it's enouth to check
-      // whether End - Size is negative.
-      if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
-        return true;
+    // If the value of Step is non-negative and the AddRec is non-wrap, it
+    // reaches its maximum at the last iteration. So it's enouth to check
+    // whether End - Size is negative.
+    if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
+      return true;
 
-      // If the value of Step is non-positive and the AddRec is non-wrap, the
-      // initial value is its maximum.
-      if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
-        return true;
+    // If the value of Step is non-positive and the AddRec is non-wrap, the
+    // initial value is its maximum.
+    if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
+      return true;
 
-      // Even if we don't know the sign of Step, either Start or End must be
-      // the maximum value of the AddRec since it is non-wrap.
-      if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
-        return true;
-    }
+    // Even if we don't know the sign of Step, either Start or End must be
+    // the maximum value of the AddRec since it is non-wrap.
+    if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
+      return true;
+
+    return false;
+  };
+
+  if (CheckAddRecBECount())
+    return true;
 
   // Check using normal isKnownNegative
   const SCEV *LimitedBound = SE->getMinusSCEV(S, Size);

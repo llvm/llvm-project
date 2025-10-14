@@ -797,6 +797,31 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToXeVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
+  let summary =
+      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+  let description = [{
+    This pass converts supported math ops marked with the `afn` fastmath flag
+    to function calls for OpenCL `native_` math intrinsics: These intrinsics
+    are typically mapped directly to native device instructions, often resulting
+    in better performance. However, the precision/error of these intrinsics
+    are implementation-defined, and thus math ops are only converted when they
+    have the `afn` fastmath flag enabled.
+  }];
+  let options = [Option<
+      "convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "xevm::XeVMDialect",
+    "LLVM::LLVMDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToEmitC
 //===----------------------------------------------------------------------===//
 
@@ -1489,8 +1514,8 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            VectorContractLoweringAttr.summary, [{::llvm::cl::values(
            clEnumValN(::mlir::vector::VectorContractLowering::Dot, "dot",
             "Progressively lower to finer grained `vector.contract` and dot-products. (default)"),
-           clEnumValN(::mlir::vector::VectorContractLowering::Matmul, "matmul",
-            "Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics."),
+           clEnumValN(::mlir::vector::VectorContractLowering::LLVMIntr, "llvmintr",
+            "Lower directly to `llvm.intr.matrix.multiply`."),
            clEnumValN(::mlir::vector::VectorContractLowering::OuterProduct, "outerproduct",
             "Lower to `vector.outerproduct`."),
            clEnumValN(::mlir::vector::VectorContractLowering::ParallelArith, "parallelarith",
@@ -1502,8 +1527,8 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            VectorTransposeLoweringAttr.summary, [{::llvm::cl::values(
            clEnumValN(::mlir::vector::VectorTransposeLowering::EltWise, "eltwise",
             "Lower transpose into element-wise extract and inserts (default)"),
-           clEnumValN(::mlir::vector::VectorTransposeLowering::Flat, "flat",
-            "Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix intrinsics"),
+           clEnumValN(::mlir::vector::VectorTransposeLowering::LLVMIntr, "llvmintr",
+            "Lower 2-D transpose directly to `llvm.intr.matrix.transpose`"),
            clEnumValN(::mlir::vector::VectorTransposeLowering::Shuffle1D, "shuffle1d",
             "Lower 2-D transpose to `vector.shuffle` on 1-D vector."),
            clEnumValN(::mlir::vector::VectorTransposeLowering::Shuffle16x16, "shuffle16x16",

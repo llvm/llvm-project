@@ -172,6 +172,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::OpenBSD:
       return std::make_unique<OpenBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                       Opts);
+    case llvm::Triple::Hurd:
+      return std::make_unique<HurdTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                   Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::GNU:
@@ -464,6 +467,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Managarm:
       return std::make_unique<ManagarmTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                      Opts);
+    case llvm::Triple::Hurd:
+      return std::make_unique<HurdTargetInfo<RISCV64TargetInfo>>(Triple, Opts);
     default:
       return std::make_unique<RISCV64TargetInfo>(Triple, Opts);
     }
@@ -699,6 +704,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       case llvm::Triple::Emscripten:
       return std::make_unique<EmscriptenTargetInfo<WebAssembly32TargetInfo>>(
           Triple, Opts);
+
+      case llvm::Triple::Linux:
+        return std::make_unique<WALITargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                         Opts);
       case llvm::Triple::UnknownOS:
       return std::make_unique<WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>>(
           Triple, Opts);

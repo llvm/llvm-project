@@ -1211,6 +1211,25 @@ public:
       TiedOperand = N;
       // Don't copy Name or constraint string.
     }
+
+    // For output operand constraints, the target can set bounds to indicate
+    // that the result value is guaranteed to fall within a certain range.
+    // This will cause corresponding assertions to be emitted that will allow
+    // for potential optimization based of that guarantee.
+    //
+    // NOTE: This re-uses the `ImmRange` fields to store the range, which are
+    // otherwise unused for constraint types used for output operands.
+    void setOutputOperandBounds(unsigned Min, unsigned Max) {
+      ImmRange.Min = Min;
+      ImmRange.Max = Max;
+      ImmRange.isConstrained = true;
+    }
+    std::optional<std::pair<unsigned, unsigned>>
+    getOutputOperandBounds() const {
+      return ImmRange.isConstrained
+                 ? std::make_pair(ImmRange.Min, ImmRange.Max)
+                 : std::optional<std::pair<unsigned, unsigned>>();
+    }
   };
 
   /// Validate register name used for global register variables.
@@ -1258,6 +1277,10 @@ public:
   bool resolveSymbolicName(const char *&Name,
                            ArrayRef<ConstraintInfo> OutputConstraints,
                            unsigned &Index) const;
+
+  std::string
+  simplifyConstraint(StringRef Constraint,
+                     SmallVectorImpl<ConstraintInfo> *OutCons = nullptr) const;
 
   // Constraint parm will be left pointing at the last character of
   // the constraint.  In practice, it won't be changed unless the

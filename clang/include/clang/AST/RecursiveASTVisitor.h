@@ -2194,6 +2194,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        is the only callback that's made for this instantiation.                \
        We use getTemplateArgsAsWritten() to distinguish. */                    \
     if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
+      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
       /* The args that remains unspecialized. */                               \
       TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
           ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
@@ -3176,6 +3177,9 @@ DEF_TRAVERSE_STMT(OMPUnrollDirective,
 DEF_TRAVERSE_STMT(OMPReverseDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFuseDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3494,6 +3498,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
+    OMPLoopRangeClause *C) {
+  TRY_TO(TraverseStmt(C->getFirst()));
+  TRY_TO(TraverseStmt(C->getCount()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
   return true;
@@ -3582,7 +3594,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *) {
+bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
 

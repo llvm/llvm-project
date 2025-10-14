@@ -43,7 +43,7 @@ public:
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
   template <class ELFT, class RelTy>
   bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
@@ -603,12 +603,8 @@ static void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   uint64_t tlsdescVal = 0;
   bool tlsdescRelax = false, isToLe = false;
   const ArrayRef<Relocation> relocs = sec.relocs();
