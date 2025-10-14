@@ -255,7 +255,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
   mlir::Value expected = builder.createLoad(loc, val1);
   mlir::Value desired = builder.createLoad(loc, val2);
 
-  auto cmpxchg = cir::AtomicCmpXchg::create(
+  auto cmpxchg = cir::AtomicCmpXchgOp::create(
       builder, loc, expected.getType(), builder.getBoolTy(), ptr.getPointer(),
       expected, desired,
       cir::MemOrderAttr::get(&cgf.getMLIRContext(), successOrder),
@@ -404,7 +404,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_exchange:
-    opName = cir::AtomicXchg::getOperationName();
+    opName = cir::AtomicXchgOp::getOperationName();
     break;
 
   case AtomicExpr::AO__opencl_atomic_init:
