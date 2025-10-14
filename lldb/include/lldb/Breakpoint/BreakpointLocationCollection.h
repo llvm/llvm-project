@@ -9,6 +9,7 @@
 #ifndef LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
 #define LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
 
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -19,9 +20,17 @@ namespace lldb_private {
 
 class BreakpointLocationCollection {
 public:
-  BreakpointLocationCollection();
+  /// Breakpoint locations don't keep their breakpoint owners alive, so neither
+  /// will a collection of breakpoint locations.  However, if you need to
+  /// use this collection in a context where some of the breakpoints whose
+  /// locations are in the collection might get deleted during its lifespan,
+  /// then you need to make sure the breakpoints don't get deleted out from
+  /// under you.  To do that, pass true for preserving, and so long as there is
+  /// a location for a given breakpoint in the collection, the breakpoint will
+  /// not get destroyed. 
+  BreakpointLocationCollection(bool preserving = false);
 
-  ~BreakpointLocationCollection();
+  virtual ~BreakpointLocationCollection();
 
   BreakpointLocationCollection &operator=(const BreakpointLocationCollection &rhs);
 
@@ -30,7 +39,7 @@ public:
   /// \param[in] bp_loc_sp
   ///     Shared pointer to the breakpoint location that will get added
   ///     to the list.
-  void Add(const lldb::BreakpointLocationSP &bp_loc_sp);
+  virtual void Add(const lldb::BreakpointLocationSP &bp_loc_sp);
 
   /// Removes the breakpoint location given by \b breakID from this
   /// list.
@@ -43,7 +52,7 @@ public:
   ///
   /// \result
   ///     \b true if the breakpoint was in the list.
-  bool Remove(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
+  virtual bool Remove(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
 
   /// Returns a shared pointer to the breakpoint location with id \a
   /// breakID.
@@ -164,6 +173,14 @@ private:
 
   collection m_break_loc_collection;
   mutable std::mutex m_collection_mutex;
+  /// These are used if we're preserving breakpoints in this list:
+  const bool m_preserving_bkpts = false;
+  struct RefCountedBPSP {
+    RefCountedBPSP(lldb::BreakpointSP in_bp_sp) : ref_cnt(1), bp_sp(in_bp_sp) {}
+    uint64_t ref_cnt;
+    lldb::BreakpointSP bp_sp; 
+  };
+  std::map<lldb::break_id_t, RefCountedBPSP> m_preserved_bps; 
 
 public:
   typedef llvm::iterator_range<collection::const_iterator>
@@ -172,7 +189,6 @@ public:
     return BreakpointLocationCollectionIterable(m_break_loc_collection);
   }
 };
-
 } // namespace lldb_private
 
 #endif // LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
