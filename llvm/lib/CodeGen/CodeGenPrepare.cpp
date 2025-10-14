@@ -377,7 +377,7 @@ public:
   /// to be optimized again.
   /// Note: Consider building time in this pass, when a BB updated, we need
   /// to insert such BB into FreshBBs for huge function.
-  SmallSet<BasicBlock *, 32> FreshBBs;
+  SmallPtrSet<BasicBlock *, 32> FreshBBs;
 
   void releaseMemory() {
     // Clear per function information.
@@ -583,23 +583,23 @@ bool CodeGenPrepare::_run(Function &F) {
   // if requested.
   if (BBSectionsGuidedSectionPrefix && BBSectionsProfileReader &&
       BBSectionsProfileReader->isFunctionHot(F.getName())) {
-    F.setSectionPrefix("hot");
+    (void)F.setSectionPrefix("hot");
   } else if (ProfileGuidedSectionPrefix) {
     // The hot attribute overwrites profile count based hotness while profile
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.
     if (F.hasFnAttribute(Attribute::Hot) ||
         PSI->isFunctionHotInCallGraph(&F, *BFI))
-      F.setSectionPrefix("hot");
+      (void)F.setSectionPrefix("hot");
     // If PSI shows this function is not hot, we will placed the function
     // into unlikely section if (1) PSI shows this is a cold function, or
     // (2) the function has a attribute of cold.
     else if (PSI->isFunctionColdInCallGraph(&F, *BFI) ||
              F.hasFnAttribute(Attribute::Cold))
-      F.setSectionPrefix("unlikely");
+      (void)F.setSectionPrefix("unlikely");
     else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
              PSI->isFunctionHotnessUnknown(F))
-      F.setSectionPrefix("unknown");
+      (void)F.setSectionPrefix("unknown");
   }
 
   /// This optimization identifies DIV instructions that can be
@@ -1105,7 +1105,7 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
 
 /// Replace all old uses with new ones, and push the updated BBs into FreshBBs.
 static void replaceAllUsesWith(Value *Old, Value *New,
-                               SmallSet<BasicBlock *, 32> &FreshBBs,
+                               SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                bool IsHuge) {
   auto *OldI = dyn_cast<Instruction>(Old);
   if (OldI) {
@@ -1749,6 +1749,12 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
                                  Sub->hasNUsesOrMore(1)))
     return false;
 
+  // We don't want to move around uses of condition values this late, so we
+  // check if it is legal to create the call to the intrinsic in the basic
+  // block containing the icmp.
+  if (Sub->getParent() != Cmp->getParent() && !Sub->hasOneUse())
+    return false;
+
   if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
                                    Cmp, Intrinsic::usub_with_overflow))
     return false;
@@ -2135,7 +2141,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 //    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
 static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
                                     const LoopInfo *LI,
-                                    SmallSet<BasicBlock *, 32> &FreshBBs,
+                                    SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
   Value *AddOffset, *RemAmt, *AddInst;
   PHINode *LoopIncrPN;
@@ -2534,11 +2540,10 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
 ///     %ctz = phi i64 [ 64, %entry ], [ %z, %cond.false ]
 ///
 /// If the transform is performed, return true and set ModifiedDT to true.
-static bool despeculateCountZeros(IntrinsicInst *CountZeros,
-                                  LoopInfo &LI,
+static bool despeculateCountZeros(IntrinsicInst *CountZeros, LoopInfo &LI,
                                   const TargetLowering *TLI,
                                   const DataLayout *DL, ModifyDT &ModifiedDT,
-                                  SmallSet<BasicBlock *, 32> &FreshBBs,
+                                  SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                   bool IsHugeFunc) {
   // If a zero input is undefined, it doesn't make sense to despeculate that.
   if (match(CountZeros->getOperand(1), m_One()))
@@ -2619,22 +2624,9 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   BasicBlock *BB = CI->getParent();
 
-  // Lower inline assembly if we can.
-  // If we found an inline asm expession, and if the target knows how to
-  // lower it to normal LLVM code, do so now.
-  if (CI->isInlineAsm()) {
-    if (TLI->ExpandInlineAsm(CI)) {
-      // Avoid invalidating the iterator.
-      CurInstIterator = BB->begin();
-      // Avoid processing instructions out of order, which could cause
-      // reuse before a value is defined.
-      SunkAddrs.clear();
-      return true;
-    }
-    // Sink address computing for memory operands into the block.
-    if (optimizeInlineAsmInst(CI))
-      return true;
-  }
+  // Sink address computing for memory operands into the block.
+  if (CI->isInlineAsm() && optimizeInlineAsmInst(CI))
+    return true;
 
   // Align the pointer arguments to this call if the target thinks it's a good
   // idea
@@ -3202,7 +3194,7 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
     case ScaledRegField:
       return ScaledReg;
     case BaseOffsField:
-      return ConstantInt::get(IntPtrTy, BaseOffs);
+      return ConstantInt::getSigned(IntPtrTy, BaseOffs);
     }
   }
 
@@ -4351,7 +4343,7 @@ private:
                     PhiNodeSet &PhiNodesToMatch) {
     SmallVector<PHIPair, 8> WorkList;
     Matcher.insert({PHI, Candidate});
-    SmallSet<PHINode *, 8> MatchedPHIs;
+    SmallPtrSet<PHINode *, 8> MatchedPHIs;
     MatchedPHIs.insert(PHI);
     WorkList.push_back({PHI, Candidate});
     SmallSet<PHIPair, 8> Visited;
@@ -5610,6 +5602,19 @@ static bool FindAllMemoryUses(
       continue;
     }
 
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
+      SmallVector<Value *, 2> PtrOps;
+      Type *AccessTy;
+      if (!TLI.getAddrModeArguments(II, PtrOps, AccessTy))
+        return true;
+
+      if (!find(PtrOps, U.get()))
+        return true;
+
+      MemoryUses.push_back({&U, AccessTy});
+      continue;
+    }
+
     if (CallInst *CI = dyn_cast<CallInst>(UserI)) {
       if (CI->hasFnAttr(Attribute::Cold)) {
         // If this is a cold call, we can sink the addressing calculation into
@@ -6095,7 +6100,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
       // Add in the Base Offset if present.
       if (AddrMode.BaseOffs) {
-        Value *V = ConstantInt::get(IntPtrTy, AddrMode.BaseOffs);
+        Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
         if (ResultIndex) {
           // We need to add this separately from the scale above to help with
           // SDAG consecutive load/store merging.
@@ -6221,7 +6226,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
     // Add in the Base Offset if present.
     if (AddrMode.BaseOffs) {
-      Value *V = ConstantInt::get(IntPtrTy, AddrMode.BaseOffs);
+      Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
       if (Result)
         Result = Builder.CreateAdd(Result, V, "sunkaddr");
       else
@@ -8635,7 +8640,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
 }
 
 static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
-                           SmallSet<BasicBlock *, 32> &FreshBBs,
+                           SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                            bool IsHugeFunc) {
   // Try and convert
   //  %c = icmp ult %x, 8

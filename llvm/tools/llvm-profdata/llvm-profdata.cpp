@@ -760,7 +760,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     auto DataAccessProfData = Reader->takeDataAccessProfData();
 
     // Check for the empty input in case the YAML file is invalid.
-    if (MemProfData.Records.empty()) {
+    if (MemProfData.Records.empty() &&
+        (!DataAccessProfData || DataAccessProfData->empty())) {
       WC->Errors.emplace_back(
           make_error<StringError>("The profile is empty.", std::error_code()),
           Filename);
@@ -2629,7 +2630,7 @@ void SampleOverlapAggregator::dumpFuncSimilarity(raw_fd_ostream &OS) const {
 }
 
 void SampleOverlapAggregator::dumpProgramSummary(raw_fd_ostream &OS) const {
-  OS << "Profile overlap infomation for base_profile: "
+  OS << "Profile overlap information for base_profile: "
      << ProfOverlap.BaseName.toString()
      << " and test_profile: " << ProfOverlap.TestName.toString()
      << "\nProgram level:\n";
@@ -3463,10 +3464,7 @@ static int order_main() {
   return 0;
 }
 
-int llvm_profdata_main(int argc, char **argvNonConst,
-                       const llvm::ToolContext &) {
-  const char **argv = const_cast<const char **>(argvNonConst);
-
+int main(int argc, const char *argv[]) {
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {

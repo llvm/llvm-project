@@ -211,6 +211,13 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
+  GCCInstallation.TripleToDebianMultiarch = [](const llvm::Triple &T) {
+    StringRef TripleStr = T.str();
+    StringRef DebianMultiarch =
+        T.getArch() == llvm::Triple::x86 ? "i386-linux-gnu" : TripleStr;
+    return DebianMultiarch;
+  };
+
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
@@ -294,11 +301,10 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
   // Android loader does not support .gnu.hash until API 23.
-  // Hexagon linker/loader does not support .gnu.hash
+  // Hexagon linker/loader does not support .gnu.hash.
+  // SUSE SLES 11 will stop being supported Mar 2028.
   if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE() || Distro == Distro::UbuntuLucid ||
-        Distro == Distro::UbuntuJaunty || Distro == Distro::UbuntuKarmic ||
-        (IsAndroid && Triple.isAndroidVersionLT(23)))
+    if (Distro.IsOpenSUSE() || (IsAndroid && Triple.isAndroidVersionLT(23)))
       ExtraOpts.push_back("--hash-style=both");
     else
       ExtraOpts.push_back("--hash-style=gnu");
@@ -693,22 +699,15 @@ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   if (!GCCInstallation.isValid())
     return;
 
-  // Detect Debian g++-multiarch-incdir.diff.
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-  StringRef DebianMultiarch =
-      GCCInstallation.getTriple().getArch() == llvm::Triple::x86
-          ? "i386-linux-gnu"
-          : TripleStr;
-
   // Try generic GCC detection first.
-  if (Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args,
-                                               DebianMultiarch))
+  if (Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args))
     return;
 
   StringRef LibDir = GCCInstallation.getParentLibPath();
   const Multilib &Multilib = GCCInstallation.getMultilib();
   const GCCVersion &Version = GCCInstallation.getVersion();
 
+  StringRef TripleStr = GCCInstallation.getTriple().str();
   const std::string LibStdCXXIncludePathCandidates[] = {
       // Android standalone toolchain has C++ headers in yet another place.
       LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,

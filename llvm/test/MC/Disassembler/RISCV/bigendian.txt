@@ -1,0 +1,29 @@
+# RUN: llvm-mc --disassemble %s -triple=riscv32be -mattr=+c 2>&1 | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=riscv64be -mattr=+c 2>&1 | FileCheck %s
+
+# Test basic disassembly for big-endian RISC-V
+# Instructions are always little-endian encoded in RISC-V
+
+[0x13,0x05,0x45,0x06]
+# CHECK: addi a0, a0, 100
+
+[0xb7,0x52,0x34,0x12]
+# CHECK: lui t0, 74565
+
+[0x03,0x26,0x05,0x00]
+# CHECK: lw a2, 0(a0)
+
+[0x23,0x22,0xc5,0x00]
+# CHECK: sw a2, 4(a0)
+
+[0xef,0x00,0x00,0x00]
+# CHECK: jal 0
+
+[0x63,0x00,0xb5,0x00]
+# CHECK: beq a0, a1, 0
+
+[0x01,0x00]
+# CHECK: nop
+
+[0x05,0x05]
+# CHECK: addi a0, a0, 1

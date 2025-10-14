@@ -365,13 +365,6 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  // Instruction TSB is specified as a one operand instruction, but 'csync' is
-  // not encoded, so for printing it is treated as a special case here:
-  if (Opcode == AArch64::TSB) {
-    O << "\ttsb\tcsync";
-    return;
-  }
-
   if (!PrintAliases || !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
 
@@ -1017,14 +1010,22 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   else
     return false;
 
+  StringRef Reg = getRegisterName(MI->getOperand(4).getReg());
+  bool NotXZR = Reg != "xzr";
+
+  // If a mandatory is not specified in the TableGen
+  // (i.e. no register operand should be present), and the register value
+  // is not xzr/x31, then disassemble to a SYS alias instead.
+  if (NotXZR && !NeedsReg)
+    return false;
+
   std::string Str = Ins + Name;
   llvm::transform(Str, Str.begin(), ::tolower);
 
   O << '\t' << Str;
-  if (NeedsReg) {
-    O << ", ";
-    printRegName(O, MI->getOperand(4).getReg());
-  }
+
+  if (NeedsReg)
+    O << ", " << Reg;
 
   return true;
 }
@@ -1065,12 +1066,13 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
       Encoding &= ~(1 << 7);
     }
 
-    const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByEncoding(Encoding);
-    if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
+    const AArch64TLBIP::TLBIP *TLBIP =
+        AArch64TLBIP::lookupTLBIPByEncoding(Encoding);
+    if (!TLBIP || !TLBIP->haveFeatures(STI.getFeatureBits()))
       return false;
 
     Ins = "tlbip\t";
-    Name = std::string(TLBI->Name);
+    Name = std::string(TLBIP->Name);
     if (CnVal == 9)
       Name += "nXS";
   } else

@@ -3746,6 +3746,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
+        if (CurTok.isNot(tok::eod))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
       return Result.getLimitedValue();
@@ -3989,9 +3991,12 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   StringRef OriginalFilename = Filename;
   bool isAngled =
       GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
+  if (Filename.empty())
+    return;
+
   OptionalFileEntryRef MaybeFileRef =
       this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {

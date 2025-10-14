@@ -74,6 +74,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = 1;
 }
 
 class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
@@ -98,6 +99,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = 1;
 }
 
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
@@ -436,8 +438,10 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPList in {
     foreach m = f.MxList in {
-    defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
-    defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in {
+        defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
+        defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      }
     }
   }
   foreach m = MxListW in {
@@ -447,7 +451,8 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPListW in {
     foreach m = f.MxList in
-    defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in
+        defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
   }
 }
 
@@ -768,7 +773,7 @@ multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
 
 multiclass VPatVFWMACC<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBFloatToFloatVectors,
+    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBF16ToFloatVectors,
                 vbfloat16m1_t>;
 
 defset list<VTypeInfoToWide> VFNRCLIPInfoPairs = {

@@ -431,12 +431,12 @@ public:
 
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices,
-                            unsigned Factor) const override;
+                            ArrayRef<unsigned> Indices, unsigned Factor,
+                            const APInt &GapMask) const override;
 
   bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                             ShuffleVectorInst *SVI,
-                             unsigned Factor) const override;
+                             ShuffleVectorInst *SVI, unsigned Factor,
+                             const APInt &GapMask) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
                                         IntrinsicInst *DI) const override;
@@ -642,6 +642,7 @@ struct RISCVVIntrinsicInfo {
   unsigned IntrinsicID;
   uint8_t ScalarOperand;
   uint8_t VLOperand;
+  bool IsFPIntrinsic;
   bool hasScalarOperand() const {
     // 0xF is not valid. See NoScalarOperand in IntrinsicsRISCV.td.
     return ScalarOperand != 0xF;

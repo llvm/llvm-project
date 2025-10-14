@@ -162,7 +162,7 @@ struct GatherOpInterface
       return failure();
     replaceOpWithNewBufferizedOp<vector::GatherOp>(
         rewriter, gatherOp, gatherOp.getVectorType(), *buffer,
-        gatherOp.getIndices(), gatherOp.getIndexVec(), gatherOp.getMask(),
+        gatherOp.getOffsets(), gatherOp.getIndices(), gatherOp.getMask(),
         gatherOp.getPassThru());
     return success();
   }
