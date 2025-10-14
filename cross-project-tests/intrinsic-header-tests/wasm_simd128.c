@@ -1511,13 +1511,13 @@ v128_t test_f16x8_convert_u16x8(v128_t a) {
 }
 
 // CHECK-LABEL: test_f16x8_relaxed_madd:
-// CHECK: f16x8.relaxed_madd{{$}}
+// CHECK: f16x8.madd{{$}}
 v128_t test_f16x8_relaxed_madd(v128_t a, v128_t b, v128_t c) {
   return wasm_f16x8_relaxed_madd(a, b, c);
 }
 
 // CHECK-LABEL: test_f16x8_relaxed_nmadd:
-// CHECK: f16x8.relaxed_nmadd{{$}}
+// CHECK: f16x8.nmadd{{$}}
 v128_t test_f16x8_relaxed_nmadd(v128_t a, v128_t b, v128_t c) {
   return wasm_f16x8_relaxed_nmadd(a, b, c);
 }
