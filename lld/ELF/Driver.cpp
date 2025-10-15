@@ -2091,6 +2091,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   nextGroupId = 0;
   isInGroup = false;
   bool hasInput = false, hasScript = false;
+  StringRef scriptFilePath, defaultScriptFilePath;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
@@ -2106,7 +2107,11 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     }
     case OPT_script:
+      scriptFilePath = arg->getValue();
+      [[fallthrough]];
     case OPT_default_script:
+      if (arg->getOption().matches(OPT_default_script))
+        defaultScriptFilePath = arg->getValue();
       if (std::optional<std::string> path =
               searchScript(ctx, arg->getValue())) {
         if (std::optional<MemoryBufferRef> mb = readFile(ctx, *path)) {
@@ -2201,6 +2206,10 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   if (defaultScript && !hasScript)
     readLinkerScript(ctx, *defaultScript);
+  if (defaultScript && hasScript)
+    Warn(ctx) << "--script at path " << scriptFilePath
+              << " will override --default-script at path "
+              << defaultScriptFilePath;
   if (files.empty() && !hasInput && errCount(ctx) == 0)
     ErrAlways(ctx) << "no input files";
 }

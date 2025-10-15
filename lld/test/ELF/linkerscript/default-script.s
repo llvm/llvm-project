@@ -32,6 +32,17 @@
 # CHECK1-NEXT: 3: 000000000000002a     0 NOTYPE  GLOBAL DEFAULT   ABS def
 # CHECK1-EMPTY:
 
+## When both --script and --default-script are specified, --script overrides
+## --default-script.
+# RUN: ld.lld --default-script def.t --script b.t a.o -o out2 2>warn.txt
+# RUN: llvm-readelf -Ss out2 | FileCheck %s --check-prefix=OVERRIDE
+# OVERRIDE:      .foo0
+# OVERRIDE-NEXT: foo1
+# OVERRIDE-NEXT: foo2
+# RUN: cat warn.txt | FileCheck %s --check-prefix=WARNING
+# WARNING: --script at path b.t will override --default-script at path def.t
+
+
 # RUN: not ld.lld --default-script not-exist.t b.t -T a.t a.o 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: error: cannot find linker script not-exist.t
 
@@ -61,3 +72,4 @@ SECTIONS {
   .foo1 : {}
   .foo0 : {}
 }
+
