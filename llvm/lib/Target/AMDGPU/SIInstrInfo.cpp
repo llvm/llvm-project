@@ -10612,17 +10612,20 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!CanOptimize)
       return false;
 
+    MachineInstr *KillsSCC = nullptr;
     for (MachineInstr &MI :
          make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
-      if (MI.modifiesRegister(AMDGPU::SCC, &RI) ||
-          MI.killsRegister(AMDGPU::SCC, &RI))
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
         return false;
+      if (MI.killsRegister(AMDGPU::SCC, &RI))
+        KillsSCC = &MI;
     }
 
     if (MachineOperand *SccDef =
             Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
       SccDef->setIsDead(false);
-
+    if (KillsSCC)
+      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
     CmpInstr.eraseFromParent();
     return true;
   };
@@ -10701,16 +10704,20 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
+    MachineInstr *KillsSCC = nullptr;
     for (MachineInstr &MI :
          make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
-      if (MI.modifiesRegister(AMDGPU::SCC, &RI) ||
-          MI.killsRegister(AMDGPU::SCC, &RI))
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
         return false;
+      if (MI.killsRegister(AMDGPU::SCC, &RI))
+        KillsSCC = &MI;
     }
 
     MachineOperand *SccDef =
         Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
     SccDef->setIsDead(false);
+    if (KillsSCC)
+      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
     CmpInstr.eraseFromParent();
 
     if (!MRI->use_nodbg_empty(DefReg)) {
