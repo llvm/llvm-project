@@ -791,12 +791,12 @@ define i1 @trunc_icmp(i8 %a0) {
 ; CHECK-NEXT:    [[TZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0:%.*]], i1 false)
 ; CHECK-NEXT:    [[TR:%.*]] = trunc nuw i8 [[TZ]] to i4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A0]], 0
-; CHECK-NEXT:    call void @use(i4 [[TR]])
+; CHECK-NEXT:    call void @use2(i4 [[TR]])
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %tz = tail call range(i8 0, 9) i8 @llvm.cttz.i8(i8 %a0, i1 false)
   %tr = trunc i8 %tz to i4
   %c = icmp eq i4 %tr, 8
-  call void @use(i4 %tr)
+  call void @use2(i4 %tr)
   ret i1 %c
 }
