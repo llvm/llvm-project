@@ -1,9 +1,9 @@
-<!--===- docs/DoConcurrent.md 
-  
+<!--===- docs/DoConcurrent.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # `DO CONCURRENT` isn't necessarily concurrent
@@ -280,7 +280,8 @@ Specifically, an easy means is required that stipulates that localization
 should apply at most only to the obvious cases of local non-pointer
 non-allocatable scalars.
 
-In the LLVM Fortran compiler project (a/k/a "flang", "f18") we considered
+In the LLVM Fortran compiler project (now known as "flang", previously also
+known as "f18") we considered
 several solutions to this problem.
 1. Add syntax (e.g., `DO PARALLEL` or `DO CONCURRENT() DEFAULT(PARALLEL)`)
    by which one can inform the compiler that it should localize only
