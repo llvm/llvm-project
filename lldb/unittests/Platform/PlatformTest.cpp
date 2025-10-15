@@ -157,3 +157,9 @@ TEST_F(PlatformTest, GetPlatformForArchitecturesCandidates) {
 
   PlatformThumb::Terminate();
 }
+
+TEST_F(PlatformTest, CreateUnknown) {
+  SetHostPlatform(std::make_shared<PlatformIntel>());
+  ASSERT_EQ(list.Create("unknown-platform-name"), nullptr);
+  ASSERT_EQ(list.GetOrCreate("dummy"), nullptr);
+}

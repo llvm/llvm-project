@@ -40,8 +40,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
-
 class directory_entry {
   typedef filesystem::path _Path;
 
@@ -286,7 +284,7 @@ private:
       return;
     }
     if (__ec && (!__allow_dne || !__is_dne_error(__ec)))
-      __throw_filesystem_error(__msg, __p_, __ec);
+      filesystem::__throw_filesystem_error(__msg, __p_, __ec);
   }
 
   _LIBCPP_HIDE_FROM_ABI void __refresh(error_code* __ec = nullptr) {
@@ -458,8 +456,6 @@ private:
   _LIBCPP_HIDE_FROM_ABI __dir_element_proxy(__dir_element_proxy&& __o) : __elem_(std::move(__o.__elem_)) {}
   directory_entry __elem_;
 };
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

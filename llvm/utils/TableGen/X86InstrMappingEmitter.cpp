@@ -66,6 +66,7 @@ private:
   void printTable(ArrayRef<Entry> Table, StringRef Name, StringRef Macro,
                   raw_ostream &OS);
 };
+} // namespace
 
 void X86InstrMappingEmitter::printClassDef(raw_ostream &OS) {
   OS << "struct X86TableEntry {\n"
@@ -98,26 +99,15 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
 
   // Print all entries added to the table
   for (const auto &Pair : Table)
-    OS << "  { X86::" << Pair.first->TheDef->getName()
-       << ", X86::" << Pair.second->TheDef->getName() << " },\n";
+    OS << "  { X86::" << Pair.first->getName()
+       << ", X86::" << Pair.second->getName() << " },\n";
 
   OS << "};\n\n";
 
   printMacroEnd(Macro, OS);
 }
 
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    const BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
-}
-
+namespace {
 class IsMatch {
   const CodeGenInstruction *OldInst;
 
@@ -158,6 +148,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 static bool isInteresting(const Record *Rec) {
   // _REV instruction should not appear before encoding optimization
@@ -228,8 +219,9 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
       // For each pre-compression instruction look for a match in the
       // appropriate vector (instructions with the same opcode) using function
       // object IsMatch.
-      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
-      if (Match != CompressedInsts[Opcode].end())
+      const auto &Insts = CompressedInsts[Opcode];
+      auto Match = llvm::find_if(Insts, IsMatch(Inst));
+      if (Match != Insts.end())
         NewInst = *Match;
     }
 
@@ -259,7 +251,7 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
      << "  default: return true;\n";
   for (const auto &[Key, Val] : PredicateInsts) {
     for (const auto &Inst : Val)
-      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
+      OS << "  case X86::" << Inst->getName() << ":\n";
     OS << "    return " << Key << ";\n";
   }
   OS << "  }\n";
@@ -274,26 +266,26 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     const Record *Rec = Inst->TheDef;
     if (!isInteresting(Rec))
       continue;
-    std::string Name = Rec->getName().str();
-    auto Pos = Name.find("_NF");
-    if (Pos == std::string::npos)
+    StringRef Name = Rec->getName();
+    if (Name.contains("_NF"))
       continue;
 
-    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3))) {
+    if (auto *NewRec = Name.consume_back("_ND")
+                           ? Records.getDef(Name.str() + "_NF_ND")
+                           : Records.getDef(Name.str() + "_NF")) {
 #ifndef NDEBUG
       auto ClobberEFLAGS = [](const Record *R) {
         return llvm::any_of(
             R->getValueAsListOfDefs("Defs"),
             [](const Record *Def) { return Def->getName() == "EFLAGS"; });
       };
-      if (ClobberEFLAGS(Rec))
+      if (ClobberEFLAGS(NewRec))
         report_fatal_error("EFLAGS should not be clobbered by " +
-                           Rec->getName());
-      if (!ClobberEFLAGS(NewRec))
-        report_fatal_error("EFLAGS should be clobbered by " +
                            NewRec->getName());
+      if (!ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should be clobbered by " + Rec->getName());
 #endif
-      Table.emplace_back(&Target.getInstruction(NewRec), Inst);
+      Table.emplace_back(Inst, &Target.getInstruction(NewRec));
     }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
@@ -372,15 +364,13 @@ void X86InstrMappingEmitter::emitSSE2AVXTable(
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 instruction mapping", OS);
 
-  ArrayRef<const CodeGenInstruction *> Insts =
-      Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> Insts = Target.getInstructions();
   printClassDef(OS);
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);
   emitND2NonNDTable(Insts, OS);
   emitSSE2AVXTable(Insts, OS);
 }
-} // namespace
 
 static TableGen::Emitter::OptClass<X86InstrMappingEmitter>
     X("gen-x86-instr-mapping", "Generate X86 instruction mapping");

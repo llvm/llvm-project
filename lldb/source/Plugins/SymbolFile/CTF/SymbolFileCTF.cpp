@@ -437,14 +437,11 @@ SymbolFileCTF::CreateArray(const CTFArray &ctf_array) {
         llvm::formatv("Could not find array element type: {0}", ctf_array.type),
         llvm::inconvertibleErrorCode());
 
-  std::optional<uint64_t> element_size = element_type->GetByteSize(nullptr);
-  if (!element_size)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("could not get element size of type: {0}",
-                      ctf_array.type),
-        llvm::inconvertibleErrorCode());
+  auto element_size_or_err = element_type->GetByteSize(nullptr);
+  if (!element_size_or_err)
+    return element_size_or_err.takeError();
 
-  uint64_t size = ctf_array.nelems * *element_size;
+  uint64_t size = ctf_array.nelems * *element_size_or_err;
 
   CompilerType compiler_type = m_ast->CreateArrayType(
       element_type->GetFullCompilerType(), ctf_array.nelems,
@@ -492,8 +489,8 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
         llvm::inconvertibleErrorCode());
 
   CompilerType func_type = m_ast->CreateFunctionType(
-      ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
-      ctf_function.variadic, 0, clang::CallingConv::CC_C);
+      ret_type->GetFullCompilerType(), arg_types, ctf_function.variadic, 0,
+      clang::CallingConv::CC_C);
 
   Declaration decl;
   return MakeType(ctf_function.uid, ConstString(ctf_function.name), 0, nullptr,
@@ -544,7 +541,8 @@ bool SymbolFileCTF::CompleteType(CompilerType &compiler_type) {
   for (const CTFRecord::Field &field : ctf_record->fields) {
     Type *field_type = ResolveTypeUID(field.type);
     assert(field_type && "field must be complete");
-    const uint32_t field_size = field_type->GetByteSize(nullptr).value_or(0);
+    const uint32_t field_size =
+        llvm::expectedToOptional(field_type->GetByteSize(nullptr)).value_or(0);
     TypeSystemClang::AddFieldToRecordType(compiler_type, field.name,
                                           field_type->GetFullCompilerType(),
                                           eAccessPublic, field_size);
@@ -740,8 +738,28 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
 
   LLDB_LOG(log, "Parsed {0} CTF types", m_ctf_types.size());
 
-  for (lldb::user_id_t uid = 1; uid < type_uid; ++uid)
+  for (lldb::user_id_t uid = 1; uid < type_uid; ++uid) {
     ResolveTypeUID(uid);
+
+    // Remove the CTF type because we don't need it anymore, except for record
+    // types which we may need to complete later.
+    auto ctf_type_it = m_ctf_types.find(uid);
+    if (ctf_type_it != m_ctf_types.end()) {
+      CTFType *ctf_type = ctf_type_it->second.get();
+      if (!llvm::isa<CTFRecord>(ctf_type))
+        m_ctf_types.erase(uid);
+    }
+  }
+
+#ifndef NDEBUG
+  // Verify that the only CTF types left at this point are record types.
+  for (auto &t : m_ctf_types) {
+    CTFType *ctf_type = t.second.get();
+    assert(ctf_type && "invalid type in m_ctf_types");
+    assert(llvm::isa<CTFRecord>(ctf_type) && "leaking non record type");
+  }
+
+#endif
 
   LLDB_LOG(log, "Created {0} CTF types", m_types.size());
 
@@ -816,8 +834,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       // Create function type.
       CompilerType func_type = m_ast->CreateFunctionType(
           ret_type ? ret_type->GetFullCompilerType() : CompilerType(),
-          arg_types.data(), arg_types.size(), is_variadic, 0,
-          clang::CallingConv::CC_C);
+          arg_types, is_variadic, 0, clang::CallingConv::CC_C);
       lldb::user_id_t function_type_uid = m_types.size() + 1;
       TypeSP type_sp =
           MakeType(function_type_uid, symbol->GetName(), 0, nullptr,
@@ -851,7 +868,7 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
   uint32_t byte_size = architecture.GetDataByteSize();
 
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
-  stream.PutHex8(lldb_private::dwarf::DW_OP_addr);
+  stream.PutHex8(llvm::dwarf::DW_OP_addr);
   stream.PutMaxHex64(symbol.GetFileAddress(), address_size, byte_order);
 
   DataBufferSP buffer =
@@ -946,8 +963,10 @@ uint32_t SymbolFileCTF::ResolveSymbolContext(const Address &so_addr,
   // Resolve functions.
   if (resolve_scope & eSymbolContextFunction) {
     for (FunctionSP function_sp : m_functions) {
-      if (function_sp->GetAddressRange().ContainsFileAddress(
-              so_addr.GetFileAddress())) {
+      if (llvm::any_of(
+              function_sp->GetAddressRanges(), [&](const AddressRange range) {
+                return range.ContainsFileAddress(so_addr.GetFileAddress());
+              })) {
         sc.function = function_sp.get();
         resolved_flags |= eSymbolContextFunction;
         break;
@@ -995,6 +1014,8 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
 
   CTFType *ctf_type = ctf_type_it->second.get();
   assert(ctf_type && "m_ctf_types should only contain valid CTF types");
+  assert(ctf_type->uid == type_uid &&
+         "CTF type UID doesn't match UID in m_ctf_types");
 
   Log *log = GetLog(LLDBLog::Symbols);
 
@@ -1015,11 +1036,6 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
   }
 
   m_types[type_uid] = type_sp;
-
-  // Except for record types which we'll need to complete later, we don't need
-  // the CTF type anymore.
-  if (!isa<CTFRecord>(ctf_type))
-    m_ctf_types.erase(type_uid);
 
   return type_sp.get();
 }

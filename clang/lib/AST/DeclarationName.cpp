@@ -113,14 +113,15 @@ static void printCXXConstructorDestructorName(QualType ClassType,
                                               PrintingPolicy Policy) {
   // We know we're printing C++ here. Ensure we print types properly.
   Policy.adjustForCPlusPlus();
+  Policy.SuppressScope = true;
 
-  if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
-    ClassRec->getDecl()->printName(OS, Policy);
+  if (const RecordType *ClassRec = ClassType->getAsCanonical<RecordType>()) {
+    ClassRec->getOriginalDecl()->printName(OS, Policy);
     return;
   }
   if (Policy.SuppressTemplateArgsInCXXConstructors) {
-    if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
-      InjTy->getDecl()->printName(OS, Policy);
+    if (auto *InjTy = ClassType->getAsCanonical<InjectedClassNameType>()) {
+      InjTy->getOriginalDecl()->printName(OS, Policy);
       return;
     }
   }
@@ -184,7 +185,7 @@ void DeclarationName::print(raw_ostream &OS,
     OS << "operator ";
     QualType Type = getCXXNameType();
     if (const RecordType *Rec = Type->getAs<RecordType>()) {
-      OS << *Rec->getDecl();
+      OS << *Rec->getOriginalDecl();
       return;
     }
     // We know we're printing C++ here, ensure we print 'bool' properly.

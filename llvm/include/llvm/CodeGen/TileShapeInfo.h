@@ -48,8 +48,7 @@ public:
         ColImm(InvalidImmShape) {
     assert(ShapesOperands.size() % 2 == 0 && "Miss row or col!");
 
-    for (auto *Shape : ShapesOperands)
-      Shapes.push_back(Shape);
+    llvm::append_range(Shapes, ShapesOperands);
 
     if (MRI)
       deduceImm(MRI);

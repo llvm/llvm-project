@@ -11,8 +11,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FormatVariadic.h"
 
-#include <cstddef>
-
 using namespace mlir;
 using namespace mlir::tracing;
 

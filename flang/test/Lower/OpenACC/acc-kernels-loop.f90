@@ -47,7 +47,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {
 ! CHECK:        acc.loop private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -59,7 +59,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels combined(loop) {
 ! CHECK:        acc.loop combined(kernels) private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -69,12 +69,12 @@ subroutine acc_kernels_loop
   END DO
   !$acc end kernels loop
 
-! CHECK:      acc.kernels {{.*}} {
+! CHECK:      acc.kernels {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
+! CHECK-NEXT: }
 
   !$acc kernels loop async(1)
   DO i = 1, n
@@ -101,6 +101,12 @@ subroutine acc_kernels_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
+
+  !$acc kernels loop async(async) device_type(nvidia) async(1)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+! CHECK: acc.kernels combined(loop) async(%{{.*}} : i32, %c1{{.*}} : i32 [#acc.device_type<nvidia>])
 
   !$acc kernels loop wait
   DO i = 1, n
@@ -291,7 +297,7 @@ subroutine acc_kernels_loop
   END DO
 
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.kernels {{.*}} self(%[[SELF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
@@ -393,6 +399,8 @@ subroutine acc_kernels_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
 
   !$acc kernels loop present(a, b)
   DO i = 1, n
@@ -407,6 +415,8 @@ subroutine acc_kernels_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
 
   !$acc kernels loop deviceptr(a) deviceptr(b)
   DO i = 1, n
@@ -480,7 +490,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -491,9 +501,9 @@ subroutine acc_kernels_loop
 
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -504,9 +514,9 @@ subroutine acc_kernels_loop
 
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -518,7 +528,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32})
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -530,7 +540,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} vector {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -543,7 +553,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -556,7 +566,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -568,7 +578,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} worker {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -581,7 +591,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -595,7 +605,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true>}
+! CHECK-NEXT:   } attributes {{{.*}}collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -611,9 +621,9 @@ subroutine acc_kernels_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:            acc.loop {{.*}} {
 ! CHECK:              acc.yield
-! CHECK-NEXT:     }{{$}}
+! CHECK-NEXT:     } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -653,7 +663,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
@@ -679,7 +689,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      acc.kernels {{.*}} {
-! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator

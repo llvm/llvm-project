@@ -1,5 +1,5 @@
-// RUN: echo "^std::.*$" > %T/allow-list.txt
-// RUN: clang-change-namespace -old_namespace "na::nb" -new_namespace "x::y" --file_pattern ".*" --allowed_file %T/allow-list.txt %s -- | sed 's,// CHECK.*,,' | FileCheck %s
+// RUN: echo "^std::.*$" > %t.allow-list.txt
+// RUN: clang-change-namespace -old_namespace "na::nb" -new_namespace "x::y" --file_pattern ".*" --allowed_file %t.allow-list.txt %s -- | sed 's,// CHECK.*,,' | FileCheck %s
 
 #include "Inputs/fake-std.h"
 

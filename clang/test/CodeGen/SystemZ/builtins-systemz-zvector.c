@@ -4889,7 +4889,7 @@ void test_float(void) {
   // CHECK: call <2 x double> @llvm.rint.v2f64(<2 x double> %{{.*}})
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 0, 0
   vd = vec_round(vd);
-  // CHECK: call <2 x double> @llvm.s390.vfidb(<2 x double> %{{.*}}, i32 4, i32 4)
+  // CHECK: call <2 x double> @llvm.roundeven.v2f64(<2 x double> %{{.*}})
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 4
 
   vbl = vec_fp_test_data_class(vd, 0, &cc);

@@ -88,11 +88,10 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                              unsigned PhysReg) const override;
+                              MCRegister PhysReg) const override;
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
@@ -158,11 +157,6 @@ public:
                       unsigned DstSubReg,
                       const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
-
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 };

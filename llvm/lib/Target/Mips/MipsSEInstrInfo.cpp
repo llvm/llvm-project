@@ -28,7 +28,7 @@ static unsigned getUnconditionalBranch(const MipsSubtarget &STI) {
 }
 
 MipsSEInstrInfo::MipsSEInstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI() {}
+    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI(STI) {}
 
 const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
   return RI;
@@ -79,8 +79,8 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc,
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0, ZeroReg = 0;
   bool isMicroMips = Subtarget.inMicroMipsMode();
@@ -682,8 +682,8 @@ MipsSEInstrInfo::compareOpndSize(unsigned Opc,
   const MCInstrDesc &Desc = get(Opc);
   assert(Desc.NumOperands == 2 && "Unary instruction expected.");
   const MipsRegisterInfo *RI = &getRegisterInfo();
-  unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0, RI, MF));
-  unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1, RI, MF));
+  unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0, RI));
+  unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1, RI));
 
   return std::make_pair(DstRegSize > SrcRegSize, DstRegSize < SrcRegSize);
 }

@@ -173,6 +173,7 @@ private:
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);
+  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName);
 
   void enqueueTask(std::function<void()> task);
   bool run();
@@ -209,11 +210,12 @@ private:
   void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
                       uint32_t *minor, bool *gotVersion = nullptr);
 
-  void parseAlternateName(StringRef);
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
-  void parseAligncomm(StringRef);
+  void parseSectionLayout(StringRef);
+
+  void parseSameAddress(StringRef);
 
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);

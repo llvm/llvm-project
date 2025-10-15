@@ -79,15 +79,12 @@ static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
 LLVM_DUMP_METHOD
 void llvm::dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
                               const TargetRegisterInfo *TRI) {
-  bool Empty = true;
   for (unsigned i = 0, e = SetPressure.size(); i < e; ++i) {
     if (SetPressure[i] != 0) {
-      dbgs() << TRI->getRegPressureSetName(i) << "=" << SetPressure[i] << '\n';
-      Empty = false;
+      dbgs() << TRI->getRegPressureSetName(i) << "=" << SetPressure[i] << ' ';
     }
   }
-  if (Empty)
-    dbgs() << "\n";
+  dbgs() << "\n";
 }
 
 LLVM_DUMP_METHOD
@@ -861,7 +858,7 @@ void RegPressureTracker::recedeSkipDebugValues() {
 
 void RegPressureTracker::recede(SmallVectorImpl<VRegMaskOrUnit> *LiveUses) {
   recedeSkipDebugValues();
-  if (CurrPos->isDebugInstr() || CurrPos->isPseudoProbe()) {
+  if (CurrPos->isDebugOrPseudoInstr()) {
     // It's possible to only have debug_value and pseudo probe instructions and
     // hit the start of the block.
     assert(CurrPos == MBB->begin());
@@ -1004,7 +1001,7 @@ static void computeMaxPressureDelta(ArrayRef<unsigned> OldMaxPressureVec,
         ++CritIdx;
 
       if (CritIdx != CritEnd && CriticalPSets[CritIdx].getPSet() == i) {
-        int PDiff = (int)PNew - (int)CriticalPSets[CritIdx].getUnitInc();
+        int PDiff = (int)PNew - CriticalPSets[CritIdx].getUnitInc();
         if (PDiff > 0) {
           Delta.CriticalMax = PressureChange(i);
           Delta.CriticalMax.setUnitInc(PDiff);
@@ -1194,7 +1191,7 @@ getUpwardPressureDelta(const MachineInstr *MI, /*const*/ PressureDiff &PDiff,
         ++CritIdx;
 
       if (CritIdx != CritEnd && CriticalPSets[CritIdx].getPSet() == PSetID) {
-        int CritInc = (int)MNew - (int)CriticalPSets[CritIdx].getUnitInc();
+        int CritInc = (int)MNew - CriticalPSets[CritIdx].getUnitInc();
         if (CritInc > 0 && CritInc <= std::numeric_limits<int16_t>::max()) {
           Delta.CriticalMax = PressureChange(PSetID);
           Delta.CriticalMax.setUnitInc(CritInc);

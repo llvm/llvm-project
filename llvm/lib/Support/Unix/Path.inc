@@ -69,7 +69,8 @@ extern char **environ;
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX) &&   \
+    !defined(__managarm__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -78,7 +79,7 @@ extern char **environ;
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__managarm__)
 #if defined(HAVE_LINUX_MAGIC_H)
 #include <linux/magic.h>
 #else
@@ -121,10 +122,12 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||      \
-    defined(__FreeBSD_kernel__) || defined(__linux__) || defined(__CYGWIN__) || \
-    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) ||              \
-    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__))
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+    defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
+    defined(__GNU__) ||                                                        \
+    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__)) ||           \
+    defined(__managarm__)
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
   char fullpath[PATH_MAX];
@@ -245,7 +248,8 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // If we don't have procfs mounted, fall back to argv[0]
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
-#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__)
+#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__) ||    \
+    defined(__managarm__)
   char exe_path[PATH_MAX];
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
@@ -385,8 +389,9 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
       }
       // Otherwise there just wasn't enough space.
       result.resize_for_overwrite(result.capacity() * 2);
-    } else
+    } else {
       break;
+    }
   }
 
   result.truncate(strlen(result.data()));
@@ -472,7 +477,7 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 }
 
 static bool is_local_impl(struct STATVFS &Vfs) {
-#if defined(__linux__) || defined(__GNU__)
+#if defined(__linux__) || defined(__GNU__) || defined(__managarm__)
 #ifndef NFS_SUPER_MAGIC
 #define NFS_SUPER_MAGIC 0x6969
 #endif
@@ -593,6 +598,11 @@ std::error_code resize_file(int FD, uint64_t Size) {
     return errnoAsErrorCode();
 
   return std::error_code();
+}
+
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  // On Unix, this is the same as `resize_file`.
+  return resize_file(FD, Size);
 }
 
 static int convertAccessMode(AccessMode Mode) {
@@ -871,6 +881,12 @@ void mapped_file_region::unmapImpl() {
     ::munmap(Mapping, Size);
 }
 
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
+}
+
 void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
@@ -934,8 +950,9 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
         (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
       return directory_iterator_increment(It);
     It.CurrentEntry.replace_filename(Name, direntType(CurDir));
-  } else
+  } else {
     return directory_iterator_destruct(It);
+  }
 
   return std::error_code();
 }
@@ -1091,14 +1108,14 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::enableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
-      if (auto EC = llvm::disablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
@@ -1184,7 +1201,7 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
-  if (ssize_t(NumRead) == -1)
+  if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
 // for reading in more cases than other platforms.
@@ -1218,13 +1235,21 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   return NumRead;
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
     struct flock Lock;
     memset(&Lock, 0, sizeof(Lock));
-    Lock.l_type = F_WRLCK;
+    switch (Kind) {
+    case LockKind::Exclusive:
+      Lock.l_type = F_WRLCK;
+      break;
+    case LockKind::Shared:
+      Lock.l_type = F_RDLCK;
+      break;
+    }
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
@@ -1233,15 +1258,24 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
     int Error = errno;
     if (Error != EACCES && Error != EAGAIN)
       return std::error_code(Error, std::generic_category());
+    if (Timeout.count() == 0)
+      break;
     usleep(1000);
   } while (std::chrono::steady_clock::now() < End);
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD) {
+std::error_code lockFile(int FD, LockKind Kind) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = F_WRLCK;
+  switch (Kind) {
+  case LockKind::Exclusive:
+    Lock.l_type = F_WRLCK;
+    break;
+  case LockKind::Shared:
+    Lock.l_type = F_RDLCK;
+    break;
+  }
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;

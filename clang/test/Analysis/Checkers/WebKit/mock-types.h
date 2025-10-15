@@ -1,3 +1,22 @@
+#ifndef std_move
+#define std_move
+
+namespace std {
+
+template <typename T> struct remove_reference {
+typedef T type;
+};
+
+template <typename T> struct remove_reference<T&> {
+typedef T type;
+};
+
+template<typename T> typename remove_reference<T>::type&& move(T&& t);
+
+}
+
+#endif
+
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
 
@@ -249,7 +268,7 @@ public:
   T *get() const { return t; }
   T *operator->() const { return t; }
   T &operator*() const { return *t; }
-  CheckedPtr &operator=(T *) { return *this; }
+  CheckedPtr &operator=(T *);
   operator bool() const { return t; }
 };
 
@@ -289,6 +308,7 @@ public:
     u.t = nullptr;
   }
   T &get() const { return *t; }
+  operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
 };

@@ -469,7 +469,7 @@ define fp128 @uitofp_i8(i8 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    call __floatunsitf
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -910,4 +910,29 @@ define fp128 @tanh(fp128 %a) nounwind {
 ; CHECK-NEXT:    ret
   %1 = call fp128 @llvm.tanh.f128(fp128 %a)
   ret fp128 %1
+}
+
+define { fp128, fp128 } @modf(fp128 %a) nounwind {
+; CHECK-LABEL: modf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    mv a2, sp
+; CHECK-NEXT:    call modfl
+; CHECK-NEXT:    ld a2, 0(sp)
+; CHECK-NEXT:    ld a3, 8(sp)
+; CHECK-NEXT:    sd a0, 0(s0)
+; CHECK-NEXT:    sd a1, 8(s0)
+; CHECK-NEXT:    sd a2, 16(s0)
+; CHECK-NEXT:    sd a3, 24(s0)
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    ret
+  %result = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)
+  ret { fp128, fp128 } %result
 }

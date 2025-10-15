@@ -57,7 +57,7 @@ define <8 x i16> @cmp_ne_load_const_volatile(ptr %x) nounwind {
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    vpmovsxbw %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -107,7 +107,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use1(ptr %x) nounwind {
 ; AVX512-NEXT:    callq use_v8i8@PLT
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpeqb (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    vpmovsxbw %xmm0, %xmm0
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    vzeroupper
@@ -159,7 +159,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use2(ptr %x) nounwind {
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    vmovdqu64 %zmm0, (%rsp) # 64-byte Spill
 ; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512-NEXT:    vzeroupper
@@ -202,7 +202,7 @@ define <8 x i16> @cmp_ne_no_load_const(i64 %x) nounwind {
 ; AVX512-NEXT:    vmovq %rdi, %xmm0
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    vpmovsxbw %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -267,7 +267,7 @@ define <3 x i32> @cmp_ult_load_const_bad_type(ptr %x) nounwind {
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -326,7 +326,7 @@ define <2 x i64> @cmp_ne_zextload(ptr %x, ptr %y) nounwind {
 ; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
 ; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
 ; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -414,7 +414,7 @@ define <8 x i32> @cmp_ne_zextload_from_legal_op(ptr %x, ptr %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512-NEXT:    vpcmpeqw (%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    retq
   %loadx = load <8 x i16>, ptr %x
@@ -679,7 +679,7 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; AVX512-NEXT:    korw %k5, %k0, %k0
 ; AVX512-NEXT:    korw %k6, %k0, %k0
 ; AVX512-NEXT:    korw %k7, %k0, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
 entry:

@@ -889,7 +889,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     }
 
     // Handle multiple gc.relocates of the same input efficiently.
-    if (VirtRegs.count(SD))
+    auto [VRegIt, Inserted] = VirtRegs.try_emplace(SD);
+    if (!Inserted)
       continue;
 
     auto *RetTy = Relocate->getType();
@@ -900,7 +901,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
     PendingExports.push_back(Chain);
 
-    VirtRegs[SD] = Reg;
+    VRegIt->second = Reg;
   }
 
   // Record for later use how each relocation was lowered.  This is needed to
@@ -915,13 +916,16 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     bool IsLocal = (Relocate->getParent() == StatepointInstr->getParent());
 
     RecordType Record;
-    if (IsLocal && LowerAsVReg.count(SDV)) {
-      // Result is already stored in StatepointLowering
-      Record.type = RecordType::SDValueNode;
-    } else if (LowerAsVReg.count(SDV)) {
-      Record.type = RecordType::VReg;
-      assert(VirtRegs.count(SDV));
-      Record.payload.Reg = VirtRegs[SDV];
+    if (LowerAsVReg.count(SDV)) {
+      if (IsLocal) {
+        // Result is already stored in StatepointLowering
+        Record.type = RecordType::SDValueNode;
+      } else {
+        Record.type = RecordType::VReg;
+        auto It = VirtRegs.find(SDV);
+        assert(It != VirtRegs.end());
+        Record.payload.Reg = It->second;
+      }
     } else if (Loc.getNode()) {
       Record.type = RecordType::Spill;
       Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();
@@ -1254,7 +1258,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   if (Record.type == RecordType::Spill) {
     unsigned Index = Record.payload.FI;
-    SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
+    SDValue SpillSlot = DAG.getFrameIndex(Index, getFrameIndexTy());
 
     // All the reloads are independent and are reading memory only modified by
     // statepoints (i.e. no other aliasing stores); informing SelectionDAG of

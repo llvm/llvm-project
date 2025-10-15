@@ -485,10 +485,7 @@ struct LoopBounds {
 
 // Specialize po_iterator_storage in order to prune the post-order traversal so
 // it is limited to the current loop and doesn't traverse the loop back edges.
-namespace llvm {
-
-template<>
-class po_iterator_storage<LoopBounds, true> {
+template <> class llvm::po_iterator_storage<LoopBounds, true> {
   LoopBounds &LB;
 
 public:
@@ -518,8 +515,6 @@ public:
     return LB.Visited.insert(To).second;
   }
 };
-
-} // end namespace llvm
 
 /// Compute the trace through MBB.
 void MachineTraceMetrics::Ensemble::computeTrace(const MachineBasicBlock *MBB) {
@@ -680,9 +675,9 @@ struct DataDep {
     : DefMI(DefMI), DefOp(DefOp), UseOp(UseOp) {}
 
   /// Create a DataDep from an SSA form virtual register.
-  DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
-    : UseOp(UseOp) {
-    assert(Register::isVirtualRegister(VirtReg));
+  DataDep(const MachineRegisterInfo *MRI, Register VirtReg, unsigned UseOp)
+      : UseOp(UseOp) {
+    assert(VirtReg.isVirtual());
     MachineOperand *DefMO = MRI->getOneDef(VirtReg);
     assert(DefMO && "Register does not have unique def");
     DefMI = DefMO->getParent();
@@ -1071,7 +1066,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
       } else {
         // For register units, the def latency is not included because we don't
         // know the def yet.
-        RegUnits[LI.Reg].Cycle = LI.Height;
+        RegUnits[LI.Reg.id()].Cycle = LI.Height;
       }
     }
   }

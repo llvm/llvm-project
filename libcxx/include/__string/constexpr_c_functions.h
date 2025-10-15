@@ -22,7 +22,6 @@
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/remove_cv.h>
 #include <__utility/element_count.h>
@@ -146,7 +145,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp*
     return nullptr;
   } else {
     char __value_buffer = 0;
-    __builtin_memcpy(&__value_buffer, &__value, sizeof(char));
+    __builtin_memcpy(&__value_buffer, std::addressof(__value), sizeof(char));
     return static_cast<_Tp*>(__builtin_memchr(__str, __value_buffer, __count));
   }
 }
@@ -225,6 +224,8 @@ __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n) {
           std::__assign_trivially_copyable(__dest[__i], __src[__i]);
       }
     }
+  } else if _LIBCPP_CONSTEXPR (sizeof(_Tp) == __datasizeof_v<_Tp>) {
+    ::__builtin_memmove(__dest, __src, __count * sizeof(_Tp));
   } else if (__count > 0) {
     ::__builtin_memmove(__dest, __src, (__count - 1) * sizeof(_Tp) + __datasizeof_v<_Tp>);
   }

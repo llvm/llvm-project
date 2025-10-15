@@ -18,13 +18,13 @@
 #include "shape.h"
 #include "tools.h"
 #include "type.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -174,6 +174,14 @@ public:
   }
   const std::optional<Shape> &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
+  Attrs &attrs() { return attrs_; }
+  bool isPossibleSequenceAssociation() const {
+    return isPossibleSequenceAssociation_;
+  }
+  TypeAndShape &set_isPossibleSequenceAssociation(bool yes) {
+    isPossibleSequenceAssociation_ = yes;
+    return *this;
+  }
   int corank() const { return corank_; }
   void set_corank(int n) { corank_ = n; }
 
@@ -195,6 +203,12 @@ public:
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
       FoldingContext &) const;
 
+  bool IsExplicitShape() const {
+    // If it's array and no special attributes are set, then must be
+    // explicit shape.
+    return Rank() > 0 && attrs_.none();
+  }
+
   // called by Fold() to rewrite in place
   TypeAndShape &Rewrite(FoldingContext &);
 
@@ -209,18 +223,18 @@ private:
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
 
-protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
   std::optional<Shape> shape_;
   Attrs attrs_;
+  bool isPossibleSequenceAssociation_{false};
   int corank_{0};
 };
 
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual)
+      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
     return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
@@ -237,7 +251,8 @@ struct DummyDataObject {
       std::optional<std::string> *warning = nullptr) const;
   static std::optional<DummyDataObject> Characterize(
       const semantics::Symbol &, FoldingContext &);
-  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
+  bool CanBePassedViaImplicitInterface(
+      std::string *whyNot = nullptr, bool checkCUDA = true) const;
   bool IsPassedByDescriptor(bool isBindC) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
@@ -293,7 +308,8 @@ struct DummyArgument {
   void SetOptional(bool = true);
   common::Intent GetIntent() const;
   void SetIntent(common::Intent);
-  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
+  bool CanBePassedViaImplicitInterface(
+      std::string *whyNot = nullptr, bool checkCUDA = true) const;
   bool IsTypelessIntrinsicDummy() const;
   bool IsCompatibleWith(const DummyArgument &, std::string *whyNot = nullptr,
       std::optional<std::string> *warning = nullptr) const;
@@ -349,8 +365,8 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(
-      Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer, Subroutine)
+  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
+      NullAllocatable, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(){};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);
@@ -388,7 +404,8 @@ struct Procedure {
     return !attrs.test(Attr::ImplicitInterface);
   }
   std::optional<int> FindPassIndex(std::optional<parser::CharBlock>) const;
-  bool CanBeCalledViaImplicitInterface(std::string *whyNot = nullptr) const;
+  bool CanBeCalledViaImplicitInterface(
+      std::string *whyNot = nullptr, bool checkCUDA = true) const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
   bool IsCompatibleWith(const Procedure &, bool ignoreImplicitVsExplicit,
       std::string *whyNot = nullptr, const SpecificIntrinsic * = nullptr,

@@ -6,7 +6,17 @@
 define void @fuzz22357(i128 %a0) {
 ; X86-LABEL: fuzz22357:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movb $0, (%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fuzz22357:
@@ -24,6 +34,15 @@ define void @fuzz22357(i128 %a0) {
 define void @fuzz22723(i128 %a0) {
 ; X86-LABEL: fuzz22723:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fuzz22723:

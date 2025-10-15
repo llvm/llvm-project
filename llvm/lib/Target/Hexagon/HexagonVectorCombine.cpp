@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 
@@ -363,7 +364,7 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
@@ -374,7 +375,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
@@ -393,7 +394,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
@@ -407,7 +408,7 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)
@@ -986,7 +987,7 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
     if (Move.Main.size() >= SizeLimit)
       return false;
-    // For stores with return values we'd have to collect downward depenencies.
+    // For stores with return values we'd have to collect downward dependencies.
     // There are no such stores that we handle at the moment, so omit that.
     assert(Info.Inst->getType()->isVoidTy() &&
            "Not handling stores with return values");
@@ -1174,8 +1175,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      EarliestUser[S.Seg.Val] = std::min(
-          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
+      auto &EU = EarliestUser[S.Seg.Val];
+      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 
@@ -1676,9 +1677,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return m_CombineOr(m_LShr(V, S), m_AShr(V, S));
   };
 
-  const APInt *Qn = nullptr;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_APInt(Qn)))) {
-    Op.Frac = Qn->getZExtValue();
+  uint64_t Qn = 0;
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+    Op.Frac = Qn;
     Exp = T;
   } else {
     Op.Frac = 0;
@@ -1688,9 +1689,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return std::nullopt;
 
   // Check if there is rounding added.
-  const APInt *C = nullptr;
-  if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    uint64_t CV = C->getZExtValue();
+  uint64_t CV;
+  if (Value *T;
+      Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
@@ -2317,9 +2318,9 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   assert(0 <= Where && Where + Length <= DstLen);
 
   int P2Len = PowerOf2Ceil(SrcLen | DstLen);
-  auto *Undef = UndefValue::get(getByteTy());
-  Value *P2Src = vresize(Builder, Src, P2Len, Undef);
-  Value *P2Dst = vresize(Builder, Dst, P2Len, Undef);
+  auto *Poison = PoisonValue::get(getByteTy());
+  Value *P2Src = vresize(Builder, Src, P2Len, Poison);
+  Value *P2Dst = vresize(Builder, Dst, P2Len, Poison);
 
   SmallVector<int, 256> SMask(P2Len);
   for (int i = 0; i != P2Len; ++i) {
@@ -2330,7 +2331,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   }
 
   Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
-  return vresize(Builder, P2Insert, DstLen, Undef);
+  return vresize(Builder, P2Insert, DstLen, Poison);
 }
 
 auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
@@ -2392,7 +2393,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");
@@ -2828,13 +2829,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
 auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
                                                  const Instruction *CtxI) const
     -> unsigned {
-  return ComputeMaxSignificantBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return ComputeMaxSignificantBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return computeKnownBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {
@@ -2930,11 +2931,6 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 }
 
 // Pass management.
-
-namespace llvm {
-void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
-FunctionPass *createHexagonVectorCombineLegacyPass();
-} // namespace llvm
 
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {

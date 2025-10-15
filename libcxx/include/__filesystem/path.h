@@ -17,7 +17,9 @@
 #include <__fwd/functional.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
@@ -27,7 +29,6 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <iomanip> // for quoted
-#  include <locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -40,8 +41,6 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 template <class _Tp>
 struct __can_convert_char {
@@ -583,7 +582,7 @@ public:
 
   template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI path& operator+=(_ECharT __x) {
-    _PathCVT<_ECharT>::__append_source(__pn_, basic_string_view<_ECharT>(&__x, 1));
+    _PathCVT<_ECharT>::__append_source(__pn_, basic_string_view<_ECharT>(std::addressof(__x), 1));
     return *this;
   }
 
@@ -860,7 +859,7 @@ public:
   }
 
   // iterators
-  class _LIBCPP_EXPORTED_FROM_ABI iterator;
+  class iterator;
   typedef iterator const_iterator;
 
   iterator begin() const;
@@ -909,14 +908,12 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept { __lh
 
 _LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <>
-struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
+struct hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(filesystem::path const& __p) const noexcept {
     return filesystem::hash_value(__p);
   }

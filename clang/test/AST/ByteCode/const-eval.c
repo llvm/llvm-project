@@ -5,11 +5,7 @@
 
 /// This is a version of test/Sema/const-eval.c with the
 /// tests commented out that the new constant expression interpreter does
-/// not support yet. They are all marked with the NEW_INTERP define:
-///
-///   - builtin_constant_p
-///   - unions
-
+/// not support yet. They are all marked with the NEW_INTERP define.
 
 #define EVAL_EXPR(testno, expr) enum { test##testno = (expr) }; struct check_positive##testno { int a[test##testno]; };
 int x;
@@ -52,9 +48,7 @@ struct s {
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
 
-#ifndef NEW_INTERP
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));
-#endif
 
 EVAL_EXPR(21, (__imag__ 2i) == 2 ? 1 : -1);
 
@@ -112,11 +106,9 @@ int intLvalue[*(int*)((long)&n ?: 1)] = { 1, 2 }; // both-error {{variable lengt
 union u { int a; char b[4]; };
 char c = ((union u)(123456)).b[0]; // both-error {{not a compile-time constant}}
 
-#ifndef NEW_INTERP
 extern const int weak_int __attribute__((weak));
 const int weak_int = 42;
 int weak_int_test = weak_int; // both-error {{not a compile-time constant}}
-#endif
 
 int literalVsNull1 = "foo" == 0;
 int literalVsNull2 = 0 == "foo";
@@ -125,10 +117,8 @@ int literalVsNull2 = 0 == "foo";
 int castViaInt[*(int*)(unsigned long)"test"]; // both-error {{variable length array}}
 
 // PR11391.
-#ifndef NEW_INTERP
 struct PR11391 { _Complex float f; } pr11391;
 EVAL_EXPR(42, __builtin_constant_p(pr11391.f = 1))
-#endif
 
 // PR12043
 float varfloat;
@@ -154,7 +144,7 @@ EVAL_EXPR(52, &pr24622 == (void *)&PR24622);
 
 // We evaluate these by providing 2s' complement semantics in constant
 // expressions, like we do for integers.
-void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // both-warning {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2305843009213693952 elements)}}
+void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // both-warning {{the pointer incremented by 18'446'744'073'709'551'615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2'305'843'009'213'693'952 elements)}}
 
 void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;                  // both-warning {{refers past the last possible element}}
 __int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c; // both-warning {{refers past the last possible element}}
@@ -180,6 +170,9 @@ typedef __INTPTR_TYPE__ intptr_t;
 const intptr_t A = (intptr_t)(((int*) 0) + 1);
 const intptr_t B = (intptr_t)(((char*)0) + 3);
 _Static_assert(A > B, "");
+int * GH149500_p = &(*(int *)0x400);
+static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);
+
 #else
 #error :(
 #endif

@@ -12,6 +12,7 @@
 
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "longjmp"
@@ -25,11 +26,6 @@ extern llvm::cl::opt<unsigned> AlignText;
 extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
-
-static cl::opt<bool>
-    CompactCodeModel("compact-code-model",
-                     cl::desc("generate code for binaries <128MB on AArch64"),
-                     cl::init(false), cl::cat(BoltCategory));
 
 static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
@@ -898,6 +894,10 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
+
+  assert((opts::CompactCodeModel ||
+          opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
+         "LongJmp cannot work with functions split in more than two fragments");
 
   if (opts::CompactCodeModel) {
     BC.outs()

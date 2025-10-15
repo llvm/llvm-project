@@ -1,6 +1,6 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-unknown -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-unknown -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
 
 ; ALL-LABEL: {{^}}test:
 ; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1
@@ -85,7 +85,7 @@ define amdgpu_kernel void @test_no_kernargs() #4 {
   %kernarg.segment.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %gep = getelementptr i32, ptr addrspace(4) %kernarg.segment.ptr, i64 10
   %value = load i32, ptr addrspace(4) %gep
-  store volatile i32 %value, ptr addrspace(1) undef
+  store volatile i32 %value, ptr addrspace(1) poison
   ret void
 }
 

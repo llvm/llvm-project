@@ -585,6 +585,28 @@ namespace regression2 {
   template <typename, int> struct Matrix;
   template struct D<Matrix<double, 3>>;
 } // namespace regression2
+namespace regression3 {
+  struct None {};
+  template<class T> struct Node { using type = T; };
+
+  template <template<class> class TT, class T>
+  struct A {
+    static_assert(!__is_same(T, None));
+    using type2 = typename A<TT, typename T::type>::type2;
+  };
+
+  template <template<class> class TT> struct A<TT, None> {
+    using type2 = void;
+  };
+
+  template <class...> class B {};
+  template struct A<B, Node<None>>;
+} // namespace regression3
+namespace GH130362 {
+  template <template <template <class... T1> class TT1> class TT2> struct A {};
+  template <template <class U1> class UU1> struct B {};
+  template struct A<B>;
+} // namespace GH130362
 
 namespace nttp_auto {
   namespace t1 {
@@ -593,24 +615,16 @@ namespace nttp_auto {
     template struct A<B>;
   } // namespace t1
   namespace t2 {
-    // FIXME: Shouldn't accept parameters after a parameter pack.
     template<template<auto... Va1, auto Va2> class> struct A {};
-    // expected-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
-    // expected-note@-2 {{previous template template parameter is here}}
+    // expected-error@-1 {{template parameter pack must be the last template parameter}}
     template<int... Vi> struct B;
-    // expected-note@-1 {{template parameter is declared here}}
     template struct A<B>;
-    // expected-note@-1 {{different template parameters}}
   } // namespace t2
   namespace t3 {
-    // FIXME: Shouldn't accept parameters after a parameter pack.
     template<template<auto... Va1, auto... Va2> class> struct A {};
-    // expected-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
-    // expected-note@-2 {{previous template template parameter is here}}
+    // expected-error@-1 {{template parameter pack must be the last template parameter}}
     template<int... Vi> struct B;
-    // expected-note@-1 {{template parameter is declared here}}
     template struct A<B>;
-    // expected-note@-1 {{different template parameters}}
   } // namespace t3
 } // namespace nttp_auto
 
@@ -658,3 +672,22 @@ namespace nttp_partial_order {
     template void f<B>(B<nullptr>);
   } // namespace t6
 } // namespace nttp_partial_order
+
+namespace nttp_inconsistent {
+  namespace t1 {
+    template<class A, A B> struct X {};
+    // expected-error@-1 {{conflicting deduction 'C' against 'int' for parameter}}
+    template<template<class C, int D> class TT> struct Y {};
+    // expected-note@-1 {{previous template template parameter is here}}
+    template struct Y<X>;
+    // expected-note@-1 {{has different template parameters}}
+  } // namespace t1
+  namespace t2 {
+    template<class A, A B = 0> struct X {};
+    // expected-error@-1 {{conflicting deduction 'C' against 'int' for parameter}}
+    template<template<class C> class TT> struct Y {};
+    // expected-note@-1 {{previous template template parameter is here}}
+    template struct Y<X>;
+    // expected-note@-1 {{has different template parameters}}
+  } // namespace t2
+} // namespace nttp_inconsistent

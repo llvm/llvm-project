@@ -12,6 +12,7 @@
 
 #include "MSP430InstrInfo.h"
 #include "MSP430.h"
+#include "MSP430Subtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -24,9 +25,9 @@ using namespace llvm;
 // Pin the vtable to this file.
 void MSP430InstrInfo::anchor() {}
 
-MSP430InstrInfo::MSP430InstrInfo(MSP430Subtarget &STI)
-  : MSP430GenInstrInfo(MSP430::ADJCALLSTACKDOWN, MSP430::ADJCALLSTACKUP),
-    RI() {}
+MSP430InstrInfo::MSP430InstrInfo(const MSP430Subtarget &STI)
+    : MSP430GenInstrInfo(STI, MSP430::ADJCALLSTACKDOWN, MSP430::ADJCALLSTACKUP),
+      RI() {}
 
 void MSP430InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -83,8 +84,8 @@ void MSP430InstrInfo::loadRegFromStackSlot(
 
 void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc,
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc;
   if (MSP430::GR16RegClass.contains(DestReg, SrcReg))

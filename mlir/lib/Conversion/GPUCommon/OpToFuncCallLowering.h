@@ -57,8 +57,9 @@ public:
   explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
                                 StringRef f32Func, StringRef f64Func,
                                 StringRef f32ApproxFunc, StringRef f16Func,
-                                StringRef i32Func = "")
-      : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
+                                StringRef i32Func = "",
+                                PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<SourceOp>(lowering, benefit), f32Func(f32Func),
         f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func),
         i32Func(i32Func) {}
 
@@ -71,11 +72,13 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
+    bool isResultBool = op->getResultTypes().front().isInteger(1);
     if constexpr (!std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
                                    SourceOp>::value) {
       assert(op->getNumOperands() > 0 &&
              "expected op to take at least one operand");
-      assert(op->getResultTypes().front() == op->getOperand(0).getType() &&
+      assert((op->getResultTypes().front() == op->getOperand(0).getType() ||
+              isResultBool) &&
              "expected op with same operand and result types");
     }
 
@@ -88,26 +91,44 @@ public:
     for (Value operand : adaptor.getOperands())
       castedOperands.push_back(maybeCast(operand, rewriter));
 
-    Type resultType = castedOperands.front().getType();
+    Type castedOperandType = castedOperands.front().getType();
+
+    // At ABI level, booleans are treated as i32.
+    Type resultType =
+        isResultBool ? rewriter.getIntegerType(32) : castedOperandType;
     Type funcType = getFunctionType(resultType, castedOperands);
-    StringRef funcName = getFunctionName(
-        cast<LLVM::LLVMFunctionType>(funcType).getReturnType(), op);
+    StringRef funcName = getFunctionName(castedOperandType, op);
     if (funcName.empty())
       return failure();
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp =
-        rewriter.create<LLVM::CallOp>(op->getLoc(), funcOp, castedOperands);
+        LLVM::CallOp::create(rewriter, op->getLoc(), funcOp, castedOperands);
 
     if (resultType == adaptor.getOperands().front().getType()) {
       rewriter.replaceOp(op, {callOp.getResult()});
       return success();
     }
 
+    // Boolean result are mapping to i32 at the ABI level with zero values being
+    // interpreted as false and non-zero values being interpreted as true. Since
+    // there is no guarantee of a specific value being used to indicate true,
+    // compare for inequality with zero (rather than truncate or shift).
+    if (isResultBool) {
+      Value zero = LLVM::ConstantOp::create(rewriter, op->getLoc(),
+                                            rewriter.getIntegerType(32),
+                                            rewriter.getI32IntegerAttr(0));
+      Value truncated =
+          LLVM::ICmpOp::create(rewriter, op->getLoc(), LLVM::ICmpPredicate::ne,
+                               callOp.getResult(), zero);
+      rewriter.replaceOp(op, {truncated});
+      return success();
+    }
+
     assert(callOp.getResult().getType().isF32() &&
            "only f32 types are supposed to be truncated back");
-    Value truncated = rewriter.create<LLVM::FPTruncOp>(
-        op->getLoc(), adaptor.getOperands().front().getType(),
+    Value truncated = LLVM::FPTruncOp::create(
+        rewriter, op->getLoc(), adaptor.getOperands().front().getType(),
         callOp.getResult());
     rewriter.replaceOp(op, {truncated});
     return success();
@@ -118,12 +139,13 @@ public:
     if (!isa<Float16Type, BFloat16Type>(type))
       return operand;
 
-    // if there's a f16 function, no need to cast f16 values
+    // If there's an f16 function, no need to cast f16 values.
     if (!f16Func.empty() && isa<Float16Type>(type))
       return operand;
 
-    return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
+    return LLVM::FPExtOp::create(rewriter, operand.getLoc(),
+                                 Float32Type::get(rewriter.getContext()),
+                                 operand);
   }
 
   Type getFunctionType(Type resultType, ValueRange operands) const {
@@ -144,7 +166,12 @@ public:
     auto parentFunc = op->getParentOfType<FunctionOpInterface>();
     assert(parentFunc && "expected there to be a parent function");
     OpBuilder b(parentFunc);
-    return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
+
+    // Create a valid global location removing any metadata attached to the
+    // location as debug info metadata inside of a function cannot be used
+    // outside of that function.
+    auto globalloc = op->getLoc()->findInstanceOfOrUnknown<FileLineColLoc>();
+    return LLVMFuncOp::create(b, globalloc, funcName, funcType);
   }
 
   StringRef getFunctionName(Type type, SourceOp op) const {

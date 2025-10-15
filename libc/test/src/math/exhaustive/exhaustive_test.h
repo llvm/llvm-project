@@ -164,12 +164,13 @@ struct LlvmLibcExhaustiveMathTest
 
             range_begin = current_value;
             if (stop >= Increment && stop - Increment >= current_value) {
-              range_end = current_value + Increment;
+              range_end = static_cast<StorageType>(current_value + Increment);
             } else {
               range_end = stop;
             }
             current_value = range_end;
-            int pc = 100.0 * (range_end - start) / (stop - start);
+            int pc =
+                static_cast<int>(100.0 * (range_end - start) / (stop - start));
             if (current_percent != pc) {
               new_percent = pc;
               current_percent = pc;

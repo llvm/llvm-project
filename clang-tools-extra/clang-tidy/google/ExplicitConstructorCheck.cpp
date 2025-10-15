@@ -1,4 +1,4 @@
-//===--- ExplicitConstructorCheck.cpp - clang-tidy ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -72,7 +72,7 @@ static bool isStdInitializerList(QualType Type) {
   }
   if (const auto *RT = Type->getAs<RecordType>()) {
     if (const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl()))
       return declIsStdInitializerList(Specialization->getSpecializedTemplate());
   }
   return false;
@@ -85,7 +85,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       "%0 explicit expression evaluates to 'false'";
 
   if (const auto *Conversion =
-      Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
+          Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
     if (Conversion->isOutOfLine())
       return;
     SourceLocation Loc = Conversion->getLocation();

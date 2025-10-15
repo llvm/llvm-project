@@ -257,9 +257,7 @@ void DataChecker::Leave(const parser::DataStmtSet &set) {
   currentSetHasFatalErrors_ = false;
 }
 
-// Handle legacy DATA-style initialization, e.g. REAL PI/3.14159/, for
-// variables and components (esp. for DEC STRUCTUREs)
-template <typename A> void DataChecker::LegacyDataInit(const A &decl) {
+void DataChecker::Leave(const parser::EntityDecl &decl) {
   if (const auto &init{
           std::get<std::optional<parser::Initialization>>(decl.t)}) {
     const Symbol *name{std::get<parser::Name>(decl.t).symbol};
@@ -270,14 +268,6 @@ template <typename A> void DataChecker::LegacyDataInit(const A &decl) {
       AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
     }
   }
-}
-
-void DataChecker::Leave(const parser::ComponentDecl &decl) {
-  LegacyDataInit(decl);
-}
-
-void DataChecker::Leave(const parser::EntityDecl &decl) {
-  LegacyDataInit(decl);
 }
 
 void DataChecker::CompileDataInitializationsIntoInitializers() {

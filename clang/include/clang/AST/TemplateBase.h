@@ -15,9 +15,9 @@
 #define LLVM_CLANG_AST_TEMPLATEBASE_H
 
 #include "clang/AST/DependenceFlags.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APInt.h"
@@ -159,7 +159,7 @@ private:
     unsigned Kind : 31;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
-    unsigned NumExpansions;
+    UnsignedOrNone NumExpansions;
     void *Name;
   };
   struct TV {
@@ -167,6 +167,8 @@ private:
     unsigned Kind : 31;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCanonicalExpr : 1;
     uintptr_t V;
   };
   union {
@@ -187,7 +189,8 @@ private:
 
 public:
   /// Construct an empty, invalid template argument.
-  constexpr TemplateArgument() : TypeOrValue({Null, 0, /* IsDefaulted */ 0}) {}
+  constexpr TemplateArgument()
+      : TypeOrValue{Null, /*IsDefaulted=*/0, /*IsCanonicalExpr=*/0, /*V=*/0} {}
 
   /// Construct a template type argument.
   TemplateArgument(QualType T, bool isNullPtr = false,
@@ -232,7 +235,7 @@ public:
     TemplateArg.Kind = Template;
     TemplateArg.IsDefaulted = IsDefaulted;
     TemplateArg.Name = Name.getAsVoidPointer();
-    TemplateArg.NumExpansions = 0;
+    TemplateArg.NumExpansions = std::nullopt;
   }
 
   /// Construct a template argument that is a template pack expansion.
@@ -249,15 +252,12 @@ public:
   ///
   /// \param IsDefaulted If 'true', implies that this TemplateArgument
   /// corresponds to a default template parameter
-  TemplateArgument(TemplateName Name, std::optional<unsigned> NumExpansions,
+  TemplateArgument(TemplateName Name, UnsignedOrNone NumExpansions,
                    bool IsDefaulted = false) {
     TemplateArg.Kind = TemplateExpansion;
     TemplateArg.IsDefaulted = IsDefaulted;
     TemplateArg.Name = Name.getAsVoidPointer();
-    if (NumExpansions)
-      TemplateArg.NumExpansions = *NumExpansions + 1;
-    else
-      TemplateArg.NumExpansions = 0;
+    TemplateArg.NumExpansions = NumExpansions;
   }
 
   /// Construct a template argument that is an expression.
@@ -265,9 +265,10 @@ public:
   /// This form of template argument only occurs in template argument
   /// lists used for dependent types and for expression; it will not
   /// occur in a non-dependent, canonical template argument list.
-  TemplateArgument(Expr *E, bool IsDefaulted = false) {
+  TemplateArgument(Expr *E, bool IsCanonical, bool IsDefaulted = false) {
     TypeOrValue.Kind = Expression;
     TypeOrValue.IsDefaulted = IsDefaulted;
+    TypeOrValue.IsCanonicalExpr = IsCanonical;
     TypeOrValue.V = reinterpret_cast<uintptr_t>(E);
   }
 
@@ -315,6 +316,8 @@ public:
   /// Determine whether this template argument is a pack expansion.
   bool isPackExpansion() const;
 
+  bool isConceptOrConceptTemplateParameter() const;
+
   /// Retrieve the type for a type template argument.
   QualType getAsType() const {
     assert(getKind() == Type && "Unexpected kind");
@@ -356,7 +359,7 @@ public:
 
   /// Retrieve the number of expansions that a template template argument
   /// expansion will produce, if known.
-  std::optional<unsigned> getNumTemplateExpansions() const;
+  UnsignedOrNone getNumTemplateExpansions() const;
 
   /// Retrieve the template argument as an integral value.
   // FIXME: Provide a way to read the integral data without copying the value.
@@ -410,6 +413,11 @@ public:
     return reinterpret_cast<Expr *>(TypeOrValue.V);
   }
 
+  bool isCanonicalExpr() const {
+    assert(getKind() == Expression && "Unexpected kind");
+    return TypeOrValue.IsCanonicalExpr;
+  }
+
   /// Iterator that traverses the elements of a template argument pack.
   using pack_iterator = const TemplateArgument *;
 
@@ -430,7 +438,7 @@ public:
   /// Iterator range referencing all of the elements of a template
   /// argument pack.
   ArrayRef<TemplateArgument> pack_elements() const {
-    return llvm::ArrayRef(pack_begin(), pack_end());
+    return {pack_begin(), pack_end()};
   }
 
   /// The number of template arguments in the given template argument
@@ -443,7 +451,7 @@ public:
   /// Return the array of arguments in this template argument pack.
   ArrayRef<TemplateArgument> getPackAsArray() const {
     assert(getKind() == Pack);
-    return llvm::ArrayRef(Args.Args, Args.NumArgs);
+    return {Args.Args, Args.NumArgs};
   }
 
   /// Determines whether two template arguments are superficially the
@@ -470,31 +478,25 @@ public:
 
 /// Location information for a TemplateArgument.
 struct TemplateArgumentLocInfo {
-private:
   struct TemplateTemplateArgLocInfo {
-    // FIXME: We'd like to just use the qualifier in the TemplateName,
-    // but template arguments get canonicalized too quickly.
-    NestedNameSpecifier *Qualifier;
     void *QualifierLocData;
+    SourceLocation TemplateKwLoc;
     SourceLocation TemplateNameLoc;
     SourceLocation EllipsisLoc;
   };
-
-  llvm::PointerUnion<TemplateTemplateArgLocInfo *, Expr *, TypeSourceInfo *>
-      Pointer;
 
   TemplateTemplateArgLocInfo *getTemplate() const {
     return cast<TemplateTemplateArgLocInfo *>(Pointer);
   }
 
-public:
   TemplateArgumentLocInfo() {}
   TemplateArgumentLocInfo(TypeSourceInfo *Declarator) { Pointer = Declarator; }
 
   TemplateArgumentLocInfo(Expr *E) { Pointer = E; }
   // Ctx is used for allocation -- this case is unusually large and also rare,
   // so we store the payload out-of-line.
-  TemplateArgumentLocInfo(ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
+  TemplateArgumentLocInfo(ASTContext &Ctx, SourceLocation TemplateKwLoc,
+                          NestedNameSpecifierLoc QualifierLoc,
                           SourceLocation TemplateNameLoc,
                           SourceLocation EllipsisLoc);
 
@@ -504,10 +506,8 @@ public:
 
   Expr *getAsExpr() const { return cast<Expr *>(Pointer); }
 
-  NestedNameSpecifierLoc getTemplateQualifierLoc() const {
-    const auto *Template = getTemplate();
-    return NestedNameSpecifierLoc(Template->Qualifier,
-                                  Template->QualifierLocData);
+  SourceLocation getTemplateKwLoc() const {
+    return getTemplate()->TemplateKwLoc;
   }
 
   SourceLocation getTemplateNameLoc() const {
@@ -517,6 +517,10 @@ public:
   SourceLocation getTemplateEllipsisLoc() const {
     return getTemplate()->EllipsisLoc;
   }
+
+private:
+  llvm::PointerUnion<TemplateTemplateArgLocInfo *, Expr *, TypeSourceInfo *>
+      Pointer;
 };
 
 /// Location wrapper for a TemplateArgument.  TemplateArgument is to
@@ -550,14 +554,10 @@ public:
   }
 
   TemplateArgumentLoc(ASTContext &Ctx, const TemplateArgument &Argument,
+                      SourceLocation TemplateKWLoc,
                       NestedNameSpecifierLoc QualifierLoc,
                       SourceLocation TemplateNameLoc,
-                      SourceLocation EllipsisLoc = SourceLocation())
-      : Argument(Argument),
-        LocInfo(Ctx, QualifierLoc, TemplateNameLoc, EllipsisLoc) {
-    assert(Argument.getKind() == TemplateArgument::Template ||
-           Argument.getKind() == TemplateArgument::TemplateExpansion);
-  }
+                      SourceLocation EllipsisLoc = SourceLocation());
 
   /// - Fetches the primary location of the argument.
   SourceLocation getLocation() const {
@@ -606,12 +606,14 @@ public:
     return LocInfo.getAsExpr();
   }
 
-  NestedNameSpecifierLoc getTemplateQualifierLoc() const {
+  SourceLocation getTemplateKWLoc() const {
     if (Argument.getKind() != TemplateArgument::Template &&
         Argument.getKind() != TemplateArgument::TemplateExpansion)
-      return NestedNameSpecifierLoc();
-    return LocInfo.getTemplateQualifierLoc();
+      return SourceLocation();
+    return LocInfo.getTemplateKwLoc();
   }
+
+  NestedNameSpecifierLoc getTemplateQualifierLoc() const;
 
   SourceLocation getTemplateNameLoc() const {
     if (Argument.getKind() != TemplateArgument::Template &&
@@ -656,7 +658,7 @@ public:
     return Arguments.data();
   }
 
-  llvm::ArrayRef<TemplateArgumentLoc> arguments() const { return Arguments; }
+  ArrayRef<TemplateArgumentLoc> arguments() const { return Arguments; }
 
   const TemplateArgumentLoc &operator[](unsigned I) const {
     return Arguments[I];
@@ -698,12 +700,12 @@ public:
 
   /// Retrieve the template arguments
   const TemplateArgumentLoc *getTemplateArgs() const {
-    return getTrailingObjects<TemplateArgumentLoc>();
+    return getTrailingObjects();
   }
   unsigned getNumTemplateArgs() const { return NumTemplateArgs; }
 
-  llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
-    return llvm::ArrayRef(getTemplateArgs(), getNumTemplateArgs());
+  ArrayRef<TemplateArgumentLoc> arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   const TemplateArgumentLoc &operator[](unsigned I) const {

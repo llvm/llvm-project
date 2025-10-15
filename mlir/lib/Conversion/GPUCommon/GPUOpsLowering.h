@@ -18,15 +18,18 @@ namespace mlir {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
+/// Note that these functions don't take a `SymbolTable` because GPU module
+/// lowerings can have name collisions as an intermediate state.
+
 /// Find or create an external function declaration in the given module.
-LLVM::LLVMFuncOp getOrDefineFunction(gpu::GPUModuleOp moduleOp, Location loc,
+LLVM::LLVMFuncOp getOrDefineFunction(Operation *moduleOp, Location loc,
                                      OpBuilder &b, StringRef name,
                                      LLVM::LLVMFunctionType type);
 
 /// Create a global that contains the given string. If a global with the same
 /// string already exists in the module, return that global.
 LLVM::GlobalOp getOrCreateStringConstant(OpBuilder &b, Location loc,
-                                         gpu::GPUModuleOp moduleOp, Type llvmI8,
+                                         Operation *moduleOp, Type llvmI8,
                                          StringRef namePrefix, StringRef str,
                                          uint64_t alignment = 0,
                                          unsigned addrSpace = 0);
@@ -43,8 +46,9 @@ struct GPUDynamicSharedMemoryOpLowering
   using ConvertOpToLLVMPattern<
       gpu::DynamicSharedMemoryOp>::ConvertOpToLLVMPattern;
   GPUDynamicSharedMemoryOpLowering(const LLVMTypeConverter &converter,
-                                   unsigned alignmentBit = 0)
-      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter),
+                                   unsigned alignmentBit = 0,
+                                   PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter, benefit),
         alignmentBit(alignmentBit) {}
 
   LogicalResult
@@ -81,8 +85,9 @@ struct GPUFuncOpLoweringOptions {
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   GPUFuncOpLowering(const LLVMTypeConverter &converter,
-                    const GPUFuncOpLoweringOptions &options)
-      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
+                    const GPUFuncOpLoweringOptions &options,
+                    PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter, benefit),
         allocaAddrSpace(options.allocaAddrSpace),
         workgroupAddrSpace(options.workgroupAddrSpace),
         kernelAttributeName(options.kernelAttributeName),
@@ -172,13 +177,13 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
 };
 
 namespace impl {
-/// Unrolls op if it's operating on vectors.
+/// Unrolls op to array/vector elements.
 LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
                                 ConversionPatternRewriter &rewriter,
                                 const LLVMTypeConverter &converter);
 } // namespace impl
 
-/// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
+/// Unrolls SourceOp to array/vector elements.
 template <typename SourceOp>
 struct ScalarizeVectorOpLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
@@ -191,6 +196,7 @@ public:
                                    *this->getTypeConverter());
   }
 };
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_

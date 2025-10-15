@@ -10,4 +10,4 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-LIST_SQRT_TESTS(float128, LIBC_NAMESPACE::fputil::sqrt<float128>)
+LIST_SQRT_TESTS(float128, LIBC_NAMESPACE::fputil::sqrt<float128>);

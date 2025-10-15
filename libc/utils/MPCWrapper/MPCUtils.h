@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_MPCWRAPPER_MPCUTILS_H
 #define LLVM_LIBC_UTILS_MPCWRAPPER_MPCUTILS_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/complex_type.h"
 #include "src/__support/macros/config.h"
@@ -16,8 +17,6 @@
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -174,11 +173,11 @@ template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
   return (Operation::BeginBinaryOperationsSingleOutput < op &&
           op < Operation::EndBinaryOperationsSingleOutput &&
-          cpp::is_complex_type_same<InputType, OutputType> &&
+          cpp::is_complex_type_same<InputType, OutputType>() &&
           cpp::is_complex_v<InputType>) ||
          (Operation::BeginUnaryOperationsSingleOutputSameOutputType < op &&
           op < Operation::EndUnaryOperationsSingleOutputSameOutputType &&
-          cpp::is_complex_type_same<InputType, OutputType> &&
+          cpp::is_complex_type_same<InputType, OutputType>() &&
           cpp::is_complex_v<InputType>) ||
          (Operation::BeginUnaryOperationsSingleOutputDifferentOutputType < op &&
           op < Operation::EndUnaryOperationsSingleOutputDifferentOutputType &&
