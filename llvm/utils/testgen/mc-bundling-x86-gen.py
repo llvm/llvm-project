@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Auto-generates an exhaustive and repetitive test for correct bundle-locked
 # alignment on x86.
