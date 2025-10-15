@@ -61,6 +61,7 @@ set(FLANG_TEST_DEPENDS
   flang
   module_files
   fir-opt
+  fir-test-opt
   tco
   bbc
   FortranDecimal

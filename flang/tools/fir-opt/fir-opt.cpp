@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   fir::registerOptTransformPasses();
   hlfir::registerHLFIRPasses();
   flangomp::registerFlangOpenMPPasses();
-#ifdef FLANG_INCLUDE_TESTS
+#ifdef FIR_TEST_OPT
   fir::test::registerTestFIRAliasAnalysisPass();
   fir::test::registerTestFIROpenACCInterfacesPass();
   mlir::registerSideEffectTestPasses();

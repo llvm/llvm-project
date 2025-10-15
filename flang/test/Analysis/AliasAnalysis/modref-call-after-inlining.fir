@@ -1,4 +1,4 @@
-// RUN:  fir-opt -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis-modref))' \
+// RUN:  fir-test-opt -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis-modref))' \
 // RUN:  --mlir-disable-threading %s -o /dev/null 2>&1 | FileCheck %s
 
 // Test fir.call modref with internal procedures after the host function has been inlined in

@@ -1,5 +1,5 @@
 // Test alias analysis queries for host associated accesses.
-// RUN: fir-opt %s --test-fir-alias-analysis -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-test-opt %s --test-fir-alias-analysis -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
 
 // subroutine test1
 //   integer :: x(10)
