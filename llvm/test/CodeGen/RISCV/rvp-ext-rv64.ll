@@ -353,9 +353,12 @@ define void @test_pasub_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %a_ptr
   %b = load <4 x i16>, ptr %b_ptr
-  %sub = sub <4 x i16> %a, %b
-  %res = ashr <4 x i16> %sub, <i16 1, i16 1, i16 1, i16 1>
-  store <4 x i16> %res, ptr %ret_ptr
+  %a_ext = sext <4 x i16> %a to <4 x i32>
+  %b_ext = sext <4 x i16> %b to <4 x i32>
+  %sub = sub <4 x i32> %a_ext, %b_ext
+  %res = ashr <4 x i32> %sub, <i32 1, i32 1, i32 1, i32 1>
+  %res_trunc = trunc <4 x i32> %res to <4 x i16>
+  store <4 x i16> %res_trunc, ptr %ret_ptr
   ret void
 }
 
@@ -371,9 +374,12 @@ define void @test_pasubu_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %a_ptr
   %b = load <4 x i16>, ptr %b_ptr
-  %sub = sub <4 x i16> %a, %b
-  %res = lshr <4 x i16> %sub, <i16 1, i16 1, i16 1, i16 1>
-  store <4 x i16> %res, ptr %ret_ptr
+  %a_ext = zext <4 x i16> %a to <4 x i32>
+  %b_ext = zext <4 x i16> %b to <4 x i32>
+  %sub = sub <4 x i32> %a_ext, %b_ext
+  %res = lshr <4 x i32> %sub, <i32 1, i32 1, i32 1, i32 1>
+  %res_trunc = trunc <4 x i32> %res to <4 x i16>
+  store <4 x i16> %res_trunc, ptr %ret_ptr
   ret void
 }
 
@@ -388,9 +394,12 @@ define void @test_pasub_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %a_ptr
   %b = load <8 x i8>, ptr %b_ptr
-  %sub = sub <8 x i8> %a, %b
-  %res = ashr <8 x i8> %sub, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  store <8 x i8> %res, ptr %ret_ptr
+  %a_ext = sext <8 x i8> %a to <8 x i16>
+  %b_ext = sext <8 x i8> %b to <8 x i16>
+  %sub = sub <8 x i16> %a_ext, %b_ext
+  %res = ashr <8 x i16> %sub, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res_trunc = trunc <8 x i16> %res to <8 x i8>
+  store <8 x i8> %res_trunc, ptr %ret_ptr
   ret void
 }
 
@@ -405,9 +414,48 @@ define void @test_pasubu_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %a_ptr
   %b = load <8 x i8>, ptr %b_ptr
-  %sub = sub <8 x i8> %a, %b
-  %res = lshr <8 x i8> %sub, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %a_ext = zext <8 x i8> %a to <8 x i16>
+  %b_ext = zext <8 x i8> %b to <8 x i16>
+  %sub = sub <8 x i16> %a_ext, %b_ext
+  %res = lshr <8 x i16> %sub, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res_trunc = trunc <8 x i16> %res to <8 x i8>
+  store <8 x i8> %res_trunc, ptr %ret_ptr
+  ret void
+}
+
+; Test PLI (pack load immediate) for v4i16
+define void @test_pli_h(ptr %ret_ptr) {
+; CHECK-LABEL: test_pli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a1, 100
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %res = add <4 x i16> <i16 100, i16 100, i16 100, i16 100>, <i16 0, i16 0, i16 0, i16 0>
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test PLI for v8i8 with unsigned immediate
+define void @test_pli_b(ptr %ret_ptr) {
+; CHECK-LABEL: test_pli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 64
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %res = add <8 x i8> <i8 64, i8 64, i8 64, i8 64, i8 64, i8 64, i8 64, i8 64>, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
   store <8 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test PLI for v2i32 with signed immediate
+define void @test_pli_w(ptr %ret_ptr) {
+; CHECK-LABEL: test_pli_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.w a1, -256
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %res = add <2 x i32> <i32 -256, i32 -256>, <i32 0, i32 0>
+  store <2 x i32> %res, ptr %ret_ptr
   ret void
 }
 
