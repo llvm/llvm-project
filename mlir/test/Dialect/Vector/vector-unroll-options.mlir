@@ -465,11 +465,11 @@ func.func @vector_step() -> vector<32xindex> {
 // CHECK: return %[[INS3]] : vector<32xindex>
 
 
-func.func @elementwise(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+func.func @elementwise_3D_to_2D(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
   %0 = arith.addf %v1, %v2 : vector<2x2x2xf32>
   return %0 : vector<2x2x2xf32>
 }
-// CHECK-LABEL: func @elementwise
+// CHECK-LABEL: func @elementwise_3D_to_2D
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<2x2x2xf32>, %[[ARG1:.*]]: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
 //       CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<2x2x2xf32>
 //       CHECK:   %[[E_LHS_0:.*]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x2xf32> to vector<1x2x2xf32>
