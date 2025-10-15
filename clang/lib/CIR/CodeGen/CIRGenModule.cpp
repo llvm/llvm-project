@@ -88,6 +88,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
 
+  AllocaInt8PtrTy = cir::PointerType::get(UInt8Ty, cirAllocaAddressSpace);
+
   PointerAlignInBytes =
       astContext
           .toCharUnitsFromBits(
