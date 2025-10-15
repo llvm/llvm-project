@@ -38,8 +38,8 @@ static llvm::StringRef GetName(XcodeSDK::Type type) {
     return "XRSimulator";
   case XcodeSDK::XROS:
     return "XROS";
-  case XcodeSDK::bridgeOS:
-    return "bridgeOS";
+  case XcodeSDK::BridgeOS:
+    return "BridgeOS";
   case XcodeSDK::Linux:
     return "Linux";
   case XcodeSDK::unknown:
@@ -83,8 +83,8 @@ static XcodeSDK::Type ParseSDKName(llvm::StringRef &name) {
     return XcodeSDK::XRSimulator;
   if (name.consume_front("XROS"))
     return XcodeSDK::XROS;
-  if (name.consume_front("bridgeOS"))
-    return XcodeSDK::bridgeOS;
+  if (name.consume_front("BridgeOS"))
+    return XcodeSDK::BridgeOS;
   if (name.consume_front("Linux"))
     return XcodeSDK::Linux;
   static_assert(XcodeSDK::Linux == XcodeSDK::numSDKTypes - 1,
@@ -204,7 +204,7 @@ std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
   case XROS:
     name = "xros";
     break;
-  case bridgeOS:
+  case BridgeOS:
     name = "bridgeos";
     break;
   case Linux:

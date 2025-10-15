@@ -38,7 +38,7 @@ public:
     watchOS,
     XRSimulator,
     XROS,
-    bridgeOS,
+    BridgeOS,
     Linux,
     unknown = -1
   };
