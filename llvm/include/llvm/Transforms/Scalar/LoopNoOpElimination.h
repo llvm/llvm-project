@@ -41,8 +41,8 @@ public:
   TargetLibraryInfo *TLI;
   OptimizationRemarkEmitter *ORE;
 
-
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
 private:
   bool runImpl(Function &F);
 };
