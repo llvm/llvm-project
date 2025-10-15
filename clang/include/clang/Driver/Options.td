@@ -2047,7 +2047,7 @@ def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>,
   MarshallingInfoInt<LangOpts<"ConstexprCallDepth">, "512">;
 def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set the maximum number of steps in constexpr function evaluation">,
+  HelpText<"Set the maximum number of steps in constexpr function evaluation (0 = no limit)">,
   MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
 def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
   HelpText<"Enable the experimental new constant interpreter">,
@@ -4534,6 +4534,12 @@ defm data_sections : BoolFOption<"data-sections",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Place each data in its own section">,
   NegFlag<SetFalse>>;
+defm experimental_call_graph_section
+    : BoolFOption<"experimental-call-graph-section",
+                  CodeGenOpts<"CallGraphSection">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Emit a call graph section">,
+                  NegFlag<SetFalse>>;
 defm stack_size_section : BoolFOption<"stack-size-section",
   CodeGenOpts<"StackSizeSection">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -6116,7 +6122,7 @@ def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
 def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
-  Flags<[NoXarchOption, HelpHidden]>,
+  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
@@ -6205,11 +6211,12 @@ def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  Group<CompileOnly_Group>, HelpText<"Language standard to compile for">,
-  ValuesCode<[{
+             Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+             Group<CompileOnly_Group>,
+             HelpText<"Language standard to compile for">,
+             ValuesCode<[{
     static constexpr const char VALUES_CODE [] =
-    #define LANGSTANDARD(id, name, lang, desc, features) name ","
+    #define LANGSTANDARD(id, name, lang, desc, features, version) name ","
     #define LANGSTANDARD_ALIAS(id, alias) alias ","
     #include "clang/Basic/LangStandards.def"
     ;

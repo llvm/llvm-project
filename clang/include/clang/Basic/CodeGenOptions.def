@@ -72,6 +72,8 @@ CODEGENOPT(EnableNoundefAttrs, 1, 0, Benign) ///< Enable emitting `noundef` attr
 CODEGENOPT(DebugPassManager, 1, 0, Benign) ///< Prints debug information for the new
                                            ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0, Benign) ///< Set when -mno-red-zone is enabled.
+CODEGENOPT(CallGraphSection, 1, 0, Benign) ///< Emit a call graph section into the
+                                           ///< object file.
 CODEGENOPT(EmitCallSiteInfo, 1, 0, Benign) ///< Emit call site info only in the case of
                                            ///< '-g' + 'O>0' level.
 CODEGENOPT(IndirectTlsSegRefs, 1, 0, Benign) ///< Set when -mno-tls-direct-seg-refs

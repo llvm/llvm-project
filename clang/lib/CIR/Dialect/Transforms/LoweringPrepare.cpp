@@ -105,6 +105,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   /// List of ctors and their priorities to be called before main()
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalCtorList;
+  /// List of dtors and their priorities to be called when unloading module.
+  llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalDtorList;
 
   void setASTContext(clang::ASTContext *c) {
     astCtx = c;
@@ -823,10 +825,13 @@ void LoweringPreparePass::buildGlobalCtorDtorList() {
                         mlir::ArrayAttr::get(&getContext(), globalCtors));
   }
 
-  // We will eventual need to populate a global_dtor list, but that's not
-  // needed for globals with destructors. It will only be needed for functions
-  // that are marked as global destructors with an attribute.
-  assert(!cir::MissingFeatures::opGlobalDtorList());
+  if (!globalDtorList.empty()) {
+    llvm::SmallVector<mlir::Attribute> globalDtors =
+        prepareCtorDtorAttrList<cir::GlobalDtorAttr>(&getContext(),
+                                                     globalDtorList);
+    mlirModule->setAttr(cir::CIRDialect::getGlobalDtorsAttrName(),
+                        mlir::ArrayAttr::get(&getContext(), globalDtors));
+  }
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
@@ -975,22 +980,28 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
-  if (auto arrayCtor = dyn_cast<ArrayCtor>(op))
+  if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
-  else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op))
+  } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
-  else if (auto cast = mlir::dyn_cast<cir::CastOp>(op))
+  } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
-  else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op))
+  } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
-  else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op))
+  } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
     lowerComplexMulOp(complexMul);
-  else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op))
+  } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
-  else if (auto dynamicCast = mlir::dyn_cast<cir::DynamicCastOp>(op))
+  } else if (auto dynamicCast = mlir::dyn_cast<cir::DynamicCastOp>(op)) {
     lowerDynamicCastOp(dynamicCast);
-  else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op))
+  } else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op)) {
     lowerUnaryOp(unary);
+  } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
+    if (auto globalCtor = fnOp.getGlobalCtorPriority())
+      globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
+    else if (auto globalDtor = fnOp.getGlobalDtorPriority())
+      globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
+  }
 }
 
 void LoweringPreparePass::runOnOperation() {
@@ -1003,7 +1014,7 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::GlobalOp, cir::UnaryOp>(op))
+                  cir::FuncOp, cir::GlobalOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 

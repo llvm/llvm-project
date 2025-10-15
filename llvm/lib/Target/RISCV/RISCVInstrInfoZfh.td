@@ -607,13 +607,16 @@ def : Pat<(fcopysign FPR64:$rs1, (f16 FPR16:$rs2)), (FSGNJ_D $rs1, (FCVT_D_H $rs
 let Predicates = [HasStdExtZhinxmin, HasStdExtZdinx, IsRV32] in {
 /// Float conversion operations
 // f64 -> f16, f16 -> f64
-def : Pat<(any_fpround FPR64IN32X:$rs1), (FCVT_H_D_IN32X FPR64IN32X:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR16INX:$rs1), (FCVT_D_H_IN32X FPR16INX:$rs1, FRM_RNE)>;
+def : Pat<(any_fpround FPR64IN32X:$rs1),
+          (FCVT_H_D_IN32X FPR64IN32X:$rs1, (i32 FRM_DYN))>;
+def : Pat<(any_fpextend FPR16INX:$rs1),
+          (FCVT_D_H_IN32X FPR16INX:$rs1, (i32 FRM_RNE))>;
 
 /// Float arithmetic operations
 def : Pat<(fcopysign FPR16INX:$rs1, FPR64IN32X:$rs2),
-          (FSGNJ_H_INX $rs1, (FCVT_H_D_IN32X $rs2, 0b111))>;
-def : Pat<(fcopysign FPR64IN32X:$rs1, FPR16INX:$rs2), (FSGNJ_D_IN32X $rs1, (FCVT_D_H_IN32X $rs2, FRM_RNE))>;
+          (FSGNJ_H_INX $rs1, (FCVT_H_D_IN32X $rs2, (i32 FRM_DYN)))>;
+def : Pat<(fcopysign FPR64IN32X:$rs1, FPR16INX:$rs2),
+          (FSGNJ_D_IN32X $rs1, (FCVT_D_H_IN32X $rs2, (i32 FRM_RNE)))>;
 } // Predicates = [HasStdExtZhinxmin, HasStdExtZdinx, IsRV32]
 
 let Predicates = [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64] in {
