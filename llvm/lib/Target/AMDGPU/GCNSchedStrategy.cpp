@@ -2255,9 +2255,7 @@ uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
   // to values that will yield the worst possible score given known frequencies
   // in order to penalize rematerializations from or into regions whose
   // frequency is unknown.
-  uint64_t DefOrOne = Freq.Regions[Remat->DefRegion];
-  if (!DefOrOne)
-    DefOrOne = 1;
+  uint64_t DefOrOne = std::max(Freq.Regions[Remat->DefRegion], (uint64_t)1);
   uint64_t UseOrMax = Freq.Regions[Remat->UseRegion];
   if (!UseOrMax)
     UseOrMax = Freq.MaxFreq;
