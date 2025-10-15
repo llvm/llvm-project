@@ -13164,9 +13164,9 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
           TLI.getTypeToTransformTo(*Context, UnextOp1VT)))
     return SDValue();
 
-  auto Constant = N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA
-                      ? DAG.getConstantFP(1, DL, UnextOp1VT)
-                      : DAG.getConstant(1, DL, UnextOp1VT);
+  SDValue Constant = N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA
+                         ? DAG.getConstantFP(1, DL, UnextOp1VT)
+                         : DAG.getConstant(1, DL, UnextOp1VT);
 
   return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, UnextOp1,
                      Constant);
