@@ -15765,19 +15765,25 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
               GetNextSCEVDividesByDivisor(One, DividesBy);
           To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);
         } else {
+          // LHS != RHS can be rewritten as (LHS - RHS) = UMax(1, LHS - RHS),
+          // but creating the subtraction eagerly is expensive. Track the
+          // inequalities in a separate map, and materialize the rewrite lazily
+          // when encountering a suitable subtraction while re-writing.
           if (LHS->getType()->isPointerTy()) {
             LHS = SE.getLosslessPtrToIntExpr(LHS);
             RHS = SE.getLosslessPtrToIntExpr(RHS);
             if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
               break;
           }
-          auto AddSubRewrite = [&](const SCEV *A, const SCEV *B) {
-            const SCEV *Sub = SE.getMinusSCEV(A, B);
-            AddRewrite(Sub, Sub,
-                       SE.getUMaxExpr(Sub, SE.getOne(From->getType())));
-          };
-          AddSubRewrite(LHS, RHS);
-          AddSubRewrite(RHS, LHS);
+          const SCEVConstant *C;
+          const SCEV *A, *B;
+          if (match(RHS, m_scev_Add(m_SCEVConstant(C), m_SCEV(A))) &&
+              match(LHS, m_scev_Add(m_scev_Specific(C), m_SCEV(B)))) {
+            RHS = A;
+            LHS = B;
+          }
+          Guards.NotEqualMap[LHS].insert(RHS);
+          Guards.NotEqualMap[RHS].insert(LHS);
           continue;
         }
         break;
@@ -15911,13 +15917,15 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
   class SCEVLoopGuardRewriter
       : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
     const DenseMap<const SCEV *, const SCEV *> &Map;
+    const DenseMap<const SCEV *, SmallPtrSet<const SCEV *, 2>> &NotEqualMap;
 
     SCEV::NoWrapFlags FlagMask = SCEV::FlagAnyWrap;
 
   public:
     SCEVLoopGuardRewriter(ScalarEvolution &SE,
                           const ScalarEvolution::LoopGuards &Guards)
-        : SCEVRewriteVisitor(SE), Map(Guards.RewriteMap) {
+        : SCEVRewriteVisitor(SE), Map(Guards.RewriteMap),
+          NotEqualMap(Guards.NotEqualMap) {
       if (Guards.PreserveNUW)
         FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNUW);
       if (Guards.PreserveNSW)
@@ -15972,14 +15980,35 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      // Helper to check if S is a subtraction (A - B) where A != B, and if so,
+      // return UMax(S, 1).
+      auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
+        const SCEV *LHS, *RHS;
+        if (MatchBinarySub(S, LHS, RHS)) {
+          auto It = NotEqualMap.find(LHS);
+          if (It != NotEqualMap.end() && It->second.contains(RHS))
+            return SE.getUMaxExpr(S, SE.getOne(S->getType()));
+        }
+        return nullptr;
+      };
+
+      // Check if Expr itself is a subtraction pattern with guard info.
+      if (const SCEV *Rewritten = RewriteSubtraction(Expr))
+        return Rewritten;
+
       // Trip count expressions sometimes consist of adding 3 operands, i.e.
       // (Const + A + B). There may be guard info for A + B, and if so, apply
       // it.
       // TODO: Could more generally apply guards to Add sub-expressions.
       if (isa<SCEVConstant>(Expr->getOperand(0)) &&
           Expr->getNumOperands() == 3) {
-        if (const SCEV *S = Map.lookup(
-                SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2))))
+        const SCEV *Add =
+            SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2));
+        if (const SCEV *Rewritten = RewriteSubtraction(Add))
+          return SE.getAddExpr(
+              Expr->getOperand(0), Rewritten,
+              ScalarEvolution::maskFlags(Expr->getNoWrapFlags(), FlagMask));
+        if (const SCEV *S = Map.lookup(Add))
           return SE.getAddExpr(Expr->getOperand(0), S);
       }
       SmallVector<const SCEV *, 2> Operands;
@@ -16014,7 +16043,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
   };
 
-  if (RewriteMap.empty())
+  if (RewriteMap.empty() && NotEqualMap.empty())
     return Expr;
 
   SCEVLoopGuardRewriter Rewriter(SE, *this);

@@ -1345,6 +1345,7 @@ public:
 
   class LoopGuards {
     DenseMap<const SCEV *, const SCEV *> RewriteMap;
+    DenseMap<const SCEV *, SmallPtrSet<const SCEV *, 2>> NotEqualMap;
     bool PreserveNUW = false;
     bool PreserveNSW = false;
     ScalarEvolution &SE;
