@@ -1283,8 +1283,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (match(Def, m_CombineOr(m_VPInstruction<VPInstruction::ExtractLastElement>(
-                                 m_VPValue(A)),
+  if (match(Def, m_CombineOr(m_ExtractLastElement(m_VPValue(A)),
                              m_ExtractLastLanePerPart(m_VPValue(A)))) &&
       ((isa<VPInstruction>(A) && vputils::isSingleScalar(A)) ||
        (isa<VPReplicateRecipe>(A) &&
