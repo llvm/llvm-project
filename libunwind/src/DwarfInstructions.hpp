@@ -695,7 +695,7 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
       value = *sp--;
       *sp = *sp >> value;
       if (log)
-        fprintf(stderr, "shift left\n");
+        fprintf(stderr, "shift right\n");
       break;
 
     case DW_OP_shra:
@@ -703,7 +703,7 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
       svalue = (sint_t)*sp;
       *sp = (pint_t)(svalue >> value);
       if (log)
-        fprintf(stderr, "shift left arithmetic\n");
+        fprintf(stderr, "shift right arithmetic\n");
       break;
 
     case DW_OP_xor:
