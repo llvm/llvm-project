@@ -2546,6 +2546,21 @@ public:
           [](auto *N) { llvm_unreachable("Unexpected retained node!"); });
   }
 
+  /// Remove types that do not belong to the subprogram's scope from
+  /// retainedNodes list.
+  void cleanupRetainedNodes();
+
+  /// When DebugTypeODRUniquing is enabled, after multiple modules are loaded,
+  /// some subprograms (that are from different compilation units, usually)
+  /// may have references to the same local type in their retainedNodes lists.
+  ///
+  /// Clean up such references.
+  template <typename RangeT>
+  static void cleanupRetainedNodes(const RangeT &NewDistinctSPs) {
+    for (DISubprogram *SP : NewDistinctSPs)
+      SP->cleanupRetainedNodes();
+  }
+
   /// Check if this subprogram describes the given function.
   ///
   /// FIXME: Should this be looking through bitcasts?

@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: %llc_dwarf -O1 -filetype=obj -split-dwarf-file=%t.dwo < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not "{{DW_TAG|NULL}}"
 
 ; CHECK-LABEL: debug_info contents
