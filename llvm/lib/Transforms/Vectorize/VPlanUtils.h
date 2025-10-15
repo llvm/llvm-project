@@ -90,7 +90,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
 }
 
 /// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, VPlan &Plan);
+bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)

@@ -2334,6 +2334,32 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   }
 }
 
+/// Verify the range attribute satisfies LLVM ConstantRange constructor
+/// requirements for NVVM SpecialRangeableRegisterOp.
+static LogicalResult
+verifyConstantRangeAttr(Operation *op,
+                        std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
+  if (!rangeAttr)
+    return success();
+
+  const llvm::APInt &lower = rangeAttr->getLower();
+  const llvm::APInt &upper = rangeAttr->getUpper();
+
+  // Check LLVM ConstantRange constructor condition
+  if (lower == upper && !lower.isMaxValue() && !lower.isMinValue()) {
+    unsigned bitWidth = lower.getBitWidth();
+    llvm::APInt minVal = llvm::APInt::getMinValue(bitWidth);
+    llvm::APInt maxVal = llvm::APInt::getMaxValue(bitWidth);
+    return op->emitOpError(
+               "invalid range attribute: Lower == Upper, but they aren't min (")
+           << llvm::toString(minVal, 10, false) << ") or max ("
+           << llvm::toString(maxVal, 10, false)
+           << ") value! This is an invalid constant range.";
+  }
+
+  return success();
+}
+
 static llvm::Value *getAsPackedI32(llvm::Value *arg,
                                    llvm::IRBuilderBase &builder) {
   return builder.CreateBitCast(arg,
