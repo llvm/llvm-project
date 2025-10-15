@@ -880,11 +880,13 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   // zext(bool) + C -> bool ? C + 1 : C
   if (match(Op0, m_ZExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return createSelectInst(X, InstCombiner::AddOne(Op1C), Op1);
+    return createSelectInstWithUnknownProfile(X, InstCombiner::AddOne(Op1C),
+                                              Op1);
   // sext(bool) + C -> bool ? C - 1 : C
   if (match(Op0, m_SExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return createSelectInst(X, InstCombiner::SubOne(Op1C), Op1);
+    return createSelectInstWithUnknownProfile(X, InstCombiner::SubOne(Op1C),
+                                              Op1);
 
   // ~X + C --> (C-1) - X
   if (match(Op0, m_Not(m_Value(X)))) {

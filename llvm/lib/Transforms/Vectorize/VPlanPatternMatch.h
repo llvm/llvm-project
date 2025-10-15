@@ -344,6 +344,10 @@ m_Freeze(const Op0_t &Op0) {
   return m_VPInstruction<Instruction::Freeze>(Op0);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnCond> m_BranchOnCond() {
+  return m_VPInstruction<VPInstruction::BranchOnCond>();
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::BranchOnCond, Op0_t>
 m_BranchOnCond(const Op0_t &Op0) {
@@ -368,10 +372,20 @@ m_ExtractLastElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
+m_ExtractLastLanePerPart(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastLanePerPart>(Op0);
+}
+
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
+}
+
+inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
+  return m_VPInstruction<VPInstruction::BranchOnCount>();
 }
 
 template <typename Op0_t, typename Op1_t>

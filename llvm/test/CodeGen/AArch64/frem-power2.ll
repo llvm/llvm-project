@@ -100,9 +100,8 @@ define half @hrem2_nsz(half %x) {
 ; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    fmov h1, #2.00000000
 ; CHECK-GI-NEXT:    fcvt s0, h0
-; CHECK-GI-NEXT:    fcvt s1, h1
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload

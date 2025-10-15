@@ -19,11 +19,11 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 
 ; PRINT:; Resource Bindings:
 ; PRINT-NEXT:;
-; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind  Count
-; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ------
-; PRINT-NEXT:; CB1                               cbuffer      NA          NA     CB0            cb0     1
-; PRINT-NEXT:; CB2                               cbuffer      NA          NA     CB1            cb1     1
-; PRINT-NEXT:; MyConstants                       cbuffer      NA          NA     CB2    cb5,space15     1
+; PRINT-NEXT:; Name            Type  Format  Dim   ID    HLSL Bind  Count
+; PRINT-NEXT:; ----
+; PRINT-NEXT:; CB1          cbuffer      NA   NA  CB0          cb0     1
+; PRINT-NEXT:; CB2          cbuffer      NA   NA  CB1          cb1     1
+; PRINT-NEXT:; MyConstants  cbuffer      NA   NA  CB2  cb5,space15     1
 
 define void @test() #0 {
 

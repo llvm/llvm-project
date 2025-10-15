@@ -2202,6 +2202,11 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   return commonCastTransforms(CI);
 }
 
+Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
+  // FIXME: Implement variants of ptrtoint folds.
+  return commonCastTransforms(CI);
+}
+
 /// This input value (which is known to have vector type) is being zero extended
 /// or truncated to the specified vector type. Since the zext/trunc is done
 /// using an integer type, we have a (bitcast(cast(bitcast))) pattern,

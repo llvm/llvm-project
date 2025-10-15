@@ -1316,6 +1316,24 @@ def OpenACC_PrivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a PrivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1410,6 +1428,24 @@ def OpenACC_FirstprivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a FirstprivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<FirstprivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
