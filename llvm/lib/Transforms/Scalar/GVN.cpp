@@ -2156,6 +2156,9 @@ bool GVNPass::processLoad(LoadInst *L) {
   if (!L->isUnordered())
     return false;
 
+  if (L->getType()->isTokenLikeTy())
+    return false;
+
   if (L->use_empty()) {
     salvageAndRemoveInstruction(L);
     return true;
