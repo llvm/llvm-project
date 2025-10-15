@@ -6122,7 +6122,7 @@ def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
 def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
-  Flags<[NoXarchOption, HelpHidden]>,
+  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
