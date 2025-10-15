@@ -37,16 +37,13 @@
     Func(basic_string<CharT>& basic_string<CharT>::assign(size_type, value_type))                                      \
     Func(basic_string<CharT>& basic_string<CharT>::assign(const basic_string&, size_type, size_type))                  \
     Func(basic_string<CharT>& basic_string<CharT>::append(size_type, value_type))                                      \
-    Func(basic_string<CharT>& basic_string<CharT>::append(const value_type*))                                          \
     Func(basic_string<CharT>& basic_string<CharT>::append(const value_type*, size_type))                               \
     Func(basic_string<CharT>& basic_string<CharT>::append(const basic_string&, size_type, size_type))                  \
     Func(void basic_string<CharT>::push_back(value_type))                                                              \
-    Func(basic_string<CharT>& basic_string<CharT>::insert(size_type, const value_type*))                               \
     Func(basic_string<CharT>& basic_string<CharT>::insert(size_type, size_type, value_type))                           \
     Func(basic_string<CharT>& basic_string<CharT>::insert(size_type, const value_type*, size_type))                    \
     Func(basic_string<CharT>& basic_string<CharT>::insert(size_type, const basic_string&, size_type, size_type))       \
     Func(basic_string<CharT>::iterator basic_string<CharT>::insert(basic_string::const_iterator, value_type))          \
-    Func(basic_string<CharT>& basic_string<CharT>::replace(size_type, size_type, const value_type*))                   \
     Func(basic_string<CharT>& basic_string<CharT>::replace(size_type, size_type, size_type, value_type))               \
     Func(basic_string<CharT>& basic_string<CharT>::replace(size_type, size_type, const value_type*, size_type))        \
     Func(basic_string<CharT>& basic_string<CharT>::replace(size_type, size_type, const basic_string&, size_type, size_type)) \
@@ -64,8 +61,6 @@
     Func(basic_string<CharT>::size_type basic_string<CharT>::find_last_not_of(const value_type*, size_type, size_type) const) \
     Func(CharT& basic_string<CharT>::at(size_type))                                                                    \
     Func(const CharT& basic_string<CharT>::at(size_type) const)                                                        \
-    Func(int basic_string<CharT>::compare(const value_type*) const)                                                    \
-    Func(int basic_string<CharT>::compare(size_type, size_type, const value_type*) const)                              \
     Func(int basic_string<CharT>::compare(size_type, size_type, const value_type*, size_type) const)                   \
     Func(int basic_string<CharT>::compare(size_type, size_type, const basic_string&, size_type, size_type) const)      \
     Func(const basic_string<CharT>::size_type basic_string<CharT>::npos)                                               \
@@ -74,7 +69,6 @@
   _LIBCPP_STRING_COMMON_EXTERN_TEMPLATE_LIST(Func, CharT)                                                              \
   Func(basic_string<CharT>::basic_string(const basic_string&))                                                         \
   Func(basic_string<CharT>::basic_string(const basic_string&, const allocator<CharT>&))                                \
-  Func(basic_string<CharT>& basic_string<CharT>::assign(const value_type*))                                            \
   Func(basic_string<CharT>& basic_string<CharT>::assign(const value_type*, size_type))                                 \
   Func(basic_string<CharT>& basic_string<CharT>::operator=(basic_string const&))                                       \
   Func(void basic_string<CharT>::__grow_by(size_type, size_type, size_type, size_type, size_type, size_type))          \
@@ -84,7 +78,6 @@
   _LIBCPP_STRING_COMMON_EXTERN_TEMPLATE_LIST(Func, CharT)                                                              \
   Func(void basic_string<CharT>::__init_copy_ctor_external(const value_type*, size_type))                              \
   Func(basic_string<CharT>& basic_string<CharT>::__assign_external(const value_type*, size_type))                      \
-  Func(basic_string<CharT>& basic_string<CharT>::__assign_external(const value_type*))                                 \
   Func(basic_string<CharT>& basic_string<CharT>::__assign_no_alias<false>(const value_type*, size_type))               \
   Func(basic_string<CharT>& basic_string<CharT>::__assign_no_alias<true>(const value_type*, size_type))                \
   Func(void basic_string<CharT>::__erase_external_with_move(size_type, size_type))

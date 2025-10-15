@@ -54,7 +54,15 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, si
 }
 
 #  define STRING_LEGACY_API(CharT)                                                                                     \
-    template _LIBCPP_EXPORTED_FROM_ABI void basic_string<CharT>::__init(const value_type*, size_type, size_type)
+    template _LIBCPP_EXPORTED_FROM_ABI void basic_string<CharT>::__init(const value_type*, size_type, size_type);      \
+    template _LIBCPP_EXPORTED_FROM_ABI basic_string<CharT>& basic_string<CharT>::append(const value_type*);            \
+    template _LIBCPP_EXPORTED_FROM_ABI basic_string<CharT>& basic_string<CharT>::insert(size_type, const value_type*); \
+    template _LIBCPP_EXPORTED_FROM_ABI basic_string<CharT>& basic_string<CharT>::replace(                              \
+        size_type, size_type, const value_type*);                                                                      \
+    template _LIBCPP_EXPORTED_FROM_ABI int basic_string<CharT>::compare(const value_type*) const;                      \
+    template _LIBCPP_EXPORTED_FROM_ABI int basic_string<CharT>::compare(size_type, size_type, const value_type*)       \
+        const;                                                                                                         \
+    template _LIBCPP_EXPORTED_FROM_ABI basic_string<CharT>& basic_string<CharT>::assign(const value_type*)
 
 STRING_LEGACY_API(char);
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
