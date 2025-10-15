@@ -217,7 +217,8 @@ protected:
   /// transitions happen, so this state can become partially obsolete!
   ///
   /// TODO: Instead of storing a complete state object in the CallEvent, only
-  /// store the relevant parts (argument/return SVals, dynamic type etc.).
+  /// store the relevant parts (such as argument/return SVals etc.) that aren't
+  /// allowed to become obsolete until the end of the call evaluation.
   ProgramStateRef getState() const { return State; }
 
 public:
