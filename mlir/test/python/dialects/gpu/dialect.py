@@ -1,10 +1,10 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
+import mlir.ir as ir
 import mlir.dialects.gpu as gpu
 import mlir.dialects.gpu.passes
 from mlir.passmanager import *
-import mlir.ir as ir
 
 
 def run(f):
@@ -70,6 +70,7 @@ def testObjectAttr():
 # CHECK-LABEL: testGPUFuncOp
 @run
 def testGPUFuncOp():
+    assert gpu.GPUFuncOp.__doc__ is not None
     module = Module.create()
     with InsertionPoint(module.body):
         gpu_module_name = StringAttr.get("gpu_module")
@@ -77,8 +78,8 @@ def testGPUFuncOp():
         block = gpumodule.bodyRegion.blocks.append()
 
         def builder(func: gpu.GPUFuncOp) -> None:
-            _ = gpu.GlobalIdOp(gpu.Dimension.x)
-            _ = gpu.ReturnOp([])
+            gpu.GlobalIdOp(gpu.Dimension.x)
+            gpu.ReturnOp([])
 
         with InsertionPoint(block):
             name = StringAttr.get("kernel0")
@@ -96,6 +97,8 @@ def testGPUFuncOp():
                 sym_name="kernel1",
                 kernel=True,
                 body_builder=builder,
+                known_block_size=[1, 2, 3],
+                known_grid_size=DenseI32ArrayAttr.get([4, 5, 6]),
             )
 
             assert func.name.value == "kernel1"
@@ -104,13 +107,17 @@ def testGPUFuncOp():
             assert func.arguments == []
             assert func.entry_block == func.body.blocks[0]
             assert func.is_kernel
+            assert func.known_block_size == DenseI32ArrayAttr.get([1, 2, 3])
+            assert func.known_grid_size == DenseI32ArrayAttr.get([4, 5, 6])
 
-            non_kernel_func = gpu.GPUFuncOp(
+            func = gpu.GPUFuncOp(
                 func_type,
                 sym_name="non_kernel_func",
                 body_builder=builder,
             )
-            assert not non_kernel_func.is_kernel
+            assert not func.is_kernel
+            assert func.known_block_size is None
+            assert func.known_grid_size is None
 
     print(module)
 
@@ -119,7 +126,9 @@ def testGPUFuncOp():
     # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
     # CHECK:   gpu.return
     # CHECK: }
-    # CHECK: gpu.func @kernel1() kernel {
+    # CHECK: gpu.func @kernel1() kernel attributes
+    # CHECK-SAME: gpu.known_block_size = array<i32: 1, 2, 3>
+    # CHECK-SAME: gpu.known_grid_size = array<i32: 4, 5, 6>
     # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
     # CHECK:   gpu.return
     # CHECK: }
