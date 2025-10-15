@@ -86,8 +86,8 @@ def testGPUFuncOp():
             func_type = ir.FunctionType.get(inputs=[], results=[])
             type_attr = TypeAttr.get(func_type)
             func = gpu.GPUFuncOp(type_attr, name)
-            func.attributes[gpu.SYM_NAME_ATTRIBUTE_NAME] = name
-            func.attributes[gpu.KERNEL_ATTRIBUTE_NAME] = UnitAttr.get()
+            func.attributes["sym_name"] = name
+            func.attributes["gpu.kernel"] = UnitAttr.get()
             block = func.body.blocks.append()
             with InsertionPoint(block):
                 builder(func)
@@ -102,13 +102,18 @@ def testGPUFuncOp():
             )
 
             assert func.name.value == "kernel1"
+            assert func.function_type.value == func_type
             assert func.arg_attrs == ArrayAttr.get([])
             assert func.result_attrs == ArrayAttr.get([])
             assert func.arguments == []
             assert func.entry_block == func.body.blocks[0]
             assert func.is_kernel
-            assert func.known_block_size == DenseI32ArrayAttr.get([1, 2, 3])
-            assert func.known_grid_size == DenseI32ArrayAttr.get([4, 5, 6])
+            assert func.known_block_size == DenseI32ArrayAttr.get(
+                [1, 2, 3]
+            ), func.known_block_size
+            assert func.known_grid_size == DenseI32ArrayAttr.get(
+                [4, 5, 6]
+            ), func.known_grid_size
 
             func = gpu.GPUFuncOp(
                 func_type,

@@ -30,19 +30,18 @@ except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 
-KERNEL_ATTRIBUTE_NAME = "gpu.kernel"
-KNOWN_BLOCK_SIZE_ATTRIBUTE_NAME = "gpu.known_block_size"
-KNOWN_GRID_SIZE_ATTRIBUTE_NAME = "gpu.known_grid_size"
-
-FUNCTION_TYPE_ATTRIBUTE_NAME = "function_type"
-SYM_NAME_ATTRIBUTE_NAME = "sym_name"
-ARGUMENT_ATTRIBUTE_NAME = "arg_attrs"
-RESULT_ATTRIBUTE_NAME = "res_attrs"
-
-
 @_ods_cext.register_operation(_Dialect, replace=True)
 class GPUFuncOp(GPUFuncOp):
     __doc__ = GPUFuncOp.__doc__
+
+    KERNEL_ATTR_NAME = "gpu.kernel"
+    KNOWN_BLOCK_SIZE_ATTR_NAME = "known_block_size"
+    KNOWN_GRID_SIZE_ATTR_NAME = "known_grid_size"
+
+    FUNCTION_TYPE_ATTR_NAME = "function_type"
+    SYM_NAME_ATTR_NAME = "sym_name"
+    ARGUMENT_ATTR_NAME = "arg_attrs"
+    RESULT_ATTR_NAME = "res_attrs"
 
     def __init__(
         self,
@@ -50,8 +49,8 @@ class GPUFuncOp(GPUFuncOp):
         sym_name: Optional[Union[str, StringAttr]] = None,
         kernel: Optional[bool] = None,
         body_builder: Optional[Callable[[GPUFuncOp], None]] = None,
-        known_block_size: Optional[Union[List[int], DenseI32ArrayAttr]] = None,
-        known_grid_size: Optional[Union[List[int], DenseI32ArrayAttr]] = None,
+        known_block_size: Optional[Union[Sequence[int], DenseI32ArrayAttr]] = None,
+        known_grid_size: Optional[Union[Sequence[int], DenseI32ArrayAttr]] = None,
         *args,
         loc=None,
         ip=None,
@@ -75,56 +74,52 @@ class GPUFuncOp(GPUFuncOp):
             else function_type
         )
         super().__init__(function_type, *args, loc=loc, ip=ip, **kwargs)
+
+        if isinstance(sym_name, str):
+            sym_name = StringAttr.get(str(sym_name))
         if sym_name is not None:
-            self.attributes[SYM_NAME_ATTRIBUTE_NAME] = StringAttr.get(str(sym_name))
+            self.attributes[self.SYM_NAME_ATTR_NAME] = sym_name
+
         if kernel:
-            self.attributes[KERNEL_ATTRIBUTE_NAME] = UnitAttr.get()
+            self.attributes[self.KERNEL_ATTR_NAME] = UnitAttr.get()
+        if known_block_size is not None:
+            if isinstance(known_block_size, Sequence):
+                self.attributes[self.KNOWN_BLOCK_SIZE_ATTR_NAME] = (
+                    DenseI32ArrayAttr.get(known_block_size)
+                )
+            elif isinstance(known_block_size, DenseI32ArrayAttr):
+                self.attributes[self.KNOWN_BLOCK_SIZE_ATTR_NAME] = known_block_size
+            else:
+                raise ValueError(
+                    "known_block_size must be a list of integers or a DenseI32ArrayAttr"
+                )
+
+        if known_grid_size is not None:
+            if isinstance(known_grid_size, Sequence):
+                self.attributes[self.KNOWN_GRID_SIZE_ATTR_NAME] = DenseI32ArrayAttr.get(
+                    known_grid_size
+                )
+            elif isinstance(known_grid_size, DenseI32ArrayAttr):
+                self.attributes[self.KNOWN_GRID_SIZE_ATTR_NAME] = known_grid_size
+            else:
+                raise ValueError(
+                    "known_grid_size must be a list of integers or a DenseI32ArrayAttr"
+                )
+
         if body_builder is not None:
             with InsertionPoint(self.add_entry_block()):
                 body_builder(self)
-        if known_block_size is not None:
-            if isinstance(known_block_size, list):
-                self.attributes[KNOWN_BLOCK_SIZE_ATTRIBUTE_NAME] = (
-                    DenseI32ArrayAttr.get(known_block_size)
-                )
-            else:
-                self.attributes[KNOWN_BLOCK_SIZE_ATTRIBUTE_NAME] = known_block_size
-        if known_grid_size is not None:
-            if isinstance(known_grid_size, list):
-                self.attributes[KNOWN_GRID_SIZE_ATTRIBUTE_NAME] = DenseI32ArrayAttr.get(
-                    known_grid_size
-                )
-            else:
-                self.attributes[KNOWN_GRID_SIZE_ATTRIBUTE_NAME] = known_grid_size
-
-    @property
-    def type(self) -> FunctionType:
-        return FunctionType(
-            TypeAttr(self.attributes[FUNCTION_TYPE_ATTRIBUTE_NAME]).value
-        )
 
     @property
     def name(self) -> StringAttr:
-        return StringAttr(self.attributes[SYM_NAME_ATTRIBUTE_NAME])
+        return StringAttr(self.attributes[self.SYM_NAME_ATTR_NAME])
 
     @property
     def is_kernel(self) -> bool:
-        return KERNEL_ATTRIBUTE_NAME in self.attributes
-
-    @property
-    def known_block_size(self) -> Optional[DenseI32ArrayAttr]:
-        if KNOWN_BLOCK_SIZE_ATTRIBUTE_NAME not in self.attributes:
-            return None
-        return self.attributes[KNOWN_BLOCK_SIZE_ATTRIBUTE_NAME]
-
-    @property
-    def known_grid_size(self) -> Optional[DenseI32ArrayAttr]:
-        if KNOWN_GRID_SIZE_ATTRIBUTE_NAME not in self.attributes:
-            return None
-        return self.attributes[KNOWN_GRID_SIZE_ATTRIBUTE_NAME]
+        return self.KERNEL_ATTR_NAME in self.attributes
 
     def add_entry_block(self) -> Block:
-        function_type = self.type
+        function_type = self.function_type.value
         return self.body.blocks.append(
             *function_type.inputs,
             arg_locs=[self.location for _ in function_type.inputs],
@@ -136,34 +131,38 @@ class GPUFuncOp(GPUFuncOp):
 
     @property
     def arguments(self) -> Sequence[Type]:
-        return self.type.inputs
+        return self.function_type.value.inputs
 
     @property
     def arg_attrs(self):
-        if ARGUMENT_ATTRIBUTE_NAME not in self.attributes:
-            return ArrayAttr.get([DictAttr.get({}) for _ in self.type.inputs])
-        return ArrayAttr(self.attributes[ARGUMENT_ATTRIBUTE_NAME])
+        if self.ARGUMENT_ATTR_NAME not in self.attributes:
+            return ArrayAttr.get(
+                [DictAttr.get({}) for _ in self.function_type.value.inputs]
+            )
+        return ArrayAttr(self.attributes[self.ARGUMENT_ATTR_NAME])
 
     @arg_attrs.setter
-    def arg_attrs(self, attribute: Union[ArrayAttr, list[Attribute]]):
+    def arg_attrs(self, attribute: Union[ArrayAttr, Sequence[Attribute]]):
         if isinstance(attribute, ArrayAttr):
-            self.attributes[ARGUMENT_ATTRIBUTE_NAME] = attribute
+            self.attributes[self.ARGUMENT_ATTR_NAME] = attribute
         else:
-            self.attributes[ARGUMENT_ATTRIBUTE_NAME] = ArrayAttr.get(
+            self.attributes[self.ARGUMENT_ATTR_NAME] = ArrayAttr.get(
                 attribute, context=self.context
             )
 
     @property
     def result_attrs(self) -> Optional[ArrayAttr]:
-        if RESULT_ATTRIBUTE_NAME not in self.attributes:
-            return ArrayAttr.get([DictAttr.get({}) for _ in self.type.results])
-        return self.attributes[RESULT_ATTRIBUTE_NAME]
+        if self.RESULT_ATTR_NAME not in self.attributes:
+            return ArrayAttr.get(
+                [DictAttr.get({}) for _ in self.function_type.value.results]
+            )
+        return self.attributes[self.RESULT_ATTR_NAME]
 
     @result_attrs.setter
-    def result_attrs(self, attribute: Union[ArrayAttr, list[Attribute]]):
+    def result_attrs(self, attribute: Union[ArrayAttr, Sequence[Attribute]]):
         if isinstance(attribute, ArrayAttr):
-            self.attributes[RESULT_ATTRIBUTE_NAME] = attribute
+            self.attributes[self.RESULT_ATTR_NAME] = attribute
         else:
-            self.attributes[RESULT_ATTRIBUTE_NAME] = ArrayAttr.get(
+            self.attributes[self.RESULT_ATTR_NAME] = ArrayAttr.get(
                 attribute, context=self.context
             )
