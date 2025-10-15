@@ -4,6 +4,7 @@ from mlir.ir import *
 import mlir.dialects.gpu as gpu
 import mlir.dialects.gpu.passes
 from mlir.passmanager import *
+import mlir.ir as ir
 
 
 def run(f):
@@ -64,3 +65,65 @@ def testObjectAttr():
     # CHECK: #gpu.object<#nvvm.target, kernels = <[#gpu.kernel_metadata<"kernel", () -> ()>]>, "BC\C0\DE5\14\00\00\05\00\00\00b\0C0$MY\BEf">
     print(o)
     assert o.kernels == kernelTable
+
+
+# CHECK-LABEL: testGPUFuncOp
+@run
+def testGPUFuncOp():
+    module = Module.create()
+    with InsertionPoint(module.body):
+        gpu_module_name = StringAttr.get("gpu_module")
+        gpumodule = gpu.GPUModuleOp(gpu_module_name)
+        block = gpumodule.bodyRegion.blocks.append()
+
+        def builder(func: gpu.GPUFuncOp) -> None:
+            _ = gpu.GlobalIdOp(gpu.Dimension.x)
+            _ = gpu.ReturnOp([])
+
+        with InsertionPoint(block):
+            name = StringAttr.get("kernel0")
+            func_type = ir.FunctionType.get(inputs=[], results=[])
+            type_attr = TypeAttr.get(func_type)
+            func = gpu.GPUFuncOp(type_attr, name)
+            func.attributes[gpu.SYM_NAME_ATTRIBUTE_NAME] = name
+            func.attributes[gpu.KERNEL_ATTRIBUTE_NAME] = UnitAttr.get()
+            block = func.body.blocks.append()
+            with InsertionPoint(block):
+                builder(func)
+
+            func = gpu.GPUFuncOp(
+                func_type,
+                sym_name="kernel1",
+                kernel=True,
+                body_builder=builder,
+            )
+
+            assert func.name.value == "kernel1"
+            assert func.arg_attrs == ArrayAttr.get([])
+            assert func.result_attrs == ArrayAttr.get([])
+            assert func.arguments == []
+            assert func.entry_block == func.body.blocks[0]
+            assert func.is_kernel
+
+            non_kernel_func = gpu.GPUFuncOp(
+                func_type,
+                sym_name="non_kernel_func",
+                body_builder=builder,
+            )
+            assert not non_kernel_func.is_kernel
+
+    print(module)
+
+    # CHECK: gpu.module @gpu_module
+    # CHECK: gpu.func @kernel0() kernel {
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   gpu.return
+    # CHECK: }
+    # CHECK: gpu.func @kernel1() kernel {
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   gpu.return
+    # CHECK: }
+    # CHECK: gpu.func @non_kernel_func() {
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   gpu.return
+    # CHECK: }
