@@ -378,6 +378,7 @@ constexpr ProcInfo Processors[] = {
   { {"gracemont"}, CK_Gracemont, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Pantherlake microarchitecture based processors.
   { {"pantherlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
+  { {"wildcatlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
   // Sierraforest microarchitecture based processors.
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
