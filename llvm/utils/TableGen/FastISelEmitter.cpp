@@ -555,7 +555,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     raw_string_ostream SuffixOS(ManglingSuffix);
     Operands.PrintManglingSuffix(SuffixOS, ImmediatePredicates, true);
     if (!StringSwitch<bool>(ManglingSuffix)
-             .Cases("", "r", "rr", "ri", "i", "f", true)
+             .Cases({"", "r", "rr", "ri", "i", "f"}, true)
              .Default(false))
       continue;
 

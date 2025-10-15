@@ -1102,8 +1102,6 @@ void TrieRawHashMapHandle::print(
 
   if (auto Err = Printer.printRecords())
     OS << "error: " << toString(std::move(Err)) << "\n";
-
-  return;
 }
 
 Error TrieRawHashMapHandle::validate(

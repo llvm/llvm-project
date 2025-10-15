@@ -221,12 +221,10 @@ constexpr ::llvm::StringRef strip_quotes(const char *Str) {
 #define LDBG_GET_DEBUG_TYPE_STR() LDBG_GET_DEBUG_TYPE_STR_(DEBUG_TYPE)
 
 /// Helper to call isCurrentDebugType with a StringRef.
-static LLVM_ATTRIBUTE_UNUSED bool ldbgIsCurrentDebugType(StringRef Type,
-                                                         int Level) {
+[[maybe_unused]] static bool ldbgIsCurrentDebugType(StringRef Type, int Level) {
   return ::llvm::isCurrentDebugType(Type.str().c_str(), Level);
 }
-static LLVM_ATTRIBUTE_UNUSED bool ldbgIsCurrentDebugType(int Level,
-                                                         StringRef Type) {
+[[maybe_unused]] static bool ldbgIsCurrentDebugType(int Level, StringRef Type) {
   return ::llvm::isCurrentDebugType(Type.str().c_str(), Level);
 }
 
@@ -302,7 +300,7 @@ public:
 };
 
 /// Remove the path prefix from the file name.
-static LLVM_ATTRIBUTE_UNUSED constexpr const char *
+[[maybe_unused]] static constexpr const char *
 getShortFileName(const char *path) {
   const char *filename = path;
   for (const char *p = path; *p != '\0'; ++p) {
@@ -315,7 +313,7 @@ getShortFileName(const char *path) {
 /// Compute the prefix for the debug log in the form of:
 /// "[DebugType] File:Line "
 /// Where the File is the file name without the path prefix.
-static LLVM_ATTRIBUTE_UNUSED std::string
+[[maybe_unused]] static std::string
 computePrefix(StringRef DebugType, const char *File, int Line, int Level) {
   std::string Prefix;
   raw_string_ostream OsPrefix(Prefix);
@@ -326,7 +324,7 @@ computePrefix(StringRef DebugType, const char *File, int Line, int Level) {
   return OsPrefix.str();
 }
 /// Overload allowing to swap the order of the DebugType and Level arguments.
-static LLVM_ATTRIBUTE_UNUSED std::string
+[[maybe_unused]] static std::string
 computePrefix(int Level, const char *File, int Line, StringRef DebugType) {
   return computePrefix(DebugType, File, Line, Level);
 }

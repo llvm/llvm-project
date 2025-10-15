@@ -152,6 +152,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %74 = nvvm.read.ptx.sreg.lanemask.ge : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.gt
   %75 = nvvm.read.ptx.sreg.lanemask.gt : i32
+  // CHECK: %76 = call range(i32 0, 0) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %76 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 0> : i32
+  // CHECK: %77 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %77 = nvvm.read.ptx.sreg.tid.x range <i32, 4294967295, 4294967295> : i32
   llvm.return %1 : i32
 }
 

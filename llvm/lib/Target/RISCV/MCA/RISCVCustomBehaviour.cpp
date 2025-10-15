@@ -43,7 +43,7 @@ const llvm::StringRef RISCVLMULInstrument::DESC_NAME = "RISCV-LMUL";
 bool RISCVLMULInstrument::isDataValid(llvm::StringRef Data) {
   // Return true if not one of the valid LMUL strings
   return StringSwitch<bool>(Data)
-      .Cases("M1", "M2", "M4", "M8", "MF2", "MF4", "MF8", true)
+      .Cases({"M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"}, true)
       .Default(false);
 }
 

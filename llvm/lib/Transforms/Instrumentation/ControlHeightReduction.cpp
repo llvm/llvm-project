@@ -396,9 +396,8 @@ class CHR {
 
 } // end anonymous namespace
 
-static inline
-raw_ostream LLVM_ATTRIBUTE_UNUSED &operator<<(raw_ostream &OS,
-                                              const CHRStats &Stats) {
+[[maybe_unused]] static inline raw_ostream &operator<<(raw_ostream &OS,
+                                                       const CHRStats &Stats) {
   Stats.print(OS);
   return OS;
 }
@@ -425,8 +424,8 @@ static bool shouldApply(Function &F, ProfileSummaryInfo &PSI) {
   return PSI.isFunctionEntryHot(&F);
 }
 
-static void LLVM_ATTRIBUTE_UNUSED dumpIR(Function &F, const char *Label,
-                                         CHRStats *Stats) {
+[[maybe_unused]] static void dumpIR(Function &F, const char *Label,
+                                    CHRStats *Stats) {
   StringRef FuncName = F.getName();
   StringRef ModuleName = F.getParent()->getName();
   (void)(FuncName); // Unused in release build.
@@ -1622,7 +1621,7 @@ static void insertTrivialPHIs(CHRScope *Scope,
 }
 
 // Assert that all the CHR regions of the scope have a biased branch or select.
-static void LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] static void
 assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
 #ifndef NDEBUG
   auto HasBiasedBranchOrSelect = [](RegInfo &RI, CHRScope *Scope) {
@@ -1644,8 +1643,9 @@ assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
 
 // Assert that all the condition values of the biased branches and selects have
 // been hoisted to the pre-entry block or outside of the scope.
-static void LLVM_ATTRIBUTE_UNUSED assertBranchOrSelectConditionHoisted(
-    CHRScope *Scope, BasicBlock *PreEntryBlock) {
+[[maybe_unused]] static void
+assertBranchOrSelectConditionHoisted(CHRScope *Scope,
+                                     BasicBlock *PreEntryBlock) {
   CHR_DEBUG(dbgs() << "Biased regions condition values \n");
   for (RegInfo &RI : Scope->CHRRegions) {
     Region *R = RI.R;
@@ -2007,8 +2007,8 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
   }
 }
 
-static void LLVM_ATTRIBUTE_UNUSED
-dumpScopes(SmallVectorImpl<CHRScope *> &Scopes, const char *Label) {
+[[maybe_unused]] static void dumpScopes(SmallVectorImpl<CHRScope *> &Scopes,
+                                        const char *Label) {
   dbgs() << Label << " " << Scopes.size() << "\n";
   for (CHRScope *Scope : Scopes) {
     dbgs() << *Scope << "\n";

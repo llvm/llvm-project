@@ -61,6 +61,9 @@ static cl::opt<SkipMLPolicyCriteria> SkipPolicy(
 static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
                                           cl::Hidden, cl::init(""));
 
+static cl::opt<bool> StopImmediatelyForTest("ml-inliner-stop-immediately",
+                                            cl::Hidden);
+
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -214,6 +217,7 @@ MLInlineAdvisor::MLInlineAdvisor(
     return;
   }
   ModelRunner->switchContext("");
+  ForceStop = StopImmediatelyForTest;
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -379,9 +383,17 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
   if (SkipPolicy == SkipMLPolicyCriteria::IfCallerIsNotCold) {
-    if (!PSI.isFunctionEntryCold(&Caller))
-      return std::make_unique<InlineAdvice>(this, CB, ORE,
-                                            GetDefaultAdvice(CB));
+    if (!PSI.isFunctionEntryCold(&Caller)) {
+      // Return a MLInlineAdvice, despite delegating to the default advice,
+      // because we need to keep track of the internal state. This is different
+      // from the other instances where we return a "default" InlineAdvice,
+      // which happen at points we won't come back to the MLAdvisor for
+      // decisions requiring that state.
+      return ForceStop ? std::make_unique<InlineAdvice>(this, CB, ORE,
+                                                        GetDefaultAdvice(CB))
+                       : std::make_unique<MLInlineAdvice>(this, CB, ORE,
+                                                          GetDefaultAdvice(CB));
+    }
   }
   auto MandatoryKind = InlineAdvisor::getMandatoryKind(CB, FAM, ORE);
   // If this is a "never inline" case, there won't be any changes to internal

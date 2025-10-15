@@ -639,3 +639,25 @@ TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
   EXPECT_EQ(expected_high, result->high());
 }
 #endif
+
+TEST_F(GDBRemoteCommunicationClientTest, MultiMemReadSupported) {
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    StringExtractorGDBRemote qSupported_packet_request;
+    server.GetPacket(qSupported_packet_request);
+    server.SendPacket("MultiMemRead+;");
+    return true;
+  });
+  ASSERT_TRUE(client.GetMultiMemReadSupported());
+  async_result.wait();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, MultiMemReadNotSupported) {
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    StringExtractorGDBRemote qSupported_packet_request;
+    server.GetPacket(qSupported_packet_request);
+    server.SendPacket(";");
+    return true;
+  });
+  ASSERT_FALSE(client.GetMultiMemReadSupported());
+  async_result.wait();
+}
