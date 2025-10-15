@@ -95,7 +95,7 @@ EOF
 venv_dir="${build_dir}/meson-venv"
 python3 -m venv "${venv_dir}"
 # Install the version of meson that was the latest at the time this script was written.
-"${venv_dir}/bin/pip" install "meson==1.1.1"
+"${venv_dir}/bin/pip" install "meson==1.9.0"
 
 "${venv_dir}/bin/meson" setup \
   -Dincludedir=include -Dlibdir=lib -Dspecsdir=none -Dmultilib=false -Dpicoexit=false \

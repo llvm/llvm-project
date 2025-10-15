@@ -376,6 +376,12 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB3_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    brk #0x1
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ldr z0, [x29, #-19, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl scalable_callee
 ; CHECK-NEXT:    smstart sm
@@ -472,6 +478,12 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; FP-CHECK-NEXT:    //APP
 ; FP-CHECK-NEXT:    //NO_APP
 ; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    rdvl x8, #1
+; FP-CHECK-NEXT:    addsvl x8, x8, #-1
+; FP-CHECK-NEXT:    cbz x8, .LBB3_2
+; FP-CHECK-NEXT:  // %bb.1:
+; FP-CHECK-NEXT:    brk #0x1
+; FP-CHECK-NEXT:  .LBB3_2:
 ; FP-CHECK-NEXT:    ldr z0, [x29, #-19, mul vl] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    bl scalable_callee
 ; FP-CHECK-NEXT:    smstart sm

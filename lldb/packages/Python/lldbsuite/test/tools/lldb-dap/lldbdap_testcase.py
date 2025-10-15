@@ -5,12 +5,16 @@ import uuid
 
 import dap_server
 from dap_server import Source
+from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
 import base64
 
 
+# DAP tests as a whole have been flakey on the Windows on Arm bot. See:
+# https://github.com/llvm/llvm-project/issues/137660
+@skipIf(oslist=["windows"], archs=["aarch64"])
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
@@ -248,6 +252,14 @@ class DAPTestCaseBase(TestBase):
         areas = event["body"].get("areas", [])
         self.assertEqual(set(expected_areas), set(areas))
 
+    def verify_memory_event(self, memoryReference):
+        if memoryReference is None:
+            self.assertIsNone(self.dap_server.memory_event)
+        event = self.dap_server.memory_event
+        self.dap_server.memory_event = None
+        self.assertIsNotNone(event)
+        self.assertEqual(memoryReference, event["body"].get("memoryReference"))
+
     def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
@@ -364,6 +376,7 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
         if response["success"]:
             self.verify_invalidated_event(["variables"])
+            self.verify_memory_event(response["body"].get("memoryReference"))
         return response
 
     def set_local(self, name, value, id=None):

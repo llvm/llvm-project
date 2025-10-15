@@ -1041,6 +1041,21 @@ public:
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
 
+  /// At location \p Loc, add a type sample for the given \p Type with
+  /// \p Count. This function uses saturating add which clamp the result to
+  /// maximum uint64_t (the counter type), and inserts the saturating add result
+  /// to map.  Returns counter_overflow to caller if the actual result is larger
+  /// than maximum uint64_t.
+  sampleprof_error addTypeSamplesAt(const LineLocation &Loc, FunctionId Type,
+                                    uint64_t Count) {
+    auto &TypeCounts = getTypeSamplesAt(Loc);
+    bool Overflowed = false;
+    TypeCounts[Type] = SaturatingMultiplyAdd(Count, /* Weight= */ (uint64_t)1,
+                                             TypeCounts[Type], &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
+  }
+
   /// Scale \p Other sample counts by \p Weight and add the scaled result to the
   /// type samples for \p Loc. Under the hoold, the caller-provided \p Loc will
   /// be un-drifted before the type sample lookup if possible.

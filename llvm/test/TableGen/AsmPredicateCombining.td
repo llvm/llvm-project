@@ -63,19 +63,19 @@ def AsmPred4 : Predicate<"Pred4">, AssemblerPredicate<(all_of AsmCond4, (not (an
 // MATCHER-NEXT:   Features.set(Feature_AsmPred4Bit);
 
 def insn1 : TestInsn<1, [AsmPred1]>;
-// DISASS: return (Bits[arch::AsmCond1]);
+// DISASS: return FB[arch::AsmCond1];
 
 def insn2 : TestInsn<2, [AsmPred2]>;
-// DISASS: return (Bits[arch::AsmCond2a] && Bits[arch::AsmCond2b])
+// DISASS: return FB[arch::AsmCond2a] && FB[arch::AsmCond2b];
 
 def insn3 : TestInsn<3, [AsmPred3]>;
-// DISASS: return (Bits[arch::AsmCond3a] || Bits[arch::AsmCond3b])
+// DISASS: return FB[arch::AsmCond3a] || FB[arch::AsmCond3b];
 
 def insn4 : TestInsn<4, [AsmPred1, AsmPred2]>;
-// DISASS: return (Bits[arch::AsmCond1] && (Bits[arch::AsmCond2a] && Bits[arch::AsmCond2b]))
+// DISASS: return FB[arch::AsmCond1] && (FB[arch::AsmCond2a] && FB[arch::AsmCond2b]);
 
 def insn5 : TestInsn<5, [AsmPred1, AsmPred3]>;
-// DISASS: return (Bits[arch::AsmCond1] && (Bits[arch::AsmCond3a] || Bits[arch::AsmCond3b]))
+// DISASS: return FB[arch::AsmCond1] && (FB[arch::AsmCond3a] || FB[arch::AsmCond3b]);
 
 def insn6 : TestInsn<6, []>;
 def : InstAlias<"alias1", (insn6 R0)> { let Predicates = [AsmPred1]; }

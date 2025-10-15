@@ -34,6 +34,7 @@
 #define DEBUG_TYPE "hexagon-disassembler"
 
 using namespace llvm;
+using namespace llvm::MCD;
 using namespace Hexagon;
 
 using DecodeStatus = MCDisassembler::DecodeStatus;
@@ -666,11 +667,10 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, HvxWRDecoderTable);
 }
 
-LLVM_ATTRIBUTE_UNUSED // Suppress warning temporarily.
-    static DecodeStatus
-    DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t /*Address*/,
-                              const MCDisassembler *Decoder) {
+[[maybe_unused]] // Suppress warning temporarily.
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const MCDisassembler *Decoder) {
   static const MCPhysReg HvxVQRDecoderTable[] = {
       Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
       Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};

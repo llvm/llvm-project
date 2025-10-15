@@ -26,14 +26,17 @@ bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
         auto QT = VD->getType();
-        if (VD->hasGlobalStorage() && QT.isConstQualified()) {
+        auto IsImmortal = safeGetName(VD) == "NSApp";
+        if (VD->hasGlobalStorage() && (IsImmortal || QT.isConstQualified()))
           return callback(E, true);
-        }
+        if (VD->hasGlobalStorage() && isSafeGlobalDecl(VD))
+          return callback(E, true);
       }
     }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
@@ -71,9 +74,11 @@ bool tryToFindPtrOrigin(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, callback) &&
+                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
+                                callback) &&
              tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, callback);
+                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
+                                callback);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
@@ -93,7 +98,8 @@ bool tryToFindPtrOrigin(
     if (auto *call = dyn_cast<CallExpr>(E)) {
       if (auto *Callee = call->getCalleeDecl()) {
         if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
-            Callee->hasAttr<NSReturnsRetainedAttr>()) {
+            Callee->hasAttr<NSReturnsRetainedAttr>() ||
+            Callee->hasAttr<NSReturnsAutoreleasedAttr>()) {
           return callback(E, true);
         }
       }
@@ -115,7 +121,7 @@ bool tryToFindPtrOrigin(
         if (auto *Callee = operatorCall->getDirectCallee()) {
           auto ClsName = safeGetName(Callee->getParent());
           if (isRefType(ClsName) || isCheckedPtr(ClsName) ||
-              isRetainPtr(ClsName) || ClsName == "unique_ptr" ||
+              isRetainPtrOrOSPtr(ClsName) || ClsName == "unique_ptr" ||
               ClsName == "UniqueRef" || ClsName == "WeakPtr" ||
               ClsName == "WeakRef") {
             if (operatorCall->getNumArgs() == 1) {
@@ -208,6 +214,8 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
+      if (StopAtFirstRefCountedObj)
+        return callback(BoxedExpr, true);
       E = BoxedExpr->getSubExpr();
       continue;
     }

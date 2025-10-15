@@ -3920,6 +3920,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_AddressOfUnaddressableFunction:
   case FK_ParenthesizedListInitFailed:
   case FK_DesignatedInitForNonAggregate:
+  case FK_HLSLInitListFlatteningFailed:
     return false;
 
   case FK_ReferenceInitOverloadFailed:
@@ -4882,8 +4883,10 @@ static void TryListInitialization(Sema &S,
                                   bool TreatUnavailableAsInvalid) {
   QualType DestType = Entity.getType();
 
-  if (S.getLangOpts().HLSL && !S.HLSL().transformInitList(Entity, InitList))
+  if (S.getLangOpts().HLSL && !S.HLSL().transformInitList(Entity, InitList)) {
+    Sequence.SetFailed(InitializationSequence::FK_HLSLInitListFlatteningFailed);
     return;
+  }
 
   // C++ doesn't allow scalar initialization with more than one argument.
   // But C99 complex numbers are scalars and it makes sense there.
@@ -6817,33 +6820,18 @@ void InitializationSequence::InitializeFrom(Sema &S,
   assert(Args.size() >= 1 && "Zero-argument case handled above");
 
   // For HLSL ext vector types we allow list initialization behavior for C++
-  // constructor syntax. This is accomplished by converting initialization
-  // arguments an InitListExpr late.
+  // functional cast expressions which look like constructor syntax. This is
+  // accomplished by converting initialization arguments to InitListExpr.
   if (S.getLangOpts().HLSL && Args.size() > 1 && DestType->isExtVectorType() &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
-
-    llvm::SmallVector<Expr *> InitArgs;
-    for (auto *Arg : Args) {
-      if (Arg->getType()->isExtVectorType()) {
-        const auto *VTy = Arg->getType()->castAs<ExtVectorType>();
-        unsigned Elm = VTy->getNumElements();
-        for (unsigned Idx = 0; Idx < Elm; ++Idx) {
-          InitArgs.emplace_back(new (Context) ArraySubscriptExpr(
-              Arg,
-              IntegerLiteral::Create(
-                  Context, llvm::APInt(Context.getIntWidth(Context.IntTy), Idx),
-                  Context.IntTy, SourceLocation()),
-              VTy->getElementType(), Arg->getValueKind(), Arg->getObjectKind(),
-              SourceLocation()));
-        }
-      } else
-        InitArgs.emplace_back(Arg);
-    }
-    InitListExpr *ILE = new (Context) InitListExpr(
-        S.getASTContext(), SourceLocation(), InitArgs, SourceLocation());
+    InitListExpr *ILE = new (Context)
+        InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
+                     Args.back()->getEndLoc());
+    ILE->setType(DestType);
     Args[0] = ILE;
-    AddListInitializationStep(DestType);
+    TryListInitialization(S, Entity, Kind, ILE, *this,
+                          TreatUnavailableAsInvalid);
     return;
   }
 
@@ -7539,7 +7527,7 @@ PerformConstructorInitialization(Sema &S,
 
   // Only check access if all of that succeeded.
   S.CheckConstructorAccess(Loc, Constructor, Step.Function.FoundDecl, Entity);
-  if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
+  if (S.DiagnoseUseOfOverloadedDecl(Constructor, Loc))
     return ExprError();
 
   if (const ArrayType *AT = S.Context.getAsArrayType(Entity.getType()))
@@ -8092,7 +8080,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
         S.CheckConstructorAccess(Kind.getLocation(), Constructor, FoundFn,
                                  Entity);
-        if (S.DiagnoseUseOfDecl(FoundFn, Kind.getLocation()))
+        if (S.DiagnoseUseOfOverloadedDecl(Constructor, Kind.getLocation()))
           return ExprError();
 
         CastKind = CK_ConstructorConversion;
@@ -8102,7 +8090,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
         CXXConversionDecl *Conversion = cast<CXXConversionDecl>(Fn);
         S.CheckMemberOperatorAccess(Kind.getLocation(), CurInit.get(), nullptr,
                                     FoundFn);
-        if (S.DiagnoseUseOfDecl(FoundFn, Kind.getLocation()))
+        if (S.DiagnoseUseOfOverloadedDecl(Conversion, Kind.getLocation()))
           return ExprError();
 
         CurInit = S.BuildCXXMemberCallExpr(CurInit.get(), FoundFn, Conversion,
@@ -8219,8 +8207,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // InitializeTemporary entity for our target type.
       QualType Ty = Step->Type;
       bool IsTemporary = !S.Context.hasSameType(Entity.getType(), Ty);
-      InitializedEntity TempEntity = InitializedEntity::InitializeTemporary(Ty);
-      InitializedEntity InitEntity = IsTemporary ? TempEntity : Entity;
+      InitializedEntity InitEntity =
+          IsTemporary ? InitializedEntity::InitializeTemporary(Ty) : Entity;
       InitListChecker PerformInitList(S, InitEntity,
           InitList, Ty, /*VerifyOnly=*/false,
           /*TreatUnavailableAsInvalid=*/false);
@@ -8242,7 +8230,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       InitListExpr *StructuredInitList =
           PerformInitList.getFullyStructuredList();
-      CurInit.get();
       CurInit = shouldBindAsTemporary(InitEntity)
           ? S.MaybeBindToTemporary(StructuredInitList)
           : StructuredInitList;
@@ -9302,6 +9289,14 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   }
 
+  case InitializationSequence::FK_HLSLInitListFlatteningFailed: {
+    // Unlike C/C++ list initialization, there is no fallback if it fails. This
+    // allows us to diagnose the failure when it happens in the
+    // TryListInitialization call instead of delaying the diagnosis, which is
+    // beneficial because the flattening is also expensive.
+    break;
+  }
+
   case FK_ExplicitConstructor: {
     S.Diag(Kind.getLocation(), diag::err_selected_explicit_constructor)
       << Args[0]->getSourceRange();
@@ -9499,6 +9494,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_DesignatedInitForNonAggregate:
       OS << "designated initializer for non-aggregate type";
+      break;
+
+    case FK_HLSLInitListFlatteningFailed:
+      OS << "HLSL initialization list flattening failed";
       break;
     }
     OS << '\n';

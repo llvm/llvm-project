@@ -12,6 +12,7 @@
 
 #include "flang/Semantics/openmp-utils.h"
 
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
@@ -39,6 +40,24 @@
 
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
+
+const Scope &GetScopingUnit(const Scope &scope) {
+  const Scope *iter{&scope};
+  for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockConstruct:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::DerivedType:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+    case Scope::Kind::Subprogram:
+      return *iter;
+    default:
+      break;
+    }
+  }
+  return *iter;
+}
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
@@ -105,6 +124,16 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object) {
+  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+    return name->source;
+  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+    return GetLastName(*desg).source;
+  }
+  return std::nullopt;
+}
+
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
@@ -114,14 +143,12 @@ const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   return nullptr;
 }
 
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    return GetLastName(*desg).source;
+const parser::OmpObject *GetArgumentObject(
+    const parser::OmpArgument &argument) {
+  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
+    return std::get_if<parser::OmpObject>(&locator->u);
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 bool IsCommonBlock(const Symbol &sym) {
@@ -188,6 +215,46 @@ std::optional<evaluate::DynamicType> GetDynamicType(
 }
 
 namespace {
+struct LogicalConstantVistor : public evaluate::Traverse<LogicalConstantVistor,
+                                   std::optional<bool>, false> {
+  using Result = std::optional<bool>;
+  using Base = evaluate::Traverse<LogicalConstantVistor, Result, false>;
+  LogicalConstantVistor() : Base(*this) {}
+
+  Result Default() const { return std::nullopt; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    if constexpr (T::category == common::TypeCategory::Logical) {
+      return llvm::transformOptional(
+          x.GetScalarValue(), [](auto &&v) { return v.IsTrue(); });
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    if constexpr (sizeof...(results) == 0) {
+      return result;
+    } else {
+      if (result.has_value()) {
+        return result;
+      } else {
+        return Combine(std::move(results)...);
+      }
+    }
+  }
+};
+} // namespace
+
+std::optional<bool> GetLogicalValue(const SomeExpr &expr) {
+  return LogicalConstantVistor{}(expr);
+}
+
+namespace {
 struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
@@ -225,7 +292,7 @@ private:
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object) {
   return common::visit( //
-      common::visitors{
+      common::visitors{//
           [&](const parser::Name &x) {
             // Any member of a common block must be contiguous.
             return std::optional<bool>{true};
@@ -237,7 +304,9 @@ std::optional<bool> IsContiguous(
             }
             return std::optional<bool>{};
           },
-      },
+          [&](const parser::OmpObject::Invalid &) {
+            return std::optional<bool>{};
+          }},
       object.u);
 }
 

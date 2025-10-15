@@ -12,7 +12,7 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-LABEL: define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC_1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -66,25 +66,6 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[MUL_IV:%.*]] = mul nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[MUL_IV]]
-; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[GEP_SRC_1]], align 1
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[L_1]], 0
-; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[IV_OR:%.*]] = or disjoint i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds [8 x i32], ptr @src, i64 0, i64 [[IV_OR]]
-; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC]], align 4
-; CHECK-NEXT:    store i32 [[L_2]], ptr [[DST]], align 4
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -114,8 +95,3 @@ loop.latch:
 exit:
   ret void
 }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-;.
