@@ -120,7 +120,7 @@ jobs:
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
         if [ "$RUNNER_OS" = "Windows" ]; then
-          release_binary_suffix="msi"
+          release_binary_suffix="exe"
         else
           release_binary_suffix="tar.xz"
         fi
