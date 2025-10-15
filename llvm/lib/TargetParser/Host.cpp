@@ -1164,7 +1164,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     default: // Unknown family 0x12 CPU.
       break;
     }
-  break;
+    break;
 
   default:
     break; // Unknown.
