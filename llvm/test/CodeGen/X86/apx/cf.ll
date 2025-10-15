@@ -235,9 +235,10 @@ define void @and_cond(i32 %a, i1 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    notb %sil
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %al, %sil
-; CHECK-NEXT:    cfcmovel %ecx, 0
+; CHECK-NEXT:    cfcmovnel %ecx, 0
 ; CHECK-NEXT:    retq
   %is_pos = icmp sgt i32 %a, 0
   %not_b = xor i1 %b, true
