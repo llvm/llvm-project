@@ -2094,7 +2094,8 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(Sym);
         const MCExpr *Dot = MCSymbolRefExpr::create(Sym, OutContext);
         const MCExpr *Value = MCSymbolRefExpr::create(
-            getSymbol(MI.getOperand(0).getGlobal()), OutContext);
+            OutContext.getOrCreateSymbol(MI.getOperand(0).getSymbolName()),
+            OutContext);
         OutStreamer->emitRelocDirective(*Dot, "BFD_RELOC_NONE", Value, SMLoc());
         break;
       }

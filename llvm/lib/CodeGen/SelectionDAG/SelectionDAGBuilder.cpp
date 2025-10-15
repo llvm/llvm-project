@@ -7773,12 +7773,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
 
   case Intrinsic::reloc_none: {
-    SDValue V = getValue(I.getArgOperand(0));
-    const auto *GA = cast<GlobalAddressSDNode>(V);
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
     SDValue Ops[2];
     Ops[0] = getRoot();
-    Ops[1] = DAG.getTargetGlobalAddress(GA->getGlobal(), sdl, V.getValueType(),
-                                        GA->getOffset());
+    Ops[1] = DAG.getTargetExternalSymbol(
+        SymbolName.data(), TLI.getProgramPointerTy(DAG.getDataLayout()));
     DAG.setRoot(DAG.getNode(ISD::RELOC_NONE, sdl, MVT::Other, Ops));
     return;
   }

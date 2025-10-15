@@ -6018,8 +6018,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "cache type argument to llvm.prefetch must be 0-1", Call);
     break;
   case Intrinsic::reloc_none: {
-    Check(isa<GlobalValue>(Call.getArgOperand(0)),
-          "llvm.reloc.none argument must be a global value", &Call);
+    Check(isa<MDString>(
+              cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata()),
+          "llvm.reloc.none argument must be a metadata string", &Call);
     break;
   }
   case Intrinsic::stackprotector:
