@@ -111,6 +111,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
+  initializeKCFIPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -487,6 +488,9 @@ void ARMPassConfig::addPreSched2() {
   // proper scheduling.
   addPass(createARMExpandPseudoPass());
 
+  // Emit KCFI checks for indirect calls.
+  addPass(createKCFIPass());
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     // When optimising for size, always run the Thumb2SizeReduction pass before
     // IfConversion. Otherwise, check whether IT blocks are restricted
@@ -530,6 +534,9 @@ void ARMPassConfig::addPreEmitPass() {
 }
 
 void ARMPassConfig::addPreEmitPass2() {
+  // Unpack KCFI bundles before AsmPrinter
+  addPass(createUnpackMachineBundles(nullptr));
+
   // Inserts fixup instructions before unsafe AES operations. Instructions may
   // be inserted at the start of blocks and at within blocks so this pass has to
   // come before those below.

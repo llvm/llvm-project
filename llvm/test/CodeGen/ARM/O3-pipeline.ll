@@ -166,6 +166,7 @@
 ; CHECK-NEXT:      ARM Execution Domain Fix
 ; CHECK-NEXT:      BreakFalseDeps
 ; CHECK-NEXT:      ARM pseudo instruction expansion pass
+; CHECK-NEXT:      Insert KCFI indirect call checks
 ; CHECK-NEXT:      Thumb2 instruction size reduce pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
@@ -204,6 +205,7 @@
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      Stack Frame Layout Analysis
+; CHECK-NEXT:      Unpack machine instruction bundles
 ; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM fix for Cortex-A57 AES Erratum 1742098
 ; CHECK-NEXT:      ARM Branch Targets
