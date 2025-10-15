@@ -65,12 +65,16 @@ class TestCase(TestBase):
         # unrecognized field
         self.check_invalid_packet("MultiMemRead:blah:;ranges:10,2;")
 
-        # This is a valid way of testing for MultiMemRead support
+        # Zero-length reads are ok.
         reply = self.send_process_packet("MultiMemRead:ranges:0,0;")
         self.assertEqual(reply, "0;")
+
         # Debugserver is permissive with trailing commas.
         reply = self.send_process_packet("MultiMemRead:ranges:10,2,;")
         self.assertEqual(reply, "0;")
+        reply = self.send_process_packet(f"MultiMemRead:ranges:{mem_address:x},2,;")
+        self.assertEqual(reply, "2;ab")
+
         reply = self.send_process_packet("MultiMemRead:ranges:10,2;")
         self.assertEqual(reply, "0;")
         reply = self.send_process_packet(f"MultiMemRead:ranges:{mem_address:x},0;")
