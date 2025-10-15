@@ -24,9 +24,9 @@ export int TestIncrementCounter() {
 // CHECK: ret
 
 // CHECK: define {{.*}} noundef i32 @hlsl::RWStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} %this)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
-// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i8 1)
+// CHECK: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 1
+// DXIL-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__counter_handle
+// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[COUNTER_HANDLE]], i8 1)
 // CHECK-NEXT:  ret i32 %[[COUNTER]]
 
 export int TestDecrementCounter() {
@@ -37,9 +37,9 @@ export int TestDecrementCounter() {
 // CHECK: ret
 
 // CHECK: define {{.*}} noundef i32 @hlsl::RWStructuredBuffer<unsigned int vector[4]>::DecrementCounter()(ptr {{.*}} %this)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer.0", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <4 x i32>, 1, 0), ptr %__handle
-// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v4i32_1_0t(target("dx.RawBuffer", <4 x i32>, 1, 0) %[[HANDLE]], i8 -1)
+// CHECK: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer.0", ptr %{{.*}}, i32 0, i32 1
+// DXIL-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", <4 x i32>, 1, 0), ptr %__counter_handle
+// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v4i32_1_0t(target("dx.RawBuffer", <4 x i32>, 1, 0) %[[COUNTER_HANDLE]], i8 -1)
 // CHECK-NEXT: ret i32 %[[COUNTER]]
 
 export void TestAppend(float value) {
@@ -54,9 +54,9 @@ export void TestAppend(float value) {
 // CHECK: %[[VALUE:.*]] = load float, ptr %value.addr
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
-// CHECK-NEXT: %__handle2 = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE2:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle2
-// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[HANDLE2]], i8 1)
+// CHECK-NEXT: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 1
+// DXIL-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__counter_handle
+// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[COUNTER_HANDLE]], i8 1)
 // DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i32 %[[COUNTER]])
 // CHECK-NEXT: store float %[[VALUE]], ptr %[[PTR]]
 // CHECK-NEXT: ret void
@@ -71,9 +71,9 @@ export double TestConsume() {
 // CHECK: define {{.*}} double @hlsl::ConsumeStructuredBuffer<double>::Consume()(ptr {{.*}} %this)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ConsumeStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", double, 1, 0), ptr %__handle
-// CHECK-NEXT: %__handle2 = getelementptr inbounds nuw %"class.hlsl::ConsumeStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE2:.*]] = load target("dx.RawBuffer", double, 1, 0), ptr %__handle2
-// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0) %[[HANDLE2]], i8 -1)
+// CHECK-NEXT: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::ConsumeStructuredBuffer", ptr %{{.*}}, i32 0, i32 1
+// DXIL-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", double, 1, 0), ptr %__counter_handle
+// DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0) %[[COUNTER_HANDLE]], i8 -1)
 // DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0) %[[HANDLE]], i32 %[[COUNTER]])
 // CHECK-NEXT: %[[VAL:.*]] = load double, ptr %[[PTR]], align 8
 // CHECK-NEXT: ret double %[[VAL]]

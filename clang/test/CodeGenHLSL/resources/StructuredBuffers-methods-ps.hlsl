@@ -21,9 +21,9 @@ export void TestIncrementCounter() {
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} i32 @hlsl::RasterizerOrderedStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} %this)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
-// DXIL-NEXT: %[[VAL:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i8 1)
+// CHECK: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr %{{.*}}, i32 0, i32 1
+// CHECK-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__counter_handle
+// DXIL-NEXT: %[[VAL:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[COUNTER_HANDLE]], i8 1)
 // CHECK-NEXT: ret i32 %[[VAL]]
 
 export void TestDecrementCounter() {
@@ -35,9 +35,9 @@ export void TestDecrementCounter() {
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} i32 @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::DecrementCounter()(ptr {{.*}} %this)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr %{{.*}}, i32 0, i32 0
-// CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
-// DXIL-NEXT: %[[VAL:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[HANDLE]], i8 -1)
+// CHECK: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr %{{.*}}, i32 0, i32 1
+// CHECK-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__counter_handle
+// DXIL-NEXT: %[[VAL:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[COUNTER_HANDLE]], i8 -1)
 // CHECK-NEXT: ret i32 %[[VAL]]
 
 export float TestLoad() {
