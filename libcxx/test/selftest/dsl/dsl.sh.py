@@ -12,7 +12,7 @@
 
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
-# RUN: %{python} %s x%S x%T x%{substitutions}
+# RUN: %{python} %s x%S x%{temp} x%{substitutions}
 
 import base64
 import copy

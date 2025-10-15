@@ -228,6 +228,11 @@ namespace llvm {
       return isSimple() ? V.is2048BitVector() : isExtended2048BitVector();
     }
 
+    /// Return true if this is a capability type.
+    bool isCheriCapability() const {
+      return isSimple() ? V.isCheriCapability() : false;
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       return (V == MVT::iAny || V == MVT::fAny || V == MVT::vAny ||

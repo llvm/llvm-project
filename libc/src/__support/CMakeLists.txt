@@ -97,6 +97,7 @@ add_header_library(
     common.h
     endian_internal.h
     macros/properties/architectures.h
+    macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
   DEPENDS
@@ -301,6 +302,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.common
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(

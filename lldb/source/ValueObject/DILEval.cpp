@@ -602,4 +602,10 @@ Interpreter::Visit(const FloatLiteralNode *node) {
                                                   "result");
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BooleanLiteralNode *node) {
+  bool value = node->GetValue();
+  return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
+}
+
 } // namespace lldb_private::dil

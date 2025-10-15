@@ -633,13 +633,30 @@ public:
     }
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
-      if (AT->isDeduced() && !D->getType()->isDependentType()) {
-        // Our current approach is to place the hint on the variable
-        // and accordingly print the full type
-        // (e.g. for `const auto& x = 42`, print `const int&`).
-        // Alternatively, we could place the hint on the `auto`
-        // (and then just print the type deduced for the `auto`).
-        addTypeHint(D->getLocation(), D->getType(), /*Prefix=*/": ");
+      if (AT->isDeduced()) {
+        QualType T;
+        // If the type is dependent, HeuristicResolver *may* be able to
+        // resolve it to something that's useful to print. In other
+        // cases, it can't, and the resultng type would just be printed
+        // as "<dependent type>", in which case don't hint it at all.
+        if (D->getType()->isDependentType()) {
+          if (D->hasInit()) {
+            QualType Resolved = Resolver->resolveExprToType(D->getInit());
+            if (Resolved != AST.DependentTy) {
+              T = Resolved;
+            }
+          }
+        } else {
+          T = D->getType();
+        }
+        if (!T.isNull()) {
+          // Our current approach is to place the hint on the variable
+          // and accordingly print the full type
+          // (e.g. for `const auto& x = 42`, print `const int&`).
+          // Alternatively, we could place the hint on the `auto`
+          // (and then just print the type deduced for the `auto`).
+          addTypeHint(D->getLocation(), T, /*Prefix=*/": ");
+        }
       }
     }
 

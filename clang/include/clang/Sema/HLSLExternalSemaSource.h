@@ -44,6 +44,7 @@ public:
 private:
   void defineTrivialHLSLTypes();
   void defineHLSLVectorAlias();
+  void defineHLSLMatrixAlias();
   void defineHLSLTypesWithForwardDeclarations();
   void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);
 };

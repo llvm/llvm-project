@@ -37,21 +37,6 @@
 #include "LibcTest.h"
 #endif
 
-// These are defined the same way for each framework, in terms of the macros
-// they all provide.
-
-#define ASSERT_ERRNO_EQ(VAL)                                                   \
-  do {                                                                         \
-    ASSERT_EQ(VAL, static_cast<int>(libc_errno));                              \
-    libc_errno = 0;                                                            \
-  } while (0)
-#define ASSERT_ERRNO_SUCCESS() ASSERT_EQ(0, static_cast<int>(libc_errno))
-#define ASSERT_ERRNO_FAILURE()                                                 \
-  do {                                                                         \
-    ASSERT_NE(0, static_cast<int>(libc_errno));                                \
-    libc_errno = 0;                                                            \
-  } while (0)
-
 // Some macro utility to append file names with LIBC_TEST macro's value to be
 // used in stdio tests.
 #undef STR

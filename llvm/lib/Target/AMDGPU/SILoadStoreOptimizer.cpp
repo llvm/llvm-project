@@ -1337,10 +1337,10 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
                                               AMDGPU::OpName::data1);
 
     const TargetRegisterClass *DataRC0 =
-        TII->getRegClass(Write2Opc, Data0Idx, TRI, *MF);
+        TII->getRegClass(Write2Opc, Data0Idx, TRI);
 
     const TargetRegisterClass *DataRC1 =
-        TII->getRegClass(Write2Opc, Data1Idx, TRI, *MF);
+        TII->getRegClass(Write2Opc, Data1Idx, TRI);
 
     if (unsigned SubReg = Data0->getSubReg()) {
       DataRC0 = TRI->getMatchingSuperRegClass(MRI->getRegClass(Data0->getReg()),

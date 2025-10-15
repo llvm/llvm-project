@@ -916,6 +916,33 @@ DecodeGPRMM16MovePRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+// Tablegen emits references to these unimplemented functions due to usage of
+// RegClassByHwMode - it does not detect that the RegClassByHwMode decoders are
+// unused, which in turn use these register class decoders.
+static DecodeStatus DecodeGP32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
+static DecodeStatus DecodeGP64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
+static DecodeStatus DecodeSP32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
+static DecodeStatus DecodeSP64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
 static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder) {
@@ -1003,7 +1030,7 @@ static DecodeStatus DecodeMem(MCInst &Inst, unsigned Insn, uint64_t Address,
   Reg = getReg(Decoder, Mips::GPR32RegClassID, Reg);
   Base = getReg(Decoder, Mips::GPR32RegClassID, Base);
 
-  if (Inst.getOpcode() == Mips::SC ||
+  if (Inst.getOpcode() == Mips::SC || Inst.getOpcode() == Mips::SC64 ||
       Inst.getOpcode() == Mips::SCD)
     Inst.addOperand(MCOperand::createReg(Reg));
 

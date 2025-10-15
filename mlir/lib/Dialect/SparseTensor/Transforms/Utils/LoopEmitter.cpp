@@ -344,7 +344,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
       // Reverse queue into a stack.
       std::reverse(remDepStack[t][lvl].begin(), remDepStack[t][lvl].end());
       for (auto [loop, coeff] : dependentLvlMap[t][lvl])
-        depRedOrder.emplace_back(std::make_tuple(loop, t, lvl));
+        depRedOrder.emplace_back(loop, t, lvl);
     }
 
     if (depRedOrder.empty())
