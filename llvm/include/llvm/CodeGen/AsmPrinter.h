@@ -110,9 +110,6 @@ public:
   /// generating (such as the current section etc).
   std::unique_ptr<MCStreamer> OutStreamer;
 
-  /// The VFS to resolve asm include directives.
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
-
   /// The current machine function.
   MachineFunction *MF = nullptr;
 

@@ -98,8 +98,13 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
 
   unsigned BufNum = addInlineAsmDiagBuffer(Str, LocMDNode);
   SourceMgr &SrcMgr = *MMI->getContext().getInlineSourceManager();
-  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
-  SrcMgr.setVirtualFileSystem(VFS);
+  // FIXME(sandboxing): This is not executed in tests, but might be common.
+  //                    Propagating vfs::FileSystem here is lots of work,
+  //                    consider bypassing the sandbox.
+  if (!MCOptions.IASSearchPaths.empty()) {
+    SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+    SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
+  }
 
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI, BufNum));
