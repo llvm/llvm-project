@@ -12074,27 +12074,30 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
       EVT::getVectorVT(*DAG.getContext(), AccVT.getVectorElementType(),
                        MulOpVT.getVectorElementCount());
 
-  unsigned ExtOpcLHS =
-      N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA   ? ISD::FP_EXTEND
-      : N->getOpcode() == ISD::PARTIAL_REDUCE_UMLA ? ISD::ZERO_EXTEND
-                                                   : ISD::SIGN_EXTEND;
-  unsigned ExtOpcRHS =
-      N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA   ? ISD::FP_EXTEND
-      : N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA ? ISD::SIGN_EXTEND
-                                                   : ISD::ZERO_EXTEND;
+  unsigned ExtOpcLHS, ExtOpcRHS;
+  switch (N->getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case ISD::PARTIAL_REDUCE_UMLA:
+    ExtOpcLHS = ExtOpcRHS = ISD::ZERO_EXTEND;
+    break;
+  case ISD::PARTIAL_REDUCE_SMLA:
+    ExtOpcLHS = ExtOpcRHS = ISD::SIGN_EXTEND;
+    break;
+  case ISD::PARTIAL_REDUCE_FMLA:
+    ExtOpcLHS = ExtOpcRHS = ISD::FP_EXTEND;
+    break;
+  }
 
   if (ExtMulOpVT != MulOpVT) {
     MulLHS = DAG.getNode(ExtOpcLHS, DL, ExtMulOpVT, MulLHS);
     MulRHS = DAG.getNode(ExtOpcRHS, DL, ExtMulOpVT, MulRHS);
   }
   SDValue Input = MulLHS;
-  APInt ConstantOne;
   if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA) {
-    ConstantFPSDNode *C = llvm::isConstOrConstSplatFP(MulRHS, false);
-    if (!(C && C->isExactlyValue(1.0)))
+    if (!llvm::isOneOrOneSplatFP(MulRHS))
       Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS);
-  } else if (!(ISD::isConstantSplatVector(MulRHS.getNode(), ConstantOne) &&
-               ConstantOne.isOne())) {
+  } else if (!llvm::isOneOrOneSplat(MulRHS)) {
     Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
   }
 

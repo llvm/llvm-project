@@ -13038,13 +13038,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     Opc = ISD::MUL;
   }
 
-  APInt C;
-  ConstantFPSDNode *CFP;
-  if (!(Op1->getOpcode() == ISD::MUL &&
-        ISD::isConstantSplatVector(Op2.getNode(), C) && C.isOne()) &&
-      !(Op1->getOpcode() == ISD::FMUL &&
-        (CFP = llvm::isConstOrConstSplatFP(Op2, false)) &&
-        CFP->isExactlyValue(1.0)))
+  if (!(Opc == ISD::MUL && llvm::isOneOrOneSplat(Op2)) &&
+      !(Opc == ISD::FMUL && llvm::isOneOrOneSplatFP(Op2)))
     return SDValue();
 
   auto IsIntOrFPExtOpcode = [](unsigned int Opcode) {
@@ -13060,6 +13055,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
   // -> partial_reduce_*mla(acc, x, C)
+  APInt C;
   if (ISD::isConstantSplatVector(RHS.getNode(), C)) {
     // TODO: Make use of partial_reduce_sumla here
     APInt CTrunc = C.trunc(LHSExtOpVT.getScalarSizeInBits());
@@ -13138,13 +13134,9 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
-  APInt ConstantOne;
-  ConstantFPSDNode *C;
   if (!(N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
-        (C = llvm::isConstOrConstSplatFP(Op2, false)) &&
-        C->isExactlyValue(1.0)) &&
-      !(ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) &&
-        ConstantOne.isOne()))
+        llvm::isOneOrOneSplatFP(Op2)) &&
+      !llvm::isOneOrOneSplat(Op2))
     return SDValue();
 
   unsigned Op1Opcode = Op1.getOpcode();
