@@ -289,17 +289,20 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
   int Shift = 0;
 
-  // ScopeStack keeps track of the current scope depth. It contains indices of
-  // the first token on each scope.
+  // ScopeStack keeps track of the current scope depth. It contains the levels
+  // of at most 2 scopes. The first one is the one that the matched token is
+  // in. The second one is the one that should not be moved by this procedure.
   // The "Matches" indices should only have tokens from the outer-most scope.
   // However, we do need to pay special attention to one class of tokens
-  // that are not in the outer-most scope, and that is function parameters
-  // which are split across multiple lines, as illustrated by this example:
+  // that are not in the outer-most scope, and that is the continuations of an
+  // unwrapped line whose positions are derived from a token to the right of the
+  // aligned token, as illustrated by this example:
   //   double a(int x);
   //   int    b(int  y,
   //          double z);
   // In the above example, we need to take special care to ensure that
-  // 'double z' is indented along with it's owning function 'b'.
+  // 'double z' is indented along with its owning function 'b', because its
+  // position is derived from the '(' token to the right of the 'b' token.
   // The same holds for calling a function:
   //   double a = foo(x);
   //   int    b = bar(foo(y),
@@ -309,32 +312,28 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
   //   auto s   = "Hello"
   //          "World";
   // Special handling is required for 'nested' ternary operators.
-  SmallVector<unsigned, 16> ScopeStack;
+  SmallVector<std::tuple<unsigned, unsigned, unsigned>, 2> ScopeStack;
 
   for (unsigned i = Start; i != End; ++i) {
     auto &CurrentChange = Changes[i];
     if (!Matches.empty() && Matches[0] < i)
       Matches.consume_front();
     assert(Matches.empty() || Matches[0] >= i);
-    if (!ScopeStack.empty() &&
-        CurrentChange.indentAndNestingLevel() <
-            Changes[ScopeStack.back()].indentAndNestingLevel()) {
+    while (!ScopeStack.empty() &&
+           CurrentChange.indentAndNestingLevel() < ScopeStack.back()) {
       ScopeStack.pop_back();
     }
 
-    // Compare current token to previous non-comment token to ensure whether
-    // it is in a deeper scope or not.
-    unsigned PreviousNonComment = i - 1;
-    while (PreviousNonComment > Start &&
-           Changes[PreviousNonComment].Tok->is(tok::comment)) {
-      --PreviousNonComment;
-    }
-    if (i != Start && CurrentChange.indentAndNestingLevel() >
-                          Changes[PreviousNonComment].indentAndNestingLevel()) {
-      ScopeStack.push_back(i);
+    // Keep track of the level that should not move with the aligned token.
+    if (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore != 0u &&
+        CurrentChange.indentAndNestingLevel() > ScopeStack[0] &&
+        !CurrentChange.IsAligned) {
+      ScopeStack.push_back(CurrentChange.indentAndNestingLevel());
     }
 
-    bool InsideNestedScope = !ScopeStack.empty();
+    bool InsideNestedScope =
+        !ScopeStack.empty() &&
+        CurrentChange.indentAndNestingLevel() > ScopeStack[0];
     bool ContinuedStringLiteral = i > Start &&
                                   CurrentChange.Tok->is(tok::string_literal) &&
                                   Changes[i - 1].Tok->is(tok::string_literal);
@@ -349,103 +348,20 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     if (!Matches.empty() && Matches[0] == i) {
       Shift = Column - (RightJustify ? CurrentChange.TokenLength : 0) -
               CurrentChange.StartOfTokenColumn;
+      ScopeStack = {CurrentChange.indentAndNestingLevel()};
       CurrentChange.Spaces += Shift;
     }
 
     if (Shift == 0)
       continue;
 
-    // This is for function parameters that are split across multiple lines,
-    // as mentioned in the ScopeStack comment.
-    if (InsideNestedScope && CurrentChange.NewlinesBefore > 0) {
-      unsigned ScopeStart = ScopeStack.back();
-      auto ShouldShiftBeAdded = [&] {
-        // Function declaration
-        if (Changes[ScopeStart - 1].Tok->is(TT_FunctionDeclarationName))
-          return true;
-
-        // Lambda.
-        if (Changes[ScopeStart - 1].Tok->is(TT_LambdaLBrace))
-          return false;
-
-        // Continued function declaration
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->is(TT_FunctionDeclarationName)) {
-          return true;
-        }
-
-        // Continued (template) function call.
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->isOneOf(tok::identifier,
-                                                 TT_TemplateCloser) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_paren) &&
-            Changes[ScopeStart].Tok->isNot(TT_LambdaLSquare)) {
-          if (CurrentChange.Tok->MatchingParen &&
-              CurrentChange.Tok->MatchingParen->is(TT_LambdaLBrace)) {
-            return false;
-          }
-          if (Changes[ScopeStart].NewlinesBefore > 0)
-            return false;
-          if (CurrentChange.Tok->is(tok::l_brace) &&
-              CurrentChange.Tok->is(BK_BracedInit)) {
-            return true;
-          }
-          return Style.BinPackArguments;
-        }
-
-        // Ternary operator
-        if (CurrentChange.Tok->is(TT_ConditionalExpr))
-          return true;
-
-        // Period Initializer .XXX = 1.
-        if (CurrentChange.Tok->is(TT_DesignatedInitializerPeriod))
-          return true;
-
-        // Continued ternary operator
-        if (CurrentChange.Tok->Previous &&
-            CurrentChange.Tok->Previous->is(TT_ConditionalExpr)) {
-          return true;
-        }
-
-        // Continued direct-list-initialization using braced list.
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            CurrentChange.Tok->is(tok::l_brace) &&
-            CurrentChange.Tok->is(BK_BracedInit)) {
-          return true;
-        }
-
-        // Continued braced list.
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->isNot(tok::identifier) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            CurrentChange.Tok->isNot(tok::r_brace)) {
-          for (unsigned OuterScopeStart : llvm::reverse(ScopeStack)) {
-            // Lambda.
-            if (OuterScopeStart > Start &&
-                Changes[OuterScopeStart - 1].Tok->is(TT_LambdaLBrace)) {
-              return false;
-            }
-          }
-          if (Changes[ScopeStart].NewlinesBefore > 0)
-            return false;
-          return true;
-        }
-
-        // Continued template parameter.
-        if (Changes[ScopeStart - 1].Tok->is(TT_TemplateOpener))
-          return true;
-
-        return false;
-      };
-
-      if (ShouldShiftBeAdded())
-        CurrentChange.Spaces += Shift;
-    }
-
-    if (ContinuedStringLiteral)
+    // This is for lines that are split across multiple lines, as mentioned in
+    // the ScopeStack comment. The stack size being 1 means that the token is
+    // not in a scope that should not move.
+    if (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
+        (ContinuedStringLiteral || InsideNestedScope)) {
       CurrentChange.Spaces += Shift;
+    }
 
     // We should not remove required spaces unless we break the line before.
     assert(Shift > 0 || Changes[i].NewlinesBefore > 0 ||
