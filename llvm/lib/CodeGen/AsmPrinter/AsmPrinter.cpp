@@ -1704,7 +1704,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
   return nullptr;
 }
 
-/// Emits .callgraph section.
+/// Emits .llvm.callgraph section.
 void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
                                       FunctionCallGraphInfo &FuncCGInfo) {
   if (!MF.getTarget().Options.EmitCallGraphSection)
