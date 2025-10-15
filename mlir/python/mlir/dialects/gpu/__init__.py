@@ -76,12 +76,17 @@ class GPUFuncOp(GPUFuncOp):
         super().__init__(function_type, *args, loc=loc, ip=ip, **kwargs)
 
         if isinstance(sym_name, str):
-            sym_name = StringAttr.get(str(sym_name))
-        if sym_name is not None:
+            self.attributes[self.SYM_NAME_ATTR_NAME] = StringAttr.get(sym_name)
+        elif isinstance(sym_name, StringAttr):
             self.attributes[self.SYM_NAME_ATTR_NAME] = sym_name
+        else:
+            raise ValueError(
+                "sym_name must be a string or a StringAttr"
+            )
 
         if kernel:
             self.attributes[self.KERNEL_ATTR_NAME] = UnitAttr.get()
+
         if known_block_size is not None:
             if isinstance(known_block_size, Sequence):
                 self.attributes[self.KNOWN_BLOCK_SIZE_ATTR_NAME] = (
@@ -119,6 +124,9 @@ class GPUFuncOp(GPUFuncOp):
         return self.KERNEL_ATTR_NAME in self.attributes
 
     def add_entry_block(self) -> Block:
+        if len(self.body.blocks) > 0:
+            raise RuntimeError(f"Entry block already exists for {self.name.value}")
+
         function_type = self.function_type.value
         return self.body.blocks.append(
             *function_type.inputs,
@@ -127,6 +135,11 @@ class GPUFuncOp(GPUFuncOp):
 
     @property
     def entry_block(self) -> Block:
+        if len(self.body.blocks) == 0:
+            raise RuntimeError(
+                f"Entry block does not exist for {self.name.value}." +
+                " Do you need to call the add_entry_block() method on this GPUFuncOp?"
+            )
         return self.body.blocks[0]
 
     @property

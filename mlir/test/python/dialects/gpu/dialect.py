@@ -88,9 +88,22 @@ def testGPUFuncOp():
             func = gpu.GPUFuncOp(type_attr, name)
             func.attributes["sym_name"] = name
             func.attributes["gpu.kernel"] = UnitAttr.get()
-            block = func.body.blocks.append()
+
+            try:
+                func.entry_block
+                assert False, "Expected RuntimeError"
+            except RuntimeError as e:
+                assert str(e) == "Entry block does not exist for kernel0. Do you need to call the add_entry_block() method on this GPUFuncOp?"
+
+            block = func.add_entry_block()
             with InsertionPoint(block):
                 builder(func)
+
+            try:
+                func.add_entry_block()
+                assert False, "Expected RuntimeError"
+            except RuntimeError as e:
+                assert str(e) == "Entry block already exists for kernel0"
 
             func = gpu.GPUFuncOp(
                 func_type,
