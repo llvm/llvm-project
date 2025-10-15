@@ -11,7 +11,6 @@
 
 #include <__algorithm/for_each.h>
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -20,11 +19,22 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <typename _Generator>
+struct __fn {
+  __fn(_Generator& __g) : __gen(__g) {}
+
+  template <typename _Tp>
+  void operator()(_Tp&& __element) const {
+    std::forward<_Tp>(__element) = __gen();
+  }
+
+  _Generator& __gen;
+};
+
 template <class _ForwardIterator, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
-  typedef typename std::iterator_traits<_ForwardIterator>::value_type value_type;
-  std::for_each(__first, __last, [&](value_type&& __element) { std::forward<value_type>(__element) = __gen(); });
+  std::for_each(__first, __last, __fn<_Generator>(__gen));
 }
 
 _LIBCPP_END_NAMESPACE_STD
