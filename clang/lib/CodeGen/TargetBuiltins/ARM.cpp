@@ -590,6 +590,7 @@ struct ARMVectorIntrinsicInfo {
       Intrinsic::LLVMIntrinsic, Intrinsic::AltLLVMIntrinsic, \
       TypeModifier }
 
+// clang-format off
 static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(__a32_vcvt_bf16_f32, arm_neon_vcvtfp2bf, 0),
   NEONMAP0(splat_lane_v),
@@ -1442,6 +1443,7 @@ static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vrsqrteh_f16, aarch64_neon_frsqrte, Add1ArgType),
   NEONMAP1(vrsqrtsh_f16, aarch64_neon_frsqrts, Add1ArgType),
 };
+// clang-format on
 
 // Some intrinsics are equivalent for codegen.
 static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
