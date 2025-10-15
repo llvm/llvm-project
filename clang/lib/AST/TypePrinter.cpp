@@ -1441,6 +1441,7 @@ void TypePrinter::printDeducedTemplateSpecializationBefore(
     Name.print(OS, Policy);
   }
   if (DeducedTD) {
+    DefaultTemplateArgsPolicyRAII _1(Policy);
     printTemplateArgumentList(OS, Args, Policy,
                               DeducedTD->getTemplateParameters());
   }
@@ -2562,7 +2563,11 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     llvm::SmallVector<TemplateArgument, 8> OrigArgs;
     for (const TA &A : Args)
       OrigArgs.push_back(getArgument(A));
-    while (!Args.empty() && getArgument(Args.back()).getIsDefaulted())
+    ASTContext &Ctx = TPL->getParam(0)->getASTContext();
+    while (!Args.empty() &&
+           isSubstitutedDefaultArgument(Ctx, getArgument(Args.back()),
+                                        TPL->getParam(Args.size() - 1),
+                                        OrigArgs, TPL->getDepth()))
       Args = Args.drop_back();
   }
 

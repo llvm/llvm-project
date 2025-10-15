@@ -53,7 +53,7 @@ int main() {
 // COMMON-SAME: templateParams: ![[PARAM:[0-9]+]]
 // COMMON:      ![[PARAM]] = !{![[TEMPL_TYPE_PARAM:[0-9]+]]}
 // GDB:         ![[TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_INT_TY]])
-// LLDB:        ![[TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_INT_TY]])
+// LLDB:        ![[TEMPL_TYPE_PARAM]] = !DITemplateTypeParameter(name: "T", type: ![[BAR_INT_BASE]])
 
     BarInt barInt;
 
@@ -75,13 +75,9 @@ int main() {
 
     Bar<char> barChar;
 
-// LLDB:   ![[BAR_SHORT_TY_2]] = !DIDerivedType(tag: DW_TAG_typedef, name: "Bar<short>", file: ![[#]], line: [[#]], baseType: ![[BAR_SHORT_TY]])
-
 // LLDB:   !DILocalVariable(name: "barChar", scope: ![[#]], file: ![[#]], line: [[#]], type: ![[BAR_CHAR_TY_2:[0-9]+]])
 // GDB:    !DILocalVariable(name: "barChar", scope: ![[#]], file: ![[#]], line: [[#]], type: ![[BAR_CHAR_TYPEDEF:[0-9]+]])
 // GDB:    ![[BAR_CHAR_TYPEDEF]] = !DIDerivedType(tag: DW_TAG_typedef, name: "Bar<char>"
-
-// LLDB:   ![[BAR_CHAR_TY_2]] = !DIDerivedType(tag: DW_TAG_typedef, name: "Bar<char>", file: ![[#]], line: [[#]], baseType: ![[BAR_CHAR_TY]])
 
     return 0;
 }

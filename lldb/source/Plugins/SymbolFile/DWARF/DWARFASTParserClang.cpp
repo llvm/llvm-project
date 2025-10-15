@@ -2076,7 +2076,6 @@ bool DWARFASTParserClang::ParseTemplateDIE(
     CompilerType clang_type;
     uint64_t uval64 = 0;
     bool uval64_valid = false;
-    bool is_default_template_arg = false;
     DWARFFormValue form_value;
     for (size_t i = 0; i < attributes.Size(); ++i) {
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
@@ -2108,7 +2107,8 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         break;
       case DW_AT_default_value:
         if (attributes.ExtractFormValueAtIndex(i, form_value))
-          is_default_template_arg = form_value.Boolean();
+          if (form_value.Boolean())
+            return true;
         break;
       default:
         break;
@@ -2127,9 +2127,9 @@ bool DWARFASTParserClang::ParseTemplateDIE(
       if (tag == DW_TAG_template_value_parameter && uval64_valid) {
         if (auto value = MakeAPValue(ast, clang_type, uval64)) {
           template_param_infos.InsertArg(
-              name, clang::TemplateArgument(
-                        ast, ClangUtil::GetQualType(clang_type),
-                        std::move(*value), is_default_template_arg));
+              name,
+              clang::TemplateArgument(ast, ClangUtil::GetQualType(clang_type),
+                                      std::move(*value)));
           return true;
         }
       }
@@ -2138,13 +2138,11 @@ bool DWARFASTParserClang::ParseTemplateDIE(
       // a non-type template parameter.
       template_param_infos.InsertArg(
           name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
-                                        /*isNullPtr*/ false,
-                                        is_default_template_arg));
+                                        /*isNullPtr=*/false));
     } else {
       auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
       template_param_infos.InsertArg(
-          name, clang::TemplateArgument(clang::TemplateName(tplt_type),
-                                        is_default_template_arg));
+          name, clang::TemplateArgument(clang::TemplateName(tplt_type)));
     }
   }
     return true;

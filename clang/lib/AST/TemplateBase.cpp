@@ -157,27 +157,10 @@ static bool needsAmpersandOnTemplateArg(QualType paramType, QualType argType) {
 // TemplateArgument Implementation
 //===----------------------------------------------------------------------===//
 
-void TemplateArgument::initFromType(QualType T, bool IsNullPtr,
-                                    bool IsDefaulted) {
-  TypeOrValue.Kind = IsNullPtr ? NullPtr : Type;
-  TypeOrValue.IsDefaulted = IsDefaulted;
-  TypeOrValue.V = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
-}
-
-void TemplateArgument::initFromDeclaration(ValueDecl *D, QualType QT,
-                                           bool IsDefaulted) {
-  assert(D && "Expected decl");
-  DeclArg.Kind = Declaration;
-  DeclArg.IsDefaulted = IsDefaulted;
-  DeclArg.QT = QT.getAsOpaquePtr();
-  DeclArg.D = D;
-}
-
 void TemplateArgument::initFromIntegral(const ASTContext &Ctx,
                                         const llvm::APSInt &Value,
-                                        QualType Type, bool IsDefaulted) {
+                                        QualType Type) {
   Integer.Kind = Integral;
-  Integer.IsDefaulted = IsDefaulted;
   // Copy the APSInt value into our decomposed form.
   Integer.BitWidth = Value.getBitWidth();
   Integer.IsUnsigned = Value.isUnsigned();
@@ -195,18 +178,11 @@ void TemplateArgument::initFromIntegral(const ASTContext &Ctx,
 }
 
 void TemplateArgument::initFromStructural(const ASTContext &Ctx, QualType Type,
-                                          const APValue &V, bool IsDefaulted) {
+                                          const APValue &V) {
   Value.Kind = StructuralValue;
-  Value.IsDefaulted = IsDefaulted;
   Value.Value = new (Ctx) APValue(V);
   Ctx.addDestruction(Value.Value);
   Value.Type = Type.getAsOpaquePtr();
-}
-
-TemplateArgument::TemplateArgument(const ASTContext &Ctx,
-                                   const llvm::APSInt &Value, QualType Type,
-                                   bool IsDefaulted) {
-  initFromIntegral(Ctx, Value, Type, IsDefaulted);
 }
 
 static const ValueDecl *getAsSimpleValueDeclRef(const ASTContext &Ctx,
@@ -236,17 +212,17 @@ static const ValueDecl *getAsSimpleValueDeclRef(const ASTContext &Ctx,
 }
 
 TemplateArgument::TemplateArgument(const ASTContext &Ctx, QualType Type,
-                                   const APValue &V, bool IsDefaulted) {
+                                   const APValue &V) {
   if (Type->isIntegralOrEnumerationType() && V.isInt())
-    initFromIntegral(Ctx, V.getInt(), Type, IsDefaulted);
+    initFromIntegral(Ctx, V.getInt(), Type);
   else if ((V.isLValue() && V.isNullPointer()) ||
            (V.isMemberPointer() && !V.getMemberPointerDecl()))
-    initFromType(Type, /*isNullPtr=*/true, IsDefaulted);
+    initFromType(Type, /*IsNullPtr=*/true);
   else if (const ValueDecl *VD = getAsSimpleValueDeclRef(Ctx, Type, V))
     // FIXME: The Declaration form should expose a const ValueDecl*.
-    initFromDeclaration(const_cast<ValueDecl *>(VD), Type, IsDefaulted);
+    initFromDeclaration(const_cast<ValueDecl *>(VD), Type);
   else
-    initFromStructural(Ctx, Type, V, IsDefaulted);
+    initFromStructural(Ctx, Type, V);
 }
 
 TemplateArgument

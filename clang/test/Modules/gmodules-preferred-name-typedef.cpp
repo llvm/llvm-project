@@ -12,4 +12,4 @@
 #include "gmodules-preferred-name-typedef.h"
 
 // CHECK: ![[#]] = !DIDerivedType(tag: DW_TAG_typedef, name: "Bar", scope: ![[#]], file: ![[#]], line: [[#]], baseType: ![[PREF_BASE:[0-9]+]])
-// CHECK: ![[PREF_BASE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Foo<char>"
+// CHECK: ![[PREF_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "Foo<char>"

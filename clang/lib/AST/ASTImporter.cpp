@@ -848,8 +848,7 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     ExpectedType ToTypeOrErr = import(From.getAsType());
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
-    return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/ false,
-                            From.getIsDefaulted());
+    return TemplateArgument(*ToTypeOrErr, /*isNullPtr=*/false);
   }
 
   case TemplateArgument::Integral: {
@@ -867,15 +866,14 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
     return TemplateArgument(dyn_cast<ValueDecl>((*ToOrErr)->getCanonicalDecl()),
-                            *ToTypeOrErr, From.getIsDefaulted());
+                            *ToTypeOrErr);
   }
 
   case TemplateArgument::NullPtr: {
     ExpectedType ToTypeOrErr = import(From.getNullPtrType());
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
-    return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/ true,
-                            From.getIsDefaulted());
+    return TemplateArgument(*ToTypeOrErr, /*isNullPtr=*/true);
   }
 
   case TemplateArgument::StructuralValue: {
@@ -894,7 +892,7 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (!ToTemplateOrErr)
       return ToTemplateOrErr.takeError();
 
-    return TemplateArgument(*ToTemplateOrErr, From.getIsDefaulted());
+    return TemplateArgument(*ToTemplateOrErr);
   }
 
   case TemplateArgument::TemplateExpansion: {
@@ -903,14 +901,12 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (!ToTemplateOrErr)
       return ToTemplateOrErr.takeError();
 
-    return TemplateArgument(*ToTemplateOrErr, From.getNumTemplateExpansions(),
-                            From.getIsDefaulted());
+    return TemplateArgument(*ToTemplateOrErr, From.getNumTemplateExpansions());
   }
 
   case TemplateArgument::Expression:
     if (ExpectedExpr ToExpr = import(From.getAsExpr()))
-      return TemplateArgument(*ToExpr, From.isCanonicalExpr(),
-                              From.getIsDefaulted());
+      return TemplateArgument(*ToExpr, From.isCanonicalExpr());
     else
       return ToExpr.takeError();
 
