@@ -43,9 +43,9 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(os.path.exists(program + ".side_effect"))
 
         self.dap_server.request_disconnect()
+        self.dap_server.terminate()
 
         # verify we didn't produce the side effect file
-        time.sleep(1)
         self.assertFalse(os.path.exists(program + ".side_effect"))
 
     @skipIfWindows
@@ -67,17 +67,19 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             lambda: self.run_platform_command("rm %s" % (sync_file_path))
         )
 
-        self.process = subprocess.Popen([program, sync_file_path])
+        process = self.spawnSubprocess(program, args=[sync_file_path])
         lldbutil.wait_for_file_on_target(self, sync_file_path)
 
-        self.attach(pid=self.process.pid, disconnectAutomatically=False)
+        self.attach(pid=process.pid, disconnectAutomatically=False, stopOnEntry=True)
+        self.dap_server.request_configurationDone()
         response = self.dap_server.request_evaluate("wait_for_attach = false;")
-        self.assertTrue(response["success"])
+        self.assertTrue(response["success"], f"evaluate failed: {response}")
 
         # verify we haven't produced the side effect file yet
         self.assertFalse(os.path.exists(program + ".side_effect"))
 
         self.dap_server.request_disconnect()
-        time.sleep(2)
+        self.dap_server.terminate()
+
         # verify we produced the side effect file, as the program continued after disconnecting
         self.assertTrue(os.path.exists(program + ".side_effect"))

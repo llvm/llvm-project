@@ -1,10 +1,12 @@
+import asyncio
 import os
 import time
+import functools
 from typing import Optional, Callable, Any, List, Union
 import uuid
 
 import dap_server
-from dap_server import Source
+from dap_server import source, Source
 from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
@@ -21,34 +23,58 @@ class DAPTestCaseBase(TestBase):
     DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @functools.cached_property
+    def loop(self) -> asyncio.AbstractEventLoop:
+        return asyncio.new_event_loop()
+
     def create_debug_adapter(
         self,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
+        *args: str,
+        env: dict[str, str] = {},
         connection: Optional[str] = None,
-        additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdapterServer(
-            executable=self.lldbDAPExec,
-            connection=connection,
-            init_commands=self.setUpCommands(),
-            log_file=log_file_path,
-            env=lldbDAPEnv,
-            additional_args=additional_args or [],
+        if connection:
+            _, connection = self.loop.run_until_complete(
+                dap_server.DebugAdapterServer.launch(
+                    self.lldbDAPExec,
+                    *args,
+                    env=env.copy(),
+                    log_file=log_file_path,
+                    connection=connection,
+                )
+            )
+            self.dap_server = self.loop.run_until_complete(
+                dap_server.DebugAdapterServer.connect(
+                    connection=connection,
+                    init_commands=self.setUpCommands(),
+                    log_file=log_file_path,
+                )
+            )
+            return
+
+        self.dap_server = self.loop.run_until_complete(
+            dap_server.DebugAdapterServer.spawn(
+                self.lldbDAPExec,
+                *args,
+                init_commands=self.setUpCommands(),
+                log_file=log_file_path,
+                env=env.copy(),
+            )
         )
 
     def build_and_create_debug_adapter(
         self,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
+        *args: str,
+        env: dict[str, str] = {},
         dictionary: Optional[dict] = None,
-        additional_args: Optional[list[str]] = None,
     ):
         self.build(dictionary=dictionary)
-        self.create_debug_adapter(lldbDAPEnv, additional_args=additional_args)
+        self.create_debug_adapter(*args, env=env.copy())
 
     def build_and_create_debug_adapter_for_attach(self):
         """Variant of build_and_create_debug_adapter that builds a uniquely
@@ -74,7 +100,7 @@ class DAPTestCaseBase(TestBase):
         self, source_reference, lines, data=None, wait_for_resolve=True
     ):
         return self.set_source_breakpoints_from_source(
-            Source.build(source_reference=source_reference),
+            source(source_reference=source_reference),
             lines,
             data,
             wait_for_resolve,
@@ -91,9 +117,7 @@ class DAPTestCaseBase(TestBase):
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        breakpoint_ids = [b["id"] for b in breakpoints if "id" in b]
         if wait_for_resolve:
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
@@ -111,16 +135,14 @@ class DAPTestCaseBase(TestBase):
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        breakpoint_ids = [b["id"] for b in breakpoints if "id" in b]
         if wait_for_resolve:
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
     def wait_for_breakpoints_to_resolve(
-        self, breakpoint_ids: list[str], timeout: Optional[float] = DEFAULT_TIMEOUT
-    ):
+        self, breakpoint_ids: list[int], timeout: Optional[float] = DEFAULT_TIMEOUT
+    ) -> None:
         unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
             breakpoint_ids, timeout
         )
@@ -162,28 +184,23 @@ class DAPTestCaseBase(TestBase):
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
-        or self.set_function_breakpoints() can be passed to this function"""
-        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        or self.set_function_breakpoints() can be passed to this function."""
+        self.dap_server.wait_for_stopped(timeout)
         normalized_bp_ids = [str(b) for b in breakpoint_ids]
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" not in body:
-                    continue
-                if (
-                    body["reason"] != "breakpoint"
-                    and body["reason"] != "instruction breakpoint"
-                ):
-                    continue
-                if "hitBreakpointIds" not in body:
-                    continue
-                hit_breakpoint_ids = body["hitBreakpointIds"]
-                for bp in hit_breakpoint_ids:
-                    if str(bp) in normalized_bp_ids:
-                        return
-        self.assertTrue(
-            False,
-            f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stopped_events {stopped_events}",
+        for body in self.dap_server.thread_stop_reasons.values():
+            if (
+                body["reason"] != "breakpoint"
+                and body["reason"] != "instruction breakpoint"
+            ):
+                continue
+            if "hitBreakpointIds" not in body:
+                continue
+            hit_breakpoint_ids = body["hitBreakpointIds"]
+            for bp in hit_breakpoint_ids:
+                if str(bp) in normalized_bp_ids:
+                    return
+        self.fail(
+            f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stop reasons {self.dap_server.thread_stop_reasons}",
         )
 
     def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
@@ -449,18 +466,13 @@ class DAPTestCaseBase(TestBase):
         )
 
     def continue_to_exit(self, exitCode=0, timeout=DEFAULT_TIMEOUT):
-        self.do_continue()
-        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        if not self.dap_server.is_exited:
+            self.do_continue()
+            self.dap_server.wait_for_exited(timeout)
         self.assertEqual(
-            len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
-        )
-        self.assertEqual(
-            stopped_events[0]["event"], "exited", "make sure program ran to completion"
-        )
-        self.assertEqual(
-            stopped_events[0]["body"]["exitCode"],
+            self.dap_server.exit_status,
             exitCode,
-            "exitCode == %i" % (exitCode),
+            f"want exitCode == {exitCode}, got {self.dap_server.exit_status}",
         )
 
     def disassemble(self, threadId=None, frameIndex=None):
@@ -517,6 +529,7 @@ class DAPTestCaseBase(TestBase):
             if disconnectAutomatically:
                 self.dap_server.request_disconnect(terminateDebuggee=True)
             self.dap_server.terminate()
+            # self.dap_server.dump_log()
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -546,6 +559,7 @@ class DAPTestCaseBase(TestBase):
             if disconnectAutomatically:
                 self.dap_server.request_disconnect(terminateDebuggee=True)
             self.dap_server.terminate()
+            # self.dap_server.dump_log()
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -563,13 +577,13 @@ class DAPTestCaseBase(TestBase):
         self,
         program,
         *,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
+        lldbDAPEnv: dict[str, str] = {},
         **kwargs,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
         """
-        self.build_and_create_debug_adapter(lldbDAPEnv)
+        self.build_and_create_debug_adapter(env=lldbDAPEnv.copy())
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(program, **kwargs)

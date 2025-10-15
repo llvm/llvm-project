@@ -113,7 +113,7 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
                 "Expected one assembly breakpoint to be set",
             )
 
-            persistent_breakpoint_source = self.dap_server.resolved_breakpoints[
+            persistent_breakpoint_source = self.dap_server.breakpoints[
                 persistent_breakpoint_ids[0]
             ]["source"]
             self.assertIn(

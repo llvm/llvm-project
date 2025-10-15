@@ -84,17 +84,17 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         self.create_debug_adapter()
         # The underlying lldb-dap process must be alive
-        self.assertEqual(self.dap_server.process.poll(), None)
+        self.assertEqual(self.dap_server.process.returncode, None)
 
         # The lldb-dap process should finish even though
         # we didn't close the communication socket explicitly
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(timeout=self.DEFAULT_TIMEOUT)
+        self.dap_server.terminate()
 
         # Check the return code
-        self.assertEqual(self.dap_server.process.poll(), 0)
+        self.assertEqual(self.dap_server.process.returncode, 0)
 
     def test_stopOnEntry(self):
         """
@@ -130,17 +130,17 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         output = self.get_stdout()
         self.assertTrue(output and len(output) > 0, "expect program output")
         lines = output.splitlines()
-        found = False
-        for line in lines:
-            if line.startswith('cwd = "'):
-                quote_path = '"%s"' % (program_parent_dir)
-                found = True
-                self.assertIn(
-                    quote_path,
-                    line,
-                    "working directory '%s' not in '%s'" % (program_parent_dir, line),
-                )
-        self.assertTrue(found, "verified program working directory")
+        self.assertIn(f'cwd = "{program_parent_dir}"', lines)
+        # for line in lines:
+        #     if line.startswith('cwd = "'):
+        #         quote_path = '"%s"' % (program_parent_dir)
+        #         found = True
+        #         self.assertIn(
+        #             quote_path,
+        #             line,
+        #             "working directory '%s' not in '%s'" % (program_parent_dir, line),
+        #         )
+        # self.assertTrue(found, "verified program working directory")
 
     def test_debuggerRoot(self):
         """
@@ -408,14 +408,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console()
+        output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue again and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the second breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console()
+        output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -423,7 +423,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
-        output = self.collect_console(pattern=terminateCommands[0])
+        output = self.collect_console(pattern=terminateCommands[-1])
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
@@ -476,14 +476,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("launchCommands", output, launchCommands)
         # Verify the "stopCommands" here
         self.continue_to_next_stop()
-        output = self.get_console()
+        output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_next_stop()
-        output = self.get_console()
+        output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -600,7 +600,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
             # Test with --no-lldbinit flag (should NOT source .lldbinit)
             self.build_and_create_debug_adapter(
-                lldbDAPEnv={"HOME": temp_home}, additional_args=["--no-lldbinit"]
+                "--no-lldbinit",
+                env={"HOME": temp_home},
             )
             program = self.getBuildArtifact("a.out")
 
@@ -611,7 +612,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             self.launch(program, initCommands=initCommands, stopOnEntry=True)
 
             # Get console output to verify the setting was NOT set from .lldbinit
-            output = self.get_console()
+            output = self.collect_console(pattern=initCommands[-1])
             self.assertTrue(output and len(output) > 0, "expect console output")
 
             # Verify the setting has default value, not "never" from .lldbinit
