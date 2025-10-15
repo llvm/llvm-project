@@ -36,7 +36,7 @@ void test_return_type() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_return_type<std::stack<int> >();
   test_return_type<std::stack<int, std::vector<int> > >();
 
@@ -56,6 +56,15 @@ int main(int, char**) {
 #endif
   assert(q.size() == 3);
   assert(q.top() == Emplaceable(3, 4.5));
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
