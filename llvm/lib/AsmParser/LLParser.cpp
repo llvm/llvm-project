@@ -54,6 +54,7 @@
 #include <cassert>
 #include <cstring>
 #include <optional>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -427,6 +428,8 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     if (N.second && !N.second->isResolved())
       N.second->resolveCycles();
   }
+
+  DISubprogram::cleanupRetainedNodes(std::exchange(NewDistinctSPs, {}));
 
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
@@ -5987,6 +5990,10 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
        targetFuncName.Val, keyInstructions.Val));
+
+  if (IsDistinct)
+    NewDistinctSPs.push_back(cast<DISubprogram>(Result));
+
   return false;
 }
 

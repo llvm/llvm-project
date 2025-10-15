@@ -5,9 +5,9 @@
 // RUN:   -analyze-function="c:@S@Window@F@overloaded#I#"
 
 // RUN: %clang_extdef_map %s | FileCheck %s
-// CHECK:      27:c:@S@Window@F@overloaded#I#
+// CHECK:      27:c:@S@Window@F@overloaded#d#
 // CHECK-NEXT: 27:c:@S@Window@F@overloaded#C#
-// CHECK-NEXT: 27:c:@S@Window@F@overloaded#d#
+// CHECK-NEXT: 27:c:@S@Window@F@overloaded#I#
 
 void clang_analyzer_warnIfReached();
 
