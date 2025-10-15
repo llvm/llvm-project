@@ -231,8 +231,8 @@ class SFrameEmitterImpl {
     // FDE or CIE. We don't have one here. Alignments are used for scaling
     // factors for ops like CFA_def_cfa_offset_sf. But this particular function
     // is only interested in registers.
-    dwarf::CFIProgram P(/* CodeAlignmentFactor */ 1,
-                        /* DataAlignmentFactor*/ 1,
+    dwarf::CFIProgram P(/*CodeAlignmentFactor=*/1,
+                        /*DataAlignmentFactor=*/1,
                         Streamer.getContext().getTargetTriple().getArch());
     uint64_t Offset = 0;
     if (P.parse(data, &Offset, CFI.getValues().size())) {
