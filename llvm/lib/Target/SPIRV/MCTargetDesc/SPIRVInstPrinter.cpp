@@ -269,6 +269,32 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpSDot:
+        case SPIRV::OpUDot:
+        case SPIRV::OpSUDot:
+        case SPIRV::OpSDotAccSat:
+        case SPIRV::OpUDotAccSat:
+        case SPIRV::OpSUDotAccSat: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::PackedVectorFormatsOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
+        case SPIRV::OpPredicatedLoadINTEL:
+        case SPIRV::OpPredicatedStoreINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -375,9 +401,17 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
       O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
-    else if (Op.isImm())
-      O << formatImm(Op.getImm());
-    else if (Op.isDFPImm())
+    else if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      // For OpVectorShuffle:
+      // A Component literal may also be FFFFFFFF, which means the corresponding
+      // result component has no source and is undefined.
+      // LLVM representation of poison/undef becomes -1 when lowered to MI.
+      if (MI->getOpcode() == SPIRV::OpVectorShuffle && Imm == -1)
+        O << "0xFFFFFFFF";
+      else
+        O << formatImm(Imm);
+    } else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())
       MAI.printExpr(O, *Op.getExpr());

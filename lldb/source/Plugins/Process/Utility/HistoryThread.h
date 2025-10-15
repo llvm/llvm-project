@@ -27,14 +27,14 @@ namespace lldb_private {
 /// process execution
 ///
 /// This subclass of Thread is used to provide a backtrace from earlier in
-/// process execution.  It is given a backtrace list of pc addresses and it
-/// will create stack frames for them.
+/// process execution.  It is given a backtrace list of pcs (return or call
+/// addresses) and it will create stack frames for them.
 
 class HistoryThread : public lldb_private::Thread {
 public:
   HistoryThread(lldb_private::Process &process, lldb::tid_t tid,
                 std::vector<lldb::addr_t> pcs,
-                bool pcs_are_call_addresses = false);
+                HistoryPCType pc_type = HistoryPCType::Returns);
 
   ~HistoryThread() override;
 

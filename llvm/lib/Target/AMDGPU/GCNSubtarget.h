@@ -99,6 +99,7 @@ protected:
   bool EnableDS128 = false;
   bool EnablePRTStrictNull = false;
   bool DumpCode = false;
+  bool AssemblerPermissiveWavesize = false;
 
   // Subtarget statically properties set by tablegen
   bool FP64 = false;
@@ -198,6 +199,7 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool HasVMemToLDSLoad = false;
+  bool RequiresAlignVGPR = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -235,6 +237,7 @@ protected:
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
+  bool Has1024AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -250,7 +253,6 @@ protected:
   bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
   bool HasSafeCUPrefetch = false;
-  bool HasCUStores = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -283,6 +285,10 @@ protected:
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
   bool HasGloballyAddressableScratch = false;
+
+  bool Has45BitNumRecordsBufferResource = false;
+
+  bool HasClusters = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -390,7 +396,11 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool supportsWGP() const { return getGeneration() >= GFX10; }
+  bool supportsWGP() const {
+    if (GFX1250Insts)
+      return false;
+    return getGeneration() >= GFX10;
+  }
 
   bool hasIntClamp() const {
     return HasIntClamp;
@@ -1011,8 +1021,6 @@ public:
 
   bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
 
-  bool hasCUStores() const { return HasCUStores; }
-
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
@@ -1341,8 +1349,12 @@ public:
 
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
+  bool setRegModeNeedsVNOPs() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
+  bool needsAlignedVGPRs() const { return RequiresAlignVGPR; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1427,6 +1439,8 @@ public:
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
+
+  bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
@@ -1572,6 +1586,12 @@ public:
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
   bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
+
+  // \returns true if the target needs to create a prolog for backward
+  // compatibility when preloading kernel arguments.
+  bool needsKernArgPreloadProlog() const {
+    return hasKernargPreload() && !GFX1250Insts;
+  }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1722,6 +1742,10 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
+  bool supportsWave32() const { return getGeneration() >= GFX10; }
+
+  bool supportsWave64() const { return !hasGFX1250Insts(); }
+
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }
@@ -1785,11 +1809,11 @@ public:
 
   // \returns true if the subtarget has a hazard requiring an "s_nop 0"
   // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
-  bool requiresNopBeforeDeallocVGPRs() const {
-    // Currently all targets that support the dealloc VGPRs message also require
-    // the nop.
-    return true;
-  }
+  bool requiresNopBeforeDeallocVGPRs() const { return !GFX1250Insts; }
+
+  // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
+  // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
+  bool requiresWaitIdleBeforeGetReg() const { return GFX1250Insts; }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
   unsigned getDynamicVGPRBlockSize() const {
@@ -1800,6 +1824,41 @@ public:
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
     // to the same register.
     return false;
+  }
+
+  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
+  // and surronded by S_WAIT_ALU(0xFFE3).
+  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
+    return getGeneration() == GFX12;
+  }
+
+  // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
+  // read.
+  bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
+  /// \returns true if the subtarget supports clusters of workgroups.
+  bool hasClusters() const { return HasClusters; }
+
+  /// \returns true if the subtarget requires a wait for xcnt before atomic
+  /// flat/global stores & rmw.
+  bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
+
+  /// \returns the number of significant bits in the immediate field of the
+  /// S_NOP instruction.
+  unsigned getSNopBits() const {
+    if (getGeneration() >= AMDGPUSubtarget::GFX12)
+      return 7;
+    if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 4;
+    return 3;
+  }
+
+  /// \returns true if the sub-target supports buffer resource (V#) with 45-bit
+  /// num_records.
+  bool has45BitNumRecordsBufferResource() const {
+    return Has45BitNumRecordsBufferResource;
   }
 };
 

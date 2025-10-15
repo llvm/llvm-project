@@ -383,32 +383,70 @@ struct Write : public Effect::Base<Write> {};
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns true if `op` has only an effect of type `EffectTy`.
+/// Return "true" if `op` has unknown effects. I.e., the effects of the
+/// operation itself are unknown and the operation does not derive its effects
+/// from its nested operations. (`HasRecursiveMemoryEffects` trait is not
+/// implemented or it is unknown whether it is implemented or not.)
+bool hasUnknownEffects(Operation *op);
+
+/// Returns "true" if `op` has only an effect of type `EffectTy`. Returns
+/// "false" if `op` has unknown effects or other/additional effects. Recursive
+/// effects are not taken into account.
 template <typename EffectTy>
 bool hasSingleEffect(Operation *op);
 
-/// Returns true if `op` has only an effect of type `EffectTy` (and of no other
-/// type) on `value`.
+/// Returns "true" if `op` has only an effect of type `EffectTy` on `value`.
+/// Returns "false" if `op` has unknown effects or other/additional effects.
+/// Recursive effects are not taken into account.
 template <typename EffectTy>
 bool hasSingleEffect(Operation *op, Value value);
 
-/// Returns true if `op` has only an effect of type `EffectTy` (and of no other
-/// type) on `value` of type `ValueTy`.
+/// Returns "true" if `op` has only an effect of type `EffectTy` on `value` of
+/// type `ValueTy`. Returns "false" if `op` has unknown effects or
+/// other/additional effects. Recursive effects are not taken into account.
 template <typename ValueTy, typename EffectTy>
 bool hasSingleEffect(Operation *op, ValueTy value);
 
-/// Returns true if `op` has an effect of type `EffectTy`.
+/// Returns "true" if `op` has an effect of type `EffectTy`. Returns "false" if
+/// `op` has unknown effects. Recursive effects are not taken into account.
 template <typename... EffectTys>
 bool hasEffect(Operation *op);
 
-/// Returns true if `op` has an effect of type `EffectTy` on `value`.
+/// Returns "true" if `op` has an effect of type `EffectTy` on `value`. Returns
+/// "false" if `op` has unknown effects. Recursive effects are not taken into
+/// account.
 template <typename... EffectTys>
 bool hasEffect(Operation *op, Value value);
 
-/// Returns true if `op` has an effect of type `EffectTy` on `value` of type
-/// `ValueTy`.
+/// Returns "true" if `op` has an effect of type `EffectTy` on `value` of type
+/// `ValueTy`. Returns "false" if `op` has unknown effects. Recursive effects
+/// are not taken into account.
 template <typename ValueTy, typename... EffectTys>
 bool hasEffect(Operation *op, ValueTy value);
+
+/// Returns "true" if `op` might have an effect of type `EffectTy`. Returns
+/// "true" if the op has unknown effects. Recursive effects are not taken into
+/// account.
+template <typename... EffectTys>
+bool mightHaveEffect(Operation *op) {
+  return hasUnknownEffects(op) || hasEffect<EffectTys...>(op);
+}
+
+/// Returns "true" if `op` might have an effect of type `EffectTy` on `value`.
+/// Returns "true" if the op has unknown effects. Recursive effects are not
+/// taken into account.
+template <typename... EffectTys>
+bool mightHaveEffect(Operation *op, Value value) {
+  return hasUnknownEffects(op) || hasEffect<EffectTys...>(op, value);
+}
+
+/// Returns "true" if `op` might have an effect of type `EffectTy` on `value`
+/// of type `ValueTy`. Returns "true" if the op has unknown effects. Recursive
+/// effects are not taken into account.
+template <typename ValueTy, typename... EffectTys>
+bool mightHaveEffect(Operation *op, ValueTy value) {
+  return hasUnknownEffects(op) || hasEffect<EffectTys...>(op, value);
+}
 
 /// Return true if the given operation is unused, and has no side effects on
 /// memory that prevent erasing.

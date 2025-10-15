@@ -1283,6 +1283,7 @@ static int getDecodedCastOpcode(unsigned Val) {
   case bitc::CAST_SITOFP  : return Instruction::SIToFP;
   case bitc::CAST_FPTRUNC : return Instruction::FPTrunc;
   case bitc::CAST_FPEXT   : return Instruction::FPExt;
+  case bitc::CAST_PTRTOADDR: return Instruction::PtrToAddr;
   case bitc::CAST_PTRTOINT: return Instruction::PtrToInt;
   case bitc::CAST_INTTOPTR: return Instruction::IntToPtr;
   case bitc::CAST_BITCAST : return Instruction::BitCast;
@@ -2202,6 +2203,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
     return Attribute::SanitizeRealtimeBlocking;
+  case bitc::ATTR_KIND_SANITIZE_ALLOC_TOKEN:
+    return Attribute::SanitizeAllocToken;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -7023,7 +7026,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!MDLoader->isStrippingTBAA()) {
     for (auto &I : instructions(F)) {
       MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa);
-      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(I, TBAA))
+      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA))
         continue;
       MDLoader->setStripTBAA(true);
       stripTBAA(F->getParent());

@@ -4,7 +4,7 @@
 constexpr bool CausesRecoveryExpr = "test" + 1.0f;
 
 template<typename T>
-concept ReferencesCRE = CausesRecoveryExpr;
+concept ReferencesCRE = CausesRecoveryExpr; // #subst1
 
 template<typename T> requires CausesRecoveryExpr // #NVC1REQ
 void NoViableCands1(){} // #NVC1
@@ -19,16 +19,18 @@ void NVCUse() {
   NoViableCands1<int>();
   // expected-error@-1 {{no matching function for call to 'NoViableCands1'}}
   // expected-note@#NVC1{{candidate template ignored: constraints not satisfied}}
+  // expected-note@#NVC2REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
   // expected-note@#NVC1REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   NoViableCands2<int>();
   // expected-error@-1 {{no matching function for call to 'NoViableCands2'}}
   // expected-note@#NVC2{{candidate template ignored: constraints not satisfied}}
-  // expected-note@#NVC2REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
   NoViableCands3<int>();
   // expected-error@-1 {{no matching function for call to 'NoViableCands3'}}
   // expected-note@#NVC3{{candidate template ignored: constraints not satisfied}}
-  // expected-note@#NVC3REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#NVC3REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 }
 
 template<typename T> requires CausesRecoveryExpr // #OVC1REQ
@@ -58,12 +60,14 @@ void OVCUse() {
   // expected-error@-1 {{no matching function for call to 'OtherViableCands2'}}
   // expected-note@#OVC2_ALT {{candidate function}}
   // expected-note@#OVC2 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#OVC2REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#OVC2REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
   OtherViableCands3<int>();
   // expected-error@-1 {{no matching function for call to 'OtherViableCands3'}}
   // expected-note@#OVC3_ALT {{candidate function}}
   // expected-note@#OVC3 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#OVC3REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#OVC3REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 }
 
 template<typename T> requires CausesRecoveryExpr // #OBNVC1REQ
@@ -95,13 +99,15 @@ void OBNVCUse() {
   // expected-note@#OBNVC2_ALT {{candidate template ignored: constraints not satisfied}}
   // expected-note@#OBNVC2REQ_ALT {{because 'false' evaluated to false}}
   // expected-note@#OBNVC2 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#OBNVC2REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#OBNVC2REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
   OtherBadNoViableCands3<int>();
   // expected-error@-1 {{no matching function for call to 'OtherBadNoViableCands3'}}
   // expected-note@#OBNVC3_ALT {{candidate template ignored: constraints not satisfied}}
   // expected-note@#OBNVC3REQ_ALT {{because 'false' evaluated to false}}
   // expected-note@#OBNVC3 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#OBNVC3REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#OBNVC3REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 }
 
 
@@ -136,12 +142,14 @@ void MemOVCUse() {
   // expected-error@-1 {{no matching member function for call to 'OtherViableCands2'}}
   // expected-note@#MEMOVC2_ALT {{candidate function}}
   // expected-note@#MEMOVC2 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#MEMOVC2REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#MEMOVC2REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
   S.OtherViableCands3<int>();
   // expected-error@-1 {{no matching member function for call to 'OtherViableCands3'}}
   // expected-note@#MEMOVC3_ALT {{candidate function}}
   // expected-note@#MEMOVC3 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#MEMOVC3REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#MEMOVC3REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 }
 
 struct StaticOVC {
@@ -173,12 +181,14 @@ void StaticMemOVCUse() {
   // expected-error@-1 {{no matching function for call to 'OtherViableCands2'}}
   // expected-note@#SMEMOVC2_ALT {{candidate function}}
   // expected-note@#SMEMOVC2 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#SMEMOVC2REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#SMEMOVC2REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
   StaticOVC::OtherViableCands3<int>();
   // expected-error@-1 {{no matching function for call to 'OtherViableCands3'}}
   // expected-note@#SMEMOVC3_ALT {{candidate function}}
   // expected-note@#SMEMOVC3 {{candidate template ignored: constraints not satisfied}}
-  // expected-note@#SMEMOVC3REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // expected-note@#SMEMOVC3REQ{{because 'int' does not satisfy 'ReferencesCRE'}}
+  // expected-note@#subst1{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 }
 
 namespace GH58548 {

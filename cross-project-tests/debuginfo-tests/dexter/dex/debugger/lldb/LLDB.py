@@ -13,6 +13,7 @@ from subprocess import CalledProcessError, check_output, STDOUT
 import sys
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
+from dex.debugger.DAP import DAP
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
 from dex.dextIR import StackFrame, SourceLocation, ProgramState
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
@@ -203,7 +204,7 @@ class LLDB(DebuggerBase):
         assert num_stopped_threads > 0
         assert self._thread, (self._process, self._thread)
 
-    def step(self):
+    def step_in(self):
         self._thread.StepInto()
         stop_reason = self._thread.GetStopReason()
         # If we (1) completed a step and (2) are sitting at a breakpoint,
@@ -231,7 +232,7 @@ class LLDB(DebuggerBase):
                     ):
                         stepped_to_breakpoint = True
             if stepped_to_breakpoint:
-                self._thread.StepInto()
+                self._process.Continue()
 
     def go(self) -> ReturnCode:
         self._process.Continue()
@@ -382,3 +383,173 @@ class LLDB(DebuggerBase):
             is_optimized_away=is_optimized_away,
             is_irretrievable=is_irretrievable,
         )
+
+
+class LLDBDAP(DAP):
+    def __init__(self, context, *args):
+        self.lldb_dap_executable = context.options.lldb_executable
+        super(LLDBDAP, self).__init__(context, *args)
+
+    @classmethod
+    def get_name(cls):
+        return "lldb-dap"
+
+    @classmethod
+    def get_option_name(cls):
+        return "lldb-dap"
+
+    @property
+    def version(self):
+        return 1
+
+    @property
+    def _debug_adapter_name(self) -> str:
+        return "lldb-dap"
+
+    @property
+    def _debug_adapter_executable(self) -> str:
+        return self.lldb_dap_executable
+
+    @property
+    def frames_below_main(self):
+        return [
+            "__scrt_common_main_seh",
+            "__libc_start_main",
+            "__libc_start_call_main",
+            "_start",
+        ]
+
+    def _post_step_hook(self):
+        """Hook to be executed after completing a step request."""
+        if self._debugger_state.stopped_reason == "step":
+            trace_req_id = self.send_message(
+                self.make_request(
+                    "stackTrace", {"threadId": self._debugger_state.thread, "levels": 1}
+                )
+            )
+            trace_response = self._await_response(trace_req_id)
+            if not trace_response["success"]:
+                raise DebuggerException("failed to get stack frames")
+            stackframes = trace_response["body"]["stackFrames"]
+            addr = stackframes[0]["instructionPointerReference"]
+            try:
+                path = stackframes[0]["source"]["path"]
+            except KeyError:
+                # We may have no path, e.g., if the module hasn't loaded or
+                # there's no debug info. If that's the case we won't have
+                # bound a source-location breakpoint here, so we can bail now.
+                return
+
+            if any(
+                self._debugger_state.bp_addr_map.get(self.dex_id_to_dap_id[dex_bp_id])
+                == addr
+                for dex_bp_id in self.file_to_bp.get(path, [])
+            ):
+                # Step again now to get to the breakpoint.
+                step_req_id = self.send_message(
+                    self.make_request(
+                        "continue", {"threadId": self._debugger_state.thread}
+                    )
+                )
+                response = self._await_response(step_req_id)
+                if not response["success"]:
+                    raise DebuggerException("failed to step")
+
+    def _get_launch_params(self, cmdline):
+        cwd = os.getcwd()
+        return {
+            "cwd": cwd,
+            "args": cmdline,
+            "program": self.context.options.executable,
+        }
+
+    @staticmethod
+    def _evaluate_result_value(
+        expression: str, result_string: str, type_string
+    ) -> ValueIR:
+        could_evaluate = not any(
+            s in result_string
+            for s in [
+                "Can't run the expression locally",
+                "use of undeclared identifier",
+                "no member named",
+                "Couldn't lookup symbols",
+                "Couldn't look up symbols",
+                "reference to local variable",
+                "invalid use of 'this' outside of a non-static member function",
+            ]
+        )
+
+        is_optimized_away = any(
+            s in result_string
+            for s in [
+                "value may have been optimized out",
+            ]
+        )
+
+        is_irretrievable = any(
+            s in result_string
+            for s in [
+                "couldn't get the value of variable",
+                "couldn't read its memory",
+                "couldn't read from memory",
+                "Cannot access memory at address",
+                "invalid address (fault address:",
+            ]
+        )
+
+        if could_evaluate and not is_irretrievable and not is_optimized_away:
+            error_string = None
+        else:
+            error_string = result_string
+
+        return ValueIR(
+            expression=expression,
+            value=result_string,
+            type_name=type_string,
+            error_string=error_string,
+            could_evaluate=could_evaluate,
+            is_optimized_away=is_optimized_away,
+            is_irretrievable=is_irretrievable,
+        )
+
+    def _update_requested_bp_list(self, bp_list):
+        """ "As lldb-dap cannot have multiple breakpoints at the same location with different conditions, we must
+        manually merge conditions here."""
+        line_to_cond = {}
+        for bp in bp_list:
+            if bp.condition is None:
+                line_to_cond[bp.line] = None
+                continue
+            # If we have a condition, we merge it with the existing condition if one exists, unless the known condition
+            # is None in which case we preserve the None condition (as the underlying breakpoint should always be hit).
+            if bp.line not in line_to_cond:
+                line_to_cond[bp.line] = f"({bp.condition})"
+            elif line_to_cond[bp.line] is not None:
+                line_to_cond[bp.line] = f"{line_to_cond[bp.line]} || ({bp.condition})"
+            bp.condition = line_to_cond[bp.line]
+        return bp_list
+
+    def _confirm_triggered_breakpoint_ids(self, dex_bp_ids):
+        """ "As lldb returns every breakpoint at the current PC regardless of whether their condition was met, we must
+        manually check conditions here."""
+        confirmed_breakpoint_ids = set()
+        for dex_bp_id in dex_bp_ids:
+            # Function and instruction breakpoints don't use conditions.
+            # FIXME: That's not a DAP restriction, so they could in future.
+            if dex_bp_id not in self.bp_info:
+                assert (
+                    dex_bp_id in self.function_bp_info
+                    or dex_bp_id in self.instruction_bp_info
+                )
+                confirmed_breakpoint_ids.add(dex_bp_id)
+                continue
+
+            _, _, cond = self.bp_info[dex_bp_id]
+            if cond is None:
+                confirmed_breakpoint_ids.add(dex_bp_id)
+                continue
+            valueIR = self.evaluate_expression(cond)
+            if valueIR.type_name == "bool" and valueIR.value == "true":
+                confirmed_breakpoint_ids.add(dex_bp_id)
+        return confirmed_breakpoint_ids

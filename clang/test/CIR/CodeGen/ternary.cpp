@@ -69,7 +69,7 @@ int foo(int a, int b) {
 // CIR: [[ALOAD2:%.+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.yield [[ALOAD2]] : !s32i
 // CIR: }) : (!cir.bool) -> !s32i
-// CIR: [[CAST:%.+]] = cir.cast(int_to_bool, [[TERNARY_RES]] : !s32i), !cir.bool
+// CIR: [[CAST:%.+]] = cir.cast int_to_bool [[TERNARY_RES]] : !s32i -> !cir.bool
 // CIR: cir.if [[CAST]] {
 // CIR: [[ONE:%.+]] = cir.const #cir.int<1> : !s32i
 // CIR: [[MINUS_ONE:%.+]] = cir.unary(minus, [[ONE]]) nsw : !s32i, !s32i

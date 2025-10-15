@@ -27,5 +27,5 @@ if [ -S /var/run/docker.sock ]; then
     DOCKER_OPTIONS+=(--volume /var/run/docker.sock:/var/run/docker.sock)
 fi
 
-docker run "${DOCKER_OPTIONS[@]}" ghcr.io/libcxx/android-buildkite-builder \
+docker run "${DOCKER_OPTIONS[@]}" ghcr.io/llvm/libcxx-android-builder \
     bash -c 'git config --global --add safe.directory /llvm; (/opt/android/container-setup.sh && exec bash)'

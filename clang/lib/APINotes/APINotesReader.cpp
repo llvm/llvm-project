@@ -94,11 +94,14 @@ public:
 
 /// Read serialized CommonEntityInfo.
 void ReadCommonEntityInfo(const uint8_t *&Data, CommonEntityInfo &Info) {
-  uint8_t UnavailableBits = *Data++;
-  Info.Unavailable = (UnavailableBits >> 1) & 0x01;
-  Info.UnavailableInSwift = UnavailableBits & 0x01;
-  if ((UnavailableBits >> 2) & 0x01)
-    Info.setSwiftPrivate(static_cast<bool>((UnavailableBits >> 3) & 0x01));
+  uint8_t EncodedBits = *Data++;
+  Info.Unavailable = (EncodedBits >> 1) & 0x01;
+  Info.UnavailableInSwift = EncodedBits & 0x01;
+  if ((EncodedBits >> 2) & 0x01)
+    Info.setSwiftPrivate(static_cast<bool>((EncodedBits >> 3) & 0x01));
+  if ((EncodedBits >> 4) & 0x01)
+    Info.setSwiftSafety(
+        static_cast<SwiftSafetyKind>((EncodedBits >> 5) & 0x03));
 
   unsigned MsgLength =
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
@@ -133,6 +136,13 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
     Info.setNSErrorDomain(std::optional<std::string>(std::string(
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
     Data += ErrorDomainLength - 1;
+  }
+
+  if (unsigned ConformanceLength =
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+    Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
+                                         ConformanceLength - 1));
+    Data += ConformanceLength - 1;
   }
 }
 
@@ -629,11 +639,12 @@ public:
           reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
       Data += DefaultOwnershipLength - 1;
     }
-    if (unsigned ConformanceLength =
-            endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
-      Info.SwiftConformance = std::string(reinterpret_cast<const char *>(Data),
-                                          ConformanceLength - 1);
-      Data += ConformanceLength - 1;
+    unsigned DestroyOpLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DestroyOpLength > 0) {
+      Info.SwiftDestroyOp = std::string(reinterpret_cast<const char *>(Data),
+                                        DestroyOpLength - 1);
+      Data += DestroyOpLength - 1;
     }
 
     ReadCommonTypeInfo(Data, Info);

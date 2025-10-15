@@ -96,3 +96,10 @@ void test_snprintf6() {
   char b[4] = {0};
   snprintf(a, sizeof(a), "%s", b); // no-warning
 }
+
+void* memcpy(void* dest, const void* src, size_t count);
+
+void test_memcpy_esoteric() {
+label:
+  memcpy((char *)&&label, (const char *)memcpy, 1);
+}

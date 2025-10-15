@@ -8,6 +8,9 @@ from lldbsuite.test.decorators import *
 import lldbdap_testcase
 import dap_server
 
+EXIT_FAILURE = 1
+EXIT_SUCCESS = 0
+
 
 class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
     def launch(self):
@@ -41,40 +44,44 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         """
         process = self.launch()
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 0)
+        self.assertEqual(process.wait(timeout=5.0), EXIT_SUCCESS)
 
     def test_invalid_header(self):
         """
-        lldb-dap handles invalid message headers.
+        lldb-dap returns a failure exit code when the input stream is closed
+        with a malformed request header.
         """
         process = self.launch()
-        process.stdin.write(b"not the corret message header")
+        process.stdin.write(b"not the correct message header")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
 
     def test_partial_header(self):
         """
-        lldb-dap handles parital message headers.
+        lldb-dap returns a failure exit code when the input stream is closed
+        with an incomplete message header is in the message buffer.
         """
         process = self.launch()
         process.stdin.write(b"Content-Length: ")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
 
     def test_incorrect_content_length(self):
         """
-        lldb-dap handles malformed content length headers.
+        lldb-dap returns a failure exit code when reading malformed content
+        length headers.
         """
         process = self.launch()
         process.stdin.write(b"Content-Length: abc")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
 
     def test_partial_content_length(self):
         """
-        lldb-dap handles partial messages.
+        lldb-dap returns a failure exit code when the input stream is closed
+        with a partial message in the message buffer.
         """
         process = self.launch()
         process.stdin.write(b"Content-Length: 10\r\n\r\n{")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)

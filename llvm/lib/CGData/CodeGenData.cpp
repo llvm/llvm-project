@@ -31,11 +31,14 @@ static cl::opt<bool>
 static cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
+
+namespace llvm {
 cl::opt<bool> CodeGenDataThinLTOTwoRounds(
     "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
     cl::desc("Enable two-round ThinLTO code generation. The first round "
              "emits codegen data, while the second round uses the emitted "
              "codegen data for further optimizations."));
+} // end namespace llvm
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
@@ -186,7 +189,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
     return make_error<CGDataError>(cgdata_error::unsupported_version);
   H.DataKind = endian::readNext<uint32_t, endianness::little, unaligned>(Curr);
 
-  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version3,
+  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version4,
                 "Please update the offset computation below if a new field has "
                 "been added to the header.");
   H.OutlinedHashTreeOffset =

@@ -18,6 +18,7 @@
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
@@ -599,6 +600,17 @@ public:
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
 
+  /// Get the globally unique ID for this target.
+  ///
+  /// This ID is unique across all debugger instances and all targets,
+  /// within the same lldb process. The ID is assigned
+  /// during target construction and remains constant for the target's lifetime.
+  /// The first target created (typically the dummy target) gets ID 1.
+  ///
+  /// \return
+  ///     The globally unique ID for this target.
+  lldb::user_id_t GetGloballyUniqueID() const { return m_target_unique_id; }
+
   const std::string &GetLabel() const { return m_label; }
 
   /// Set a label for a target.
@@ -723,7 +735,7 @@ public:
   lldb::BreakpointSP CreateBreakpoint(lldb::addr_t load_addr, bool internal,
                                       bool request_hardware);
 
-  // Use this to create a breakpoint from a load address and a module file spec
+  // Use this to create a breakpoint from a file address and a module file spec
   lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
                                                      bool internal,
                                                      const FileSpec &file_spec,
@@ -752,8 +764,8 @@ public:
       const FileSpecList *containingModules,
       const FileSpecList *containingSourceFiles, const char *func_name,
       lldb::FunctionNameType func_name_type_mask, lldb::LanguageType language,
-      lldb::addr_t offset, LazyBool skip_prologue, bool internal,
-      bool request_hardware);
+      lldb::addr_t offset, bool offset_is_insn_count, LazyBool skip_prologue,
+      bool internal, bool request_hardware);
 
   lldb::BreakpointSP
   CreateExceptionBreakpoint(enum lldb::LanguageType language, bool catch_bp,
@@ -1334,6 +1346,10 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
+  llvm::Expected<lldb::DisassemblerSP>
+  ReadInstructions(const Address &start_addr, uint32_t count,
+                   const char *flavor_string = nullptr);
+
   // Target Stop Hooks
   class StopHook : public UserID {
   public:
@@ -1646,6 +1662,9 @@ protected:
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
+  lldb::user_id_t m_target_unique_id =
+      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; /// The globally unique ID
+                                              /// assigned to this target
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.
   lldb::TraceSP m_trace_sp;

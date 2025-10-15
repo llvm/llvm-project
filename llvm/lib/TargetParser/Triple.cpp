@@ -158,6 +158,8 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       return "dxilv1.7";
     case Triple::DXILSubArch_v1_8:
       return "dxilv1.8";
+    case Triple::DXILSubArch_v1_9:
+      return "dxilv1.9";
     default:
       break;
     }
@@ -329,6 +331,8 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case LiteOS: return "liteos";
   case XROS: return "xros";
   case Vulkan: return "vulkan";
+  case CheriotRTOS:
+    return "cheriotrtos";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -371,6 +375,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case MuslSF:
     return "muslsf";
   case MuslX32: return "muslx32";
+  case MuslWALI:
+    return "muslwali";
   case Simulator: return "simulator";
   case Pixel: return "pixel";
   case Vertex: return "vertex";
@@ -387,6 +393,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Callable: return "callable";
   case Mesh: return "mesh";
   case Amplification: return "amplification";
+  case RootSignature:
+    return "rootsignature";
   case OpenCL:
     return "opencl";
   case OpenHOS: return "ohos";
@@ -648,6 +656,8 @@ static Triple::ArchType parseArch(StringRef ArchName) {
                 .Cases("dxil", "dxilv1.0", "dxilv1.1", "dxilv1.2", "dxilv1.3",
                        "dxilv1.4", "dxilv1.5", "dxilv1.6", "dxilv1.7",
                        "dxilv1.8", Triple::dxil)
+                // Note: Cases has max limit of 10.
+                .Case("dxilv1.9", Triple::dxil)
                 .Case("xtensa", Triple::xtensa)
                 .Default(Triple::UnknownArch);
 
@@ -687,49 +697,50 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
 
 static Triple::OSType parseOS(StringRef OSName) {
   return StringSwitch<Triple::OSType>(OSName)
-    .StartsWith("darwin", Triple::Darwin)
-    .StartsWith("dragonfly", Triple::DragonFly)
-    .StartsWith("freebsd", Triple::FreeBSD)
-    .StartsWith("fuchsia", Triple::Fuchsia)
-    .StartsWith("ios", Triple::IOS)
-    .StartsWith("kfreebsd", Triple::KFreeBSD)
-    .StartsWith("linux", Triple::Linux)
-    .StartsWith("lv2", Triple::Lv2)
-    .StartsWith("macos", Triple::MacOSX)
-    .StartsWith("managarm", Triple::Managarm)
-    .StartsWith("netbsd", Triple::NetBSD)
-    .StartsWith("openbsd", Triple::OpenBSD)
-    .StartsWith("solaris", Triple::Solaris)
-    .StartsWith("uefi", Triple::UEFI)
-    .StartsWith("win32", Triple::Win32)
-    .StartsWith("windows", Triple::Win32)
-    .StartsWith("zos", Triple::ZOS)
-    .StartsWith("haiku", Triple::Haiku)
-    .StartsWith("rtems", Triple::RTEMS)
-    .StartsWith("aix", Triple::AIX)
-    .StartsWith("cuda", Triple::CUDA)
-    .StartsWith("nvcl", Triple::NVCL)
-    .StartsWith("amdhsa", Triple::AMDHSA)
-    .StartsWith("ps4", Triple::PS4)
-    .StartsWith("ps5", Triple::PS5)
-    .StartsWith("elfiamcu", Triple::ELFIAMCU)
-    .StartsWith("tvos", Triple::TvOS)
-    .StartsWith("watchos", Triple::WatchOS)
-    .StartsWith("bridgeos", Triple::BridgeOS)
-    .StartsWith("driverkit", Triple::DriverKit)
-    .StartsWith("xros", Triple::XROS)
-    .StartsWith("visionos", Triple::XROS)
-    .StartsWith("mesa3d", Triple::Mesa3D)
-    .StartsWith("amdpal", Triple::AMDPAL)
-    .StartsWith("hermit", Triple::HermitCore)
-    .StartsWith("hurd", Triple::Hurd)
-    .StartsWith("wasi", Triple::WASI)
-    .StartsWith("emscripten", Triple::Emscripten)
-    .StartsWith("shadermodel", Triple::ShaderModel)
-    .StartsWith("liteos", Triple::LiteOS)
-    .StartsWith("serenity", Triple::Serenity)
-    .StartsWith("vulkan", Triple::Vulkan)
-    .Default(Triple::UnknownOS);
+      .StartsWith("darwin", Triple::Darwin)
+      .StartsWith("dragonfly", Triple::DragonFly)
+      .StartsWith("freebsd", Triple::FreeBSD)
+      .StartsWith("fuchsia", Triple::Fuchsia)
+      .StartsWith("ios", Triple::IOS)
+      .StartsWith("kfreebsd", Triple::KFreeBSD)
+      .StartsWith("linux", Triple::Linux)
+      .StartsWith("lv2", Triple::Lv2)
+      .StartsWith("macos", Triple::MacOSX)
+      .StartsWith("managarm", Triple::Managarm)
+      .StartsWith("netbsd", Triple::NetBSD)
+      .StartsWith("openbsd", Triple::OpenBSD)
+      .StartsWith("solaris", Triple::Solaris)
+      .StartsWith("uefi", Triple::UEFI)
+      .StartsWith("win32", Triple::Win32)
+      .StartsWith("windows", Triple::Win32)
+      .StartsWith("zos", Triple::ZOS)
+      .StartsWith("haiku", Triple::Haiku)
+      .StartsWith("rtems", Triple::RTEMS)
+      .StartsWith("aix", Triple::AIX)
+      .StartsWith("cuda", Triple::CUDA)
+      .StartsWith("nvcl", Triple::NVCL)
+      .StartsWith("amdhsa", Triple::AMDHSA)
+      .StartsWith("ps4", Triple::PS4)
+      .StartsWith("ps5", Triple::PS5)
+      .StartsWith("elfiamcu", Triple::ELFIAMCU)
+      .StartsWith("tvos", Triple::TvOS)
+      .StartsWith("watchos", Triple::WatchOS)
+      .StartsWith("bridgeos", Triple::BridgeOS)
+      .StartsWith("driverkit", Triple::DriverKit)
+      .StartsWith("xros", Triple::XROS)
+      .StartsWith("visionos", Triple::XROS)
+      .StartsWith("mesa3d", Triple::Mesa3D)
+      .StartsWith("amdpal", Triple::AMDPAL)
+      .StartsWith("hermit", Triple::HermitCore)
+      .StartsWith("hurd", Triple::Hurd)
+      .StartsWith("wasi", Triple::WASI)
+      .StartsWith("emscripten", Triple::Emscripten)
+      .StartsWith("shadermodel", Triple::ShaderModel)
+      .StartsWith("liteos", Triple::LiteOS)
+      .StartsWith("serenity", Triple::Serenity)
+      .StartsWith("vulkan", Triple::Vulkan)
+      .StartsWith("cheriotrtos", Triple::CheriotRTOS)
+      .Default(Triple::UnknownOS);
 }
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
@@ -758,6 +769,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("muslf32", Triple::MuslF32)
       .StartsWith("muslsf", Triple::MuslSF)
       .StartsWith("muslx32", Triple::MuslX32)
+      .StartsWith("muslwali", Triple::MuslWALI)
       .StartsWith("musl", Triple::Musl)
       .StartsWith("msvc", Triple::MSVC)
       .StartsWith("itanium", Triple::Itanium)
@@ -780,6 +792,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("callable", Triple::Callable)
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
+      .StartsWith("rootsignature", Triple::RootSignature)
       .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
@@ -839,6 +852,7 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.6", Triple::DXILSubArch_v1_6)
         .EndsWith("v1.7", Triple::DXILSubArch_v1_7)
         .EndsWith("v1.8", Triple::DXILSubArch_v1_8)
+        .EndsWith("v1.9", Triple::DXILSubArch_v1_9)
         .Default(Triple::NoSubArch);
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
@@ -1108,7 +1122,7 @@ static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {
   VersionTuple Ver =
       parseVersionFromName(ShaderModelStr.drop_front(strlen("shadermodel")));
   // Default DXIL minor version when Shader Model version is anything other
-  // than 6.[0...8] or 6.x (which translates to latest current SM version)
+  // than 6.[0...9] or 6.x (which translates to latest current SM version)
   const unsigned SMMajor = 6;
   if (!Ver.empty()) {
     if (Ver.getMajor() == SMMajor) {
@@ -1132,6 +1146,8 @@ static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {
           return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_7);
         case 8:
           return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_8);
+        case 9:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_9);
         default:
           report_fatal_error("Unsupported Shader Model version", false);
         }

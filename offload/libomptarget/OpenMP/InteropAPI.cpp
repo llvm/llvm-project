@@ -124,7 +124,7 @@ void *getProperty<void *>(omp_interop_val_t &InteropVal,
   case omp_ipr_device_context:
     return InteropVal.device_info.Context;
   case omp_ipr_targetsync:
-    return InteropVal.async_info->Queue;
+    return InteropVal.async_info ? InteropVal.async_info->Queue : nullptr;
   default:;
   }
   getTypeMismatch(Property, Err);
@@ -167,7 +167,6 @@ bool getPropertyCheck(omp_interop_val_t **InteropPtr,
                                        omp_interop_property_t property_id,     \
                                        int *err) {                             \
     omp_interop_val_t *interop_val = (omp_interop_val_t *)interop;             \
-    assert((interop_val)->interop_type == kmp_interop_type_targetsync);        \
     if (!getPropertyCheck(&interop_val, property_id, err)) {                   \
       return (RETURN_TYPE)(0);                                                 \
     }                                                                          \
@@ -275,8 +274,8 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   return Interop;
 }
 
-int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
-                      interop_ctx_t *Ctx, dep_pack_t *Deps) {
+int __tgt_interop_use60(ident_t *LocRef, omp_interop_val_t *Interop,
+                        interop_ctx_t *Ctx, dep_pack_t *Deps) {
   bool Nowait = Ctx->flags.nowait;
   DP("Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n", __func__,
      DPxPTR(Interop), Nowait);
@@ -357,6 +356,40 @@ EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
   Interop->addCompletionCb(CB, Data);
 
   return omp_irc_success;
+}
+
+// Backwards compatibility wrappers
+void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
+                        omp_interop_val_t *&InteropPtr, int32_t InteropType,
+                        int32_t DeviceId, int32_t Ndeps,
+                        kmp_depend_info_t *DepList, int32_t HaveNowait) {
+  constexpr int32_t old_kmp_interop_type_targetsync = 2;
+  interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
+  dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
+  InteropPtr =
+      __tgt_interop_get(LocRef,
+                        InteropType == old_kmp_interop_type_targetsync
+                            ? kmp_interop_type_targetsync
+                            : kmp_interop_type_target,
+                        DeviceId, 0, nullptr, &Ctx, Ndeps ? &Deps : nullptr);
+}
+
+void __tgt_interop_use(ident_t *LocRef, int32_t Gtid,
+                       omp_interop_val_t *&InteropPtr, int32_t DeviceId,
+                       int32_t Ndeps, kmp_depend_info_t *DepList,
+                       int32_t HaveNowait) {
+  interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
+  dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
+  __tgt_interop_use60(LocRef, InteropPtr, &Ctx, Ndeps ? &Deps : nullptr);
+}
+
+void __tgt_interop_destroy(ident_t *LocRef, int32_t Gtid,
+                           omp_interop_val_t *&InteropPtr, int32_t DeviceId,
+                           int32_t Ndeps, kmp_depend_info_t *DepList,
+                           int32_t HaveNowait) {
+  interop_ctx_t Ctx = {0, {false, (bool)HaveNowait, 0}, Gtid};
+  dep_pack_t Deps = {Ndeps, 0, DepList, nullptr};
+  __tgt_interop_release(LocRef, InteropPtr, &Ctx, Ndeps ? &Deps : nullptr);
 }
 
 } // extern "C"

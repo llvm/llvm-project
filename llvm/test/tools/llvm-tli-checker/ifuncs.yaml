@@ -1,0 +1,39 @@
+# REQUIRES: x86-registered-target
+#
+# stpncpy is declared as available in TargetLibraryInfo for FreeBSD, but
+# llvm-tli-checker won't be able to find it unless it knows how to check ifuncs.
+# This test makes sure that llvm-tli-checker supports processing ifuncs.
+#
+# RUN: yaml2obj %s -o=%t1
+# RUN: llvm-tli-checker --triple=x86_64-unknown-freebsd %t1 | FileCheck %s
+#
+# CHECK: == Total TLI yes SDK yes: 1
+#
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x3CA20
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x1E2C68
+        Symbol:          stpncpy
+        Type:            R_X86_64_JUMP_SLOT
+DynamicSymbols:
+  - Name:            stpncpy
+    Type:            STT_GNU_IFUNC
+    Section:         .text
+    Binding:         STB_WEAK
+    Value:           0x15D5E0
+    Size:            0xC

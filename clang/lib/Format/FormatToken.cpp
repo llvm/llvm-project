@@ -33,8 +33,19 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
+static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
+    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
+    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
+    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+};
+
+bool FormatToken::isQtProperty() const {
+  assert(llvm::is_sorted(QtPropertyKeywords));
+  return llvm::binary_search(QtPropertyKeywords, TokenText);
+}
+
 // Sorted common C++ non-keyword types.
-static SmallVector<StringRef> CppNonKeywordTypes = {
+static constexpr std::array<StringRef, 14> CppNonKeywordTypes = {
     "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
     "intptr_t", "ptrdiff_t", "size_t",  "time_t",    "uint16_t",
     "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
@@ -43,6 +54,7 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
   if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
     return true;
+  assert(llvm::is_sorted(CppNonKeywordTypes));
   return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
          llvm::binary_search(CppNonKeywordTypes, TokenText);
 }
@@ -95,7 +107,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
       State.NextToken->Previous->getPreviousNonComment();
-  if (!LBrace || !LBrace->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
+  if (!LBrace || LBrace->isNoneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
       LBrace->is(BK_Block) || LBrace->is(TT_DictLiteral) ||
       LBrace->Next->is(TT_DesignatedInitializerPeriod)) {
     return 0;
@@ -164,7 +176,7 @@ static unsigned CodePointsBetween(const FormatToken *Begin,
 void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // FIXME: At some point we might want to do this for other lists, too.
   if (!Token->MatchingParen ||
-      !Token->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
+      Token->isNoneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
     return;
   }
 
@@ -328,6 +340,8 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
     return true;
   }
   if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
+  if (Current.is(TT_QtProperty))
     return true;
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||

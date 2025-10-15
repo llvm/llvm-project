@@ -66,6 +66,7 @@ struct PtrAddChain {
   int64_t Imm;
   Register Base;
   const RegisterBank *Bank;
+  unsigned Flags;
 };
 
 struct RegisterImmPair {
@@ -78,6 +79,15 @@ struct ShiftOfShiftedLogic {
   MachineInstr *Shift2;
   Register LogicNonShiftReg;
   uint64_t ValSum;
+};
+
+struct LshrOfTruncOfLshr {
+  bool Mask = false;
+  APInt MaskVal;
+  Register Src;
+  APInt ShiftAmt;
+  LLT ShiftAmtTy;
+  LLT InnerShiftTy;
 };
 
 using BuildFnTy = std::function<void(MachineIRBuilder &)>;
@@ -336,6 +346,12 @@ public:
                                 ShiftOfShiftedLogic &MatchInfo) const;
 
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
+  /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
+  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo,
+                              MachineInstr &ShiftMI) const;
+  void applyLshrOfTruncOfLshr(MachineInstr &MI,
+                              LshrOfTruncOfLshr &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
@@ -726,6 +742,23 @@ public:
   bool matchUMulHToLShr(MachineInstr &MI) const;
   void applyUMulHToLShr(MachineInstr &MI) const;
 
+  // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
+  // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
+  bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(smin(smax(x, 0), C)) -> truncssat_u(x)
+  // or      trunc(smax(smin(x, C), 0)) -> truncssat_u(x)
+  // or      trunc(umin(smax(x, 0), C)) -> truncssat_u(x)
+  bool matchTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(umin(x, C)) -> truncusat_u(x).
+  bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
+
+  // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
+  bool matchTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI) const;
@@ -814,6 +847,10 @@ public:
                                                 BuildFnTy &MatchInfo) const;
 
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
+
+  bool matchRepeatedFPDivisor(MachineInstr &MI,
+                              SmallVector<MachineInstr *> &MatchInfo) const;
+  void applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
   /// Transform G_ADD(G_SUB(y, x), x) to y.
