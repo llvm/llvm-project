@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ===- csv2json.py - Static Analyzer test helper ---*- python -*-===#
 #

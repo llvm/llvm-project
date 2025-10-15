@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##
 ## Name:    mkdoc.py
 ## Purpose: Extract documentation from header files.
