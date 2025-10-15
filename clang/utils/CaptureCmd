@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """CaptureCmd - A generic tool for capturing information about the
 invocations of another program.
