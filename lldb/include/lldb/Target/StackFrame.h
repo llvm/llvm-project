@@ -442,7 +442,10 @@ public:
   uint32_t GetFrameIndex() const;
 
   /// Set this frame's synthetic frame index.
-  void SetFrameIndex(uint32_t index) { m_frame_index = index; }
+  void SetFrameIndex(uint32_t index) {
+    m_frame_index = index;
+    m_concrete_frame_index = index;
+  }
 
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList, not counting inlined frames.

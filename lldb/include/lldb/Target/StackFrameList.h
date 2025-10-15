@@ -103,6 +103,7 @@ public:
 
 protected:
   friend class Thread;
+  friend class ScriptedFrameProvider;
   friend class ScriptedThread;
 
   /// Use this API to build a stack frame list (used for scripted threads, for

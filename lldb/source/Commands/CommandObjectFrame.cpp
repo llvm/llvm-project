@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionGroupVariable.h"
 #include "lldb/Interpreter/Options.h"
@@ -29,6 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/ValueObject/ValueObject.h"
 
 #include <memory>
@@ -1223,6 +1225,98 @@ public:
   ~CommandObjectFrameRecognizer() override = default;
 };
 
+#pragma mark CommandObjectFrameProvider
+
+#define LLDB_OPTIONS_frame_provider_register
+#include "CommandOptions.inc"
+
+class CommandObjectFrameProviderRegister : public CommandObjectParsed {
+public:
+  CommandObjectFrameProviderRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "frame provider register",
+                            "Register frame provider into current thread.",
+                            nullptr, eCommandRequiresThread),
+
+        m_class_options("frame provider", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+
+    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatOptional);
+  }
+
+  ~CommandObjectFrameProviderRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    // No repeat for "process launch"...
+    return std::string("");
+  }
+
+protected:
+  void DoExecute(Args &launch_args, CommandReturnObject &result) override {
+    ScriptedMetadata metadata(m_class_options.GetName(),
+                              m_class_options.GetStructuredData());
+
+    Thread *thread = m_exe_ctx.GetThreadPtr();
+    if (!thread) {
+      result.AppendError("invalid thread");
+      return;
+    }
+
+    Status error = thread->SetScriptedFrameProvider(metadata);
+    if (error.Success())
+      result.AppendMessageWithFormat(
+          "Successfully registered scripted frame provider '%s'\n",
+          m_class_options.GetName().c_str());
+    result.SetError(std::move(error));
+  }
+
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectFrameProviderClear : public CommandObjectParsed {
+public:
+  CommandObjectFrameProviderClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "frame provider clear",
+                            "Delete registered frame provider.", nullptr) {}
+
+  ~CommandObjectFrameProviderClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Thread *thread = m_exe_ctx.GetThreadPtr();
+    if (!thread) {
+      result.AppendError("invalid thread");
+      return;
+    }
+
+    thread->ClearScriptedFrameProvider();
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectFrameProvider : public CommandObjectMultiword {
+public:
+  CommandObjectFrameProvider(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "frame provider",
+            "Commands for registering and viewing frame providers.",
+            "frame provider [<sub-command-options>] ") {
+    LoadSubCommand(
+        "register",
+        CommandObjectSP(new CommandObjectFrameProviderRegister(interpreter)));
+    LoadSubCommand("clear", CommandObjectSP(new CommandObjectFrameProviderClear(
+                                interpreter)));
+  }
+
+  ~CommandObjectFrameProvider() override = default;
+};
+
 #pragma mark CommandObjectMultiwordFrame
 
 // CommandObjectMultiwordFrame
@@ -1243,6 +1337,8 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
   LoadSubCommand("variable",
                  CommandObjectSP(new CommandObjectFrameVariable(interpreter)));
 #if LLDB_ENABLE_PYTHON
+  LoadSubCommand("provider",
+                 CommandObjectSP(new CommandObjectFrameProvider(interpreter)));
   LoadSubCommand("recognizer", CommandObjectSP(new CommandObjectFrameRecognizer(
                                    interpreter)));
 #endif

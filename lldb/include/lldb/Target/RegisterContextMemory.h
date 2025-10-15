@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
+#ifndef LLDB_TARGET_REGISTERCONTEXTMEMORY_H
+#define LLDB_TARGET_REGISTERCONTEXTMEMORY_H
 
 #include <vector>
 
@@ -72,4 +72,4 @@ private:
   operator=(const RegisterContextMemory &) = delete;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
+#endif // LLDB_TARGET_REGISTERCONTEXTMEMORY_H
