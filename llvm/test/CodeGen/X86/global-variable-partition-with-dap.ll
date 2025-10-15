@@ -10,13 +10,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     input-with-dap-enabled.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR
+; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     input-without-dap.ll -o - 2>&1 | FileCheck %s --check-prefixes=NODAP
+; RUN:     input-with-data-access-prof-off.ll -o - 2>&1 | FileCheck %s --check-prefixes=OFF
 
 ; LOG: hot_bss has section prefix hot, the max from data access profiles as hot and PGO counters as hot
 ; LOG: data_unknown_hotness has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
@@ -30,17 +30,17 @@ target triple = "x86_64-unknown-linux-gnu"
 ; IR-NEXT:     .section        .data.rel.ro.unlikely.,"aw"
 
 
-; NODAP:       .type   hot_bss,@object
-; NODAP-NEXT:  .section        .bss.hot.,"aw"
-; NODAP:       .type   data_unknown_hotness,@object
-; NODAP-NEXT:  .section        .data.unlikely.,"aw"
+; OFF:        .type   hot_bss,@object
+; OFF-NEXT:   .section        .bss.hot.,"aw"
+; OFF:        .type   data_unknown_hotness,@object
+; OFF-NEXT:   .section        .data.unlikely.,"aw"
 ;; Global variable section prefix metadata is not used when
 ;; module flag `EnableDataAccessProf` is 0, and @external_relro_array has
 ;; external linkage, so analysis based on PGO counters doesn't apply. 
-; NODAP:       .type   external_relro_array,@object    # @external_relro_array
-; NODAP:       .section        .data.rel.ro,"aw"
+; OFF:        .type   external_relro_array,@object    # @external_relro_array
+; OFF-NEXT:   .section        .data.rel.ro,"aw"
 
-;--- input-with-dap-enabled.ll
+;--- input-with-data-access-prof-on.ll
 ; Internal vars
 @hot_bss = internal global i32 0, !section_prefix !17
 @data_unknown_hotness = internal global i32 1
@@ -83,9 +83,8 @@ declare i32 @func_taking_arbitrary_param(...)
 !17 = !{!"section_prefix", !"hot"}
 !18 = !{!"section_prefix", !"unlikely"}
 
-;--- input-without-dap.ll
-; Same as `input-with-dap-enabled.ll` above except that module flag
-; `EnableDataAccessProf` has value 0. 
+;--- input-with-data-access-prof-off.ll
+; Same as file above except that module flag `EnableDataAccessProf` has value 0.
 ; Internal vars
 @hot_bss = internal global i32 0, !section_prefix !17
 @data_unknown_hotness = internal global i32 1
