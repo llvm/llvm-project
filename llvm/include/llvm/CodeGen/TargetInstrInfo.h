@@ -2169,7 +2169,7 @@ public:
     return TargetOpcode::COPY;
   }
 
-  /// During PHI eleimination lets target to make necessary checks and
+  /// During PHI elimination lets target to make necessary checks and
   /// insert the copy to the PHI destination register in a target specific
   /// manner.
   virtual MachineInstr *createPHIDestinationCopy(
@@ -2179,7 +2179,7 @@ public:
         .addReg(Src);
   }
 
-  /// During PHI eleimination lets target to make necessary checks and
+  /// During PHI elimination lets target to make necessary checks and
   /// insert the copy to the PHI destination register in a target specific
   /// manner.
   virtual MachineInstr *createPHISourceCopy(MachineBasicBlock &MBB,
@@ -2189,6 +2189,17 @@ public:
                                             Register Dst) const {
     return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
         .addReg(Src, 0, SrcSubReg);
+  }
+
+  /// During PHI elimination lets target to decide if two phis can use the
+  /// same register \p Reg when they have the same rhs. Register \p Reg has
+  /// been used for the first phi and \p PHIReg is the DestReg of the second
+  /// Phi. This function is to check if the second phi can reuse \p Reg as
+  /// its temporary register.
+  /// The default is to allow reuse.
+  virtual bool allowPHIReuse(Register Reg, Register PHIReg,
+                             const MachineFunction &MF) const {
+    return true;
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific

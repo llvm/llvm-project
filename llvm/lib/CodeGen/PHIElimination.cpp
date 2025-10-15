@@ -380,7 +380,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     Register *Entry = nullptr;
     if (AllEdgesCritical)
       Entry = &LoweredPHIs[MPhi];
-    if (Entry && *Entry) {
+    if (Entry && *Entry && TII->allowPHIReuse(*Entry, DestReg, MF)) {
       // An identical PHI node was already lowered. Reuse the incoming register.
       IncomingReg = *Entry;
       reusedIncoming = true;
