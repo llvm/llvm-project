@@ -44,26 +44,6 @@ using namespace ompx;
 
 namespace {
 
-/// Fallback implementations are missing to trigger a link time error.
-/// Implementations for new devices, including the host, should go into a
-/// dedicated begin/end declare variant.
-///
-///{
-extern "C" {
-#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
-
-[[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
-[[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
-
-#else
-
-[[gnu::weak, gnu::leaf]] void *malloc(size_t Size);
-[[gnu::weak, gnu::leaf]] void free(void *Ptr);
-
-#endif
-}
-///}
-
 /// A "smart" stack in shared memory.
 ///
 /// The stack exposes a malloc/free interface but works like a stack internally.
@@ -171,13 +151,13 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
-  void *Ptr = malloc(Bytes);
+  void *Ptr = allocator::alloc(Bytes);
   if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
     printf("nullptr returned by malloc!\n");
   return Ptr;
 }
 
-void memory::freeGlobal(void *Ptr, const char *Reason) { free(Ptr); }
+void memory::freeGlobal(void *Ptr, const char *Reason) { allocator::free(Ptr); }
 
 ///}
 
