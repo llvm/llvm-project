@@ -44,6 +44,7 @@ public:
     eBroadcastBitWatchpointChanged = (1 << 3),
     eBroadcastBitSymbolsLoaded = (1 << 4),
     eBroadcastBitSymbolsChanged = (1 << 5),
+    eBroadcastBitNewTargetCreated = (1 << 6),
   };
 
   // Constructors
@@ -68,6 +69,8 @@ public:
 
   static lldb::SBModule GetModuleAtIndexFromEvent(const uint32_t idx,
                                                   const lldb::SBEvent &event);
+
+  static const char *GetSessionNameFromEvent(const SBEvent &event);
 
   static const char *GetBroadcasterClassName();
 

@@ -537,6 +537,7 @@ public:
     eBroadcastBitWatchpointChanged = (1 << 3),
     eBroadcastBitSymbolsLoaded = (1 << 4),
     eBroadcastBitSymbolsChanged = (1 << 5),
+    eBroadcastBitNewTargetCreated = (1 << 6),
   };
 
   // These two functions fill out the Broadcaster interface:
@@ -556,6 +557,11 @@ public:
     TargetEventData(const lldb::TargetSP &target_sp,
                     const ModuleList &module_list);
 
+    TargetEventData(const lldb::TargetSP &target_sp, std::string session_name);
+
+    TargetEventData(const lldb::TargetSP &target_sp,
+                    const ModuleList &module_list, std::string session_name);
+
     ~TargetEventData() override;
 
     static llvm::StringRef GetFlavorString();
@@ -563,6 +569,8 @@ public:
     llvm::StringRef GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
+
+    static llvm::StringRef GetSessionNameFromEvent(const Event *event_ptr);
 
     void Dump(Stream *s) const override;
 
@@ -579,6 +587,7 @@ public:
   private:
     lldb::TargetSP m_target_sp;
     ModuleList m_module_list;
+    std::string m_session_name;
 
     TargetEventData(const TargetEventData &) = delete;
     const TargetEventData &operator=(const TargetEventData &) = delete;
