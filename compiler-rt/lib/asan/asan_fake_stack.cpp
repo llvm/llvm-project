@@ -214,35 +214,42 @@ void FakeStack::ForEachFakeFrame(RangeIteratorCallback callback, void *arg) {
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 static THREADLOCAL FakeStack *fake_stack_tls;
 
-FakeStack *GetTLSFakeStack() {
-  return fake_stack_tls;
-}
-void SetTLSFakeStack(FakeStack *fs) {
-  fake_stack_tls = fs;
-}
+FakeStack* GetTLSFakeStack() { return fake_stack_tls; }
+static void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
+void ResetTLSFakeStack() { fake_stack_tls = nullptr; }
 #else
-FakeStack *GetTLSFakeStack() { return 0; }
-void SetTLSFakeStack(FakeStack *fs) { }
+FakeStack* GetTLSFakeStack() { return 0; }
+static void SetTLSFakeStack(FakeStack*) {}
+void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
-static FakeStack *GetFakeStack() {
-  AsanThread *t = GetCurrentThread();
-  if (!t) return nullptr;
+static FakeStack* GetFakeStack() {
+  AsanThread* t = GetCurrentThread();
+  if (!t)
+    return nullptr;
   return t->get_or_create_fake_stack();
 }
 
-static FakeStack *GetFakeStackFast() {
-  if (FakeStack *fs = GetTLSFakeStack())
+static FakeStack* GetFakeStackFast() {
+  FakeStack* fs = GetTLSFakeStack();
+  if (LIKELY(fs))
     return fs;
   if (!__asan_option_detect_stack_use_after_return)
     return nullptr;
-  return GetFakeStack();
+  fs = GetFakeStack();
+  if (LIKELY(fs))
+    SetTLSFakeStack(fs);
+  return fs;
 }
 
-static FakeStack *GetFakeStackFastAlways() {
-  if (FakeStack *fs = GetTLSFakeStack())
+static FakeStack* GetFakeStackFastAlways() {
+  FakeStack* fs = GetTLSFakeStack();
+  if (LIKELY(fs))
     return fs;
-  return GetFakeStack();
+  fs = GetFakeStack();
+  if (LIKELY(fs))
+    SetTLSFakeStack(fs);
+  return fs;
 }
 
 static ALWAYS_INLINE uptr OnMalloc(uptr class_id, uptr size) {
