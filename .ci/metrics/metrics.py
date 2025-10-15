@@ -40,6 +40,7 @@ GITHUB_WORKFLOW_TO_TRACK = {
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
         "Build and Test Linux": "premerge_linux",
+        "Build and Test Linux AArch64": "premerge_linux_aarch64",
         "Build and Test Windows": "premerge_windows",
     },
     "github_libcxx_premerge_checks": {

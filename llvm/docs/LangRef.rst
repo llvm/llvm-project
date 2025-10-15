@@ -7517,12 +7517,12 @@ sections that the user does not want removed after linking.
 '``unpredictable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``unpredictable`` metadata may be attached to any branch or switch
-instruction. It can be used to express the unpredictability of control
-flow. Similar to the ``llvm.expect`` intrinsic, it may be used to alter
-optimizations related to compare and branch instructions. The metadata
-is treated as a boolean value; if it exists, it signals that the branch
-or switch that it is attached to is completely unpredictable.
+``unpredictable`` metadata may be attached to any branch, select, or switch
+instruction. It can be used to express the unpredictability of control flow.
+Similar to the ``llvm.expect`` intrinsic, it may be used to alter optimizations
+related to compare and branch instructions. The metadata is treated as a
+boolean value; if it exists, it signals that the branch, select, or switch that
+it is attached to is completely unpredictable.
 
 .. _md_dereferenceable:
 
@@ -21074,12 +21074,12 @@ Overview:
 
 The '``llvm.matrix.column.major.load.*``' intrinsics load a ``<Rows> x <Cols>``
 matrix using a stride of ``%Stride`` to compute the start address of the
-different columns.  The offset is computed using ``%Stride``'s bitwidth. This
-allows for convenient loading of sub matrixes. If ``<IsVolatile>`` is true, the
-intrinsic is considered a :ref:`volatile memory access <volatile>`. The result
-matrix is returned in the result vector. If the ``%Ptr`` argument is known to
-be aligned to some boundary, this can be specified as an attribute on the
-argument.
+different columns.  This allows for convenient loading of sub matrixes.
+Independent of ``%Stride``'s bitwidth, the offset is computed using the target
+daya layout's pointer index type. If ``<IsVolatile>`` is true, the intrinsic is
+considered a :ref:`volatile memory access <volatile>`.  The result matrix is
+returned in the result vector. If the ``%Ptr`` argument is known to be aligned
+to some boundary, this can be specified as an attribute on the argument.
 
 Arguments:
 """"""""""
@@ -21114,9 +21114,9 @@ Overview:
 
 The '``llvm.matrix.column.major.store.*``' intrinsics store the ``<Rows> x
 <Cols>`` matrix in ``%In`` to memory using a stride of ``%Stride`` between
-columns. The offset is computed using ``%Stride``'s bitwidth. If
-``<IsVolatile>`` is true, the intrinsic is considered a
-:ref:`volatile memory access <volatile>`.
+columns.  Independent of ``%Stride``'s bitwidth, the offset is computed using
+the target daya layout's pointer index type.  If ``<IsVolatile>`` is true, the
+intrinsic is considered a :ref:`volatile memory access <volatile>`.
 
 If the ``%Ptr`` argument is known to be aligned to some boundary, this can be
 specified as an attribute on the argument.

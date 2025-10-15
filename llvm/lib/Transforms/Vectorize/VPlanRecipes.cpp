@@ -511,6 +511,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
@@ -878,9 +879,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement: {
-    unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+    unsigned Offset =
+        getOpcode() == VPInstruction::ExtractPenultimateElement ? 2 : 1;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -1154,7 +1157,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
-  LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -1166,6 +1169,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractLastElement ||
+         getOpcode() == VPInstruction::ExtractLastLanePerPart ||
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
@@ -1229,6 +1233,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::FirstActiveLane:
@@ -1375,6 +1380,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
+    break;
+  case VPInstruction::ExtractLastLanePerPart:
+    O << "extract-last-lane-per-part";
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
@@ -2344,7 +2352,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  auto *CanIV = cast<VPCanonicalIVPHIRecipe>(&*getParent()->begin());
+  auto *CanIV = getParent()->getParent()->getCanonicalIV();
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
          getScalarType() == CanIV->getScalarType();
 }
@@ -2855,7 +2863,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
   case ExpressionTypes::ExtNegatedMulAccReduction:
     assert(Opcode == Instruction::Add && "Unexpected opcode");
     Opcode = Instruction::Sub;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ExpressionTypes::ExtMulAccReduction: {
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
@@ -3174,6 +3182,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
 
+  if (VF.isScalable() && !isSingleScalar())
+    return InstructionCost::getInvalid();
+
   switch (UI->getOpcode()) {
   case Instruction::GetElementPtr:
     // We mark this instruction as zero-cost because the cost of GEPs in
@@ -3220,9 +3231,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                  ElementCount::getFixed(1), Ctx));
       return ScalarCallCost;
     }
-
-    if (VF.isScalable())
-      return InstructionCost::getInvalid();
 
     return ScalarCallCost * VF.getFixedValue() +
            Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
@@ -3274,9 +3282,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    if (VF.isScalable() && !isSingleScalar())
-      return InstructionCost::getInvalid();
-
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
     const VPRegionBlock *ParentRegion = getParent()->getParent();

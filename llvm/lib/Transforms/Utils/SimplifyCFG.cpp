@@ -5959,7 +5959,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
-    for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
+    unsigned E = PreviousEdges - 1;
+    // Remove all incoming values from OtherDest if OtherDest is unreachable.
+    if (NewBI->isUnconditional())
+      ++E;
+    for (unsigned I = 0; I != E; ++I)
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
   }
 
@@ -7736,8 +7740,7 @@ struct SwitchSuccWrapper {
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
 
-namespace llvm {
-template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
+template <> struct llvm::DenseMapInfo<const SwitchSuccWrapper *> {
   static const SwitchSuccWrapper *getEmptyKey() {
     return static_cast<SwitchSuccWrapper *>(
         DenseMapInfo<void *>::getEmptyKey());
@@ -7805,7 +7808,6 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     return true;
   }
 };
-} // namespace llvm
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {

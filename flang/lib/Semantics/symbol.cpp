@@ -769,6 +769,11 @@ void DerivedTypeDetails::add_component(const Symbol &symbol) {
   componentNames_.push_back(symbol.name());
 }
 
+void DerivedTypeDetails::add_originalKindParameter(
+    SourceName name, const parser::Expr *expr) {
+  originalKindParameterMap_.emplace(name, expr);
+}
+
 const Symbol *DerivedTypeDetails::GetParentComponent(const Scope &scope) const {
   if (auto extends{GetParentComponentName()}) {
     if (auto iter{scope.find(*extends)}; iter != scope.cend()) {
