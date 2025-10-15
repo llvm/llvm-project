@@ -89,6 +89,19 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
+// CIR Operation Traits
+//===----------------------------------------------------------------------===//
+
+class HasAtMostOneOfAttrsPred<list<string> names> :
+  CPred<!foldl("0", names, acc, name,  acc # " + (" # name # " ? 1 : 0)")
+        # " <= 1">;
+
+class HasAtMostOneOfAttrs<list<string> names> : PredOpTrait<
+  "has only one of the optional attributes: " # !interleave(names, ", "),
+  HasAtMostOneOfAttrsPred<!foreach(name, names, "$" # name)>
+>;
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -2422,9 +2435,17 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
 // TODO(CIR): FuncOp is still a tiny shell of what it will become.  Many more
 // properties and attributes will be added as upstreaming continues.
 
+def CIR_OptionalPriorityAttr : OptionalAttr<
+  DefaultValuedAttr<
+    ConfinedAttr<I32Attr, [IntMinValue<101>, IntMaxValue<65535>]>,
+    "65535"
+  >
+>;
+
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
+  HasAtMostOneOfAttrs<["global_ctor_priority", "global_dtor_priority"]>,
   IsolatedFromAbove
 ]> {
   let summary = "Declare or define a function";
@@ -2448,6 +2469,12 @@ def CIR_FuncOp : CIR_Op<"func", [
     The `no_proto` keyword is used to identify functions that were declared
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
+
+    The `global_ctor` keyword indicates whether a function should execute before
+    `main()` function, as specified by `__attribute__((constructor))`. An
+    execution priority can also be specified `global_ctor(<priority>)`.
+    Similarly, for global destructors both `global_dtor` and
+    `global_dtor(<priority>)` are available.
 
     Example:
 
@@ -2487,7 +2514,9 @@ def CIR_FuncOp : CIR_Op<"func", [
                        UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
-                       OptionalAttr<FlatSymbolRefAttr>:$aliasee);
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+                       CIR_OptionalPriorityAttr:$global_ctor_priority,
+                       CIR_OptionalPriorityAttr:$global_dtor_priority);
 
   let regions = (region AnyRegion:$body);
 
@@ -4300,7 +4329,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
-def CIR_AtomicXchg : CIR_Op<"atomic.xchg", [
+def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
   AllTypesMatch<["result", "val"]>,
   TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
     "ptr", "val", "mlir::cast<cir::PointerType>($_self).getPointee()">
@@ -4318,9 +4347,7 @@ def CIR_AtomicXchg : CIR_Op<"atomic.xchg", [
     Example:
 
     ```mlir
-    %res = cir.atomic.xchg(%ptr : !cir.ptr<!u64i>,
-                           %val : !u64i,
-                           seq_cst) : !u64i
+    %res = cir.atomic.xchg seq_cst %ptr, %val : !cir.ptr<!u64i> -> !u64i
     ```
   }];
 
@@ -4335,12 +4362,16 @@ def CIR_AtomicXchg : CIR_Op<"atomic.xchg", [
   let assemblyFormat = [{
     $mem_order (`volatile` $is_volatile^)?
     $ptr `,` $val
-    `:` qualified(type($ptr)) `->` type($result) attr-dict
+    `:` functional-type(operands, results) attr-dict
   }];
 }
 
-def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
-  AllTypesMatch<["old", "expected", "desired"]>
+def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
+  AllTypesMatch<["old", "expected", "desired"]>,
+  TypesMatchWith<"type of 'expected' must match the pointee type of 'ptr'",
+    "ptr", "expected", "mlir::cast<cir::PointerType>($_self).getPointee()">,
+  TypesMatchWith<"type of 'desired' must match the pointee type of 'ptr'",
+    "ptr", "desired", "mlir::cast<cir::PointerType>($_self).getPointee()">
 ]> {
   let summary = "Atomic compare and exchange";
   let description = [{
@@ -4373,12 +4404,9 @@ def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
     Example:
 
     ```mlir
-    %old, %success = cir.atomic.cmpxchg(%ptr : !cir.ptr<!u64i>,
-                                        %expected : !u64i,
-                                        %desired : !u64i,
-                                        success = seq_cst,
-                                        failure = seq_cst) weak
-                                        : (!u64i, !cir.bool)
+    %old, %success = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
+        %ptr, %expected, %desired
+        : (!cir.ptr<!u64i>, !u64i, !u64i) -> (!u64i, !cir.bool)
     ```
   }];
   let results = (outs CIR_AnyType:$old, CIR_BoolType:$success);
@@ -4392,20 +4420,13 @@ def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
                        UnitAttr:$is_volatile);
 
   let assemblyFormat = [{
-    `(`
-      $ptr `:` qualified(type($ptr)) `,`
-      $expected `:` type($expected) `,`
-      $desired `:` type($desired) `,`
-      `success` `=`  $succ_order `,`
-      `failure` `=`  $fail_order
-    `)`
-    (`align` `(` $alignment^ `)`)?
     (`weak` $weak^)?
+    `success` `(` $succ_order `)` `failure` `(` $fail_order `)`
+    $ptr `,` $expected `,` $desired
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
-    `:` `(` type($old) `,` type($success) `)` attr-dict
+    `:` functional-type(operands, results) attr-dict
   }];
-
-  let hasVerifier = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
