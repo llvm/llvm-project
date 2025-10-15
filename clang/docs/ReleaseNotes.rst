@@ -191,6 +191,8 @@ C23 Feature Support
 - Added ``FLT_SNAN``, ``DBL_SNAN``, and ``LDBL_SNAN`` to Clang's ``<float.h>``
   header in C23 and later modes. This implements
   `WG14 N2710 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2710.htm>`_.
+- Fixed accepting as compatible unnamed tag types with the same fields within
+  the same translation unit but from different types.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -513,6 +515,7 @@ X86 Support
   driver.
 - Remove `[no-]evex512` feature request from intrinsics and builtins.
 - Change features `avx10.x-[256,512]` to `avx10.x`.
+- `-march=wildcatlake` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

@@ -12535,6 +12535,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferStridedMetadataInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":Pass",
