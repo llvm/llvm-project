@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCParser/MCAsmParser.h"
-#include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -48,7 +48,7 @@ public:
 
 TEST_F(MCAsmParserTest, InvalidRead) {
   AsmLexer Lexer(*MAI);
-  const char* Source = "ret\0 ";
+  const char *Source = "ret\0 ";
   StringRef SourceRef(Source, 4); // Include null terminator in buffer length
   Lexer.setBuffer(SourceRef);
 
