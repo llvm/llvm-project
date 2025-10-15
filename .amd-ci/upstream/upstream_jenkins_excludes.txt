@@ -18,3 +18,4 @@
 ^prj-essentials/devo/aocc/CODEOWNERS\.AOCC\.m4
 ^\.github/\.ai_pr_platform/
 ^\.github/workflows/amd-validate-.*config-file\.yml
+^CODEOWNERS
