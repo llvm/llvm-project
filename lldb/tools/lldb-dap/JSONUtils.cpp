@@ -866,7 +866,8 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid, bool external) {
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+    const std::vector<std::optional<std::string>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
   if (external) {
     // This indicates the IDE to open an external terminal window.
@@ -885,6 +886,18 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
+  if (!stdio.empty()) {
+    req_args.push_back("--stdio");
+    std::stringstream ss;
+    for (const std::optional<std::string> &file : stdio) {
+      if (file)
+        ss << *file;
+      ss << ":";
+    }
+    std::string files = ss.str();
+    files.pop_back();
+    req_args.push_back(std::move(files));
+  }
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);
 
