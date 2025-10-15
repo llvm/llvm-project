@@ -131,10 +131,7 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
       if (!InflateToAVClass)
         continue;
 
-      for (MachineOperand &Op : MI.operands()) {
-        if (!Op.isReg() || !Op.isDef())
-          continue;
-
+      for (MachineOperand &Op : MI.all_defs()) {
         Register DefReg = Op.getReg();
         if (DefReg.isPhysical())
           continue;
