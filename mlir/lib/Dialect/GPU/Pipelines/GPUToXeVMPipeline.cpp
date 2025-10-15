@@ -35,11 +35,11 @@ using namespace mlir;
 
 namespace {
 //===----------------------------------------------------------------------===//
-// Common pipeline
+// Pre-GPU common pipeline for both Host and GPU.
 //===----------------------------------------------------------------------===//
-void buildCommonPassPipeline(
+void buildPreGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
-  // builtin.module scope passes
+  // builtin.module scope passes.
   pm.addPass(createCSEPass());
   pm.addPass(createConvertVectorToSCFPass());
   {
@@ -58,7 +58,7 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 // GPUModule-specific stuff.
 //===----------------------------------------------------------------------===//
-void buildGpuPassPipeline(OpPassManager &pm,
+void buildGPUPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   if (options.xegpuOpLevel == "workgroup") {
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
@@ -90,10 +90,11 @@ void buildGpuPassPipeline(OpPassManager &pm,
 }
 
 //===----------------------------------------------------------------------===//
-// Host Post-GPU pipeline
+// Post-GPU pipeline for both Host and GPU.
 //===----------------------------------------------------------------------===//
-void buildHostPostPipeline(OpPassManager &pm,
+void buildPostGPUCommonPassPipeline(OpPassManager &pm,
                            const mlir::gpu::GPUToXeVMPipelineOptions &options) {
+  // builtin.module scope passes.
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   {
@@ -117,14 +118,14 @@ void buildHostPostPipeline(OpPassManager &pm,
 
 void mlir::gpu::buildLowerToXeVMPassPipeline(
     OpPassManager &pm, const GPUToXeVMPipelineOptions &options) {
-  // Common pipelines
-  buildCommonPassPipeline(pm, options);
+  // Pre-GPU common pipelines.
+  buildPreGPUCommonPassPipeline(pm, options);
 
-  // GPUModule-specific stuff
-  buildGpuPassPipeline(pm, options);
+  // GPUModule-specific stuff.
+  buildGPUPassPipeline(pm, options);
 
-  // Host post-GPUModule-specific stuff
-  buildHostPostPipeline(pm, options);
+  // Post-GPU pipeline for both Host and GPU.
+  buildPostGPUCommonPassPipeline(pm, options);
 }
 
 void mlir::gpu::registerGPUToXeVMPipeline() {
