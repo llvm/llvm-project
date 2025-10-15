@@ -520,7 +520,7 @@ public:
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto resTy = cast<xegpu::MemDescType>(op.getResult().getType());
+    auto resTy = op.getMemDesc();
 
     // Create the result MemRefType with the same shape, element type, and
     // memory space

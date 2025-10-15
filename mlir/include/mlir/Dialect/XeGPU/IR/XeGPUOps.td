@@ -1319,6 +1319,9 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Arguments:
      - `mem_desc`: the memory descriptor identifying the SLM region.
      - `offsets`: the coordinates within the matrix to read from.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
+                 lowered to a subgroup block load. When this attribute is present, 
+                 the offsets are subgroup-uniform across all lanes.
      - `layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
                  LayoutAttr or SliceAttr.
@@ -1367,6 +1370,9 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
      - `mem_desc`: the memory descriptor specifying the SLM region.
      - `offsets`: the coordinates within the matrix where the data will be written.
      - `data`: the values to be stored in the matrix.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
+                 lowered to a subgroup block store. When this attribute is present, 
+                 the offsets are subgroup-uniform across all lanes.     
      - `layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
                  LayoutAttr or SliceAttr.
