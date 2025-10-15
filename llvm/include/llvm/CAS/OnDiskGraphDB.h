@@ -197,6 +197,7 @@ private:
 /// Handle for a loaded node object.
 class ObjectHandle {
 public:
+  explicit ObjectHandle(uint64_t Opaque) : Opaque(Opaque) {}
   uint64_t getOpaqueData() const { return Opaque; }
 
   static ObjectHandle fromFileOffset(FileOffset Offset);
@@ -210,7 +211,6 @@ public:
   }
 
 private:
-  explicit ObjectHandle(uint64_t Opaque) : Opaque(Opaque) {}
   uint64_t Opaque;
 };
 

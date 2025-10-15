@@ -45,21 +45,6 @@ struct ol_platform_impl_t {
       : BackendType(BackendType), Plugin(std::move(Plugin)) {}
   ol_platform_backend_t BackendType;
 
-  /// Get the plugin, lazily initializing it if necessary.
-  llvm::Expected<GenericPluginTy *> getPlugin() {
-    if (llvm::Error Err = init())
-      return Err;
-    return Plugin.get();
-  }
-
-  /// Get the device list, lazily initializing it if necessary.
-  llvm::Expected<llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> &>
-  getDevices() {
-    if (llvm::Error Err = init())
-      return Err;
-    return Devices;
-  }
-
   /// Complete all pending work for this platform and perform any needed
   /// cleanup.
   ///
@@ -73,8 +58,6 @@ struct ol_platform_impl_t {
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
-private:
-  std::once_flag Initialized;
   llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> Devices;
 };
 
@@ -154,39 +137,25 @@ llvm::Error ol_platform_impl_t::destroy() {
 }
 
 llvm::Error ol_platform_impl_t::init() {
-  std::unique_ptr<llvm::Error> Storage;
+  if (!Plugin)
+    return llvm::Error::success();
 
-  // This can be called concurrently, make sure we only do the actual
-  // initialization once.
-  std::call_once(Initialized, [&]() {
-    // FIXME: Need better handling for the host platform.
-    if (!Plugin)
-      return;
+  if (llvm::Error Err = Plugin->init())
+    return Err;
 
-    llvm::Error Err = Plugin->init();
-    if (Err) {
-      Storage = std::make_unique<llvm::Error>(std::move(Err));
-      return;
-    }
+  for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
+    if (llvm::Error Err = Plugin->initDevice(Id))
+      return Err;
 
-    for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
-      if (llvm::Error Err = Plugin->initDevice(Id)) {
-        Storage = std::make_unique<llvm::Error>(std::move(Err));
-        return;
-      }
+    auto Device = &Plugin->getDevice(Id);
+    auto Info = Device->obtainInfoImpl();
+    if (llvm::Error Err = Info.takeError())
+      return Err;
+    Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
+                                                            std::move(*Info)));
+  }
 
-      auto Device = &Plugin->getDevice(Id);
-      auto Info = Device->obtainInfoImpl();
-      if (llvm::Error Err = Info.takeError()) {
-        Storage = std::make_unique<llvm::Error>(std::move(Err));
-        return;
-      }
-      Devices.emplace_back(std::make_unique<ol_device_impl_t>(
-          Id, Device, *this, std::move(*Info)));
-    }
-  });
-
-  return Storage ? std::move(*Storage) : llvm::Error::success();
+  return llvm::Error::success();
 }
 
 struct ol_queue_impl_t {
@@ -266,7 +235,7 @@ struct OffloadContext {
   std::mutex AllocInfoMapMutex{};
   // Partitioned list of memory base addresses. Each element in this list is a
   // key in AllocInfoMap
-  llvm::SmallVector<void *> AllocBases{};
+  SmallVector<void *> AllocBases{};
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
   ol_device_handle_t HostDevice;
   size_t RefCount;
@@ -314,14 +283,19 @@ Error initPlugins(OffloadContext &Context) {
   } while (false);
 #include "Shared/Targets.def"
 
-  // Add the special host device
+  // Eagerly initialize all of the plugins and devices. We need to make sure
+  // that the platform is initialized at a consistent point to maintain the
+  // expected teardown order in the vendor libraries.
+  for (auto &Platform : Context.Platforms) {
+    if (Error Err = Platform->init())
+      return Err;
+  }
+
+  // Add the special host device.
   auto &HostPlatform = Context.Platforms.emplace_back(
       std::make_unique<ol_platform_impl_t>(nullptr, OL_PLATFORM_BACKEND_HOST));
-  auto DevicesOrErr = HostPlatform->getDevices();
-  if (!DevicesOrErr)
-    return DevicesOrErr.takeError();
-  Context.HostDevice = DevicesOrErr
-                           ->emplace_back(std::make_unique<ol_device_impl_t>(
+  Context.HostDevice = HostPlatform->Devices
+                           .emplace_back(std::make_unique<ol_device_impl_t>(
                                -1, nullptr, *HostPlatform, InfoTreeNode{}))
                            .get();
 
@@ -355,7 +329,7 @@ Error olShutDown_impl() {
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
 
-  llvm::Error Result = Error::success();
+  Error Result = Error::success();
   auto *OldContext = OffloadContextVal.exchange(nullptr);
 
   for (auto &Platform : OldContext->Platforms) {
@@ -364,7 +338,7 @@ Error olShutDown_impl() {
       continue;
 
     if (auto Res = Platform->destroy())
-      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+      Result = joinErrors(std::move(Result), std::move(Res));
   }
 
   delete OldContext;
@@ -423,7 +397,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   auto makeError = [&](ErrorCode Code, StringRef Err) {
     std::string ErrBuffer;
-    llvm::raw_string_ostream(ErrBuffer) << PropName << ": " << Err;
+    raw_string_ostream(ErrBuffer) << PropName << ": " << Err;
     return Plugin::error(ErrorCode::UNIMPLEMENTED, ErrBuffer.c_str());
   };
 
@@ -641,10 +615,7 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
-    auto DevicesOrErr = Platform->getDevices();
-    if (!DevicesOrErr)
-      return DevicesOrErr.takeError();
-    for (auto &Device : *DevicesOrErr) {
+    for (auto &Device : Platform->Devices) {
       if (!Callback(Device.get(), UserData)) {
         return Error::success();
       }
@@ -1186,7 +1157,7 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   auto CheckKind = [&](ol_symbol_kind_t Required) {
     if (Symbol->Kind != Required) {
       std::string ErrBuffer;
-      llvm::raw_string_ostream(ErrBuffer)
+      raw_string_ostream(ErrBuffer)
           << PropName << ": Expected a symbol of Kind " << Required
           << " but given a symbol of Kind " << Symbol->Kind;
       return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
