@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_DRIVER_OPTIONS_H
-#define LLVM_CLANG_DRIVER_OPTIONS_H
+#ifndef LLVM_CLANG_OPTIONS_H
+#define LLVM_CLANG_OPTIONS_H
 
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 
 namespace clang {
-namespace driver {
 
 namespace options {
 /// Flags specifically for clang options.  Must not overlap with
@@ -42,16 +41,15 @@ enum ClangVisibility {
 };
 
 enum ID {
-    OPT_INVALID = 0, // This is not an option ID.
+  OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
-#include "clang/Driver/Options.inc"
-    LastOption
+#include "clang/Options/Options.inc"
+  LastOption
 #undef OPTION
-  };
-}
+};
+} // namespace options
 
 const llvm::opt::OptTable &getDriverOptTable();
-}
-}
+} // namespace clang
 
 #endif

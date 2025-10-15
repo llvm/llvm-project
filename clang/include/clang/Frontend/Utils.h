@@ -15,7 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Driver/OptionUtils.h"
+#include "clang/Options/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
