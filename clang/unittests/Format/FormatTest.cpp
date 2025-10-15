@@ -24843,6 +24843,11 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                " } while (0 )",
                Style);
 
+  Style.OneLineFormatOffRegex = "MACRO_TEST";
+  verifyNoChange(" MACRO_TEST1 ( ) ;\n"
+                 "   MACRO_TEST2( );",
+                 Style);
+
   Style.ColumnLimit = 50;
   Style.OneLineFormatOffRegex = "^LogErrorPrint$";
   verifyFormat(" myproject::LogErrorPrint(logger, \"Don't split me!\");\n"

@@ -3383,7 +3383,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     }
   }
 
-  switch (llvm::omp::Directive dir = item->id) {
+  llvm::omp::Directive dir = item->id;
+  switch (dir) {
   case llvm::omp::Directive::OMPD_barrier:
     newOp = genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
