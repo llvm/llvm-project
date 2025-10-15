@@ -361,7 +361,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-integer-sign-comparison
   <clang-tidy/checks/modernize/use-integer-sign-comparison>` by providing
-  correct fix-its when the RHS of a comparison contains a non-C-style cast.
+  correct fix-its when the right-hand side of a comparison contains a
+  non-C-style cast.
 
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
