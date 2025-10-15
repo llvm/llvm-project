@@ -822,8 +822,7 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
   }
 }
 
-void ProfiledBinary::populateSymbolsFromElf(
-    const ObjectFile *Obj) {
+void ProfiledBinary::populateSymbolsFromElf(const ObjectFile *Obj) {
   // Load binary functions from ELF symbol table when DWARF info is incomplete
   StringRef FileName = Obj->getFileName();
   for (const ELFSymbolRef Symbol : Obj->symbols()) {
@@ -836,8 +835,9 @@ void ProfiledBinary::populateSymbolsFromElf(
       continue;
 
     SmallVector<StringRef> Suffixes(
-      {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
-    const StringRef SymName = FunctionSamples::getCanonicalFnName(Name, Suffixes);
+        {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
+    const StringRef SymName =
+        FunctionSamples::getCanonicalFnName(Name, Suffixes);
 
     auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
     auto &Func = Ret.first->second;

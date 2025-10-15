@@ -492,13 +492,18 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
   }
 
   if (ErrStkAddr)
-    WithColor::warning() << "Cannot find Stack Address from DWARF Info: " << ErrStkAddr << "/" << TotalStkAddr << " missing\n";
+    WithColor::warning() << "Cannot find Stack Address from DWARF Info: "
+                         << ErrStkAddr << "/" << TotalStkAddr << " missing\n";
   if (ErrFuncRange)
-    WithColor::warning() << "Cannot find Function Range from DWARF Info: " << ErrFuncRange << "/" << TotalFuncRange << " missing\n";
+    WithColor::warning() << "Cannot find Function Range from DWARF Info: "
+                         << ErrFuncRange << "/" << TotalFuncRange
+                         << " missing\n";
   if (ErrSrc)
-    WithColor::warning() << "Cannot find LBR Source Addr from DWARF Info: " << ErrSrc << "/" << TotalSrc << " missing\n";
+    WithColor::warning() << "Cannot find LBR Source Addr from DWARF Info: "
+                         << ErrSrc << "/" << TotalSrc << " missing\n";
   if (ErrTgt)
-    WithColor::warning() << "Cannot find LBR Target Addr from DWARF Info: " << ErrTgt << "/" << TotalTgt << " missing\n";
+    WithColor::warning() << "Cannot find LBR Target Addr from DWARF Info: "
+                         << ErrTgt << "/" << TotalTgt << " missing\n";
   return true;
 }
 

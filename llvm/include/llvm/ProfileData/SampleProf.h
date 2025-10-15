@@ -1214,7 +1214,7 @@ public:
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
     // of "B" in knownSuffixes.
-    SmallVector<StringRef> KnownSuffixes ({LLVMSuffix, PartSuffix, UniqSuffix});
+    SmallVector<StringRef> KnownSuffixes({LLVMSuffix, PartSuffix, UniqSuffix});
     return getCanonicalFnName(FnName, KnownSuffixes, Attr);
   }
 
