@@ -1067,33 +1067,29 @@ _mm256_mask_min_epu16(__m256i __W, __mmask16 __M, __m256i __A, __m256i __B) {
                                             (__v16hi)__W);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_shuffle_epi8(__m128i __W, __mmask16 __U, __m128i __A, __m128i __B)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_shuffle_epi8(__m128i __W, __mmask16 __U, __m128i __A, __m128i __B) {
   return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
                                             (__v16qi)_mm_shuffle_epi8(__A, __B),
                                             (__v16qi)__W);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_shuffle_epi8(__mmask16 __U, __m128i __A, __m128i __B)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_shuffle_epi8(__mmask16 __U, __m128i __A, __m128i __B) {
   return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
                                             (__v16qi)_mm_shuffle_epi8(__A, __B),
                                             (__v16qi)_mm_setzero_si128());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mask_shuffle_epi8(__m256i __W, __mmask32 __U, __m256i __A, __m256i __B)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mask_shuffle_epi8(__m256i __W, __mmask32 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectb_256((__mmask32)__U,
                                          (__v32qi)_mm256_shuffle_epi8(__A, __B),
                                          (__v32qi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskz_shuffle_epi8(__mmask32 __U, __m256i __A, __m256i __B)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_maskz_shuffle_epi8(__mmask32 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectb_256((__mmask32)__U,
                                          (__v32qi)_mm256_shuffle_epi8(__A, __B),
                                          (__v32qi)_mm256_setzero_si256());
