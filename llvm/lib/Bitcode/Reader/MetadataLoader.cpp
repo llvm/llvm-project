@@ -452,6 +452,10 @@ class MetadataLoader::MetadataLoaderImpl {
   /// metadata.
   SmallDenseMap<Function *, DISubprogram *, 16> FunctionsWithSPs;
 
+  /// retainedNodes of these subprograms should be cleaned up from incorrectly
+  /// scoped local types.
+  SmallVector<DISubprogram *> NewDistinctSPs;
+
   // Map the bitcode's custom MDKind ID to the Module's MDKind ID.
   DenseMap<unsigned, unsigned> MDKindMap;
 
@@ -728,29 +732,7 @@ class MetadataLoader::MetadataLoaderImpl {
     upgradeCUVariables();
     if (ModuleLevel)
       upgradeCULocals();
-  }
-
-  void cloneLocalTypes() {
-    for (Metadata *M : MetadataList) {
-      if (auto *SP = dyn_cast_or_null<DISubprogram>(M)) {
-        auto RetainedNodes = SP->getRetainedNodes();
-        SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
-        bool HasChanged = false;
-        for (auto &N : MDs)
-          if (auto *T = dyn_cast<DIType>(N))
-            if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
-              if (auto *Parent = findEnclosingSubprogram(LS))
-                if (Parent != SP) {
-                  HasChanged = true;
-                  auto NewT = T->clone();
-                  NewT->replaceOperandWith(1, SP);
-                  N = MDNode::replaceWithUniqued(std::move(NewT));
-                }
-
-        if (HasChanged)
-          SP->replaceRetainedNodes(MDNode::get(Context, MDs));
-      }
-    }
+    DISubprogram::cleanupRetainedNodes(std::exchange(NewDistinctSPs, {}));
   }
 
   void callMDTypeCallback(Metadata **Val, unsigned TypeID);
@@ -1129,7 +1111,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       // placeholders, that we flush here.
       resolveForwardRefsAndPlaceholders(Placeholders);
       upgradeDebugInfo(ModuleLevel);
-      cloneLocalTypes();
       // Return at the beginning of the block, since it is easy to skip it
       // entirely from there.
       Stream.ReadBlockEnd(); // Pop the abbrev block context.
@@ -1161,7 +1142,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::EndBlock:
       resolveForwardRefsAndPlaceholders(Placeholders);
       upgradeDebugInfo(ModuleLevel);
-      cloneLocalTypes();
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -2043,6 +2023,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          UsesKeyInstructions));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
+
+    if (IsDistinct)
+      NewDistinctSPs.push_back(SP);
 
     // Upgrade sp->function mapping to function->sp mapping.
     if (HasFn) {

@@ -1,16 +1,18 @@
-; RUN: llvm-as < %s -o %t0
-; RUN: llvm-dis %t0 -o - | FileCheck %s
+; RUN: llvm-as --disable-verify < %s -o %t0
+; RUN: opt --passes=verify %t0 -o /dev/null
+; RUN: llvm-dis %t0 -o - | FileCheck %s --implicit-check-not=DICompositeType
 
-; Ensure that function-local types with the same ODR identifier belonging
-; to different subprograms are not deduplicated when a module is being loaded.
+; During module loading, if a local type appears in retainedNodes
+; field of multiple DISubprograms due to ODR-uniquing,
+; retainedNodes should be cleaned up, so that only one DISubprogram
+; will have this type in its retainedNodes.
 
 ; CHECK: [[CU:![0-9]+]] = distinct !DICompileUnit
 ; CHECK: [[BAR:![0-9]+]] = distinct !DISubprogram(name: "bar", {{.*}}, retainedNodes: [[RN_BAR:![0-9]+]])
-; CHECK: [[RN_BAR]] = !{[[T2:![0-9]+]]}
-; CHECK: [[T2]] = !DICompositeType(tag: DW_TAG_class_type, {{.*}}, identifier: "local_type")
+; CHECK: [[RN_BAR]] = !{}
 ; CHECK: [[FOO:![0-9]+]] = distinct !DISubprogram(name: "foo", {{.*}}, retainedNodes: [[RN_FOO:![0-9]+]])
 ; CHECK: [[RN_FOO]] = !{[[T1:![0-9]+]]}
-; CHECK: [[T1]] = !DICompositeType(tag: DW_TAG_class_type, {{.*}}, identifier: "local_type")
+; CHECK: [[T1]] = !DICompositeType(tag: DW_TAG_class_type, scope: [[FOO]], {{.*}}, identifier: "local_type")
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
