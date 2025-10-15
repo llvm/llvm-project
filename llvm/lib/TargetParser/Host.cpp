@@ -964,6 +964,13 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
