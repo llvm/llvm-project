@@ -98,12 +98,20 @@ typedef CVImageBufferRef CVPixelBufferRef;
 typedef signed int CVReturn;
 CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut);
 
+extern "C" NSString *NSStringFromSelector(SEL aSelector);
+extern "C" SEL NSSelectorFromString(NSString *aSelectorName);
+
+extern "C" NSString *NSStringFromClass(Class aClass);
+extern "C" Class NSClassFromString(NSString *aClassName);
+
+extern "C" NSString *NSStringFromProtocol(Protocol *proto);
+extern "C" Protocol * NSProtocolFromString(NSString *namestr);
+
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
-extern Class NSClassFromString(NSString *aClassName);
 
 #if __has_feature(objc_arc)
 id CFBridgingRelease(CFTypeRef X) {

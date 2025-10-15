@@ -410,6 +410,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
@@ -1006,6 +1008,41 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
                                  offsetValue);
 }
 
+CIRGenFunction::VlaSizePair CIRGenFunction::getVLASize(QualType type) {
+  const VariableArrayType *vla =
+      cgm.getASTContext().getAsVariableArrayType(type);
+  assert(vla && "type was not a variable array type!");
+  return getVLASize(vla);
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLASize(const VariableArrayType *type) {
+  // The number of elements so far; always size_t.
+  mlir::Value numElements;
+
+  QualType elementType;
+  do {
+    elementType = type->getElementType();
+    mlir::Value vlaSize = vlaSizeMap[type->getSizeExpr()];
+    assert(vlaSize && "no size for VLA!");
+    assert(vlaSize.getType() == SizeTy);
+
+    if (!numElements) {
+      numElements = vlaSize;
+    } else {
+      // It's undefined behavior if this wraps around, so mark it that way.
+      // FIXME: Teach -fsanitize=undefined to trap this.
+
+      numElements =
+          builder.createMul(numElements.getLoc(), numElements, vlaSize,
+                            cir::OverflowBehavior::NoUnsignedWrap);
+    }
+  } while ((type = getContext().getAsVariableArrayType(elementType)));
+
+  assert(numElements && "Undefined elements number");
+  return {numElements, elementType};
+}
+
 // TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {
@@ -1086,7 +1123,26 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
 
     case Type::VariableArray: {
-      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType VLA");
+      // Losing element qualification here is fine.
+      const VariableArrayType *vat = cast<clang::VariableArrayType>(ty);
+
+      // Unknown size indication requires no size computation.
+      // Otherwise, evaluate and record it.
+      if (const Expr *sizeExpr = vat->getSizeExpr()) {
+        // It's possible that we might have emitted this already,
+        // e.g. with a typedef and a pointer to it.
+        mlir::Value &entry = vlaSizeMap[sizeExpr];
+        if (!entry) {
+          mlir::Value size = emitScalarExpr(sizeExpr);
+          assert(!cir::MissingFeatures::sanitizers());
+
+          // Always zexting here would be wrong if it weren't
+          // undefined behavior to have a negative bound.
+          // FIXME: What about when size's type is larger than size_t?
+          entry = builder.createIntCast(size, SizeTy);
+        }
+      }
+      type = vat->getElementType();
       break;
     }
 

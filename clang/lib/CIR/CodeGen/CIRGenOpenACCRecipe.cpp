@@ -398,6 +398,7 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
     emitDestroy(block->getArgument(1), elementTy);
   }
 
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd);
 }
 void OpenACCRecipeBuilderBase::makeBoundsInit(
@@ -480,6 +481,7 @@ void OpenACCRecipeBuilderBase::createInitRecipe(
                      /*isInitSection=*/true);
   }
 
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd);
 }
 
@@ -518,6 +520,7 @@ void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
   cgf.emitAutoVarInit(tempDeclEmission);
 
   builder.setInsertionPointToEnd(&copyRegion.back());
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd);
 }
 
@@ -662,6 +665,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
   }
 
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
+  ls.forceCleanup();
   mlir::acc::YieldOp::create(builder, locEnd, block->getArgument(0));
 }
 

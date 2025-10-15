@@ -519,6 +519,14 @@ public:
     return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
   }
 
+  cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
+    return cir::StackSaveOp::create(*this, loc, ty);
+  }
+
+  cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
+    return cir::StackRestoreOp::create(*this, loc, v);
+  }
+
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
                                 Address dstAddr, mlir::Type storageType,
                                 mlir::Value src, const CIRGenBitFieldInfo &info,

@@ -149,6 +149,10 @@ public:
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
   SymTableTy symbolTable;
 
+  /// Whether a cir.stacksave operation has been added. Used to avoid
+  /// inserting cir.stacksave for multiple VLAs in the same scope.
+  bool didCallStackSave = false;
+
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
@@ -187,6 +191,14 @@ public:
   /// Keeps track of the current set of opaque value expressions.
   llvm::DenseMap<const OpaqueValueExpr *, LValue> opaqueLValues;
   llvm::DenseMap<const OpaqueValueExpr *, RValue> opaqueRValues;
+
+  // This keeps track of the associated size for each VLA type.
+  // We track this by the size expression rather than the type itself because
+  // in certain situations, like a const qualifier applied to an VLA typedef,
+  // multiple VLA types can share the same size expression.
+  // FIXME: Maybe this could be a stack of maps that is pushed/popped as we
+  // enter/leave scopes.
+  llvm::DenseMap<const Expr *, mlir::Value> vlaSizeMap;
 
 public:
   /// A non-RAII class containing all the information about a bound
@@ -436,6 +448,20 @@ public:
     }
   };
 
+  struct VlaSizePair {
+    mlir::Value numElts;
+    QualType type;
+
+    VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
+  };
+
+  /// Returns an MLIR::Value+QualType pair that corresponds to the size,
+  /// in non-variably-sized elements, of a variable length array type,
+  /// plus that largest non-variably-sized element type.  Assumes that
+  /// the type has already been emitted with emitVariablyModifiedType.
+  VlaSizePair getVLASize(const VariableArrayType *type);
+  VlaSizePair getVLASize(QualType type);
+
   void finishFunction(SourceLocation endLoc);
 
   /// Determine whether the given initializer is trivial in the sense
@@ -582,6 +608,8 @@ public:
   CleanupKind getCleanupKind(QualType::DestructionKind kind) {
     return needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup;
   }
+
+  void pushStackRestore(CleanupKind kind, Address spMem);
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -854,6 +882,7 @@ public:
 
   protected:
     bool performCleanup;
+    bool oldDidCallStackSave;
 
   private:
     RunCleanupsScope(const RunCleanupsScope &) = delete;
@@ -867,6 +896,8 @@ public:
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
+      oldDidCallStackSave = cgf.didCallStackSave;
+      cgf.didCallStackSave = false;
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
       cgf.currentCleanupStackDepth = cleanupStackDepth;
     }
@@ -883,6 +914,7 @@ public:
       assert(performCleanup && "Already forced cleanup");
       {
         mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+        cgf.didCallStackSave = oldDidCallStackSave;
         cgf.popCleanupBlocks(cleanupStackDepth);
         performCleanup = false;
         cgf.currentCleanupStackDepth = oldCleanupStackDepth;
