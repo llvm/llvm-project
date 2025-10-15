@@ -233,18 +233,19 @@ function (add_flangrt_library name)
         )
 
       # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
-      # GCC 15.1, libstdc++ uses (void)_EXC in its definition in order
-      # to silence a warning.
+      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
+      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
+      # silence a warning.
       #
       # This is a problem for us because some compilers, specifically
       # clang, do not always optimize away that (void)_EXC even though
       # it is unreachable since it occurs after a call to
       # _builtin_abort().  Because _EXC is typically an object derived
       # from std::exception, (void)_EXC, when not optimized away,
-      # causes a link reference to std::exception, and we do not want
-      # to link against std::exception since doing that would link us
-      # against the C++ runtime library, and we do not want to link
-      # the Fortran runtime against the C++ runtime.
+      # calls std::exception methods defined in the libstdc++ shared
+      # library.  We shouldn't link against that library since our
+      # build version may conflict with the version used by a hybrid
+      # Fortran/C++ application.
       #
       # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
       # supported by the maintainers of libstdc++, so future changes
