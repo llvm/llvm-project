@@ -39,7 +39,6 @@ struct MissingFeatures {
   static bool opGlobalUsedOrCompilerUsed() { return false; }
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
-  static bool opGlobalDtorList() { return false; }
   static bool setDSOLocal() { return false; }
   static bool setComdat() { return false; }
 
@@ -85,6 +84,7 @@ struct MissingFeatures {
   static bool opFuncReadOnly() { return false; }
   static bool opFuncSection() { return false; }
   static bool opFuncWillReturn() { return false; }
+  static bool opFuncNoReturn() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
   static bool setFunctionAttributes() { return false; }
 
@@ -174,6 +174,10 @@ struct MissingFeatures {
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
 
+  // Global ctor handling
+  static bool globalCtorLexOrder() { return false; }
+  static bool globalCtorAssociatedData() { return false; }
+
   // Misc
   static bool abiArgInfo() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
@@ -256,6 +260,8 @@ struct MissingFeatures {
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
+  static bool loweringPrepareX86CXXABI() { return false; }
+  static bool loweringPrepareAArch64XXABI() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }

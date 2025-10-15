@@ -3517,7 +3517,9 @@ struct OmpObject {
   std::variant<Designator, /*common block*/ Name, Invalid> u;
 };
 
-WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
+struct OmpObjectList {
+  WRAPPER_CLASS_BOILERPLATE(OmpObjectList, std::list<OmpObject>);
+};
 
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
 //
@@ -3547,14 +3549,18 @@ struct OmpTypeSpecifier {
   std::variant<TypeSpec, DeclarationTypeSpec> u;
 };
 
-WRAPPER_CLASS(OmpTypeNameList, std::list<OmpTypeSpecifier>);
+struct OmpTypeNameList {
+  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeSpecifier>);
+};
 
 struct OmpLocator {
   UNION_CLASS_BOILERPLATE(OmpLocator);
   std::variant<OmpObject, FunctionReference> u;
 };
 
-WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
+struct OmpLocatorList {
+  WRAPPER_CLASS_BOILERPLATE(OmpLocatorList, std::list<OmpLocator>);
+};
 
 // Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
 //
@@ -4324,7 +4330,9 @@ struct OmpIteration {
 //
 // iteration-vector ->
 //    [iteration...]                                // since 4.5
-WRAPPER_CLASS(OmpIterationVector, std::list<OmpIteration>);
+struct OmpIterationVector {
+  WRAPPER_CLASS_BOILERPLATE(OmpIterationVector, std::list<OmpIteration>);
+};
 
 // Extract this into a separate structure (instead of having it directly in
 // OmpDoacrossClause), so that the context in TYPE_CONTEXT_PARSER can be set
@@ -4364,14 +4372,18 @@ struct OmpDependClause {
 //
 // doacross-clause ->
 //    DOACROSS(dependence-type: iteration-vector)   // since 5.2
-WRAPPER_CLASS(OmpDoacrossClause, OmpDoacross);
+struct OmpDoacrossClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDoacrossClause, OmpDoacross);
+};
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:73]
 //
 // destroy-clause ->
 //    DESTROY |                                     // since 5.0, until 5.1
 //    DESTROY(variable)                             // since 5.2
-WRAPPER_CLASS(OmpDestroyClause, OmpObject);
+struct OmpDestroyClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDestroyClause, OmpObject);
+};
 
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:265-266]
 //
@@ -4785,7 +4797,9 @@ struct OmpInitClause {
 // REF: [5.1:217-220], [5.2:294]
 //
 // 14.1.3 use-clause -> USE (interop-var)
-WRAPPER_CLASS(OmpUseClause, OmpObject);
+struct OmpUseClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpUseClause, OmpObject);
+};
 
 // OpenMP Clauses
 struct OmpClause {
