@@ -3928,6 +3928,7 @@ SDValue PPCTargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
 }
 
 SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
+  LLVM_DEBUG(dbgs() << "Lowering inline asm: "; Op.dump(&DAG));
   MachineFunction &MF = DAG.getMachineFunction();
   PPCFunctionInfo &MFI = *MF.getInfo<PPCFunctionInfo>();
 
@@ -17882,6 +17883,7 @@ PPCTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'y':
       return C_RegisterClass;
     case 'Z':
+    case 'Q':
       // FIXME: While Z does indicate a memory constraint, it specifically
       // indicates an r+r address (used in conjunction with the 'y' modifier
       // in the replacement string). Currently, we're forcing the base
