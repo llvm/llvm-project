@@ -33,8 +33,9 @@ extern wostream wclog;
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/iostream>
+#else
 #  include <__config>
 #  include <version>
 
@@ -66,6 +67,6 @@ extern _LIBCPP_EXPORTED_FROM_ABI wostream wclog;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_IOSTREAM

@@ -47,6 +47,10 @@ template <int KIND> struct CppTypeForHelper<TypeCategory::Integer, KIND> {
   using type = common::HostSignedIntType<8 * KIND>;
 };
 
+template <int KIND> struct CppTypeForHelper<TypeCategory::Unsigned, KIND> {
+  using type = common::HostUnsignedIntType<8 * KIND>;
+};
+
 #if HAS_FP16
 template <> struct CppTypeForHelper<TypeCategory::Real, 2> {
   using type = std::float16_t;

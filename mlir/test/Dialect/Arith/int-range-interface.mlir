@@ -1,4 +1,4 @@
-// RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -int-range-optimizations -canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @add_min_max
 // CHECK: %[[c3:.*]] = arith.constant 3 : index
@@ -224,6 +224,15 @@ func.func @ceil_divui(%arg0 : index) -> i1 {
     func.return %7 : i1
 }
 
+// CHECK-LABEL: func @ceil_divui_by_zero_issue_131273
+// CHECK-NEXT: return
+func.func @ceil_divui_by_zero_issue_131273() {
+    %0 = test.with_bounds {smax = 0 : i32, smin = -1 : i32, umax = 0 : i32, umin = -1 : i32} : i32
+    %c7_i32 = arith.constant 7 : i32
+    %1 = arith.ceildivui %c7_i32, %0 : i32
+    return
+}
+
 // CHECK-LABEL: func @ceil_divsi
 // CHECK: %[[ret:.*]] = arith.cmpi eq
 // CHECK: return %[[ret]]
@@ -247,6 +256,18 @@ func.func @ceil_divsi(%arg0 : index) -> i1 {
     %9 = arith.cmpi eq, %8, %c1 : index
     %10 = arith.andi %6, %9 : i1
     func.return %10 : i1
+}
+
+// There was a bug, which was causing this expr errorneously fold to constant
+// CHECK-LABEL: func @ceil_divsi_full_range
+// CHECK-SAME: (%[[arg:.*]]: index)
+// CHECK: %[[c64:.*]] = arith.constant 64 : index
+// CHECK: %[[ret:.*]] = arith.ceildivsi %[[arg]], %[[c64]] : index
+// CHECK: return %[[ret]]
+func.func @ceil_divsi_full_range(%6: index) -> index {
+  %c64 = arith.constant 64 : index
+  %55 = arith.ceildivsi %6, %c64 : index
+  return %55 : index
 }
 
 // CHECK-LABEL: func @ceil_divsi_intmin_bug_115293
@@ -999,5 +1020,23 @@ func.func @zero_trip_loop2() {
   scf.for %arg0 = %idx1 to %idx1 step %idxm1 {
     %138 = index.floordivs %arg0, %arg0
   }
+  return
+}
+
+// CHECK-LABEL: @noninteger_operation_result
+func.func @noninteger_operation_result(%lb: index, %ub: index, %step: index, %cond: i1) {
+  %c1_i32 = arith.constant 1 : i32
+
+  %0 = "some_fp_op"() : () -> f32
+  // CHECK: [[OUTS:%.*]]:2 = scf.for
+  %outs:2 = scf.for %i = %lb to %ub step %step iter_args(%a = %c1_i32, %b = %0) -> (i32, f32) {
+    %1:2 = "some_op"() : () -> (i32, f32)
+    scf.yield %1#0, %1#1 : i32, f32
+  }
+
+  // CHECK: [[RESULT:%.*]] = arith.select %{{.*}}, %c1_i32, [[OUTS]]#0
+  %result = arith.select %cond, %c1_i32, %outs#0 : i32
+  // CHECK: "use"([[RESULT]], [[OUTS]]#1)
+  "use"(%result, %outs#1) : (i32, f32) -> ()
   return
 }

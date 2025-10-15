@@ -17,21 +17,21 @@
 ## &.got[1] - 0x1286 = 0x2380 - 0x1286 = 4346
 ## &.got[2] - 0x128e = 0x2378 - 0x128e = 4330
 ## &.got[3] - 0x1296 = 0x2380 - 0x1296 = 4330
-## &.got[0] - 0x12a0 = 0x2376 - 0x12a0 = 4310
-## &.got[1] - 0x12aa = 0x237e - 0x12aa = 4308
-## &.got[0] - 0x12b4 = 0x2376 - 0x12b4 = 4290
-## &.got[1] - 0x12be = 0x237e - 0x12be = 4288
-## &.got[0] - 0x12c8 = 0x2376 - 0x12c8 = 4270
+## &.got[0] - 0x12a0 = 0x2378 - 0x12a0 = 4312
+## &.got[1] - 0x12aa = 0x2380 - 0x12aa = 4310
+## &.got[0] - 0x12b4 = 0x2378 - 0x12b4 = 4292
+## &.got[1] - 0x12be = 0x2380 - 0x12be = 4290
+## &.got[0] - 0x12c8 = 0x2378 - 0x12c8 = 4272
 
 # CHECK:      1278:       addq 4345(%rip), %rax
 # CHECK-NEXT: 127f:       addq 4346(%rip), %rax
 # CHECK-NEXT: 1286:       addq 4330(%rip), %r16
 # CHECK-NEXT: 128e:       addq 4330(%rip), %r16
-# CHECK-NEXT: 1296:       addq %r8, 4310(%rip), %r16
-# CHECK-NEXT: 12a0:       addq 4308(%rip), %rax, %r12
-# CHECK-NEXT: 12aa:       {nf} addq %r8, 4290(%rip), %r16
-# CHECK-NEXT: 12b4:       {nf} addq 4288(%rip), %rax, %r12
-# CHECK-NEXT: 12be:       {nf} addq 4270(%rip), %r12
+# CHECK-NEXT: 1296:       addq %r8, 4312(%rip), %r16
+# CHECK-NEXT: 12a0:       addq 4310(%rip), %rax, %r12
+# CHECK-NEXT: 12aa:       {nf} addq %r8, 4292(%rip), %r16
+# CHECK-NEXT: 12b4:       {nf} addq 4290(%rip), %rax, %r12
+# CHECK-NEXT: 12be:       {nf} addq 4272(%rip), %r12
 
 addq foo@GOTTPOFF(%rip), %rax
 addq bar@GOTTPOFF(%rip), %rax

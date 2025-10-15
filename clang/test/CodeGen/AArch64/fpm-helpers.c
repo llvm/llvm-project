@@ -35,7 +35,7 @@ extern "C" {
 //
 fpm_t test_init() { return __arm_fpm_init(); }
 
-// CHECK-LABEL: define dso_local noundef i64 @test_src1_1(
+// CHECK-LABEL: define dso_local noundef range(i64 0, -6) i64 @test_src1_1(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 -8
@@ -44,7 +44,7 @@ fpm_t test_src1_1() {
   return __arm_set_fpm_src1_format(INIT_ONES, __ARM_FPM_E5M2);
 }
 
-// CHECK-LABEL: define dso_local noundef i64 @test_src1_2(
+// CHECK-LABEL: define dso_local noundef range(i64 0, -6) i64 @test_src1_2(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 1
@@ -53,7 +53,7 @@ fpm_t test_src1_2() {
   return __arm_set_fpm_src1_format(INIT_ZERO, __ARM_FPM_E4M3);
 }
 
-// CHECK-LABEL: define dso_local noundef i64 @test_src2_1(
+// CHECK-LABEL: define dso_local noundef range(i64 0, -48) i64 @test_src2_1(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 -57
@@ -62,7 +62,7 @@ fpm_t test_src2_1() {
   return __arm_set_fpm_src2_format(INIT_ONES, __ARM_FPM_E5M2);
 }
 
-// CHECK-LABEL: define dso_local noundef i64 @test_src2_2(
+// CHECK-LABEL: define dso_local noundef range(i64 0, -48) i64 @test_src2_2(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 8
@@ -71,7 +71,7 @@ fpm_t test_src2_2() {
   return __arm_set_fpm_src2_format(INIT_ZERO, __ARM_FPM_E4M3);
 }
 
-// CHECK-LABEL: define dso_local noundef i64 @test_dst1_1(
+// CHECK-LABEL: define dso_local noundef range(i64 0, -384) i64 @test_dst1_1(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 -449
@@ -80,7 +80,7 @@ fpm_t test_dst1_1() {
   return __arm_set_fpm_dst_format(INIT_ONES, __ARM_FPM_E5M2);
 }
 
-// CHECK-LABEL: define dso_local noundef i64 @test_dst2_2(
+// CHECK-LABEL: define dso_local noundef range(i64 0, -384) i64 @test_dst2_2(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 64
@@ -139,21 +139,21 @@ fpm_t test_lscale() { return __arm_set_fpm_lscale(INIT_ZERO, 127); }
 //
 fpm_t test_lscale2() { return __arm_set_fpm_lscale2(INIT_ZERO, 63); }
 
-// CHECK-LABEL: define dso_local noundef range(i64 0, 4294967296) i64 @test_nscale_1(
+// CHECK-LABEL: define dso_local noundef range(i64 0, 4278190081) i64 @test_nscale_1(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 2147483648
 //
 fpm_t test_nscale_1() { return __arm_set_fpm_nscale(INIT_ZERO, -128); }
 
-// CHECK-LABEL: define dso_local noundef range(i64 0, 4294967296) i64 @test_nscale_2(
+// CHECK-LABEL: define dso_local noundef range(i64 0, 4278190081) i64 @test_nscale_2(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 2130706432
 //
 fpm_t test_nscale_2() { return __arm_set_fpm_nscale(INIT_ZERO, 127); }
 
-// CHECK-LABEL: define dso_local noundef range(i64 0, 4294967296) i64 @test_nscale_3(
+// CHECK-LABEL: define dso_local noundef range(i64 0, 4278190081) i64 @test_nscale_3(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 4278190080

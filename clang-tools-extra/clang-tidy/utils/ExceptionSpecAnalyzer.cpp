@@ -1,4 +1,4 @@
-//===--- ExceptionSpecAnalyzer.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,18 +9,20 @@
 #include "ExceptionSpecAnalyzer.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 
 namespace clang::tidy::utils {
 
 ExceptionSpecAnalyzer::State
 ExceptionSpecAnalyzer::analyze(const FunctionDecl *FuncDecl) {
-  // Check if the function has already been analyzed and reuse that result.
-  const auto CacheEntry = FunctionCache.find(FuncDecl);
-  if (CacheEntry == FunctionCache.end()) {
+  // Check if function exist in cache or add temporary value to cache to protect
+  // against endless recursion.
+  const auto [CacheEntry, NotFound] =
+      FunctionCache.try_emplace(FuncDecl, State::NotThrowing);
+  if (NotFound) {
     ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
-
-    // Cache the result of the analysis.
-    FunctionCache.try_emplace(FuncDecl, State);
+    // Update result with calculated value
+    FunctionCache[FuncDecl] = State;
     return State;
   }
 
@@ -65,9 +67,7 @@ ExceptionSpecAnalyzer::analyzeBase(const CXXBaseSpecifier &Base,
   if (!RecType)
     return State::Unknown;
 
-  const auto *BaseClass = cast<CXXRecordDecl>(RecType->getDecl());
-
-  return analyzeRecord(BaseClass, Kind);
+  return analyzeRecord(RecType->getAsCXXRecordDecl(), Kind);
 }
 
 ExceptionSpecAnalyzer::State

@@ -117,10 +117,6 @@ const fltSemantics &Type::getFltSemantics() const {
   }
 }
 
-bool Type::isIEEE() const {
-  return APFloat::getZero(getFltSemantics()).isIEEE();
-}
-
 bool Type::isScalableTargetExtTy() const {
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return isa<ScalableVectorType>(TT->getLayoutType());
@@ -251,6 +247,20 @@ int Type::getFPMantissaWidth() const {
   return -1;
 }
 
+bool Type::isFirstClassType() const {
+  switch (getTypeID()) {
+    default:
+      return true;
+    case FunctionTyID:
+    case VoidTyID:
+      return false;
+    case StructTyID: {
+      auto *ST = cast<StructType>(this);
+      return !ST->isOpaque();
+    }
+  }
+}
+
 bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
   if (auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType()->isSized(Visited);
@@ -294,14 +304,12 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
-  static PointerType *Ty = PointerType::get(C, 10);
-  return Ty;
+  return PointerType::get(C, 10);
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(20)
-  static PointerType *Ty = PointerType::get(C, 20);
-  return Ty;
+  return PointerType::get(C, 20);
 }
 
 //===----------------------------------------------------------------------===//
@@ -314,12 +322,12 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
 
   // Check for the built-in integer types
   switch (NumBits) {
-  case   1: return cast<IntegerType>(Type::getInt1Ty(C));
-  case   8: return cast<IntegerType>(Type::getInt8Ty(C));
-  case  16: return cast<IntegerType>(Type::getInt16Ty(C));
-  case  32: return cast<IntegerType>(Type::getInt32Ty(C));
-  case  64: return cast<IntegerType>(Type::getInt64Ty(C));
-  case 128: return cast<IntegerType>(Type::getInt128Ty(C));
+  case   1: return Type::getInt1Ty(C);
+  case   8: return Type::getInt8Ty(C);
+  case  16: return Type::getInt16Ty(C);
+  case  32: return Type::getInt32Ty(C);
+  case  64: return Type::getInt64Ty(C);
+  case 128: return Type::getInt128Ty(C);
   default:
     break;
   }
@@ -394,7 +402,7 @@ bool FunctionType::isValidReturnType(Type *RetTy) {
 }
 
 bool FunctionType::isValidArgumentType(Type *ArgTy) {
-  return ArgTy->isFirstClassType();
+  return ArgTy->isFirstClassType() && !ArgTy->isLabelTy();
 }
 
 //===----------------------------------------------------------------------===//
@@ -553,7 +561,7 @@ Error StructType::checkBody(ArrayRef<Type *> Elements) {
     if (Ty == this)
       return createStringError(Twine("identified structure type '") +
                                getName() + "' is recursive");
-    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
+    Worklist.insert_range(Ty->subtypes());
   }
   return Error::success();
 }
@@ -780,8 +788,12 @@ VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
 }
 
 bool VectorType::isValidElementType(Type *ElemTy) {
-  return ElemTy->isIntegerTy() || ElemTy->isFloatingPointTy() ||
-         ElemTy->isPointerTy() || ElemTy->getTypeID() == TypedPointerTyID;
+  if (ElemTy->isIntegerTy() || ElemTy->isFloatingPointTy() ||
+      ElemTy->isPointerTy() || ElemTy->getTypeID() == TypedPointerTyID)
+    return true;
+  if (auto *TTy = dyn_cast<TargetExtType>(ElemTy))
+    return TTy->hasProperty(TargetExtType::CanBeVectorElement);
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -791,8 +803,9 @@ bool VectorType::isValidElementType(Type *ElemTy) {
 FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
   assert(NumElts > 0 && "#Elements of a VectorType must be greater than 0");
   assert(isValidElementType(ElementType) && "Element type of a VectorType must "
-                                            "be an integer, floating point, or "
-                                            "pointer type.");
+                                            "be an integer, floating point, "
+                                            "pointer type, or a valid target "
+                                            "extension type.");
 
   auto EC = ElementCount::getFixed(NumElts);
 
@@ -857,7 +870,7 @@ PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
 }
 
 PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  return PointerType::get(const_cast<Type*>(this), AddrSpace);
+  return PointerType::get(getContext(), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {
@@ -958,16 +971,43 @@ struct TargetTypeInfo {
 
   template <typename... ArgTys>
   TargetTypeInfo(Type *LayoutType, ArgTys... Properties)
-      : LayoutType(LayoutType), Properties((0 | ... | Properties)) {}
+      : LayoutType(LayoutType), Properties((0 | ... | Properties)) {
+    assert((!(this->Properties & TargetExtType::CanBeVectorElement) ||
+            LayoutType->isSized()) &&
+           "Vector element type must be sized");
+  }
 };
 } // anonymous namespace
 
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name == "spirv.Image")
+  if (Name == "spirv.Image" || Name == "spirv.SignedImage")
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);
+  if (Name == "spirv.Type") {
+    assert(Ty->getNumIntParameters() == 3 &&
+           "Wrong number of parameters for spirv.Type");
+
+    auto Size = Ty->getIntParameter(1);
+    auto Alignment = Ty->getIntParameter(2);
+
+    llvm::Type *LayoutType = nullptr;
+    if (Size > 0 && Alignment > 0) {
+      LayoutType =
+          ArrayType::get(Type::getIntNTy(C, Alignment), Size * 8 / Alignment);
+    } else {
+      // LLVM expects variables that can be allocated to have an alignment and
+      // size. Default to using a 32-bit int as the layout type if none are
+      // present.
+      LayoutType = Type::getInt32Ty(C);
+    }
+
+    return TargetTypeInfo(LayoutType, TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
+  }
+  if (Name == "spirv.IntegralConstant" || Name == "spirv.Literal")
+    return TargetTypeInfo(Type::getVoidTy(C));
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
@@ -986,7 +1026,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     unsigned TotalNumElts =
         std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
                      ->getMinNumElements(),
-                 RISCV::RVVBitsPerBlock / 8) *
+                 RISCV::RVVBytesPerBlock) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
@@ -996,7 +1036,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   // DirectX resources
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeLocal);
+                          TargetExtType::CanBeLocal,
+                          TargetExtType::IsTokenLike);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {
@@ -1004,7 +1045,22 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
                           TargetExtType::CanBeGlobal);
   }
 
+  // Type used to test vector element target extension property.
+  // Can be removed once a public target extension type uses CanBeVectorElement.
+  if (Name == "llvm.test.vectorelement") {
+    return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
+                          TargetExtType::CanBeVectorElement);
+  }
+
   return TargetTypeInfo(Type::getVoidTy(C));
+}
+
+bool Type::isTokenLikeTy() const {
+  if (isTokenTy())
+    return true;
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return TT->hasProperty(TargetExtType::Property::IsTokenLike);
+  return false;
 }
 
 Type *TargetExtType::getLayoutType() const {

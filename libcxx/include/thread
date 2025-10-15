@@ -86,8 +86,9 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/thread>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_THREADS
@@ -127,6 +128,6 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #    include <system_error>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_THREAD

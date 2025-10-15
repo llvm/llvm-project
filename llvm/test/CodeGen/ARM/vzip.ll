@@ -21,11 +21,11 @@ define <8 x i8> @vzipi8(ptr %A, ptr %B) nounwind {
 define <16 x i8> @vzipi8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi8_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vzip.8 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vzip.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = load <8 x i8>, ptr %B
@@ -53,11 +53,11 @@ define <4 x i16> @vzipi16(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vzipi16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi16_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vzip.16 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vzip.16 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = load <4 x i16>, ptr %B
@@ -221,11 +221,11 @@ define <8 x i8> @vzipi8_undef(ptr %A, ptr %B) nounwind {
 define <16 x i8> @vzipi8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi8_undef_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vzip.8 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vzip.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = load <8 x i8>, ptr %B
@@ -269,11 +269,11 @@ define <32 x i8> @vzipQi8_undef_QQres(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vzip_lower_shufflemask_undef(ptr %A, ptr %B) {
 ; CHECK-LABEL: vzip_lower_shufflemask_undef:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vzip.16 d18, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vzip.16 d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
 	%tmp1 = load <4 x i16>, ptr %A
@@ -289,10 +289,10 @@ define <8 x i16> @vzip_lower_shufflemask_undef_rev(ptr %A, ptr %B) {
 ; CHECK-LABEL: vzip_lower_shufflemask_undef_rev:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d19, [r0]
-; CHECK-NEXT:    vtrn.16 d19, d16
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.16 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <4 x i16>, ptr %A
@@ -380,4 +380,23 @@ entry:
   %lane3 = shufflevector <8 x i8> %3, <8 x i8> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef>
   %vzip.i = shufflevector <8 x i8> %lane, <8 x i8> %lane3, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   ret <8 x i8> %vzip.i
+}
+
+define <16 x i16> @test_15xi16(ptr %next.gep, ptr %next.gep13) {
+; CHECK-LABEL: test_15xi16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    add r1, r1, #2
+; CHECK-NEXT:    mov r2, #4
+; CHECK-NEXT:    vld1.16 {d16, d17}, [r1], r2
+; CHECK-NEXT:    vld1.16 {d18, d19}, [r1]
+; CHECK-NEXT:    vzip.16 q8, q9
+; CHECK-NEXT:    vst1.16 {d16, d17}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d18, d19}, [r0:128]
+; CHECK-NEXT:    mov pc, lr
+  %a = getelementptr inbounds nuw i8, ptr %next.gep, i32 2
+  %b = load <15 x i16>, ptr %a, align 2
+  %c = getelementptr inbounds nuw i8, ptr %next.gep, i32 6
+  %d = load <15 x i16>, ptr %c, align 2
+  %interleaved.vec = shufflevector <15 x i16> %b, <15 x i16> %d, <16 x i32> <i32 0, i32 15, i32 1, i32 16, i32 2, i32 17, i32 3, i32 18, i32 4, i32 19, i32 5, i32 20, i32 6, i32 21, i32 7, i32 22>
+  ret <16 x i16> %interleaved.vec
 }

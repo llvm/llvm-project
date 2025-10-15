@@ -29,12 +29,19 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
     VirtualBaseMap[V.Decl] = &V;
 }
 
-const std::string Record::getName() const {
+std::string Record::getName() const {
   std::string Ret;
   llvm::raw_string_ostream OS(Ret);
   Decl->getNameForDiagnostic(OS, Decl->getASTContext().getPrintingPolicy(),
                              /*Qualified=*/true);
   return Ret;
+}
+
+bool Record::hasTrivialDtor() const {
+  if (isAnonymousUnion())
+    return true;
+  const CXXDestructorDecl *Dtor = getDestructor();
+  return !Dtor || Dtor->isTrivial();
 }
 
 const Record::Field *Record::getField(const FieldDecl *FD) const {
@@ -50,10 +57,8 @@ const Record::Base *Record::getBase(const RecordDecl *FD) const {
 }
 
 const Record::Base *Record::getBase(QualType T) const {
-  if (auto *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+  if (auto *RD = T->getAsCXXRecordDecl())
     return BaseMap.lookup(RD);
-  }
   return nullptr;
 }
 

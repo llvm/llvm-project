@@ -13,39 +13,6 @@
 #include <cstring> // strcpy, wcsncpy
 #include <cwchar>  // mbstate_t
 
-// Like sprintf, but when return value >= 0 it returns
-// a pointer to a malloc'd string in *sptr.
-// If return >= 0, use free to delete *sptr.
-int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
-  *sptr = nullptr;
-  // Query the count required.
-  va_list ap_copy;
-  va_copy(ap_copy, ap);
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  int count = vsnprintf(nullptr, 0, format, ap_copy);
-  _LIBCPP_DIAGNOSTIC_POP
-  va_end(ap_copy);
-  if (count < 0)
-    return count;
-  size_t buffer_size = static_cast<size_t>(count) + 1;
-  char* p            = static_cast<char*>(malloc(buffer_size));
-  if (!p)
-    return -1;
-  // If we haven't used exactly what was required, something is wrong.
-  // Maybe bug in vsnprintf. Report the error and return.
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  if (vsnprintf(p, buffer_size, format, ap) != count) {
-    _LIBCPP_DIAGNOSTIC_POP
-    free(p);
-    return -1;
-  }
-  // All good. This is returning memory to the caller not freeing it.
-  *sptr = p;
-  return count;
-}
-
 // Returns >= 0: the number of wide characters found in the
 // multi byte sequence src (of src_size_bytes), that fit in the buffer dst
 // (of max_dest_chars elements size). The count returned excludes the

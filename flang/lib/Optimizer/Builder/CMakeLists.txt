@@ -5,6 +5,7 @@ add_flang_library(FIRBuilder
   BoxValue.cpp
   Character.cpp
   Complex.cpp
+  CUFCommon.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
   HLFIRTools.cpp
@@ -15,8 +16,10 @@ add_flang_library(FIRBuilder
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
   Runtime/Assign.cpp
+  Runtime/Coarray.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp
+  Runtime/CUDA/Descriptor.cpp
   Runtime/Derived.cpp
   Runtime/EnvironmentDefaults.cpp
   Runtime/Exceptions.cpp
@@ -39,8 +42,6 @@ add_flang_library(FIRBuilder
   CUFDialect
   FIRDialect
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_LIBS
   CUFAttrs
@@ -48,7 +49,15 @@ add_flang_library(FIRBuilder
   FIRDialect
   FIRDialectSupport
   FIRSupport
+  FortranEvaluate
+  FortranSupport
   HLFIRDialect
+
+  MLIR_DEPS
+  ${dialect_libs}
+  ${extension_libs}
+
+  MLIR_LIBS
   ${dialect_libs}
   ${extension_libs}
 )

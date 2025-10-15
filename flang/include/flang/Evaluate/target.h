@@ -12,11 +12,12 @@
 #ifndef FORTRAN_EVALUATE_TARGET_H_
 #define FORTRAN_EVALUATE_TARGET_H_
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/target-rounding.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Support/Fortran.h"
 #include <cstdint>
 
 namespace Fortran::evaluate {
@@ -36,6 +37,13 @@ public:
   bool isBigEndian() const { return isBigEndian_; }
   void set_isBigEndian(bool isBig = true);
 
+  bool haltingSupportIsUnknownAtCompileTime() const {
+    return haltingSupportIsUnknownAtCompileTime_;
+  }
+  void set_haltingSupportIsUnknownAtCompileTime(bool yes = true) {
+    haltingSupportIsUnknownAtCompileTime_ = yes;
+  }
+
   bool areSubnormalsFlushedToZero() const {
     return areSubnormalsFlushedToZero_;
   }
@@ -47,8 +55,23 @@ public:
   bool hasSubnormalFlushingControl(bool any = false) const;
   void set_hasSubnormalFlushingControl(int kind, bool yes = true);
 
+  // Check if a given real kind has support for raising a nonstandard
+  // ieee_denorm exception.
+  bool hasSubnormalExceptionSupport(int kind) const;
+  // Check if all real kinds have support for the ieee_denorm exception.
+  bool hasSubnormalExceptionSupport() const;
+  void set_hasSubnormalExceptionSupport(int kind, bool yes = true);
+
   Rounding roundingMode() const { return roundingMode_; }
   void set_roundingMode(Rounding);
+
+  void set_ieeeFeature(IeeeFeature ieeeFeature, bool yes = true) {
+    if (yes) {
+      ieeeFeatures_.set(ieeeFeature);
+    } else {
+      ieeeFeatures_.reset(ieeeFeature);
+    }
+  }
 
   std::size_t procedurePointerByteSize() const {
     return procedurePointerByteSize_;
@@ -97,6 +120,9 @@ public:
   bool isPPC() const { return isPPC_; }
   void set_isPPC(bool isPPC = false);
 
+  bool isSPARC() const { return isSPARC_; }
+  void set_isSPARC(bool isSPARC = false);
+
   bool isOSWindows() const { return isOSWindows_; }
   void set_isOSWindows(bool isOSWindows = false) {
     isOSWindows_ = isOSWindows;
@@ -105,15 +131,23 @@ public:
   IeeeFeatures &ieeeFeatures() { return ieeeFeatures_; }
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
+  std::size_t integerKindForPointer() { return integerKindForPointer_; }
+  void set_integerKindForPointer(std::size_t newKind) {
+    integerKindForPointer_ = newKind;
+  }
+
 private:
-  static constexpr int maxKind{16};
+  static constexpr int maxKind{common::maxKind};
   std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind + 1]{};
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind + 1]{};
   bool isBigEndian_{false};
   bool isPPC_{false};
+  bool isSPARC_{false};
   bool isOSWindows_{false};
+  bool haltingSupportIsUnknownAtCompileTime_{false};
   bool areSubnormalsFlushedToZero_{false};
   bool hasSubnormalFlushingControl_[maxKind + 1]{};
+  bool hasSubnormalExceptionSupport_[maxKind + 1]{};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};
   std::size_t procedurePointerAlignment_{8};
@@ -127,6 +161,7 @@ private:
       IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
       IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
       IeeeFeature::UnderflowControl};
+  std::size_t integerKindForPointer_{8}; /* For 64 bit pointer */
 };
 
 } // namespace Fortran::evaluate

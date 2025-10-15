@@ -1,4 +1,4 @@
-//===-- CUFOpConversion.cpp -----------------------------------------------===//
+//===-- CUFDeviceGlobal.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
-#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -28,22 +28,41 @@ namespace fir {
 
 namespace {
 
-static constexpr llvm::StringRef builtinPrefix = "_QM__fortran_builtins";
-
 static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
-                            llvm::DenseSet<fir::GlobalOp> &candidates) {
+                            llvm::DenseSet<fir::GlobalOp> &candidates,
+                            bool recurseInGlobal) {
+
+  // Check if there is a real use of the global.
+  if (addrOfOp.getOperation()->hasOneUse()) {
+    mlir::OpOperand &addrUse = *addrOfOp.getOperation()->getUses().begin();
+    if (mlir::isa<fir::DeclareOp>(addrUse.getOwner()) &&
+        addrUse.getOwner()->use_empty())
+      return;
+  }
+
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
-    if (globalOp.getConstant()) {
-      // Limit recursion to builtin global for now.
-      if (globalOp.getSymName().starts_with(builtinPrefix)) {
-        globalOp.walk([&](fir::AddrOfOp op) {
-          processAddrOfOp(op, symbolTable, candidates);
-        });
-      }
+    if (recurseInGlobal)
+      globalOp.walk([&](fir::AddrOfOp op) {
+        processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
+      });
+    candidates.insert(globalOp);
+  }
+}
+
+static void processTypeDescriptor(fir::RecordType recTy,
+                                  mlir::SymbolTable &symbolTable,
+                                  llvm::DenseSet<fir::GlobalOp> &candidates) {
+  if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
+          fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
+    if (!candidates.contains(globalOp)) {
+      globalOp.walk([&](fir::AddrOfOp op) {
+        processAddrOfOp(op, symbolTable, candidates,
+                        /*recurseInGlobal=*/true);
+      });
       candidates.insert(globalOp);
     }
   }
@@ -53,17 +72,7 @@ static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
                            llvm::DenseSet<fir::GlobalOp> &candidates) {
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(
           fir::unwrapRefType(emboxOp.getMemref().getType())))
-    // Only look at builtin record type.
-    if (recTy.getName().starts_with(builtinPrefix))
-      if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
-              fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
-        if (!candidates.contains(globalOp)) {
-          globalOp.walk([&](fir::AddrOfOp op) {
-            processAddrOfOp(op, symbolTable, candidates);
-          });
-          candidates.insert(globalOp);
-        }
-      }
+    processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
 static void
@@ -74,11 +83,22 @@ prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
   if (cudaProcAttr && cudaProcAttr.getValue() != cuf::ProcAttribute::Host) {
     funcOp.walk([&](fir::AddrOfOp op) {
-      processAddrOfOp(op, symbolTable, candidates);
+      processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false);
     });
     funcOp.walk(
         [&](fir::EmboxOp op) { processEmboxOp(op, symbolTable, candidates); });
   }
+}
+
+static void
+processPotentialTypeDescriptor(mlir::Type candidateType,
+                               mlir::SymbolTable &symbolTable,
+                               llvm::DenseSet<fir::GlobalOp> &candidates) {
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(candidateType))
+    candidateType = boxTy.getEleTy();
+  candidateType = fir::unwrapSequenceType(fir::unwrapRefType(candidateType));
+  if (auto recTy = mlir::dyn_cast<fir::RecordType>(candidateType))
+    processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
 class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
@@ -97,7 +117,8 @@ public:
     });
     mod.walk([&](cuf::KernelOp kernelOp) {
       kernelOp.walk([&](fir::AddrOfOp addrOfOp) {
-        processAddrOfOp(addrOfOp, symTable, candidates);
+        processAddrOfOp(addrOfOp, symTable, candidates,
+                        /*recurseInGlobal=*/false);
       });
     });
 
@@ -108,8 +129,18 @@ public:
       return signalPassFailure();
     mlir::SymbolTable gpuSymTable(gpuMod);
     for (auto globalOp : mod.getOps<fir::GlobalOp>()) {
-      if (cuf::isRegisteredDeviceGlobal(globalOp))
+      if (cuf::isRegisteredDeviceGlobal(globalOp)) {
         candidates.insert(globalOp);
+        processPotentialTypeDescriptor(globalOp.getType(), parentSymTable,
+                                       candidates);
+      } else if (globalOp.getConstant() &&
+                 mlir::isa<fir::SequenceType>(
+                     fir::unwrapRefType(globalOp.resultType()))) {
+        mlir::Attribute initAttr =
+            globalOp.getInitVal().value_or(mlir::Attribute());
+        if (initAttr && mlir::dyn_cast<mlir::DenseElementsAttr>(initAttr))
+          candidates.insert(globalOp);
+      }
     }
     for (auto globalOp : candidates) {
       auto globalName{globalOp.getSymbol().getValue()};

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInvokes.h"
-#include "Delta.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -29,13 +28,9 @@ static void reduceInvokesInFunction(Oracle &O, Function &F) {
   // reduction.
 }
 
-static void reduceInvokesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceInvokesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   for (Function &F : WorkItem.getModule()) {
     if (F.hasPersonalityFn())
       reduceInvokesInFunction(O, F);
   }
-}
-
-void llvm::reduceInvokesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceInvokesInModule, "Reducing Invokes");
 }

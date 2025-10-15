@@ -142,6 +142,10 @@
     ret void
   }
 
+  define void @avl_is_last_instr() {
+    ret void
+  }
+
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
@@ -282,14 +286,14 @@ body:             |
   ; CHECK-NEXT: bb.1.if.then:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   early-clobber %9:vr = PseudoVZEXT_VF2_M1 undef $noreg, [[PseudoVLE32_V_MF2_]], $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.else:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   early-clobber %9:vr = PseudoVSEXT_VF2_M1 undef $noreg, [[PseudoVLE32_V_MF2_]], $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
@@ -499,9 +503,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 223 /* e64, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 223 /* e64, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVID_V_MF2_:%[0-9]+]]:vr = PseudoVID_V_MF2 undef $noreg, -1, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_1:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_1:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vrnov0 = PseudoVMV_V_I_MF2 undef $noreg, 0, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -509,12 +513,12 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PseudoVMSEQ_VI_MF2_:%[0-9]+]]:vmv0 = PseudoVMSEQ_VI_MF2 [[PseudoVID_V_MF2_]], 0, -1, 5 /* e32 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $v0 = COPY [[PseudoVMSEQ_VI_MF2_]]
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 23 /* e32, mf2, tu, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 23 /* e32, mf2, tu, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVLE32_V_MF2_MASK:%[0-9]+]]:vrnov0 = PseudoVLE32_V_MF2_MASK [[PseudoVMV_V_I_MF2_]], [[COPY]], $v0, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-  ; CHECK-NEXT:   [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[PseudoVMSEQ_VI_MF2_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVCPOP_M_B64_:%[0-9]+]]:gpr = PseudoVCPOP_M_B64 [[PseudoVMSEQ_VI_MF2_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; CHECK-NEXT:   BEQ [[PseudoVCPOP_M_B1_]], $x0, %bb.3
+  ; CHECK-NEXT:   BEQ [[PseudoVCPOP_M_B64_]], $x0, %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -523,7 +527,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr = LWU [[COPY1]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVADD_VX_MF2_:%[0-9]+]]:vr = nsw PseudoVADD_VX_MF2 undef $noreg, [[PseudoVLE32_V_MF2_MASK]], [[DEF]], -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $v0 = COPY [[PseudoVADD_VX_MF2_]]
   ; CHECK-NEXT:   PseudoRET implicit $v0
@@ -543,7 +547,7 @@ body:             |
     %5:vmv0 = PseudoVMSEQ_VI_MF2 killed %3, 0, -1, 5
     $v0 = COPY %5
     %6:vrnov0 = PseudoVLE32_V_MF2_MASK %4, killed %0, $v0, -1, 5, 0
-    %7:gpr = PseudoVCPOP_M_B1 %5, -1, 0
+    %7:gpr = PseudoVCPOP_M_B64 %5, -1, 0
     %8:gpr = COPY $x0
     BEQ killed %7, %8, %bb.3
     PseudoBR %bb.2
@@ -584,7 +588,7 @@ body:             |
   ; CHECK-NEXT:   [[PseudoReadVLENB:%[0-9]+]]:gpr = PseudoReadVLENB
   ; CHECK-NEXT:   [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 3
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x11
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVID_V_M1_:%[0-9]+]]:vr = PseudoVID_V_M1 undef $noreg, -1, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT: {{  $}}
@@ -651,7 +655,7 @@ body:             |
   ; CHECK-NEXT:   [[PseudoReadVLENB:%[0-9]+]]:gpr = PseudoReadVLENB
   ; CHECK-NEXT:   [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 3
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x11
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVID_V_M1_:%[0-9]+]]:vr = PseudoVID_V_M1 undef $noreg, -1, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT: {{  $}}
@@ -815,14 +819,14 @@ body:             |
   ; CHECK-NEXT:   %t3:vr = COPY $v2
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrnov0 = COPY $v3
   ; CHECK-NEXT:   %t5:vrnov0 = COPY $v1
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   %t6:vr = PseudoVMSEQ_VI_M1 %t1, 0, -1, 6 /* e64 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %mask:vr = PseudoVMANDN_MM_MF8 %t6, %t3, -1, 0 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   %mask:vr = PseudoVMANDN_MM_B64 %t6, %t3, -1, 0 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   BEQ %a, $x0, %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -830,12 +834,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $v0 = COPY %mask
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   early-clobber [[COPY]]:vrnov0 = PseudoVLUXEI64_V_M1_MF8_MASK %t5, %inaddr, %idxs, $v0, -1, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_1:%[0-9]+]]:gpr = PseudoVSETVLIX0 $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_1:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   $v0 = COPY %mask
   ; CHECK-NEXT:   PseudoVSOXEI64_V_M1_MF8_MASK [[COPY]], %b, %idxs, $v0, -1, 3 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   PseudoRET
@@ -857,7 +861,7 @@ body:             |
   bb.1:
     successors: %bb.3, %bb.2
 
-    %mask:vr = PseudoVMANDN_MM_MF8 %t6, %t3, -1, 0
+    %mask:vr = PseudoVMANDN_MM_B64 %t6, %t3, -1, 0
     %t2:gpr = COPY $x0
     BEQ %a, %t2, %bb.3
     PseudoBR %bb.2
@@ -894,7 +898,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x15
   ; CHECK-NEXT:   %vlenb:gpr = PseudoReadVLENB
   ; CHECK-NEXT:   %inc:gpr = SRLI %vlenb, 3
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVID_V_M1_:%[0-9]+]]:vr = PseudoVID_V_M1 undef $noreg, -1, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
@@ -903,11 +907,11 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY2]], [[COPY3]]
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVADD_VX_M1_:%[0-9]+]]:vr = PseudoVADD_VX_M1 undef $noreg, [[PseudoVID_V_M1_]], [[ADD]], -1, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[PseudoVMSLTU_VX_M1_:%[0-9]+]]:vr = PseudoVMSLTU_VX_M1 [[PseudoVADD_VX_M1_]], [[COPY1]], -1, 6 /* e64 */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[PseudoVMSLTU_VX_M1_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   BEQ [[PseudoVCPOP_M_B1_]], $x0, %bb.3
+  ; CHECK-NEXT:   [[PseudoVCPOP_M_B64_:%[0-9]+]]:gpr = PseudoVCPOP_M_B64 [[PseudoVMSLTU_VX_M1_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   BEQ [[PseudoVCPOP_M_B64_]], $x0, %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -915,7 +919,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:gpr = ADD %src, [[COPY3]]
   ; CHECK-NEXT:   [[PseudoVLE8_V_MF8_:%[0-9]+]]:vrnov0 = PseudoVLE8_V_MF8 undef $noreg, [[ADD1]], -1, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVADD_VI_MF8_:%[0-9]+]]:vrnov0 = PseudoVADD_VI_MF8 undef $noreg, [[PseudoVLE8_V_MF8_]], 4, -1, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:gpr = ADD %dst, [[COPY3]]
   ; CHECK-NEXT:   PseudoVSE8_V_MF8 [[PseudoVADD_VI_MF8_]], [[ADD2]], -1, 3 /* e8 */, implicit $vl, implicit $vtype
@@ -952,7 +956,7 @@ body:             |
     %61:gpr = ADD %12, %26
     %27:vr = PseudoVADD_VX_M1 undef $noreg, %10, killed %61, -1, 6, 0
     %62:vr = PseudoVMSLTU_VX_M1 %27, %11, -1, 6
-    %63:gpr = PseudoVCPOP_M_B1 %62, -1, 0
+    %63:gpr = PseudoVCPOP_M_B64 %62, -1, 0
     %64:gpr = COPY $x0
     BEQ killed %63, %64, %bb.3
     PseudoBR %bb.2
@@ -1020,7 +1024,7 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $v8m2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, renamable $v8m2, renamable $v8m2, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI [[COPY]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, renamable $v8m2, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
@@ -1072,7 +1076,7 @@ body: |
   ; CHECK-NEXT:   dead [[ADDI:%[0-9]+]]:gprnox0 = ADDI [[ADDI]], 1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, %v, %v, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI [[COPY]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, %v, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
@@ -1099,3 +1103,31 @@ body: |
     renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, %v, %v, -1, 5, 0
     renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, killed %v, %outvl:gprnox0, 5, 0
     PseudoRET implicit $v8m2
+...
+---
+name: avl_is_last_instr
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: avl_is_last_instr
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %avl:gprnox0 = COPY $x10
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY %avl
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   dead %avl:gprnox0 = ADDI %avl, -1
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 1, 192 /* e8, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   $v8 = PseudoVMV_S_X undef renamable $v8, $x0, 1, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI [[COPY]], 192 /* e8, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   $v8 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, $noreg, 3 /* e8 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+  bb.0:
+    liveins: $x10
+    %avl:gprnox0 = COPY $x10
+
+  bb.1:
+    %vl:gprnox0 = PseudoVSETVLI %avl:gprnox0, 192, implicit-def dead $vl, implicit-def dead $vtype
+    %avl:gprnox0 = ADDI %avl:gprnox0, -1
+    $v8 = PseudoVMV_S_X undef renamable $v8, $x0, 1, 3
+    $v8 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl:gprnox0, 3, 3

@@ -180,8 +180,8 @@ define void @foo(i32 %v0) {
   EXPECT_EQ(VecTy32x2->getScalarSizeInBits(), 32u);
   // Check getFPMantissaWidth().
   EXPECT_EQ(FloatTy->getFPMantissaWidth(), LLVMFloatTy->getFPMantissaWidth());
-  // Check isIEEE().
-  EXPECT_EQ(FloatTy->isIEEE(), LLVMFloatTy->isIEEE());
+  // Check isIEEELikeFPTy().
+  EXPECT_EQ(FloatTy->isIEEELikeFPTy(), LLVMFloatTy->isIEEELikeFPTy());
   // Check getScalarType().
   EXPECT_EQ(
       Ctx.getType(llvm::FixedVectorType::get(LLVMInt32Ty, 8u))->getScalarType(),
@@ -217,10 +217,6 @@ define void @foo(ptr %ptr) {
   auto *F = Ctx.createFunction(LLVMF);
   // Check classof(), creation.
   auto *PtrTy = cast<sandboxir::PointerType>(F->getArg(0)->getType());
-  // Check get(ElementType, AddressSpace).
-  auto *NewPtrTy =
-      sandboxir::PointerType::get(sandboxir::Type::getInt32Ty(Ctx), 0u);
-  EXPECT_EQ(NewPtrTy, PtrTy);
   // Check get(Ctx, AddressSpace).
   auto *NewPtrTy2 = sandboxir::PointerType::get(Ctx, 0u);
   EXPECT_EQ(NewPtrTy2, PtrTy);

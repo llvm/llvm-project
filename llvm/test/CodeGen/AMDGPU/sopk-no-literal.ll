@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -debug-only=branch-relaxation -verify-machineinstrs < %s 2>&1 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -debug-only=branch-relaxation < %s 2>&1 | FileCheck --check-prefix=GFX10 %s
 
 ; GFX10: Basic blocks after relaxation
 ; GFX10: %bb.0	offset=00000000	size=0x1c
@@ -23,5 +23,3 @@ define amdgpu_kernel void @test_sopk_size(i32 %var.mode) {
 
 declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

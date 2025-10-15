@@ -42,7 +42,6 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[UMAX]], -9
 ; VEC-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[P1]]
 ; VEC-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
-; VEC-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP8]], 65535
 ; VEC-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP8]] to i16
 ; VEC-NEXT:    [[TMP11:%.*]] = add i16 2, [[TMP10]]
 ; VEC-NEXT:    [[TMP12:%.*]] = icmp ult i16 [[TMP11]], 2
@@ -57,7 +56,6 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 1>, [[VECTOR_PH]] ], [ [[TMP28:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 1, i16 2, i16 3, i16 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
@@ -76,7 +74,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    store i64 0, ptr [[TMP25]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP26]], align 8
 ; VEC-NEXT:    [[TMP27:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 1)
-; VEC-NEXT:    [[TMP28]] = zext <4 x i16> [[TMP27]] to <4 x i64>
+; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP27]] to <4 x i64>
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; VEC-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -86,9 +84,9 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VEC:       scalar.ph:
-; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
+; VEC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
 ; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; VEC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
 ; VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; VEC:       for.body:
 ; VEC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IDX:%.*]], [[FOR_BODY]] ]

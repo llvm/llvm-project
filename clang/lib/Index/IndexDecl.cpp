@@ -132,8 +132,8 @@ public:
         }
       }
     }
-    if (auto *C = D->getTrailingRequiresClause())
-      IndexCtx.indexBody(C, Parent);
+    if (const AssociatedConstraint &C = D->getTrailingRequiresClause())
+      IndexCtx.indexBody(C.ConstraintExpr, Parent);
   }
 
   bool handleObjCMethod(const ObjCMethodDecl *D,
@@ -666,7 +666,7 @@ public:
         Template = D->getSpecializedTemplateOrPartial();
     const Decl *SpecializationOf =
         isa<ClassTemplateDecl *>(Template)
-            ? (Decl *)Template.get<ClassTemplateDecl *>()
+            ? (Decl *)cast<ClassTemplateDecl *>(Template)
             : cast<ClassTemplatePartialSpecializationDecl *>(Template);
     if (!D->isThisDeclarationADefinition())
       IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);

@@ -4,12 +4,10 @@
 declare void @zero_args()
 declare void @two_args(ptr, ptr)
 
-; TODO: Could be non-null based on call-site attributes.
 define i1 @test_zero_args_nonnull(ptr %p) {
 ; CHECK-LABEL: @test_zero_args_nonnull(
 ; CHECK-NEXT:    call void @zero_args(ptr noundef nonnull [[P:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne ptr [[P]], null
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   call void @zero_args(ptr nonnull noundef %p)
   %c = icmp ne ptr %p, null
@@ -27,12 +25,10 @@ define i1 @test_zero_args_maybe_null(ptr %p) {
   ret i1 %c
 }
 
-; TODO: Could be non-null based on call-site attributes.
 define i1 @test_two_args_nonnull(ptr %p) {
 ; CHECK-LABEL: @test_two_args_nonnull(
 ; CHECK-NEXT:    call void @two_args(ptr noundef nonnull [[P:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne ptr [[P]], null
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   call void @two_args(ptr nonnull noundef %p)
   %c = icmp ne ptr %p, null

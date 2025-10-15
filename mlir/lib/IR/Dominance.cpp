@@ -14,7 +14,6 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace mlir;
@@ -213,61 +212,73 @@ DominanceInfoBase<IsPostDom>::findNearestCommonDominator(Block *a,
   return getDomTree(a->getParent()).findNearestCommonDominator(a, b);
 }
 
-/// Return true if the specified block A properly dominates block B.
-template <bool IsPostDom>
-bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(Block *a,
-                                                         Block *b) const {
-  assert(a && b && "null blocks not allowed");
+/// Returns the given block iterator if it lies within the region region.
+/// Otherwise, otherwise finds the ancestor of the given block iterator that
+/// lies within the given region. Returns and "empty" iterator if the latter
+/// fails.
+///
+/// Note: This is a variant of Region::findAncestorOpInRegion that operates on
+/// block iterators instead of ops.
+static std::pair<Block *, Block::iterator>
+findAncestorIteratorInRegion(Region *r, Block *b, Block::iterator it) {
+  // Case 1: The iterator lies within the region region.
+  if (b->getParent() == r)
+    return std::make_pair(b, it);
 
-  // A block dominates, but does not properly dominate, itself unless this
-  // is a graph region.
+  // Otherwise: Find ancestor iterator. Bail if we run out of parent ops.
+  Operation *parentOp = b->getParentOp();
+  if (!parentOp)
+    return std::make_pair(static_cast<Block *>(nullptr), Block::iterator());
+  Operation *op = r->findAncestorOpInRegion(*parentOp);
+  if (!op)
+    return std::make_pair(static_cast<Block *>(nullptr), Block::iterator());
+  return std::make_pair(op->getBlock(), op->getIterator());
+}
+
+/// Given two iterators into the same block, return "true" if `a` is before `b.
+/// Note: This is a variant of Operation::isBeforeInBlock that operates on
+/// block iterators instead of ops.
+static bool isBeforeInBlock(Block *block, Block::iterator a,
+                            Block::iterator b) {
   if (a == b)
-    return !hasSSADominance(a);
-
-  // If both blocks are not in the same region, `a` properly dominates `b` if
-  // `b` is defined in an operation region that (recursively) ends up being
-  // dominated by `a`. Walk up the list of containers enclosing B.
-  Region *regionA = a->getParent();
-  if (regionA != b->getParent()) {
-    b = regionA ? regionA->findAncestorBlockInRegion(*b) : nullptr;
-    // If we could not find a valid block b then it is a not a dominator.
-    if (!b)
-      return false;
-
-    // Check to see if the ancestor of `b` is the same block as `a`.  A properly
-    // dominates B if it contains an op that contains the B block.
-    if (a == b)
-      return true;
-  }
-
-  // Otherwise, they are two different blocks in the same region, use DomTree.
-  return getDomTree(regionA).properlyDominates(a, b);
+    return false;
+  if (a == block->end())
+    return false;
+  if (b == block->end())
+    return true;
+  return a->isBeforeInBlock(&*b);
 }
 
 template <bool IsPostDom>
 bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
-    Operation *a, Operation *b, bool enclosingOpOk) const {
-  Block *aBlock = a->getBlock(), *bBlock = b->getBlock();
-  assert(aBlock && bBlock && "operations must be in a block");
+    Block *aBlock, Block::iterator aIt, Block *bBlock, Block::iterator bIt,
+    bool enclosingOk) const {
+  assert(aBlock && bBlock && "expected non-null blocks");
 
-  // An operation (pos)dominates, but does not properly (pos)dominate, itself
-  // unless this is a graph region.
-  if (a == b)
+  // A block iterator (post)dominates, but does not properly (post)dominate,
+  // itself unless this is a graph region.
+  if (aBlock == bBlock && aIt == bIt)
     return !hasSSADominance(aBlock);
 
-  // If these ops are in different regions, then normalize one into the other.
+  // If the iterators are in different regions, then normalize one into the
+  // other.
   Region *aRegion = aBlock->getParent();
   if (aRegion != bBlock->getParent()) {
-    // Scoot up b's region tree until we find an operation in A's region that
+    // Scoot up b's region tree until we find a location in A's region that
     // encloses it.  If this fails, then we know there is no (post)dom relation.
-    b = aRegion ? aRegion->findAncestorOpInRegion(*b) : nullptr;
-    if (!b)
+    if (!aRegion) {
+      bBlock = nullptr;
+      bIt = Block::iterator();
+    } else {
+      std::tie(bBlock, bIt) =
+          findAncestorIteratorInRegion(aRegion, bBlock, bIt);
+    }
+    if (!bBlock)
       return false;
-    bBlock = b->getBlock();
-    assert(bBlock->getParent() == aRegion);
+    assert(bBlock->getParent() == aRegion && "expected block in regionA");
 
     // If 'a' encloses 'b', then we consider it to (post)dominate.
-    if (a == b && enclosingOpOk)
+    if (aBlock == bBlock && aIt == bIt && enclosingOk)
       return true;
   }
 
@@ -279,9 +290,9 @@ bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
     if (!hasSSADominance(aBlock))
       return true;
     if constexpr (IsPostDom) {
-      return b->isBeforeInBlock(a);
+      return isBeforeInBlock(aBlock, bIt, aIt);
     } else {
-      return a->isBeforeInBlock(b);
+      return isBeforeInBlock(aBlock, aIt, bIt);
     }
   }
 
@@ -309,6 +320,18 @@ template class detail::DominanceInfoBase</*IsPostDom=*/false>;
 // DominanceInfo
 //===----------------------------------------------------------------------===//
 
+bool DominanceInfo::properlyDominates(Operation *a, Operation *b,
+                                      bool enclosingOpOk) const {
+  return super::properlyDominatesImpl(a->getBlock(), a->getIterator(),
+                                      b->getBlock(), b->getIterator(),
+                                      enclosingOpOk);
+}
+
+bool DominanceInfo::properlyDominates(Block *a, Block *b) const {
+  return super::properlyDominatesImpl(a, a->begin(), b, b->begin(),
+                                      /*enclosingOk=*/true);
+}
+
 /// Return true if the `a` value properly dominates operation `b`, i.e if the
 /// operation that defines `a` properlyDominates `b` and the operation that
 /// defines `a` does not contain `b`.
@@ -321,4 +344,20 @@ bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
   // `a` properlyDominates `b` if the operation defining `a` properlyDominates
   // `b`, but `a` does not itself enclose `b` in one of its regions.
   return properlyDominates(a.getDefiningOp(), b, /*enclosingOpOk=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// PostDominanceInfo
+//===----------------------------------------------------------------------===//
+
+bool PostDominanceInfo::properlyPostDominates(Operation *a, Operation *b,
+                                              bool enclosingOpOk) const {
+  return super::properlyDominatesImpl(a->getBlock(), a->getIterator(),
+                                      b->getBlock(), b->getIterator(),
+                                      enclosingOpOk);
+}
+
+bool PostDominanceInfo::properlyPostDominates(Block *a, Block *b) const {
+  return super::properlyDominatesImpl(a, a->end(), b, b->end(),
+                                      /*enclosingOk=*/true);
 }

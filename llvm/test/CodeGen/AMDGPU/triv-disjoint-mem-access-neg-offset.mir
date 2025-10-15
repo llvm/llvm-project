@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-misched --debug-only=machine-scheduler -run-pass=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-misched --debug-only=machine-scheduler -run-pass=machine-scheduler -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Make sure handling of unsigned immediate values interpreted as negative values

@@ -12,6 +12,7 @@ add_llvm_unittest(ADTTests
   BitFieldsTest.cpp
   BitmaskEnumTest.cpp
   BitTest.cpp
+  BitsetTest.cpp
   BitVectorTest.cpp
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
@@ -67,6 +68,7 @@ add_llvm_unittest(ADTTests
   SCCIteratorTest.cpp
   STLExtrasTest.cpp
   STLForwardCompatTest.cpp
+  ScopedHashTableTest.cpp
   ScopeExitTest.cpp
   SequenceTest.cpp
   SetOperationsTest.cpp

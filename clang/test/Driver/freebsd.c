@@ -77,6 +77,18 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV64I-LD %s
 // CHECK-RV64I-LD: ld{{.*}}" {{.*}} "-m" "elf64lriscv"
 //
+// Check that LoongArch passes the correct linker emulation.
+//
+// RUN: %clang --target=loongarch64-freebsd -### %s %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64-LD %s
+// CHECK-LA64-LD: ld{{.*}}" {{.*}} "-m" "elf64loongarch"
+//
+// Check options passed to the linker on LoongArch
+//
+// RUN: %clang --target=loongarch64-freebsd -mno-relax -### %s %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64-LD-OPTS %s
+// CHECK-LA64-LD-OPTS: ld{{.*}}" {{.*}} "-X" "--no-relax"
+//
 // Check that the new linker flags are passed to FreeBSD
 // RUN: %clang --target=x86_64-pc-freebsd10.0 -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \

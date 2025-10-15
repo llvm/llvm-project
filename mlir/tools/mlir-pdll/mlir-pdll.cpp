@@ -167,6 +167,15 @@ int main(int argc, char **argv) {
       "write-if-changed",
       llvm::cl::desc("Only write to the output file if it changed"));
 
+  // `ResetCommandLineParser` at the above unregistered the "D" option
+  // of `llvm-tblgen`, which causes tblgen usage to fail due to
+  // "Unknnown command line argument '-D...`" when a macros name is
+  // present. The following is a workaround to re-register it again.
+  llvm::cl::list<std::string> macroNames(
+      "D",
+      llvm::cl::desc("Name of the macro to be defined -- ignored by mlir-pdll"),
+      llvm::cl::value_desc("macro name"), llvm::cl::Prefix);
+
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL Frontend");
 
@@ -192,6 +201,12 @@ int main(int argc, char **argv) {
   llvm::raw_string_ostream outputStrOS(outputStr);
   auto processFn = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
                        raw_ostream &os) {
+    // Split does not guarantee null-termination. Make a copy of the buffer to
+    // ensure null-termination.
+    if (!chunkBuffer->getBuffer().ends_with('\0')) {
+      chunkBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+          chunkBuffer->getBuffer(), chunkBuffer->getBufferIdentifier());
+    }
     return processBuffer(os, std::move(chunkBuffer), outputType, includeDirs,
                          dumpODS, includedFiles);
   };

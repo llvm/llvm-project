@@ -60,12 +60,6 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Itinerary = itin;
   let Size = 4;
 
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
-
   // *** Must match MCTargetDesc/HexagonBaseInfo.h ***
 
   // Instruction type according to the ISA.
@@ -287,12 +281,6 @@ class InstDuplex<bits<4> iClass, string cstr = ""> : Instruction,
   let Itinerary = DUPLEX;
   let Size = 4;
 
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
-
   // *** Must match MCTargetDesc/HexagonBaseInfo.h ***
 
   let TSFlags{6-0} = Type.Value;
@@ -336,5 +324,4 @@ class InstDuplex<bits<4> iClass, string cstr = ""> : Instruction,
 //                         Instruction Classes Definitions -
 //===----------------------------------------------------------------------===//
 
-include "HexagonInstrFormatsV60.td"
 include "HexagonInstrFormatsV65.td"

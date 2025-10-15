@@ -7,17 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__need_malloc_and_calloc)
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-#  include_next <stdlib.h>
-
-#elif !defined(_LIBCPP_STDLIB_H)
-#  define _LIBCPP_STDLIB_H
-
 /*
     stdlib.h synopsis
 
@@ -84,17 +73,24 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 
 */
 
-#  if 0
-#  else // 0
-#    include <__config>
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stdlib.h>
+#else
+#  include <__config>
 
-#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#      pragma GCC system_header
-#    endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
-#    if __has_include_next(<stdlib.h>)
-#      include_next <stdlib.h>
-#    endif
+// The inclusion of the system's <stdlib.h> is intentionally done once outside of any include
+// guards because some code expects to be able to include the underlying system header multiple
+// times to get different definitions based on the macros that are set before inclusion.
+#  if __has_include_next(<stdlib.h>)
+#    include_next <stdlib.h>
+#  endif
+
+#  if !defined(_LIBCPP_STDLIB_H)
+#    define _LIBCPP_STDLIB_H
 
 #    ifdef __cplusplus
 extern "C++" {
@@ -110,23 +106,8 @@ extern "C++" {
 #        undef llabs
 #      endif
 
-// MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
-#      if !defined(_LIBCPP_MSVCRT)
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long abs(long __x) _NOEXCEPT { return __builtin_labs(__x); }
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long long abs(long long __x) _NOEXCEPT { return __builtin_llabs(__x); }
-#      endif // !defined(_LIBCPP_MSVCRT)
-
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float abs(float __lcpp_x) _NOEXCEPT {
-  return __builtin_fabsf(__lcpp_x); // Use builtins to prevent needing math.h
-}
-
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI double abs(double __lcpp_x) _NOEXCEPT {
-  return __builtin_fabs(__lcpp_x);
-}
-
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double abs(long double __lcpp_x) _NOEXCEPT {
-  return __builtin_fabsl(__lcpp_x);
-}
+#      include <__math/abs.h>
+using std::__math::abs;
 
 // div
 
@@ -149,6 +130,6 @@ inline _LIBCPP_HIDE_FROM_ABI lldiv_t div(long long __x, long long __y) _NOEXCEPT
 #      endif // _LIBCPP_MSVCRT
 } // extern "C++"
 #    endif   // __cplusplus
-#  endif     // 0
+#  endif     // _LIBCPP_STDLIB_H
 
-#endif // _LIBCPP_STDLIB_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

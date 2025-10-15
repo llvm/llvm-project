@@ -34,6 +34,7 @@
 # CHECK-NEXT:           {
 # CHECK-NEXT:             ID: 0
 # CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Hash: 0x0
 # CHECK-NEXT:             Size: 0x1
 # CHECK-NEXT:             HasReturn: No
 # CHECK-NEXT:             HasTailCall: Yes
@@ -49,7 +50,9 @@
 # CHECK-NEXT:           {
 # CHECK-NEXT:             ID: 2
 # CHECK-NEXT:             Offset: 0x3
-# CHECK-NEXT:             Size: 0x4
+# CHECK-NEXT:             Callsite End Offsets: [1, 3]
+# CHECK-NEXT:             Hash: 0x123
+# CHECK-NEXT:             Size: 0x7
 # CHECK-NEXT:             HasReturn: Yes
 # CHECK-NEXT:             HasTailCall: No
 # CHECK-NEXT:             IsEHPad: Yes
@@ -75,7 +78,7 @@
 # CHECK-NEXT:             HasTailCall: No
 # CHECK-NEXT:             IsEHPad: No
 # CHECK-NEXT:             CanFallThrough: Yes
-# CHECK-NEXT:            HasIndirectBranch: No
+# CHECK-NEXT:             HasIndirectBranch: No
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
@@ -143,8 +146,8 @@ Sections:
     ShSize: [[SIZE=<none>]]
     Link:   .text
     Entries:
-      - Version: 2
-        Feature: 0x8
+      - Version: 4
+        Feature: 0x68
         BBRanges:
           - BaseAddress: [[ADDR=0x11111]]
             BBEntries:
@@ -158,6 +161,8 @@ Sections:
                 AddressOffset: 0x3
                 Size:          0x4
                 Metadata:      0x15
+                CallsiteEndOffsets: [ 0x1 , 0x2 ]
+                Hash:          0x123
       - Version: 2
         BBRanges:
           - BaseAddress: 0x22222

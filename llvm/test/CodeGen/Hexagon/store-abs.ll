@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ; This lit test validates that storetrunc for a 64bit value picks a store
 ; absolute pattern instead of base + index store pattern. This will facilitate
 ; the constant extender optimization pass to move the immediate value to a register

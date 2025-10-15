@@ -75,8 +75,10 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     auto &It = PendingMembers[0];
     CCAssignFn *AssignFn =
         TLI->CCAssignFnForCall(State.getCallingConv(), /*IsVarArg=*/false);
+    // FIXME: Get the correct original type.
+    Type *OrigTy = EVT(It.getValVT()).getTypeForEVT(State.getContext());
     if (AssignFn(It.getValNo(), It.getValVT(), It.getValVT(), CCValAssign::Full,
-                 ArgFlags, State))
+                 ArgFlags, OrigTy, State))
       llvm_unreachable("Call operand has unhandled type");
 
     // Return the flags to how they were before.
@@ -142,7 +144,7 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   ArrayRef<MCPhysReg> RegList;
   if (LocVT.SimpleTy == MVT::i64 || (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32))
     RegList = XRegList;
-  else if (LocVT.SimpleTy == MVT::f16)
+  else if (LocVT.SimpleTy == MVT::f16 || LocVT.SimpleTy == MVT::bf16)
     RegList = HRegList;
   else if (LocVT.SimpleTy == MVT::f32 || LocVT.is32BitVector())
     RegList = SRegList;
@@ -176,27 +178,27 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // [N x i32] arguments get packed into x-registers on Darwin's arm64_32
   // because that's how the armv7k Clang front-end emits small structs.
   unsigned EltsPerReg = (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32) ? 2 : 1;
-  unsigned RegResult = State.AllocateRegBlock(
+  ArrayRef<MCPhysReg> RegResult = State.AllocateRegBlock(
       RegList, alignTo(PendingMembers.size(), EltsPerReg) / EltsPerReg);
-  if (RegResult && EltsPerReg == 1) {
-    for (auto &It : PendingMembers) {
-      It.convertToReg(RegResult);
+  if (!RegResult.empty() && EltsPerReg == 1) {
+    for (const auto &[It, Reg] : zip(PendingMembers, RegResult)) {
+      It.convertToReg(Reg);
       State.addLoc(It);
-      ++RegResult;
     }
     PendingMembers.clear();
     return true;
-  } else if (RegResult) {
+  } else if (!RegResult.empty()) {
     assert(EltsPerReg == 2 && "unexpected ABI");
     bool UseHigh = false;
     CCValAssign::LocInfo Info;
+    unsigned RegIdx = 0;
     for (auto &It : PendingMembers) {
       Info = UseHigh ? CCValAssign::AExtUpper : CCValAssign::ZExt;
-      State.addLoc(CCValAssign::getReg(It.getValNo(), MVT::i32, RegResult,
-                                       MVT::i64, Info));
+      State.addLoc(CCValAssign::getReg(It.getValNo(), MVT::i32,
+                                       RegResult[RegIdx], MVT::i64, Info));
       UseHigh = !UseHigh;
       if (!UseHigh)
-        ++RegResult;
+        ++RegIdx;
     }
     PendingMembers.clear();
     return true;

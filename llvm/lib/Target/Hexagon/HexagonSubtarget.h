@@ -54,7 +54,6 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueJumps = false;
   bool UseNewValueStores = false;
   bool UseSmallData = false;
-  bool UseUnsafeMath = false;
   bool UseZRegOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
@@ -210,6 +209,21 @@ public:
   bool hasV73OpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V73;
   }
+  bool hasV75Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V75;
+  }
+  bool hasV75OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V75;
+  }
+  bool hasV79Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V79;
+  }
+  bool hasV79OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V79;
+  }
+  bool useHVXV79Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V79;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
@@ -219,7 +233,6 @@ public:
   bool useNewValueJumps() const { return UseNewValueJumps; }
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
-  bool useUnsafeMath() const { return UseUnsafeMath; }
   bool useZRegOps() const { return UseZRegOps; }
   bool useCabac() const { return UseCabac; }
 
@@ -351,7 +364,8 @@ private:
   void restoreLatency(SUnit *Src, SUnit *Dst) const;
   void changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat) const;
   bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,
-      SmallSet<SUnit*, 4> &ExclSrc, SmallSet<SUnit*, 4> &ExclDst) const;
+                         SmallPtrSet<SUnit *, 4> &ExclSrc,
+                         SmallPtrSet<SUnit *, 4> &ExclDst) const;
 };
 
 } // end namespace llvm

@@ -30,6 +30,7 @@ public:
   // Output X86 mnemonic tables.
   void run(raw_ostream &OS);
 };
+} // namespace
 
 void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 Mnemonic tables", OS);
@@ -40,7 +41,7 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   // Hold all instructions grouped by mnemonic
   StringMap<SmallVector<const CodeGenInstruction *, 0>> MnemonicToCGInstrMap;
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *I : Target.getInstructions()) {
     const Record *Def = I->TheDef;
     // Filter non-X86 instructions.
     if (!Def->isSubClassOf("X86Inst"))
@@ -70,11 +71,11 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
     auto Mnemonics = MnemonicToCGInstrMap[Mnemonic];
     if (Mnemonics.size() == 1) {
       const CodeGenInstruction *CGI = *Mnemonics.begin();
-      OS << "\treturn Opcode == " << CGI->TheDef->getName() << ";\n}\n\n";
+      OS << "\treturn Opcode == " << CGI->getName() << ";\n}\n\n";
     } else {
       OS << "\tswitch (Opcode) {\n";
       for (const CodeGenInstruction *CGI : Mnemonics) {
-        OS << "\tcase " << CGI->TheDef->getName() << ":\n";
+        OS << "\tcase " << CGI->getName() << ":\n";
       }
       OS << "\t\treturn true;\n\t}\n\treturn false;\n}\n\n";
     }
@@ -82,8 +83,6 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   OS << "#endif // GET_X86_MNEMONIC_TABLES_CPP\n\n";
   OS << "} // end namespace X86\n} // end namespace llvm";
 }
-
-} // namespace
 
 static TableGen::Emitter::OptClass<X86MnemonicTablesEmitter>
     X("gen-x86-mnemonic-tables", "Generate X86 mnemonic tables");

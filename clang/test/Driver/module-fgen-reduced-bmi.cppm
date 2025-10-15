@@ -48,6 +48,14 @@
 // RUN: %clang -std=c++20 Hello.cppm --precompile -fmodules-reduced-bmi \
 // RUN:     -o Hello.full.pcm -### 2>&1 | FileCheck Hello.cppm \
 // RUN:     --check-prefix=CHECK-EMIT-MODULE-INTERFACE
+
+// RUN: %clang -std=c++20 Hello.cppm --precompile -fmodules-reduced-bmi \
+// RUN:     -### 2>&1 | FileCheck Hello.cppm \
+// RUN:     --check-prefix=CHECK-OVERRIDE-WARN
+
+// RUN: %clang -std=c++20 Hello.cppm --precompile -fmodules-reduced-bmi \
+// RUN:     -o Hello.pcm -### 2>&1 | FileCheck Hello.cppm \
+// RUN:    --check-prefix=CHECK-OVERRIDE-WARN
 //
 // RUN: %clang -std=c++20 Hello.cc -fmodules-reduced-bmi -Wall -Werror \
 // RUN:     -c -o Hello.o -### 2>&1 | FileCheck Hello.cc
@@ -56,7 +64,8 @@
 // RUN:     -Wno-missing-reduced-bmi -### 2>&1 | FileCheck Hello.cppm -check-prefix=NO_WARN
 //
 // RUN: %clang -std=c++20 Hello.cppm --precompile -o Hello.pcm \
-// RUN:     -Wno-missing-reduced-bmi -### 2>&1 | FileCheck Hello.cppm -check-prefix=NO_WARN
+// RUN:     -fno-modules-reduced-bmi -Wno-missing-reduced-bmi -### 2>&1 | \
+// RUN:     FileCheck Hello.cppm -check-prefix=NO_WARN
 
 //--- Hello.cppm
 export module Hello;
@@ -73,6 +82,8 @@ export module Hello;
 // With `-emit-module-interface` specified, we should still see the `-emit-module-interface`
 // flag.
 // CHECK-EMIT-MODULE-INTERFACE: -emit-module-interface
+
+// CHECK-OVERRIDE-WARN: warning: the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. {{.*}}-Wreduced-bmi-output-overrided
 
 // NO_WARN-NOT: warning
 

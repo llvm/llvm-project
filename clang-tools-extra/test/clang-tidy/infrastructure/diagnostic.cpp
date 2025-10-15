@@ -14,15 +14,15 @@
 // Now create a directory with a compilation database file and ensure we don't
 // use it after failing to parse commands from the command line:
 //
-// RUN: mkdir -p %T/diagnostics/
-// RUN: echo '[{"directory": "%/T/diagnostics/","command": "clang++ -fan-option-from-compilation-database -c %/T/diagnostics/input.cpp", "file": "%/T/diagnostics/input.cpp"}]' > %T/diagnostics/compile_commands.json
-// RUN: cat %s > %T/diagnostics/input.cpp
-// RUN: not clang-tidy -checks='-*,modernize-use-override' %T/diagnostics/nonexistent.cpp -- 2>&1 | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
-// RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %T/diagnostics/input.cpp -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK2 -implicit-check-not='{{warning:|error:}}' %s
-// RUN: not clang-tidy -checks='-*,google-explicit-constructor,clang-diagnostic-literal-conversion' %T/diagnostics/input.cpp -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK3 -implicit-check-not='{{warning:|error:}}' %s
-// RUN: clang-tidy -checks='-*,modernize-use-override,clang-diagnostic-macro-redefined' %T/diagnostics/input.cpp -- -DMACRO_FROM_COMMAND_LINE 2>&1 | FileCheck -check-prefix=CHECK4 -implicit-check-not='{{warning:|error:}}' %s
-// RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %T/diagnostics/input.cpp 2>&1 | FileCheck -check-prefix=CHECK5 -implicit-check-not='{{warning:|error:}}' %s
-// RUN: not clang-tidy -checks='-*,modernize-use-override' %T/diagnostics/input.cpp -- -DCOMPILATION_ERROR 2>&1 | FileCheck -check-prefix=CHECK6 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: mkdir -p %t.dir/diagnostics/
+// RUN: echo '[{"directory": "%/t.dir/diagnostics/","command": "clang++ -fan-option-from-compilation-database -c %/t.dir/diagnostics/input.cpp", "file": "%/t.dir/diagnostics/input.cpp"}]' > %t.dir/diagnostics/compile_commands.json
+// RUN: cat %s > %t.dir/diagnostics/input.cpp
+// RUN: not clang-tidy -checks='-*,modernize-use-override' %t.dir/diagnostics/nonexistent.cpp -- 2>&1 | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %t.dir/diagnostics/input.cpp -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK2 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: not clang-tidy -checks='-*,google-explicit-constructor,clang-diagnostic-literal-conversion' %t.dir/diagnostics/input.cpp -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK3 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: clang-tidy -checks='-*,modernize-use-override,clang-diagnostic-macro-redefined' %t.dir/diagnostics/input.cpp -- -DMACRO_FROM_COMMAND_LINE 2>&1 | FileCheck -check-prefix=CHECK4 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %t.dir/diagnostics/input.cpp 2>&1 | FileCheck -check-prefix=CHECK5 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: not clang-tidy -checks='-*,modernize-use-override' %t.dir/diagnostics/input.cpp -- -DCOMPILATION_ERROR 2>&1 | FileCheck -check-prefix=CHECK6 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: clang-tidy -checks='-*,modernize-use-override,clang-diagnostic-macro-redefined' %s -- -DMACRO_FROM_COMMAND_LINE -std=c++20 | FileCheck -check-prefix=CHECK4 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: clang-tidy -checks='-*,modernize-use-override,clang-diagnostic-macro-redefined,clang-diagnostic-literal-conversion' %s -- -DMACRO_FROM_COMMAND_LINE -std=c++20 -Wno-macro-redefined | FileCheck --check-prefix=CHECK7 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: clang-tidy -checks='-*,modernize-use-override' %s -- -std=c++20 -DPR64602

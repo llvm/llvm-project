@@ -20,7 +20,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 
@@ -133,10 +132,8 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
       CtorDtor.Func->setVisibility(GlobalValue::HiddenVisibility);
     }
 
-    if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration()) {
-      dbgs() << "  Skipping because why now?\n";
+    if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration())
       continue;
-    }
 
     CtorDtorsByPriority[CtorDtor.Priority].push_back(
         Mangle(CtorDtor.Func->getName()));
@@ -277,14 +274,19 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
 StaticLibraryDefinitionGenerator::VisitMembersFunction
 StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(ObjectLayer &L,
                                                            JITDylib &JD) {
-  return [&](MemoryBufferRef Buf) -> Error {
+  return [&](object::Archive &A, MemoryBufferRef Buf,
+             size_t Index) -> Expected<bool> {
     switch (identify_magic(Buf.getBuffer())) {
     case file_magic::elf_relocatable:
     case file_magic::macho_object:
     case file_magic::coff_object:
-      return L.add(JD, MemoryBuffer::getMemBuffer(Buf));
+      if (auto Err = L.add(JD, createMemberBuffer(A, Buf, Index)))
+        return std::move(Err);
+      // Since we've loaded it already, mark this as not loadable.
+      return false;
     default:
-      return Error::success();
+      // Non-object-file members are not loadable.
+      return false;
     }
   };
 }
@@ -309,13 +311,18 @@ StaticLibraryDefinitionGenerator::Create(
     std::unique_ptr<object::Archive> Archive, VisitMembersFunction VisitMembers,
     GetObjectFileInterface GetObjFileInterface) {
 
-  Error Err = Error::success();
+  DenseSet<uint64_t> Excluded;
 
   if (VisitMembers) {
+    size_t Index = 0;
+    Error Err = Error::success();
     for (auto Child : Archive->children(Err)) {
       if (auto ChildBuf = Child.getMemoryBufferRef()) {
-        if (auto Err2 = VisitMembers(*ChildBuf))
-          return std::move(Err2);
+        if (auto Loadable = VisitMembers(*Archive, *ChildBuf, Index++)) {
+          if (!*Loadable)
+            Excluded.insert(Child.getDataOffset());
+        } else
+          return Loadable.takeError();
       } else {
         // We silently allow non-object archive members. This matches the
         // behavior of ld.
@@ -326,15 +333,39 @@ StaticLibraryDefinitionGenerator::Create(
       return std::move(Err);
   }
 
-  std::unique_ptr<StaticLibraryDefinitionGenerator> ADG(
+  DenseMap<SymbolStringPtr, size_t> SymbolToMemberIndexMap;
+  {
+    DenseMap<uint64_t, size_t> OffsetToIndex;
+    size_t Index = 0;
+    Error Err = Error::success();
+    for (auto &Child : Archive->children(Err)) {
+      // For all members not excluded above, add them to the OffsetToIndex map.
+      if (!Excluded.count(Child.getDataOffset()))
+        OffsetToIndex[Child.getDataOffset()] = Index;
+      ++Index;
+    }
+    if (Err)
+      return Err;
+
+    auto &ES = L.getExecutionSession();
+    for (auto &Sym : Archive->symbols()) {
+      auto Member = Sym.getMember();
+      if (!Member)
+        return Member.takeError();
+      auto EntryItr = OffsetToIndex.find(Member->getDataOffset());
+
+      // Missing entry means this member should be ignored.
+      if (EntryItr == OffsetToIndex.end())
+        continue;
+
+      SymbolToMemberIndexMap[ES.intern(Sym.getName())] = EntryItr->second;
+    }
+  }
+
+  return std::unique_ptr<StaticLibraryDefinitionGenerator>(
       new StaticLibraryDefinitionGenerator(
           L, std::move(ArchiveBuffer), std::move(Archive),
-          std::move(GetObjFileInterface), Err));
-
-  if (Err)
-    return std::move(Err);
-
-  return std::move(ADG);
+          std::move(GetObjFileInterface), std::move(SymbolToMemberIndexMap)));
 }
 
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
@@ -394,85 +425,81 @@ Error StaticLibraryDefinitionGenerator::tryToGenerate(
   if (!Archive)
     return Error::success();
 
-  DenseSet<std::pair<StringRef, StringRef>> ChildBufferInfos;
+  DenseMap<size_t, MemoryBufferRef> ToLoad;
 
-  for (const auto &KV : Symbols) {
-    const auto &Name = KV.first;
-    if (!ObjectFilesMap.count(Name))
+  for (const auto &[Name, _] : Symbols) {
+    // Check whehter the archive contains this symbol.
+    auto It = SymbolToMemberIndexMap.find(Name);
+    if (It == SymbolToMemberIndexMap.end())
       continue;
-    auto ChildBuffer = ObjectFilesMap[Name];
-    ChildBufferInfos.insert(
-        {ChildBuffer.getBuffer(), ChildBuffer.getBufferIdentifier()});
+    size_t Index = It->second;
+
+    // If we're already loading the member containing this symbol then we're
+    // done.
+    if (ToLoad.count(Index))
+      continue;
+
+    auto Member = Archive->findSym(*Name);
+    if (!Member)
+      return Member.takeError();
+    if (!*Member) // Skip "none" children.
+      continue;
+
+    auto MemberBuf = (*Member)->getMemoryBufferRef();
+    if (!MemberBuf)
+      return MemberBuf.takeError();
+
+    ToLoad[Index] = *MemberBuf;
   }
 
-  for (auto ChildBufferInfo : ChildBufferInfos) {
-    MemoryBufferRef ChildBufferRef(ChildBufferInfo.first,
-                                   ChildBufferInfo.second);
+  // Remove symbols to be loaded.
+  {
+    // FIXME: Enable DenseMap removal using NonOwningSymbolStringPtr?
+    std::vector<SymbolStringPtr> ToRemove;
+    for (auto &[Name, Index] : SymbolToMemberIndexMap)
+      if (ToLoad.count(Index))
+        ToRemove.push_back(Name);
+    for (auto &Name : ToRemove)
+      SymbolToMemberIndexMap.erase(Name);
+  }
 
-    auto I = GetObjFileInterface(L.getExecutionSession(), ChildBufferRef);
-    if (!I)
-      return I.takeError();
+  // Add loaded files to JITDylib.
+  for (auto &[Index, Buf] : ToLoad) {
+    auto MemberBuf = createMemberBuffer(*Archive, Buf, Index);
 
-    if (auto Err = L.add(JD, MemoryBuffer::getMemBuffer(ChildBufferRef, false),
-                         std::move(*I)))
+    auto Interface = GetObjFileInterface(L.getExecutionSession(),
+                                         MemberBuf->getMemBufferRef());
+    if (!Interface)
+      return Interface.takeError();
+
+    if (auto Err = L.add(JD, std::move(MemberBuf), std::move(*Interface)))
       return Err;
   }
 
   return Error::success();
 }
 
-Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
-  DenseMap<uint64_t, MemoryBufferRef> MemoryBuffers;
-  DenseSet<uint64_t> Visited;
-  DenseSet<uint64_t> Excluded;
-  StringSaver FileNames(ObjFileNameStorage);
-  for (auto &S : Archive->symbols()) {
-    StringRef SymName = S.getName();
-    auto Member = S.getMember();
-    if (!Member)
-      return Member.takeError();
-    auto DataOffset = Member->getDataOffset();
-    if (!Visited.count(DataOffset)) {
-      Visited.insert(DataOffset);
-      auto Child = Member->getAsBinary();
-      if (!Child)
-        return Child.takeError();
-      if ((*Child)->isCOFFImportFile()) {
-        ImportedDynamicLibraries.insert((*Child)->getFileName().str());
-        Excluded.insert(DataOffset);
-        continue;
-      }
-
-      // Give members of the archive a name that contains the archive path so
-      // that they can be differentiated from a member with the same name in a
-      // different archive. This also ensure initializer symbols names will be
-      // unique within a JITDylib.
-      StringRef FullName = FileNames.save(Archive->getFileName() + "(" +
-                                          (*Child)->getFileName() + ")");
-      MemoryBufferRef MemBuffer((*Child)->getMemoryBufferRef().getBuffer(),
-                                FullName);
-
-      MemoryBuffers[DataOffset] = MemBuffer;
-    }
-    if (!Excluded.count(DataOffset))
-      ObjectFilesMap[L.getExecutionSession().intern(SymName)] =
-          MemoryBuffers[DataOffset];
-  }
-
-  return Error::success();
+std::unique_ptr<MemoryBuffer>
+StaticLibraryDefinitionGenerator::createMemberBuffer(object::Archive &A,
+                                                     MemoryBufferRef BufRef,
+                                                     size_t Index) {
+  return MemoryBuffer::getMemBuffer(BufRef.getBuffer(),
+                                    (A.getFileName() + "[" + Twine(Index) +
+                                     "](" + BufRef.getBufferIdentifier() + ")")
+                                        .str(),
+                                    false);
 }
 
 StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
     std::unique_ptr<object::Archive> Archive,
-    GetObjectFileInterface GetObjFileInterface, Error &Err)
+    GetObjectFileInterface GetObjFileInterface,
+    DenseMap<SymbolStringPtr, size_t> SymbolToMemberIndexMap)
     : L(L), GetObjFileInterface(std::move(GetObjFileInterface)),
-      ArchiveBuffer(std::move(ArchiveBuffer)), Archive(std::move(Archive)) {
-  ErrorAsOutParameter _(Err);
+      ArchiveBuffer(std::move(ArchiveBuffer)), Archive(std::move(Archive)),
+      SymbolToMemberIndexMap(std::move(SymbolToMemberIndexMap)) {
   if (!this->GetObjFileInterface)
     this->GetObjFileInterface = getObjectFileInterface;
-  if (!Err)
-    Err = buildObjectFilesMap();
 }
 
 std::unique_ptr<DLLImportDefinitionGenerator>
@@ -505,17 +532,16 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
     if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
-    if (ToLookUpSymbols.count(Deinterned) &&
-        ToLookUpSymbols[Deinterned] == SymbolLookupFlags::RequiredSymbol)
-      continue;
-    ToLookUpSymbols[Deinterned] = KV.second;
+    auto [It, Inserted] = ToLookUpSymbols.try_emplace(Deinterned);
+    if (Inserted || It->second != SymbolLookupFlags::RequiredSymbol)
+      It->second = KV.second;
   }
 
   for (auto &KV : ToLookUpSymbols)
     LookupSet.add(ES.intern(KV.first), KV.second);
 
-  auto Resolved =
-      ES.lookup(LinkOrder, LookupSet, LookupKind::DLSym, SymbolState::Resolved);
+  auto Resolved = ES.lookup(LinkOrder, LookupSet, LookupKind::Static,
+                            SymbolState::Resolved);
   if (!Resolved)
     return Resolved.takeError();
 
@@ -525,49 +551,17 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   return L.add(JD, std::move(*G));
 }
 
-Expected<unsigned>
-DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    return 8;
-  default:
-    return make_error<StringError>(
-        "architecture unsupported by DLLImportDefinitionGenerator",
-        inconvertibleErrorCode());
-  }
-}
-
-Expected<llvm::endianness>
-DLLImportDefinitionGenerator::getEndianness(const Triple &TT) {
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    return llvm::endianness::little;
-  default:
-    return make_error<StringError>(
-        "architecture unsupported by DLLImportDefinitionGenerator",
-        inconvertibleErrorCode());
-  }
-}
-
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
-  Triple TT = ES.getTargetTriple();
-  auto PointerSize = getTargetPointerSize(TT);
-  if (!PointerSize)
-    return PointerSize.takeError();
-  auto Endianness = getEndianness(TT);
-  if (!Endianness)
-    return Endianness.takeError();
-
   auto G = std::make_unique<jitlink::LinkGraph>(
-      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), TT, *PointerSize,
-      *Endianness, jitlink::getGenericEdgeKindName);
+      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
   jitlink::Section &Sec =
       G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(
-        *KV.first, KV.second.getAddress(), *PointerSize,
+        *KV.first, KV.second.getAddress(), G->getPointerSize(),
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol

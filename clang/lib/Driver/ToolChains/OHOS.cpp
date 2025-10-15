@@ -8,18 +8,16 @@
 
 #include "OHOS.h"
 #include "Arch/ARM.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
@@ -58,9 +56,11 @@ static bool findOHOSMuslMultilibs(const Driver &D,
   return false;
 }
 
-static bool findOHOSMultilibs(const Driver &D, const ToolChain &TC,
-                              const llvm::Triple &TargetTriple, StringRef Path,
-                              const ArgList &Args, DetectedMultilibs &Result) {
+static bool findOHOSMultilibs(const Driver &D,
+                                      const ToolChain &TC,
+                                      const llvm::Triple &TargetTriple,
+                                      StringRef Path, const ArgList &Args,
+                                      DetectedMultilibs &Result) {
   Multilib::flags_list Flags;
   bool IsA7 = false;
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
@@ -109,6 +109,8 @@ std::string OHOS::getMultiarchTriple(const llvm::Triple &T) const {
     return "x86_64-linux-ohos";
   case llvm::Triple::aarch64:
     return "aarch64-linux-ohos";
+  case llvm::Triple::loongarch64:
+    return "loongarch64-linux-ohos";
   }
   return T.str();
 }
@@ -170,7 +172,8 @@ OHOS::OHOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       Paths);
 }
 
-ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(const ArgList &Args) const {
+ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(
+    const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "compiler-rt")
@@ -181,19 +184,20 @@ ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(const ArgList &Args) const {
   return ToolChain::RLT_CompilerRT;
 }
 
-ToolChain::CXXStdlibType OHOS::GetCXXStdlibType(const ArgList &Args) const {
+ToolChain::CXXStdlibType
+OHOS::GetCXXStdlibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "libc++")
       getDriver().Diag(diag::err_drv_invalid_stdlib_name)
-          << A->getAsString(Args);
+        << A->getAsString(Args);
   }
 
   return ToolChain::CST_Libcxx;
 }
 
 void OHOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
-                                     ArgStringList &CC1Args) const {
+                                        ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   const llvm::Triple &Triple = getTriple();
   std::string SysRoot = computeSysRoot();
@@ -254,7 +258,7 @@ void OHOS::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
 }
 
 void OHOS::AddCXXStdlibLibArgs(const ArgList &Args,
-                               ArgStringList &CmdArgs) const {
+                                  ArgStringList &CmdArgs) const {
   switch (GetCXXStdlibType(Args)) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
@@ -287,8 +291,7 @@ ToolChain::path_list OHOS::getRuntimePaths() const {
 
   // First try the triple passed to driver as --target=<triple>.
   P.assign(D.ResourceDir);
-  llvm::sys::path::append(P, "lib", D.getTargetTriple(),
-                          SelectedMultilib.gccSuffix());
+  llvm::sys::path::append(P, "lib", D.getTargetTriple(), SelectedMultilib.gccSuffix());
   Paths.push_back(P.c_str());
 
   // Second try the normalized triple.
@@ -298,7 +301,6 @@ ToolChain::path_list OHOS::getRuntimePaths() const {
 
   // Third try the effective triple.
   P.assign(D.ResourceDir);
-  std::string SysRoot = computeSysRoot();
   llvm::sys::path::append(P, "lib", getMultiarchTriple(Triple),
                           SelectedMultilib.gccSuffix());
   Paths.push_back(P.c_str());
@@ -336,21 +338,27 @@ std::string OHOS::getDynamicLinker(const ArgList &Args) const {
 }
 
 std::string OHOS::getCompilerRT(const ArgList &Args, StringRef Component,
-                                FileType Type) const {
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
-
+                                FileType Type, bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, "lib", getMultiarchTriple(getTriple()),
-                          SelectedMultilib.gccSuffix(), CRTBasename);
-  if (getVFS().exists(Path))
-    return std::string(Path);
-
-  std::string NewPath = ToolChain::getCompilerRT(Args, Component, Type);
-  if (getVFS().exists(NewPath))
-    return NewPath;
-
-  return std::string(Path);
+                          SelectedMultilib.gccSuffix());
+  const char *Prefix =
+      Type == ToolChain::FT_Object ? "" : "lib";
+  const char *Suffix;
+  switch (Type) {
+  case ToolChain::FT_Object:
+    Suffix = ".o";
+    break;
+  case ToolChain::FT_Static:
+    Suffix = ".a";
+    break;
+  case ToolChain::FT_Shared:
+    Suffix = ".so";
+    break;
+  }
+  llvm::sys::path::append(
+      Path, Prefix + Twine("clang_rt.") + Component + Suffix);
+  return static_cast<std::string>(Path.str());
 }
 
 void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
@@ -359,7 +367,9 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-z");
   CmdArgs.push_back("relro");
   CmdArgs.push_back("-z");
-  CmdArgs.push_back("max-page-size=4096");
+  CmdArgs.push_back(getArch() == llvm::Triple::loongarch64
+                        ? "max-page-size=16384"
+                        : "max-page-size=4096");
   // .gnu.hash section is not compatible with the MIPS target
   if (getArch() != llvm::Triple::mipsel)
     CmdArgs.push_back("--hash-style=both");
@@ -387,7 +397,7 @@ SanitizerMask OHOS::getSupportedSanitizers() const {
 
 // TODO: Make a base class for Linux and OHOS and move this there.
 void OHOS::addProfileRTLibs(const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs) const {
+                             llvm::opt::ArgStringList &CmdArgs) const {
   // Add linker option -u__llvm_profile_runtime to cause runtime
   // initialization module to be linked in.
   if (needsProfileRT(Args))
@@ -404,8 +414,7 @@ ToolChain::path_list OHOS::getArchSpecificLibPaths() const {
   return Paths;
 }
 
-ToolChain::UnwindLibType
-OHOS::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
+ToolChain::UnwindLibType OHOS::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
   if (Args.getLastArg(options::OPT_unwindlib_EQ))
     return Generic_ELF::GetUnwindLibType(Args);
   return GetDefaultUnwindLibType();

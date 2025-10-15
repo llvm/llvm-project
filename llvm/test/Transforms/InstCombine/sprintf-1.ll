@@ -5,8 +5,7 @@
 ; RUN: opt < %s -mtriple xcore-xmos-elf -passes=instcombine -S | FileCheck %s -check-prefixes=CHECK,WITHSTPCPY,CHECK-IPRINTF
 ; RUN: opt < %s -mtriple=i386-pc-windows-msvc -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
 ; RUN: opt < %s -mtriple=i386-mingw32 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
-; RUN: opt < %s -mtriple=armv7-none-linux-android16 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
-; RUN: opt < %s -mtriple=armv7-none-linux-android21 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,WITHSTPCPY
+; RUN: opt < %s -mtriple=armv7-none-linux-android -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,WITHSTPCPY
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
@@ -103,7 +102,7 @@ define i32 @test_simplify7(ptr %dst, ptr %str) {
 ; NOSTPCPY-LABEL: @test_simplify7(
 ; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
 ; NOSTPCPY-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i1 false)
+; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr nonnull align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; NOSTPCPY-NEXT:    ret i32 [[STRLEN]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)
@@ -133,7 +132,7 @@ define i32 @test_simplify9(ptr %dst, ptr %str) {
 ; NOSTPCPY-LABEL: @test_simplify9(
 ; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
 ; NOSTPCPY-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i1 false)
+; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr nonnull align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; NOSTPCPY-NEXT:    ret i32 [[STRLEN]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)

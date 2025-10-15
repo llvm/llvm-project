@@ -5,8 +5,9 @@
 
 @.str = constant [3 x i8] c"-h\00"
 
-define i32 @main() {
-; CHECK-LABEL: define i32 @main() {
+define i32 @main() !prof !8 {
+; CHECK-LABEL: define i32 @main()
+; CHECK: !prof [[PROF_0:![0-9]+]]
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[SUB_0:.*]], !dbg [[DBG4:![0-9]+]]
 ; CHECK:       [[SUB_0]]:
@@ -14,13 +15,13 @@ define i32 @main() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32, !dbg [[DBG4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 45, !dbg [[DBG4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0, !dbg [[DBG4]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[NE:.*]], label %[[SUB_1:.*]], !dbg [[DBG4]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[NE:.*]], label %[[SUB_1:.*]], !dbg [[DBG4]], !prof [[PROF_1:![0-9]+]]
 ; CHECK:       [[SUB_1]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr null, i64 1), align 1, !dbg [[DBG4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32, !dbg [[DBG4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], 104, !dbg [[DBG4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP6]], 0, !dbg [[DBG4]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[NE]], label %[[SUB_2:.*]], !dbg [[DBG4]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[NE]], label %[[SUB_2:.*]], !dbg [[DBG4]], !prof [[PROF_1]]
 ; CHECK:       [[SUB_2]]:
 ; CHECK-NEXT:    br label %[[NE]], !dbg [[DBG4]]
 ; CHECK:       [[NE]]:
@@ -46,11 +47,14 @@ declare i32 @strcmp(ptr, ptr)
 !4 = !DILocation(line: 258, column: 10, scope: !5)
 !5 = distinct !DISubprogram(name: "streq", scope: !1, file: !1, line: 257, type: !7, scopeLine: 257, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
+!8 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], retainedTypes: [[META2]], globals: [[META2]])
 ; CHECK: [[META1]] = !DIFile(filename: "test.c", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
+; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[DBG4]] = !DILocation(line: 258, column: 10, scope: [[META5:![0-9]+]])
 ; CHECK: [[META5]] = distinct !DISubprogram(name: "streq", scope: [[META1]], file: [[META1]], line: 257, type: [[META6:![0-9]+]], scopeLine: 257, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META2]])
 ; CHECK: [[META6]] = !DISubroutineType(types: [[META2]])
+; CHECK: [[PROF_1]] = !{!"unknown", !"aggressive-instcombine"}
 ;.

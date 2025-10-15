@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFLinkerImpl.h"
-#include "DIEGenerator.h"
 #include "DependencyTracker.h"
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -891,10 +890,9 @@ void DWARFLinkerImpl::printStatistic() {
               CU->tryGetSectionDescriptor(DebugSectionKind::DebugInfo))
         AllDebugInfoSectionsSize += (*DebugInfo)->getContents().size();
 
-    SizeByObject[Context->InputDWARFFile.FileName].Input =
-        Context->OriginalDebugInfoSize;
-    SizeByObject[Context->InputDWARFFile.FileName].Output =
-        AllDebugInfoSectionsSize;
+    auto &Size = SizeByObject[Context->InputDWARFFile.FileName];
+    Size.Input = Context->OriginalDebugInfoSize;
+    Size.Output = AllDebugInfoSectionsSize;
   }
 
   // Create a vector sorted in descending order by output size.

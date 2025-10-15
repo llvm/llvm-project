@@ -41,8 +41,9 @@ public:
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stdexcept>
+#else
 #  include <__config>
 #  include <__exception/exception.h>
 #  include <__fwd/string.h>
@@ -284,7 +285,8 @@ _LIBCPP_END_NAMESPACE_STD
 #    include <cstdlib>
 #    include <exception>
 #    include <iosfwd>
+#    include <new>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STDEXCEPT

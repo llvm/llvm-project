@@ -160,6 +160,19 @@ BASERELOC-NEXT:     Type: DIR64
 BASERELOC-NEXT:     Address: 0x5020
 BASERELOC-NEXT:   }
 
+
+Build with -filealign:8 to enable precise size checking.
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out-size.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
+RUN:          test.obj test-arm64ec.lib test2-arm64ec.lib -filealign:8
+
+RUN: llvm-readobj --headers out-size.dll | FileCheck --check-prefix=RDATA-HEADER %s
+
+RDATA-HEADER:      Name: .rdata (2E 72 64 61 74 61 00 00)
+RDATA-HEADER-NEXT: VirtualSize: 0x2030
+RDATA-HEADER-NEXT: VirtualAddress: 0x3000
+RDATA-HEADER-NEXT: RawDataSize: 8240
+
 #--- test.s
     .section .test, "r"
     .globl arm64ec_data_sym
