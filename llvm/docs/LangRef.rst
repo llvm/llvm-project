@@ -20430,7 +20430,9 @@ Semantics:
 
 As the way in which the arguments to this floating-point intrinsic are reduced
 is unspecified, this intrinsic will assume floating-point reassociation and
-contraction, which may result in variations to the results.
+contraction can be leveraged to implement the reduction, which may result in
+variations to the results due to reordering or by lowering to different
+instructions (including combining multiple instructions into a single one).
 
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
