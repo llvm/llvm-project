@@ -164,7 +164,9 @@ bool tryToFindPtrOrigin(
 
         auto Name = safeGetName(callee);
         if (Name == "__builtin___CFStringMakeConstantString" ||
-            Name == "NSClassFromString")
+            Name == "NSStringFromSelector" || Name == "NSSelectorFromString" ||
+            Name == "NSStringFromClass" || Name == "NSClassFromString" ||
+            Name == "NSStringFromProtocol" || Name == "NSProtocolFromString")
           return callback(E, true);
       } else if (auto *CalleeE = call->getCallee()) {
         if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
@@ -202,6 +204,8 @@ bool tryToFindPtrOrigin(
           !Selector.getNumArgs())
         return callback(E, true);
     }
+    if (auto *ObjCProtocol = dyn_cast<ObjCProtocolExpr>(E))
+      return callback(ObjCProtocol, true);
     if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
       return callback(ObjCDict, true);
     if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
