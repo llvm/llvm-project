@@ -304,6 +304,11 @@ template bool
 mlir::hasEffect<BlockArgument, MemoryEffects::Write, MemoryEffects::Free>(
     Operation *, BlockArgument);
 
+bool mlir::hasUnknownEffects(Operation *op) {
+  return !isa<MemoryEffectOpInterface>(op) &&
+         !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+}
+
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
     return false;

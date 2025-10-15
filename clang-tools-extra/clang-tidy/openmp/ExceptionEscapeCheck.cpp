@@ -1,4 +1,4 @@
-//===--- ExceptionEscapeCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   llvm::SmallVector<StringRef, 8> IgnoredExceptionsVec;
 
   llvm::StringSet<> IgnoredExceptions;
-  StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
+  RawIgnoredExceptions.split(IgnoredExceptionsVec, ",", -1, false);
   llvm::transform(IgnoredExceptionsVec, IgnoredExceptionsVec.begin(),
                   [](StringRef S) { return S.trim(); });
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);

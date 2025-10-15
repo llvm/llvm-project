@@ -12,7 +12,7 @@
 #define lldb_NativeRegisterContextLinux_arm_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 
@@ -21,7 +21,8 @@ namespace process_linux {
 
 class NativeProcessLinux;
 
-class NativeRegisterContextLinux_arm : public NativeRegisterContextLinux {
+class NativeRegisterContextLinux_arm : public NativeRegisterContextLinux,
+                                       public NativeRegisterContextDBReg_arm {
 public:
   NativeRegisterContextLinux_arm(const ArchSpec &target_arch,
                                  NativeThreadProtocol &native_thread);
@@ -41,39 +42,6 @@ public:
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
-
-  // Hardware breakpoints/watchpoint management functions
-
-  uint32_t NumSupportedHardwareBreakpoints() override;
-
-  uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
-
-  bool ClearHardwareBreakpoint(uint32_t hw_idx) override;
-
-  Status ClearAllHardwareBreakpoints() override;
-
-  Status GetHardwareBreakHitIndex(uint32_t &bp_index,
-                                  lldb::addr_t trap_addr) override;
-
-  uint32_t NumSupportedHardwareWatchpoints() override;
-
-  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
-
-  bool ClearHardwareWatchpoint(uint32_t hw_index) override;
-
-  Status ClearAllHardwareWatchpoints() override;
-
-  Status GetWatchpointHitIndex(uint32_t &wp_index,
-                               lldb::addr_t trap_addr) override;
-
-  lldb::addr_t GetWatchpointHitAddress(uint32_t wp_index) override;
-
-  lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
-
-  uint32_t GetWatchpointSize(uint32_t wp_index);
-
-  bool WatchpointIsEnabled(uint32_t wp_index);
 
 protected:
   Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
@@ -100,23 +68,18 @@ private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
   RegisterInfoPOSIX_arm::FPU m_fpr;
 
-  std::array<NativeRegisterContextDBReg::DREG, 16>
-      m_hbr_regs; // Arm native linux hardware breakpoints
-  std::array<NativeRegisterContextDBReg::DREG, 16>
-      m_hwp_regs; // Arm native linux hardware watchpoints
-
-  uint32_t m_max_hwp_supported;
-  uint32_t m_max_hbp_supported;
   bool m_refresh_hwdebug_info;
 
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
 
-  Status ReadHardwareDebugInfo();
+  llvm::Error ReadHardwareDebugInfo() override;
 
-  Status WriteHardwareDebugRegs(NativeRegisterContextDBReg::DREGType hwbType,
-                                int hwb_index);
+  llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
+#ifdef __arm__
+  llvm::Error WriteHardwareDebugReg(DREGType hwbType, int hwb_index);
+#endif
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 

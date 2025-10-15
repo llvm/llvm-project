@@ -14,8 +14,6 @@
 // explicit basic_stringstream(const basic_string<charT,traits,Allocator>& str,
 //                             ios_base::openmode which = ios_base::out|ios_base::in);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <sstream>
 #include <cassert>
 

@@ -24,7 +24,7 @@
 #ifdef __CLC_FPSIZE
 
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_atomic_compare_exchange(         \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atomic_compare_exchange(          \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,         \
       __CLC_GENTYPE Value, int MemoryOrderEqual, int MemoryOrderUnequal,       \
       int MemoryScope) {                                                       \
@@ -38,7 +38,7 @@
 #else
 
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_atomic_compare_exchange(         \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atomic_compare_exchange(          \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,         \
       __CLC_GENTYPE Value, int MemoryOrderEqual, int MemoryOrderUnequal,       \
       int MemoryScope) {                                                       \

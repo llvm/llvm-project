@@ -774,8 +774,8 @@ TEST_P(ImportType, ImportDependentTemplateSpecialization) {
              "  typename A<T>::template B<T> a;"
              "};",
              Lang_CXX03, "", Lang_CXX03, Verifier,
-             classTemplateDecl(has(cxxRecordDecl(has(
-                 fieldDecl(hasType(dependentTemplateSpecializationType())))))));
+             classTemplateDecl(has(cxxRecordDecl(
+                 has(fieldDecl(hasType(templateSpecializationType())))))));
 }
 
 TEST_P(ImportType, ImportDeducedTemplateSpecialization) {
@@ -9189,7 +9189,7 @@ protected:
                          .getTypePtr();
     ASSERT_TRUE(Ty);
     EXPECT_FALSE(Ty->isCanonicalUnqualified());
-    const auto *InjTy = Ty->castAs<InjectedClassNameType>();
+    const auto *InjTy = dyn_cast<InjectedClassNameType>(Ty);
     EXPECT_TRUE(InjTy);
     for (const Decl *ReD : D->redecls()) {
       if (ReD == D)
@@ -9204,8 +9204,6 @@ protected:
       EXPECT_FALSE(ReTy->isCanonicalUnqualified());
       EXPECT_NE(ReTy, Ty);
       EXPECT_TRUE(Ctx.hasSameType(ReTy, Ty));
-      const auto *ReInjTy = Ty->castAs<InjectedClassNameType>();
-      EXPECT_TRUE(ReInjTy);
     }
   }
 
@@ -10027,7 +10025,8 @@ protected:
       EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     } else {
       EXPECT_EQ(FromD, FromDInherited->getPreviousDecl());
-      EXPECT_EQ(ToD, ToDInherited->getPreviousDecl());
+      // The order is reversed by the import process.
+      EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     }
   }
 

@@ -232,11 +232,11 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Enum:
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
+    case Type::SubstBuiltinTemplatePack:
     case Type::DeducedTemplateSpecialization:
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
     case Type::DependentName:
-    case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
     case Type::ObjCTypeParam:
     case Type::ObjCInterface:
@@ -846,16 +846,45 @@ void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
   }
 }
 
+static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
+  OS << T->getNumRows() << ", " << T->getNumColumns();
+}
+
+static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                  raw_ostream &OS) {
+  OS << "matrix<";
+  TP.printBefore(T->getElementType(), OS);
+}
+
+static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
+  OS << ", ";
+  printDims(T, OS);
+  OS << ">";
+}
+
+static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                   raw_ostream &OS) {
+  TP.printBefore(T->getElementType(), OS);
+  OS << " __attribute__((matrix_type(";
+  printDims(T, OS);
+  OS << ")))";
+}
+
 void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
                                             raw_ostream &OS) {
-  printBefore(T->getElementType(), OS);
-  OS << " __attribute__((matrix_type(";
-  OS << T->getNumRows() << ", " << T->getNumColumns();
-  OS << ")))";
+  if (Policy.UseHLSLTypes) {
+    printHLSLMatrixBefore(*this, T, OS);
+    return;
+  }
+  printClangMatrixBefore(*this, T, OS);
 }
 
 void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
                                            raw_ostream &OS) {
+  if (Policy.UseHLSLTypes) {
+    printHLSLMatrixAfter(T, OS);
+    return;
+  }
   printAfter(T->getElementType(), OS);
 }
 
@@ -1731,6 +1760,15 @@ void TypePrinter::printSubstTemplateTypeParmAfter(
   printAfter(T->getReplacementType(), OS);
 }
 
+void TypePrinter::printSubstBuiltinTemplatePackBefore(
+    const SubstBuiltinTemplatePackType *T, raw_ostream &OS) {
+  IncludeStrongLifetimeRAII Strong(Policy);
+  OS << "type-pack";
+}
+
+void TypePrinter::printSubstBuiltinTemplatePackAfter(
+    const SubstBuiltinTemplatePackType *T, raw_ostream &OS) {}
+
 void TypePrinter::printSubstTemplateTypeParmPackBefore(
                                         const SubstTemplateTypeParmPackType *T,
                                         raw_ostream &OS) {
@@ -1825,22 +1863,6 @@ void TypePrinter::printDependentNameBefore(const DependentNameType *T,
 
 void TypePrinter::printDependentNameAfter(const DependentNameType *T,
                                           raw_ostream &OS) {}
-
-void TypePrinter::printDependentTemplateSpecializationBefore(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {
-  IncludeStrongLifetimeRAII Strong(Policy);
-
-  OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ElaboratedTypeKeyword::None)
-    OS << " ";
-
-  T->getDependentTemplateName().print(OS, Policy);
-  printTemplateArgumentList(OS, T->template_arguments(), Policy);
-  spaceBeforePlaceHolder(OS);
-}
-
-void TypePrinter::printDependentTemplateSpecializationAfter(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {}
 
 void TypePrinter::printPackExpansionBefore(const PackExpansionType *T,
                                            raw_ostream &OS) {
@@ -2040,6 +2062,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLROV:
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
+  case attr::HLSLIsCounter:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2154,6 +2177,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ExtVectorType:
     OS << "ext_vector_type";
     break;
+  case attr::CFISalt:
+    OS << "cfi_salt(\"" << cast<CFISaltAttr>(T->getAttr())->getSalt() << "\")";
+    break;
   }
   OS << "))";
 }
@@ -2185,6 +2211,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_rov]]";
   if (Attrs.RawBuffer)
     OS << " [[hlsl::raw_buffer]]";
+  if (Attrs.IsCounter)
+    OS << " [[hlsl::is_counter]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {
@@ -2369,7 +2397,7 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     return true;
 
   // A type parameter matches its argument.
-  if (auto *TTPT = Pattern->getAs<TemplateTypeParmType>()) {
+  if (auto *TTPT = Pattern->getAsCanonical<TemplateTypeParmType>()) {
     if (TTPT->getDepth() == Depth && TTPT->getIndex() < Args.size() &&
         Args[TTPT->getIndex()].getKind() == TemplateArgument::Type) {
       QualType SubstArg = Ctx.getQualifiedType(

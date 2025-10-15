@@ -83,6 +83,9 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   // Number of VGPRs that meets number of waves per execution unit request.
   const MCExpr *NumVGPRsForWavesPerEU = nullptr;
 
+  // Number of named barriers used by the kernel.
+  const MCExpr *NamedBarCnt = nullptr;
+
   // Final occupancy.
   const MCExpr *Occupancy = nullptr;
 

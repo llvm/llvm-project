@@ -13,6 +13,7 @@
 #include "LanaiInstrInfo.h"
 #include "LanaiAluCode.h"
 #include "LanaiCondCode.h"
+#include "LanaiSubtarget.h"
 #include "MCTargetDesc/LanaiBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,8 +26,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "LanaiGenInstrInfo.inc"
 
-LanaiInstrInfo::LanaiInstrInfo()
-    : LanaiGenInstrInfo(Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
+LanaiInstrInfo::LanaiInstrInfo(const LanaiSubtarget &STI)
+    : LanaiGenInstrInfo(STI, Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
       RegisterInfo() {}
 
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,

@@ -45,7 +45,7 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
 ; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
-; RUN:	   sort -b -k 1 | FileCheck %s --check-prefixes=LOOP6
+; RUN:	   sort -b -k 1 | FileCheck %s --check-prefixes=LOOP32
 ;
 ; Single loop nest, not unswitched
 ; LOOP1:     Loop at depth 1 containing:
@@ -55,23 +55,23 @@
 ;
 ; Half unswitched loop nests, with unscaled4 and div1 it gets less depth1 loops unswitched
 ; since they have more cost.
-; LOOP-UNSCALE4-DIV1-COUNT-4: Loop at depth 1 containing:
-; LOOP-UNSCALE4-DIV1-COUNT-4: Loop at depth 2 containing:
-; LOOP-UNSCALE4-DIV1-COUNT-4: Loop at depth 3 containing:
+; LOOP-UNSCALE4-DIV1-COUNT-6: Loop at depth 1 containing:
+; LOOP-UNSCALE4-DIV1-COUNT-19: Loop at depth 2 containing:
+; LOOP-UNSCALE4-DIV1-COUNT-29: Loop at depth 3 containing:
 ; LOOP-UNSCALE4-DIV1-NOT:      Loop at depth {{[0-9]+}} containing:
 ;
 ; Half unswitched loop nests, with unscaled4 and div2 it gets more depth1 loops unswitched
 ; as div2 kicks in.
-; LOOP-UNSCALE4-DIV2-COUNT-4: Loop at depth 1 containing:
-; LOOP-UNSCALE4-DIV2-COUNT-4: Loop at depth 2 containing:
-; LOOP-UNSCALE4-DIV2-COUNT-4: Loop at depth 3 containing:
+; LOOP-UNSCALE4-DIV2-COUNT-11: Loop at depth 1 containing:
+; LOOP-UNSCALE4-DIV2-COUNT-22: Loop at depth 2 containing:
+; LOOP-UNSCALE4-DIV2-COUNT-29: Loop at depth 3 containing:
 ; LOOP-UNSCALE4-DIV2-NOT:      Loop at depth {{[0-9]+}} containing:
 ;
-; 6 loop nests, fully unswitched
-; LOOP6-COUNT-6: Loop at depth 1 containing:
-; LOOP6-COUNT-6: Loop at depth 2 containing:
-; LOOP6-COUNT-6: Loop at depth 3 containing:
-; LOOP6-NOT:      Loop at depth {{[0-9]+}} containing:
+; 32 loop nests, fully unswitched
+; LOOP32-COUNT-32: Loop at depth 1 containing:
+; LOOP32-COUNT-32: Loop at depth 2 containing:
+; LOOP32-COUNT-32: Loop at depth 3 containing:
+; LOOP32-NOT:      Loop at depth {{[0-9]+}} containing:
 
 declare void @bar()
 

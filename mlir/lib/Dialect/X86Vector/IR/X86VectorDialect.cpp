@@ -83,29 +83,6 @@ x86vector::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
   return intrinsicOperands;
 }
 
-SmallVector<Value> x86vector::DotInt8Op::getIntrinsicOperands(
-    ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
-    RewriterBase &rewriter) {
-  SmallVector<Value> intrinsicOprnds;
-  Adaptor adaptor(operands, *this);
-  intrinsicOprnds.push_back(adaptor.getW());
-  // Bitcast `a` and `b` to i32
-  Value bitcast_a = LLVM::BitcastOp::create(
-      rewriter, getLoc(),
-      VectorType::get((getA().getType().getShape()[0] / 4),
-                      rewriter.getIntegerType(32)),
-      adaptor.getA());
-  intrinsicOprnds.push_back(bitcast_a);
-  Value bitcast_b = LLVM::BitcastOp::create(
-      rewriter, getLoc(),
-      VectorType::get((getB().getType().getShape()[0] / 4),
-                      rewriter.getIntegerType(32)),
-      adaptor.getB());
-  intrinsicOprnds.push_back(bitcast_b);
-
-  return intrinsicOprnds;
-}
-
 SmallVector<Value> x86vector::BcstToPackedF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {

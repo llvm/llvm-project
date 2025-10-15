@@ -364,7 +364,7 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
@@ -375,7 +375,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
@@ -394,7 +394,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
@@ -408,7 +408,7 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)
@@ -1677,9 +1677,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return m_CombineOr(m_LShr(V, S), m_AShr(V, S));
   };
 
-  const APInt *Qn = nullptr;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_APInt(Qn)))) {
-    Op.Frac = Qn->getZExtValue();
+  uint64_t Qn = 0;
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+    Op.Frac = Qn;
     Exp = T;
   } else {
     Op.Frac = 0;
@@ -1689,9 +1689,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return std::nullopt;
 
   // Check if there is rounding added.
-  const APInt *C = nullptr;
-  if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    uint64_t CV = C->getZExtValue();
+  uint64_t CV;
+  if (Value *T;
+      Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)

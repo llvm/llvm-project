@@ -21,5 +21,4 @@ set(LLVM_TARGET_DEFINITIONS ShardOps.td)
 mlir_tablegen(ShardOps.h.inc -gen-op-decls)
 mlir_tablegen(ShardOps.cpp.inc -gen-op-defs)
 
-add_public_tablegen_target(MLIRShardIncGen)
-add_dependencies(mlir-headers MLIRShardIncGen)
+add_mlir_dialect_tablegen_target(MLIRShardIncGen)

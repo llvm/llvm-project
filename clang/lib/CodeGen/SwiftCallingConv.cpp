@@ -65,7 +65,7 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
   // Deal with various aggregate types as special cases:
 
   // Record types.
-  if (auto recType = type->getAs<RecordType>()) {
+  if (auto recType = type->getAsCanonical<RecordType>()) {
     addTypedData(recType->getOriginalDecl(), begin);
 
     // Array types.

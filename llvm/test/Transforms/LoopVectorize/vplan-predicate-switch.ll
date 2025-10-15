@@ -6,18 +6,27 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-NEXT:  IR %start2 = ptrtoint ptr %start to i64
+; CHECK-NEXT:  IR %end1 = ptrtoint ptr %end to i64
+; CHECK-NEXT:  IR %0 = sub i64 %end1, %start2
+; CHECK-NEXT:  EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<2>
+; CHECK-NEXT:  EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<%n.mod.vf> = urem ir<%0>, ir<2>
 ; CHECK-NEXT:   EMIT vp<[[VTC:%.+]]> = sub ir<%0>, vp<%n.mod.vf>
 ; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
-; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
+; CHECK-NEXT:   EMIT vp<[[STEP1:%.+]]> = extractelement vp<[[STEPS]]>, ir<0>
+; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEP1]]>
+; CHECK-NEXT:   EMIT vp<[[STEP2:%.+]]> = extractelement vp<[[STEPS]]>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[PTR]]>.1 = ptradd ir<%start>, vp<[[STEP2]]>
+; CHECK-NEXT:   EMIT vp<[[PTR_VEC:%.+]]> = buildvector vp<[[PTR]]>, vp<[[PTR]]>.1
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[PTR]]>
 ; CHECK-NEXT:   EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK-NEXT:   EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
@@ -31,7 +40,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store ir<0>, vp<[[PTR]]>
+; CHECK-NEXT:     REPLICATE store ir<0>, vp<[[PTR_VEC]]>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
@@ -48,7 +57,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:     REPLICATE store ir<42>, vp<[[PTR]]>
+; CHECK-NEXT:     REPLICATE store ir<42>, vp<[[PTR_VEC]]>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
@@ -65,7 +74,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store ir<2>, vp<[[PTR]]>
+; CHECK-NEXT:     REPLICATE store ir<2>, vp<[[PTR_VEC]]>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:

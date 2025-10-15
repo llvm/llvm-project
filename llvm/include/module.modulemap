@@ -107,6 +107,12 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/MsgPack.def"
 }
 
+module LLVM_CAS {
+  requires cplusplus
+  umbrella "llvm/CAS"
+  module * { export * }
+}
+
 module LLVM_Config {
   requires cplusplus
   umbrella "llvm/Config"
@@ -400,7 +406,7 @@ module LLVM_Utils {
     exclude header "llvm/Support/PluginLoader.h"
     exclude header "llvm/Support/Solaris/sys/regset.h"
     textual header "llvm/Support/TargetOpcodes.def"
-
+    textual header "llvm/Support/VirtualOutputConfig.def"
   }
 
   module TargetParser {

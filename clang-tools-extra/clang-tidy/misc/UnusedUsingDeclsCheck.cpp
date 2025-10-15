@@ -1,4 +1,4 @@
-//===--- UnusedUsingDeclsCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -131,7 +131,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
-      if (const auto *ET = ECD->getType()->getAs<EnumType>())
+      if (const auto *ET = ECD->getType()->getAsCanonical<EnumType>())
         removeFromFoundDecls(ET->getOriginalDecl());
     }
   };

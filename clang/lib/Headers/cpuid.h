@@ -348,7 +348,7 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
 // In some cases, offloading will set the host as the aux triple and define the
 // builtin. Given __has_builtin does not detect builtins on aux triples, we need
 // to explicitly check for some offloading cases.
-#ifndef __NVPTX__
+#if !defined(__NVPTX__) && !defined(__AMDGPU__) && !defined(__SPIRV__)
 static __inline void __cpuidex(int __cpu_info[4], int __leaf, int __subleaf) {
   __cpuid_count(__leaf, __subleaf, __cpu_info[0], __cpu_info[1], __cpu_info[2],
                 __cpu_info[3]);
