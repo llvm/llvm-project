@@ -177,10 +177,15 @@ private:
   Register AgnosticZABufferPtr = AArch64::NoRegister;
 };
 
+/// Checks if \p State is a legal edge bundle state. For a state to be a legal
+/// bundle state, it must be possible to transition from it to any other bundle
+/// state without losing any ZA state. This is the case for ACTIVE/LOCAL_SAVED,
+/// as you can transition between those states by saving/restoring ZA. The OFF
+/// state would not be legal, as transitioning to it drops the content of ZA.
 static bool isLegalEdgeBundleZAState(ZAState State) {
   switch (State) {
-  case ZAState::ACTIVE:
-  case ZAState::LOCAL_SAVED:
+  case ZAState::ACTIVE:      // ZA state within the accumulator/ZT0.
+  case ZAState::LOCAL_SAVED: // ZA state is saved on the stack.
     return true;
   default:
     return false;
@@ -463,24 +468,24 @@ void MachineSMEABI::propagateDesiredStates(FunctionInfo &FnInfo,
 
   while (!Worklist.empty()) {
     MachineBasicBlock *MBB = Worklist.pop_back_val();
-    auto &BlockInfo = FnInfo.Blocks[MBB->getNumber()];
+    BlockInfo &Block = FnInfo.Blocks[MBB->getNumber()];
 
     // Pick a legal edge bundle state that matches the majority of
     // predecessors/successors.
     int StateCounts[ZAState::NUM_ZA_STATE] = {0};
     for (MachineBasicBlock *PredOrSucc :
          Forwards ? predecessors(MBB) : successors(MBB)) {
-      auto &PredOrSuccBlockInfo = FnInfo.Blocks[PredOrSucc->getNumber()];
-      auto ZAState = GetBlockState(PredOrSuccBlockInfo, !Forwards);
+      BlockInfo &PredOrSuccBlock = FnInfo.Blocks[PredOrSucc->getNumber()];
+      ZAState ZAState = GetBlockState(PredOrSuccBlock, !Forwards);
       if (isLegalEdgeBundleZAState(ZAState))
         StateCounts[ZAState]++;
     }
 
     ZAState PropagatedState = ZAState(max_element(StateCounts) - StateCounts);
-    auto &CurrentState = GetBlockState(BlockInfo, Forwards);
+    ZAState &CurrentState = GetBlockState(Block, Forwards);
     if (PropagatedState != CurrentState) {
       CurrentState = PropagatedState;
-      auto &OtherState = GetBlockState(BlockInfo, !Forwards);
+      ZAState &OtherState = GetBlockState(Block, !Forwards);
       // Propagate to the incoming/outgoing state if that is also "ANY".
       if (OtherState == ZAState::ANY)
         OtherState = PropagatedState;
@@ -488,9 +493,8 @@ void MachineSMEABI::propagateDesiredStates(FunctionInfo &FnInfo,
       // worklist.
       for (MachineBasicBlock *SuccOrPred :
            Forwards ? successors(MBB) : predecessors(MBB)) {
-        auto &SuccOrPredBlockInfo = FnInfo.Blocks[SuccOrPred->getNumber()];
-        if (!isLegalEdgeBundleZAState(
-                GetBlockState(SuccOrPredBlockInfo, Forwards)))
+        BlockInfo &SuccOrPredBlock = FnInfo.Blocks[SuccOrPred->getNumber()];
+        if (!isLegalEdgeBundleZAState(GetBlockState(SuccOrPredBlock, Forwards)))
           Worklist.push_back(SuccOrPred);
       }
     }
