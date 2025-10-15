@@ -1852,9 +1852,8 @@ _mm256_sad_epu8(__m256i __a, __m256i __b)
 ///    control byte specify the index (within the same 128-bit half) of \a __a
 ///    to copy to the result byte.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_shuffle_epi8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_shuffle_epi8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_pshufb256((__v32qi)__a, (__v32qi)__b);
 }
 

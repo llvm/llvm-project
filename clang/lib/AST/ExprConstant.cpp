@@ -11619,6 +11619,44 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
+static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
+                              APValue &Out) {
+  APValue SrcVec, ControlVec;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), SrcVec))
+    return false;
+  if (!EvaluateAsRValue(Info, Call->getArg(1), ControlVec))
+    return false;
+
+  const auto *VT = Call->getType()->getAs<VectorType>();
+  if (!VT)
+    return false;
+
+  QualType ElemT = VT->getElementType();
+  unsigned NumElts = VT->getNumElements();
+
+  SmallVector<APValue, 64> ResultElements;
+  ResultElements.reserve(NumElts);
+
+  for (unsigned Idx = 0; Idx != NumElts; ++Idx) {
+    APValue CtlVal = ControlVec.getVectorElt(Idx);
+    APSInt CtlByte = CtlVal.getInt();
+    uint8_t Ctl = static_cast<uint8_t>(CtlByte.getZExtValue());
+
+    if (Ctl & 0x80) {
+      APValue Zero(Info.Ctx.MakeIntValue(0, ElemT));
+      ResultElements.push_back(Zero);
+    } else {
+      unsigned LaneBase = (Idx / 16) * 16;
+      unsigned SrcOffset = Ctl & 0x0F;
+      unsigned SrcIdx = LaneBase + SrcOffset;
+
+      ResultElements.push_back(SrcVec.getVectorElt(SrcIdx));
+    }
+  }
+  Out = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
                              bool IsShufHW, APValue &Out) {
   APValue Vec;
@@ -12239,6 +12277,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_pshufb128:
+  case X86::BI__builtin_ia32_pshufb256:
+  case X86::BI__builtin_ia32_pshufb512: {
+    APValue R;
+    if (!evalPshufbBuiltin(Info, E, R))
+      return false;
+    return Success(R, E);
   }
 
   case X86::BI__builtin_ia32_pshuflw:

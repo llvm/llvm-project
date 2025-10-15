@@ -9,6 +9,7 @@
 #include "RegisterContextFreeBSD_x86_64.h"
 #include "RegisterContextFreeBSD_i386.h"
 #include "RegisterContextPOSIX_x86.h"
+#include "llvm/Support/Threading.h"
 #include <vector>
 
 using namespace lldb_private;
@@ -69,40 +70,34 @@ struct UserArea {
 #include "RegisterInfos_x86_64.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 
-static std::vector<lldb_private::RegisterInfo> &GetSharedRegisterInfoVector() {
-  static std::vector<lldb_private::RegisterInfo> register_infos;
-  return register_infos;
-}
-
-static const RegisterInfo *
-GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
-  static std::vector<lldb_private::RegisterInfo> g_register_infos(
-      GetSharedRegisterInfoVector());
-
-  // Allocate RegisterInfo only once
-  if (g_register_infos.empty()) {
-    // Copy the register information from base class
-    std::unique_ptr<RegisterContextFreeBSD_i386> reg_interface(
-        new RegisterContextFreeBSD_i386(arch));
-    const RegisterInfo *base_info = reg_interface->GetRegisterInfo();
-    g_register_infos.insert(g_register_infos.end(), &base_info[0],
-                            &base_info[k_num_registers_i386]);
+static std::vector<lldb_private::RegisterInfo> &
+GetSharedRegisterInfoVector_i386(const lldb_private::ArchSpec &arch) {
+  static std::vector<lldb_private::RegisterInfo> g_register_infos;
+  static llvm::once_flag g_initialized;
+  llvm::call_once(g_initialized, [&]() {
+    if (g_register_infos.empty()) {
+      // Copy the register information from base class
+      std::unique_ptr<RegisterContextFreeBSD_i386> reg_interface(
+          new RegisterContextFreeBSD_i386(arch));
+      const RegisterInfo *base_info = reg_interface->GetRegisterInfo();
+      g_register_infos.insert(g_register_infos.end(), &base_info[0],
+                              &base_info[k_num_registers_i386]);
 
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.
 #define UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
 #include "RegisterInfos_x86_64.h"
 #undef UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
-  }
-
-  return &g_register_infos[0];
+    }
+  });
+  return g_register_infos;
 }
 
 static const RegisterInfo *
 PrivateGetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::x86:
-    return GetRegisterInfo_i386(target_arch);
+    return &GetSharedRegisterInfoVector_i386(target_arch)[0];
   case llvm::Triple::x86_64:
     return g_register_infos_x86_64;
   default:
@@ -116,9 +111,10 @@ PrivateGetRegisterCount(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::x86:
     // This vector should have already been filled.
-    assert(!GetSharedRegisterInfoVector().empty() &&
+    assert(!GetSharedRegisterInfoVector_i386(target_arch).empty() &&
            "i386 register info vector not filled.");
-    return static_cast<uint32_t>(GetSharedRegisterInfoVector().size());
+    return static_cast<uint32_t>(
+        GetSharedRegisterInfoVector_i386(target_arch).size());
   case llvm::Triple::x86_64:
     return static_cast<uint32_t>(sizeof(g_register_infos_x86_64) /
                                  sizeof(g_register_infos_x86_64[0]));
