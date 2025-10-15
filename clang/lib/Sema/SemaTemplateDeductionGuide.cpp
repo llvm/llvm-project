@@ -996,7 +996,7 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     // dependent. e.g.
     //   using AliasFoo = Foo<bool>;
     if (const auto *CTSD =
-            dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl())) {
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl())) {
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
@@ -1054,12 +1054,11 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // such that T can be deduced as U.
   auto RType = F->getTemplatedDecl()->getReturnType();
   // The (trailing) return type of the deduction guide.
-  const TemplateSpecializationType *FReturnType =
-      RType->getAs<TemplateSpecializationType>();
+  const auto *FReturnType = RType->getAs<TemplateSpecializationType>();
   if (const auto *ICNT = RType->getAsCanonical<InjectedClassNameType>())
     // implicitly-generated deduction guide.
     FReturnType = cast<TemplateSpecializationType>(
-        ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+        ICNT->getDecl()->getCanonicalTemplateSpecializationType(
             SemaRef.Context));
   assert(FReturnType && "expected to see a return type");
   // Deduce template arguments of the deduction guide f from the RHS of
