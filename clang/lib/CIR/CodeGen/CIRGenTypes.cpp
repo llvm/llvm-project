@@ -159,7 +159,7 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
     for (const clang::CXXBaseSpecifier &i : crd->bases())
       if (!isSafeToConvert(i.getType()
                                ->castAs<RecordType>()
-                               ->getOriginalDecl()
+                               ->getDecl()
                                ->getDefinitionOrSelf(),
                            cgt, alreadyChecked))
         return false;
@@ -279,8 +279,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
-    return convertRecordDeclType(
-        recordType->getOriginalDecl()->getDefinitionOrSelf());
+    return convertRecordDeclType(recordType->getDecl()->getDefinitionOrSelf());
 
   // Has the type already been processed?
   TypeCacheTy::iterator tci = typeCache.find(ty);

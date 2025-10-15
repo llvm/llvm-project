@@ -402,7 +402,7 @@ void StackLayoutModifier::classifyCFIs() {
         break;
       case MCCFIInstruction::OpRestoreState: {
         assert(!CFIStack.empty() && "Corrupt CFI stack");
-        std::pair<int64_t, uint16_t> &Elem = CFIStack.top();
+        std::pair<int64_t, uint16_t> Elem = CFIStack.top();
         CFIStack.pop();
         CfaOffset = Elem.first;
         CfaReg = Elem.second;
