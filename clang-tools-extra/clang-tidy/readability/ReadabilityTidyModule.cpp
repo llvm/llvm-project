@@ -76,6 +76,8 @@ public:
         "readability-ambiguous-smartptr-reset-call");
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
+    CheckFactories.registerCheck<AvoidDefaultLambdaCaptureCheck>(
+        "readability-avoid-default-lambda-capture");
     CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
         "readability-avoid-nested-conditional-operator");
     CheckFactories.registerCheck<AvoidReturnWithVoidValueCheck>(
@@ -94,8 +96,6 @@ public:
         "readability-container-size-empty");
     CheckFactories.registerCheck<ConvertMemberFunctionsToStatic>(
         "readability-convert-member-functions-to-static");
-    CheckFactories.registerCheck<AvoidDefaultLambdaCaptureCheck>(
-        "readability-avoid-default-lambda-capture");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
         "readability-delete-null-pointer");
     CheckFactories.registerCheck<DuplicateIncludeCheck>(
