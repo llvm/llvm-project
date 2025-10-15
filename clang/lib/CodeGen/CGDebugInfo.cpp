@@ -680,12 +680,13 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
   return LangTag;
 }
 
-static std::pair<llvm::dwarf::SourceLanguageName, uint32_t>
-GetSourceLanguageName(const CodeGenModule &CGM) {
-  const CodeGenOptions &CGO = CGM.getCodeGenOpts();
-  const LangOptions &LO = CGM.getLangOpts();
+static llvm::DISourceLanguageName
+GetDISourceLanguageName(const CodeGenModule &CGM) {
+  // Emit pre-DWARFv6 language codes.
+  if (CGM.getCodeGenOpts().DwarfVersion < 6)
+    return llvm::DISourceLanguageName(GetSourceLanguage(CGM));
 
-  assert(CGO.DwarfVersion >= 6);
+  const LangOptions &LO = CGM.getLangOpts();
 
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
@@ -705,17 +706,7 @@ GetSourceLanguageName(const CodeGenModule &CGM) {
     LangVersion = LO.getCLangStd().value_or(0);
   }
 
-  return {LangTag, LangVersion};
-}
-
-static llvm::DISourceLanguageName
-GetDISourceLanguageName(const CodeGenModule &CGM) {
-  // Emit pre-DWARFv6 language codes.
-  if (CGM.getCodeGenOpts().DwarfVersion < 6)
-    return llvm::DISourceLanguageName(GetSourceLanguage(CGM));
-
-  auto [LName, LVersion] = GetSourceLanguageName(CGM);
-  return llvm::DISourceLanguageName(LName, LVersion);
+  return llvm::DISourceLanguageName(LangTag, LangVersion);
 }
 
 void CGDebugInfo::CreateCompileUnit() {
