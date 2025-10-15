@@ -148,8 +148,8 @@ def testGPUFuncOp():
     # CHECK:   gpu.return
     # CHECK: }
     # CHECK: gpu.func @kernel1() kernel attributes
-    # CHECK-SAME: gpu.known_block_size = array<i32: 1, 2, 3>
-    # CHECK-SAME: gpu.known_grid_size = array<i32: 4, 5, 6>
+    # CHECK-SAME: known_block_size = array<i32: 1, 2, 3>
+    # CHECK-SAME: known_grid_size = array<i32: 4, 5, 6>
     # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
     # CHECK:   gpu.return
     # CHECK: }

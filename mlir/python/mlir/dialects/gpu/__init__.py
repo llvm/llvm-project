@@ -87,9 +87,8 @@ class GPUFuncOp(GPUFuncOp):
 
         if known_block_size is not None:
             if isinstance(known_block_size, Sequence):
-                self.attributes[self.KNOWN_BLOCK_SIZE_ATTR_NAME] = (
-                    DenseI32ArrayAttr.get(known_block_size)
-                )
+                block_size = DenseI32ArrayAttr.get(known_block_size)
+                self.attributes[self.KNOWN_BLOCK_SIZE_ATTR_NAME] = block_size
             elif isinstance(known_block_size, DenseI32ArrayAttr):
                 self.attributes[self.KNOWN_BLOCK_SIZE_ATTR_NAME] = known_block_size
             else:
@@ -99,9 +98,8 @@ class GPUFuncOp(GPUFuncOp):
 
         if known_grid_size is not None:
             if isinstance(known_grid_size, Sequence):
-                self.attributes[self.KNOWN_GRID_SIZE_ATTR_NAME] = DenseI32ArrayAttr.get(
-                    known_grid_size
-                )
+                grid_size = DenseI32ArrayAttr.get(known_grid_size)
+                self.attributes[self.KNOWN_GRID_SIZE_ATTR_NAME] = grid_size
             elif isinstance(known_grid_size, DenseI32ArrayAttr):
                 self.attributes[self.KNOWN_GRID_SIZE_ATTR_NAME] = known_grid_size
             else:
