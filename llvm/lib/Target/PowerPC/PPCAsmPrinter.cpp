@@ -411,11 +411,30 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
+  fprintf(stderr, "Printing Inline ASM:\n");
+  MI->dump();
+  fprintf(stderr, "Operand #%i to be printed:\n", OpNo);
+  MI->getOperand(OpNo).dump();
+  for(int i = 0; i < MI->getNumOperands(); i++) {
+    if (i == OpNo) continue;
+    fprintf(stderr, "Other Operand #%i:\n", i);
+    MI->getOperand(i).dump();
+  }
   if (ExtraCode && ExtraCode[0]) {
+    fprintf(stderr, "ExtraCode[0] is %c\n", ExtraCode[0]);
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
 
     switch (ExtraCode[0]) {
-    default: return true;  // Unknown modifier.
+    default: {
+      const char *AsmStr = MI->getOperand(0).getSymbolName();
+      const MDNode *LocMD = MI->getLocCookieMD();
+      uint64_t LocCookie = LocMD ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue() : 0;
+      const Function &Fn = MI->getMF()->getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoInlineAsm(
+          LocCookie,
+          "Unknown modifier in inline asm: '" + Twine(AsmStr) + "'"));
+      return true;  // Unknown modifier.
+    }
     case 'L': // A memory reference to the upper word of a double word op.
       O << getDataLayout().getPointerSize() << "(";
       printOperand(MI, OpNo, O);

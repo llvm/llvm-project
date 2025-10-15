@@ -2689,6 +2689,8 @@ void Verifier::verifyInlineAsmCall(const CallBase &Call) {
   const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   unsigned ArgNo = 0;
   unsigned LabelNo = 0;
+  fprintf(stderr,"Call:\n");
+  Call.dump();
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     if (CI.Type == InlineAsm::isLabel) {
       ++LabelNo;
@@ -2701,6 +2703,8 @@ void Verifier::verifyInlineAsmCall(const CallBase &Call) {
 
     if (CI.isIndirect) {
       const Value *Arg = Call.getArgOperand(ArgNo);
+      fprintf(stderr,"Arg:\n");
+      Arg->dump();
       Check(Arg->getType()->isPointerTy(),
             "Operand for indirect constraint must have pointer type", &Call);
 
