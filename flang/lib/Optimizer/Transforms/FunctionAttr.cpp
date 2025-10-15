@@ -95,10 +95,6 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoNansFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
-  if (approxFuncFPMath)
-    func->setAttr(
-        mlir::LLVM::LLVMFuncOp::getApproxFuncFpMathAttrName(llvmFuncOpName),
-        mlir::BoolAttr::get(context, true));
   if (noSignedZerosFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoSignedZerosFpMathAttrName(llvmFuncOpName),

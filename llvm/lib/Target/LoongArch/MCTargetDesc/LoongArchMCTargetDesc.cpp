@@ -163,8 +163,10 @@ public:
       break;
     }
     case LoongArch::PCADDU18I:
-      setGPRState(Inst.getOperand(0).getReg(),
-                  Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 18));
+      setGPRState(
+          Inst.getOperand(0).getReg(),
+          Addr + SignExtend64<38>(
+                     static_cast<uint64_t>(Inst.getOperand(1).getImm()) << 18));
       break;
     }
   }

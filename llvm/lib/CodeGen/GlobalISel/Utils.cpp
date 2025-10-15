@@ -114,7 +114,7 @@ Register llvm::constrainOperandRegClass(
   // Assume physical registers are properly constrained.
   assert(Reg.isVirtual() && "PhysReg not implemented");
 
-  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI, MF);
+  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI);
   // Some of the target independent instructions, like COPY, may not impose any
   // register class constraints on some of their operands: If it's a use, we can
   // skip constraining as the instruction defining the register would constrain
@@ -1409,7 +1409,8 @@ bool llvm::isBuildVectorConstantSplat(const Register Reg,
 
 bool llvm::isBuildVectorConstantSplat(const Register Reg,
                                       const MachineRegisterInfo &MRI,
-                                      APInt SplatValue, bool AllowUndef) {
+                                      const APInt &SplatValue,
+                                      bool AllowUndef) {
   if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef)) {
     if (SplatValAndReg->Value.getBitWidth() < SplatValue.getBitWidth())
       return APInt::isSameValue(
@@ -1431,7 +1432,8 @@ bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
 
 bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
-                                      APInt SplatValue, bool AllowUndef) {
+                                      const APInt &SplatValue,
+                                      bool AllowUndef) {
   return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
                                     AllowUndef);
 }
@@ -1758,9 +1760,11 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMUL:

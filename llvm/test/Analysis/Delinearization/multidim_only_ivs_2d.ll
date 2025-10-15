@@ -12,14 +12,12 @@
 define void @foo(i64 %n, i64 %m, ptr %A) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: %val = load double, ptr %arrayidx, align 8
-; CHECK-NEXT:  In Loop with Header: for.j
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,(8 * %m)}<%for.i>,+,8}<%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store double %val, ptr %arrayidx, align 8
-; CHECK-NEXT:  In Loop with Header: for.j
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,(8 * %m)}<%for.i>,+,8}<%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.

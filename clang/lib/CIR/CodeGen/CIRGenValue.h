@@ -371,6 +371,13 @@ public:
                    mayOverlap, isZeroed);
   }
 
+  IsDestructed_t isExternallyDestructed() const {
+    return IsDestructed_t(destructedFlag);
+  }
+  void setExternallyDestructed(bool destructed = true) {
+    destructedFlag = destructed;
+  }
+
   clang::Qualifiers getQualifiers() const { return quals; }
 
   Address getAddress() const { return addr; }
@@ -378,6 +385,8 @@ public:
   bool isIgnored() const { return !addr.isValid(); }
 
   mlir::Value getPointer() const { return addr.getPointer(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 

@@ -16,6 +16,7 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_retained | FileCheck -check-prefix=CHECK-METHOD-RETURNING-FRT-RETAINED %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter WrappedOptions | FileCheck -check-prefix=CHECK-WRAPPED-OPTIONS %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableWithDestroyType | FileCheck -check-prefix=CHECK-NONCOPYABLE-WITH-DESTROY %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImportAsUnsafe | FileCheck -check-prefix=CHECK-IMPORT-AS-UNSAFE %s
 
 #include <SwiftImportAs.h>
 
@@ -103,3 +104,32 @@
 // CHECK-NONCOPYABLE-WITH-DESTROY: RecordDecl {{.*}}struct NoncopyableWithDestroyType
 // CHECK-NONCOPYABLE-WITH-DESTROY: SwiftAttrAttr {{.+}} "destroy:NCDDestroy"
 // CHECK-NONCOPYABLE-WITH-DESTROY: SwiftAttrAttr {{.+}} "~Copyable"
+
+// CHECK-IMPORT-AS-UNSAFE: Dumping ImportAsUnsafe:
+// CHECK-IMPORT-AS-UNSAFE: FunctionDecl {{.+}} ImportAsUnsafe
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "unsafe"
+
+// CHECK-IMPORT-AS-UNSAFE: Dumping ImportAsUnsafeStruct:
+// CHECK-IMPORT-AS-UNSAFE: CXXRecordDecl {{.+}} ImportAsUnsafeStruct
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "unsafe"
+
+// CHECK-IMPORT-AS-UNSAFE: Dumping StructWithUnsafeMethod::ImportAsUnsafeMethod:
+// CHECK-IMPORT-AS-UNSAFE: CXXMethodDecl {{.+}} ImportAsUnsafeMethod
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "unsafe"
+
+// CHECK-IMPORT-AS-UNSAFE: Dumping StructWithUnsafeMethod::ImportAsUnsafeMethodActuallySafe:
+// CHECK-IMPORT-AS-UNSAFE: CXXMethodDecl {{.+}} ImportAsUnsafeMethodActuallySafe
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "safe"
+
+// CHECK-IMPORT-AS-UNSAFE: Dumping ImportAsUnsafeAlreadyAnnotated:
+// CHECK-IMPORT-AS-UNSAFE: FunctionDecl {{.+}} ImportAsUnsafeAlreadyAnnotated
+// CHECK-IMPORT-AS-UNSAFE: SwiftVersionedAdditionAttr {{.+}} IsReplacedByActive
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "unsafe"
+// CHECK-IMPORT-AS-UNSAFE-EMPTY:
+
+// CHECK-IMPORT-AS-UNSAFE: Dumping ImportAsUnsafeVersioned:
+// CHECK-IMPORT-AS-UNSAFE: FunctionDecl {{.+}} ImportAsUnsafeVersioned
+// CHECK-IMPORT-AS-UNSAFE: SwiftVersionedAdditionAttr {{.+}} 3.0
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "unsafe"
+// CHECK-IMPORT-AS-UNSAFE: SwiftVersionedAdditionAttr {{.+}} 6.0
+// CHECK-IMPORT-AS-UNSAFE: SwiftAttrAttr {{.+}} "safe"

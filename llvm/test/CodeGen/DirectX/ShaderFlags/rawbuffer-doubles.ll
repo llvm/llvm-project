@@ -16,7 +16,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK: Function rawbuf : 0x00000014
 define void @rawbuf() "hlsl.export" {
   %rb = tail call target("dx.RawBuffer", <4 x double>, 0, 0)
-    @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f16_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+    @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f16_0_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
   %load = call { <4 x double>, i1 }
     @llvm.dx.resource.load.rawbuffer.v4double.tdx.RawBuffer_v4f16_0_0t(target("dx.RawBuffer", <4 x double>, 0, 0) %rb, i32 0, i32 0)
   %extract = extractvalue { <4 x double>, i1 } %load, 0

@@ -7712,18 +7712,6 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
 /// \endcode
 extern const AstTypeMatcher<DependentNameType> dependentNameType;
 
-/// Matches a dependent template specialization type
-///
-/// Example matches A<T>::template B<T>
-/// \code
-///   template<typename T> struct A;
-///   template<typename T> struct declToImport {
-///     typename A<T>::template B<T> a;
-///   };
-/// \endcode
-extern const AstTypeMatcher<DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
-
 /// Matches declarations whose declaration context, interpreted as a
 /// Decl, matches \c InnerMatcher.
 ///
@@ -8823,7 +8811,7 @@ AST_MATCHER(OMPDefaultClause, isFirstPrivateKind) {
 ///   #pragma omp          for
 /// \endcode
 ///
-/// `ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
+/// ``ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
 /// ``omp parallel`` and ``omp parallel for``.
 ///
 /// If the matcher is use from clang-query, ``OpenMPClauseKind`` parameter

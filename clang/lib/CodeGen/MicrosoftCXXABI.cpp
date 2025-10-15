@@ -77,6 +77,8 @@ public:
         return false;
 
       case Dtor_Comdat: llvm_unreachable("emitting dtor comdat as function?");
+      case Dtor_Unified:
+        llvm_unreachable("unexpected unified dtor type");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -901,12 +903,19 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                               const CXXDestructorDecl *Dtor) {
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
-  bool UseGlobalDelete = DE->isGlobalDelete();
-  CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
-                                                  /*CallOrInvoke=*/nullptr);
-  if (UseGlobalDelete)
-    CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
+  if (!getContext().getTargetInfo().callGlobalDeleteInDeletingDtor(
+          getContext().getLangOpts())) {
+    bool UseGlobalDelete = DE->isGlobalDelete();
+    CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
+    llvm::Value *MDThis =
+        EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
+                                  /*CallOrInvoke=*/nullptr);
+    if (UseGlobalDelete)
+      CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
+  } else {
+    EmitVirtualDestructorCall(CGF, Dtor, Dtor_Deleting, Ptr, DE,
+                              /*CallOrInvoke=*/nullptr);
+  }
 }
 
 void MicrosoftCXXABI::emitRethrow(CodeGenFunction &CGF, bool isNoReturn) {
@@ -1417,6 +1426,8 @@ llvm::GlobalValue::LinkageTypes MicrosoftCXXABI::getCXXDestructorLinkage(
     // and are emitted everywhere they are used. They are internal if the class
     // is internal.
     return llvm::GlobalValue::LinkOnceODRLinkage;
+  case Dtor_Unified:
+    llvm_unreachable("MS C++ ABI does not support unified dtors");
   case Dtor_Comdat:
     llvm_unreachable("MS C++ ABI does not support comdat dtors");
   }
@@ -2019,9 +2030,12 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
   ASTContext &Context = getContext();
-  llvm::Value *ImplicitParam = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
-      DtorType == Dtor_Deleting);
+  bool IsDeleting = DtorType == Dtor_Deleting;
+  bool IsGlobalDelete = D && D->isGlobalDelete() &&
+                        Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+                            Context.getLangOpts());
+  llvm::Value *ImplicitParam =
+      CGF.Builder.getInt32((IsDeleting ? 1 : 0) | (IsGlobalDelete ? 4 : 0));
 
   QualType ThisTy;
   if (CE) {

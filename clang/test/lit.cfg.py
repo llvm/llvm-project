@@ -92,7 +92,7 @@ tools = [
     "clang-diff",
     "clang-format",
     "clang-repl",
-    "clang-offload-packager",
+    "llvm-offload-binary",
     "clang-tblgen",
     "clang-scan-deps",
     "clang-installapi",
@@ -140,24 +140,29 @@ def have_host_out_of_process_jit_feature_support():
 
     return False
 
-def have_host_jit_feature_support(feature_name):
+
+def run_clang_repl(args):
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
     if not clang_repl_exe:
-        return False
+        return ""
 
     try:
         clang_repl_cmd = subprocess.Popen(
-            [clang_repl_exe, "--host-supports-" + feature_name], stdout=subprocess.PIPE
+            [clang_repl_exe, args], stdout=subprocess.PIPE
         )
     except OSError:
         print("could not exec clang-repl")
-        return False
+        return ""
 
     clang_repl_out = clang_repl_cmd.stdout.read().decode("ascii")
     clang_repl_cmd.wait()
 
-    return "true" in clang_repl_out
+    return clang_repl_out
+
+
+def have_host_jit_feature_support(feature_name):
+    return "true" in run_clang_repl("--host-supports-" + feature_name)
 
 def have_host_clang_repl_cuda():
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
@@ -191,6 +196,8 @@ if have_host_jit_feature_support('jit'):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+    hosttriple = run_clang_repl("--host-jit-triple")
+    config.substitutions.append(("%host-jit-triple", hosttriple.strip()))
 
     if have_host_out_of_process_jit_feature_support():
         config.available_features.add("host-supports-out-of-process-jit")
@@ -223,6 +230,10 @@ if config.clang_staticanalyzer:
             '"%s" %s' % (config.python_executable, csv2json_path),
         )
     )
+
+# ClangIR support
+if config.clang_enable_cir:
+    config.available_features.add("cir-support")
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 

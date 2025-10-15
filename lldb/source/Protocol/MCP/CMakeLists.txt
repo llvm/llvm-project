@@ -8,6 +8,7 @@ add_lldb_library(lldbProtocolMCP NO_PLUGIN_DEPENDENCIES
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbHost
     lldbUtility
 )
 

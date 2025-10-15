@@ -44,6 +44,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstdint>
@@ -478,6 +479,7 @@ Error Module::materializeAll() {
 }
 
 Error Module::materializeMetadata() {
+  llvm::TimeTraceScope timeScope("Materialize metadata");
   if (!Materializer)
     return Error::success();
   return Materializer->materializeMetadata();

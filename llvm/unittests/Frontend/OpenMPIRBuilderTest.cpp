@@ -11,6 +11,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -212,8 +213,8 @@ protected:
     DIBuilder DIB(*M);
     auto File = DIB.createFile("test.dbg", "/src", std::nullopt,
                                std::optional<StringRef>("/src/test.dbg"));
-    auto CU =
-        DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
+    auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C),
+                                    File, "llvm-C", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
@@ -7850,6 +7851,30 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
   splitBB(Builder, /*CreateBranch=*/true, "test");
   if (AllocaBB->getTerminator())
     EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
+}
+
+TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Test calling spliceBB with an empty Block (but having trailing debug
+  // records).
+  DIBuilder DIB(*M);
+  DISubprogram *SP = F->getSubprogram();
+  DIType *VoidPtrTy =
+      DIB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+  DILocalVariable *Var = DIB.createParameterVariable(
+      SP, "test", /*ArgNo*/ 1, SP->getFile(), /*LineNo=*/0, VoidPtrTy);
+  DIB.insertDeclare(F->getArg(0), Var, DIB.createExpression(), DL,
+                    Builder.GetInsertPoint());
+  BasicBlock *New = BasicBlock::Create(Ctx, "", F);
+  spliceBB(Builder.saveIP(), New, true, DL);
+  Instruction *Terminator = BB->getTerminator();
+  EXPECT_NE(Terminator, nullptr);
+  EXPECT_FALSE(Terminator->getDbgRecordRange().empty());
 }
 
 } // namespace

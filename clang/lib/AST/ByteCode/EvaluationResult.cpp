@@ -8,6 +8,7 @@
 
 #include "EvaluationResult.h"
 #include "InterpState.h"
+#include "Pointer.h"
 #include "Record.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -15,37 +16,6 @@
 
 namespace clang {
 namespace interp {
-
-APValue EvaluationResult::toAPValue() const {
-  assert(!empty());
-  switch (Kind) {
-  case LValue:
-    // Either a pointer or a function pointer.
-    if (const auto *P = std::get_if<Pointer>(&Value))
-      return P->toAPValue(Ctx->getASTContext());
-    else
-      llvm_unreachable("Unhandled LValue type");
-    break;
-  case RValue:
-    return std::get<APValue>(Value);
-  case Valid:
-    return APValue();
-  default:
-    llvm_unreachable("Unhandled result kind?");
-  }
-}
-
-std::optional<APValue> EvaluationResult::toRValue() const {
-  if (Kind == RValue)
-    return toAPValue();
-
-  assert(Kind == LValue);
-
-  // We have a pointer and want an RValue.
-  if (const auto *P = std::get_if<Pointer>(&Value))
-    return P->toRValue(*Ctx, getSourceType());
-  llvm_unreachable("Unhandled lvalue kind");
-}
 
 static void DiagnoseUninitializedSubobject(InterpState &S, SourceLocation Loc,
                                            const FieldDecl *SubObjDecl) {
@@ -162,6 +132,8 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   assert(empty());
 
   if (Ptr.isZero())
+    return true;
+  if (!Ptr.isBlockPointer())
     return true;
 
   // We can't inspect dead pointers at all. Return true here so we can

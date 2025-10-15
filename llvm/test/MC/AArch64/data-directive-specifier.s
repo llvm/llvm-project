@@ -23,11 +23,14 @@ l:
 # CHECK-NEXT:   0x0 R_AARCH64_GOTPCREL32 data1 0x0
 # CHECK-NEXT:   0x4 R_AARCH64_GOTPCREL32 extern 0x4
 # CHECK-NEXT:   0x8 R_AARCH64_GOTPCREL32 extern 0xFFFFFFFFFFFFFFFB
+# CHECK-NEXT:   0xC R_AARCH64_FUNCINIT64 .text 0
 # CHECK-NEXT: }
 .section .data1,"aw"
 data1:
 .word %gotpcrel(data1)
 .word %gotpcrel(extern+4), %gotpcrel(extern-5)
+
+.quad %funcinit(l)
 
 .ifdef ERR0
 # ERR0: [[#@LINE+1]]:8: error: invalid relocation specifier

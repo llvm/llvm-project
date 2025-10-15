@@ -27,6 +27,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.rsqrtf
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -373,6 +388,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.fmodf16
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  fmodbf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    fmodbf16_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.fmodbf16
+    libc.src.__support.FPUtil.bfloat16
   LINK_LIBRARIES
     -lpthread
 )

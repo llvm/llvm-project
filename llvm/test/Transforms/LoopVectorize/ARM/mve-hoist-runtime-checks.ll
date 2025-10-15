@@ -51,7 +51,7 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[MUL_US]]
 ; CHECK-NEXT:    [[MUL6_US:%.*]] = mul nsw i32 [[I_023_US]], [[ADD5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i32 [[MUL6_US]]
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
@@ -60,7 +60,7 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[FOUND_CONFLICT]], [[STRIDE_CHECK]]
 ; CHECK-NEXT:    [[STRIDE_CHECK2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[STRIDE_CHECK2]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
@@ -79,10 +79,9 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[OUTER_LOOP]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
-; CHECK-NEXT:    [[J_021_US:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_US:%.*]], [[INNER_LOOP]] ]
+; CHECK-NEXT:    [[J_021_US:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC_US:%.*]], [[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr i32, ptr [[TMP7]], i32 [[J_021_US]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[J_021_US]]

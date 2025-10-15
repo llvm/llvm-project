@@ -111,7 +111,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       break;
     reportError(Fixup.getLoc(), AArch64::getSpecifierName(RefKind) +
                                     " can only be used in a .word directive");
-    return ELF::R_RISCV_NONE;
+    return ELF::R_AARCH64_NONE;
   default:
     break;
   }
@@ -247,6 +247,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       }
       if (RefKind == AArch64::S_AUTH || RefKind == AArch64::S_AUTHADDR)
         return ELF::R_AARCH64_AUTH_ABS64;
+      if (RefKind == AArch64::S_FUNCINIT)
+        return ELF::R_AARCH64_FUNCINIT64;
       return ELF::R_AARCH64_ABS64;
     }
     case AArch64::fixup_aarch64_add_imm12:

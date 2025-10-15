@@ -454,6 +454,12 @@ public:
     return false;
   }
 
+  /// Return the canonical name for a LibFunc. This should not be used for
+  /// semantic purposes, use getName instead.
+  static StringRef getStandardName(LibFunc F) {
+    return TargetLibraryInfoImpl::StandardNames[F];
+  }
+
   StringRef getName(LibFunc F) const {
     auto State = getState(F);
     if (State == TargetLibraryInfoImpl::Unavailable)
