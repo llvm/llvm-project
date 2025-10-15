@@ -1132,15 +1132,12 @@ def gen_mma_tests():
 
 
 def get_mma_block_scale_ops():
-    return (
-        make_mma_ops(["m16n8k64"], ["e2m1"], [], ["f32"], [])
-        + make_mma_ops(
-            ["m16n8k32"],
-            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
-            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
-            ["f32"],
-            [],
-        )
+    return make_mma_ops(["m16n8k64"], ["e2m1"], [], ["f32"], []) + make_mma_ops(
+        ["m16n8k32"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["f32"],
+        [],
     )
 
 
@@ -1196,7 +1193,9 @@ def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
     return False
 
 
-def common_mma_block_scale_test_gen(params, op, intrinsic_template, instruction_template):
+def common_mma_block_scale_test_gen(
+    params, op, intrinsic_template, instruction_template
+):
     mma_block_scale_template = """
 declare ${ret_ty} @${intrinsic}(
         ${args});
@@ -1250,12 +1249,8 @@ def gen_mma_block_scale_tests():
     if not (ptx_version >= 87 and gpu_arch >= 120 and aa):
         return []
 
-    mma_block_scale_intrinsic_template = (
-        "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
-    )
-    mma_block_scale_instruction_template = (
-        "mma.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
-    )
+    mma_block_scale_intrinsic_template = "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
+    mma_block_scale_instruction_template = "mma.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
 
     generated_items = []
 
@@ -1282,7 +1277,9 @@ def gen_mma_block_scale_tests():
         instruction_template = mma_block_scale_instruction_template
 
         generated_items.append(
-            common_mma_block_scale_test_gen(params, op, intrinsic_template, instruction_template)
+            common_mma_block_scale_test_gen(
+                params, op, intrinsic_template, instruction_template
+            )
         )
 
     return generated_items
@@ -1381,7 +1378,7 @@ def is_mma_sp_variant_supported(op, metadata, kind, satf):
     return True
 
 
-def sp_selector_gen(op, block_scale = False):
+def sp_selector_gen(op, block_scale=False):
     if block_scale:
         # PTX ISA 9.0 has the sparsity selector equal to 0 only
         return range(1)
@@ -1517,16 +1514,13 @@ def gen_mma_sp_tests():
 
 
 def get_mma_sp_block_scale_ops():
-    return (
-        make_mma_ops(["m16n8k128"], ["e2m1"], [], ["f32"], [], True)
-        + make_mma_ops(
-            ["m16n8k64"],
-            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
-            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
-            ["f32"],
-            [],
-            True,
-        )
+    return make_mma_ops(["m16n8k128"], ["e2m1"], [], ["f32"], [], True) + make_mma_ops(
+        ["m16n8k64"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["f32"],
+        [],
+        True,
     )
 
 
@@ -1582,7 +1576,9 @@ def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
     return False
 
 
-def common_mma_sp_block_scale_test_gen(params, op, intrinsic_template, instruction_template):
+def common_mma_sp_block_scale_test_gen(
+    params, op, intrinsic_template, instruction_template
+):
     mma_sp_block_scale_decl_template = """
 declare ${ret_ty} @${intrinsic}(
         ${args});
@@ -1653,12 +1649,8 @@ def gen_mma_sp_block_scale_tests():
     if not (ptx_version >= 87 and gpu_arch >= 120 and aa):
         return []
 
-    mma_sp_block_scale_intrinsic_template = (
-        "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
-    )
-    mma_sp_block_scale_instruction_template = (
-        "mma.sp::ordered_metadata.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
-    )
+    mma_sp_block_scale_intrinsic_template = "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
+    mma_sp_block_scale_instruction_template = "mma.sp::ordered_metadata.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
 
     generated_items = []
 
@@ -1685,7 +1677,9 @@ def gen_mma_sp_block_scale_tests():
         instruction_template = mma_sp_block_scale_instruction_template
 
         generated_items.append(
-            common_mma_sp_block_scale_test_gen(params, op, intrinsic_template, instruction_template)
+            common_mma_sp_block_scale_test_gen(
+                params, op, intrinsic_template, instruction_template
+            )
         )
 
     return generated_items
