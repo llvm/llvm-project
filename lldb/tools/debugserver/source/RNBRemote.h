@@ -135,6 +135,7 @@ public:
     query_transfer,                     // 'qXfer:'
     json_query_dyld_process_state,      // 'jGetDyldProcessState'
     enable_error_strings,               // 'QEnableErrorStrings'
+    multi_mem_read,                     // 'MultiMemRead'
     unknown_type
   };
   // clang-format on
@@ -215,6 +216,7 @@ public:
   rnb_err_t HandlePacket_last_signal(const char *p);
   rnb_err_t HandlePacket_m(const char *p);
   rnb_err_t HandlePacket_M(const char *p);
+  rnb_err_t HandlePacket_MultiMemRead(const char *p);
   rnb_err_t HandlePacket_x(const char *p);
   rnb_err_t HandlePacket_X(const char *p);
   rnb_err_t HandlePacket_z(const char *p);
