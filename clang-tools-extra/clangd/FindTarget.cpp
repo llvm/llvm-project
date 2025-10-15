@@ -366,7 +366,7 @@ public:
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
       void VisitTagType(const TagType *TT) {
-        Outer.add(cast<TagType>(TT)->getOriginalDecl(), Flags);
+        Outer.add(cast<TagType>(TT)->getDecl(), Flags);
       }
 
       void VisitUsingType(const UsingType *ET) {
@@ -861,7 +861,7 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getOriginalDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc L) {
