@@ -46,7 +46,7 @@ namespace {
 /// Match: G_STORE (G_FCONSTANT +0.0), addr
 /// Return the source vreg in MatchInfo if matched.
 bool matchFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          Register &MatchInfo) {
+                          const RISCVSubtarget &STI, Register &MatchInfo) {
   if (MI.getOpcode() != TargetOpcode::G_STORE)
     return false;
 
@@ -60,6 +60,12 @@ bool matchFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   auto *CFP = Def->getOperand(1).getFPImm();
   if (!CFP || !CFP->getValueAPF().isPosZero())
+    return false;
+
+  unsigned ValBits = MRI.getType(SrcReg).getSizeInBits();
+  if ((ValBits == 16 && !STI.hasStdExtZfh()) ||
+      (ValBits == 32 && !STI.hasStdExtF()) ||
+      (ValBits == 64 && (!STI.hasStdExtD() || !STI.is64Bit())))
     return false;
 
   MatchInfo = SrcReg;

@@ -24,7 +24,7 @@ def fp_zero_store_matchdata : GIDefMatchData<"Register">;
 def fold_fp_zero_store : GICombineRule<
   (defs root:$root, fp_zero_store_matchdata:$matchinfo),
   (match (G_STORE $src, $addr):$root,
-         [{ return matchFoldFPZeroStore(*${root}, MRI, ${matchinfo}); }]),
+         [{ return matchFoldFPZeroStore(*${root}, MRI, STI, ${matchinfo}); }]),
   (apply [{ applyFoldFPZeroStore(*${root}, MRI, B, STI, ${matchinfo}); }])>;
 
 // Post-legalization combines which are primarily optimizations.
