@@ -589,6 +589,8 @@ __m64 test_mm_shuffle_pi8(__m64 a, __m64 b) {
   return _mm_shuffle_pi8(a, b);
 }
 
+TEST_CONSTEXPR(match_v8qi(_mm_shuffle_pi8((__m64)(__v8qi){0,1,2,3,4,5,6,7}, (__m64)(__v8qi){10,20,30,40,50,60,70,80}), 2,4,6,0,2,4,6,0));
+
 __m64 test_mm_shuffle_pi16(__m64 a) {
   // CHECK-LABEL: test_mm_shuffle_pi16
   // CHECK: shufflevector <4 x i16> {{%.*}}, <4 x i16> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 0, i32 0>

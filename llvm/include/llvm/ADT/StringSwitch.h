@@ -54,17 +54,14 @@ public:
   explicit StringSwitch(StringRef S)
   : Str(S), Result() { }
 
+  StringSwitch(StringSwitch &&) = default;
+
   // StringSwitch is not copyable.
   StringSwitch(const StringSwitch &) = delete;
 
   // StringSwitch is not assignable due to 'Str' being 'const'.
   void operator=(const StringSwitch &) = delete;
-  void operator=(StringSwitch &&other) = delete;
-
-  StringSwitch(StringSwitch &&other)
-    : Str(other.Str), Result(std::move(other.Result)) { }
-
-  ~StringSwitch() = default;
+  void operator=(StringSwitch &&) = delete;
 
   // Case-sensitive case matchers
   StringSwitch &Case(StringLiteral S, T Value) {

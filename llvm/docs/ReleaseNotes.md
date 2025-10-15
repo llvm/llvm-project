@@ -139,6 +139,8 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `-mcpu=wildcatlake` is now supported.
+
 Changes to the OCaml bindings
 -----------------------------
 
