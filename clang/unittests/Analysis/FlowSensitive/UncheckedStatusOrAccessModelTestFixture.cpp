@@ -28,7 +28,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoStatusOrMention) {
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Lvalue_CallToValue) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       sor.value();  // [[unsafe]]
@@ -38,7 +38,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 
 TEST_P(UncheckedStatusOrAccessModelTest, NonExplicitInitialization) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
     STATUSOR_INT target() {
       STATUSOR_INT x = Make<STATUSOR_INT>();
       return x.value();  // [[unsafe]]
@@ -49,7 +49,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NonExplicitInitialization) {
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Lvalue_CallToValue_NewLine) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       sor.  // force newline
@@ -61,7 +61,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Rvalue_CallToValue) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       std::move(sor).value();  // [[unsafe]]
@@ -72,7 +72,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Lvalue_CallToValueOrDie) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       sor.ValueOrDie();  // [[unsafe]]
@@ -83,7 +83,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Rvalue_CallToValueOrDie) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       std::move(sor).ValueOrDie();  // [[unsafe]]
@@ -94,7 +94,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Lvalue_CallToOperatorStar) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       *sor;  // [[unsafe]]
@@ -105,7 +105,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Lvalue_CallToOperatorStarSeparateLine) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       *  // [[unsafe]]
@@ -117,7 +117,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Rvalue_CallToOperatorStar) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       *std::move(sor);  // [[unsafe]]
@@ -128,7 +128,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Lvalue_CallToOperatorArrow) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       void foo();
@@ -143,7 +143,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 TEST_P(UncheckedStatusOrAccessModelTest,
        UnwrapWithoutCheck_Rvalue_CallToOperatorArrow) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       void foo();
@@ -157,7 +157,7 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 
 TEST_P(UncheckedStatusOrAccessModelTest, UnwrapRvalueWithCheck) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (sor.ok()) std::move(sor).value();
@@ -167,7 +167,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, UnwrapRvalueWithCheck) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ParensInDeclInitExpr) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       auto sor = (Make<STATUSOR_INT>());
@@ -178,7 +178,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ParensInDeclInitExpr) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ReferenceInDeclInitExpr) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       const STATUSOR_INT& GetStatusOrInt() const;
@@ -190,7 +190,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceInDeclInitExpr) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       STATUSOR_INT& GetStatusOrInt();
@@ -202,7 +202,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceInDeclInitExpr) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       STATUSOR_INT&& GetStatusOrInt() &&;
@@ -218,7 +218,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceInDeclInitExpr) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT sor) {
           if (sor.ok())
@@ -230,7 +230,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse) {
         }
       )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       if (auto sor = Make<STATUSOR_INT>(); sor.ok())
@@ -244,7 +244,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse) {
 TEST_P(UncheckedStatusOrAccessModelTest, JoinSafeSafe) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT sor, bool b) {
           if (sor.ok()) {
@@ -259,7 +259,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, JoinSafeSafe) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, JoinUnsafeUnsafe) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor, bool b) {
       if (b)
@@ -273,7 +273,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, JoinUnsafeUnsafe) {
 TEST_P(UncheckedStatusOrAccessModelTest, InversedIfThenElse) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT sor) {
           if (!sor.ok())
@@ -288,7 +288,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, InversedIfThenElse) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, DoubleInversedIfThenElse) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (!!sor.ok())
@@ -301,7 +301,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DoubleInversedIfThenElse) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, TripleInversedIfThenElse) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (!!!sor.ok())
@@ -314,7 +314,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TripleInversedIfThenElse) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsAndRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       if (x.ok() && y.ok()) {
@@ -333,7 +333,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsAndRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsAndRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!x.ok() && y.ok()) {
@@ -352,7 +352,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsAndRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsAndNotRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (x.ok() && !y.ok()) {
@@ -370,7 +370,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsAndNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       if (!x.ok() && !y.ok()) {
@@ -389,7 +389,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsAndNotRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsAndRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!(x.ok() && y.ok())) {
@@ -408,7 +408,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsAndRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsAndRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!(!x.ok() && y.ok())) {
@@ -427,7 +427,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsAndRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsAndNotRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!(x.ok() && !y.ok())) {
@@ -445,7 +445,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsAndNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       if (!(!x.ok() && !y.ok())) {
@@ -463,7 +463,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsOrRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       if (x.ok() || y.ok()) {
@@ -482,7 +482,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsOrRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsOrRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!x.ok() || y.ok()) {
@@ -501,7 +501,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsOrRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsOrNotRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (x.ok() || !y.ok()) {
@@ -520,7 +520,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_LhsOrNotRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsOrNotRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!x.ok() || !y.ok()) {
@@ -538,7 +538,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_NotLhsOrNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsOrRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       if (!(x.ok() || y.ok())) {
@@ -557,7 +557,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsOrRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsOrRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!(!x.ok() || y.ok())) {
@@ -576,7 +576,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsOrRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsOrNotRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!(x.ok() || !y.ok())) {
@@ -594,7 +594,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_LhsOrNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsOrNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       if (!(!x.ok() || !y.ok())) {
@@ -612,7 +612,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, IfThenElse_Not_NotLhsOrNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranch) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (!sor.ok()) return;
@@ -621,7 +621,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranch) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (sor.ok()) return;
@@ -631,7 +631,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranch) {
   )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!x.ok() || !y.ok()) return;
@@ -645,7 +645,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranch) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfElseBranch) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (sor.ok()) {
@@ -657,7 +657,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfElseBranch) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (!sor.ok()) {
@@ -672,7 +672,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfElseBranch) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranchInLoop) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (Make<bool>()) {
@@ -685,7 +685,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranchInLoop) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (Make<bool>()) {
@@ -701,7 +701,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TerminatingIfThenBranchInLoop) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, TernaryConditionalOperator) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       sor.ok() ? sor.value() : 21;
@@ -710,7 +710,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TernaryConditionalOperator) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       !sor.ok() ? 21 : sor.value();
@@ -719,7 +719,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TernaryConditionalOperator) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor1, STATUSOR_INT sor2) {
       !((__builtin_expect(false || (!(sor1.ok() && sor2.ok())), false)))
@@ -735,35 +735,35 @@ TEST_P(UncheckedStatusOrAccessModelTest, TernaryConditionalOperator) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (Make<bool>()) sor.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (sor.ok()) sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (!sor.ok()) sor.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (!!sor.ok()) sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (!!!sor.ok()) sor.value();  // [[unsafe]]
@@ -774,7 +774,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While) {
 TEST_P(UncheckedStatusOrAccessModelTest, While_LhsAndRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           while (x.ok() && y.ok()) {
@@ -788,14 +788,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_LhsAndRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsAndRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() && y.ok()) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() && y.ok()) y.value();
@@ -805,14 +805,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsAndRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_LhsAndNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (x.ok() && !y.ok()) x.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (x.ok() && !y.ok()) y.value();  // [[unsafe]]
@@ -822,14 +822,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_LhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsAndNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() && !y.ok()) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() && !y.ok()) y.value();  // [[unsafe]]
@@ -839,14 +839,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsAndRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() && y.ok())) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() && y.ok())) y.value();  // [[unsafe]]
@@ -856,14 +856,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsAndRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsAndRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(!x.ok() && y.ok())) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(!x.ok() && y.ok())) y.value();  // [[unsafe]]
@@ -873,14 +873,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsAndRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsAndNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() && !y.ok())) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() && !y.ok())) y.value();  // [[unsafe]]
@@ -890,14 +890,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsAndNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(!x.ok() && !y.ok())) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(!x.ok() && !y.ok())) y.value();  // [[unsafe]]
@@ -907,14 +907,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsAndNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_LhsOrRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (x.ok() || y.ok()) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (x.ok() || y.ok()) y.value();  // [[unsafe]]
@@ -924,14 +924,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_LhsOrRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsOrRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() || y.ok()) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() || y.ok()) y.value();  // [[unsafe]]
@@ -941,14 +941,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsOrRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_LhsOrNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (x.ok() || !y.ok()) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (x.ok() || !y.ok()) y.value();  // [[unsafe]]
@@ -958,14 +958,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_LhsOrNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsOrNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() || !y.ok()) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!x.ok() || !y.ok()) y.value();  // [[unsafe]]
@@ -975,14 +975,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NotLhsOrNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsOrRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() || y.ok())) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() || y.ok())) y.value();  // [[unsafe]]
@@ -992,14 +992,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsOrRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsOrRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(!x.ok() || y.ok())) x.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(!x.ok() || y.ok())) y.value();  // [[unsafe]]
@@ -1009,14 +1009,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsOrRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsOrNotRhs) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() || !y.ok())) x.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT x, STATUSOR_INT y) {
       while (!(x.ok() || !y.ok())) y.value();
@@ -1027,7 +1027,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_LhsOrNotRhs) {
 TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsOrNotRhs) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           while (!(!x.ok() || !y.ok())) {
@@ -1041,7 +1041,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_Not_NotLhsOrNotRhs) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_AccessAfterStmt) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (sor.ok()) {
@@ -1051,7 +1051,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_AccessAfterStmt) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (!sor.ok()) {
@@ -1064,7 +1064,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_AccessAfterStmt) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, While_TerminatingBranch_Return) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (!sor.ok()) return;
@@ -1073,7 +1073,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_TerminatingBranch_Return) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (sor.ok()) return;
@@ -1083,26 +1083,10 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_TerminatingBranch_Return) {
   )cc");
 }
 
-TEST_P(UncheckedStatusOrAccessModelTest, While_TerminatingBranch_Continue) {
-  ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
-
-    void target(STATUSOR_INT sor) {
-      while (Make<bool>()) {
-        if (!sor.ok()) continue;
-
-        sor.value();
-      }
-
-      sor.value();  // [[unsafe]]
-    }
-  )cc");
-}
-
 TEST_P(UncheckedStatusOrAccessModelTest, While_NestedIfWithBinaryCondition) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           while (Make<bool>()) {
@@ -1116,7 +1100,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NestedIfWithBinaryCondition) {
       )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           while (Make<bool>()) {
@@ -1133,7 +1117,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NestedIfWithBinaryCondition) {
 TEST_P(UncheckedStatusOrAccessModelTest, BuiltinExpect) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT x, STATUSOR_INT y) {
           if (!__builtin_expect(!x.ok() || __builtin_expect(!y.ok(), true), false)) {
@@ -1147,7 +1131,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, BuiltinExpect) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT sor = Make<STATUSOR_INT>();
@@ -1158,7 +1142,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT sor = Make<STATUSOR_INT>();
@@ -1169,7 +1153,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT x = Make<STATUSOR_INT>();
@@ -1185,7 +1169,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
   )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target() {
           STATUSOR_INT x = Make<STATUSOR_INT>();
@@ -1199,7 +1183,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
         }
       )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       STATUSOR_INT bar;
@@ -1219,42 +1203,42 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ShortCircuitingBinaryOperators) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_BOOL sor) {
       bool b = sor.ok() & sor.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_BOOL sor) {
       bool b = sor.ok() && sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_BOOL sor) {
       bool b = !sor.ok() && sor.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_BOOL sor) {
       bool b = sor.ok() || sor.value();  // [[unsafe]]
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_BOOL sor) {
       bool b = !sor.ok() || sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       if (b || sor.ok()) {
@@ -1265,7 +1249,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ShortCircuitingBinaryOperators) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       if (__builtin_expect(b || sor.ok(), false)) {
@@ -1277,7 +1261,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ShortCircuitingBinaryOperators) {
   )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT sor1, STATUSOR_INT sor2) {
           while (sor1.ok() && sor2.ok()) sor1.value();
@@ -1288,7 +1272,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ShortCircuitingBinaryOperators) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, References) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT x = Make<STATUSOR_INT>();
@@ -1306,7 +1290,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, References) {
   )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target() {
           STATUSOR_INT x = Make<STATUSOR_INT>();
@@ -1324,7 +1308,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, References) {
       )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target() {
           STATUSOR_INT x = Make<STATUSOR_INT>();
@@ -1339,7 +1323,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, References) {
       )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target() {
           STATUSOR_INT x = Make<STATUSOR_INT>();
@@ -1356,7 +1340,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, References) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     __attribute__((noreturn)) void f();
 
@@ -1367,7 +1351,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void f();
 
@@ -1378,7 +1362,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       __attribute__((noreturn)) ~Foo();
@@ -1392,7 +1376,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       ~Foo();
@@ -1406,7 +1390,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void f();
     __attribute__((noreturn)) void g();
@@ -1418,7 +1402,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     __attribute__((noreturn)) void f();
     void g();
@@ -1430,7 +1414,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void f();
     void g();
@@ -1442,7 +1426,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void terminate() __attribute__((noreturn));
 
@@ -1452,7 +1436,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void terminate() __attribute__((noreturn));
 
@@ -1462,7 +1446,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void terminate() __attribute__((noreturn));
 
@@ -1481,14 +1465,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, NoReturnAttribute) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, DeclInLoop) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       while (auto ok = sor.ok()) sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     using BoolAlias = bool;
 
@@ -1497,7 +1481,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DeclInLoop) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       while (Make<bool>()) {
@@ -1507,7 +1491,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DeclInLoop) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     using StatusOrInt = STATUSOR_INT;
 
@@ -1523,7 +1507,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DeclInLoop) {
 TEST_P(UncheckedStatusOrAccessModelTest, NonEvaluatedExprInCondition) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         bool unknown();
 
@@ -1534,7 +1518,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NonEvaluatedExprInCondition) {
       )cc");
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         bool unknown();
 
@@ -1544,7 +1528,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NonEvaluatedExprInCondition) {
         }
       )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     bool unknown();
 
@@ -1553,7 +1537,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NonEvaluatedExprInCondition) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     bool unknown();
 
@@ -1565,7 +1549,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NonEvaluatedExprInCondition) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, CorrelatedBranches) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       if (b || sor.ok()) {
@@ -1574,7 +1558,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CorrelatedBranches) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       if (b && !sor.ok()) return;
@@ -1582,7 +1566,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CorrelatedBranches) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       if (sor.ok()) b = true;
@@ -1590,7 +1574,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CorrelatedBranches) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       if (b) return;
@@ -1602,14 +1586,14 @@ TEST_P(UncheckedStatusOrAccessModelTest, CorrelatedBranches) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ConditionWithInitStmt) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       if (STATUSOR_INT sor = Make<STATUSOR_INT>(); sor.ok()) sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       if (STATUSOR_INT sor = Make<STATUSOR_INT>(); !sor.ok())
@@ -1620,7 +1604,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ConditionWithInitStmt) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, DeadCode) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       bool b = false;
@@ -1628,7 +1612,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DeadCode) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       bool b;
@@ -1640,7 +1624,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DeadCode) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       sor.ok() ? sor.value() : Fatal().value();
@@ -1649,7 +1633,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       !sor.ok() ? Fatal().value() : sor.value();
@@ -1658,7 +1642,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       b ? 0 : sor.ok() ? sor.value() : Fatal().value();
@@ -1667,7 +1651,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       for (int i = 0; i < 10; i++) {
@@ -1678,7 +1662,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       for (int i = 0; i < 10; i++) {
@@ -1689,7 +1673,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b, STATUSOR_INT sor) {
       for (int i = 0; i < 10; i++) {
@@ -1705,7 +1689,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, TemporaryDestructors) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, CheckMacro) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       CHECK(sor.ok());
@@ -1713,7 +1697,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CheckMacro) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       CHECK(!sor.ok());
@@ -1724,7 +1708,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CheckMacro) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, QcheckMacro) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       QCHECK(sor.ok());
@@ -1732,7 +1716,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, QcheckMacro) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       QCHECK(!sor.ok());
@@ -1743,7 +1727,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, QcheckMacro) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, CheckNeMacro) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       CHECK_NE(sor.status(), absl::OkStatus());
@@ -1754,7 +1738,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, CheckNeMacro) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, QcheckNeMacro) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       QCHECK_NE(sor.status(), absl::OkStatus());
@@ -1767,7 +1751,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
   // The following examples are not sound as there could be opaque calls between
   // the ok() and the value() calls that change the StatusOr value.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     static STATUSOR_INT sor;
 
@@ -1779,7 +1763,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       static STATUSOR_INT sor;
@@ -1790,7 +1774,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       static STATUSOR_INT sor;
@@ -1804,7 +1788,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       static STATUSOR_INT sor;
@@ -1818,7 +1802,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       static STATUSOR_INT sor;
@@ -1832,7 +1816,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
     };
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       static STATUSOR_INT sor;
@@ -1846,7 +1830,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
     };
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct S {
       static const int x = -1;
@@ -1861,7 +1845,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceReceivers) {
   // the ok() and the value() calls that change the StatusOr value. However,
   // this is the behavior that users expect so it is here to stay.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT& sor) {
       if (sor.ok())
@@ -1871,7 +1855,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceReceivers) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       STATUSOR_INT& sor;
@@ -1885,7 +1869,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceReceivers) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Bar {
       STATUSOR_INT sor;
@@ -1903,7 +1887,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceReceivers) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       STATUSOR_INT& sor;
@@ -1920,7 +1904,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ReferenceReceivers) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       [](STATUSOR_INT sor) {
@@ -1932,7 +1916,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
     }
   )cc");
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       [sor]() {
@@ -1944,7 +1928,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
     }
   )cc");
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       [&sor]() {
@@ -1956,7 +1940,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
     }
   )cc");
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       [sor2 = sor]() {
@@ -1968,7 +1952,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
     }
   )cc");
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       [&]() {
@@ -1980,7 +1964,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
     }
   )cc");
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       [=]() {
@@ -1992,7 +1976,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
     }
   )cc");
   ExpectDiagnosticsForLambda(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct Foo {
       STATUSOR_INT sor;
@@ -2011,7 +1995,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, GoodLambda) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     int target() {
       STATUSOR_INT sor = Make<STATUSOR_INT>();
@@ -2023,7 +2007,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, GoodLambda) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, Status) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void foo();
 
@@ -2032,7 +2016,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Status) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void foo();
 
@@ -2045,7 +2029,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Status) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ExpectThatMacro) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       EXPECT_THAT(sor, testing::status::IsOk());
@@ -2054,7 +2038,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ExpectThatMacro) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       EXPECT_THAT(sor.status(), testing::status::IsOk());
@@ -2063,7 +2047,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ExpectThatMacro) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT sor = Make<STATUSOR_INT>();
@@ -2076,7 +2060,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ExpectThatMacro) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ExpectOkMacro) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       EXPECT_OK(sor);
@@ -2085,7 +2069,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ExpectOkMacro) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       EXPECT_OK(sor.status());
@@ -2094,7 +2078,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ExpectOkMacro) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT sor = Make<STATUSOR_INT>();
@@ -2121,7 +2105,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, BreadthFirstBlockTraversalLoop) {
   // expression and not having a storage location assigned to it. This leads to
   // an infinite loop as the environment can't stabilize.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void foo(int, int);
     STATUSOR_INT bar(STATUSOR_INT);
@@ -2144,9 +2128,9 @@ TEST_P(UncheckedStatusOrAccessModelTest, BreadthFirstBlockTraversalLoop) {
   )cc");
 }
 
-TEST_P(UncheckedStatusOrAccessModelTest, UsingDeclaration) {
+TEST_P(UncheckedStatusOrAccessModelTest, ReturnValue) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       STATUSOR_INT sor = Make<STATUSOR_INT>();
@@ -2160,7 +2144,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, UsingDeclaration) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, Goto) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
     label:
@@ -2172,7 +2156,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Goto) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
     label:
@@ -2181,7 +2165,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Goto) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       if (!sor.ok()) return;
@@ -2194,7 +2178,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Goto) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, JoinDistinctValues) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b) {
       STATUSOR_INT sor;
@@ -2210,7 +2194,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, JoinDistinctValues) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b) {
       STATUSOR_INT sor;
@@ -2225,7 +2209,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, JoinDistinctValues) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(bool b) {
       STATUSOR_INT sor;
@@ -2240,9 +2224,9 @@ TEST_P(UncheckedStatusOrAccessModelTest, JoinDistinctValues) {
   )cc");
 }
 
-TEST_P(UncheckedStatusOrAccessModelTest, VarDeclInitExprWithoutValue) {
+TEST_P(UncheckedStatusOrAccessModelTest, VarDeclInitExprFromPairAccess) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       auto sor = Make<std::pair<int, STATUSOR_INT>>().second;
@@ -2253,7 +2237,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, VarDeclInitExprWithoutValue) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       const auto& sor = Make<std::pair<int, STATUSOR_INT>>().second;
@@ -2267,7 +2251,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, VarDeclInitExprWithoutValue) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, LValueToRValueCastOfChangingValue) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     bool foo();
 
@@ -2290,7 +2274,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, LValueToRValueCastOfChangingValue) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, ConstructorInitializer) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     class target {
       target() : foo_(Make<STATUSOR_INT>().value()) {  // [[unsafe]]
@@ -2302,7 +2286,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, ConstructorInitializer) {
 
 TEST_P(UncheckedStatusOrAccessModelTest, AssignStatusToBoolVar) {
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       bool ok = sor.ok();
@@ -2313,7 +2297,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, AssignStatusToBoolVar) {
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target(STATUSOR_INT sor) {
       bool not_ok = !sor.ok();
@@ -2328,7 +2312,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, AssignStatusToBoolVar) {
 TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
   // Binding to a pair (which is actually a struct in the mock header).
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       const auto [sor, x] = Make<std::pair<STATUSOR_INT, int>>();
@@ -2338,7 +2322,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
 
   // Unsafe case.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       const auto [sor, x] = Make<std::pair<STATUSOR_INT, int>>();
@@ -2348,7 +2332,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
 
   // As a reference.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       const auto& [sor, x] = Make<std::pair<STATUSOR_INT, int>>();
@@ -2358,7 +2342,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
 
   // Binding to a ref in a struct.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     struct S {
       STATUSOR_INT& sor;
@@ -2373,7 +2357,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
 
   // In a loop.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       auto vals = Make<std::vector<std::pair<int, STATUSOR_INT>>>();
@@ -2385,7 +2369,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
   // Similar to the above, but InitExpr already has the storage initialized,
   // and bindings refer to them.
   ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
     void target() {
       auto vals = Make<std::vector<std::pair<int, STATUSOR_INT>>>();
@@ -2400,7 +2384,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, StructuredBindings) {
 TEST_P(UncheckedStatusOrAccessModelTest, AssignCompositeLogicExprToVar) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT sor, bool b) {
           bool c = sor.ok() && b;
@@ -2410,7 +2394,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, AssignCompositeLogicExprToVar) {
 
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         void target(STATUSOR_INT sor, bool b) {
           bool c = !(!sor.ok() || !b);
@@ -2422,11 +2406,9 @@ TEST_P(UncheckedStatusOrAccessModelTest, AssignCompositeLogicExprToVar) {
 TEST_P(UncheckedStatusOrAccessModelTest, Subclass) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
-        class Bar;
-
-        class Foo : public absl::StatusOr<Bar> {};
+        class Foo : public STATUSOR_INT {};
 
         void target(Foo opt) {
           opt.value();  // [[unsafe]]
@@ -2437,7 +2419,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Subclass) {
 TEST_P(UncheckedStatusOrAccessModelTest, SubclassStatus) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
         class Foo : public STATUS {};
 
@@ -2448,11 +2430,9 @@ TEST_P(UncheckedStatusOrAccessModelTest, SubclassStatus) {
 TEST_P(UncheckedStatusOrAccessModelTest, SubclassOk) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
-        class Bar;
-
-        class Foo : public absl::StatusOr<Bar> {};
+        class Foo : public STATUSOR_INT {};
 
         void target(Foo opt) {
           if (opt.ok()) opt.value();
@@ -2463,11 +2443,9 @@ TEST_P(UncheckedStatusOrAccessModelTest, SubclassOk) {
 TEST_P(UncheckedStatusOrAccessModelTest, SubclassOperator) {
   ExpectDiagnosticsFor(
       R"cc(
-#include "unchecked_statusor_use_test_defs.h"
+#include "unchecked_statusor_access_test_defs.h"
 
-        class Bar;
-
-        class Foo : public absl::StatusOr<Bar> {};
+        class Foo : public STATUSOR_INT {};
 
         void target(Foo opt) {
           *opt;  // [[unsafe]]
@@ -2515,7 +2493,7 @@ std::vector<std::pair<std::string, std::string>>
 GetHeaders(UncheckedStatusOrAccessModelTestAliasKind AliasKind) {
   auto Headers = test::getMockHeaders();
 
-  Headers.emplace_back("unchecked_statusor_use_test_defs.h",
+  Headers.emplace_back("unchecked_statusor_access_test_defs.h",
                        R"cc(
 #include "cstddef.h"
 #include "statusor_defs.h"

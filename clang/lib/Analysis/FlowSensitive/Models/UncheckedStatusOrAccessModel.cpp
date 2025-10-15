@@ -38,18 +38,6 @@ using ::clang::ast_matchers::StatementMatcher;
 
 } // namespace
 
-static void transferStatusOrOkCall(const CXXMemberCallExpr *Expr,
-                                   const MatchFinder::MatchResult &,
-                                   LatticeTransferState &State) {
-  RecordStorageLocation *StatusOrLoc =
-      getImplicitObjectLocation(*Expr, State.Env);
-  if (StatusOrLoc == nullptr)
-    return;
-
-  auto &OkVal = valForOk(locForStatus(*StatusOrLoc), State.Env);
-  State.Env.setValue(*Expr, OkVal);
-}
-
 static bool isStatusOrOperatorBaseType(QualType type) {
   return isRecordTypeWithName(type, "absl::internal_statusor::OperatorBase");
 }
@@ -236,6 +224,18 @@ BoolValue &valForOk(RecordStorageLocation &StatusLoc, Environment &Env) {
   if (auto *Val = Env.get<BoolValue>(locForOk(StatusLoc)))
     return *Val;
   return initializeStatus(StatusLoc, Env);
+}
+
+static void transferStatusOrOkCall(const CXXMemberCallExpr *Expr,
+                                   const MatchFinder::MatchResult &,
+                                   LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusOrLoc == nullptr)
+    return;
+
+  auto &OkVal = valForOk(locForStatus(*StatusOrLoc), State.Env);
+  State.Env.setValue(*Expr, OkVal);
 }
 
 CFGMatchSwitch<LatticeTransferState>
