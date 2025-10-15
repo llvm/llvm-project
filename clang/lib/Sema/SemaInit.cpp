@@ -775,7 +775,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
 
   if (Init >= NumInits || !ILE->getInit(Init)) {
     if (const RecordType *RType = ILE->getType()->getAsCanonical<RecordType>())
-      if (!RType->getOriginalDecl()->isUnion())
+      if (!RType->getDecl()->isUnion())
         assert((Init < NumInits || VerifyOnly) &&
                "This ILE should have been expanded");
 
@@ -9195,9 +9195,8 @@ bool InitializationSequence::Diagnose(Sema &S,
                    diag::note_member_declared_at);
 
             if (const auto *Record = Entity.getType()->getAs<RecordType>())
-              S.Diag(Record->getOriginalDecl()->getLocation(),
-                     diag::note_previous_decl)
-                  << S.Context.getCanonicalTagType(Record->getOriginalDecl());
+              S.Diag(Record->getDecl()->getLocation(), diag::note_previous_decl)
+                  << S.Context.getCanonicalTagType(Record->getDecl());
           }
           break;
         }
@@ -9991,8 +9990,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         // Cases where template arguments in the RHS of the alias are not
         // dependent. e.g.
         //   using AliasFoo = Foo<bool>;
-        if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
-                RT->getOriginalDecl()))
+        if (const auto *CTSD =
+                llvm::dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
           Template = CTSD->getSpecializedTemplate();
       }
     }

@@ -1897,7 +1897,7 @@ bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
   // complex destructor or a non-trivially copyable type.
   if (const RecordType *RT =
           ReturnType.getCanonicalType()->getAsCanonical<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
       return ClassDecl->hasTrivialDestructor();
   }
   return ReturnType.isTriviallyCopyableType(Context);
@@ -3865,7 +3865,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
                         SmallVectorImpl<uint64_t> &Bits) {
   ASTContext &Context = CGM.getContext();
   int CharWidth = Context.getCharWidth();
-  const RecordDecl *RD = RTy->getOriginalDecl()->getDefinition();
+  const RecordDecl *RD = RTy->getDecl()->getDefinition();
   const ASTRecordLayout &ASTLayout = Context.getASTRecordLayout(RD);
   const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(RD);
 

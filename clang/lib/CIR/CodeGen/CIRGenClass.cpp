@@ -478,8 +478,7 @@ void CIRGenFunction::getVTablePointers(BaseSubobject base,
 
   for (const auto &nextBase : rd->bases()) {
     const auto *baseDecl =
-        cast<CXXRecordDecl>(
-            nextBase.getType()->castAs<RecordType>()->getOriginalDecl())
+        cast<CXXRecordDecl>(nextBase.getType()->castAs<RecordType>()->getDecl())
             ->getDefinitionOrSelf();
 
     // Ignore classes without a vtable.
@@ -1025,7 +1024,7 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
 
     // Anonymous union members do not have their destructors called.
     const RecordType *rt = type->getAsUnionType();
-    if (rt && rt->getOriginalDecl()->isAnonymousStructOrUnion())
+    if (rt && rt->getDecl()->isAnonymousStructOrUnion())
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);
