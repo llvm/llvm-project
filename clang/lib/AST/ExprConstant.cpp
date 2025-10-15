@@ -11628,9 +11628,7 @@ static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
     return false;
 
   QualType ElemT = VT->getElementType();
-  unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
   unsigned NumElts = VT->getNumElements();
-  bool DestUnsigned = ElemT->isUnsignedIntegerOrEnumerationType();
 
   SmallVector<APValue, 64> ResultElements;
   ResultElements.reserve(NumElts);
