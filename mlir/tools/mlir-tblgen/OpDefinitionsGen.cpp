@@ -4938,10 +4938,7 @@ static void emitOpDefShard(const RecordKeeper &records,
                            ArrayRef<const Record *> defs,
                            const Dialect &dialect, unsigned shardIndex,
                            unsigned shardCount, raw_ostream &os) {
-  std::string shardGuard = "GET_OP_DEFS_";
-  std::string indexStr = std::to_string(shardIndex);
-  shardGuard += indexStr;
-  IfDefEmitter scope(os, shardGuard);
+  IfDefEmitter scope(os, Twine("GET_OP_DEFS_") + Twine(shardIndex));
 
   // Emit the op registration hook in the first shard.
   const char *const opRegistrationHook =
@@ -4968,7 +4965,7 @@ static void emitOpDefShard(const RecordKeeper &records,
   os << "}\n";
 
   // Generate the per-shard op definitions.
-  emitOpClassDefs(records, defs, os, indexStr);
+  emitOpClassDefs(records, defs, os, std::to_string(shardIndex));
 }
 
 /// Emit op definitions for all op records.

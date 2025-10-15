@@ -13,9 +13,8 @@
 #ifndef LLVM_TABLEGEN_CODEGENHELPERS_H
 #define LLVM_TABLEGEN_CODEGENHELPERS_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -23,7 +22,7 @@ namespace llvm {
 // Simple RAII helper for emitting ifdef-undef-endif scope.
 class IfDefEmitter {
 public:
-  IfDefEmitter(raw_ostream &OS, StringRef Name) : Name(Name.str()), OS(OS) {
+  IfDefEmitter(raw_ostream &OS, const Twine &Name) : Name(Name.str()), OS(OS) {
     OS << "#ifdef " << Name << "\n"
        << "#undef " << Name << "\n\n";
   }
@@ -37,7 +36,7 @@ private:
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
 class IncludeGuardEmitter {
 public:
-  IncludeGuardEmitter(raw_ostream &OS, StringRef Name)
+  IncludeGuardEmitter(raw_ostream &OS, const Twine &Name)
       : Name(Name.str()), OS(OS) {
     OS << "#ifndef " << Name << "\n"
        << "#define " << Name << "\n\n";
@@ -54,8 +53,8 @@ private:
 // namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
-      : Name(trim(NameUntrimmed).str()), OS(OS) {
+  NamespaceEmitter(raw_ostream &OS, const Twine &NameUntrimmed)
+      : Name(trim(NameUntrimmed)), OS(OS) {
     if (!Name.empty())
       OS << "namespace " << Name << " {\n";
   }
@@ -77,9 +76,11 @@ private:
   // }
   //
   // and cannot use "namespace ::mlir::toy".
-  static StringRef trim(StringRef Name) {
-    Name.consume_front("::");
-    return Name;
+  static std::string trim(const Twine &NameUntrimmed) {
+    std::string Name = NameUntrimmed.str();
+    StringRef StrRef = Name;
+    StrRef.consume_front("::");
+    return StrRef.str();
   }
   std::string Name;
   raw_ostream &OS;
