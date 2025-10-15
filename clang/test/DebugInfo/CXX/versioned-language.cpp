@@ -10,7 +10,7 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -debug-info-kind=limited -dwarf-version=6 -std=c++23 | FileCheck %s --check-prefix=CHECK-CPP23
 // RUN: %clang_cc1 -emit-llvm %s -o - -debug-info-kind=limited -dwarf-version=6 -std=c++2c | FileCheck %s --check-prefix=CHECK-CPP2C
 
-int globalVar = 10;
+struct Foo {} globalVar;
 
 // CHECK-CPP98:     !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 199711
 // FIXME: C++03 technically has no official standard version code. From Clang's point of view C++03 and C++98 are interchangable.
