@@ -48,32 +48,42 @@ class GPUFuncOp(GPUFuncOp):
         function_type: Union[FunctionType, TypeAttr],
         sym_name: Optional[Union[str, StringAttr]] = None,
         kernel: Optional[bool] = None,
-        body_builder: Optional[Callable[[GPUFuncOp], None]] = None,
+        workgroup_attrib_attrs: Optional[Sequence[dict]] = None,
+        private_attrib_attrs: Optional[Sequence[dict]] = None,
         known_block_size: Optional[Union[Sequence[int], DenseI32ArrayAttr]] = None,
         known_grid_size: Optional[Union[Sequence[int], DenseI32ArrayAttr]] = None,
-        *args,
         loc=None,
         ip=None,
-        **kwargs,
+        body_builder: Optional[Callable[[GPUFuncOp], None]] = None,
     ):
         """
-        Create a GPUFuncOp with the provided `function_type`, `sym_name`, `kernel`, `body_builder`, `known_block_size`, and `known_grid_size`.
+        Create a GPUFuncOp with the provided `function_type`, `sym_name`, 
+        `kernel`, `workgroup_attrib_attrs`, `private_attrib_attrs`, `known_block_size`, 
+        `known_grid_size`, and `body_builder`.
         - `function_type` is a FunctionType or a TypeAttr.
         - `sym_name` is a string or a StringAttr representing the function name.
         - `kernel` is a boolean representing whether the function is a kernel.
+        - `workgroup_attrib_attrs` is an optional list of dictionaries.
+        - `private_attrib_attrs` is an optional list of dictionaries.
+        - `known_block_size` is an optional list of integers or a DenseI32ArrayAttr representing the known block size.
+        - `known_grid_size` is an optional list of integers or a DenseI32ArrayAttr representing the known grid size.
         - `body_builder` is an optional callback. When provided, a new entry block
           is created and the callback is invoked with the new op as argument within
           an InsertionPoint context already set for the block. The callback is
           expected to insert a terminator in the block.
-        - `known_block_size` is an optional list of integers or a DenseI32ArrayAttr representing the known block size.
-        - `known_grid_size` is an optional list of integers or a DenseI32ArrayAttr representing the known grid size.
         """
         function_type = (
             TypeAttr.get(function_type)
             if not isinstance(function_type, TypeAttr)
             else function_type
         )
-        super().__init__(function_type, *args, loc=loc, ip=ip, **kwargs)
+        super().__init__(
+            function_type,
+            workgroup_attrib_attrs=workgroup_attrib_attrs,
+            private_attrib_attrs=private_attrib_attrs,
+            loc=loc,
+            ip=ip,
+        )
 
         if isinstance(sym_name, str):
             self.attributes[self.SYM_NAME_ATTR_NAME] = StringAttr.get(sym_name)
