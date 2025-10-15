@@ -17,9 +17,12 @@
 
 #include <cassert>
 #include <cstddef>
+#include <expected>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "test_macros.h"
 #include "type_algorithms.h"
@@ -216,8 +219,18 @@ constexpr bool test() {
 
   // C++ standard library types
 
+  // These types are guaranteed to be implicit-lifetime.
+  test_is_implicit_lifetime<std::expected<int, float>>();
+  test_is_implicit_lifetime<std::optional<float>>();
+  test_is_implicit_lifetime<std::variant<float, int>>();
+
+#ifdef _LIBCPP_VERSION
+  // These types should be implicit-lifetime, but they are not guaranteed to be so.
+#  ifndef _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
   test_is_implicit_lifetime<std::pair<int, float>>();
+#  endif
   test_is_implicit_lifetime<std::tuple<int, float>>();
+#endif
 
   // Standard C23 types
 

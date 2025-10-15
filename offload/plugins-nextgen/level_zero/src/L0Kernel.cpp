@@ -54,33 +54,6 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-/// Read global thread limit and max teams from the host runtime. These values
-/// are subject to change at any program point, so every kernel execution
-/// needs to read the most recent values.
-static std::tuple<int32_t, int32_t> readTeamsThreadLimit() {
-  int32_t ThreadLimit;
-  ThreadLimit = omp_get_teams_thread_limit();
-  DP("omp_get_teams_thread_limit() returned %" PRId32 "\n", ThreadLimit);
-  // omp_get_thread_limit() would return INT_MAX by default.
-  // NOTE: Windows.h defines max() macro, so we have to guard
-  //       the call with parentheses.
-  ThreadLimit =
-      (ThreadLimit > 0 && ThreadLimit != (std::numeric_limits<int32_t>::max)())
-          ? ThreadLimit
-          : 0;
-
-  int NTeams = omp_get_max_teams();
-  DP("omp_get_max_teams() returned %" PRId32 "\n", NTeams);
-  // omp_get_max_teams() would return INT_MAX by default.
-  // NOTE: Windows.h defines max() macro, so we have to guard
-  //       the call with parentheses.
-  int32_t NumTeams =
-      (NTeams > 0 && NTeams != (std::numeric_limits<int32_t>::max)()) ? NTeams
-                                                                      : 0;
-
-  return {NumTeams, ThreadLimit};
-}
-
 void L0KernelTy::decideKernelGroupArguments(
     L0DeviceTy &Device, uint32_t NumTeams, uint32_t ThreadLimit,
     TgtNDRangeDescTy *LoopLevels, uint32_t *GroupSizes,
@@ -406,21 +379,12 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
   const auto DeviceId = Device.getDeviceId();
   const auto &KernelPR = getProperties();
 
-  // Detect if we need to reduce available HW threads. We need this adjustment
-  // on XeHPG when L0 debug is enabled (ZET_ENABLE_PROGRAM_DEBUGGING=1).
-  static std::once_flag OnceFlag;
-  static bool ZeDebugEnabled = false;
-  std::call_once(OnceFlag, []() {
-    const char *EnvVal = std::getenv("ZET_ENABLE_PROGRAM_DEBUGGING");
-    if (EnvVal && std::atoi(EnvVal) == 1)
-      ZeDebugEnabled = true;
-  });
-
   // Read the most recent global thread limit and max teams.
-  auto [NumTeamsICV, ThreadLimitICV] = readTeamsThreadLimit();
+  const auto [NumTeamsICV, ThreadLimitICV] = std::make_tuple(0, 0);
 
   bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
-  bool HalfNumThreads = ZeDebugEnabled && IsXeHPG;
+  bool HalfNumThreads =
+      LevelZeroPluginTy::getOptions().ZeDebugEnabled && IsXeHPG;
   uint32_t KernelWidth = KernelPR.Width;
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,

@@ -24,7 +24,7 @@ namespace plugin {
 
 /// Abstract queue that supports asynchronous command submission
 struct AsyncQueueTy {
-  /// List of events attahced to submitted commands
+  /// List of events attached to submitted commands
   llvm::SmallVector<ze_event_handle_t> WaitEvents;
   /// Pending staging buffer to host copies
   llvm::SmallVector<std::tuple<void *, void *, size_t>> H2MList;

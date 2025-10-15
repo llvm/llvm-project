@@ -17,8 +17,6 @@
 #include "Shared/Requirements.h"
 #include "omptarget.h"
 
-#define LIBOMP_DECL(RetType, FnDecl) RetType __cdecl FnDecl
-
 enum class AllocOptionTy : int32_t {
   ALLOC_OPT_NONE = 0,
   ALLOC_OPT_REDUCTION_SCRATCH = 1,
@@ -26,14 +24,6 @@ enum class AllocOptionTy : int32_t {
   ALLOC_OPT_HOST_MEM = 3,
   ALLOC_OPT_SLM = 4,
 };
-
-/// Host runtime routines being used
-extern "C" {
-LIBOMP_DECL(int, omp_get_max_teams(void));
-LIBOMP_DECL(int, omp_get_thread_limit(void));
-LIBOMP_DECL(int, omp_get_teams_thread_limit(void));
-LIBOMP_DECL(double, omp_get_wtime(void));
-} // extern "C"
 
 #ifndef EXTRACT_BITS
 // MSB=63, LSB=0
@@ -69,7 +59,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 }
 
 #define L0_UNIMPLEMENTED_ERR                                                   \
-  return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet\n",   \
+  return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet",     \
                        __func__);
 
 } // namespace llvm::omp::target::plugin

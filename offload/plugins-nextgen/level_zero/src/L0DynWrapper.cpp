@@ -83,6 +83,7 @@ DLWRAP(zeModuleDynamicLink, 3)
 DLWRAP(zeModuleGetGlobalPointer, 4)
 DLWRAP(zesDeviceEnumMemoryModules, 3)
 DLWRAP(zesMemoryGetState, 2)
+DLWRAP(zeCommandListHostSynchronize, 2)
 
 DLWRAP_FINALIZE()
 

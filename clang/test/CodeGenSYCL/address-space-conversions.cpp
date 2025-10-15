@@ -35,9 +35,9 @@ void tmpl(T t) {}
   // CHECK-DAG: [[LOC]].ascast = addrspacecast ptr [[LOC]] to ptr addrspace(4)
   // CHECK-DAG: [[PRIV]].ascast = addrspacecast ptr [[PRIV]] to ptr addrspace(4)
   LOC = nullptr;
-  // CHECK-DAG: store ptr addrspace(3) null, ptr addrspace(4) [[LOC]].ascast, align 8
+  // CHECK-DAG: store ptr addrspace(3) addrspacecast (ptr addrspace(4) null to ptr addrspace(3)), ptr addrspace(4) [[LOC]].ascast, align 8
   GLOB = nullptr;
-  // CHECK-DAG: store ptr addrspace(1) null, ptr addrspace(4) [[GLOB]].ascast, align 8
+  // CHECK-DAG: store ptr addrspace(1) addrspacecast (ptr addrspace(4) null to ptr addrspace(1)), ptr addrspace(4) [[GLOB]].ascast, align 8
 
   // Explicit conversions
   // From named address spaces to default address space

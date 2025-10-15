@@ -174,7 +174,6 @@ MemAllocatorTy::MemPoolTy::MemPoolTy(MemAllocatorTy *_Allocator) {
   BucketStats.resize(1, {0, 0});
   BucketParams.emplace_back(AllocMax, AllocUnit);
   ZeroInit = true;
-  ZeroInitValue.resize(AllocUnit, 0);
   DP("Initialized zero-initialized reduction counter pool for "
      "device " DPxMOD ": AllocMin = %zu, AllocMax = %zu, PoolSizeMax = %zu\n",
      DPxPTR(Allocator->Device), AllocMin, AllocMax, PoolSizeMax);
@@ -265,8 +264,7 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
     void *Base = Allocator->allocL0(BlockSize, 0, AllocKind);
 
     if (ZeroInit) {
-      auto RC =
-          Allocator->enqueueMemCopy(Base, ZeroInitValue.data(), BlockSize);
+      auto RC = Allocator->enqueueMemSet(Base, 0, BlockSize);
       if (RC != OFFLOAD_SUCCESS) {
         DP("Failed to zero-initialize pool memory\n");
         return nullptr;
@@ -405,8 +403,11 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
 void MemAllocatorTy::deinit() {
   std::lock_guard<std::mutex> Lock(Mtx);
   // Release RTL-owned memory
-  for (auto *M : MemOwned)
-    dealloc_locked(M);
+  for (auto *M : MemOwned) {
+    auto Err = dealloc_locked(M);
+    if (Err)
+      consumeError(std::move(Err));
+  }
   // Release resources used in the pool
   Pools.clear();
   ReductionPool.reset(nullptr);
@@ -436,9 +437,10 @@ void MemAllocatorTy::deinit() {
 }
 
 /// Allocate memory with the specified information
-void *MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
-                            intptr_t Offset, bool UserAlloc, bool DevMalloc,
-                            uint32_t MemAdvice, AllocOptionTy AllocOpt) {
+Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
+                                       intptr_t Offset, bool UserAlloc,
+                                       bool DevMalloc, uint32_t MemAdvice,
+                                       AllocOptionTy AllocOpt) {
   assert((Kind == TARGET_ALLOC_DEVICE || Kind == TARGET_ALLOC_HOST ||
           Kind == TARGET_ALLOC_SHARED) &&
          "Unknown memory kind while allocating target memory");
@@ -503,12 +505,13 @@ void *MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
 }
 
 /// Deallocate memory
-int32_t MemAllocatorTy::dealloc_locked(void *Ptr) {
+Error MemAllocatorTy::dealloc_locked(void *Ptr) {
   MemAllocInfoTy Info;
   if (!AllocInfo.remove(Ptr, &Info)) {
-    DP("Error: Cannot find memory allocation information for " DPxMOD "\n",
-       DPxPTR(Ptr));
-    return OFFLOAD_FAIL;
+    return Plugin::error(ErrorCode::BACKEND_FAILURE,
+                         "Cannot find memory allocation information for " DPxMOD
+                         "\n",
+                         DPxPTR(Ptr));
   }
   if (Info.InPool) {
     size_t DeallocSize = 0;
@@ -521,24 +524,31 @@ int32_t MemAllocatorTy::dealloc_locked(void *Ptr) {
       if (DeallocSize == 0)
         DeallocSize = CounterPool->dealloc(Info.Base);
       if (DeallocSize == 0) {
-        DP("Error: Cannot return memory " DPxMOD " to pool\n", DPxPTR(Ptr));
-        return OFFLOAD_FAIL;
+        return Plugin::error(ErrorCode::BACKEND_FAILURE,
+                             "Cannot return memory " DPxMOD " to pool\n",
+                             DPxPTR(Ptr));
       }
     }
     log(0, DeallocSize, Info.Kind, true /* Pool */);
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
   if (!Info.Base) {
     DP("Error: Cannot find base address of " DPxMOD "\n", DPxPTR(Ptr));
-    return OFFLOAD_FAIL;
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Cannot find base address of " DPxMOD "\n",
+                         DPxPTR(Ptr));
   }
-  CALL_ZE_RET_FAIL(zeMemFree, L0Context->getZeContext(), Info.Base);
+  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Info.Base);
   log(0, Info.Size, Info.Kind);
 
   DP("Deleted device memory " DPxMOD " (Base: " DPxMOD ", Size: %zu)\n",
      DPxPTR(Ptr), DPxPTR(Info.Base), Info.Size);
 
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
+}
+
+int32_t MemAllocatorTy::enqueueMemSet(void *Dst, int8_t Value, size_t Size) {
+  return Device->enqueueMemFill(Dst, &Value, sizeof(int8_t), Size);
 }
 
 int32_t MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src,

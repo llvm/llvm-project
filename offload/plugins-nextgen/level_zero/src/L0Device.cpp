@@ -492,13 +492,14 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo) {
   return Plugin::success();
 }
 
-void *L0DeviceTy::allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) {
+Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
+                                      TargetAllocTy Kind) {
   return dataAlloc(Size, /*Align=*/0, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
 
-int L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
+Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
   return dataDelete(TgtPtr);
 }
 
@@ -541,14 +542,6 @@ Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
     Queue = getPlugin().getAsyncQueue();
     AsyncInfoWrapper.setQueueAs<AsyncQueueTy *>(Queue);
   }
-  return Plugin::success();
-}
-
-Error L0DeviceTy::initDeviceInfoImpl(__tgt_device_info *Info) {
-  if (!Info->Context)
-    Info->Context = getZeContext();
-  if (!Info->Device)
-    Info->Device = reinterpret_cast<void *>(getZeDevice());
   return Plugin::success();
 }
 
@@ -627,9 +620,13 @@ uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
 interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
                                                    int32_t NumPrefers,
                                                    interop_spec_t *Prefers) {
-  // no supported preference found, set default to level_zero, non-ordered
+  // no supported preference found, set default to level_zero,
+  // non-ordered unless is targetsync
   return interop_spec_t{
-      tgt_fr_level_zero, {forceInorderInterop() /*inorder*/, 0}, 0};
+      tgt_fr_level_zero,
+      {InteropType == kmp_interop_type_targetsync ? true : false /*inorder*/,
+       0},
+      0};
 }
 
 Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
@@ -696,14 +693,12 @@ int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
                                    bool UseCopyEngine) {
   ze_command_list_handle_t CmdList = nullptr;
   ze_command_queue_handle_t CmdQueue = nullptr;
-  ze_event_handle_t Event = nullptr;
 
   if (useImmForCopy()) {
     CmdList = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
-    Event = getEvent();
     CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                     Event, 0, nullptr);
-    CALL_ZE_RET_FAIL(zeEventHostSynchronize, Event, UINT64_MAX);
+                     nullptr, 0, nullptr);
+    CALL_ZE_RET_FAIL(zeCommandListHostSynchronize, CmdList, UINT64_MAX);
   } else {
     if (UseCopyEngine) {
       CmdList = getCopyCmdList();
@@ -714,7 +709,7 @@ int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     }
 
     CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                     Event, 0, nullptr);
+                     nullptr, 0, nullptr);
     CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
     CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                          CmdQueue, 1, &CmdList, nullptr);
@@ -786,9 +781,10 @@ Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
   return Plugin::error(error::ErrorCode::UNKNOWN, "%s failed\n", __func__);
 }
 
-void *L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
-                            intptr_t Offset, bool UserAlloc, bool DevMalloc,
-                            uint32_t MemAdvice, AllocOptionTy AllocOpt) {
+Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
+                                       intptr_t Offset, bool UserAlloc,
+                                       bool DevMalloc, uint32_t MemAdvice,
+                                       AllocOptionTy AllocOpt) {
 
   const bool UseDedicatedPool =
       (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_SCRATCH) ||
@@ -808,7 +804,7 @@ void *L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
                          MemAdvice, AllocOpt);
 }
 
-int32_t L0DeviceTy::dataDelete(void *Ptr) {
+Error L0DeviceTy::dataDelete(void *Ptr) {
   auto &Allocator = getMemAllocator(Ptr);
   return Allocator.dealloc(Ptr);
 }

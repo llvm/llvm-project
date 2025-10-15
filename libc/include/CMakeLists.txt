@@ -191,6 +191,17 @@ add_header_macro(
     .inttypes
 )
 
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.netinet_in_macros
+)
+
 add_header_macro(
   assert
   ../libc/include/assert.yaml

@@ -200,8 +200,6 @@ class MemAllocatorTy {
     std::vector<std::pair<uint64_t, uint64_t>> BucketStats;
     /// Need to zero-initialize after L0 allocation
     bool ZeroInit = false;
-    /// Zero-initialized values to be copied to device
-    std::vector<char> ZeroInitValue;
 
     /// Get bucket ID from the specified allocation size.
     uint32_t getBucketId(size_t Size) {
@@ -307,7 +305,7 @@ class MemAllocatorTy {
   bool IsHostMem = false;
   // Internal deallocation function to be called when already
   // hondling the Mtx lock
-  int32_t dealloc_locked(void *Ptr);
+  Error dealloc_locked(void *Ptr);
 
 public:
   MemAllocatorTy() = default;
@@ -337,12 +335,12 @@ public:
   void *allocL0(size_t Size, size_t Align, int32_t Kind, size_t ActiveSize = 0);
 
   /// Allocate memory with the specified information from a memory pool
-  void *alloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
-              bool UserAlloc, bool DevMalloc, uint32_t MemAdvice,
-              AllocOptionTy AllocOpt);
+  Expected<void *> alloc(size_t Size, size_t Align, int32_t Kind,
+                         intptr_t Offset, bool UserAlloc, bool DevMalloc,
+                         uint32_t MemAdvice, AllocOptionTy AllocOpt);
 
   /// Deallocate memory
-  int32_t dealloc(void *Ptr) {
+  Error dealloc(void *Ptr) {
     std::lock_guard<std::mutex> Lock(Mtx);
     return dealloc_locked(Ptr);
   }
@@ -394,6 +392,10 @@ public:
 
   /// Perform copy operation
   int32_t enqueueMemCopy(void *Dst, const void *Src, size_t Size);
+
+  /// Perform memory fill operation
+  int32_t enqueueMemSet(void *Dst, int8_t Value, size_t Size);
+
 }; /// MemAllocatorTy
 
 // simple generic wrapper to reuse objects
