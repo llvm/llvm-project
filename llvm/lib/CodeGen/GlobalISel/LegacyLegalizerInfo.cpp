@@ -100,6 +100,9 @@ LegacyLegalizerInfo::LegacyLegalizerInfo() {
   setLegalizeScalarToDifferentSizeStrategy(
       TargetOpcode::G_EXTRACT, 1, narrowToSmallerAndUnsupportedIfTooSmall);
   setScalarAction(TargetOpcode::G_FNEG, 0, {{1, Lower}});
+
+  setScalarAction(TargetOpcode::G_PTRTOADDR, 0, {{1, Lower}});
+  // FIXME: Lower G_PTRTOADDR for vector types using less hacky approach
 }
 
 void LegacyLegalizerInfo::computeTables() {
@@ -204,6 +207,10 @@ LegacyLegalizerInfo::getAspectAction(const InstrAspect &Aspect) const {
   if (Aspect.Type.isScalar() || Aspect.Type.isPointer())
     return findScalarLegalAction(Aspect);
   assert(Aspect.Type.isVector());
+  if (Aspect.Opcode == TargetOpcode::G_PTRTOADDR) {
+    // FIXME: need to handle this better
+    return {Lower, Aspect.Type};
+  }
   return findVectorLegalAction(Aspect);
 }
 
@@ -382,4 +389,3 @@ LegacyLegalizerInfo::getAction(const LegalityQuery &Query) const {
   LLVM_DEBUG(dbgs() << ".. (legacy) Legal\n");
   return {Legal, 0, LLT{}};
 }
-

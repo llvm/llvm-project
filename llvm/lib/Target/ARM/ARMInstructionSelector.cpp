@@ -1018,6 +1018,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     break;
   }
   case G_INTTOPTR:
+  case G_PTRTOADDR:
   case G_PTRTOINT: {
     auto SrcReg = I.getOperand(1).getReg();
     auto DstReg = I.getOperand(0).getReg();
