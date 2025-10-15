@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
-#include "DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
@@ -188,6 +187,26 @@ bool DependencyScanningWorker::computeDependencies(
 
   return scanDependencies(WorkingDirectory, ModifiedCommandLine, Consumer,
                           Controller, DC, OverlayFS, ModuleName);
+}
+
+llvm::Error DependencyScanningWorker::initializeCompierInstanceWithContext(
+    StringRef CWD, const std::vector<std::string> &CommandLine) {
+  CIWithContext =
+      std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
+  return CIWithContext->initialize();
+}
+
+llvm::Error DependencyScanningWorker::computeDependenciesByNameWithContext(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  assert(CIWithContext && "CompilerInstance with context required!");
+  return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
+}
+
+llvm::Error DependencyScanningWorker::finalizeCompilerInstanceWithContext() {
+  llvm::Error E = CIWithContext->finalize();
+  CIWithContext.reset();
+  return E;
 }
 
 DependencyActionController::~DependencyActionController() {}

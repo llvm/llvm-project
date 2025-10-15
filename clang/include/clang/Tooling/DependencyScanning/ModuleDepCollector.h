@@ -288,6 +288,8 @@ public:
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
 
+  PPCallbacks *getPPCallbacks() override { return CollectorPPPtr; }
+
   /// Apply any changes implied by the discovered dependencies to the given
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
   void applyDiscoveredDependencies(CompilerInvocation &CI);
@@ -338,6 +340,10 @@ private:
 
   std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
+
+  /// A pointer to the preprocessor callback so we can invoke it directly
+  /// if needed.
+  ModuleDepCollectorPP *CollectorPPPtr = nullptr;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
