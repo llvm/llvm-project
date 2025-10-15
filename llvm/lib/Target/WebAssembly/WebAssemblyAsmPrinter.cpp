@@ -469,7 +469,7 @@ void WebAssemblyAsmPrinter::emitBranchHintSection() const {
   OutStreamer->switchSection(BranchHintsSection);
   OutStreamer->emitULEB128IntValue(NumFunctionHints);
 
-  auto EmitFunc = [this](const MCSymbol* Sym, const BranchHintRecord& Hints) {
+  auto EmitFunc = [this](const MCSymbol *Sym, const BranchHintRecord &Hints) {
     assert(!Hints.empty());
     // emit relocatable function index for the function symbol
     OutStreamer->emitULEB128Value(
@@ -486,10 +486,11 @@ void WebAssemblyAsmPrinter::emitBranchHintSection() const {
     }
   };
 
-  if (MCAssembler* AssemblerPtr = OutStreamer->getAssemblerPtr()) {
+  if (MCAssembler *AssemblerPtr = OutStreamer->getAssemblerPtr()) {
     const auto &AssemblerSymbols = AssemblerPtr->getSymbols();
     for (const auto &Sym : AssemblerSymbols) {
-      if (auto FuncEntry = BranchHints.find(Sym); FuncEntry != BranchHints.end()) {
+      if (auto FuncEntry = BranchHints.find(Sym);
+          FuncEntry != BranchHints.end()) {
         EmitFunc(Sym, FuncEntry->second);
       }
     }
