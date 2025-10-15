@@ -29,6 +29,23 @@ MlirContext mlirRewriterBaseGetContext(MlirRewriterBase rewriter) {
   return wrap(unwrap(rewriter)->getContext());
 }
 
+MlirRewriterBaseListener
+mlirRewriterBaseGetListener(MlirRewriterBase rewriter) {
+  return wrap(
+      dyn_cast<RewriterBase::Listener>(unwrap(rewriter)->getListener()));
+}
+
+void mlirRewriterBaseListenerNotifyOperationInserted(
+    MlirRewriterBaseListener listener, MlirOperation op,
+    MlirOperation insertionPoint) {
+  OpBuilder::InsertPoint ip;
+  if (!mlirOperationIsNull(insertionPoint)) {
+    ip = OpBuilder::InsertPoint(unwrap(insertionPoint)->getBlock(),
+                                Block::iterator(unwrap(insertionPoint)));
+  }
+  return unwrap(listener)->notifyOperationInserted(unwrap(op), ip);
+}
+
 //===----------------------------------------------------------------------===//
 /// Insertion points methods
 //===----------------------------------------------------------------------===//
