@@ -5022,6 +5022,67 @@ defset list<WMMA_INSTR> MMAs  = {
 } // defset
 }
 
+// MMA.block_scale
+class MMA_BLOCK_SCALE<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
+                      WMMA_REGINFO FragC, WMMA_REGINFO FragD,
+                      string Kind, string SType, string ScaleVecSize>
+  : WMMA_INSTR<MMA_BLOCK_SCALE_NAME<Kind, SType, ScaleVecSize,
+                                    FragA, FragB, FragC, FragD>.record,
+                                    [FragA.Ins, FragB.Ins, FragC.Ins,
+                                     (ins B32:$scale_a, B16:$byte_id_a,
+                                          B16:$thread_id_a, B32:$scale_b,
+                                          B16:$byte_id_b, B16:$thread_id_b)]>,
+    // Requires does not seem to have effect on Instruction w/o Patterns.
+    // We set it here anyways and propagate to the Pat<> we construct below.
+  Requires<FragA.Predicates> {
+  let OutOperandList = FragD.Outs;
+  let InOperandList  = !con(Args, (ins MmaCode:$ptx));
+  string TypeList = !interleave([FragD.ptx_elt_type,
+                                 FragA.ptx_elt_type,
+                                 FragB.ptx_elt_type,
+                                 FragC.ptx_elt_type], ".");
+  string ScaleVecSizeStr = !cond(
+    !eq(ScaleVecSize, "") : "",
+    !eq(ScaleVecSize, ".scale_1x") : ".scale_vec::1X",
+    !eq(ScaleVecSize, ".scale_2x") : ".scale_vec::2X",
+    !eq(ScaleVecSize, ".scale_4x") : ".scale_vec::4X"
+  );
+  let AsmString = "mma.sync.aligned."
+                  # FragA.geom
+                  # ".row.col"
+                  # ".kind::" # Kind
+                  # ".block_scale"
+                  # ScaleVecSizeStr
+                  # "." # TypeList
+                  # "." # SType # " \n\t\t"
+                  # FragD.regstring # ",\n\t\t"
+                  # FragA.regstring # ",\n\t\t"
+                  # FragB.regstring # ",\n\t\t"
+                  # FragC.regstring # ",\n\t\t"
+                  # "$scale_a, {{$byte_id_a, $thread_id_a}}" # ",\n\t\t"
+                  # "$scale_b, {{$byte_id_b, $thread_id_b}};";
+}
+
+let isConvergent = true in {
+defset list<WMMA_INSTR> MMA_BLOCK_SCALEs  = {
+  foreach kind = ["mxf4", "mxf4nvf4", "mxf8f6f4"] in {
+    foreach scale_vec_size = ["", ".scale_1x", ".scale_2x", ".scale_4x"] in {
+      foreach stype = ["ue8m0", "ue4m3"] in {
+        foreach op = NVVM_MMA_OPS.all_mma_block_scale_ops in {
+          if NVVM_MMA_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
+            def : MMA_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.block_scale", "", kind>,
+                                  WMMA_REGINFO<op[1], "mma.block_scale", "", kind>,
+                                  WMMA_REGINFO<op[2], "mma.block_scale", "", kind>,
+                                  WMMA_REGINFO<op[3], "mma.block_scale", "", kind>,
+                                  kind, stype, scale_vec_size>;
+          }
+        } // op
+      } // stype
+    } // scale_vec_size
+  } // kind
+} // defset
+}
+
 // MMA SP
 class MMA_SP<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
              WMMA_REGINFO FragC, WMMA_REGINFO FragD,
@@ -5075,6 +5136,72 @@ defset list<WMMA_INSTR> MMA_SPs = {
       } // satf
     } // kind
   } // metadata
+} // defset
+}
+
+// MMA SP BLOCK SCALE
+class MMA_SP_BLOCK_SCALE<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
+                         WMMA_REGINFO FragC, WMMA_REGINFO FragD,
+                         string Kind, string SType, string ScaleVecSize>
+  : WMMA_INSTR<MMA_SP_BLOCK_SCALE_NAME<Kind, SType, ScaleVecSize,
+                                       FragA, FragB, FragC, FragD>.record,
+               [FragA.Ins, FragB.Ins, FragC.Ins,
+                (ins B32:$metadata, i32imm:$selector,
+                     B32:$scale_a, B16:$byte_id_a, B16:$thread_id_a,
+                     B32:$scale_b, B16:$byte_id_b, B16:$thread_id_b)]>,
+    // Requires does not seem to have effect on Instruction w/o Patterns.
+    // We set it here anyways and propagate to the Pat<> we construct below.
+    Requires<!listconcat(FragA.Predicates,
+                         FragB.Predicates,
+                         FragC.Predicates,
+                         FragD.Predicates)> {
+  let OutOperandList = FragD.Outs;
+  let InOperandList = !con(Args, (ins MmaCode:$ptx));
+  string TypeList = "." # FragD.ptx_elt_type
+                    # "." # FragA.ptx_elt_type
+                    # "." # FragB.ptx_elt_type
+                    # "." # FragC.ptx_elt_type;
+  string ScaleVecSizeStr = !cond(
+    !eq(ScaleVecSize, "") : "",
+    !eq(ScaleVecSize, ".scale_1x") : ".scale_vec::1X",
+    !eq(ScaleVecSize, ".scale_2x") : ".scale_vec::2X",
+    !eq(ScaleVecSize, ".scale_4x") : ".scale_vec::4X"
+  );
+  let AsmString = "mma.sp::ordered_metadata.sync.aligned."
+                  # FragA.geom
+                  # ".row.col"
+                  # ".kind::" # Kind
+                  # ".block_scale"
+                  # ScaleVecSizeStr
+                  # TypeList
+                  # "." # SType # "\n\t\t"
+                  # FragD.regstring # ",\n\t\t"
+                  # FragA.regstring # ",\n\t\t"
+                  # FragB.regstring # ",\n\t\t"
+                  # FragC.regstring # ",\n\t\t"
+                  # "$metadata" # ",\n\t\t"
+                  # "$selector" # ",\n\t\t"
+                  # "$scale_a, {{$byte_id_a, $thread_id_a}}" # ",\n\t\t"
+                  # "$scale_b, {{$byte_id_b, $thread_id_b}};";
+}
+
+let isConvergent = true in {
+defset list<WMMA_INSTR> MMA_SP_BLOCK_SCALEs = {
+  foreach kind = ["mxf4", "mxf4nvf4", "mxf8f6f4"] in {
+    foreach scale_vec_size = ["", ".scale_1x", ".scale_2x", ".scale_4x"] in {
+      foreach stype = ["ue8m0", "ue4m3"] in {
+      foreach op = NVVM_MMA_OPS.all_mma_sp_block_scale_ops in {
+        if NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
+          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[1], "mma.sp", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[2], "mma.sp", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[3], "mma.sp", "sp::ordered_metadata", kind>,
+                       kind, stype, scale_vec_size>;
+        }
+      } // op
+      } // stype
+    } // scale_vec_size
+  } // kind
 } // defset
 }
 
@@ -5159,7 +5286,8 @@ class MMA_PAT<WMMA_INSTR wi>
         Requires<wi.Predicates>;
 
 // Build intrinsic->instruction patterns for all MMA instructions.
-foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs, STMATRIXs, MMA_SPs) in
+foreach mma = !listconcat(MMAs, MMA_BLOCK_SCALEs, WMMAs, MMA_LDSTs, LDMATRIXs,
+                          STMATRIXs, MMA_SPs, MMA_SP_BLOCK_SCALEs) in
   def : MMA_PAT<mma>;
 
 multiclass MAPA<string suffix, Intrinsic Intr> {

@@ -131,7 +131,7 @@ class MMAFrag:
             "m16n8k64:b:e5m2": 4,
             "m16n8k64:b:e3m2": 4,
             "m16n8k64:b:e2m3": 4,
-            "m16n8k64:b:e2m1": 4,
+            "m16n8k64:b:e2m1": 4 if is_mma_sparse else 2,
             "m16n8k64:c:f16": 2,
             "m16n8k64:c:f32": 4,
             "m16n8k64:d:f16": 2,
@@ -1131,6 +1131,163 @@ def gen_mma_tests():
     return generated_items
 
 
+def get_mma_block_scale_ops():
+    return (
+        make_mma_ops(["m16n8k64"], ["e2m1"], [], ["f32"], [])
+        + make_mma_ops(
+            ["m16n8k32"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f32"],
+            [],
+        )
+    )
+
+
+def is_mma_block_scale_geom_supported(geom):
+    # geometries for FP.
+    if geom in [
+        "m16n8k32",
+        "m16n8k64",
+    ]:
+        return True
+    raise ValueError(f"Unexpected MMA block scale geometry: {geom}")
+
+
+def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+    if not (
+        is_type_supported(op.a.mma_type.ptx_type)
+        and is_mma_block_scale_geom_supported(op.a.geom)
+    ):
+        return False
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::2X"]
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf4nvf4"
+        and stype == "ue8m0"
+        and scale_vec_size == ".scale_vec::2X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf4nvf4"
+        and stype == "ue4m3"
+        and scale_vec_size == ".scale_vec::4X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k32"
+        and kind == "mxf8f6f4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::1X"]
+    ):
+        return True
+
+    return False
+
+
+def common_mma_block_scale_test_gen(params, op, intrinsic_template, instruction_template):
+    mma_block_scale_template = """
+declare ${ret_ty} @${intrinsic}(
+        ${args});
+
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define ${ret_ty} @test_${function}(
+        ${args}) {
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_a}
+; CHECK-NEXT: ${check_b}
+; CHECK-NEXT: ${check_c}
+; CHECK-NEXT: ${check_scale_a_data}
+; CHECK-NEXT: ${check_byte_id_a}
+; CHECK-NEXT: ${check_thread_id_a}
+; CHECK-NEXT: ${check_scale_b_data}
+; CHECK-NEXT: ${check_byte_id_b}
+; CHECK-NEXT: ${check_thread_id_b}
+  %r = call ${ret_ty} @${intrinsic}(
+        ${args});
+  ret ${ret_ty} %r;
+}
+"""
+
+    test_params = params
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".", "_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
+    test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
+    test_params["check_a"] = check_pattern(op.a)
+    test_params["check_b"] = check_pattern(op.b)
+    test_params["check_c"] = check_pattern(op.c)
+    test_params["check_d"] = check_pattern(op.d)
+    test_params["check_scale_a_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_scale_b_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_b"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_b"] = "{{%r[0-9]+}}"
+    args = ",\n        ".join(
+        list(make_wmma_slice_args(frag) for frag in (op.a, op.b, op.c))
+        + ["i32 %scale_a_data", "i16 %byte_id_a, i16 %thread_id_a"]
+        + ["i32 %scale_b_data", "i16 %byte_id_b, i16 %thread_id_b"]
+    )
+    test_params["args"] = args
+    print(Template(mma_block_scale_template).substitute(test_params))
+    return (test_params["intrinsic"], test_params["instruction"])
+
+
+def gen_mma_block_scale_tests():
+    if not (ptx_version >= 87 and gpu_arch >= 120 and aa):
+        return []
+
+    mma_block_scale_intrinsic_template = (
+        "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
+    )
+    mma_block_scale_instruction_template = (
+        "mma.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
+    )
+
+    generated_items = []
+
+    for op, kind, scale_vec_size, stype in product(
+        get_mma_block_scale_ops(),
+        ["mxf4", "mxf4nvf4", "mxf8f6f4"],
+        ["", ".scale_vec::1X", ".scale_vec::2X", ".scale_vec::4X"],
+        ["ue8m0", "ue4m3"],
+    ):
+        if not is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+            continue
+
+        params = {
+            "intrinsic_signature": mma_signature(op),
+            "ptx_signature": mma_ptx_signature(op),
+            "geom": op.a.geom,
+            "kind": kind,
+            "scale_vec_size": scale_vec_size,
+            "scale": scale_vec_size.replace("_vec::", ".").lower(),
+            "stype": stype,
+        }
+
+        intrinsic_template = mma_block_scale_intrinsic_template
+        instruction_template = mma_block_scale_instruction_template
+
+        generated_items.append(
+            common_mma_block_scale_test_gen(params, op, intrinsic_template, instruction_template)
+        )
+
+    return generated_items
+
+
 def get_mma_sp_ops():
     return (
         make_mma_ops(["m16n8k16", "m16n8k32"], ["bf16"], [], ["f32"], [], True)
@@ -1224,7 +1381,11 @@ def is_mma_sp_variant_supported(op, metadata, kind, satf):
     return True
 
 
-def sp_selector_gen(op):
+def sp_selector_gen(op, block_scale = False):
+    if block_scale:
+        # PTX ISA 9.0 has the sparsity selector equal to 0 only
+        return range(1)
+
     # (geom, type) -> allowed selector range
     range_01 = {
         ("m16n8k32", "bf16"),
@@ -1350,6 +1511,181 @@ def gen_mma_sp_tests():
 
         generated_items.append(
             common_mma_sp_test_gen(params, op, intrinsic_template, instruction_template)
+        )
+
+    return generated_items
+
+
+def get_mma_sp_block_scale_ops():
+    return (
+        make_mma_ops(["m16n8k128"], ["e2m1"], [], ["f32"], [], True)
+        + make_mma_ops(
+            ["m16n8k64"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f32"],
+            [],
+            True,
+        )
+    )
+
+
+def is_mma_sp_block_scale_geom_supported(geom):
+    # geometries for FP.
+    if geom in [
+        "m16n8k64",
+        "m16n8k128",
+    ]:
+        return True
+    raise ValueError(f"Unexpected sparse MMA block scale geometry: {geom}")
+
+
+def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+    if not (
+        is_type_supported(op.a.mma_type.ptx_type)
+        and is_mma_sp_block_scale_geom_supported(op.a.geom)
+    ):
+        return False
+
+    if (
+        op.a.geom == "m16n8k128"
+        and kind == "mxf4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::2X"]
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k128"
+        and kind == "mxf4nvf4"
+        and stype == "ue8m0"
+        and scale_vec_size == ".scale_vec::2X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k128"
+        and kind == "mxf4nvf4"
+        and stype == "ue4m3"
+        and scale_vec_size == ".scale_vec::4X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf8f6f4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::1X"]
+    ):
+        return True
+
+    return False
+
+
+def common_mma_sp_block_scale_test_gen(params, op, intrinsic_template, instruction_template):
+    mma_sp_block_scale_decl_template = """
+declare ${ret_ty} @${intrinsic}(
+        ${args});
+"""
+
+    mma_sp_block_scale_test_template = """
+; CHECK-LABEL: .func {{.*}}test_${function}_${selector}(
+define ${ret_ty} @test_${function}_${selector}(
+        ${args}) {
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_a}
+; CHECK-NEXT: ${check_b}
+; CHECK-NEXT: ${check_c}
+; CHECK-NEXT: ${check_metadata}
+; CHECK-NEXT: ${check_selector}
+; CHECK-NEXT: ${check_scale_a_data}
+; CHECK-NEXT: ${check_byte_id_a}
+; CHECK-NEXT: ${check_thread_id_a}
+; CHECK-NEXT: ${check_scale_b_data}
+; CHECK-NEXT: ${check_byte_id_b}
+; CHECK-NEXT: ${check_thread_id_b}
+  %r = call ${ret_ty} @${intrinsic}(
+        ${call_args});
+  ret ${ret_ty} %r;
+}
+"""
+
+    test_params = params
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".", "_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
+    test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
+    test_params["check_a"] = check_pattern(op.a)
+    test_params["check_b"] = check_pattern(op.b)
+    test_params["check_c"] = check_pattern(op.c)
+    test_params["check_d"] = check_pattern(op.d)
+    test_params["check_metadata"] = "{{%r[0-9]+}}"
+    test_params["check_scale_a_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_scale_b_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_b"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_b"] = "{{%r[0-9]+}}"
+    args = ",\n        ".join(
+        list(make_wmma_slice_args(frag) for frag in (op.a, op.b, op.c))
+        + ["i32 %metadata", "i32 %selector"]
+        + ["i32 %scale_a_data", "i16 %byte_id_a, i16 %thread_id_a"]
+        + ["i32 %scale_b_data", "i16 %byte_id_b, i16 %thread_id_b"]
+    )
+    test_params["args"] = args
+
+    print(Template(mma_sp_block_scale_decl_template).substitute(test_params))
+
+    for selector in [str(r) for r in sp_selector_gen(op, True)]:
+        test_params["selector"] = selector
+        test_params["check_selector"] = "{{" + test_params["selector"] + "}}"
+        test_params["call_args"] = test_params["args"].replace(
+            "%selector", test_params["selector"]
+        )
+
+        print(Template(mma_sp_block_scale_test_template).substitute(test_params))
+
+    return (test_params["intrinsic"], test_params["instruction"])
+
+
+def gen_mma_sp_block_scale_tests():
+    if not (ptx_version >= 87 and gpu_arch >= 120 and aa):
+        return []
+
+    mma_sp_block_scale_intrinsic_template = (
+        "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
+    )
+    mma_sp_block_scale_instruction_template = (
+        "mma.sp::ordered_metadata.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
+    )
+
+    generated_items = []
+
+    for op, kind, scale_vec_size, stype in product(
+        get_mma_sp_block_scale_ops(),
+        ["mxf4", "mxf4nvf4", "mxf8f6f4"],
+        ["", ".scale_vec::1X", ".scale_vec::2X", ".scale_vec::4X"],
+        ["ue8m0", "ue4m3"],
+    ):
+        if not is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+            continue
+
+        params = {
+            "intrinsic_signature": mma_signature(op),
+            "ptx_signature": mma_ptx_signature(op),
+            "geom": op.a.geom,
+            "kind": kind,
+            "scale_vec_size": scale_vec_size,
+            "scale": scale_vec_size.replace("_vec::", ".").lower(),
+            "stype": stype,
+        }
+
+        intrinsic_template = mma_sp_block_scale_intrinsic_template
+        instruction_template = mma_sp_block_scale_instruction_template
+
+        generated_items.append(
+            common_mma_sp_block_scale_test_gen(params, op, intrinsic_template, instruction_template)
         )
 
     return generated_items
@@ -1545,7 +1881,9 @@ def gen_tests():
     items += gen_stmatrix_tests()
     items += gen_wmma_mma_tests()
     items += gen_mma_tests()
+    items += gen_mma_block_scale_tests()
     items += gen_mma_sp_tests()
+    items += gen_mma_sp_block_scale_tests()
     gen_check_unsupported_ops(items)
 
 
