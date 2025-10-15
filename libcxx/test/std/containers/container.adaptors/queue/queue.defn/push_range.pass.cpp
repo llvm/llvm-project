@@ -18,7 +18,7 @@
 #include "../../push_range_container_adaptors.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
     test_push_range<std::queue<int, std::deque<int, Alloc>>, Iter, Sent>();
     // Also cover a non-random-access (forward-iterator-only) underlying container.
@@ -31,6 +31,15 @@ int main(int, char**) {
 
   test_push_range_exception_safety_throwing_copy<std::queue>();
   test_push_range_exception_safety_throwing_allocator<std::queue, std::deque, int>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
