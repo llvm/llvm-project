@@ -157,9 +157,11 @@ using EqClassKey =
 struct ChainElem {
   Instruction *Inst;
   APInt OffsetFromLeader;
-  bool Redundant = false; // Set to true when load is redundant.
-  ChainElem(Instruction *Inst, APInt OffsetFromLeader)
-      : Inst(std::move(Inst)), OffsetFromLeader(std::move(OffsetFromLeader)) {}
+  unsigned IncrementalBytes = 0;
+  ChainElem(Instruction *Inst, APInt OffsetFromLeader,
+            unsigned IncrementalBytes)
+      : Inst(std::move(Inst)), OffsetFromLeader(std::move(OffsetFromLeader)),
+        IncrementalBytes(std::move(IncrementalBytes)) {}
 };
 using Chain = SmallVector<ChainElem, 1>;
 
@@ -627,8 +629,10 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
 
-  APInt PrevReadEnd = C[0].OffsetFromLeader +
-                      DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
+  unsigned ElemBytes = DL.getTypeStoreSize(getChainElemTy(C));
+  assert(C[0].IncrementalBytes ==
+         DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8);
+  APInt PrevReadEnd = C[0].OffsetFromLeader + C[0].IncrementalBytes;
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
     // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
@@ -638,21 +642,23 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
 
     // Add this instruction to the end of the current chain, or start a new one.
     APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
-    bool IsRedundant = ReadEnd.sle(PrevReadEnd);
-    bool AreContiguous = It->OffsetFromLeader == PrevReadEnd;
+    int ExtraBytes =
+        PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
+    bool AreContiguous =
+        It->OffsetFromLeader.sle(PrevReadEnd) && ExtraBytes % ElemBytes == 0;
 
     LLVM_DEBUG(dbgs() << "LSV: Instruction is "
-                      << (AreContiguous
-                              ? "contiguous"
-                              : ((IsRedundant ? "redundant" : "chain-breaker")))
+                      << (AreContiguous ? "contiguous" : "chain-breaker")
                       << *It->Inst << " (starts at offset "
                       << It->OffsetFromLeader << ")\n");
 
-    It->Redundant = IsRedundant;
-    if (AreContiguous || IsRedundant)
+    if (AreContiguous) {
+      It->IncrementalBytes = ExtraBytes;
       CurChain.push_back(*It);
-    else
+    } else {
+      assert(It->IncrementalBytes == SzBits / 8);
       Ret.push_back({*It});
+    }
     PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
   }
 
@@ -883,11 +889,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
   unsigned ChainBytes = 0;
-  for (auto &E : C) {
-    if (E.Redundant)
-      continue;
-    ChainBytes += DL.getTypeStoreSize(getLoadStoreType(E.Inst));
-  }
+  for (auto &E : C)
+    ChainBytes += E.IncrementalBytes;
+
   assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
@@ -1579,7 +1583,8 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
               (ChainIter->first->comesBefore(I) ? I : ChainIter->first))) {
         // `Offset` might not have the expected number of bits, if e.g. AS has a
         // different number of bits than opaque pointers.
-        ChainIter->second.emplace_back(I, Offset.value());
+        ChainIter->second.emplace_back(
+            I, Offset.value(), DL.getTypeSizeInBits(getLoadStoreType(I)) / 8);
         // Move ChainIter to the front of the MRU list.
         MRU.remove(*ChainIter);
         MRU.push_front(*ChainIter);
@@ -1591,7 +1596,8 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
     if (!MatchFound) {
       APInt ZeroOffset(ASPtrBits, 0);
       InstrListElem *E = new (Allocator.Allocate()) InstrListElem(I);
-      E->second.emplace_back(I, ZeroOffset);
+      E->second.emplace_back(I, ZeroOffset,
+                             DL.getTypeSizeInBits(getLoadStoreType(I)) / 8);
       MRU.push_front(*E);
       Chains.insert(E);
     }
