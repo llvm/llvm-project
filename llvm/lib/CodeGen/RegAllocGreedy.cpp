@@ -1384,9 +1384,6 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   // We define it as the total frequency of broken COPY instructions to/from
   // Hint register, and after split, they can be deleted.
 
-  // FIXME: This is miscounting the costs with subregisters. In particular, this
-  // should support recognizing SplitKit formed copy bundles instead of direct
-  // copy instructions, which will appear in the same block.
   for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
     const MachineInstr &Instr = *Opnd.getParent();
     if (!Instr.isCopy() || Opnd.isImplicit())
@@ -1429,8 +1426,19 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
     MCRegister ThisHint =
         SubReg ? TRI->getSubReg(Hint, SubReg) : MCRegister(Hint);
-    if (OtherPhysReg == ThisHint)
-      Cost += MBFI->getBlockFreq(Instr.getParent());
+    if (OtherPhysReg == ThisHint) {
+      const MachineBasicBlock *MBB = Instr.getParent();
+
+      // Skip counting if this COPY instruction is part of a bundle but not the
+      // first instruction in the bundle. This avoids overcounting SplitKit
+      // formed copy bundles.
+      if (Instr.isBundledWithPred()) {
+        // This is part of a bundle but not the first instruction, so skip it
+        continue;
+      }
+
+      Cost += MBFI->getBlockFreq(MBB);
+    }
   }
 
   // Decrease the cost so it will be split in colder blocks.
