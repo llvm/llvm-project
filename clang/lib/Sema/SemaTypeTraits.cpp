@@ -1164,7 +1164,9 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     const CXXDestructorDecl *Dtor = RD->getDestructor();
     if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
       return true;
-    if (!(RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())))
+    bool HasTrivialNonDeletedDtr =
+        RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted());
+    if (!HasTrivialNonDeletedDtr)
       return false;
     for (CXXConstructorDecl *Ctr : RD->ctors()) {
       if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
