@@ -771,7 +771,7 @@ Intrinsics representing queries on multisampled texture resources include
 `.ms.` in their name and their return value includes an additional `i32` for
 the number of samples.
 
-Intrinsics with `mip_level` argument and `.level.` in their name are used
+Intrinsics with `mip_level` argument and `.levels.` in their name are used
 for texture resources with multiple MIP levels. Their return
 struct includes an additional `i32` for the number of levels the resource has.
 
@@ -782,7 +782,7 @@ struct includes an additional `i32` for the number of levels the resource has.
    {i32, i32, i32} @llvm.dx.resource.getdimensions.xyz( target("dx.*") handle )
    {i32, i32} @llvm.dx.resource.getdimensions.levels.x( target("dx.*") handle, i32 mip_level )
    {i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xy( target("dx.*") handle, i32 mip_level )
-   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyx( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyz( target("dx.*") handle, i32 mip_level )
    {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy( target("dx.*") handle )
    {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xyz( target("dx.*") handle )
 
