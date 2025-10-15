@@ -167,6 +167,20 @@ struct alignas(128) OveralignedWithCookie {
   char padding[Size];
 };
 
+// These types have a different ABI alignment (alignof) and preferred alignment (__alignof) on some platforms.
+// Make sure things work with these types because array cookies can be sensitive to preferred alignment on some
+// platforms.
+struct WithCookiePreferredAlignment {
+  WithCookiePreferredAlignment() = default;
+  WithCookiePreferredAlignment(WithCookiePreferredAlignment const&) {}
+  WithCookiePreferredAlignment& operator=(WithCookiePreferredAlignment const&) { return *this; }
+  ~WithCookiePreferredAlignment() {}
+  long double data;
+};
+struct NoCookiePreferredAlignment {
+  long double data;
+};
+
 int main(int, char**) {
   test<WithCookie<1>, NoCookie<1>>();
   test<WithCookie<2>, NoCookie<2>>();
@@ -187,6 +201,7 @@ int main(int, char**) {
   test<OveralignedWithCookie<256>, OveralignedNoCookie<256>>();
 
   test<std::string, int>();
+  test<WithCookiePreferredAlignment, NoCookiePreferredAlignment>();
 
   return 0;
 }
