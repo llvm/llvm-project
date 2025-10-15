@@ -121,17 +121,10 @@ class PrepareForOMPOffloadPrivatizationPass
         //   /*cleanup_code*/
         //   omp.terminator
         // }
+        // fakeDependVar is the address of the first heap-allocated copy of the
+        // host variable being privatized.
+
         bool needsCleanupTask = !privatizer.getDeallocRegion().empty();
-        if (needsCleanupTask && !fakeDependVar) {
-          Region *targetParentRegion = targetOp->getParentRegion();
-          rewriter.setInsertionPointToStart(&*targetParentRegion->begin());
-          Location loc = targetParentRegion->getLoc();
-          Type i32Ty = rewriter.getI32Type();
-          Type llvmPtrTy = LLVM::LLVMPointerType::get(targetOp->getContext());
-          Value constOne = rewriter.create<LLVM::ConstantOp>(loc, i32Ty, 1);
-          fakeDependVar =
-              LLVM::AllocaOp::create(rewriter, loc, llvmPtrTy, i32Ty, constOne);
-        }
 
         // Allocate heap memory that corresponds to the type of memory
         // pointed to by varPtr
@@ -152,6 +145,9 @@ class PrepareForOMPOffloadPrivatizationPass
               "Unable to allocate heap memory when trying to move "
               "a private variable out of the stack and into the "
               "heap for use by a deferred target task");
+
+        if (needsCleanupTask && !fakeDependVar)
+          fakeDependVar = heapMem;
 
         // The types of private vars should match before and after the
         // transformation. In particular, if the type is a pointer,

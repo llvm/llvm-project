@@ -154,133 +154,124 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     llvm.return
   }
 }
-
-// CHECK-LABEL:       llvm.func @free(!llvm.ptr)
+// CHECK-LABEL:   llvm.func @free(!llvm.ptr)
 // CHECK: llvm.func @malloc(i64) -> !llvm.ptr
 
-// CHECK-LABEL: llvm.func internal @firstprivate_test(
+
+// CHECK-LABEL:   llvm.func internal @firstprivate_test(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "ptr0"},
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "ptr1"}) {
 // CHECK: %[[VAL_0:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK: %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 : (i32) -> !llvm.ptr
-// CHECK: %[[VAL_2:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK: %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: %[[VAL_4:.*]] = llvm.alloca %[[VAL_2]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-// CHECK: %[[VAL_5:.*]] = llvm.mlir.constant(48 : i64) : i64
-// CHECK: %[[HEAP0:.*]] = llvm.call @malloc(%[[VAL_5]]) : (i64) -> !llvm.ptr
-// CHECK: %[[STACK0:.*]] = llvm.alloca %[[VAL_2]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "local"} : (i32) -> !llvm.ptr
-// CHECK: %[[VAL_8:.*]] = llvm.mlir.constant(48 : i64) : i64
-// CHECK: %[[HEAP1:.*]] = llvm.call @malloc(%[[VAL_8]]) : (i64) -> !llvm.ptr
-// CHECK: %[[STACK1:.*]] = llvm.alloca %[[VAL_2]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "glocal"} : (i32) -> !llvm.ptr
-// CHECK: %[[VAL_11:.*]] = llvm.alloca %[[VAL_2]] x i32 {bindc_name = "i"} : (i32) -> !llvm.ptr
-// CHECK: %[[VAL_12:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: llvm.store %[[VAL_12]], %[[STACK0]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>, !llvm.ptr
-// CHECK: llvm.store %[[VAL_12]], %[[STACK1]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>, !llvm.ptr
-// CHECK: llvm.store %[[VAL_2]], %[[VAL_11]] : i32, !llvm.ptr
-// CHECK: %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
-// CHECK: %[[VAL_14:.*]] = llvm.getelementptr %[[STACK0]][0, 7, %[[VAL_3]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_1:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[VAL_2:.*]] = llvm.alloca %[[VAL_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+// CHECK: %[[VAL_3:.*]] = llvm.mlir.constant(48 : i64) : i64
+// CHECK: %[[HEAP0:.*]] = llvm.call @malloc(%[[VAL_3]]) : (i64) -> !llvm.ptr
+// CHECK: %[[VAL_5:.*]] = llvm.alloca %[[VAL_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "local"} : (i32) -> !llvm.ptr
+// CHECK: %[[VAL_6:.*]] = llvm.mlir.constant(48 : i64) : i64
+// CHECK: %[[HEAP1:.*]] = llvm.call @malloc(%[[VAL_6]]) : (i64) -> !llvm.ptr
+// CHECK: %[[VAL_8:.*]] = llvm.alloca %[[VAL_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "glocal"} : (i32) -> !llvm.ptr
+// CHECK: %[[VAL_9:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i32) -> !llvm.ptr
+// CHECK: %[[VAL_10:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: llvm.store %[[VAL_10]], %[[VAL_5]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>, !llvm.ptr
+// CHECK: llvm.store %[[VAL_10]], %[[VAL_8]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>, !llvm.ptr
+// CHECK: llvm.store %[[VAL_0]], %[[VAL_9]] : i32, !llvm.ptr
+// CHECK: %[[VAL_11:.*]] = omp.map.info var_ptr(%[[VAL_9]] : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
+// CHECK: %[[VAL_12:.*]] = llvm.getelementptr %[[VAL_5]][0, 7, %[[VAL_1]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_13:.*]] = llvm.load %[[VAL_12]] : !llvm.ptr -> i64
+// CHECK: %[[VAL_14:.*]] = llvm.getelementptr %[[VAL_5]][0, 7, %[[VAL_1]], 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK: %[[VAL_15:.*]] = llvm.load %[[VAL_14]] : !llvm.ptr -> i64
-// CHECK: %[[VAL_16:.*]] = llvm.getelementptr %[[STACK0]][0, 7, %[[VAL_3]], 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_16:.*]] = llvm.getelementptr %[[VAL_5]][0, 7, %[[VAL_1]], 2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK: %[[VAL_17:.*]] = llvm.load %[[VAL_16]] : !llvm.ptr -> i64
-// CHECK: %[[VAL_18:.*]] = llvm.getelementptr %[[STACK0]][0, 7, %[[VAL_3]], 2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_19:.*]] = llvm.load %[[VAL_18]] : !llvm.ptr -> i64
-// CHECK: %[[VAL_20:.*]] = llvm.sub %[[VAL_17]], %[[VAL_3]] : i64
-// CHECK: %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_3]] : i64) upper_bound(%[[VAL_20]] : i64) extent(%[[VAL_17]] : i64) stride(%[[VAL_19]] : i64) start_idx(%[[VAL_15]] : i64) {stride_in_bytes = true}
-// CHECK: %[[VAL_22:.*]] = llvm.call @firstprivatizer_init(%[[STACK0]], %[[HEAP0]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-// CHECK: %[[VAL_23:.*]] = llvm.call @firstprivatizer_copy(%[[STACK0]], %[[VAL_22]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-// CHECK: %[[VAL_24:.*]] = llvm.getelementptr %[[STACK1]][0, 7, %[[VAL_3]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_18:.*]] = llvm.sub %[[VAL_15]], %[[VAL_1]] : i64
+// CHECK: %[[VAL_19:.*]] = omp.map.bounds lower_bound(%[[VAL_1]] : i64) upper_bound(%[[VAL_18]] : i64) extent(%[[VAL_15]] : i64) stride(%[[VAL_17]] : i64) start_idx(%[[VAL_13]] : i64) {stride_in_bytes = true}
+// CHECK: %[[VAL_20:.*]] = llvm.call @firstprivatizer_init(%[[VAL_5]], %[[HEAP0]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_21:.*]] = llvm.call @firstprivatizer_copy(%[[VAL_5]], %[[VAL_20]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_22:.*]] = llvm.getelementptr %[[VAL_8]][0, 7, %[[VAL_1]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_23:.*]] = llvm.load %[[VAL_22]] : !llvm.ptr -> i64
+// CHECK: %[[VAL_24:.*]] = llvm.getelementptr %[[VAL_8]][0, 7, %[[VAL_1]], 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK: %[[VAL_25:.*]] = llvm.load %[[VAL_24]] : !llvm.ptr -> i64
-// CHECK: %[[VAL_26:.*]] = llvm.getelementptr %[[STACK1]][0, 7, %[[VAL_3]], 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_26:.*]] = llvm.getelementptr %[[VAL_8]][0, 7, %[[VAL_1]], 2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK: %[[VAL_27:.*]] = llvm.load %[[VAL_26]] : !llvm.ptr -> i64
-// CHECK: %[[VAL_28:.*]] = llvm.getelementptr %[[STACK1]][0, 7, %[[VAL_3]], 2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_29:.*]] = llvm.load %[[VAL_28]] : !llvm.ptr -> i64
-// CHECK: %[[VAL_30:.*]] = llvm.sub %[[VAL_27]], %[[VAL_3]] : i64
-// CHECK: %[[VAL_31:.*]] = omp.map.bounds lower_bound(%[[VAL_3]] : i64) upper_bound(%[[VAL_30]] : i64) extent(%[[VAL_27]] : i64) stride(%[[VAL_29]] : i64) start_idx(%[[VAL_25]] : i64) {stride_in_bytes = true}
-// CHECK: %[[VAL_32:.*]] = llvm.call @firstprivatizer_1_init(%[[STACK1]], %[[HEAP1]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-// CHECK: %[[VAL_33:.*]] = llvm.call @firstprivatizer_1_copy(%[[STACK1]], %[[VAL_32]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-// CHECK: %[[VAL_34:.*]] = llvm.getelementptr %[[HEAP0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_35:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, i32) map_clauses({{.*}}to{{.*}}) capture(ByRef)
-// CHECK-SAME: var_ptr_ptr(%[[VAL_34]] : !llvm.ptr) bounds(%[[VAL_21]]) -> !llvm.ptr {name = ""}
-// CHECK: %[[VAL_36:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)
-// CHECK-SAME: map_clauses(always,{{.*}}to) capture(ByRef) members(%[[VAL_35]] : [0] : !llvm.ptr) -> !llvm.ptr
-// CHECK: %[[VAL_37:.*]] = llvm.getelementptr %[[HEAP1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_38:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, i32) map_clauses({{.*}}to{{.*}}) capture(ByRef)
-// CHECK-SAME: var_ptr_ptr(%[[VAL_37]] : !llvm.ptr) bounds(%[[VAL_31]]) -> !llvm.ptr {name = ""}
-// CHECK: %[[VAL_39:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always,{{.*}}to) capture(ByRef) members(%[[VAL_38]] : [0] : !llvm.ptr) -> !llvm.ptr
-// CHECK: omp.target depend(taskdependout -> %[[VAL_1]] : !llvm.ptr) nowait
-// CHECK-SAME: map_entries(%[[VAL_13]] -> %[[VAL_40:.*]], %[[VAL_36]] -> %[[VAL_41:.*]], %[[VAL_35]] -> %[[VAL_42:.*]], %[[VAL_39]] -> %[[VAL_43:.*]], %[[VAL_38]] -> %[[VAL_44:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr)
-// CHECK-SAME: private(@firstprivatizer %[[HEAP0]] -> %[[VAL_45:.*]] [map_idx=1], @firstprivatizer_1 %[[HEAP1]] -> %[[VAL_46:.*]] [map_idx=3] : !llvm.ptr, !llvm.ptr) {
+// CHECK: %[[VAL_28:.*]] = llvm.sub %[[VAL_25]], %[[VAL_1]] : i64
+// CHECK: %[[VAL_29:.*]] = omp.map.bounds lower_bound(%[[VAL_1]] : i64) upper_bound(%[[VAL_28]] : i64) extent(%[[VAL_25]] : i64) stride(%[[VAL_27]] : i64) start_idx(%[[VAL_23]] : i64) {stride_in_bytes = true}
+// CHECK: %[[VAL_30:.*]] = llvm.call @firstprivatizer_1_init(%[[VAL_8]], %[[HEAP1]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_31:.*]] = llvm.call @firstprivatizer_1_copy(%[[VAL_8]], %[[VAL_30]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_32:.*]] = llvm.getelementptr %[[HEAP0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_33:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[VAL_32]] : !llvm.ptr) bounds(%[[VAL_19]]) -> !llvm.ptr {name = ""}
+// CHECK: %[[VAL_34:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[VAL_33]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_35:.*]] = llvm.getelementptr %[[HEAP1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_36:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[VAL_35]] : !llvm.ptr) bounds(%[[VAL_29]]) -> !llvm.ptr {name = ""}
+// CHECK: %[[VAL_37:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[VAL_36]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: omp.target depend(taskdependout -> %[[HEAP0]] : !llvm.ptr) nowait map_entries(%[[VAL_11]] -> %[[VAL_38:.*]], %[[VAL_34]] -> %[[VAL_39:.*]], %[[VAL_33]] -> %[[VAL_40:.*]], %[[VAL_37]] -> %[[VAL_41:.*]], %[[VAL_36]] -> %[[VAL_42:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@firstprivatizer %[[HEAP0]] -> %[[VAL_43:.*]] [map_idx=1], @firstprivatizer_1 %[[HEAP1]] -> %[[VAL_44:.*]] [map_idx=3] : !llvm.ptr, !llvm.ptr) {
 // CHECK: omp.terminator
 // CHECK: }
-// CHECK: omp.task depend(taskdependin -> %[[VAL_1]] : !llvm.ptr) {
-// CHECK: llvm.call @firstprivatizer_1_dealloc(%[[VAL_33]]) : (!llvm.ptr) -> ()
+// CHECK: omp.task depend(taskdependin -> %[[HEAP0]] : !llvm.ptr) {
+// CHECK: llvm.call @firstprivatizer_1_dealloc(%[[VAL_31]]) : (!llvm.ptr) -> ()
 // CHECK: llvm.call @free(%[[HEAP1]]) : (!llvm.ptr) -> ()
-// CHECK: llvm.call @firstprivatizer_dealloc(%[[VAL_23]]) : (!llvm.ptr) -> ()
+// CHECK: llvm.call @firstprivatizer_dealloc(%[[VAL_21]]) : (!llvm.ptr) -> ()
 // CHECK: llvm.call @free(%[[HEAP0]]) : (!llvm.ptr) -> ()
 // CHECK: omp.terminator
 // CHECK: }
-// CHECK: %[[VAL_47:.*]] = llvm.mlir.constant(48 : i32) : i32
-// CHECK: %[[VAL_48:.*]] = llvm.getelementptr %[[STACK0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_49:.*]] = llvm.load %[[VAL_48]] : !llvm.ptr -> !llvm.ptr
-// CHECK: llvm.call @free(%[[VAL_49]]) : (!llvm.ptr) -> ()
+// CHECK: %[[VAL_45:.*]] = llvm.mlir.constant(48 : i32) : i32
+// CHECK: %[[VAL_46:.*]] = llvm.getelementptr %[[VAL_5]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK: %[[VAL_47:.*]] = llvm.load %[[VAL_46]] : !llvm.ptr -> !llvm.ptr
+// CHECK: llvm.call @free(%[[VAL_47]]) : (!llvm.ptr) -> ()
 // CHECK: llvm.return
 // CHECK: }
 
 // CHECK-LABEL:   llvm.func @target_boxchar_(
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "l"}) attributes {fir.internal_name = "_QPtarget_boxchar", frame_pointer = #llvm.framePointerKind<all>, target_cpu = "x86-64"} {
-// CHECK: %[[VAL_0:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK: %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 : (i32) -> !llvm.ptr
+// CHECK: %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
 // CHECK: %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-// CHECK: %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: %[[VAL_5:.*]] = llvm.mlir.constant(16 : i64) : i64
-// CHECK: %[[VAL_6:.*]] = llvm.call @malloc(%[[VAL_5]]) : (i64) -> !llvm.ptr
-// CHECK: %[[VAL_7:.*]] = llvm.alloca %[[VAL_4]] x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
-// CHECK: %[[VAL_8:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[VAL_9:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: %[[VAL_10:.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK: %[[VAL_11:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: %[[VAL_12:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: %[[VAL_13:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> i32
-// CHECK: %[[VAL_14:.*]] = llvm.icmp "sgt" %[[VAL_13]], %[[VAL_10]] : i32
-// CHECK: %[[VAL_15:.*]] = llvm.select %[[VAL_14]], %[[VAL_13]], %[[VAL_10]] : i1, i32
-// CHECK: %[[VAL_16:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: %[[VAL_17:.*]] = llvm.sext %[[VAL_15]] : i32 to i64
-// CHECK: %[[VAL_18:.*]] = llvm.alloca %[[VAL_17]] x i8 {bindc_name = "char_var"} : (i64) -> !llvm.ptr
-// CHECK: %[[VAL_19:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_20:.*]] = llvm.sext %[[VAL_15]] : i32 to i64
-// CHECK: %[[VAL_21:.*]] = llvm.insertvalue %[[VAL_18]], %[[VAL_19]][0] : !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_22:.*]] = llvm.insertvalue %[[VAL_20]], %[[VAL_21]][1] : !llvm.struct<(ptr, i64)>
-// CHECK: llvm.store %[[VAL_22]], %[[VAL_7]] : !llvm.struct<(ptr, i64)>, !llvm.ptr
-// CHECK: %[[VAL_23:.*]] = llvm.load %[[VAL_7]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_24:.*]] = llvm.extractvalue %[[VAL_23]][0] : !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_25:.*]] = llvm.extractvalue %[[VAL_23]][1] : !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_26:.*]] = llvm.sub %[[VAL_25]], %[[VAL_8]] : i64
-// CHECK: %[[VAL_27:.*]] = omp.map.bounds lower_bound(%[[VAL_9]] : i64) upper_bound(%[[VAL_26]] : i64) extent(%[[VAL_25]] : i64) stride(%[[VAL_8]] : i64) start_idx(%[[VAL_9]] : i64) {stride_in_bytes = true}
-// CHECK: %[[VAL_28:.*]] = llvm.load %[[VAL_7]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_29:.*]] = llvm.load %[[VAL_6]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_30:.*]] = llvm.call @boxchar_firstprivate_init(%[[VAL_28]], %[[VAL_29]]) : (!llvm.struct<(ptr, i64)>, !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_31:.*]] = llvm.call @boxchar_firstprivate_copy(%[[VAL_28]], %[[VAL_30]]) : (!llvm.struct<(ptr, i64)>, !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)>
-// CHECK: llvm.store %[[VAL_31]], %[[VAL_6]] : !llvm.struct<(ptr, i64)>, !llvm.ptr
-// CHECK: %[[VAL_32:.*]] = omp.map.info var_ptr(%[[VAL_3]] : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr
-// CHECK: %[[VAL_33:.*]] = llvm.getelementptr %[[VAL_6]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
-// CHECK: %[[VAL_34:.*]] = omp.map.info var_ptr(%[[VAL_6]] : !llvm.ptr, i8) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_33]] : !llvm.ptr) bounds(%[[VAL_27]]) -> !llvm.ptr
-// CHECK: %[[VAL_35:.*]] = omp.map.info var_ptr(%[[VAL_6]] : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%[[VAL_34]] : [0] : !llvm.ptr) -> !llvm.ptr
-// CHECK: %[[VAL_36:.*]] = llvm.load %[[VAL_6]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
-// CHECK: omp.target depend(taskdependout -> %[[VAL_1]] : !llvm.ptr) nowait map_entries(%[[VAL_35]] -> %[[VAL_37:.*]], %[[VAL_32]] -> %[[VAL_38:.*]], %[[VAL_34]] -> %[[VAL_39:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@boxchar_firstprivate %[[VAL_36]] -> %[[VAL_40:.*]] [map_idx=0], @private_eye %[[VAL_3]] -> %[[VAL_41:.*]] [map_idx=1] : !llvm.struct<(ptr, i64)>, !llvm.ptr) {
+// CHECK: %[[VAL_3:.*]] = llvm.mlir.constant(16 : i64) : i64
+// CHECK: %[[HEAP0:.*]] = llvm.call @malloc(%[[VAL_3]]) : (i64) -> !llvm.ptr
+// CHECK: %[[VAL_5:.*]] = llvm.alloca %[[VAL_2]] x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
+// CHECK: %[[VAL_6:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: %[[VAL_7:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[VAL_8:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %[[VAL_9:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[VAL_10:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[VAL_11:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> i32
+// CHECK: %[[VAL_12:.*]] = llvm.icmp "sgt" %[[VAL_11]], %[[VAL_8]] : i32
+// CHECK: %[[VAL_13:.*]] = llvm.select %[[VAL_12]], %[[VAL_11]], %[[VAL_8]] : i1, i32
+// CHECK: %[[VAL_14:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[VAL_15:.*]] = llvm.sext %[[VAL_13]] : i32 to i64
+// CHECK: %[[VAL_16:.*]] = llvm.alloca %[[VAL_15]] x i8 {bindc_name = "char_var"} : (i64) -> !llvm.ptr
+// CHECK: %[[VAL_17:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_18:.*]] = llvm.sext %[[VAL_13]] : i32 to i64
+// CHECK: %[[VAL_19:.*]] = llvm.insertvalue %[[VAL_16]], %[[VAL_17]][0] : !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_20:.*]] = llvm.insertvalue %[[VAL_18]], %[[VAL_19]][1] : !llvm.struct<(ptr, i64)>
+// CHECK: llvm.store %[[VAL_20]], %[[VAL_5]] : !llvm.struct<(ptr, i64)>, !llvm.ptr
+// CHECK: %[[VAL_21:.*]] = llvm.load %[[VAL_5]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_22:.*]] = llvm.extractvalue %[[VAL_21]][0] : !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_23:.*]] = llvm.extractvalue %[[VAL_21]][1] : !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_24:.*]] = llvm.sub %[[VAL_23]], %[[VAL_6]] : i64
+// CHECK: %[[VAL_25:.*]] = omp.map.bounds lower_bound(%[[VAL_7]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_23]] : i64) stride(%[[VAL_6]] : i64) start_idx(%[[VAL_7]] : i64) {stride_in_bytes = true}
+// CHECK: %[[VAL_26:.*]] = llvm.load %[[VAL_5]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_27:.*]] = llvm.load %[[HEAP0]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_28:.*]] = llvm.call @boxchar_firstprivate_init(%[[VAL_26]], %[[VAL_27]]) : (!llvm.struct<(ptr, i64)>, !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_29:.*]] = llvm.call @boxchar_firstprivate_copy(%[[VAL_26]], %[[VAL_28]]) : (!llvm.struct<(ptr, i64)>, !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)>
+// CHECK: llvm.store %[[VAL_29]], %[[HEAP0]] : !llvm.struct<(ptr, i64)>, !llvm.ptr
+// CHECK: %[[VAL_30:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr
+// CHECK: %[[VAL_31:.*]] = llvm.getelementptr %[[HEAP0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_32:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, i8) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_31]] : !llvm.ptr) bounds(%[[VAL_25]]) -> !llvm.ptr
+// CHECK: %[[VAL_33:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%[[VAL_32]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_34:.*]] = llvm.load %[[HEAP0]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
+// CHECK: omp.target depend(taskdependout -> %[[HEAP0]] : !llvm.ptr) nowait map_entries(%[[VAL_33]] -> %[[VAL_35:.*]], %[[VAL_30]] -> %[[VAL_36:.*]], %[[VAL_32]] -> %[[VAL_37:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@boxchar_firstprivate %[[VAL_34]] -> %[[VAL_38:.*]] [map_idx=0], @private_eye %[[VAL_1]] -> %[[VAL_39:.*]] [map_idx=1] : !llvm.struct<(ptr, i64)>, !llvm.ptr) {
 // CHECK: omp.terminator
 // CHECK: }
-// CHECK: omp.task depend(taskdependin -> %[[VAL_1]] : !llvm.ptr) {
-// CHECK: llvm.call @boxchar_firstprivate_dealloc(%[[VAL_31]]) : (!llvm.struct<(ptr, i64)>) -> ()
-// CHECK: llvm.call @free(%[[VAL_6]]) : (!llvm.ptr) -> ()
+// CHECK: omp.task depend(taskdependin -> %[[HEAP0]] : !llvm.ptr) {
+// CHECK: llvm.call @boxchar_firstprivate_dealloc(%[[VAL_29]]) : (!llvm.struct<(ptr, i64)>) -> ()
+// CHECK: llvm.call @free(%[[HEAP0]]) : (!llvm.ptr) -> ()
 // CHECK: omp.terminator
 // CHECK: }
 // CHECK: llvm.return
 // CHECK: }
 
-
-
-// CHECK-LABEL: llvm.func @firstprivatizer_init(
-// CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr,
-// CHECK-SAME: %[[ARG1:.*]]: !llvm.ptr) -> !llvm.ptr attributes {always_inline} {
+// CHECK-LABEL:   llvm.func @firstprivatizer_init(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr,
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr) -> !llvm.ptr attributes {always_inline} {
 // CHECK: %[[VAL_0:.*]] = llvm.mlir.constant(48 : i64) : i64
 // CHECK: %[[VAL_1:.*]] = llvm.call @malloc(%[[VAL_0]]) : (i64) -> !llvm.ptr
 // CHECK: %[[VAL_2:.*]] = llvm.getelementptr %[[ARG1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
@@ -288,9 +279,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: llvm.return %[[ARG1]] : !llvm.ptr
 // CHECK: }
 
-// CHECK-LABEL: llvm.func @firstprivatizer_copy(
-// CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr,
-// CHECK-SAME: %[[ARG1:.*]]: !llvm.ptr) -> !llvm.ptr attributes {always_inline} {
+// CHECK-LABEL:   llvm.func @firstprivatizer_copy(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr,
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr) -> !llvm.ptr attributes {always_inline} {
 // CHECK: %[[VAL_0:.*]] = llvm.mlir.constant(48 : i32) : i32
 // CHECK: "llvm.intr.memcpy"(%[[ARG1]], %[[ARG0]], %[[VAL_0]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK: llvm.return %[[ARG1]] : !llvm.ptr
@@ -349,4 +340,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_5:.*]] = llvm.select %[[VAL_4]], %[[VAL_3]], %[[VAL_1]] : i1, i64
 // CHECK: "llvm.intr.memmove"(%[[VAL_2]], %[[VAL_0]], %[[VAL_5]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK: llvm.return %[[ARG1]] : !llvm.struct<(ptr, i64)>
+// CHECK: }
+
+// CHECK-LABEL:   llvm.func @boxchar_firstprivate_dealloc(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.struct<(ptr, i64)>) attributes {always_inline} {
+// CHECK: %[[VAL_0:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.struct<(ptr, i64)>
+// CHECK: %[[VAL_1:.*]] = llvm.extractvalue %[[ARG0]][1] : !llvm.struct<(ptr, i64)>
+// CHECK: llvm.call @free(%[[VAL_0]]) : (!llvm.ptr) -> ()
+// CHECK: llvm.return
 // CHECK: }
