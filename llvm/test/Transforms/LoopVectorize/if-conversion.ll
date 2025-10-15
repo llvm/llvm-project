@@ -94,7 +94,7 @@ define i32 @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) 
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %cmp16 = icmp slt i32 %start, %end
@@ -127,7 +127,7 @@ if.end:
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }
 
 
@@ -237,6 +237,8 @@ for.end:                                          ; preds = %for.inc, %entry
 ; Handle PHI with single incoming value having a full mask.
 ; PR34523
 
+; NOTE: Changing PHI inputs from undef to poison leads to change in
+; behaviour of the test. Left as undef for now.
 define void @PR34523() {
 ; CHECK-LABEL: define void @PR34523() {
 ; CHECK-NEXT:  [[BB1:.*:]]

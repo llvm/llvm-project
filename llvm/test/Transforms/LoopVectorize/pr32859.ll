@@ -16,7 +16,7 @@ entry:
 
 for.cond1.preheader.i:                            ; preds = %if.end.2.i, %entry
   %c.06.i = phi i32 [ 0, %entry ], [ %inc5.i, %if.end.2.i ]
-  %tobool.i = icmp ne i32 undef, 0
+  %tobool.i = icmp ne i32 poison, 0
   br label %if.end.2.i
 
 if.end.2.i:                                       ; preds = %for.cond1.preheader.i

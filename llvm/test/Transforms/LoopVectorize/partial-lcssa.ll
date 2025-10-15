@@ -50,5 +50,5 @@ for.end.outer.loopexit:                           ; preds = %for.end.inner
   br label %for.end.outer
 
 for.end.outer:                                    ; preds = %for.end.outer.loopexit, %entry
-  ret i64 undef
+  ret i64 poison
 }

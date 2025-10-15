@@ -57,7 +57,7 @@ entry:
 for.body:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %for.body ]
   %iv.next = add nsw i64 %iv, 1
-  %arrayidx = getelementptr inbounds [3 x i32], ptr undef, i64 0, i64 %iv.next
+  %arrayidx = getelementptr inbounds [3 x i32], ptr poison, i64 0, i64 %iv.next
   %G2 = getelementptr i32, ptr %arrayidx, i64 %iv.next
   %G9 = getelementptr i32, ptr %G2, i32 -2147483647
   store i32 0, ptr %G2
@@ -87,7 +87,7 @@ entry:
 for.body:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %for.body ]
   %iv.next = add nsw i64 %iv, 1
-  %arrayidx = getelementptr inbounds [3 x i32], ptr undef, i64 0, i64 %iv.next
+  %arrayidx = getelementptr inbounds [3 x i32], ptr poison, i64 0, i64 %iv.next
   %G2 = getelementptr i32, ptr %arrayidx, i64 %iv.next
   %G9 = getelementptr i32, ptr %G2, i32 -2147483648
   store i32 0, ptr %G2

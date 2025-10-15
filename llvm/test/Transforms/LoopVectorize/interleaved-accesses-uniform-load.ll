@@ -32,7 +32,7 @@ define dso_local void @test_dead_load(i32 %arg) {
 ; CHECK-LABEL: @test_dead_load(
 ; CHECK: vector.body:
 ; CHECK: %wide.vec = load <16 x i32>, ptr %3, align 8
-; CHECK: %strided.vec = shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK: %strided.vec = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 bb1:
   br label %bb2
 

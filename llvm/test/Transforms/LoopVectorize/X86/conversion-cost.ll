@@ -77,7 +77,7 @@ define i32 @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    br label [[DOT_CRIT_EDGE]]
 ; CHECK:       ._crit_edge:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %1 = icmp sgt i32 %n, 3
   br i1 %1, label %.lr.ph, label %._crit_edge
@@ -93,7 +93,7 @@ define i32 @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret i32 poison
 }
 
 define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
@@ -156,7 +156,7 @@ define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    br label [[DOT_CRIT_EDGE]]
 ; CHECK:       ._crit_edge:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %1 = icmp sgt i32 %n, 9
   br i1 %1, label %.lr.ph, label %._crit_edge
@@ -173,5 +173,5 @@ define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret i32 poison
 }

@@ -38,7 +38,7 @@ define i8 @PR34687(i1 %c, i32 %x, i32 %n) {
 ; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[R_NEXT:%.*]], [[IF_END]] ]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T0:%.*]] = sdiv i32 undef, undef
+; CHECK-NEXT:    [[T0:%.*]] = sdiv i32 poison, poison
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[R]], 255
@@ -60,7 +60,7 @@ for.body:
   br i1 %c, label %if.then, label %if.end
 
 if.then:
-  %t0 = sdiv i32 undef, undef
+  %t0 = sdiv i32 poison, poison
   br label %if.end
 
 if.end:

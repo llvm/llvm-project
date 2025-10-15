@@ -58,7 +58,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG14:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef, !dbg [[DBG14]]
+; CHECK-NEXT:    ret i32 poison, !dbg [[DBG14]]
 ;
 ; FORCED_OPTSIZE-LABEL: @foo(
 ; FORCED_OPTSIZE-NEXT:  entry:
@@ -80,7 +80,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; FORCED_OPTSIZE:       for.end.loopexit:
 ; FORCED_OPTSIZE-NEXT:    br label [[FOR_END]], !dbg [[DBG10:![0-9]+]]
 ; FORCED_OPTSIZE:       for.end:
-; FORCED_OPTSIZE-NEXT:    ret i32 undef, !dbg [[DBG10]]
+; FORCED_OPTSIZE-NEXT:    ret i32 poison, !dbg [[DBG10]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0, !dbg !6
@@ -99,7 +99,7 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.end, label %for.body, !dbg !7
 
 for.end:                                          ; preds = %for.body, %entry
-  ret i32 undef, !dbg !8
+  ret i32 poison, !dbg !8
 }
 
 ; Make sure that we try to vectorize loops with a runtime check if the

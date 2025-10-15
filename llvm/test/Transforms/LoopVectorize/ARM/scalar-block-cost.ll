@@ -70,7 +70,7 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
-  ret i32 undef
+  ret i32 poison
 
 for.body:                                         ; preds = %for.body.preheader, %if.end
   %i.032 = phi i32 [ %inc, %if.end ], [ %start, %for.body.preheader ]

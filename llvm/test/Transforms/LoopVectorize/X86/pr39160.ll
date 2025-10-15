@@ -13,7 +13,7 @@ bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
-  %tmp4 = icmp slt i32 undef, 0
+  %tmp4 = icmp slt i32 poison, 0
   br i1 %tmp4, label %bb2, label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -23,8 +23,8 @@ bb18:                                             ; preds = %bb33
   ret void
 
 bb19:                                             ; preds = %bb36, %bb5
-  %tmp21 = phi i64 [ undef, %bb36 ], [ 2, %bb5 ]
-  %tmp22 = phi i32 [ %tmp65, %bb36 ], [ undef, %bb5 ]
+  %tmp21 = phi i64 [ poison, %bb36 ], [ 2, %bb5 ]
+  %tmp22 = phi i32 [ %tmp65, %bb36 ], [ poison, %bb5 ]
   br label %bb50
 
 bb33:                                             ; preds = %bb62
@@ -48,7 +48,7 @@ bb50:                                             ; preds = %bb50, %bb19
   %tmp54 = add i32 %tmp52, 12
   %tmp55 = add i32 %tmp52, 13
   %tmp56 = add nuw nsw i64 %tmp53, 1
-  %tmp58 = icmp ult i64 %tmp53, undef
+  %tmp58 = icmp ult i64 %tmp53, poison
   br i1 %tmp58, label %bb50, label %bb46
 
 bb59:                                             ; preds = %bb46

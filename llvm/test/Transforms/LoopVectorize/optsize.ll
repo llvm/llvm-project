@@ -259,7 +259,7 @@ define void @pr43371() optsize {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> poison, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
@@ -285,7 +285,7 @@ define void @pr43371() optsize {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
+; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> poison, [[VEC_IND]]
 ; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 ; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
@@ -311,7 +311,7 @@ define void @pr43371() optsize {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
+; NPGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> poison, [[VEC_IND]]
 ; NPGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; NPGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 ; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
@@ -340,7 +340,7 @@ for.cond.cleanup28:
 
 for.body29:
   %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
-  %add33 = add i16 undef, %i24.0170
+  %add33 = add i16 poison, %i24.0170
   %idxprom34 = zext i16 %add33 to i32
   %arrayidx35 = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 %idxprom34
   store i16 0, ptr %arrayidx35, align 1
@@ -360,7 +360,7 @@ define void @pr43371_pgso() !prof !14 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> poison, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
@@ -386,7 +386,7 @@ define void @pr43371_pgso() !prof !14 {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
+; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> poison, [[VEC_IND]]
 ; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 ; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
@@ -408,13 +408,13 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO-NEXT:  [[ENTRY:.*:]]
 ; NPGSO-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; NPGSO:       [[VECTOR_SCEVCHECK]]:
-; NPGSO-NEXT:    br i1 undef, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NPGSO-NEXT:    br i1 poison, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NPGSO:       [[VECTOR_PH]]:
 ; NPGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; NPGSO-NEXT:    [[TMP1:%.*]] = add i16 undef, [[OFFSET_IDX]]
+; NPGSO-NEXT:    [[TMP1:%.*]] = add i16 poison, [[OFFSET_IDX]]
 ; NPGSO-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; NPGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP3]], align 1
@@ -429,7 +429,7 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO-NEXT:    unreachable
 ; NPGSO:       [[FOR_BODY29]]:
 ; NPGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
-; NPGSO-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
+; NPGSO-NEXT:    [[ADD33:%.*]] = add i16 poison, [[I24_0170]]
 ; NPGSO-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; NPGSO-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
 ; NPGSO-NEXT:    store i16 0, ptr [[ARRAYIDX35]], align 1
@@ -449,7 +449,7 @@ for.cond.cleanup28:
 
 for.body29:
   %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
-  %add33 = add i16 undef, %i24.0170
+  %add33 = add i16 poison, %i24.0170
   %idxprom34 = zext i16 %add33 to i32
   %arrayidx35 = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 %idxprom34
   store i16 0, ptr %arrayidx35, align 1

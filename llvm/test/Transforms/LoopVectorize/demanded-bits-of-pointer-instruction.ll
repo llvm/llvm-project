@@ -10,7 +10,7 @@ start:
 
 loop:
   %ptr2 = phi ptr [ %ptr3, %loop ], [ %ptr, %start ]
-  %x = sext i8 undef to i64
+  %x = sext i8 poison to i64
   %ptr3 = getelementptr inbounds i8, ptr %ptr2, i64 1
   %cmp = icmp ult ptr %ptr3, %ptr_end
   br i1 %cmp, label %loop, label %end

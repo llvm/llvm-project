@@ -26,7 +26,7 @@ define i32 @foo(i32 %n, ptr nocapture %A) {
 
 ; <label>:3                                       ; preds = %.lr.ph, %3
   %indvars.iv = phi i64 [ %2, %.lr.ph ], [ %indvars.iv.next, %3 ]
-  %sum.01 = phi i32 [ undef, %.lr.ph ], [ %9, %3 ]
+  %sum.01 = phi i32 [ poison, %.lr.ph ], [ %9, %3 ]
   %4 = trunc i64 %indvars.iv to i32
   %5 = shl nsw i32 %4, 1
   %6 = sext i32 %5 to i64
@@ -39,7 +39,7 @@ define i32 @foo(i32 %n, ptr nocapture %A) {
   br i1 %11, label %3, label %._crit_edge
 
 ._crit_edge:                                      ; preds = %3, %0
-  %sum.0.lcssa = phi i32 [ undef, %0 ], [ %9, %3 ]
+  %sum.0.lcssa = phi i32 [ poison, %0 ], [ %9, %3 ]
   ret i32 %sum.0.lcssa
 }
 
