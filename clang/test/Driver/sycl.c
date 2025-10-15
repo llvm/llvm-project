@@ -25,3 +25,6 @@
 // RUN: %clang_cl -### -fsycl -- %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 // DEFAULT: "-sycl-std=2020"
+
+// RUN: %clang_cl -### -fsycl -sycl-std=2017 --no-offloadlib -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OFFLOADLIB
+// CHECK-NO-OFFLOADLIB-NOT: warning: unknown argument ignored in clang-cl: '--no-offloadlib'
