@@ -1,16 +1,15 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-;; A minimal test case. llc will crash if global variables already has a section
-;; prefix. Subsequent PRs will expand on this test case to test the hotness
-;; reconciliation implementation.
-
-; RUN: not llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+;; A minimal test case. Subsequent PRs will expand on this test case
+;; (e.g., with more functions, variables and profiles) and test the hotness
+;; reconcillation implementation.
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefix=IR
 
-; ERR: Global variable hot_bss already has a section prefix hot
+; IR: .section .bss.hot.,"aw"
 
 @hot_bss = internal global i32 0, !section_prefix !17
 
