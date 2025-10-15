@@ -42,8 +42,8 @@ using __iter_distance_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::diffe
 #endif
 
 template <class _InputIter, class _Sent>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_InputIter>
-__distance(_InputIter __first, _Sent __last) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_InputIter> __distance(_InputIter __first, _Sent __last) {
   __iter_distance_t<_InputIter> __r(0);
   for (; __first != __last; ++__first)
     ++__r;
