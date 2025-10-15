@@ -172,3 +172,36 @@ loop:
 exit:
   ret void
 }
+
+; SCEV handles `i & 1` as an i1 addrec. Ensure that the monotonicity analysis
+; properly analyzes it.
+;
+; for (i = 0; i < 100; i++)
+;  a[i & 1] = 0;
+;
+define void @offset_truncated_to_i1(ptr %a) {
+; CHECK-LABEL: 'offset_truncated_to_i1'
+; CHECK-NEXT:  Monotonicity check:
+; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:      Expr: (zext i1 {false,+,true}<%loop> to i64)
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (zext i1 {false,+,true}<%loop> to i64)
+; CHECK-EMPTY:
+; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:    da analyze - confused!
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop ]
+  %and = and i64 %i, 1
+  %idx = getelementptr inbounds i8, ptr %a, i64 %and
+  store i8 0, ptr %idx
+  %i.inc = add nsw i64 %i, 1
+  %exitcond = icmp eq i64 %i.inc, 100
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
