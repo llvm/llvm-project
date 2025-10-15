@@ -62,12 +62,6 @@ auto basic_usage(auto auto) {   // c23-error {{'auto' not allowed in function pr
 
   int auto_cxx_decl = auto(0);  // expected-error {{expected expression}}
 
-  constexpr auto int x = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
-                               c17-error {{use of undeclared identifier 'constexpr'}}
-
-  constexpr int auto y = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
-                               c17-error {{use of undeclared identifier 'constexpr'}}
-
   return c;
 }
 
@@ -135,4 +129,31 @@ void atomic(void) {
 
 void attributes(void) {
   auto ident [[clang::annotate("this works")]] = 12;  // c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+}
+
+/** GH163090 */
+constexpr auto int a1 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
+                              c23-error {{cannot combine with previous 'auto' declaration specifier}} \
+                              c17-error {{illegal storage class on file-scoped variable}} \
+                              c17-error {{unknown type name 'constexpr'}}
+
+constexpr int auto a2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
+                              c17-error {{illegal storage class on file-scoped variable}} \
+                              c17-error {{unknown type name 'constexpr'}}
+
+auto int b1 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
+                    c17-error {{illegal storage class on file-scoped variable}}
+
+int auto b2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
+                    c17-error {{illegal storage class on file-scoped variable}}
+
+void f() {
+  constexpr auto int c1 = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
+                                c17-error {{use of undeclared identifier 'constexpr'}}
+
+  constexpr int auto c2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
+                                c17-error {{use of undeclared identifier 'constexpr'}}
+
+  auto int d1 = 0;
+  int auto d2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}}
 }
