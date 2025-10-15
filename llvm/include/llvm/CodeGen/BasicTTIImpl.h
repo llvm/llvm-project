@@ -1377,6 +1377,43 @@ public:
   InstructionCost
   getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                  const Instruction *I = nullptr) const override {
+    if (Opcode == Instruction::Switch && CostKind == TTI::TCK_CodeSize && I) {
+      const SwitchInst *SI = cast<SwitchInst>(I);
+      unsigned JumpTableSize, NumSuccs = I->getNumSuccessors();
+      auto BrCost = thisT()->getCFInstrCost(Instruction::Br, CostKind);
+      if (SI->defaultDestUnreachable())
+        NumSuccs--;
+
+      // An unreachable switch
+      if (NumSuccs == 0)
+        return TTI::TCC_Free;
+
+      // A trivial unconditional branch.
+      if (NumSuccs == 1)
+        return BrCost;
+
+      thisT()->getEstimatedNumberOfCaseClusters(*SI, JumpTableSize, nullptr,
+                                                nullptr);
+      Type *BoolTy = IntegerType::get(SI->getContext(), 1);
+      Type *CondTy = SI->getCondition()->getType();
+      auto CmpCost = thisT()->getCmpSelInstrCost(
+          BinaryOperator::ICmp, BoolTy, CondTy, CmpInst::ICMP_UGT, CostKind);
+
+      // Assume that lowering the switch block is implemented by binary search
+      // if no jump table is generated.
+      if (JumpTableSize == 0)
+        return llvm::Log2_32_Ceil(NumSuccs) * (CmpCost + BrCost);
+
+      // Cost for jump table: load + jump + default compare + default jump
+      Type *EntryTy = PointerType::get(SI->getContext(), 0);
+      Align Alignment = thisT()->DL.getABITypeAlign(EntryTy);
+      auto LoadCost = thisT()->getMemoryOpCost(Instruction::Load, EntryTy,
+                                               Alignment, 0, CostKind);
+
+      return LoadCost + BrCost +
+             (SI->defaultDestUnreachable() ? 0 : (CmpCost + BrCost));
+    }
+
     return BaseT::getCFInstrCost(Opcode, CostKind, I);
   }
 

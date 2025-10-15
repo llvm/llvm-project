@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i32 @single_succ_switch(i32 %x) {
 ; THROUGHPUT-LABEL: 'single_succ_switch'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
 ; THROUGHPUT-NEXT:    ]
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 1
 ;
@@ -30,7 +30,7 @@ default:
 
 define i32 @dense_switch(i32 %x) {
 ; THROUGHPUT-LABEL: 'dense_switch'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
 ; THROUGHPUT-NEXT:      i32 0, label %bb0
 ; THROUGHPUT-NEXT:      i32 1, label %bb1
 ; THROUGHPUT-NEXT:      i32 2, label %bb2
@@ -60,7 +60,7 @@ define i32 @dense_switch(i32 %x) {
 ; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: unreachable
 ;
 ; CODESIZE-LABEL: 'dense_switch'
-; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: switch i32 %x, label %default [
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: switch i32 %x, label %default [
 ; CODESIZE-NEXT:      i32 0, label %bb0
 ; CODESIZE-NEXT:      i32 1, label %bb1
 ; CODESIZE-NEXT:      i32 2, label %bb2
@@ -96,9 +96,77 @@ default:
   unreachable
 }
 
+define i32 @dense_switch_reachable_default(i32 %x) {
+; THROUGHPUT-LABEL: 'dense_switch_reachable_default'
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:      i32 0, label %bb0
+; THROUGHPUT-NEXT:      i32 1, label %bb1
+; THROUGHPUT-NEXT:      i32 2, label %bb2
+; THROUGHPUT-NEXT:      i32 3, label %bb3
+; THROUGHPUT-NEXT:      i32 4, label %bb4
+; THROUGHPUT-NEXT:    ]
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 1
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 2
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 3
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 4
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 5
+;
+; LATENCY-LABEL: 'dense_switch_reachable_default'
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
+; LATENCY-NEXT:      i32 0, label %bb0
+; LATENCY-NEXT:      i32 1, label %bb1
+; LATENCY-NEXT:      i32 2, label %bb2
+; LATENCY-NEXT:      i32 3, label %bb3
+; LATENCY-NEXT:      i32 4, label %bb4
+; LATENCY-NEXT:    ]
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 2
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 3
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 4
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 5
+;
+; CODESIZE-LABEL: 'dense_switch_reachable_default'
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: switch i32 %x, label %default [
+; CODESIZE-NEXT:      i32 0, label %bb0
+; CODESIZE-NEXT:      i32 1, label %bb1
+; CODESIZE-NEXT:      i32 2, label %bb2
+; CODESIZE-NEXT:      i32 3, label %bb3
+; CODESIZE-NEXT:      i32 4, label %bb4
+; CODESIZE-NEXT:    ]
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 2
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 3
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 4
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 5
+;
+entry:
+  switch i32 %x, label %default [
+    i32 0, label %bb0
+    i32 1, label %bb1
+    i32 2, label %bb2
+    i32 3, label %bb3
+    i32 4, label %bb4
+  ]
+bb0:
+  ret i32 0
+bb1:
+  ret i32 1
+bb2:
+  ret i32 2
+bb3:
+  ret i32 3
+bb4:
+  ret i32 4
+default:
+  ret i32 5
+}
+
 define i32 @sparse_switch(i32 %x) {
 ; THROUGHPUT-LABEL: 'sparse_switch'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
 ; THROUGHPUT-NEXT:      i32 0, label %bb0
 ; THROUGHPUT-NEXT:      i32 100, label %bb1
 ; THROUGHPUT-NEXT:      i32 200, label %bb2
@@ -164,9 +232,77 @@ default:
   unreachable
 }
 
+define i32 @sparse_switch_reachable_default(i32 %x) {
+; THROUGHPUT-LABEL: 'sparse_switch_reachable_default'
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:      i32 0, label %bb0
+; THROUGHPUT-NEXT:      i32 100, label %bb1
+; THROUGHPUT-NEXT:      i32 200, label %bb2
+; THROUGHPUT-NEXT:      i32 300, label %bb3
+; THROUGHPUT-NEXT:      i32 400, label %bb4
+; THROUGHPUT-NEXT:    ]
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 1
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 2
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 3
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 4
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 5
+;
+; LATENCY-LABEL: 'sparse_switch_reachable_default'
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
+; LATENCY-NEXT:      i32 0, label %bb0
+; LATENCY-NEXT:      i32 100, label %bb1
+; LATENCY-NEXT:      i32 200, label %bb2
+; LATENCY-NEXT:      i32 300, label %bb3
+; LATENCY-NEXT:      i32 400, label %bb4
+; LATENCY-NEXT:    ]
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 2
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 3
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 4
+; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 5
+;
+; CODESIZE-LABEL: 'sparse_switch_reachable_default'
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: switch i32 %x, label %default [
+; CODESIZE-NEXT:      i32 0, label %bb0
+; CODESIZE-NEXT:      i32 100, label %bb1
+; CODESIZE-NEXT:      i32 200, label %bb2
+; CODESIZE-NEXT:      i32 300, label %bb3
+; CODESIZE-NEXT:      i32 400, label %bb4
+; CODESIZE-NEXT:    ]
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 2
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 3
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 4
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 5
+;
+entry:
+  switch i32 %x, label %default [
+    i32 0, label %bb0
+    i32 100, label %bb1
+    i32 200, label %bb2
+    i32 300, label %bb3
+    i32 400, label %bb4
+  ]
+bb0:
+  ret i32 0
+bb1:
+  ret i32 1
+bb2:
+  ret i32 2
+bb3:
+  ret i32 3
+bb4:
+  ret i32 4
+default:
+  ret i32 5
+}
+
 define i32 @dense_big_switch(i32 %x) {
 ; THROUGHPUT-LABEL: 'dense_big_switch'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
 ; THROUGHPUT-NEXT:      i32 0, label %bb0
 ; THROUGHPUT-NEXT:      i32 1, label %bb1
 ; THROUGHPUT-NEXT:      i32 2, label %bb2
@@ -220,7 +356,7 @@ define i32 @dense_big_switch(i32 %x) {
 ; LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: unreachable
 ;
 ; CODESIZE-LABEL: 'dense_big_switch'
-; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: switch i32 %x, label %default [
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: switch i32 %x, label %default [
 ; CODESIZE-NEXT:      i32 0, label %bb0
 ; CODESIZE-NEXT:      i32 1, label %bb1
 ; CODESIZE-NEXT:      i32 2, label %bb2
@@ -288,7 +424,7 @@ default:
 
 define i32 @sparse_big_switch(i32 %x) {
 ; THROUGHPUT-LABEL: 'sparse_big_switch'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: switch i32 %x, label %default [
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: switch i32 %x, label %default [
 ; THROUGHPUT-NEXT:      i32 0, label %bb0
 ; THROUGHPUT-NEXT:      i32 100, label %bb1
 ; THROUGHPUT-NEXT:      i32 200, label %bb2

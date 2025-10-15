@@ -6174,22 +6174,8 @@ X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
 InstructionCost X86TTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
                                            const Instruction *I) const {
-  if (Opcode == Instruction::Switch && CostKind == TTI::TCK_CodeSize) {
-    unsigned JumpTableSize, NumSuccs = I->getNumSuccessors();
-    getEstimatedNumberOfCaseClusters(*cast<SwitchInst>(I), JumpTableSize,
-                                     nullptr, nullptr);
-    // A trivial unconditional branch.
-    if (NumSuccs == 1)
-      return TTI::TCC_Basic;
-
-    // Assume that lowering the switch block is implemented by binary search if
-    // no jump table is generated.
-    if (JumpTableSize == 0)
-      return llvm::Log2_32_Ceil(NumSuccs) * 2 * TTI::TCC_Basic;
-
-    // Indirect branch + default compare + default jump
-    return 3 * TTI::TCC_Basic;
-  }
+  if (Opcode == Instruction::Switch)
+    return BaseT::getCFInstrCost(Opcode, CostKind, I);
 
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
