@@ -10,3 +10,9 @@ uint16_t4x4 mat2;
 matrix<int, 5, 5> mat3;
 // expected-error@-1 {{constraints not satisfied for alias template 'matrix' [with element = int, rows_count = 5, cols_count = 5]}}
 // expected-note@* {{because '5 <= 4' (5 <= 4) evaluated to false}}
+
+using float8x4 = __attribute__((matrix_type(8,4))) float;
+// expected-error@-1 {{matrix row size too large}}
+
+using float4x8 = __attribute__((matrix_type(4,8))) float;
+// expected-error@-1 {{matrix column size too large}}
