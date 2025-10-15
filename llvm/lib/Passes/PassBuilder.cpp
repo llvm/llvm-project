@@ -69,6 +69,7 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolutionDivision.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -94,6 +95,7 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
@@ -103,6 +105,7 @@
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
+#include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
@@ -138,8 +141,11 @@
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRAHazardRecognizer.h"
+#include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
@@ -151,6 +157,7 @@
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
+#include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -179,8 +186,10 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -231,6 +240,7 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
@@ -266,6 +276,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
+#include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
@@ -339,6 +350,7 @@
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/DXILUpgrade.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/DeclareRuntimeLibcalls.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/HelloWorld.h"
@@ -357,13 +369,13 @@
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
-#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
@@ -373,9 +385,6 @@
 #include <optional>
 
 using namespace llvm;
-
-static const Regex DefaultAliasRegex(
-    "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
 cl::opt<bool> llvm::PrintPipelinePasses(
     "print-pipeline-passes",
@@ -473,10 +482,31 @@ public:
 
 } // namespace
 
+static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  return StringSwitch<std::optional<OptimizationLevel>>(S)
+      .Case("O0", OptimizationLevel::O0)
+      .Case("O1", OptimizationLevel::O1)
+      .Case("O2", OptimizationLevel::O2)
+      .Case("O3", OptimizationLevel::O3)
+      .Case("Os", OptimizationLevel::Os)
+      .Case("Oz", OptimizationLevel::Oz)
+      .Default(std::nullopt);
+}
+
+static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
+  std::optional<OptimizationLevel> OptLevel = parseOptLevel(S);
+  if (OptLevel)
+    return *OptLevel;
+  return make_error<StringError>(
+      formatv("invalid optimization level '{}'", S).str(),
+      inconvertibleErrorCode());
+}
+
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
-                         PassInstrumentationCallbacks *PIC)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
+                         PassInstrumentationCallbacks *PIC,
+                         IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {
@@ -522,6 +552,96 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #include "llvm/Passes/MachinePassRegistry.def"
     });
   }
+
+  // Module-level callbacks without LTO phase
+  registerPipelineParsingCallback(
+      [this](StringRef Name, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+#define MODULE_CALLBACK(NAME, INVOKE)                                          \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
+    INVOKE(PM, L.get());                                                       \
+    return true;                                                               \
+  }
+#include "PassRegistry.def"
+        return false;
+      });
+
+  // Module-level callbacks with LTO phase (use Phase::None for string API)
+  registerPipelineParsingCallback(
+      [this](StringRef Name, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+#define MODULE_LTO_CALLBACK(NAME, INVOKE)                                      \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
+    INVOKE(PM, L.get(), ThinOrFullLTOPhase::None);                             \
+    return true;                                                               \
+  }
+#include "PassRegistry.def"
+        return false;
+      });
+
+  // Function-level callbacks
+  registerPipelineParsingCallback(
+      [this](StringRef Name, FunctionPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+#define FUNCTION_CALLBACK(NAME, INVOKE)                                        \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
+    INVOKE(PM, L.get());                                                       \
+    return true;                                                               \
+  }
+#include "PassRegistry.def"
+        return false;
+      });
+
+  // CGSCC-level callbacks
+  registerPipelineParsingCallback(
+      [this](StringRef Name, CGSCCPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+#define CGSCC_CALLBACK(NAME, INVOKE)                                           \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
+    INVOKE(PM, L.get());                                                       \
+    return true;                                                               \
+  }
+#include "PassRegistry.def"
+        return false;
+      });
+
+  // Loop-level callbacks
+  registerPipelineParsingCallback(
+      [this](StringRef Name, LoopPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+#define LOOP_CALLBACK(NAME, INVOKE)                                            \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
+    INVOKE(PM, L.get());                                                       \
+    return true;                                                               \
+  }
+#include "PassRegistry.def"
+        return false;
+      });
 }
 
 void PassBuilder::registerModuleAnalyses(ModuleAnalysisManager &MAM) {
@@ -605,17 +725,6 @@ static std::optional<int> parseDevirtPassName(StringRef Name) {
   if (Name.getAsInteger(0, Count) || Count < 0)
     return std::nullopt;
   return Count;
-}
-
-static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
-  return StringSwitch<std::optional<OptimizationLevel>>(S)
-      .Case("O0", OptimizationLevel::O0)
-      .Case("O1", OptimizationLevel::O1)
-      .Case("O2", OptimizationLevel::O2)
-      .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
-      .Default(std::nullopt);
 }
 
 Expected<bool> PassBuilder::parseSinglePassOption(StringRef Params,
@@ -932,6 +1041,19 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
 
         Result.cutoffs[index] = cutoff;
       }
+    } else if (ParamName.starts_with("runtime_check")) {
+      StringRef ValueString;
+      std::tie(std::ignore, ValueString) = ParamName.split("=");
+      int runtime_check;
+      if (ValueString.getAsInteger(0, runtime_check)) {
+        return make_error<StringError>(
+            formatv("invalid LowerAllowCheck pass runtime_check parameter '{}' "
+                    "({})",
+                    ValueString, Params)
+                .str(),
+            inconvertibleErrorCode());
+      }
+      Result.runtime_check = runtime_check;
     } else {
       return make_error<StringError>(
           formatv("invalid LowerAllowCheck pass parameter '{}'", ParamName)
@@ -989,6 +1111,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.forwardSwitchCondToPhi(Enable);
     } else if (ParamName == "switch-range-to-icmp") {
       Result.convertSwitchRangeToICmp(Enable);
+    } else if (ParamName == "switch-to-arithmetic") {
+      Result.convertSwitchToArithmetic(Enable);
     } else if (ParamName == "switch-to-lookup") {
       Result.convertSwitchToLookupTable(Enable);
     } else if (ParamName == "keep-loops") {
@@ -1164,9 +1288,13 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     } else if (ParamName == "split-backedge-load-pre") {
       Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
+      // MemDep and MemorySSA are mutually exclusive.
       Result.setMemDep(Enable);
+      Result.setMemorySSA(!Enable);
     } else if (ParamName == "memoryssa") {
+      // MemDep and MemorySSA are mutually exclusive.
       Result.setMemorySSA(Enable);
+      Result.setMemDep(!Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{}'", ParamName).str(),
@@ -1461,6 +1589,27 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
+Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+  if (Param.empty())
+    return CodeGenOptLevel::None;
+
+  // Parse a CodeGenOptLevel, e.g. "O1", "O2", "O3".
+  auto [Prefix, Digit] = Param.split('O');
+
+  uint8_t N;
+  if (!Prefix.empty() || Digit.getAsInteger(10, N))
+    return createStringError("invalid expand-fp pass parameter '%s'",
+                             Param.str().c_str());
+
+  std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
+  if (!Level.has_value())
+    return createStringError(
+        "invalid optimization level for expand-fp pass: %s",
+        Digit.str().c_str());
+
+  return *Level;
+}
+
 Expected<RAGreedyPass::Options>
 parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
   if (Params.empty() || Params == "all")
@@ -1505,14 +1654,42 @@ Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
   return ClearVirtRegs;
 }
 
-} // namespace
+struct FatLTOOptions {
+  OptimizationLevel OptLevel;
+  bool ThinLTO = false;
+  bool EmitSummary = false;
+};
 
-/// Tests whether a pass name starts with a valid prefix for a default pipeline
-/// alias.
-static bool startsWithDefaultPipelineAliasPrefix(StringRef Name) {
-  return Name.starts_with("default") || Name.starts_with("thinlto") ||
-         Name.starts_with("lto");
+Expected<FatLTOOptions> parseFatLTOOptions(StringRef Params) {
+  FatLTOOptions Result;
+  bool HaveOptLevel = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "thinlto") {
+      Result.ThinLTO = true;
+    } else if (ParamName == "emit-summary") {
+      Result.EmitSummary = true;
+    } else if (std::optional<OptimizationLevel> OptLevel =
+                   parseOptLevel(ParamName)) {
+      Result.OptLevel = *OptLevel;
+      HaveOptLevel = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid fatlto-pre-link pass parameter '{}'", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  if (!HaveOptLevel)
+    return make_error<StringError>(
+        "missing optimization level for fatlto-pre-link pipeline",
+        inconvertibleErrorCode());
+  return Result;
 }
+
+} // namespace
 
 /// Tests whether registered callbacks will accept a given pass name.
 ///
@@ -1535,10 +1712,6 @@ static bool callbacksAcceptPassName(StringRef Name, CallbacksT &Callbacks) {
 
 template <typename CallbacksT>
 static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
-  // Manually handle aliases for pre-configured pipeline fragments.
-  if (startsWithDefaultPipelineAliasPrefix(Name))
-    return DefaultAliasRegex.match(Name);
-
   StringRef NameNoBracket = Name.take_until([](char C) { return C == '<'; });
 
   // Explicitly handle pass manager names.
@@ -1737,6 +1910,15 @@ PassBuilder::parsePipelineText(StringRef Text) {
   return {std::move(ResultPipeline)};
 }
 
+static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
+                                         OptimizationLevel L) {
+  // This is consistent with old pass manager invoked via opt, but
+  // inconsistent with clang. Clang doesn't enable loop vectorization
+  // but does enable slp vectorization at Oz.
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+}
+
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,
                                    const PipelineElement &E) {
   auto &Name = E.Name;
@@ -1787,47 +1969,6 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
         formatv("invalid use of '{}' pass as module pipeline", Name).str(),
         inconvertibleErrorCode());
     ;
-  }
-
-  // Manually handle aliases for pre-configured pipeline fragments.
-  if (startsWithDefaultPipelineAliasPrefix(Name)) {
-    SmallVector<StringRef, 3> Matches;
-    if (!DefaultAliasRegex.match(Name, &Matches))
-      return make_error<StringError>(
-          formatv("unknown default pipeline alias '{}'", Name).str(),
-          inconvertibleErrorCode());
-
-    assert(Matches.size() == 3 && "Must capture two matched strings!");
-
-    OptimizationLevel L = *parseOptLevel(Matches[2]);
-
-    // This is consistent with old pass manager invoked via opt, but
-    // inconsistent with clang. Clang doesn't enable loop vectorization
-    // but does enable slp vectorization at Oz.
-    PTO.LoopVectorization =
-        L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-    PTO.SLPVectorization =
-        L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-
-    if (Matches[1] == "default") {
-      MPM.addPass(buildPerModuleDefaultPipeline(L));
-    } else if (Matches[1] == "thinlto-pre-link") {
-      MPM.addPass(buildThinLTOPreLinkDefaultPipeline(L));
-    } else if (Matches[1] == "thinlto") {
-      MPM.addPass(buildThinLTODefaultPipeline(L, nullptr));
-    } else if (Matches[1] == "lto-pre-link") {
-      if (PTO.UnifiedLTO)
-        // When UnifiedLTO is enabled, use the ThinLTO pre-link pipeline. This
-        // avoids compile-time performance regressions and keeps the pre-link
-        // LTO pipeline "unified" for both LTO modes.
-        MPM.addPass(buildThinLTOPreLinkDefaultPipeline(L));
-      else
-        MPM.addPass(buildLTOPreLinkDefaultPipeline(L));
-    } else {
-      assert(Matches[1] == "lto" && "Not one of the matched options!");
-      MPM.addPass(buildLTODefaultPipeline(L, nullptr));
-    }
-    return Error::success();
   }
 
   // Finally expand the basic registered passes from the .inc file.
@@ -2053,11 +2194,8 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       bool UseBFI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
         return Pipeline.Name.contains("simple-loop-unswitch");
       });
-      bool UseBPI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
-        return Pipeline.Name == "loop-predication";
-      });
       FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
-                                                  UseBFI, UseBPI));
+                                                  UseBFI));
       return Error::success();
     }
     if (Name == "machine-function") {
@@ -2207,9 +2345,18 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
 Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
                                     const PipelineElement &E) {
   StringRef Name = E.Name;
-  if (!E.InnerPipeline.empty())
+  // Handle any nested pass managers.
+  if (!E.InnerPipeline.empty()) {
+    if (E.Name == "machine-function") {
+      MachineFunctionPassManager NestedPM;
+      if (auto Err = parseMachinePassPipeline(NestedPM, E.InnerPipeline))
+        return Err;
+      MFPM.addPass(std::move(NestedPM));
+      return Error::success();
+    }
     return make_error<StringError>("invalid pipeline",
                                    inconvertibleErrorCode());
+  }
 
 #define MACHINE_MODULE_PASS(NAME, CREATE_PASS)                                 \
   if (Name == NAME) {                                                          \

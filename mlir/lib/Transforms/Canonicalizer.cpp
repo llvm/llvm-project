@@ -13,7 +13,6 @@
 
 #include "mlir/Transforms/Passes.h"
 
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 

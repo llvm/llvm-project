@@ -151,8 +151,8 @@ LIBC_INLINE DoubleDouble quick_mult(double a, const DoubleDouble &b) {
 }
 
 template <size_t SPLIT_B = 27>
-LIBC_INLINE DoubleDouble quick_mult(const DoubleDouble &a,
-                                    const DoubleDouble &b) {
+LIBC_INLINE constexpr DoubleDouble quick_mult(const DoubleDouble &a,
+                                              const DoubleDouble &b) {
   DoubleDouble r = exact_mult<double, SPLIT_B>(a.hi, b.hi);
   double t1 = multiply_add(a.hi, b.lo, r.lo);
   double t2 = multiply_add(a.lo, b.hi, t1);

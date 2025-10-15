@@ -29,6 +29,7 @@
 #  include "sanitizer_solaris.h"
 
 #  if SANITIZER_HAIKU
+#    define _GNU_SOURCE
 #    define _DEFAULT_SOURCE
 #  endif
 
@@ -782,42 +783,13 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-static bool requiresProcmaps() {
-#  if SANITIZER_ANDROID && __ANDROID_API__ <= 22
-  // Fall back to /proc/maps if dl_iterate_phdr is unavailable or broken.
-  // The runtime check allows the same library to work with
-  // both K and L (and future) Android releases.
-  return AndroidGetApiLevel() <= ANDROID_LOLLIPOP_MR1;
-#  else
-  return false;
-#  endif
-}
-
-static void procmapsInit(InternalMmapVectorNoCtor<LoadedModule> *modules) {
-  MemoryMappingLayout memory_mapping(/*cache_enabled*/ true);
-  memory_mapping.DumpListOfModules(modules);
-}
-
 void ListOfModules::init() {
   clearOrInit();
-  if (requiresProcmaps()) {
-    procmapsInit(&modules_);
-  } else {
-    DlIteratePhdrData data = {&modules_, true};
-    dl_iterate_phdr(dl_iterate_phdr_cb, &data);
-  }
+  DlIteratePhdrData data = {&modules_, true};
+  dl_iterate_phdr(dl_iterate_phdr_cb, &data);
 }
 
-// When a custom loader is used, dl_iterate_phdr may not contain the full
-// list of modules. Allow callers to fall back to using procmaps.
-void ListOfModules::fallbackInit() {
-  if (!requiresProcmaps()) {
-    clearOrInit();
-    procmapsInit(&modules_);
-  } else {
-    clear();
-  }
-}
+void ListOfModules::fallbackInit() { clear(); }
 
 // getrusage does not give us the current RSS, only the max RSS.
 // Still, this is better than nothing if /proc/self/statm is not available

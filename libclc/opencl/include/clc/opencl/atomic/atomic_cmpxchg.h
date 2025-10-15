@@ -6,7 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_CMPXCHG_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_CMPXCHG_H__
+
+#include <clc/opencl/opencl-base.h>
+
 _CLC_OVERLOAD _CLC_DECL int atomic_cmpxchg(volatile local int *, int, int);
 _CLC_OVERLOAD _CLC_DECL int atomic_cmpxchg(volatile global int *, int, int);
 _CLC_OVERLOAD _CLC_DECL uint atomic_cmpxchg(volatile local uint *, uint, uint);
 _CLC_OVERLOAD _CLC_DECL uint atomic_cmpxchg(volatile global uint *, uint, uint);
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_CMPXCHG_H__

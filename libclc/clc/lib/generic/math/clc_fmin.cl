@@ -6,31 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
-#include <clc/relational/clc_isnan.h>
 
-_CLC_DEFINE_BINARY_BUILTIN(float, __clc_fmin, __builtin_fminf, float, float);
+#define __CLC_FUNCTION __clc_fmin
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_minimumnum
+#define __CLC_BODY <clc/shared/binary_def.inc>
 
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_DEFINE_BINARY_BUILTIN(double, __clc_fmin, __builtin_fmin, double, double);
-
-#endif
-
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-_CLC_DEF _CLC_OVERLOAD half __clc_fmin(half x, half y) {
-  if (__clc_isnan(x))
-    return y;
-  if (__clc_isnan(y))
-    return x;
-  return (y < x) ? y : x;
-}
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_fmin, half, half)
-
-#endif
+#include <clc/math/gentype.inc>

@@ -747,8 +747,8 @@ public:
 
   /// hasChild - Return true if N is any of our children.
   bool hasChild(const TreePatternNode *N) const {
-    for (unsigned i = 0, e = Children.size(); i != e; ++i)
-      if (Children[i].get() == N)
+    for (const TreePatternNodePtr &Child : Children)
+      if (Child.get() == N)
         return true;
     return false;
   }
@@ -1135,6 +1135,7 @@ private:
   std::vector<PatternToMatch> PatternsToMatch;
 
   TypeSetByHwMode LegalVTS;
+  TypeSetByHwMode LegalPtrVTS;
 
   using PatternRewriterFn = std::function<void(TreePattern *)>;
   PatternRewriterFn PatternRewriter;
@@ -1148,6 +1149,7 @@ public:
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
   const TypeSetByHwMode &getLegalTypes() const { return LegalVTS; }
+  const TypeSetByHwMode &getLegalPtrTypes() const { return LegalPtrVTS; }
 
   const Record *getSDNodeNamed(StringRef Name) const;
 
@@ -1171,9 +1173,9 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return Intrinsics[i];
+    for (const CodeGenIntrinsic &Intrinsic : Intrinsics)
+      if (Intrinsic.TheDef == R)
+        return Intrinsic;
     llvm_unreachable("Unknown intrinsic!");
   }
 
@@ -1249,6 +1251,7 @@ public:
   }
 
 private:
+  TypeSetByHwMode ComputeLegalPtrTypes() const;
   void ParseNodeInfo();
   void ParseNodeTransforms();
   void ParseComplexPatterns();
@@ -1280,8 +1283,8 @@ private:
 inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
                                              TreePattern &TP) const {
   bool MadeChange = false;
-  for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
-    MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
+  for (const SDTypeConstraint &TypeConstraint : TypeConstraints)
+    MadeChange |= TypeConstraint.ApplyTypeConstraint(N, *this, TP);
   return MadeChange;
 }
 

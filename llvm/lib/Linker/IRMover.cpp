@@ -8,8 +8,9 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
@@ -291,6 +292,9 @@ class IRLinker {
   Module &DstM;
   std::unique_ptr<Module> SrcM;
 
+  // Lookup table to optimize IRMover::linkNamedMDNodes().
+  IRMover::NamedMDNodesT &NamedMDNodes;
+
   /// See IRMover::move().
   IRMover::LazyCallback AddLazyFor;
 
@@ -436,10 +440,12 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport)
-      : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
-        TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
+           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport,
+           IRMover::NamedMDNodesT &NamedMDNodes)
+      : DstM(DstM), SrcM(std::move(SrcM)), NamedMDNodes(NamedMDNodes),
+        AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
+        GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
+        IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
@@ -595,7 +601,6 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
                              SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
-  F->IsNewDbgInfoFormat = SF->IsNewDbgInfoFormat;
   return F;
 }
 
@@ -1030,7 +1035,6 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     Dst.setPrologueData(Src.getPrologueData());
   if (Src.hasPersonalityFn())
     Dst.setPersonalityFn(Src.getPersonalityFn());
-  assert(Src.IsNewDbgInfoFormat == Dst.IsNewDbgInfoFormat);
 
   // Copy over the metadata attachments without remapping.
   Dst.copyMetadata(&Src, 0);
@@ -1135,9 +1139,19 @@ void IRLinker::linkNamedMDNodes() {
       continue;
 
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
+
+    auto &Inserted = NamedMDNodes[DestNMD];
+    if (Inserted.empty()) {
+      // Must be the first module, copy everything from DestNMD.
+      Inserted.insert(DestNMD->operands().begin(), DestNMD->operands().end());
+    }
+
     // Add Src elements into Dest node.
-    for (const MDNode *Op : NMD.operands())
-      DestNMD->addOperand(Mapper.mapMDNode(*Op));
+    for (const MDNode *Op : NMD.operands()) {
+      MDNode *MD = Mapper.mapMDNode(*Op);
+      if (Inserted.insert(MD).second)
+        DestNMD->addOperand(MD);
+    }
   }
 }
 
@@ -1670,6 +1684,6 @@ Error IRMover::move(std::unique_ptr<Module> Src,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       IsPerformingImport);
+                       IsPerformingImport, NamedMDNodes);
   return TheIRLinker.run();
 }

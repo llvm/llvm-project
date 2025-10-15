@@ -431,15 +431,15 @@ namespace PR9238 {
 }
 
 namespace PR7900 {
-  struct A { // expected-note 2{{type 'PR7900::A' found by destructor name lookup}}
+  struct A { // expected-note 2{{type 'A' found by destructor name lookup}}
   };
   struct B : public A {
   };
   void foo() {
     B b;
     b.~B();
-    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
-    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    b.~A(); // expected-error{{destructor type 'A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    (&b)->~A(); // expected-error{{destructor type 'A' in object destruction expression does not match the type 'B' of the object being destroyed}}
   }
 }
 
@@ -553,14 +553,11 @@ namespace crash_on_invalid_base_dtor {
 struct Test {
   virtual ~Test();
 };
-struct Baz : public Test { // expected-warning {{non-virtual destructor}}
+struct Baz : public Test {
   Baz() {}
-  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}} \
-                   // expected-error {{initializer on function}} \
-                   // expected-note {{overridden virtual function is here}}
+  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}}
 };
-struct Foo : public Baz { // expected-error {{cannot override a non-deleted function}} \
-                          // expected-note {{destructor of 'Foo' is implicitly deleted}}
+struct Foo : public Baz {
   Foo() {}
 };
 }
@@ -579,11 +576,9 @@ static_assert(!__is_trivially_constructible(Foo, Foo &&), "");
 
 namespace GH97230 {
 struct X {
-  ~X() = defaul; // expected-error {{initializer on function does not look like a pure-specifier}} \
-                 // expected-error {{use of undeclared identifier 'defaul'}}
+  ~X() = defaul; // expected-error {{use of undeclared identifier 'defaul'}}
 };
-struct Y : X {} y1{ }; // expected-error {{call to implicitly-deleted default constructor of 'struct Y'}} \
-                       // expected-note {{default constructor of 'Y' is implicitly deleted because base class 'X' has no destructor}}
+struct Y : X {} y1{ };
 }
 
 namespace GH121706 {

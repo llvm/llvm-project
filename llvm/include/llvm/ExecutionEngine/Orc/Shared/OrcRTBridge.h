@@ -25,7 +25,7 @@ namespace rt {
 
 LLVM_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerLookupWrapperName;
+LLVM_ABI extern const char *SimpleExecutorDylibManagerResolveWrapperName;
 
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
@@ -44,8 +44,16 @@ LLVM_ABI extern const char *MemoryWriteUInt8sWrapperName;
 LLVM_ABI extern const char *MemoryWriteUInt16sWrapperName;
 LLVM_ABI extern const char *MemoryWriteUInt32sWrapperName;
 LLVM_ABI extern const char *MemoryWriteUInt64sWrapperName;
-LLVM_ABI extern const char *MemoryWriteBuffersWrapperName;
 LLVM_ABI extern const char *MemoryWritePointersWrapperName;
+LLVM_ABI extern const char *MemoryWriteBuffersWrapperName;
+
+LLVM_ABI extern const char *MemoryReadUInt8sWrapperName;
+LLVM_ABI extern const char *MemoryReadUInt16sWrapperName;
+LLVM_ABI extern const char *MemoryReadUInt32sWrapperName;
+LLVM_ABI extern const char *MemoryReadUInt64sWrapperName;
+LLVM_ABI extern const char *MemoryReadPointersWrapperName;
+LLVM_ABI extern const char *MemoryReadBuffersWrapperName;
+LLVM_ABI extern const char *MemoryReadStringsWrapperName;
 
 LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
@@ -58,10 +66,9 @@ using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);
 
-using SPSSimpleExecutorDylibManagerLookupSignature =
-    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorSymbolDef>>(
-        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-        shared::SPSRemoteSymbolLookupSet);
+using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
+    shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorSymbolDef>>>(
+    shared::SPSExecutorAddr, shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,

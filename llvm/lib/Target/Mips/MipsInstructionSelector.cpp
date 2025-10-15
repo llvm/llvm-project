@@ -347,6 +347,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     break;
   }
   case G_INTTOPTR:
+  case G_PTRTOADDR:
   case G_PTRTOINT: {
     I.setDesc(TII.get(COPY));
     return selectCopy(I, MRI);

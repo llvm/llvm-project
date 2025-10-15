@@ -2,10 +2,14 @@
 
 int printf(char const *, ...);
 
+#include <stddef.h>
+
 void test(void) {
   // size_t
+  printf("%zu", (size_t)0); // no-warning
+  printf("%zu", sizeof(int)); // no-warning
+  printf("%zu", (size_t)0 + sizeof(int)); // no-warning
   printf("%zu", (double)42); // expected-warning {{format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'double'}}
-
   // intmax_t / uintmax_t
   printf("%jd", (double)42); // expected-warning {{format specifies type 'intmax_t' (aka 'long') but the argument has type 'double'}}
   printf("%ju", (double)42); // expected-warning {{format specifies type 'uintmax_t' (aka 'unsigned long') but the argument has type 'double'}}

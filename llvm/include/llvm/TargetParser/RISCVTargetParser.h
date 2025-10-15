@@ -29,6 +29,13 @@ struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;
   uint64_t MImpID;
+
+  bool isValid() const { return MVendorID != 0 && MArchID != 0 && MImpID != 0; }
+
+  bool operator==(const CPUModel &Other) const {
+    return MVendorID == Other.MVendorID && MArchID == Other.MArchID &&
+           MImpID == Other.MImpID;
+  }
 };
 
 struct CPUInfo {
@@ -58,6 +65,7 @@ LLVM_ABI bool hasFastScalarUnalignedAccess(StringRef CPU);
 LLVM_ABI bool hasFastVectorUnalignedAccess(StringRef CPU);
 LLVM_ABI bool hasValidCPUModel(StringRef CPU);
 LLVM_ABI CPUModel getCPUModel(StringRef CPU);
+LLVM_ABI StringRef getCPUNameFromCPUModel(const CPUModel &Model);
 
 } // namespace RISCV
 
@@ -90,7 +98,7 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
 }
 
 LLVM_ABI unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                              bool MaskAgnostic);
+                              bool MaskAgnostic, bool AltFmt = false);
 
 LLVM_ABI unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
 
@@ -152,6 +160,8 @@ inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
 
 LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
+
+LLVM_ABI void printXSfmmVType(unsigned VType, raw_ostream &OS);
 
 LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 

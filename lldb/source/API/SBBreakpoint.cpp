@@ -275,7 +275,11 @@ void SBBreakpoint::SetCondition(const char *condition) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->SetCondition(condition);
+    // Treat a null pointer as resetting the condition.
+    if (!condition)
+      bkpt_sp->SetCondition(StopCondition());
+    else
+      bkpt_sp->SetCondition(StopCondition(condition));
   }
 }
 
@@ -288,7 +292,10 @@ const char *SBBreakpoint::GetCondition() {
 
   std::lock_guard<std::recursive_mutex> guard(
       bkpt_sp->GetTarget().GetAPIMutex());
-  return ConstString(bkpt_sp->GetConditionText()).GetCString();
+  StopCondition cond = bkpt_sp->GetCondition();
+  if (!cond)
+    return nullptr;
+  return ConstString(cond.GetText()).GetCString();
 }
 
 void SBBreakpoint::SetAutoContinue(bool auto_continue) {
@@ -567,6 +574,15 @@ SBError SBBreakpoint::AddLocation(SBAddress &address) {
   return error;
 }
 
+SBBreakpointLocation SBBreakpoint::AddFacadeLocation() {
+  BreakpointSP bkpt_sp = GetSP();
+  if (!bkpt_sp)
+    return {};
+
+  BreakpointLocationSP loc_sp = bkpt_sp->AddFacadeLocation();
+  return SBBreakpointLocation(loc_sp);
+}
+
 SBStructuredData SBBreakpoint::SerializeToStructuredData() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -779,6 +795,18 @@ bool SBBreakpoint::IsHardware() const {
   if (bkpt_sp)
     return bkpt_sp->IsHardware();
   return false;
+}
+
+lldb::SBError SBBreakpoint::SetIsHardware(bool is_hardware) {
+  LLDB_INSTRUMENT_VA(this, is_hardware);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        bkpt_sp->GetTarget().GetAPIMutex());
+    return SBError(Status::FromError(bkpt_sp->SetIsHardware(is_hardware)));
+  }
+  return SBError();
 }
 
 BreakpointSP SBBreakpoint::GetSP() const { return m_opaque_wp.lock(); }

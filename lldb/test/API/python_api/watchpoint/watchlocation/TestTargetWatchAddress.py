@@ -21,6 +21,11 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
         # This is for verifying that watch location works.
         self.violating_func = "do_bad_thing_with_location"
 
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/144777",
+    )
     def test_watch_create_by_address(self):
         """Exercise SBTarget.WatchpointCreateByAddress() API to set a watchpoint."""
         self.build()
@@ -88,6 +93,11 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
 
         # This finishes our test.
 
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/144777",
+    )
     def test_watch_address(self):
         """Exercise SBTarget.WatchAddress() API to set a watchpoint.
         Same as test_watch_create_by_address, but uses the simpler API.

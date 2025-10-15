@@ -27,11 +27,11 @@ TEST(LlvmLibcMempcpyTest, ZeroCount) {
   ASSERT_EQ(static_cast<char *>(result), dest + 0);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcMempcpyTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::mempcpy(nullptr, nullptr, 1); },
                WITH_SIGNAL(-1));
 }
 
-#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#endif // defined(LIBC_ADD_NULL_CHECKS)

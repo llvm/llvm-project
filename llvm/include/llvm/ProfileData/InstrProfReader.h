@@ -729,6 +729,11 @@ public:
   LLVM_ABI DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() const;
 
+  // Returns non-owned pointer to data access profile data.
+  LLVM_ABI memprof::DataAccessProfData *getDataAccessProfileData() const {
+    return DataAccessProfileData.get();
+  }
+
   // Return the entire MemProf profile.
   LLVM_ABI memprof::AllMemProfData getAllMemProfData() const;
 
@@ -824,7 +829,7 @@ public:
   /// functions, MismatchedFuncSum returns the maximum. If \c FuncName is not
   /// found, try to lookup \c DeprecatedFuncName to handle profiles built by
   /// older compilers.
-  Expected<InstrProfRecord>
+  Expected<NamedInstrProfRecord>
   getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
                      StringRef DeprecatedFuncName = "",
                      uint64_t *MismatchedFuncSum = nullptr);
@@ -898,6 +903,12 @@ public:
   /// Return the MemProf summary. Will be null if unavailable (version < 4).
   memprof::MemProfSummary *getMemProfSummary() const {
     return MemProfReader.getSummary();
+  }
+
+  /// Returns non-owned pointer to the data access profile data.
+  /// Will be null if unavailable (version < 4).
+  memprof::DataAccessProfData *getDataAccessProfileData() const {
+    return MemProfReader.getDataAccessProfileData();
   }
 
   Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) override;

@@ -29,14 +29,15 @@ define void @test(i32 %arg) personality ptr null {
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[PHI6]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[PHI7]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP8]], <4 x i32> [[TMP7]], i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    br label %[[BB11:.*]]
 ; CHECK:       [[BB9:.*]]:
 ; CHECK-NEXT:    [[LANDINGPAD10:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label %[[BB11]]
 ; CHECK:       [[BB11]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <8 x i32> [ poison, %[[BB9]] ], [ [[TMP9]], %[[BB5]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <8 x i32> [ poison, %[[BB9]] ], [ [[TMP10]], %[[BB5]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

@@ -17,7 +17,7 @@ define void @test() "hlsl.export" {
   ; RWBuffer<float> Buf : register(u0, space0)
   %buf0 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 0, i32 1, i32 0, ptr null)
   ret void
 }
 

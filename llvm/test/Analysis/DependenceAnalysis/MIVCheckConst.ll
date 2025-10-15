@@ -40,6 +40,9 @@ define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) #0 align 2 {
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %v27 = load <32 x i32>, ptr %v25, align 256 --> Dst: %v27 = load <32 x i32>, ptr %v25, align 256
 ; CHECK-NEXT:    da analyze - consistent input [0 S S]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i7 (4 * (trunc i32 %v1 to i7) * (1 + (trunc i32 %n to i7))) to i32) == 0
+; CHECK-NEXT:    Equal predicate: (8 * (zext i4 (trunc i32 %v1 to i4) to i32))<nuw><nsw> == 0
 ; CHECK-NEXT:  Src: %v27 = load <32 x i32>, ptr %v25, align 256 --> Dst: %v32 = load <32 x i32>, ptr %v30, align 128
 ; CHECK-NEXT:    da analyze - input [* S S|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
