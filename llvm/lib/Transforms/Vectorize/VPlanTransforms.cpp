@@ -788,9 +788,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                                                ScalarEvolution &SE) {
   VPValue *Incoming, *Mask;
   if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
-                     m_VPInstruction<VPInstruction::FirstActiveLane>(
-                         m_VPValue(Mask)),
-                     m_VPValue(Incoming))))
+                     m_FirstActiveLane(m_VPValue(Mask)), m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);

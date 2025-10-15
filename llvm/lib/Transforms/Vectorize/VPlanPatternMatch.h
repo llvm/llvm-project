@@ -400,6 +400,12 @@ m_AnyOf(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::AnyOf>(Op0);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::FirstActiveLane, Op0_t>
+m_FirstActiveLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::FirstActiveLane>(Op0);
+}
+
 template <unsigned Opcode, typename Op0_t>
 inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
   return AllRecipe_match<Opcode, Op0_t>(Op0);
