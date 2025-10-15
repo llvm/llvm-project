@@ -675,17 +675,10 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                           const CallEvent &CallTemplate) {
-  // WARNING: As this function performs transitions between several different
-  // states (perhaps in a branching structure) we must be careful to avoid
-  // referencing obsolete or irrelevant states. In particular, 'CallEvent'
-  // instances have an attached state (because this is convenient within the
-  // checker callbacks) and it is our responsibility to keep these up-to-date.
-  // In fact, the parameter 'CallTemplate' is a "template" because its attached
-  // state may be older than the state of 'Pred' (which will be further
-  // transformed by the transitions within this method).
-  // (Note that 'runCheckersFor*Call' and 'finishArgumentConstruction' are
-  // prepared to take this template and attach the proper state before
-  // forwarding it to the checkers.)
+  // NOTE: CallTemplate is called a "template" because its attached state may
+  // be obsolete (compared to the state of Pred). The state-dependent methods
+  // of CallEvent should be used only after a `cloneWithState` call that
+  // attaches the up-to-date state to this template object.
 
   // Run any pre-call checks using the generic call interface.
   ExplodedNodeSet dstPreVisit;
