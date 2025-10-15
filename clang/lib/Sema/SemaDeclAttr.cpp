@@ -3629,18 +3629,20 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Check for formats that get handled specially.
       .Case("NSString", NSStringFormat)
       .Case("CFString", CFStringFormat)
-      .Cases("gnu_strftime", "strftime", StrftimeFormat)
+      .Cases({"gnu_strftime", "strftime"}, StrftimeFormat)
 
       // Otherwise, check for supported formats.
-      .Cases("gnu_scanf", "scanf", "gnu_printf", "printf", "printf0",
-             "gnu_strfmon", "strfmon", SupportedFormat)
-      .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
-      .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
-      .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
+      .Cases({"gnu_scanf", "scanf", "gnu_printf", "printf", "printf0",
+              "gnu_strfmon", "strfmon"},
+             SupportedFormat)
+      .Cases({"cmn_err", "vcmn_err", "zcmn_err"}, SupportedFormat)
+      .Cases({"kprintf", "syslog"}, SupportedFormat) // OpenBSD.
+      .Case("freebsd_kprintf", SupportedFormat)      // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 
-      .Cases("gcc_diag", "gcc_cdiag", "gcc_cxxdiag", "gcc_tdiag", IgnoredFormat)
+      .Cases({"gcc_diag", "gcc_cdiag", "gcc_cxxdiag", "gcc_tdiag"},
+             IgnoredFormat)
       .Default(InvalidFormat);
 }
 
@@ -5204,16 +5206,7 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
   bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
-  if (S.getLangOpts().SYCLIsDevice) {
-    if (!IsFunctionTemplate) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << AL << AL.isRegularKeywordAttribute() << "function templates";
-    } else {
-      S.SYCL().handleKernelAttr(D, AL);
-    }
-  } else if (DeviceKernelAttr::isSYCLSpelling(AL)) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-  } else if (S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
+  if (S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
     handleGlobalAttr(S, D, AL);
   } else {
     // OpenCL C++ will throw a more specific error.
@@ -7099,6 +7092,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_EnumExtensibility:
     handleEnumExtensibilityAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_SYCLKernel:
+    S.SYCL().handleKernelAttr(D, AL);
     break;
   case ParsedAttr::AT_SYCLExternal:
     handleSimpleAttribute<SYCLExternalAttr>(S, D, AL);

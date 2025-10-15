@@ -654,7 +654,6 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
       InstrsToUnpack.insert(&Instr);
   }
-  return;
 }
 
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
@@ -674,20 +673,13 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
   MachineOperand HiDstOp = Op0HOp1H->getOperand(0);
 
-  if (I.getFlag(MachineInstr::MIFlag::NoFPExcept)) {
-    Op0LOp1L->setFlag(MachineInstr::MIFlag::NoFPExcept);
-    Op0HOp1H->setFlag(MachineInstr::MIFlag::NoFPExcept);
-  }
-  if (I.getFlag(MachineInstr::MIFlag::FmContract)) {
-    Op0LOp1L->setFlag(MachineInstr::MIFlag::FmContract);
-    Op0HOp1H->setFlag(MachineInstr::MIFlag::FmContract);
-  }
-
+  uint32_t IFlags = I.getFlags();
+  Op0LOp1L->setFlags(IFlags);
+  Op0HOp1H->setFlags(IFlags);
   LoDstOp.setIsRenamable(DstOp.isRenamable());
   HiDstOp.setIsRenamable(DstOp.isRenamable());
 
   I.eraseFromParent();
-  return;
 }
 
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,

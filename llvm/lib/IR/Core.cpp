@@ -4098,15 +4098,8 @@ LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
   return wrap(unwrap(B)->CreateGlobalString(Str, Name));
 }
 
-LLVMBool LLVMGetVolatile(LLVMValueRef MemAccessInst) {
-  Value *P = unwrap(MemAccessInst);
-  if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    return LI->isVolatile();
-  if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    return SI->isVolatile();
-  if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(P))
-    return AI->isVolatile();
-  return cast<AtomicCmpXchgInst>(P)->isVolatile();
+LLVMBool LLVMGetVolatile(LLVMValueRef Inst) {
+  return cast<Instruction>(unwrap(Inst))->isVolatile();
 }
 
 void LLVMSetVolatile(LLVMValueRef MemAccessInst, LLVMBool isVolatile) {

@@ -419,10 +419,10 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
      - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
      - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. For example, a test that requires some test
        input stored in a data file would use this libc++-specific Lit directive. When a test file contains the ``FILE_DEPENDENCIES`` directive, Lit will collect the named files and copy
-       them to the directory represented by the ``%T`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
+       them to the directory represented by the ``%{temp}`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
        (i.e. the source directory of the test being executed) which makes it possible to use relative paths to specify the location of dependency files. After Lit copies
-       all the dependent files to the directory specified by the ``%T`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
-       it should be possible to copy the contents of the directory specified by the ``%T`` substitution to a remote host where the execution of the test will actually occur.
+       all the dependent files to the directory specified by the ``%{temp}`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
+       it should be possible to copy the contents of the directory specified by the ``%{temp}`` substitution to a remote host where the execution of the test will actually occur.
    * - ``ADDITIONAL_COMPILE_FLAGS``
      - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
      - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``

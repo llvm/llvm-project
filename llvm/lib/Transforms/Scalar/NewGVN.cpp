@@ -434,10 +434,6 @@ private:
   int StoreCount = 0;
 };
 
-} // end anonymous namespace
-
-namespace llvm {
-
 struct ExactEqualsExpression {
   const Expression &E;
 
@@ -449,8 +445,9 @@ struct ExactEqualsExpression {
     return E.exactlyEquals(Other);
   }
 };
+} // end anonymous namespace
 
-template <> struct DenseMapInfo<const Expression *> {
+template <> struct llvm::DenseMapInfo<const Expression *> {
   static const Expression *getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
@@ -492,8 +489,6 @@ template <> struct DenseMapInfo<const Expression *> {
     return *LHS == *RHS;
   }
 };
-
-} // end namespace llvm
 
 namespace {
 

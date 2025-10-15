@@ -6442,6 +6442,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back("-fexperimental-call-graph-section");
+
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_size_section,
                     options::OPT_fno_stack_size_section);
 
@@ -9210,8 +9214,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_nogpulibc)) {
     forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {
       // The device C library is only available for NVPTX and AMDGPU targets
-      // currently.
-      if (!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU())
+      // and we only link it by default for OpenMP currently.
+      if ((!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU()) ||
+          !JA.isHostOffloading(Action::OFK_OpenMP))
         return;
       bool HasLibC = TC.getStdlibIncludePath().has_value();
       if (HasLibC) {
