@@ -4378,20 +4378,20 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   bool ScalableTC = match(TC, m_scev_Mul(m_SCEV(KnownMinTC), m_SCEVVScale())) ||
                     match(TC, m_scev_Mul(m_SCEVVScale(), m_SCEV(KnownMinTC)));
   // Use versions of TC and VF in which both are either scalable or fixed.
-  if (ScalableTC == MainLoopVF.isScalable()) {
+  if (ScalableTC == MainLoopVF.isScalable())
     RemainingIterations =
         SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
-  } else {
-    if (ScalableTC)
-      RemainingIterations = SE.getURemExpr(
-          KnownMinTC, SE.getElementCount(TCType, MainLoopVF * IC));
-    else
-      RemainingIterations = SE.getURemExpr(
-          TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
-  }
+  else if (ScalableTC) {
+    const SCEV *EstimatedTC = SE.getMulExpr(
+        KnownMinTC, SE.getConstant(TCType, CM.getVScaleForTuning().value()));
+    RemainingIterations = SE.getURemExpr(
+        EstimatedTC, SE.getElementCount(TCType, MainLoopVF * IC));
+  } else
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
-  if (!RemainingIterations || RemainingIterations->isZero())
+  if (RemainingIterations->isZero())
     return Result;
 
   if (MainLoopVF.isFixed()) {

@@ -10,6 +10,7 @@
 target triple = "aarch64-linux-gnu"
 
 ; DEBUG: LV: Checking a loop in 'main_vf_vscale_x_16'
+; DEBUG-NOT: Create Skeleton for epilogue vectorized loop (first pass)
 ; DEBUG: Executing best plan with VF=vscale x 16, UF=2
 
 ; DEBUG-FORCED: LV: Checking a loop in 'main_vf_vscale_x_16'
