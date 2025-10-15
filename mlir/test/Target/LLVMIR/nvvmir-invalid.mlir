@@ -254,6 +254,14 @@ llvm.func @nvvm_cvt_f32x2_to_f6x2_invalid_type(%a : f32, %b : f32) {
 
 // -----
 
+llvm.func @nvvm_cvt_f32x2_to_f4x2_invalid_type(%a : f32, %b : f32) {
+  // expected-error @below {{Only 'f4E2M1FN' type is supported for conversions from f32x2 to f4x2.}}
+  %res = nvvm.convert.f32x2.to.f4x2 %a, %b : i8 (f8E4M3FN)
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_prefetch_L1_with_evict_priority(%global_ptr: !llvm.ptr<1>) {
   // expected-error @below {{cache eviction priority supported only for cache level L2}}
   nvvm.prefetch level = L1, evict_priority = evict_last, %global_ptr : !llvm.ptr<1>
@@ -558,4 +566,14 @@ llvm.func @clusterlaunchcontrol_query_cancel_get_first_cta_id_invalid_return_typ
   // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op get_first_cta_id_x, get_first_cta_id_y, get_first_cta_id_z query types return an i32}}
   %res = nvvm.clusterlaunchcontrol.query.cancel query = get_first_cta_id_x, %try_cancel_response : i1
   llvm.return
+}
+
+
+// -----
+
+// Test for range validation - invalid range where lower == upper but not at extremes
+func.func @invalid_range_equal_bounds() {
+  // expected-error @below {{invalid range attribute: Lower == Upper, but they aren't min (0) or max (4294967295) value! This is an invalid constant range.}}
+  %0 = nvvm.read.ptx.sreg.warpsize range <i32, 32, 32> : i32
+  return
 }

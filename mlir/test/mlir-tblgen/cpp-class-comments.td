@@ -96,17 +96,14 @@ def EncodingTrait : AttrInterface<"EncodingTrait"> {
   }];
   let methods = [
   ];
-// ATTR-INTERFACE: namespace mlir
-// ATTR-INTERFACE-NEXT: namespace a
-// ATTR-INTERFACE-NEXT: namespace traits
+// ATTR-INTERFACE: namespace mlir::a::traits {
 // ATTR-INTERFACE-NEXT: /// Common trait for all layouts.
 // ATTR-INTERFACE-NEXT: class EncodingTrait;
 }
 
 def SimpleEncodingTrait : AttrInterface<"SimpleEncodingTrait"> {
   let cppNamespace = "a::traits";
-// ATTR-INTERFACE: namespace a {
-// ATTR-INTERFACE-NEXT: namespace traits {
+// ATTR-INTERFACE: namespace a::traits {
 // ATTR-INTERFACE-NEXT: class SimpleEncodingTrait;
 }
 
@@ -116,8 +113,7 @@ def SimpleOpInterface : OpInterface<"SimpleOpInterface"> {
 
     Simple Op Interface description
     }];
-// OP-INTERFACE: namespace a {
-// OP-INTERFACE-NEXT: namespace traits {
+// OP-INTERFACE: namespace a::traits {
 // OP-INTERFACE-NEXT: /// Simple Op Interface description
 // OP-INTERFACE-NEXT: class SimpleOpInterface;
 }

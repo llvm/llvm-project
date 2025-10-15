@@ -567,6 +567,17 @@ struct Derived : Base {
 
 } // namespace ns_retained_return_value
 
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  consume(provideAutoreleased());
+}
+
+} // autoreleased
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;

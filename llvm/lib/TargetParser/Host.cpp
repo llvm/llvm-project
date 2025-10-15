@@ -70,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
@@ -960,6 +960,13 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     // Pantherlake:
     case 0xcc:
       CPU = "pantherlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;

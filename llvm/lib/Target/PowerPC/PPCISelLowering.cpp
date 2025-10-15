@@ -9702,6 +9702,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       }
       return SDV;
     }
+    // Recognize build vector patterns to emit VSX vector instructions
+    // instead of loading value from memory.
+    if (SDValue VecPat = combineBVLoadsSpecialValue(Op, DAG))
+      return VecPat;
   }
   // Check if this is a splat of a constant value.
   APInt APSplatBits, APSplatUndef;
@@ -15693,6 +15697,142 @@ combineElementTruncationToVectorTruncation(SDNode *N,
     SDValue BV = DAG.getBuildVector(NewVT, dl, Ops);
     return DAG.getNode(Opcode, dl, TargetVT, BV);
   }
+  return SDValue();
+}
+
+// LXVKQ instruction load VSX vector with a special quadword value
+// based on an immediate value. This helper method returns the details of the
+// match as a tuple of {LXVKQ unsigned IMM Value, right_shift_amount}
+// to help generate the LXVKQ instruction and the subsequent shift instruction
+// required to match the original build vector pattern.
+
+// LXVKQPattern: {LXVKQ unsigned IMM Value, right_shift_amount}
+using LXVKQPattern = std::tuple<uint32_t, uint8_t>;
+
+static std::optional<LXVKQPattern> getPatternInfo(const APInt &FullVal) {
+
+  // LXVKQ instruction loads the Quadword value:
+  // 0x8000_0000_0000_0000_0000_0000_0000_0000 when imm = 0b10000
+  static const APInt BasePattern = APInt(128, 0x8000000000000000ULL) << 64;
+  static const uint32_t Uim = 16;
+
+  // Check for direct LXVKQ match (no shift needed)
+  if (FullVal == BasePattern)
+    return std::make_tuple(Uim, uint8_t{0});
+
+  // Check if FullValue is 1 (the result of the base pattern >> 127)
+  if (FullVal == APInt(128, 1))
+    return std::make_tuple(Uim, uint8_t{127});
+
+  return std::nullopt;
+}
+
+/// Combine vector loads to a single load (using lxvkq) or splat with shift of a
+/// constant (xxspltib + vsrq) by recognising patterns in the Build Vector.
+/// LXVKQ instruction load VSX vector with a special quadword value based on an
+/// immediate value. if UIM=0b10000 then LXVKQ loads VSR[32×TX+T] with value
+/// 0x8000_0000_0000_0000_0000_0000_0000_0000.
+/// This can be used to inline the build vector constants that have the
+/// following patterns:
+///
+/// 0x8000_0000_0000_0000_0000_0000_0000_0000 (MSB set pattern)
+/// 0x0000_0000_0000_0000_0000_0000_0000_0001 (LSB set pattern)
+/// MSB pattern can directly loaded using LXVKQ while LSB is loaded using a
+/// combination of splatting and right shift instructions.
+
+SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+
+  assert((Op.getNode() && Op.getOpcode() == ISD::BUILD_VECTOR) &&
+         "Expected a BuildVectorSDNode in combineBVLoadsSpecialValue");
+
+  // This transformation is only supported if we are loading either a byte,
+  // halfword, word, or doubleword.
+  EVT VT = Op.getValueType();
+  if (!(VT == MVT::v8i16 || VT == MVT::v16i8 || VT == MVT::v4i32 ||
+        VT == MVT::v2i64))
+    return SDValue();
+
+  LLVM_DEBUG(llvm::dbgs() << "\ncombineBVLoadsSpecialValue: Build vector ("
+                          << VT.getEVTString() << "): ";
+             Op->dump());
+
+  unsigned NumElems = VT.getVectorNumElements();
+  unsigned ElemBits = VT.getScalarSizeInBits();
+
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+
+  // Check for Non-constant operand in the build vector.
+  for (const SDValue &Operand : Op.getNode()->op_values()) {
+    if (!isa<ConstantSDNode>(Operand))
+      return SDValue();
+  }
+
+  // Assemble build vector operands as a 128-bit register value
+  // We need to reconstruct what the 128-bit register pattern would be
+  // that produces this vector when interpreted with the current endianness
+  APInt FullVal = APInt::getZero(128);
+
+  for (unsigned Index = 0; Index < NumElems; ++Index) {
+    auto *C = cast<ConstantSDNode>(Op.getOperand(Index));
+
+    // Get element value as raw bits (zero-extended)
+    uint64_t ElemValue = C->getZExtValue();
+
+    // Mask to element size to ensure we only get the relevant bits
+    if (ElemBits < 64)
+      ElemValue &= ((1ULL << ElemBits) - 1);
+
+    // Calculate bit position for this element in the 128-bit register
+    unsigned BitPos =
+        (IsLittleEndian) ? (Index * ElemBits) : (128 - (Index + 1) * ElemBits);
+
+    // Create APInt for the element value and shift it to correct position
+    APInt ElemAPInt(128, ElemValue);
+    ElemAPInt <<= BitPos;
+
+    // Place the element value at the correct bit position
+    FullVal |= ElemAPInt;
+  }
+
+  if (FullVal.isZero() || FullVal.isAllOnes())
+    return SDValue();
+
+  if (auto UIMOpt = getPatternInfo(FullVal)) {
+    const auto &[Uim, ShiftAmount] = *UIMOpt;
+    SDLoc Dl(Op);
+
+    // Generate LXVKQ instruction if the shift amount is zero.
+    if (ShiftAmount == 0) {
+      SDValue UimVal = DAG.getTargetConstant(Uim, Dl, MVT::i32);
+      SDValue LxvkqInstr =
+          SDValue(DAG.getMachineNode(PPC::LXVKQ, Dl, VT, UimVal), 0);
+      LLVM_DEBUG(llvm::dbgs()
+                     << "combineBVLoadsSpecialValue: Instruction Emitted ";
+                 LxvkqInstr.dump());
+      return LxvkqInstr;
+    }
+
+    assert(ShiftAmount == 127 && "Unexpected lxvkq shift amount value");
+
+    // The right shifted pattern can be constructed using a combination of
+    // XXSPLTIB and VSRQ instruction. VSRQ uses the shift amount from the lower
+    // 7 bits of byte 15. This can be specified using XXSPLTIB with immediate
+    // value 255.
+    SDValue ShiftAmountVec =
+        SDValue(DAG.getMachineNode(PPC::XXSPLTIB, Dl, MVT::v4i32,
+                                   DAG.getTargetConstant(255, Dl, MVT::i32)),
+                0);
+    // Generate appropriate right shift instruction
+    SDValue ShiftVec = SDValue(
+        DAG.getMachineNode(PPC::VSRQ, Dl, VT, ShiftAmountVec, ShiftAmountVec),
+        0);
+    LLVM_DEBUG(llvm::dbgs()
+                   << "\n combineBVLoadsSpecialValue: Instruction Emitted ";
+               ShiftVec.dump());
+    return ShiftVec;
+  }
+  // No patterns matched for build vectors.
   return SDValue();
 }
 

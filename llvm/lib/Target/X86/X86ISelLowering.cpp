@@ -58342,11 +58342,12 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
   } else if (Op1.getOpcode() == ISD::AND && Sub.getValue(0).use_empty()) {
     SDValue Src = Op1;
     SDValue Op10 = Op1.getOperand(0);
-    if (Op10.getOpcode() == ISD::XOR && isAllOnesConstant(Op10.getOperand(1))) {
-      // res, flags2 = sub 0, (and (xor X, -1), Y)
+    if (Op10.getOpcode() == ISD::XOR && isAllOnesConstant(Op10.getOperand(1)) &&
+        llvm::isOneConstant(Op1.getOperand(1))) {
+      // res, flags2 = sub 0, (and (xor X, -1), 1)
       // cload/cstore ..., cond_ne, flag2
       // ->
-      // res, flags2 = sub 0, (and X, Y)
+      // res, flags2 = sub 0, (and X, 1)
       // cload/cstore ..., cond_e, flag2
       Src = DAG.getNode(ISD::AND, DL, Op1.getValueType(), Op10.getOperand(0),
                         Op1.getOperand(1));

@@ -1310,14 +1310,6 @@ Transforms/SimpleLoopUnswitch/pr60736.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-freeze-individual-conditions.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-logical-and-or.ll
-Transforms/SROA/phi-gep.ll
-Transforms/SROA/scalable-vectors-with-known-vscale.ll
-Transforms/SROA/select-gep.ll
-Transforms/SROA/select-load.ll
-Transforms/SROA/slice-width.ll
-Transforms/SROA/vector-conversion.ll
-Transforms/SROA/vector-promotion-cannot-tree-structure-merge.ll
-Transforms/SROA/vector-promotion.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/StructurizeCFG/AMDGPU/uniform-regions.ll
 Transforms/StructurizeCFG/hoist-zerocost.ll

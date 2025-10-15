@@ -783,21 +783,22 @@ bool ABISysV_riscv::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   bool is_callee_saved =
       llvm::StringSwitch<bool>(name)
           // integer ABI names
-          .Cases("ra", "sp", "fp", true)
-          .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9",
+          .Cases({"ra", "sp", "fp"}, true)
+          .Cases({"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"},
                  true)
-          .Cases("s10", "s11", true)
+          .Cases({"s10", "s11"}, true)
           // integer hardware names
-          .Cases("x1", "x2", "x8", "x9", "x18", "x19", "x20", "x21", "x22",
+          .Cases({"x1", "x2", "x8", "x9", "x18", "x19", "x20", "x21", "x22"},
                  true)
-          .Cases("x23", "x24", "x25", "x26", "x27", true)
+          .Cases({"x23", "x24", "x25", "x26", "x27"}, true)
           // floating point ABI names
-          .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7",
+          .Cases({"fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7"},
                  is_hw_fp)
-          .Cases("fs8", "fs9", "fs10", "fs11", is_hw_fp)
+          .Cases({"fs8", "fs9", "fs10", "fs11"}, is_hw_fp)
           // floating point hardware names
-          .Cases("f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23", is_hw_fp)
-          .Cases("f24", "f25", "f26", "f27", is_hw_fp)
+          .Cases({"f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23"},
+                 is_hw_fp)
+          .Cases({"f24", "f25", "f26", "f27"}, is_hw_fp)
           .Default(false);
 
   return is_callee_saved;
