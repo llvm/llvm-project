@@ -107,7 +107,7 @@ func.func @return_not_in_function() {
 // -----
 
 func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
-  vector.splat %v : vector<8xf64>
+  vector.broadcast %v : f64 to vector<8xf64>
   // expected-error@-1 {{expects different type than prior uses}}
   return
 }

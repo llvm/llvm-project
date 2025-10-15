@@ -1090,7 +1090,7 @@ TEST(DeclPrinter, TestClassTemplateDecl9) {
       "template<typename T> struct Z { };"
       "template<template<typename U> class T = Z> struct A { };",
       classTemplateDecl(hasName("A")).bind("id"),
-      "template <template <typename U> class T> struct A {}"));
+      "template <template <typename U> class T = Z> struct A {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateDecl10) {

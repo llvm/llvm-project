@@ -989,6 +989,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rsqrtf
+  SRCS
+    rsqrtf.cpp
+  HDRS
+    ../rsqrtf.h
+  DEPENDS
+    libc.src.__support.math.rsqrtf
+)
+
+add_entrypoint_object(
   rsqrtf16
   SRCS
     rsqrtf16.cpp
@@ -1468,15 +1478,7 @@ add_entrypoint_object(
   HDRS
     ../exp2f16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.expxf16_utils
+    libc.src.__support.math.exp2f16
 )
 
 add_entrypoint_object(

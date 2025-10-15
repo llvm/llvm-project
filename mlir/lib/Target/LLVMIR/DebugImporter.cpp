@@ -59,7 +59,8 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
           std::underlying_type_t<llvm::DICompileUnit::DebugNameTableKind>>(
           node->getNameTableKind()));
   return DICompileUnitAttr::get(
-      context, getOrCreateDistinctID(node), node->getSourceLanguage(),
+      context, getOrCreateDistinctID(node),
+      node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
       node->isOptimized(), emissionKind.value(), nameTableKind.value(),
       getStringAttrOrNull(node->getRawSplitDebugFilename()));

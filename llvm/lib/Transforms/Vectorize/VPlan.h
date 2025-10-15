@@ -24,12 +24,9 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
-#include "VPlanAnalysis.h"
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
@@ -41,10 +38,11 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -345,13 +343,6 @@ public:
 
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
-
-  /// Return true if it is legal to hoist instructions into this block.
-  bool isLegalToHoistInto() {
-    // There are currently no constraints that prevent an instruction to be
-    // hoisted into a VPBlockBase.
-    return true;
-  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
@@ -1064,6 +1055,7 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
+    OpsEnd = VScale,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -2263,8 +2255,7 @@ public:
   /// debug location \p DL.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
-        Name(Name.str()) {
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, {}, Phi, DL), Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }

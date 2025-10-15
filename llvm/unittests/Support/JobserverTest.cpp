@@ -355,6 +355,7 @@ TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
       int CurrentActive = ++ActiveTasks;
       LLVM_DEBUG(dbgs() << "Task " << i << ": Active tasks: " << CurrentActive
                         << "\n");
+      (void)i;
       int OldMax = MaxActiveTasks.load();
       while (CurrentActive > OldMax)
         MaxActiveTasks.compare_exchange_weak(OldMax, CurrentActive);

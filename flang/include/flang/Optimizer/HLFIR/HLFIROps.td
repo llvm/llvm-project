@@ -73,6 +73,10 @@ def hlfir_DeclareOp
         local lower bound values. It is intended to be used when generating FIR
         from HLFIR in order to avoid descriptor creation for simple entities.
 
+    The attribute skip_rebox can be set to indicate that the second and first
+    result are known to be the same descriptors (the input descriptor is known
+    to already have the correct attributes and lower bounds).
+
     Example:
 
     CHARACTER(n) :: c(10:n, 20:n)
@@ -98,7 +102,8 @@ def hlfir_DeclareOp
       DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-      OptionalAttr<cuf_DataAttributeAttr>:$data_attr);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+      OptionalAttr<UnitAttr>:$skip_rebox);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
@@ -106,6 +111,7 @@ def hlfir_DeclareOp
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
+    (`skip_rebox` $skip_rebox^)?
     attr-dict `:` functional-type(operands, results)
   }];
 

@@ -23,6 +23,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -774,9 +775,7 @@ struct ConvertXeGPUToXeVMPass
       if (rank < 1 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
-      int64_t sum =
-          std::accumulate(type.getShape().begin(), type.getShape().end(),
-                          int64_t{1}, std::multiplies<int64_t>());
+      int64_t sum = llvm::product_of(type.getShape());
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {

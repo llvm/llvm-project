@@ -74,6 +74,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
@@ -96,6 +97,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <cctype>
 #include <memory>
@@ -527,7 +529,8 @@ static void SetupTargetOpts(CompilerInstance &compiler,
 
 static void SetupLangOpts(CompilerInstance &compiler,
                           ExecutionContextScope &exe_scope,
-                          const Expression &expr) {
+                          const Expression &expr,
+                          DiagnosticManager &diagnostic_manager) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   // If the expression is being evaluated in the context of an existing stack
@@ -547,6 +550,9 @@ static void SetupLangOpts(CompilerInstance &compiler,
                      : lldb::eLanguageTypeUnknown),
         lldb_private::Language::GetNameForLanguageType(language));
 
+  lldb::LanguageType language_for_note = language;
+  std::string language_fallback_reason;
+
   LangOptions &lang_opts = compiler.getLangOpts();
 
   switch (language) {
@@ -560,12 +566,20 @@ static void SetupLangOpts(CompilerInstance &compiler,
     // family language, because the expression parser uses features of C++ to
     // capture values.
     lang_opts.CPlusPlus = true;
+
+    language_for_note = lldb::eLanguageTypeC_plus_plus;
+    language_fallback_reason =
+        "Expression evaluation in pure C not supported. ";
     break;
   case lldb::eLanguageTypeObjC:
     lang_opts.ObjC = true;
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
     lang_opts.CPlusPlus = true;
+
+    language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+    language_fallback_reason =
+        "Expression evaluation in pure Objective-C not supported. ";
 
     // Clang now sets as default C++14 as the default standard (with
     // GNU extensions), so we do the same here to avoid mismatches that
@@ -607,8 +621,26 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus = true;
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
+
+    language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+    if (language != language_for_note) {
+      if (language != lldb::eLanguageTypeUnknown)
+        language_fallback_reason = llvm::formatv(
+            "Expression evaluation in {0} not supported. ",
+            lldb_private::Language::GetDisplayNameForLanguageType(language));
+
+      language_fallback_reason +=
+          llvm::formatv("Falling back to default language. ");
+    }
     break;
   }
+
+  diagnostic_manager.AddDiagnostic(
+      llvm::formatv("{0}Ran expression as '{1}'.", language_fallback_reason,
+                    lldb_private::Language::GetDisplayNameForLanguageType(
+                        language_for_note))
+          .str(),
+      lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
 
   lang_opts.Bool = true;
   lang_opts.WChar = true;
@@ -687,8 +719,8 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
 
 ClangExpressionParser::ClangExpressionParser(
     ExecutionContextScope *exe_scope, Expression &expr,
-    bool generate_debug_info, std::vector<std::string> include_directories,
-    std::string filename)
+    bool generate_debug_info, DiagnosticManager &diagnostic_manager,
+    std::vector<std::string> include_directories, std::string filename)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr),
       m_include_directories(std::move(include_directories)),
@@ -754,7 +786,7 @@ ClangExpressionParser::ClangExpressionParser(
   }
 
   // 4. Set language options.
-  SetupLangOpts(*m_compiler, *exe_scope, expr);
+  SetupLangOpts(*m_compiler, *exe_scope, expr, diagnostic_manager);
   auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
   if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");

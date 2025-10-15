@@ -27,9 +27,7 @@
 #include <memory>
 using namespace llvm;
 
-namespace llvm {
-Triple TargetTriple;
-}
+Triple llvm::TargetTriple;
 
 DiscardTemp::~DiscardTemp() {
   if (SaveTemps) {
@@ -41,18 +39,14 @@ DiscardTemp::~DiscardTemp() {
     errs() << "Failed to delete temp file " << toString(std::move(E)) << '\n';
 }
 
-// Anonymous namespace to define command line options for debugging.
-//
-namespace {
 // Output - The user can specify a file containing the expected output of the
 // program.  If this filename is set, it is used as the reference diff source,
 // otherwise the raw input run through an interpreter is used as the reference
 // source.
 //
-cl::opt<std::string> OutputFile("output",
-                                cl::desc("Specify a reference program output "
-                                         "(for miscompilation detection)"));
-}
+static cl::opt<std::string>
+    OutputFile("output", cl::desc("Specify a reference program output "
+                                  "(for miscompilation detection)"));
 
 /// If we reduce or update the program somehow, call this method to update
 /// bugdriver with it.  This deletes the old module and sets the specified one
@@ -238,7 +232,7 @@ Error BugDriver::run() {
   return Error::success();
 }
 
-void llvm::PrintFunctionList(const std::vector<Function *> &Funcs) {
+void llvm::printFunctionList(const std::vector<Function *> &Funcs) {
   unsigned NumPrint = Funcs.size();
   if (NumPrint > 10)
     NumPrint = 10;
@@ -249,7 +243,7 @@ void llvm::PrintFunctionList(const std::vector<Function *> &Funcs) {
   outs().flush();
 }
 
-void llvm::PrintGlobalVariableList(const std::vector<GlobalVariable *> &GVs) {
+void llvm::printGlobalVariableList(const std::vector<GlobalVariable *> &GVs) {
   unsigned NumPrint = GVs.size();
   if (NumPrint > 10)
     NumPrint = 10;
