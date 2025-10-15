@@ -1171,12 +1171,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
   }
   case Instruction::FCmp:
-  case Instruction::ICmp: {
-    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
-    return Ctx.TTI.getCmpSelInstrCost(getOpcode(), ValTy,
-                                      CmpInst::makeCmpResultType(ValTy),
-                                      getPredicate(), Ctx.CostKind);
-  }
+  case Instruction::ICmp:
+    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();

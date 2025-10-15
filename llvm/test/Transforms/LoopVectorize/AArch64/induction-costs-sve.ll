@@ -775,20 +775,20 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; PRED-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
-; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX1]], 3
-; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
+; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX1]], 1
+; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; PRED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX1]], 1
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
-; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], %[[PRED_STORE_CONTINUE9:.*]] ]
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT2]], <4 x i64> poison, <4 x i32> zeroinitializer
-; PRED-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT3]], <i64 0, i64 1, i64 2, i64 3>
-; PRED-NEXT:    [[TMP8:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
-; PRED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
+; PRED-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT3]], <i64 0, i64 1>
+; PRED-NEXT:    [[TMP6:%.*]] = icmp ule <2 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; PRED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP6]], i32 0
 ; PRED-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; PRED:       [[PRED_STORE_IF]]:
 ; PRED-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
@@ -796,33 +796,17 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED-NEXT:    store i32 0, ptr [[TMP9]], align 8
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; PRED:       [[PRED_STORE_CONTINUE]]:
-; PRED-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
-; PRED-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
+; PRED-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP6]], i32 1
+; PRED-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5]]
 ; PRED:       [[PRED_STORE_IF4]]:
 ; PRED-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
 ; PRED-NEXT:    [[TMP12:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP13]], i32 2
 ; PRED-NEXT:    store i32 0, ptr [[TMP12]], align 8
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; PRED:       [[PRED_STORE_CONTINUE5]]:
-; PRED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
-; PRED-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
-; PRED:       [[PRED_STORE_IF6]]:
-; PRED-NEXT:    [[INDEX_NEXT:%.*]] = add i64 [[INDEX]], 2
-; PRED-NEXT:    [[TMP15:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[INDEX_NEXT]], i32 2
-; PRED-NEXT:    store i32 0, ptr [[TMP15]], align 8
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
-; PRED:       [[PRED_STORE_CONTINUE7]]:
-; PRED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
-; PRED-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9]]
-; PRED:       [[PRED_STORE_IF8]]:
-; PRED-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 3
-; PRED-NEXT:    [[TMP18:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP17]], i32 2
-; PRED-NEXT:    store i32 0, ptr [[TMP18]], align 8
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
-; PRED:       [[PRED_STORE_CONTINUE9]]:
-; PRED-NEXT:    [[INDEX_NEXT1]] = add i64 [[INDEX]], 4
-; PRED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT1]], [[N_VEC]]
-; PRED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; PRED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; PRED-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
