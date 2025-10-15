@@ -1989,7 +1989,7 @@ void cir::TernaryOp::build(
   YieldOp yield = dyn_cast_or_null<YieldOp>(trueRegion->back().getTerminator());
   if (!yield)
     yield = dyn_cast_or_null<YieldOp>(falseRegion->back().getTerminator());
-  
+
   assert((yield && yield.getNumOperands() <= 1) &&
          "expected zero or one result type");
   if (yield.getNumOperands() == 1)
