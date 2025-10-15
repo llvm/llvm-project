@@ -751,4 +751,226 @@ template bool OpenACCMappableModel<fir::PointerType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value privatized) const;
 
+template <typename Ty>
+mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const {
+
+  // Get the element type from the pointer type
+  mlir::Type eleTy = mlir::cast<Ty>(pointer).getElementType();
+
+  // Unlimited polymorphic (class(*)) cannot be handled - size unknown
+  if (fir::isUnlimitedPolymorphicType(eleTy))
+    return {};
+
+  // Character types with dynamic length cannot be handled without a descriptor.
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy))
+    if (charTy.hasDynamicLen())
+      return {};
+
+  // Return null for dynamic or unknown shape arrays because the size of the
+  // allocation cannot be determined simply from the type.
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
+      return {};
+
+  // Use heap allocation for fir.heap, stack allocation for others (fir.ref,
+  // fir.ptr, fir.llvm_ptr). For fir.ptr, which is supposed to represent a
+  // Fortran pointer type, it feels a bit odd to "allocate" since it is meant
+  // to point to an existing entity - but one can imagine where a pointee is
+  // privatized - thus it makes sense to issue an allocate.
+  mlir::Value allocation;
+  if (std::is_same_v<Ty, fir::HeapType>) {
+    needsFree = true;
+    allocation = fir::AllocMemOp::create(builder, loc, eleTy);
+  } else {
+    needsFree = false;
+    allocation = fir::AllocaOp::create(builder, loc, eleTy);
+  }
+
+  // Convert to the requested pointer type if needed.
+  // This means converting from a fir.ref to either a fir.llvm_ptr or a fir.ptr.
+  // fir.heap is already correct type in this case.
+  if (allocation.getType() != pointer) {
+    assert(!(std::is_same_v<Ty, fir::HeapType>) &&
+           "fir.heap is already correct type because of allocmem");
+    return fir::ConvertOp::create(builder, loc, pointer, allocation);
+  }
+
+  return allocation;
+}
+
+template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+static mlir::Value stripCasts(mlir::Value value, bool stripDeclare = true) {
+  mlir::Value currentValue = value;
+
+  while (currentValue) {
+    auto *definingOp = currentValue.getDefiningOp();
+    if (!definingOp)
+      break;
+
+    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
+      currentValue = convertOp.getValue();
+      continue;
+    }
+
+    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
+      currentValue = viewLike.getViewSource();
+      continue;
+    }
+
+    if (stripDeclare) {
+      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+
+      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+    }
+    break;
+  }
+
+  return currentValue;
+}
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const {
+
+  // If pointer type is HeapType, assume it's a heap allocation
+  if (std::is_same_v<Ty, fir::HeapType>) {
+    fir::FreeMemOp::create(builder, loc, varToFree);
+    return true;
+  }
+
+  // Use allocRes if provided to determine the allocation type
+  mlir::Value valueToInspect = allocRes ? allocRes : varToFree;
+
+  // Strip casts and declare operations to find the original allocation
+  mlir::Value strippedValue = stripCasts(valueToInspect);
+  mlir::Operation *originalAlloc = strippedValue.getDefiningOp();
+
+  // If we found an AllocMemOp (heap allocation), free it
+  if (mlir::isa_and_nonnull<fir::AllocMemOp>(originalAlloc)) {
+    mlir::Value toFree = varToFree;
+    if (!mlir::isa<fir::HeapType>(valueToInspect.getType()))
+      toFree = fir::ConvertOp::create(
+          builder, loc,
+          fir::HeapType::get(varToFree.getType().getElementType()), toFree);
+    fir::FreeMemOp::create(builder, loc, toFree);
+    return true;
+  }
+
+  // If we found an AllocaOp (stack allocation), no deallocation needed
+  if (mlir::isa_and_nonnull<fir::AllocaOp>(originalAlloc))
+    return true;
+
+  // Unable to determine allocation type
+  return false;
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::PointerType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::HeapType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const {
+
+  // Check that source and destination types match
+  if (source.getType() != destination.getType())
+    return false;
+
+  mlir::Type eleTy = mlir::cast<Ty>(pointer).getElementType();
+
+  // Unlimited polymorphic (class(*)) cannot be handled because source and
+  // destination types are not known.
+  if (fir::isUnlimitedPolymorphicType(eleTy))
+    return false;
+
+  // Dynamic lengths without descriptor do not have size information.
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy))
+    if (charTy.hasDynamicLen())
+      return false;
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
+      return false;
+
+  if (fir::isa_trivial(eleTy)) {
+    auto loadVal = fir::LoadOp::create(builder, loc, source);
+    fir::StoreOp::create(builder, loc, loadVal, destination);
+  } else {
+    hlfir::AssignOp::create(builder, loc, source, destination);
+  }
+  return true;
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::PointerType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::HeapType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
 } // namespace fir::acc
