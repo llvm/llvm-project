@@ -27,6 +27,9 @@ using nullptr_t = decltype(nullptr);
 
 } // namespace std
 
+typedef decltype(sizeof(char)) size_t;
+typedef decltype(sizeof(char*)) ptrdiff_t;
+
 #endif // CSTDDEF_H
 )";
 
@@ -479,12 +482,38 @@ struct conjunction<T, Ts...>
 template <typename T>
 struct conjunction<T> : T {};
 
+template <typename... Ts>
+struct disjunction : std::false_type {};
+
+template <typename T, typename... Ts>
+struct disjunction<T, Ts...>
+    : std::conditional<T::value, T, disjunction<Ts...>>::type {};
+
+template <typename T>
+struct disjunction<T> : T {};
+
 template <typename T>
 struct negation : std::integral_constant<bool, !T::value> {};
 
 template <bool B, typename T = void>
 using enable_if_t = typename std::enable_if<B, T>::type;
 
+
+template <bool B, typename T, typename F>
+using conditional_t = typename std::conditional<B, T, F>::type;
+
+template <typename T>
+using remove_cv_t = typename std::remove_cv<T>::type;
+
+template <typename T>
+using remove_reference_t = typename std::remove_reference<T>::type;
+
+template <typename T>
+using decay_t = typename std::decay<T>::type;
+
+struct in_place_t {};
+
+constexpr in_place_t in_place;
 } // namespace absl
 
 #endif // ABSL_TYPE_TRAITS_H
@@ -499,8 +528,16 @@ namespace std {
 struct string {
   string(const char*);
   ~string();
+  const char *c_str() const;
   bool empty();
 };
+
+struct string_view {
+  string_view(const char*);
+  ~string_view();
+  bool empty();
+};
+
 bool operator!=(const string &LHS, const char *RHS);
 
 } // namespace std
@@ -791,9 +828,6 @@ struct nullopt_t {
   constexpr explicit nullopt_t() {}
 };
 constexpr nullopt_t nullopt;
-
-struct in_place_t {};
-constexpr in_place_t in_place;
 
 template <typename T>
 class optional;
@@ -1240,6 +1274,964 @@ constexpr bool operator!=(const T &value, const Optional<U> &opt);
 } // namespace base
 )";
 
+constexpr const char StatusDefsHeader[] =
+    R"cc(
+#ifndef STATUS_H_
+#define STATUS_H_
+
+#include "absl_type_traits.h"
+#include "std_initializer_list.h"
+#include "std_string.h"
+#include "std_type_traits.h"
+#include "std_utility.h"
+
+namespace absl {
+struct SourceLocation {
+  static constexpr SourceLocation current();
+  static constexpr SourceLocation
+  DoNotInvokeDirectlyNoSeriouslyDont(int line, const char *file_name);
+};
+} // namespace absl
+namespace absl {
+enum class StatusCode : int {
+  kOk,
+  kCancelled,
+  kUnknown,
+  kInvalidArgument,
+  kDeadlineExceeded,
+  kNotFound,
+  kAlreadyExists,
+  kPermissionDenied,
+  kResourceExhausted,
+  kFailedPrecondition,
+  kAborted,
+  kOutOfRange,
+  kUnimplemented,
+  kInternal,
+  kUnavailable,
+  kDataLoss,
+  kUnauthenticated,
+};
+} // namespace absl
+
+namespace absl {
+enum class StatusToStringMode : int {
+  kWithNoExtraData = 0,
+  kWithPayload = 1 << 0,
+  kWithSourceLocation = 1 << 1,
+  kWithEverything = ~kWithNoExtraData,
+  kDefault = kWithPayload,
+};
+class Status {
+public:
+  Status();
+  template <typename Enum> Status(Enum code, std::string_view msg);
+  Status(absl::StatusCode code, std::string_view msg,
+         absl::SourceLocation loc = SourceLocation::current());
+  Status(const Status &base_status, absl::SourceLocation loc);
+  Status(Status &&base_status, absl::SourceLocation loc);
+  ~Status() {}
+
+  Status(const Status &);
+  Status &operator=(const Status &x);
+
+  Status(Status &&) noexcept;
+  Status &operator=(Status &&);
+
+  friend bool operator==(const Status &, const Status &);
+  friend bool operator!=(const Status &, const Status &);
+
+  bool ok() const { return true; }
+  void CheckSuccess() const;
+  void IgnoreError() const;
+  int error_code() const;
+  absl::Status ToCanonical() const;
+  std::string
+  ToString(StatusToStringMode m = StatusToStringMode::kDefault) const;
+  void Update(const Status &new_status);
+  void Update(Status &&new_status);
+};
+
+bool operator==(const Status &lhs, const Status &rhs);
+bool operator!=(const Status &lhs, const Status &rhs);
+
+Status OkStatus();
+Status InvalidArgumentError(char *);
+
+#endif // STATUS_H
+)cc";
+
+constexpr const char StatusOrDefsHeader[] = R"cc(
+#ifndef STATUSOR_H_
+#define STATUSOR_H_
+#include "absl_type_traits.h"
+#include "status_defs.h"
+#include "std_initializer_list.h"
+#include "std_type_traits.h"
+#include "std_utility.h"
+
+template <typename T> struct StatusOr;
+
+namespace internal_statusor {
+
+template <typename T, typename U, typename = void>
+struct HasConversionOperatorToStatusOr : std::false_type {};
+
+template <typename T, typename U>
+void test(char (*)[sizeof(std::declval<U>().operator absl::StatusOr<T>())]);
+
+template <typename T, typename U>
+struct HasConversionOperatorToStatusOr<T, U, decltype(test<T, U>(0))>
+    : std::true_type {};
+
+template <typename T, typename U>
+using IsConstructibleOrConvertibleFromStatusOr =
+    absl::disjunction<std::is_constructible<T, StatusOr<U> &>,
+                      std::is_constructible<T, const StatusOr<U> &>,
+                      std::is_constructible<T, StatusOr<U> &&>,
+                      std::is_constructible<T, const StatusOr<U> &&>,
+                      std::is_convertible<StatusOr<U> &, T>,
+                      std::is_convertible<const StatusOr<U> &, T>,
+                      std::is_convertible<StatusOr<U> &&, T>,
+                      std::is_convertible<const StatusOr<U> &&, T>>;
+
+template <typename T, typename U>
+using IsConstructibleOrConvertibleOrAssignableFromStatusOr =
+    absl::disjunction<IsConstructibleOrConvertibleFromStatusOr<T, U>,
+                      std::is_assignable<T &, StatusOr<U> &>,
+                      std::is_assignable<T &, const StatusOr<U> &>,
+                      std::is_assignable<T &, StatusOr<U> &&>,
+                      std::is_assignable<T &, const StatusOr<U> &&>>;
+
+template <typename T, typename U>
+struct IsDirectInitializationAmbiguous
+    : public absl::conditional_t<
+          std::is_same<absl::remove_cv_t<absl::remove_reference_t<U>>,
+                       U>::value,
+          std::false_type,
+          IsDirectInitializationAmbiguous<
+              T, absl::remove_cv_t<absl::remove_reference_t<U>>>> {};
+
+template <typename T, typename V>
+struct IsDirectInitializationAmbiguous<T, absl::StatusOr<V>>
+    : public IsConstructibleOrConvertibleFromStatusOr<T, V> {};
+
+template <typename T, typename U>
+using IsDirectInitializationValid = absl::disjunction<
+    // Short circuits if T is basically U.
+    std::is_same<T, absl::remove_cv_t<absl::remove_reference_t<U>>>,
+    absl::negation<absl::disjunction<
+        std::is_same<absl::StatusOr<T>,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        std::is_same<absl::Status,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        std::is_same<absl::in_place_t,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        IsDirectInitializationAmbiguous<T, U>>>>;
+
+template <typename T, typename U>
+struct IsForwardingAssignmentAmbiguous
+    : public absl::conditional_t<
+          std::is_same<absl::remove_cv_t<absl::remove_reference_t<U>>,
+                       U>::value,
+          std::false_type,
+          IsForwardingAssignmentAmbiguous<
+              T, absl::remove_cv_t<absl::remove_reference_t<U>>>> {};
+
+template <typename T, typename U>
+struct IsForwardingAssignmentAmbiguous<T, absl::StatusOr<U>>
+    : public IsConstructibleOrConvertibleOrAssignableFromStatusOr<T, U> {};
+
+template <typename T, typename U>
+using IsForwardingAssignmentValid = absl::disjunction<
+    // Short circuits if T is basically U.
+    std::is_same<T, absl::remove_cv_t<absl::remove_reference_t<U>>>,
+    absl::negation<absl::disjunction<
+        std::is_same<absl::StatusOr<T>,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        std::is_same<absl::Status,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        std::is_same<absl::in_place_t,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        IsForwardingAssignmentAmbiguous<T, U>>>>;
+
+template <typename T, typename U>
+using IsForwardingAssignmentValid = absl::disjunction<
+    // Short circuits if T is basically U.
+    std::is_same<T, absl::remove_cv_t<absl::remove_reference_t<U>>>,
+    absl::negation<absl::disjunction<
+        std::is_same<absl::StatusOr<T>,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        std::is_same<absl::Status,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        std::is_same<absl::in_place_t,
+                     absl::remove_cv_t<absl::remove_reference_t<U>>>,
+        IsForwardingAssignmentAmbiguous<T, U>>>>;
+
+template <typename T> struct OperatorBase {
+  const T &value() const &;
+  T &value() &;
+  const T &&value() const &&;
+  T &&value() &&;
+
+  const T &operator*() const &;
+  T &operator*() &;
+  const T &&operator*() const &&;
+  T &&operator*() &&;
+
+  // To test that analyses are okay if there is a use of operator*
+  // within this base class.
+  const T *operator->() const { return __builtin_addressof(**this); }
+  T *operator->() { return __builtin_addressof(**this); }
+};
+
+} // namespace internal_statusor
+
+template <typename T>
+struct StatusOr : private internal_statusor::OperatorBase<T> {
+  explicit StatusOr();
+
+  StatusOr(const StatusOr &) = default;
+  StatusOr &operator=(const StatusOr &) = default;
+
+  StatusOr(StatusOr &&) = default;
+  StatusOr &operator=(StatusOr &&) = default;
+
+  template <
+      typename U,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>,
+              std::is_constructible<T, const U &>,
+              std::is_convertible<const U &, T>,
+              absl::negation<
+                  internal_statusor::IsConstructibleOrConvertibleFromStatusOr<
+                      T, U>>>::value,
+          int> = 0>
+  StatusOr(const StatusOr<U> &);
+
+  template <
+      typename U,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>,
+              std::is_constructible<T, const U &>,
+              absl::negation<std::is_convertible<const U &, T>>,
+              absl::negation<
+                  internal_statusor::IsConstructibleOrConvertibleFromStatusOr<
+                      T, U>>>::value,
+          int> = 0>
+  explicit StatusOr(const StatusOr<U> &);
+
+  template <
+      typename U,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>,
+              std::is_constructible<T, U &&>, std::is_convertible<U &&, T>,
+              absl::negation<
+                  internal_statusor::IsConstructibleOrConvertibleFromStatusOr<
+                      T, U>>>::value,
+          int> = 0>
+  StatusOr(StatusOr<U> &&);
+
+  template <
+      typename U,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>,
+              std::is_constructible<T, U &&>,
+              absl::negation<std::is_convertible<U &&, T>>,
+              absl::negation<
+                  internal_statusor::IsConstructibleOrConvertibleFromStatusOr<
+                      T, U>>>::value,
+          int> = 0>
+  explicit StatusOr(StatusOr<U> &&);
+
+  template <
+      typename U,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>,
+              std::is_constructible<T, const U &>,
+              std::is_assignable<T, const U &>,
+              absl::negation<
+                  internal_statusor::
+                      IsConstructibleOrConvertibleOrAssignableFromStatusOr<
+                          T, U>>>::value,
+          int> = 0>
+  StatusOr &operator=(const StatusOr<U> &);
+
+  template <
+      typename U,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>,
+              std::is_constructible<T, U &&>, std::is_assignable<T, U &&>,
+              absl::negation<
+                  internal_statusor::
+                      IsConstructibleOrConvertibleOrAssignableFromStatusOr<
+                          T, U>>>::value,
+          int> = 0>
+  StatusOr &operator=(StatusOr<U> &&);
+
+  template <
+      typename U = absl::Status,
+      absl::enable_if_t<
+          absl::conjunction<
+              std::is_convertible<U &&, absl::Status>,
+              std::is_constructible<absl::Status, U &&>,
+              absl::negation<std::is_same<absl::decay_t<U>, absl::StatusOr<T>>>,
+              absl::negation<std::is_same<absl::decay_t<U>, T>>,
+              absl::negation<std::is_same<absl::decay_t<U>, absl::in_place_t>>,
+              absl::negation<internal_statusor::HasConversionOperatorToStatusOr<
+                  T, U &&>>>::value,
+          int> = 0>
+  StatusOr(U &&);
+
+  template <
+      typename U = absl::Status,
+      absl::enable_if_t<
+          absl::conjunction<
+              absl::negation<std::is_convertible<U &&, absl::Status>>,
+              std::is_constructible<absl::Status, U &&>,
+              absl::negation<std::is_same<absl::decay_t<U>, absl::StatusOr<T>>>,
+              absl::negation<std::is_same<absl::decay_t<U>, T>>,
+              absl::negation<std::is_same<absl::decay_t<U>, absl::in_place_t>>,
+              absl::negation<internal_statusor::HasConversionOperatorToStatusOr<
+                  T, U &&>>>::value,
+          int> = 0>
+  explicit StatusOr(U &&);
+
+  template <
+      typename U = absl::Status,
+      absl::enable_if_t<
+          absl::conjunction<
+              std::is_convertible<U &&, absl::Status>,
+              std::is_constructible<absl::Status, U &&>,
+              absl::negation<std::is_same<absl::decay_t<U>, absl::StatusOr<T>>>,
+              absl::negation<std::is_same<absl::decay_t<U>, T>>,
+              absl::negation<std::is_same<absl::decay_t<U>, absl::in_place_t>>,
+              absl::negation<internal_statusor::HasConversionOperatorToStatusOr<
+                  T, U &&>>>::value,
+          int> = 0>
+  StatusOr &operator=(U &&);
+
+  template <
+      typename U = T,
+      typename = typename std::enable_if<absl::conjunction<
+          std::is_constructible<T, U &&>, std::is_assignable<T &, U &&>,
+          absl::disjunction<
+              std::is_same<absl::remove_cv_t<absl::remove_reference_t<U>>, T>,
+              absl::conjunction<
+                  absl::negation<std::is_convertible<U &&, absl::Status>>,
+                  absl::negation<
+                      internal_statusor::HasConversionOperatorToStatusOr<
+                          T, U &&>>>>,
+          internal_statusor::IsForwardingAssignmentValid<T, U &&>>::value>::
+          type>
+  StatusOr &operator=(U &&);
+
+  template <typename... Args> explicit StatusOr(absl::in_place_t, Args &&...);
+
+  template <typename U, typename... Args>
+  explicit StatusOr(absl::in_place_t, std::initializer_list<U>, Args &&...);
+
+  template <
+      typename U = T,
+      absl::enable_if_t<
+          absl::conjunction<
+              internal_statusor::IsDirectInitializationValid<T, U &&>,
+              std::is_constructible<T, U &&>, std::is_convertible<U &&, T>,
+              absl::disjunction<
+                  std::is_same<absl::remove_cv_t<absl::remove_reference_t<U>>,
+                               T>,
+                  absl::conjunction<
+                      absl::negation<std::is_convertible<U &&, absl::Status>>,
+                      absl::negation<
+                          internal_statusor::HasConversionOperatorToStatusOr<
+                              T, U &&>>>>>::value,
+          int> = 0>
+  StatusOr(U &&);
+
+  template <
+      typename U = T,
+      absl::enable_if_t<
+          absl::conjunction<
+              internal_statusor::IsDirectInitializationValid<T, U &&>,
+              absl::disjunction<
+                  std::is_same<absl::remove_cv_t<absl::remove_reference_t<U>>,
+                               T>,
+                  absl::conjunction<
+                      absl::negation<std::is_constructible<absl::Status, U &&>>,
+                      absl::negation<
+                          internal_statusor::HasConversionOperatorToStatusOr<
+                              T, U &&>>>>,
+              std::is_constructible<T, U &&>,
+              absl::negation<std::is_convertible<U &&, T>>>::value,
+          int> = 0>
+  explicit StatusOr(U &&);
+
+  bool ok() const;
+
+  const Status &status() const & { return status_; }
+  Status status() &&;
+
+  using StatusOr::OperatorBase::value;
+
+  const T &ValueOrDie() const &;
+  T &ValueOrDie() &;
+  const T &&ValueOrDie() const &&;
+  T &&ValueOrDie() &&;
+
+  using StatusOr::OperatorBase::operator*;
+  using StatusOr::OperatorBase::operator->;
+
+  template <typename U> T value_or(U &&default_value) const &;
+  template <typename U> T value_or(U &&default_value) &&;
+
+  template <typename... Args> T &emplace(Args &&...args);
+
+  template <
+      typename U, typename... Args,
+      absl::enable_if_t<std::is_constructible<T, std::initializer_list<U> &,
+                                              Args &&...>::value,
+                        int> = 0>
+  T &emplace(std::initializer_list<U> ilist, Args &&...args);
+
+private:
+  absl::Status status_;
+};
+
+template <typename T>
+bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
+
+template <typename T>
+bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
+
+} // namespace absl
+
+#endif // STATUSOR_H_
+)cc";
+
+static constexpr char StdVectorHeader[] = R"cc(
+#ifndef STD_VECTOR_H
+#define STD_VECTOR_H
+namespace std {
+template <class T> struct allocator {
+  typedef size_t size_type;
+  typedef ptrdiff_t difference_type;
+  typedef T *pointer;
+  typedef const T *const_pointer;
+  typedef T value_type;
+
+  T *allocate(size_t n);
+};
+
+template <class Alloc> struct allocator_traits {
+  typedef Alloc allocator_type;
+  typedef typename allocator_type::value_type value_type;
+  typedef typename allocator_type::pointer pointer;
+  typedef typename allocator_type::const_pointer const_pointer;
+  typedef typename allocator_type::difference_type difference_type;
+  typedef typename allocator_type::size_type size_type;
+};
+
+template <typename T, class Allocator = allocator<T>> class vector {
+public:
+  using value_type = T;
+  using size_type = typename allocator_traits<Allocator>::size_type;
+
+  // Constructors.
+  vector() {}
+  vector(size_type, const Allocator & = Allocator()) {}
+  vector(initializer_list<T> initializer_list,
+         const Allocator & = Allocator()) {}
+  vector(const vector &vector) {}
+  ~vector();
+
+  // Modifiers.
+  void push_back(const T &value);
+  void push_back(T &&value);
+  template <typename... Args> T &emplace_back(Args &&...args);
+
+  // Iterators
+  class InputIterator {
+  public:
+    InputIterator(const InputIterator &);
+    ~InputIterator();
+    InputIterator &operator=(const InputIterator &);
+    InputIterator &operator++();
+    T &operator*() const;
+    bool operator!=(const InputIterator &) const;
+    bool operator==(const InputIterator &) const;
+  };
+  typedef InputIterator iterator;
+  typedef const InputIterator const_iterator;
+  iterator begin() noexcept;
+  const_iterator begin() const noexcept;
+  const_iterator cbegin() const noexcept;
+  iterator end() noexcept;
+  const_iterator end() const noexcept;
+  const_iterator cend() const noexcept;
+  T *data() noexcept;
+  const T *data() const noexcept;
+  T &operator[](int n);
+  const T &operator[](int n) const;
+  T &at(int n);
+  const T &at(int n) const;
+  size_t size() const;
+};
+} // namespace std
+#endif // STD_VECTOR_H
+)cc";
+
+static constexpr char StdPairHeader[] = R"cc(
+#ifndef STD_PAIR_H
+#define STD_PAIR_H
+namespace std {
+template <class T1, class T2> struct pair {
+  T1 first;
+  T2 second;
+
+  typedef T1 first_type;
+  typedef T2 second_type;
+
+  constexpr pair();
+
+  template <class U1, class U2> pair(pair<U1, U2> &&p);
+
+  template <class U1, class U2> pair(U1 &&x, U2 &&y);
+};
+
+template <class T1, class T2> pair<T1, T2> make_pair(T1 &&t1, T2 &&t2);
+} // namespace std
+#endif // STD_PAIR_H
+)cc";
+
+constexpr const char AbslLogHeader[] = R"cc(
+#ifndef ABSL_LOG_H
+#define ABSL_LOG_H
+
+#include "std_pair.h"
+
+namespace absl {
+
+#define ABSL_PREDICT_FALSE(x) (__builtin_expect(false || (x), false))
+#define ABSL_PREDICT_TRUE(x) (__builtin_expect(false || (x), true))
+
+namespace log_internal {
+class LogMessage {
+public:
+  LogMessage();
+  LogMessage &stream();
+  LogMessage &InternalStream();
+  LogMessage &WithVerbosity(int verboselevel);
+  template <typename T> LogMessage &operator<<(const T &);
+};
+class LogMessageFatal : public LogMessage {
+public:
+  LogMessageFatal();
+  ~LogMessageFatal() __attribute__((noreturn));
+};
+class LogMessageQuietlyFatal : public LogMessage {
+public:
+  LogMessageQuietlyFatal();
+  ~LogMessageQuietlyFatal() __attribute__((noreturn));
+};
+class Voidify final {
+public:
+  // This has to be an operator with a precedence lower than << but higher
+  // than
+  // ?:
+  template <typename T> void operator&&(const T &) const && {}
+};
+} // namespace log_internal
+} // namespace absl
+
+#ifndef NULL
+#define NULL __null
+#endif
+extern "C" void abort() {}
+#define ABSL_LOG_INTERNAL_LOG_INFO ::absl::log_internal::LogMessage()
+#define ABSL_LOG_INTERNAL_LOG_WARNING ::absl::log_internal::LogMessage()
+#define ABSL_LOG_INTERNAL_LOG_ERROR ::absl::log_internal::LogMessage()
+#define ABSL_LOG_INTERNAL_LOG_FATAL ::absl::log_internal::LogMessageFatal()
+#define ABSL_LOG_INTERNAL_LOG_QFATAL                                           \
+  ::absl::log_internal::LogMessageQuietlyFatal()
+#define LOG(severity) ABSL_LOG_INTERNAL_LOG_##severity.InternalStream()
+
+#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
+#define ABSL_LOG_INTERNAL_STRIP_STRING_LITERAL(lit) lit
+
+#define ABSL_LOG_INTERNAL_STATELESS_CONDITION(condition)                       \
+  switch (0)                                                                   \
+  case 0:                                                                      \
+  default:                                                                     \
+    !(condition) ? (void)0 : ::absl::log_internal::Voidify() &&
+
+#define ABSL_LOG_INTERNAL_CONDITION_INFO(type, condition)                      \
+  ABSL_LOG_INTERNAL_##type##_CONDITION(condition)
+
+#define ABSL_LOG_INTERNAL_CONDITION_FATAL(type, condition)                     \
+  ABSL_LOG_INTERNAL_##type##_CONDITION(condition)
+
+#define ABSL_LOG_INTERNAL_CONDITION_QFATAL(type, condition)                    \
+  ABSL_LOG_INTERNAL_##type##_CONDITION(condition)
+
+#define ABSL_CHECK_IMPL(condition, condition_text)                             \
+  ABSL_LOG_INTERNAL_CONDITION_FATAL(STATELESS,                                 \
+                                    ABSL_PREDICT_FALSE(!(condition)))          \
+  ABSL_LOG_INTERNAL_CHECK(condition_text).InternalStream()
+
+#define ABSL_QCHECK_IMPL(condition, condition_text)                            \
+  ABSL_LOG_INTERNAL_CONDITION_QFATAL(STATELESS,                                \
+                                     ABSL_PREDICT_FALSE(!(condition)))         \
+  ABSL_LOG_INTERNAL_QCHECK(condition_text).InternalStream()
+
+#define CHECK(condition) ABSL_CHECK_IMPL((condition), #condition)
+#define DCHECK(condition) CHECK(condition)
+#define QCHECK(condition) ABSL_QCHECK_IMPL((condition), #condition)
+
+#define ABSL_LOG_INTERNAL_MAX_LOG_VERBOSITY_CHECK(x)
+
+namespace absl {
+
+template <typename T> class StatusOr;
+class Status;
+
+namespace status_internal {
+std::string *MakeCheckFailString(const absl::Status *status,
+                                 const char *prefix);
+} // namespace status_internal
+
+namespace log_internal {
+template <class T> const T &GetReferenceableValue(const T &t);
+char GetReferenceableValue(char t);
+unsigned char GetReferenceableValue(unsigned char t);
+signed char GetReferenceableValue(signed char t);
+short GetReferenceableValue(short t);
+unsigned short GetReferenceableValue(unsigned short t);
+int GetReferenceableValue(int t);
+unsigned int GetReferenceableValue(unsigned int t);
+long GetReferenceableValue(long t);
+unsigned long GetReferenceableValue(unsigned long t);
+long long GetReferenceableValue(long long t);
+unsigned long long GetReferenceableValue(unsigned long long t);
+const absl::Status *AsStatus(const absl::Status &s);
+template <typename T> const absl::Status *AsStatus(const absl::StatusOr<T> &s);
+} // namespace log_internal
+} // namespace absl
+// TODO(tkd): this still doesn't allow operator<<, unlike the real CHECK_
+// macros.
+#define ABSL_LOG_INTERNAL_CHECK_OP(name, op, val1, val2)                       \
+  while (char *_result = ::absl::log_internal::name##Impl(                     \
+             ::absl::log_internal::GetReferenceableValue(val1),                \
+             ::absl::log_internal::GetReferenceableValue(val2),                \
+             #val1 " " #op " " #val2))                                         \
+  (void)0
+#define ABSL_LOG_INTERNAL_QCHECK_OP(name, op, val1, val2)                      \
+  while (char *_result = ::absl::log_internal::name##Impl(                     \
+             ::absl::log_internal::GetReferenceableValue(val1),                \
+             ::absl::log_internal::GetReferenceableValue(val2),                \
+             #val1 " " #op " " #val2))                                         \
+  (void)0
+namespace absl {
+namespace log_internal {
+template <class T1, class T2>
+char *Check_NEImpl(const T1 &v1, const T2 &v2, const char *names);
+template <class T1, class T2>
+char *Check_EQImpl(const T1 &v1, const T2 &v2, const char *names);
+template <class T1, class T2>
+char *Check_LTImpl(const T1 &v1, const T2 &v2, const char *names);
+
+#define CHECK_EQ(a, b) ABSL_LOG_INTERNAL_CHECK_OP(Check_EQ, ==, a, b)
+#define CHECK_NE(a, b) ABSL_LOG_INTERNAL_CHECK_OP(Check_NE, !=, a, b)
+#define CHECK_LT(a, b) ABSL_LOG_INTERNAL_CHECK_OP(Check_EQ, <, a, b)
+
+#define QCHECK_EQ(a, b) ABSL_LOG_INTERNAL_QCHECK_OP(Check_EQ, ==, a, b)
+#define QCHECK_NE(a, b) ABSL_LOG_INTERNAL_QCHECK_OP(Check_NE, !=, a, b)
+} // namespace log_internal
+} // namespace absl
+
+#define CHECK_NOTNULL(x) CHECK((x) != nullptr)
+
+#define ABSL_LOG_INTERNAL_CHECK(failure_message)                               \
+  ::absl::log_internal::LogMessageFatal()
+#define ABSL_LOG_INTERNAL_QCHECK(failure_message)                              \
+  ::absl::log_internal::LogMessageQuietlyFatal()
+#define ABSL_LOG_INTERNAL_CHECK_OK(val)                                        \
+  for (::std::pair<const ::absl::Status *, ::std::string *>                    \
+           absl_log_internal_check_ok_goo;                                     \
+       absl_log_internal_check_ok_goo.first =                                  \
+           ::absl::log_internal::AsStatus(val),                                \
+       absl_log_internal_check_ok_goo.second =                                 \
+           ABSL_PREDICT_TRUE(absl_log_internal_check_ok_goo.first->ok())       \
+               ? nullptr                                                       \
+               : ::absl::status_internal::MakeCheckFailString(                 \
+                     absl_log_internal_check_ok_goo.first,                     \
+                     ABSL_LOG_INTERNAL_STRIP_STRING_LITERAL(#val " is OK")),   \
+       !ABSL_PREDICT_TRUE(absl_log_internal_check_ok_goo.first->ok());)        \
+  ABSL_LOG_INTERNAL_CHECK(*absl_log_internal_check_ok_goo.second)              \
+      .InternalStream()
+#define ABSL_LOG_INTERNAL_QCHECK_OK(val)                                       \
+  for (::std::pair<const ::absl::Status *, ::std::string *>                    \
+           absl_log_internal_check_ok_goo;                                     \
+       absl_log_internal_check_ok_goo.first =                                  \
+           ::absl::log_internal::AsStatus(val),                                \
+       absl_log_internal_check_ok_goo.second =                                 \
+           ABSL_PREDICT_TRUE(absl_log_internal_check_ok_goo.first->ok())       \
+               ? nullptr                                                       \
+               : ::absl::status_internal::MakeCheckFailString(                 \
+                     absl_log_internal_check_ok_goo.first,                     \
+                     ABSL_LOG_INTERNAL_STRIP_STRING_LITERAL(#val " is OK")),   \
+       !ABSL_PREDICT_TRUE(absl_log_internal_check_ok_goo.first->ok());)        \
+  ABSL_LOG_INTERNAL_QCHECK(*absl_log_internal_check_ok_goo.second)             \
+      .InternalStream()
+
+#define CHECK_OK(val) ABSL_LOG_INTERNAL_CHECK_OK(val)
+#define DCHECK_OK(val) ABSL_LOG_INTERNAL_CHECK_OK(val)
+#define QCHECK_OK(val) ABSL_LOG_INTERNAL_QCHECK_OK(val)
+
+#endif // ABSL_LOG_H
+)cc";
+
+constexpr const char TestingDefsHeader[] = R"cc(
+#pragma clang system_header
+
+#ifndef TESTING_DEFS_H
+#define TESTING_DEFS_H
+
+#include "absl_type_traits.h"
+#include "std_initializer_list.h"
+#include "std_string.h"
+#include "std_type_traits.h"
+#include "std_utility.h"
+
+namespace testing {
+struct AssertionResult {
+  template <typename T>
+  explicit AssertionResult(const T &res, bool enable_if = true) {}
+  ~AssertionResult();
+  operator bool() const;
+  template <typename T> AssertionResult &operator<<(const T &value);
+  const char *failure_message() const;
+};
+
+class TestPartResult {
+public:
+  enum Type { kSuccess, kNonFatalFailure, kFatalFailure, kSkip };
+};
+
+class Test {
+public:
+  virtual ~Test() = default;
+
+protected:
+  virtual void SetUp() {}
+};
+
+class Message {
+public:
+  template <typename T> Message &operator<<(const T &val);
+};
+
+namespace internal {
+class AssertHelper {
+public:
+  AssertHelper(TestPartResult::Type type, const char *file, int line,
+               const char *message);
+  void operator=(const Message &message) const;
+};
+
+class EqHelper {
+public:
+  template <typename T1, typename T2>
+  static AssertionResult Compare(const char *lhx, const char *rhx,
+                                 const T1 &lhs, const T2 &rhs);
+};
+
+#define GTEST_IMPL_CMP_HELPER_(op_name)                                        \
+  template <typename T1, typename T2>                                          \
+  AssertionResult CmpHelper##op_name(const char *expr1, const char *expr2,     \
+                                     const T1 &val1, const T2 &val2);
+
+GTEST_IMPL_CMP_HELPER_(NE)
+GTEST_IMPL_CMP_HELPER_(LE)
+GTEST_IMPL_CMP_HELPER_(LT)
+GTEST_IMPL_CMP_HELPER_(GE)
+GTEST_IMPL_CMP_HELPER_(GT)
+
+#undef GTEST_IMPL_CMP_HELPER_
+
+std::string GetBoolAssertionFailureMessage(
+    const AssertionResult &assertion_result, const char *expression_text,
+    const char *actual_predicate_value, const char *expected_predicate_value);
+
+template <typename M> class PredicateFormatterFromMatcher {
+public:
+  template <typename T>
+  AssertionResult operator()(const char *value_text, const T &x) const;
+};
+
+template <typename M>
+inline PredicateFormatterFromMatcher<M>
+MakePredicateFormatterFromMatcher(M matcher) {
+  return PredicateFormatterFromMatcher<M>();
+}
+} // namespace internal
+
+namespace status {
+namespace internal_status {
+class IsOkMatcher {};
+
+class StatusIsMatcher {};
+
+class CanonicalStatusIsMatcher {};
+
+template <typename M> class IsOkAndHoldsMatcher {};
+
+} // namespace internal_status
+
+internal_status::IsOkMatcher IsOk();
+
+template <typename StatusCodeMatcher>
+internal_status::StatusIsMatcher StatusIs(StatusCodeMatcher &&code_matcher);
+
+template <typename StatusCodeMatcher>
+internal_status::CanonicalStatusIsMatcher
+CanonicalStatusIs(StatusCodeMatcher &&code_matcher);
+
+template <typename InnerMatcher>
+internal_status::IsOkAndHoldsMatcher<InnerMatcher> IsOkAndHolds(InnerMatcher m);
+} // namespace status
+
+class IsTrueMatcher {};
+IsTrueMatcher IsTrue();
+
+class IsFalseMatcher {};
+IsFalseMatcher IsFalse();
+
+} // namespace testing
+
+namespace absl_testing {
+namespace status_internal {
+class IsOkMatcher {};
+template <typename M> class IsOkAndHoldsMatcher {};
+class StatusIsMatcher {};
+class CanonicalStatusIsMatcher {};
+} // namespace status_internal
+status_internal::IsOkMatcher IsOk();
+template <typename InnerMatcher>
+status_internal::IsOkAndHoldsMatcher<InnerMatcher> IsOkAndHolds(InnerMatcher m);
+template <typename StatusCodeMatcher>
+status_internal::StatusIsMatcher StatusIs(StatusCodeMatcher &&code_matcher);
+
+template <typename StatusCodeMatcher>
+status_internal::CanonicalStatusIsMatcher
+CanonicalStatusIs(StatusCodeMatcher &&code_matcher);
+} // namespace absl_testing
+
+using testing::AssertionResult;
+#define EXPECT_TRUE(x)                                                         \
+  switch (0)                                                                   \
+  case 0:                                                                      \
+  default:                                                                     \
+    if (const AssertionResult gtest_ar_ = AssertionResult(x)) {                \
+    } else /* NOLINT */                                                        \
+      ::testing::Message()
+#define EXPECT_FALSE(x) EXPECT_TRUE(!(x))
+
+#define GTEST_AMBIGUOUS_ELSE_BLOCKER_                                          \
+  switch (0)                                                                   \
+  case 0:                                                                      \
+  default:
+
+#define GTEST_ASSERT_(expression, on_failure)                                  \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_                                                \
+  if (const ::testing::AssertionResult gtest_ar = (expression))                \
+    ;                                                                          \
+  else                                                                         \
+    on_failure(gtest_ar.failure_message())
+#define GTEST_PRED_FORMAT1_(pred_format, v1, on_failure)                       \
+  GTEST_ASSERT_(pred_format(#v1, v1), on_failure)
+#define GTEST_PRED_FORMAT2_(pred_format, v1, v2, on_failure)                   \
+  GTEST_ASSERT_(pred_format(#v1, #v2, v1, v2), on_failure)
+#define GTEST_MESSAGE_AT_(file, line, message, result_type)                    \
+  ::testing::internal::AssertHelper(result_type, file, line, message) =        \
+      ::testing::Message()
+#define GTEST_MESSAGE_(message, result_type)                                   \
+  GTEST_MESSAGE_AT_(__FILE__, __LINE__, message, result_type)
+#define GTEST_FATAL_FAILURE_(message)                                          \
+  return GTEST_MESSAGE_(message, ::testing::TestPartResult::kFatalFailure)
+#define GTEST_NONFATAL_FAILURE_(message)                                       \
+  GTEST_MESSAGE_(message, ::testing::TestPartResult::kNonFatalFailure)
+
+#define ASSERT_PRED_FORMAT1(pred_format, v1)                                   \
+  GTEST_PRED_FORMAT1_(pred_format, v1, GTEST_FATAL_FAILURE_)
+#define ASSERT_PRED_FORMAT2(pred_format, v1, v2)                               \
+  GTEST_PRED_FORMAT2_(pred_format, v1, v2, GTEST_FATAL_FAILURE_)
+
+#define ASSERT_THAT(value, matcher)                                            \
+  ASSERT_PRED_FORMAT1(                                                         \
+      ::testing::internal::MakePredicateFormatterFromMatcher(matcher), value)
+#define ASSERT_OK(x) ASSERT_THAT(x, ::testing::status::IsOk())
+
+#define EXPECT_PRED_FORMAT1(pred_format, v1)                                   \
+  GTEST_PRED_FORMAT1_(pred_format, v1, GTEST_NONFATAL_FAILURE_)
+#define EXPECT_PRED_FORMAT2(pred_format, v1, v2)                               \
+  GTEST_PRED_FORMAT2_(pred_format, v1, v2, GTEST_NONFATAL_FAILURE_)
+#define EXPECT_THAT(value, matcher)                                            \
+  EXPECT_PRED_FORMAT1(                                                         \
+      ::testing::internal::MakePredicateFormatterFromMatcher(matcher), value)
+#define EXPECT_OK(expression) EXPECT_THAT(expression, ::testing::status::IsOk())
+
+#define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail)          \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_                                                \
+  if (const ::testing::AssertionResult gtest_ar_ =                             \
+          ::testing::AssertionResult(expression))                              \
+    ;                                                                          \
+  else                                                                         \
+    fail(::testing::internal::GetBoolAssertionFailureMessage(                  \
+             gtest_ar_, text, #actual, #expected)                              \
+             .c_str())
+#define GTEST_ASSERT_TRUE(condition)                                           \
+  GTEST_TEST_BOOLEAN_(condition, #condition, false, true, GTEST_FATAL_FAILURE_)
+#define GTEST_ASSERT_FALSE(condition)                                          \
+  GTEST_TEST_BOOLEAN_(!(condition), #condition, true, false,                   \
+                      GTEST_FATAL_FAILURE_)
+#define ASSERT_TRUE(condition) GTEST_ASSERT_TRUE(condition)
+#define ASSERT_FALSE(condition) GTEST_ASSERT_FALSE(condition)
+
+#define EXPECT_EQ(x, y)                                                        \
+  EXPECT_PRED_FORMAT2(::testing::internal::EqHelper::Compare, x, y)
+#define EXPECT_NE(x, y)                                                        \
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperNE, x, y)
+#define EXPECT_LT(x, y)                                                        \
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperLT, x, y)
+#define EXPECT_GT(x, y)                                                        \
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperGT, x, y)
+#define EXPECT_LE(x, y)                                                        \
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperLE, x, y)
+#define EXPECT_GE(x, y)                                                        \
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperGE, x, y)
+
+#define ASSERT_EQ(x, y)                                                        \
+  ASSERT_PRED_FORMAT2(testing::internal::EqHelper::Compare, x, y)
+#define ASSERT_NE(x, y)                                                        \
+  ASSERT_PRED_FORMAT2(testing::internal::CmpHelperNE, x, y)
+#define ASSERT_LT(x, y)                                                        \
+  ASSERT_PRED_FORMAT2(testing::internal::CmpHelperLT, x, y)
+#define ASSERT_GT(x, y)                                                        \
+  ASSERT_PRED_FORMAT2(testing::internal::CmpHelperGT, x, y)
+#define ASSERT_LE(x, y)                                                        \
+  ASSERT_PRED_FORMAT2(testing::internal::CmpHelperLE, x, y)
+#define ASSERT_GE(x, y)                                                        \
+  ASSERT_PRED_FORMAT2(testing::internal::CmpHelperGE, x, y)
+
+#endif // TESTING_DEFS_H
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -1251,6 +2243,12 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
   Headers.emplace_back("absl_optional.h", AbslOptionalHeader);
   Headers.emplace_back("base_optional.h", BaseOptionalHeader);
+  Headers.emplace_back("std_vector.h", StdVectorHeader);
+  Headers.emplace_back("std_pair.h", StdPairHeader);
+  Headers.emplace_back("status_defs.h", StatusDefsHeader);
+  Headers.emplace_back("statusor_defs.h", StatusOrDefsHeader);
+  Headers.emplace_back("absl_log.h", AbslLogHeader);
+  Headers.emplace_back("testing_defs.h", TestingDefsHeader);
   return Headers;
 }
 

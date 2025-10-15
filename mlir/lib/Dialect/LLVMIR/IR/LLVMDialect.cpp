@@ -2826,6 +2826,20 @@ LogicalResult ShuffleVectorOp::verify() {
   return success();
 }
 
+// Folding for shufflevector op when v1 is single element 1D vector
+// and the mask is a single zero. OpFoldResult will be v1 in this case.
+OpFoldResult ShuffleVectorOp::fold(FoldAdaptor adaptor) {
+  // Check if operand 0 is a single element vector.
+  auto vecType = llvm::dyn_cast<VectorType>(getV1().getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.getNumElements() != 1)
+    return {};
+  // Check if the mask is a single zero.
+  // Note: The mask is guaranteed to be non-empty.
+  if (getMask().size() != 1 || getMask()[0] != 0)
+    return {};
+  return getV1();
+}
+
 //===----------------------------------------------------------------------===//
 // Implementations for LLVM::LLVMFuncOp.
 //===----------------------------------------------------------------------===//
