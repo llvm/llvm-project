@@ -265,7 +265,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 1, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
@@ -1421,7 +1421,7 @@ def HasVendorXMIPSCMov
     : Predicate<"Subtarget->hasVendorXMIPSCMov()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
-def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+def UseMIPSCCMovInsn : Predicate<"Subtarget->useMIPSCCMovInsn()">;
 
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
@@ -1520,6 +1520,8 @@ def HasVendorXqcics
     : Predicate<"Subtarget->hasVendorXqcics()">,
       AssemblerPredicate<(all_of FeatureVendorXqcics),
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
+def NoVendorXqcics
+    : Predicate<"!Subtarget->hasVendorXqcics()">;
 
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
@@ -1822,6 +1824,11 @@ def TuneConditionalCompressedMoveFusion
                        "true", "Enable branch+c.mv fusion">;
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
+
+def TuneHasSingleElementVecFP64
+    : SubtargetFeature<"single-element-vec-fp64", "HasSingleElementVectorFP64", "true",
+                       "Certain vector FP64 operations produce a single result "
+                       "element per cycle">;
 
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",

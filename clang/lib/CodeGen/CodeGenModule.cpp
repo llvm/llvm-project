@@ -493,10 +493,15 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     auto ReaderOrErr = llvm::IndexedInstrProfReader::create(
         CodeGenOpts.ProfileInstrumentUsePath, *FS,
         CodeGenOpts.ProfileRemappingFile);
-    // We're checking for profile read errors in CompilerInvocation, so if
-    // there was an error it should've already been caught. If it hasn't been
-    // somehow, trip an assertion.
-    assert(ReaderOrErr);
+    if (auto E = ReaderOrErr.takeError()) {
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
+      llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
+        Diags.Report(DiagID)
+            << CodeGenOpts.ProfileInstrumentUsePath << EI.message();
+      });
+      return;
+    }
     PGOReader = std::move(ReaderOrErr.get());
   }
 
@@ -2343,7 +2348,7 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   const RecordType *UT = Ty->getAsUnionType();
   if (!UT)
     return Ty;
-  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return Ty;
   for (const auto *it : UD->fields()) {
@@ -4225,7 +4230,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 static bool HasNonDllImportDtor(QualType T) {
   if (const auto *RT =
           T->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
-    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
         return true;

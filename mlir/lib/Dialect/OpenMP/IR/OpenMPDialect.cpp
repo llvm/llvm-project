@@ -3425,10 +3425,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               }
               llvm_unreachable("Unexpected generatee argument");
             })
-            .Default([&](Operation *op) {
-              assert(false && "TODO: Custom name for this operation");
-              return "transformed";
-            });
+            .DefaultUnreachable("TODO: Custom name for this operation");
   }
 
   setNameFn(result, cliName);

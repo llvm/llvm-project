@@ -529,7 +529,7 @@ if (current_cpu == "ve") {
 if (current_cpu == "wasm") {
   builtins_sources += [
     "wasm/__c_longjmp.S",
-    "wasm/__cpp_exceptions.S",
+    "wasm/__cpp_exception.S",
   ]
 }
 
