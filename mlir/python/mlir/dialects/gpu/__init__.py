@@ -39,6 +39,7 @@ SYM_NAME_ATTRIBUTE_NAME = "sym_name"
 ARGUMENT_ATTRIBUTE_NAME = "arg_attrs"
 RESULT_ATTRIBUTE_NAME = "res_attrs"
 
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class GPUFuncOp(GPUFuncOp):
     __doc__ = GPUFuncOp.__doc__
@@ -90,8 +91,8 @@ class GPUFuncOp(GPUFuncOp):
                 self.attributes[KNOWN_BLOCK_SIZE_ATTRIBUTE_NAME] = known_block_size
         if known_grid_size is not None:
             if isinstance(known_grid_size, list):
-                self.attributes[KNOWN_GRID_SIZE_ATTRIBUTE_NAME] = (
-                    DenseI32ArrayAttr.get(known_grid_size)
+                self.attributes[KNOWN_GRID_SIZE_ATTRIBUTE_NAME] = DenseI32ArrayAttr.get(
+                    known_grid_size
                 )
             else:
                 self.attributes[KNOWN_GRID_SIZE_ATTRIBUTE_NAME] = known_grid_size
