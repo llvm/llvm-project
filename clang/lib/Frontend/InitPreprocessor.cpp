@@ -459,8 +459,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      value is, are implementation-defined.
   // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
-    Builder.defineMacro("__STDC_VERSION__",
-                        Twine(*LangOpts.getCLangStd()) + "L");
+    if (std::optional<uint32_t> Lang = LangOpts.getCLangStd())
+      Builder.defineMacro("__STDC_VERSION__", Twine(*Lang) + "L");
   } else {
     //   -- __cplusplus
     Builder.defineMacro("__cplusplus",
