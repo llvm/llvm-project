@@ -41,9 +41,8 @@ void check_format_string(FILE *fp, va_list ap) {
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
     // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
-    snprintf(NULL, 10, 0, 42);
+    snprintf(buf, 10, 0, 42);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
-    // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
     vprintf(fmt, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
@@ -54,9 +53,8 @@ void check_format_string(FILE *fp, va_list ap) {
     vsprintf(buf, nullptr, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
-    vsnprintf(NULL, 10, fmt, ap);
+    vsnprintf(buf, 10, fmt, ap);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
-    // expected-warning@-2{{null passed to a callee that requires a non-null argument}}
 
     scanf(NULL);
     // expected-warning@-1{{null passed to a callee that requires a non-null argument}}

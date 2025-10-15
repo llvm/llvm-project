@@ -3116,7 +3116,7 @@ def FPrintf : LibBuiltin<"stdio.h"> {
 
 def SnPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["snprintf"];
-  let Attributes = [NoThrow, PrintfFormat<2>, NonNull<[0, 2]>];
+  let Attributes = [NoThrow, PrintfFormat<2>, NonNull<[2]>];
   let Prototype = "int(char* restrict, size_t, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -3144,7 +3144,7 @@ def VfPrintf : LibBuiltin<"stdio.h"> {
 
 def VsnPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsnprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<2>, NonNull<[0, 2]>];
+  let Attributes = [NoThrow, VPrintfFormat<2>, NonNull<[2]>];
   let Prototype = "int(char* restrict, size_t, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
