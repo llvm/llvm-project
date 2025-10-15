@@ -629,7 +629,7 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
-    if (const Fortran::semantics::Symbol * sym{GetLastSymbol(sourceExpr)})
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
         TODO(loc, "CUDA Fortran: allocate with device source");
 
