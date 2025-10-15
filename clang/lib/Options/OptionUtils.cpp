@@ -8,7 +8,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
-#include "clang/Driver/OptionUtils.h"
+#include "clang/Options/OptionUtils.h"
 #include "llvm/Option/ArgList.h"
 
 using namespace clang;
