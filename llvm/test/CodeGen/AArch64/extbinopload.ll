@@ -263,16 +263,16 @@ define <16 x i16> @load_v16i8(ptr %p) {
 define <2 x i16> @std_v2i8_v2i16(ptr %p) {
 ; CHECK-LABEL: std_v2i8_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrb w9, [x0, #3]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    mov v1.s[1], w9
-; CHECK-NEXT:    shl v0.2s, v0.2s, #3
-; CHECK-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ldr h0, [x0, #2]
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mov h2, v0.h[0]
+; CHECK-NEXT:    mov h3, v1.h[0]
+; CHECK-NEXT:    mov v2.h[2], v0.h[1]
+; CHECK-NEXT:    mov v3.h[2], v1.h[1]
+; CHECK-NEXT:    shl v0.2s, v2.2s, #3
+; CHECK-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NEXT:    ret
   %l1 = load <2 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 2
