@@ -1803,6 +1803,30 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
           cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap());
       return NewAdd;
     }
+
+    // Fold ((X << A) + C) >> B  -->  (X << (A - B)) + (C >> B)
+    // when the shift is exact and the add is nsw.
+    // This transforms patterns like: ((x << 4) + 16) ashr exact 1  -->  (x <<
+    // 3) + 8
+    const APInt *ShlAmt, *AddC;
+    if (I.isExact() &&
+        match(Op0, m_c_NSWAdd(m_NSWShl(m_Value(X), m_APInt(ShlAmt)),
+                              m_APInt(AddC))) &&
+        ShlAmt->uge(ShAmt)) {
+      // Check if C is divisible by (1 << ShAmt)
+      if (AddC->isShiftedMask() || AddC->countTrailingZeros() >= ShAmt ||
+          AddC->ashr(ShAmt).shl(ShAmt) == *AddC) {
+        // X << (A - B)
+        Constant *NewShlAmt = ConstantInt::get(Ty, *ShlAmt - ShAmt);
+        Value *NewShl = Builder.CreateShl(X, NewShlAmt);
+
+        // C >> B
+        Constant *NewAddC = ConstantInt::get(Ty, AddC->ashr(ShAmt));
+
+        // (X << (A - B)) + (C >> B)
+        return BinaryOperator::CreateAdd(NewShl, NewAddC);
+      }
+    }
   }
 
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
