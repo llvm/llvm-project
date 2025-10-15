@@ -6122,7 +6122,7 @@ def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
 def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
-  Flags<[NoXarchOption, HelpHidden]>,
+  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
@@ -6211,11 +6211,12 @@ def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  Group<CompileOnly_Group>, HelpText<"Language standard to compile for">,
-  ValuesCode<[{
+             Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+             Group<CompileOnly_Group>,
+             HelpText<"Language standard to compile for">,
+             ValuesCode<[{
     static constexpr const char VALUES_CODE [] =
-    #define LANGSTANDARD(id, name, lang, desc, features) name ","
+    #define LANGSTANDARD(id, name, lang, desc, features, version) name ","
     #define LANGSTANDARD_ALIAS(id, alias) alias ","
     #include "clang/Basic/LangStandards.def"
     ;
