@@ -24,12 +24,21 @@
 #include "nasty_containers.h"
 #include "test_container_comparisons.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   assert((test_sequence_container_adaptor_spaceship<std::stack, std::deque>()));
   assert((test_sequence_container_adaptor_spaceship<std::stack, std::list>()));
   assert((test_sequence_container_adaptor_spaceship<std::stack, std::vector>()));
   assert((test_sequence_container_adaptor_spaceship<std::stack, nasty_list>()));
   assert((test_sequence_container_adaptor_spaceship<std::stack, nasty_vector>()));
-  // `std::stack` is not constexpr, so no `static_assert` test here.
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }
