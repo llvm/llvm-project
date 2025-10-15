@@ -6,6 +6,7 @@ add_flang_library(FIROpenACCTransforms
 
   LINK_LIBS
   MLIRIR
+  MLIRPass
   FIRDialect
   MLIROpenACCDialect
 )
