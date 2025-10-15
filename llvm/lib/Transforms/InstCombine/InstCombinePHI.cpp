@@ -1636,8 +1636,10 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     //   %phi = phi [ X, %BB0 ], [ %phi.next, %BB1 ]
     //   ...
     //   %identicalPhi.next = select %cmp, %val, %identicalPhi
-    //   %1 = select %cmp2, %identicalPhi, float %phi
+    //                      (or select %cmp, %identicalPhi, %val)
+    //   %1 = select %cmp2, %identicalPhi, %phi
     //   %phi.next = select %cmp, %val, %1
+    //             (or select %cmp, %1, %val)
     //
     // Prove that %phi and %identicalPhi are the same by induction:
     //
@@ -1646,43 +1648,58 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // Suppose %phi and %identicalPhi are equal at iteration i.
     // We look at their values at iteration i+1 which are %phi.next and
     // %identicalPhi.next. They would have become different only when %cmp is
-    // false and the corresponding values %1 and %identicalPhi differ.
+    // false and the corresponding values %1 and %identicalPhi differ
+    // (similar reason for the other "or" case in the bracket).
     //
     // The only condition when %1 and %identicalPh could differ is when %cmp2
     // is false and %1 is %phi, which contradicts our inductive hypothesis
     // that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
     // always equal at iteration i+1.
 
-    if (PN.getNumIncomingValues() == 2 && PN.getNumUses() == 1) {
-      unsigned diffVals = 0;
-      unsigned diffValIdx = 0;
+    if (PN.getNumIncomingValues() == 2) {
+      unsigned DiffVals = 0;
+      BasicBlock *DiffValBB = nullptr;
       // Check that only the backedge incoming value is different.
       for (unsigned i = 0; i < 2; i++) {
-        if (PN.getIncomingValue(i) != IdenticalPN.getIncomingValue(i)) {
-          diffVals++;
-          diffValIdx = i;
+        BasicBlock *PredBB = PN.getIncomingBlock(i);
+        if (PN.getIncomingValueForBlock(PredBB) !=
+            IdenticalPN.getIncomingValueForBlock(PredBB)) {
+          DiffVals++;
+          DiffValBB = PredBB;
         }
       }
       BasicBlock *CurBB = PN.getParent();
-      if (diffVals == 2 || PN.getIncomingBlock(diffValIdx) != CurBB)
+      if (DiffVals == 2 || DiffValBB != CurBB)
         continue;
       // Now check that the backedge incoming values are two select
-      // instructions that are in the same BB, and have the same condition,
-      // true value.
-      auto *Val = PN.getIncomingValue(diffValIdx);
-      auto *IdenticalVal = IdenticalPN.getIncomingValue(diffValIdx);
+      // instructions that are in the same BB, and have the same condition.
+      // Either their true values are the same, or their false values are
+      // the same.
+      auto *Val = PN.getIncomingValueForBlock(DiffValBB);
+      auto *IdenticalVal = IdenticalPN.getIncomingValueForBlock(DiffValBB);
       if (!isa<SelectInst>(Val) || !isa<SelectInst>(IdenticalVal))
         continue;
 
       auto *SI = cast<SelectInst>(Val);
       auto *IdenticalSI = cast<SelectInst>(IdenticalVal);
-      if (SI->getParent() != CurBB || IdenticalSI->getParent() != CurBB)
+      if (SI->getParent() != CurBB || IdenticalSI->getParent() != CurBB ||
+          SI->getNumUses() != 1)
         continue;
       if (SI->getCondition() != IdenticalSI->getCondition() ||
-          SI->getTrueValue() != IdenticalSI->getTrueValue())
+          (SI->getTrueValue() != IdenticalSI->getTrueValue() &&
+           SI->getFalseValue() != IdenticalSI->getFalseValue()))
         continue;
+      Value *SIOtherVal = nullptr;
+      Value *IdenticalSIOtherVal = nullptr;
+      if (SI->getTrueValue() == IdenticalSI->getTrueValue()) {
+        SIOtherVal = SI->getFalseValue();
+        IdenticalSIOtherVal = IdenticalSI->getFalseValue();
+      } else {
+        SIOtherVal = SI->getTrueValue();
+        IdenticalSIOtherVal = IdenticalSI->getTrueValue();
+      }
 
-      // Now check that the false values, i.e., %1 and %identicalPhi,
+      // Now check that the other values in select, i.e., %1 and %identicalPhi,
       // are essentially the same value within the same BB.
       auto SameSelAndPhi = [&](SelectInst *SI, PHINode *IdenticalPN,
                                PHINode *PN) {
@@ -1691,15 +1708,13 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         }
         return false;
       };
-      auto *FalseVal = SI->getFalseValue();
-      auto *IdenticalSIFalseVal =
-          dyn_cast<PHINode>(IdenticalSI->getFalseValue());
-      if (!isa<SelectInst>(FalseVal) || !IdenticalSIFalseVal ||
-          IdenticalSIFalseVal != &IdenticalPN)
+      if (!isa<SelectInst>(SIOtherVal) || !isa<PHINode>(IdenticalSIOtherVal))
         continue;
-      auto *FalseValSI = cast<SelectInst>(FalseVal);
-      if (FalseValSI->getParent() != CurBB ||
-          !SameSelAndPhi(FalseValSI, &IdenticalPN, &PN))
+      if (cast<PHINode>(IdenticalSIOtherVal) != &IdenticalPN)
+        continue;
+      auto *SIOtherValAsSel = cast<SelectInst>(SIOtherVal);
+      if (SIOtherValAsSel->getParent() != CurBB ||
+          !SameSelAndPhi(SIOtherValAsSel, &IdenticalPN, &PN))
         continue;
 
       ++NumPHICSEs;
