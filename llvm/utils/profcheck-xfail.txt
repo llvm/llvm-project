@@ -906,7 +906,6 @@ Transforms/InstCombine/select_frexp.ll
 Transforms/InstCombine/select.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
-Transforms/InstCombine/select-safe-impliedcond-transforms.ll
 Transforms/InstCombine/select-safe-transforms.ll
 Transforms/InstCombine/select-select.ll
 Transforms/InstCombine/select-with-extreme-eq-cond.ll
@@ -1237,7 +1236,6 @@ Transforms/PartiallyInlineLibCalls/X86/good-prototype.ll
 Transforms/PGOProfile/chr-dead-pred.ll
 Transforms/PGOProfile/chr-dup-threshold.ll
 Transforms/PGOProfile/chr-lifetimes.ll
-Transforms/PGOProfile/chr.ll
 Transforms/PGOProfile/chr-poison.ll
 Transforms/PGOProfile/comdat.ll
 Transforms/PGOProfile/memop_profile_funclet_wasm.ll

@@ -13,7 +13,7 @@
 ///
 /// OnDiskGraphDB defines:
 ///
-/// - How the data are stored inside database, either as a standalone file, or
+/// - How the data is stored inside database, either as a standalone file, or
 ///   allocated inside a datapool.
 /// - How references to other objects inside the same database is stored. They
 ///   are stored as internal references, instead of full hash value to save
@@ -90,7 +90,7 @@ static Error createCorruptObjectError(Expected<ArrayRef<uint8_t>> ID) {
 
 namespace {
 
-/// Trie record data: 8B, atomic<uint64_t>
+/// Trie record data: 8 bytes, atomic<uint64_t>
 /// - 1-byte: StorageKind
 /// - 7-bytes: DataStoreOffset (offset into referenced file)
 class TrieRecord {
@@ -129,7 +129,7 @@ public:
   }
 
   enum Limits : int64_t {
-    // Saves files bigger than 64KB standalone instead of embedding them.
+    /// Saves files bigger than 64KB standalone instead of embedding them.
     MaxEmbeddedSize = 64LL * 1024LL - 1,
   };
 
@@ -138,6 +138,7 @@ public:
     FileOffset Offset;
   };
 
+  /// Pack StorageKind and Offset from Data into 8 byte TrieRecord.
   static uint64_t pack(Data D) {
     assert(D.Offset.get() < (int64_t)(1ULL << 56));
     uint64_t Packed = uint64_t(D.SK) << 56 | D.Offset.get();
@@ -150,6 +151,7 @@ public:
     return Packed;
   }
 
+  // Unpack TrieRecord into Data.
   static Data unpack(uint64_t Packed) {
     Data D;
     if (!Packed)
@@ -221,7 +223,7 @@ struct DataRecordHandle {
                     0,
                 "Not enough bits");
 
-  // layout of the DataRecordHandle and how to decode it.
+  /// Layout of the DataRecordHandle and how to decode it.
   struct LayoutFlags {
     NumRefsFlags NumRefs;
     DataSizeFlags DataSize;
@@ -287,10 +289,12 @@ struct DataRecordHandle {
     return getDataRelOffset() + getDataSize() + 1;
   }
 
+  /// Describe the layout of data stored and how to decode from
+  /// DataRecordHandle.
   struct Layout {
     explicit Layout(const Input &I);
 
-    LayoutFlags Flags{};
+    LayoutFlags Flags;
     uint64_t DataSize = 0;
     uint32_t NumRefs = 0;
     int64_t RefsRelOffset = 0;
@@ -349,7 +353,7 @@ struct OnDiskContent {
   std::optional<ArrayRef<char>> Bytes;
 };
 
-// Data loaded inside the memory from standalone file.
+/// Data loaded inside the memory from standalone file.
 class StandaloneDataInMemory {
 public:
   OnDiskContent getContent() const;
@@ -382,9 +386,8 @@ template <size_t NumShards> class StandaloneDataMap {
   static_assert(isPowerOf2_64(NumShards), "Expected power of 2");
 
 public:
-  const StandaloneDataInMemory &
-  insert(ArrayRef<uint8_t> Hash, TrieRecord::StorageKind SK,
-         std::unique_ptr<sys::fs::mapped_file_region> Region);
+  uintptr_t insert(ArrayRef<uint8_t> Hash, TrieRecord::StorageKind SK,
+                   std::unique_ptr<sys::fs::mapped_file_region> Region);
 
   const StandaloneDataInMemory *lookup(ArrayRef<uint8_t> Hash) const;
   bool count(ArrayRef<uint8_t> Hash) const { return bool(lookup(Hash)); }
@@ -409,27 +412,7 @@ private:
 
 using StandaloneDataMapTy = StandaloneDataMap<16>;
 
-struct InternalHandle {
-  FileOffset getAsFileOffset() const { return *DataOffset; }
-
-  uint64_t getRawData() const {
-    if (DataOffset) {
-      uint64_t Raw = DataOffset->get();
-      assert(!(Raw & 0x1));
-      return Raw;
-    }
-    uint64_t Raw = reinterpret_cast<uintptr_t>(SDIM);
-    assert(!(Raw & 0x1));
-    return Raw | 1;
-  }
-
-  explicit InternalHandle(FileOffset DataOffset) : DataOffset(DataOffset) {}
-  explicit InternalHandle(uint64_t DataOffset) : DataOffset(DataOffset) {}
-  explicit InternalHandle(const StandaloneDataInMemory &SDIM) : SDIM(&SDIM) {}
-  std::optional<FileOffset> DataOffset;
-  const StandaloneDataInMemory *SDIM = nullptr;
-};
-
+/// A vector of internal node references.
 class InternalRefVector {
 public:
   void push_back(InternalRef Ref) {
@@ -476,6 +459,18 @@ DataRecordHandle::create(function_ref<char *(size_t Size)> Alloc,
   return constructImpl(Alloc(L.getTotalSize()), I, L);
 }
 
+ObjectHandle ObjectHandle::fromFileOffset(FileOffset Offset) {
+  // Store the file offset as it is.
+  assert(!(Offset.get() & 0x1));
+  return ObjectHandle(Offset.get());
+}
+
+ObjectHandle ObjectHandle::fromMemory(uintptr_t Ptr) {
+  // Store the pointer from memory with lowest bit set.
+  assert(!(Ptr & 0x1));
+  return ObjectHandle(Ptr | 1);
+}
+
 /// Proxy for an on-disk index record.
 struct OnDiskGraphDB::IndexProxy {
   FileOffset Offset;
@@ -484,7 +479,7 @@ struct OnDiskGraphDB::IndexProxy {
 };
 
 template <size_t N>
-const StandaloneDataInMemory &StandaloneDataMap<N>::insert(
+uintptr_t StandaloneDataMap<N>::insert(
     ArrayRef<uint8_t> Hash, TrieRecord::StorageKind SK,
     std::unique_ptr<sys::fs::mapped_file_region> Region) {
   auto &S = getShard(Hash);
@@ -492,7 +487,7 @@ const StandaloneDataInMemory &StandaloneDataMap<N>::insert(
   auto &V = S.Map[Hash.data()];
   if (!V)
     V = std::make_unique<StandaloneDataInMemory>(std::move(Region), SK);
-  return *V;
+  return reinterpret_cast<uintptr_t>(V.get());
 }
 
 template <size_t N>
@@ -1168,20 +1163,16 @@ ArrayRef<uint8_t> OnDiskGraphDB::getDigest(const IndexProxy &I) const {
 
 static OnDiskContent getContentFromHandle(const OnDiskDataAllocator &DataPool,
                                           ObjectHandle OH) {
-  auto getInternalHandle = [](ObjectHandle Handle) -> InternalHandle {
-    uint64_t Data = Handle.getOpaqueData();
-    if (Data & 1)
-      return InternalHandle(*reinterpret_cast<const StandaloneDataInMemory *>(
-          Data & (-1ULL << 1)));
-    return InternalHandle(Data);
-  };
+  // Decode ObjectHandle to locate the stored content.
+  uint64_t Data = OH.getOpaqueData();
+  if (Data & 1) {
+    const auto *SDIM =
+        reinterpret_cast<const StandaloneDataInMemory *>(Data & (-1ULL << 1));
+    return SDIM->getContent();
+  }
 
-  InternalHandle Handle = getInternalHandle(OH);
-  if (Handle.SDIM)
-    return Handle.SDIM->getContent();
-
-  auto DataHandle = cantFail(
-      DataRecordHandle::getFromDataPool(DataPool, Handle.getAsFileOffset()));
+  auto DataHandle =
+      cantFail(DataRecordHandle::getFromDataPool(DataPool, FileOffset(Data)));
   assert(DataHandle.getData().end()[0] == 0 && "Null termination");
   return OnDiskContent{DataHandle, std::nullopt};
 }
@@ -1215,12 +1206,8 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
     return faultInFromUpstream(ExternalRef);
   }
 
-  auto toObjectHandle = [](InternalHandle H) -> ObjectHandle {
-    return ObjectHandle::fromOpaqueData(H.getRawData());
-  };
-
   if (Object.SK == TrieRecord::StorageKind::DataPool)
-    return toObjectHandle(InternalHandle(Object.Offset));
+    return ObjectHandle::fromFileOffset(Object.Offset);
 
   // Only TrieRecord::StorageKind::Standalone (and variants) need to be
   // explicitly loaded.
@@ -1263,9 +1250,9 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
   if (EC)
     return createCorruptObjectError(getDigest(*I));
 
-  return toObjectHandle(
-      InternalHandle(static_cast<StandaloneDataMapTy *>(StandaloneData)
-                         ->insert(I->Hash, Object.SK, std::move(Region))));
+  return ObjectHandle::fromMemory(
+      static_cast<StandaloneDataMapTy *>(StandaloneData)
+          ->insert(I->Hash, Object.SK, std::move(Region)));
 }
 
 Expected<bool> OnDiskGraphDB::isMaterialized(ObjectID Ref) {

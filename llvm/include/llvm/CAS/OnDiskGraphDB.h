@@ -22,7 +22,7 @@
 
 namespace llvm::cas::ondisk {
 
-/// Standard 8B reference inside OnDiskGraphDB.
+/// Standard 8 byte reference inside OnDiskGraphDB.
 class InternalRef {
 public:
   FileOffset getFileOffset() const { return FileOffset(Data); }
@@ -43,7 +43,7 @@ private:
   uint64_t Data;
 };
 
-/// Compact 4B reference inside OnDiskGraphDB for smaller references.
+/// Compact 4 byte reference inside OnDiskGraphDB for smaller references.
 class InternalRef4B {
 public:
   FileOffset getFileOffset() const { return FileOffset(Data); }
@@ -199,9 +199,8 @@ class ObjectHandle {
 public:
   uint64_t getOpaqueData() const { return Opaque; }
 
-  static ObjectHandle fromOpaqueData(uint64_t Opaque) {
-    return ObjectHandle(Opaque);
-  }
+  static ObjectHandle fromFileOffset(FileOffset Offset);
+  static ObjectHandle fromMemory(uintptr_t Ptr);
 
   friend bool operator==(const ObjectHandle &LHS, const ObjectHandle &RHS) {
     return LHS.Opaque == RHS.Opaque;
@@ -401,8 +400,8 @@ private:
   /// Create a standalone leaf file.
   Error createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
 
-  /// @name Helper functions for internal data structures.
-  /// @{
+  /// \name Helper functions for internal data structures.
+  /// \{
   static InternalRef getInternalRef(ObjectID Ref) {
     return InternalRef::getFromRawData(Ref.getOpaqueData());
   }
@@ -425,7 +424,7 @@ private:
   getIndexProxyFromPointer(OnDiskTrieRawHashMap::ConstOnDiskPtr P) const;
 
   InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
-  /// @}
+  /// \}
 
   /// Get the atomic variable that keeps track of the standalone data storage
   /// size.
@@ -453,7 +452,7 @@ private:
   OnDiskDataAllocator DataPool;
 
   /// A StandaloneDataMap.
-  void *StandaloneData;
+  void *StandaloneData = nullptr;
 
   /// Path to the root directory.
   std::string RootPath;
