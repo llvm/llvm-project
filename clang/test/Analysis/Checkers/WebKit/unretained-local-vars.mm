@@ -1,8 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
 
 #import "objc-mock-types.h"
+#import "mock-system-header.h"
 
 void someFunction();
+extern "C" CFStringRef LocalGlobalCFString;
+extern "C" NSString *LocalGlobalNSString;
 
 namespace raw_ptr {
 void foo() {
@@ -546,6 +549,29 @@ void foo() {
 }
 
 } // autoreleased
+
+namespace ns_global {
+
+void consumeCFString(CFStringRef);
+void consumeNSString(NSString *);
+
+void cf() {
+  auto *str = kCFURLTagNamesKey;
+  consumeCFString(str);
+  auto *localStr = LocalGlobalCFString;
+  // expected-warning@-1{{Local variable 'localStr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeCFString(localStr);
+}
+
+void ns() {
+  auto *str = NSApplicationDidBecomeActiveNotification;
+  consumeNSString(str);
+  auto *localStr = LocalGlobalNSString;
+  // expected-warning@-1{{Local variable 'localStr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeNSString(localStr);
+}
+
+}
 
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
