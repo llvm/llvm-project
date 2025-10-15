@@ -1511,7 +1511,7 @@ mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
     cir::PtrDiffOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   auto dstTy = mlir::cast<cir::IntType>(op.getType());
-  auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+  mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
 
   auto lhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
                                                      adaptor.getLhs());
@@ -1522,10 +1522,11 @@ mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
       rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), llvmDstTy, lhs, rhs);
 
   cir::PointerType ptrTy = op.getLhs().getType();
-  auto typeSize = getTypeSize(ptrTy.getPointee(), *op);
+  assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
+  uint64_t typeSize = getTypeSize(ptrTy.getPointee(), *op);
 
   // Avoid silly division by 1.
-  auto resultVal = diff.getResult();
+  mlir::Value resultVal = diff.getResult();
   if (typeSize != 1) {
     auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
         op.getLoc(), llvmDstTy, typeSize);
