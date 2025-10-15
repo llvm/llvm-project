@@ -658,9 +658,11 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   }
 
   VPIRMetadata VPBranchWeights;
-  auto *Term = VPBuilder(CheckBlockVPBB)
-                   .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
-                                 Plan.getCanonicalIV()->getDebugLoc());
+  auto *Term =
+      VPBuilder(CheckBlockVPBB)
+          .createNaryOp(
+              VPInstruction::BranchOnCond, {CondVPV},
+              Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc());
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
@@ -921,8 +923,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       if (DerivedIV->getNumUsers() == 1 &&
           DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
-        auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(),
-                                            &Plan.getVectorTripCount());
+        auto *NewSel = Builder.createSelect(
+            AnyNaN, LoopRegion->getCanonicalIV(), &Plan.getVectorTripCount());
         DerivedIV->moveAfter(&*Builder.getInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
@@ -935,7 +937,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
                            "FMaxNum/FMinNum reduction.\n");
       return false;
     }
-    auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(), VecV);
+    auto *NewSel =
+        Builder.createSelect(AnyNaN, LoopRegion->getCanonicalIV(), VecV);
     ResumeR->setOperand(0, NewSel);
   }
 

@@ -230,6 +230,23 @@ entry:
   ret void
 }
 
+define void @and_cond(i32 %a, i1 %b) {
+; CHECK-LABEL: and_cond:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %al, %sil
+; CHECK-NEXT:    cfcmovel %ecx, 0
+; CHECK-NEXT:    retq
+  %is_pos = icmp sgt i32 %a, 0
+  %not_b = xor i1 %b, true
+  %cond = and i1 %not_b, %is_pos
+  %mask = insertelement <1 x i1> zeroinitializer, i1 %cond, i64 0
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr null, i32 1, <1 x i1> %mask)
+  ret void
+}
+
 define i64 @redundant_test(i64 %num, ptr %p1, i64 %in) {
 ; CHECK-LABEL: redundant_test:
 ; CHECK:       # %bb.0:

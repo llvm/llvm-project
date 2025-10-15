@@ -67,8 +67,10 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()), m_One(),
-                                     m_Specific(&Plan.getVF()))) ||
+           (match(A,
+                  m_ScalarIVSteps(
+                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
@@ -102,7 +104,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
+  auto *CanonicalIV =
+      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
   // Canonical IV chain is uniform.
   if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
     return true;

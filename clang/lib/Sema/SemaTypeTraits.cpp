@@ -1076,8 +1076,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C) || T->isObjCLifetimeType())
       return true;
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl()) {
-      if (RD->hasTrivialDefaultConstructor() &&
-          !RD->hasNonTrivialDefaultConstructor())
+      if (RD->hasTrivialDefaultConstructor())
         return true;
 
       bool FoundConstructor = false;
@@ -1165,14 +1164,26 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     const CXXDestructorDecl *Dtor = RD->getDestructor();
     if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
       return true;
-    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())) {
-      for (CXXConstructorDecl *Ctr : RD->ctors()) {
-        if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
-          continue;
-        if (Ctr->isTrivial())
-          return true;
-      }
+    bool HasTrivialNonDeletedDtr =
+        RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted());
+    if (!HasTrivialNonDeletedDtr)
+      return false;
+    for (CXXConstructorDecl *Ctr : RD->ctors()) {
+      if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
+        continue;
+      if (Ctr->isTrivial())
+        return true;
     }
+    if (RD->needsImplicitDefaultConstructor() &&
+        RD->hasTrivialDefaultConstructor() &&
+        !RD->hasNonTrivialDefaultConstructor())
+      return true;
+    if (RD->needsImplicitCopyConstructor() && RD->hasTrivialCopyConstructor() &&
+        !RD->defaultedCopyConstructorIsDeleted())
+      return true;
+    if (RD->needsImplicitMoveConstructor() && RD->hasTrivialMoveConstructor() &&
+        !RD->defaultedMoveConstructorIsDeleted())
+      return true;
     return false;
   }
   case UTT_IsIntangibleType:

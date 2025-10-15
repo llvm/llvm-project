@@ -5,49 +5,49 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @sve_ext() {
 ; CHECK-LABEL: 'sve_ext'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> undef to <vscale x 16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv16_i8_to_i32 = zext <vscale x 16 x i8> undef to <vscale x 16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv16_i8_to_i64 = zext <vscale x 16 x i8> undef to <vscale x 16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i16_to_i32 = zext <vscale x 8 x i16> undef to <vscale x 8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i16_to_i64 = zext <vscale x 8 x i16> undef to <vscale x 8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv4_i32_to_i64 = zext <vscale x 4 x i32> undef to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv4_i8_to_i64 = zext <vscale x 4 x i8> undef to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i8_to_i32 = zext <vscale x 8 x i8> undef to <vscale x 8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv4_i16_to_i64 = zext <vscale x 4 x i16> undef to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i8_to_i64 = zext <vscale x 8 x i8> undef to <vscale x 8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv16_i8_to_i16 = sext <vscale x 16 x i8> undef to <vscale x 16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv16_i8_to_i32 = sext <vscale x 16 x i8> undef to <vscale x 16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv16_i8_to_i64 = sext <vscale x 16 x i8> undef to <vscale x 16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i16_to_i32 = sext <vscale x 8 x i16> undef to <vscale x 8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i16_to_i64 = sext <vscale x 8 x i16> undef to <vscale x 8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv4_i32_to_i64 = sext <vscale x 4 x i32> undef to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv4_i8_to_i64 = sext <vscale x 4 x i8> undef to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i8_to_i32 = sext <vscale x 8 x i8> undef to <vscale x 8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv4_i16_to_i64 = sext <vscale x 4 x i16> undef to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i8_to_i64 = sext <vscale x 8 x i8> undef to <vscale x 8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> poison to <vscale x 16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv16_i8_to_i32 = zext <vscale x 16 x i8> poison to <vscale x 16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv16_i8_to_i64 = zext <vscale x 16 x i8> poison to <vscale x 16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i16_to_i32 = zext <vscale x 8 x i16> poison to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i16_to_i64 = zext <vscale x 8 x i16> poison to <vscale x 8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv4_i32_to_i64 = zext <vscale x 4 x i32> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv4_i8_to_i64 = zext <vscale x 4 x i8> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i8_to_i32 = zext <vscale x 8 x i8> poison to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv4_i16_to_i64 = zext <vscale x 4 x i16> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %zext_nxv8_i8_to_i64 = zext <vscale x 8 x i8> poison to <vscale x 8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv16_i8_to_i16 = sext <vscale x 16 x i8> poison to <vscale x 16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv16_i8_to_i32 = sext <vscale x 16 x i8> poison to <vscale x 16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv16_i8_to_i64 = sext <vscale x 16 x i8> poison to <vscale x 16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i16_to_i32 = sext <vscale x 8 x i16> poison to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i16_to_i64 = sext <vscale x 8 x i16> poison to <vscale x 8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv4_i32_to_i64 = sext <vscale x 4 x i32> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv4_i8_to_i64 = sext <vscale x 4 x i8> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i8_to_i32 = sext <vscale x 8 x i8> poison to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv4_i16_to_i64 = sext <vscale x 4 x i16> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %sext_nxv8_i8_to_i64 = sext <vscale x 8 x i8> poison to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> undef to <vscale x 16 x i16>
-  %zext_nxv16_i8_to_i32 = zext <vscale x 16 x i8> undef to <vscale x 16 x i32>
-  %zext_nxv16_i8_to_i64 = zext <vscale x 16 x i8> undef to <vscale x 16 x i64>
-  %zext_nxv8_i16_to_i32 = zext <vscale x 8 x i16> undef to <vscale x 8 x i32>
-  %zext_nxv8_i16_to_i64 = zext <vscale x 8 x i16> undef to <vscale x 8 x i64>
-  %zext_nxv4_i32_to_i64 = zext <vscale x 4 x i32> undef to <vscale x 4 x i64>
-  %zext_nxv4_i8_to_i64  = zext <vscale x 4 x i8>  undef to <vscale x 4 x i64>
-  %zext_nxv8_i8_to_i32  = zext <vscale x 8 x i8>  undef to <vscale x 8 x i32>
-  %zext_nxv4_i16_to_i64 = zext <vscale x 4 x i16> undef to <vscale x 4 x i64>
-  %zext_nxv8_i8_to_i64  = zext <vscale x 8 x i8>  undef to <vscale x 8 x i64>
+  %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> poison to <vscale x 16 x i16>
+  %zext_nxv16_i8_to_i32 = zext <vscale x 16 x i8> poison to <vscale x 16 x i32>
+  %zext_nxv16_i8_to_i64 = zext <vscale x 16 x i8> poison to <vscale x 16 x i64>
+  %zext_nxv8_i16_to_i32 = zext <vscale x 8 x i16> poison to <vscale x 8 x i32>
+  %zext_nxv8_i16_to_i64 = zext <vscale x 8 x i16> poison to <vscale x 8 x i64>
+  %zext_nxv4_i32_to_i64 = zext <vscale x 4 x i32> poison to <vscale x 4 x i64>
+  %zext_nxv4_i8_to_i64  = zext <vscale x 4 x i8>  poison to <vscale x 4 x i64>
+  %zext_nxv8_i8_to_i32  = zext <vscale x 8 x i8>  poison to <vscale x 8 x i32>
+  %zext_nxv4_i16_to_i64 = zext <vscale x 4 x i16> poison to <vscale x 4 x i64>
+  %zext_nxv8_i8_to_i64  = zext <vscale x 8 x i8>  poison to <vscale x 8 x i64>
 
-  %sext_nxv16_i8_to_i16 = sext <vscale x 16 x i8> undef to <vscale x 16 x i16>
-  %sext_nxv16_i8_to_i32 = sext <vscale x 16 x i8> undef to <vscale x 16 x i32>
-  %sext_nxv16_i8_to_i64 = sext <vscale x 16 x i8> undef to <vscale x 16 x i64>
-  %sext_nxv8_i16_to_i32 = sext <vscale x 8 x i16> undef to <vscale x 8 x i32>
-  %sext_nxv8_i16_to_i64 = sext <vscale x 8 x i16> undef to <vscale x 8 x i64>
-  %sext_nxv4_i32_to_i64 = sext <vscale x 4 x i32> undef to <vscale x 4 x i64>
-  %sext_nxv4_i8_to_i64  = sext <vscale x 4 x i8>  undef to <vscale x 4 x i64>
-  %sext_nxv8_i8_to_i32  = sext <vscale x 8 x i8>  undef to <vscale x 8 x i32>
-  %sext_nxv4_i16_to_i64 = sext <vscale x 4 x i16> undef to <vscale x 4 x i64>
-  %sext_nxv8_i8_to_i64  = sext <vscale x 8 x i8>  undef to <vscale x 8 x i64>
+  %sext_nxv16_i8_to_i16 = sext <vscale x 16 x i8> poison to <vscale x 16 x i16>
+  %sext_nxv16_i8_to_i32 = sext <vscale x 16 x i8> poison to <vscale x 16 x i32>
+  %sext_nxv16_i8_to_i64 = sext <vscale x 16 x i8> poison to <vscale x 16 x i64>
+  %sext_nxv8_i16_to_i32 = sext <vscale x 8 x i16> poison to <vscale x 8 x i32>
+  %sext_nxv8_i16_to_i64 = sext <vscale x 8 x i16> poison to <vscale x 8 x i64>
+  %sext_nxv4_i32_to_i64 = sext <vscale x 4 x i32> poison to <vscale x 4 x i64>
+  %sext_nxv4_i8_to_i64  = sext <vscale x 4 x i8>  poison to <vscale x 4 x i64>
+  %sext_nxv8_i8_to_i32  = sext <vscale x 8 x i8>  poison to <vscale x 8 x i32>
+  %sext_nxv4_i16_to_i64 = sext <vscale x 4 x i16> poison to <vscale x 4 x i64>
+  %sext_nxv8_i8_to_i64  = sext <vscale x 8 x i8>  poison to <vscale x 8 x i64>
 
   ret void
 }

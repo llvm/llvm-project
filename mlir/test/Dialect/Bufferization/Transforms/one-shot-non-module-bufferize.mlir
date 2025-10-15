@@ -24,10 +24,46 @@
     // CHECK-NOT: copy
     // CHECK: %[[call:.*]]:2 = call @inner_func(%[[arg0]])
     %0, %1 = call @inner_func(%t0) : (tensor<?xf32>) -> (tensor<?xf32>, f32)
-    // CHECK: return %[[call]]#1, %[[call]]#0 : f32, memref<?xf32,{{.*}}>
+    // CHECK: return %[[call]]#1, %[[call]]#0 : f32, memref<?xf32{{.*}}>
     return %1, %0 : f32, tensor<?xf32>
   }
   "test.finish" () : () -> ()
 }) : () -> ()
 
+// -----
 
+#enc1 = #test.tensor_encoding<"hello">
+#enc2 = #test.tensor_encoding<"not hello">
+
+"test.symbol_scope_isolated"() ({
+  // CHECK: func @inner_func(
+  // CHECK-SAME:  %[[arg0:.*]]: memref<?xf32, #test.memref_layout<"hello">>)
+  // CHECK-SAME:  -> memref<?xf32, #test.memref_layout<"hello">>
+  func.func @inner_func(%t: tensor<?xf32, #enc1>)
+      -> tensor<?xf32, #enc1> {
+    // CHECK: return %[[arg0]]
+    return %t : tensor<?xf32, #enc1>
+  }
+
+  // CHECK: func @outer_func(
+  // CHECK-SAME:  %[[arg0:.*]]: memref<?xf32, #test.memref_layout<"hello">>)
+  // CHECK-SAME:  -> (memref<?xf32, #test.memref_layout<"hello">>,
+  // CHECK-SAME:      memref<?xf32, #test.memref_layout<"not hello">>)
+  func.func @outer_func(%t0: tensor<?xf32, #enc1>)
+      -> (tensor<?xf32, #enc1>, tensor<?xf32, #enc2>) {
+    // CHECK: %[[call:.*]] = call @inner_func(%[[arg0]])
+    %0 = call @inner_func(%t0)
+      : (tensor<?xf32, #enc1>) -> (tensor<?xf32, #enc1>)
+
+    // CHECK: %[[local:.*]] = "test.create_memref_op"() : ()
+    // CHECK-SAME:  -> memref<?xf32, #test.memref_layout<"not hello">>
+    %local = "test.create_tensor_op"() : () -> tensor<?xf32, #enc2>
+    // CHECK: %[[dummy:.*]] = "test.dummy_memref_op"(%[[local]])
+    %1 = "test.dummy_tensor_op"(%local) : (tensor<?xf32, #enc2>)
+      -> tensor<?xf32, #enc2>
+
+    // CHECK: return %[[call]], %[[dummy]]
+    return %0, %1 : tensor<?xf32, #enc1>, tensor<?xf32, #enc2>
+  }
+  "test.finish" () : () -> ()
+}) : () -> ()
