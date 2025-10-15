@@ -2667,7 +2667,9 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
     Mask2.push_back(IRB.getInt1(i >= BeginIndex && i < EndIndex));
 
-  V = IRB.CreateSelect(ConstantVector::get(Mask2), V, Old, Name + "blend");
+  // No profiling support for vector selects.
+  V = IRB.CreateSelectWithUnknownProfile(ConstantVector::get(Mask2), V, Old,
+                                         DEBUG_TYPE, Name + "blend");
 
   LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;
