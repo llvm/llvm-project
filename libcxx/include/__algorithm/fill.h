@@ -35,7 +35,7 @@ __fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __value) {
 template <class _RandomAccessIterator,
           class _Tp,
           __enable_if_t<__has_random_access_iterator_category<_RandomAccessIterator>::value &&
-                            !__is_segmented_iterator<_RandomAccessIterator>::value,
+                            !__is_segmented_iterator_v<_RandomAccessIterator>,
                         int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
 __fill(_RandomAccessIterator __first, _RandomAccessIterator __last, const _Tp& __value) {
