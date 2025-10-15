@@ -259,8 +259,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
-  if (match(&R, m_BranchOnCond(m_VPValue())) ||
-      match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+  if (match(&R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount())))
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
@@ -317,8 +316,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
             VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
-        match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                        m_VPValue())))
+        match(Copy,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       Copy->addOperand(getConstantVPV(Part));
 
     if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))

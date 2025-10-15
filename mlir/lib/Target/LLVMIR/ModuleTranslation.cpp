@@ -647,7 +647,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
-      if (child->isZeroValue()) {
+      if (child->isZeroValue() && !elementType->isFPOrFPVectorTy()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       } else {
         if (llvm::ConstantDataSequential::isElementTypeCompatible(
@@ -922,8 +922,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     assert(opBundleSizes.size() == opBundleTagsAttr.size() &&
            "operand bundles and tags do not match");
 
-    numOpBundleOperands =
-        std::accumulate(opBundleSizes.begin(), opBundleSizes.end(), size_t(0));
+    numOpBundleOperands = llvm::sum_of(opBundleSizes);
     assert(numOpBundleOperands <= intrOp->getNumOperands() &&
            "operand bundle operands is more than the number of operands");
 

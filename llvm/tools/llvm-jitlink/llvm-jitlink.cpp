@@ -623,8 +623,9 @@ public:
         });
   }
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
-    return InProcessMemoryMapper::prepare(Addr - DeltaAddr, ContentSize);
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override {
+    return InProcessMemoryMapper::prepare(G, Addr - DeltaAddr, ContentSize);
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
@@ -1519,10 +1520,10 @@ private:
 
 static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
   using namespace support::endian;
-  auto Armv7MovWTle = byte_swap<uint32_t, endianness::little>(0xe300c000);
-  auto Armv7BxR12le = byte_swap<uint32_t, endianness::little>(0xe12fff1c);
-  auto Thumbv7MovWTle = byte_swap<uint32_t, endianness::little>(0x0c00f240);
-  auto Thumbv7BxR12le = byte_swap<uint16_t, endianness::little>(0x4760);
+  auto Armv7MovWTle = byte_swap<uint32_t>(0xe300c000, endianness::little);
+  auto Armv7BxR12le = byte_swap<uint32_t>(0xe12fff1c, endianness::little);
+  auto Thumbv7MovWTle = byte_swap<uint32_t>(0x0c00f240, endianness::little);
+  auto Thumbv7BxR12le = byte_swap<uint16_t>(0x4760, endianness::little);
 
   MemoryMatcher M(Stub.getContent());
   if (M.matchMask(Thumbv7MovWTle)) {
@@ -1636,7 +1637,11 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
       case file_magic::macho_object: {
         auto Obj = ExitOnErr(
             object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-        Triple TT = Obj->makeTriple();
+        Triple TT;
+        if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(Obj.get()))
+          TT = MachOObj->getArchTriple();
+        else
+          TT = Obj->makeTriple();
         if (Magic == file_magic::coff_object) {
           // TODO: Move this to makeTriple() if possible.
           TT.setObjectFormat(Triple::COFF);

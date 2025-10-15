@@ -96,8 +96,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
 
-    # Flakey on Windows, https://github.com/llvm/llvm-project/issues/137660.
-    @skipIfWindows
     def test_stopOnEntry(self):
         """
         Tests the default launch of a simple program that stops at the
@@ -144,7 +142,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
         self.assertTrue(found, "verified program working directory")
 
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of

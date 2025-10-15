@@ -447,7 +447,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     if (verifySelfRef(node))
       return DistinctAttr::create(builder.getUnitAttr());
 
-    auto name = cast<llvm::MDString>(node->getOperand(0));
+    auto *name = cast<llvm::MDString>(node->getOperand(0));
     return builder.getStringAttr(name->getString());
   };
 
@@ -1123,7 +1123,7 @@ void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
 void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
                                    Operation *op) const {
   auto iface = cast<DisjointFlagInterface>(op);
-  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
+  auto *instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
 
   iface.setIsDisjoint(instDisjoint->isDisjoint());
 }
@@ -1374,7 +1374,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
                                     convertLinkageFromLLVM(alias->getLinkage()),
                                     alias->getName(),
-                                    /*dso_local=*/alias->isDSOLocal(),
+                                    /*dsoLocal=*/alias->isDSOLocal(),
                                     /*thread_local=*/alias->isThreadLocal(),
                                     /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
@@ -1507,8 +1507,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   GlobalOp globalOp = GlobalOp::create(
       builder, mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
-      valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
-      /*dso_local=*/globalVar->isDSOLocal(),
+      valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
+      /*dsoLocal=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;

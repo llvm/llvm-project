@@ -123,11 +123,11 @@ define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr 
 ; CHECK-LABEL: define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[START:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i4, i1 } @llvm.umul.with.overflow.i4(i4 5, i4 -1)
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i4, i1 } [[MUL]], 1
-; CHECK-NEXT:    br i1 [[MUL_OVERFLOW]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MUL_OVERFLOW]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -145,7 +145,7 @@ define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 12, %[[MIDDLE_BLOCK]] ], [ 0, %[[START]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 12, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

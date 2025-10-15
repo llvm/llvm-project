@@ -17,7 +17,7 @@ namespace clang::tidy::misc {
 /// Check detects cyclic #include dependencies between user-defined headers.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/header-include-cycle.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/header-include-cycle.html
 class HeaderIncludeCycleCheck : public ClangTidyCheck {
 public:
   HeaderIncludeCycleCheck(StringRef Name, ClangTidyContext *Context);

@@ -555,7 +555,7 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   InterfaceKind Kind = V.computeInterfaceKind(DesugaredTy);
   switch (Kind) {
   case InterfaceKind::WithAlloc:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case InterfaceKind::CopyArray: {
     // __clang_Interpreter_SetValueWithAlloc.
     ExprResult AllocCall =

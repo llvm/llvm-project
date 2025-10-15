@@ -536,14 +536,14 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) 
 ; AVX1-NEXT:    vpaddw %xmm4, %xmm4, %xmm5
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm6
 ; AVX1-NEXT:    vpblendvb %xmm4, %xmm6, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
-; AVX1-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm4
-; AVX1-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm4
-; AVX1-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm6
+; AVX1-NEXT:    vpblendvb %xmm5, %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm5
+; AVX1-NEXT:    vpsllw $2, %xmm4, %xmm6
+; AVX1-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm5
+; AVX1-NEXT:    vpsllw $3, %xmm4, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vpslld $23, %xmm3, %xmm3
