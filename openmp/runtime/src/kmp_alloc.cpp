@@ -2265,6 +2265,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
       KMP_ASSERT(0); // abort fallback requested
     } // no sense to look for another fallback because of same internal alloc
   }
+#if KMP_HWLOC_ENABLED
+  }
+#endif
   KE_TRACE(10, ("__kmp_alloc: T#%d %p=alloc(%d)\n", gtid, ptr, desc.size_a));
   if (ptr == NULL)
     return NULL;
