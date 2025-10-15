@@ -255,6 +255,8 @@ private:
                                       VariableList &variables);
   size_t ParseVariablesForBlock(PdbCompilandSymId block_id);
 
+  void CreateSimpleArgumentListTypes(llvm::codeview::TypeIndex arglist_ti);
+
   llvm::Expected<uint32_t> GetFileIndex(const CompilandIndexItem &cii,
                                         uint32_t file_id);
 
