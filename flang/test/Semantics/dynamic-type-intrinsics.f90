@@ -40,17 +40,17 @@ module m
     integer(kind=merge(kind(1),-1,same_type_as(x1, x3))) same_type_as_x1_x3_false
     !ERROR: INTEGER(KIND=-1) is not a supported type
     integer(kind=merge(kind(1),-1,same_type_as(a1, a3))) same_type_as_a1_a3_false
-    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible or unlimited polymorphic type
     logical :: t1_8 = same_type_as(x5, x5)
-    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible or unlimited polymorphic type
     logical :: t1_9 = same_type_as(x5, x1)
-    !ERROR: Actual argument for 'b=' has type 't5', but was expected to be an extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'b=' has type 't5', but was expected to be an extensible or unlimited polymorphic type
     logical :: t1_10 = same_type_as(x1, x5)
-    !ERROR: Actual argument for 'a=' has bad type 'INTEGER(4)', expected extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has bad type 'INTEGER(4)', expected extensible or unlimited polymorphic type
     logical :: t1_11 = same_type_as(i, i)
-    !ERROR: Actual argument for 'a=' has bad type 'REAL(4)', expected extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has bad type 'REAL(4)', expected extensible or unlimited polymorphic type
     logical :: t1_12 = same_type_as(r, r)
-    !ERROR: Actual argument for 'a=' has bad type 'INTEGER(4)', expected extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has bad type 'INTEGER(4)', expected extensible or unlimited polymorphic type
     logical :: t1_13 = same_type_as(i, t)
 
     integer(kind=merge(kind(1),-1,extends_type_of(x1, y1))) extends_type_of_x1_y1_true
@@ -64,10 +64,10 @@ module m
     !ERROR: INTEGER(KIND=-1) is not a supported type
     integer(kind=merge(kind(1),-1,extends_type_of(x1, x4))) extends_type_of_x1_x4_false
     integer(kind=merge(kind(1),-1,extends_type_of(x4, x1))) extends_type_of_x4_x1_true
-    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible or unlimited polymorphic type
     logical :: t2_9 = extends_type_of(x5, x5)
-    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'a=' has type 't5', but was expected to be an extensible or unlimited polymorphic type
     logical :: t2_10 = extends_type_of(x5, x1)
-    !ERROR: Actual argument for 'mold=' has type 't5', but was expected to be an extensible derived or unlimited polymorphic type
+    !ERROR: Actual argument for 'mold=' has type 't5', but was expected to be an extensible or unlimited polymorphic type
     logical :: t2_11 = extends_type_of(x1, x5)
 end module

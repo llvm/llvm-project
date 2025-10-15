@@ -2105,18 +2105,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       }
       return std::nullopt;
     } else if (!d.typePattern.categorySet.test(type->category())) {
-      std::string expectedText;
-      switch (d.typePattern.kindCode) {
-      case KindCode::extensibleOrUnlimitedType:
-        expectedText = "extensible derived or unlimited polymorphic type";
-        break;
-      default:
-        break;
-      }
+      const char *expected{
+          d.typePattern.kindCode == KindCode::extensibleOrUnlimitedType
+              ? ", expected extensible or unlimited polymorphic type"
+              : ""};
       messages.Say(arg->sourceLocation(),
           "Actual argument for '%s=' has bad type '%s'%s"_err_en_US, d.keyword,
-          type->AsFortran(),
-          expectedText.empty() ? "" : ", expected " + expectedText);
+          type->AsFortran(), expected);
       return std::nullopt; // argument has invalid type category
     }
     bool argOk{false};
@@ -2261,7 +2256,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
               IsExtensibleType(GetDerivedTypeSpec(type)));
       if (!argOk) {
         messages.Say(arg->sourceLocation(),
-            "Actual argument for '%s=' has type '%s', but was expected to be an extensible derived or unlimited polymorphic type"_err_en_US,
+            "Actual argument for '%s=' has type '%s', but was expected to be an extensible or unlimited polymorphic type"_err_en_US,
             d.keyword, type->AsFortran());
         return std::nullopt;
       }
