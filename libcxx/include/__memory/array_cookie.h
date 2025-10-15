@@ -43,14 +43,7 @@ template <class _Tp>
 struct __has_array_cookie : false_type {};
 #endif
 
-template <class _Tp, bool _HasPadding = (_LIBCPP_PREFERRED_ALIGNOF(_Tp) > sizeof(size_t))>
-struct [[__gnu__::__aligned__(_LIBCPP_PREFERRED_ALIGNOF(_Tp))]] __itanium_array_cookie {
-  size_t __element_count;
-};
-
-template <class _Tp>
-struct [[__gnu__::__aligned__(_LIBCPP_PREFERRED_ALIGNOF(_Tp))]] __itanium_array_cookie<_Tp, /* _HasPadding */ true> {
-  char __padding[_LIBCPP_PREFERRED_ALIGNOF(_Tp) - sizeof(size_t)];
+struct __itanium_array_cookie {
   size_t __element_count;
 };
 
@@ -66,8 +59,8 @@ struct [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(_Tp))]] __arm_array_cookie {
 // ----------------------
 // The element count is stored immediately before the first element of the array. If the preferred alignment
 // of array elements (which is different from the ABI alignment) is more than that of size_t, additional
-// padding bytes exist at the beginning of the array cookie. Assuming array elements of size and alignment 16
-// bytes, that gives us the following layout:
+// padding bytes exist before the array cookie. Assuming array elements of size and alignment 16 bytes, that
+// gives us the following layout:
 //
 // |ooooooooxxxxxxxxaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd|
 //  ^^^^^^^^        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -75,8 +68,6 @@ struct [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(_Tp))]] __arm_array_cookie {
 //     |       |                              array elements
 //  padding    |
 //       element count
-//
-// In practice, it is sufficient to read the bytes immediately before the first array element.
 //
 //
 // In the Itanium ABI with ARM differences [2]
@@ -96,8 +87,9 @@ struct [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(_Tp))]] __arm_array_cookie {
 // element size  |        padding                                 |
 //         element count                                     array elements
 //
-// We calculate the starting address of the allocation by taking into account the ABI alignment (not
-// the preferred alignment) of the type.
+// We must be careful to take into account the alignment of the array cookie, which may result in padding
+// bytes between the element count and the first element of the array. Note that for ARM, the compiler
+// aligns the array cookie using the ABI alignment, not the preferred alignment of array elements.
 //
 // [1]: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-cookies
 // [2]: https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Handle-C++-differences
@@ -118,11 +110,11 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
   };
 #endif
 
-  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
+  char const* __array_cookie_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
   _ArrayCookie __cookie;
   // This is necessary to avoid violating strict aliasing. It's valid because _ArrayCookie is an
   // implicit lifetime type.
-  __builtin_memcpy(std::addressof(__cookie), __allocation_start, sizeof(_ArrayCookie));
+  __builtin_memcpy(std::addressof(__cookie), __array_cookie_start, sizeof(_ArrayCookie));
   return __cookie.__element_count;
 }
 
