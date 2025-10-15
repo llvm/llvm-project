@@ -417,6 +417,8 @@ private:
   static constexpr size_t startCMJTEntryIdx = 0;
   static constexpr size_t startCMJALTEntryIdx = 32;
 
+  static constexpr size_t tableAlign = 64;
+
   llvm::DenseMap<const Symbol *, int> CMJTEntryCandidates;
   SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
       finalizedCMJTEntries;

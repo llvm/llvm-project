@@ -75,7 +75,6 @@ public:
 #define INTERNAL_R_RISCV_TBJAL 260
 
 const uint64_t dtpOffset = 0x800;
-const uint32_t jvtAlign = 64;
 
 namespace {
 enum Op {
@@ -1541,7 +1540,7 @@ void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
 
 TableJumpSection::TableJumpSection(Ctx &ctx)
     : SyntheticSection(ctx, ".riscv.jvt", SHT_PROGBITS,
-                       SHF_ALLOC | SHF_EXECINSTR, jvtAlign) {}
+                       SHF_ALLOC | SHF_EXECINSTR, tableAlign) {}
 
 void TableJumpSection::addCMJTEntryCandidate(const Symbol *symbol,
                                              int csReduction) {
@@ -1637,8 +1636,11 @@ void TableJumpSection::finalizeContents() {
 
   if (!finalizedCMJALTEntries.empty() &&
       getSizeReduction() < CMJTSizeReduction) {
-    // Stop relax to cm.jalt if there will be the code reduction of cm.jalt is
-    // smaller then the size of padding 0 for doing cm.jalt optmise
+    // In memory, the cm.jt table occupies the first 0x20 entries.
+    // To be able to use the cm.jalt table which comes afterwards
+    // it is necessary to pad out the cm.jt table.
+    // Remove cm.jalt entries if the code reduction of cm.jalt is
+    // smaller than the size of the padding.
     finalizedCMJALTEntries.clear();
   }
   // if table jump still got negative effect, give up.
@@ -1668,10 +1670,8 @@ TableJumpSection::finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap,
   std::sort(tempEntryVector.begin(), tempEntryVector.end(), cmp);
 
   auto finalizedVector = tempEntryVector;
-  if (tempEntryVector.size() >= maxSize)
-    finalizedVector =
-        SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>(
-            tempEntryVector.begin(), tempEntryVector.begin() + maxSize);
+
+  finalizedVector.resize(maxSize);
 
   // Drop any items that have a negative effect (i.e. increase code size).
   while (!finalizedVector.empty()) {
@@ -1689,12 +1689,12 @@ size_t TableJumpSection::getSize() const {
       return (startCMJALTEntryIdx + finalizedCMJALTEntries.size()) *
              ctx.arg.wordsize;
     return (startCMJTEntryIdx + finalizedCMJTEntries.size()) * ctx.arg.wordsize;
-  } else {
-    if (!CMJALTEntryCandidates.empty())
-      return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) *
-             ctx.arg.wordsize;
-    return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * ctx.arg.wordsize;
   }
+
+  if (!CMJALTEntryCandidates.empty())
+    return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) *
+           ctx.arg.wordsize;
+  return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * ctx.arg.wordsize;
 }
 
 int32_t TableJumpSection::getSizeReduction() {
