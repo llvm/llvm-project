@@ -7079,26 +7079,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fkeep-system-includes");
   }
 
-  if (IsUEFI) {
-    llvm::outs() << "IsUEFI true;\n";
-  } else {
-    llvm::outs() << "IsUEFI false;\n";
-  }
-  if (IsWindowsMSVC) {
-    llvm::outs() << "IsWindowsMSVC true;\n";
-  } else {
-    llvm::outs() << "IsWindowsMSVC false;\n";
-  }
-
-  // -fms-extensions=0 is default.
-  if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
-                   IsWindowsMSVC || IsUEFI)) {
-    llvm::outs() << "set  OPT_fms_extensions\n";
-    CmdArgs.push_back("-fms-extensions");
-  } else {
-    llvm::outs() << "DONT SET  OPT_fms_extensions\n";
-  }
-
   // -fms-compatibility=0 is default.
   bool IsMSVCCompat = Args.hasFlag(
       options::OPT_fms_compatibility, options::OPT_fno_ms_compatibility,

@@ -357,6 +357,7 @@ class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
 public:
   UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+    llvm::outs() << "In targetinfo constructor\n";
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
     // This is an LLP64 platform.
     // int:4, long:4, long long:8, long double:8.
@@ -370,9 +371,6 @@ public:
     SizeType = UnsignedLongLong;
     PtrDiffType = SignedLongLong;
     IntPtrType = SignedLongLong;
-    this->resetDataLayout(
-        "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
-        "i64:64-i128:128-n32:64-S128-Fn32");
   }
   BuiltinVaListKind getBuiltinVaListKind() const override;
   void getTargetDefines(const LangOptions &Opts,
@@ -380,6 +378,9 @@ public:
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
   TargetInfo::CallingConvKind
   getCallingConvKind(bool ClangABICompat4) const override;
+
+private:
+  void setDataLayout() override;
 };
 
 } // namespace targets

@@ -1781,6 +1781,7 @@ void UEFIAArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                              MacroBuilder &Builder) const {
   AArch64leTargetInfo::getTargetDefines(Opts, Builder);
   Builder.defineMacro("_M_ARM64", "1");
+  UEFIAArch64TargetInfo::getOSDefines(Opts, getTriple(), Builder);
 }
 
 TargetInfo::CallingConvCheckResult
@@ -1799,6 +1800,11 @@ UEFIAArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
 TargetInfo::CallingConvKind
 UEFIAArch64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_MicrosoftWin64;
+}
+
+void UEFIAArch64TargetInfo::setDataLayout() {
+  resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+                  "i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
@@ -1860,6 +1866,14 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   getAppleMachOAArch64Defines(Builder, Opts, Triple);
   DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
+
+// void UEFIAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+//                                            const llvm::Triple &Triple,
+//                                            MacroBuilder &Builder) const{
+
+//   UEFITargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
+//   // Builder.defineMacro("__UEFI__");
+// }
 
 TargetInfo::BuiltinVaListKind
 DarwinAArch64TargetInfo::getBuiltinVaListKind() const {
