@@ -40,6 +40,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -126,6 +127,17 @@ class MapInfoFinalizationPass
         os << ',';
       os << path[i];
     }
+  }
+
+  /// Return true if the module has an OpenMP requires clause that includes
+  /// unified_shared_memory.
+  static bool moduleRequiresUSM(mlir::ModuleOp module) {
+    assert(module && "invalid module");
+    if (auto req = module->getAttrOfType<mlir::omp::ClauseRequiresAttr>(
+            "omp.requires"))
+      return mlir::omp::bitEnumContainsAll(
+          req.getValue(), mlir::omp::ClauseRequires::unified_shared_memory);
+    return false;
   }
 
   /// Create the member map for coordRef and append it (and its index
@@ -425,8 +437,12 @@ class MapInfoFinalizationPass
 
     mapFlags flags = mapFlags::OMP_MAP_TO |
                      (mapFlags(mapTypeFlag) &
-                      (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_CLOSE |
-                       mapFlags::OMP_MAP_ALWAYS));
+                      (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_ALWAYS));
+    // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
+    // to ensure device-local placement where required by tests relying on USM +
+    // close semantics.
+    if (moduleRequiresUSM(target->getParentOfType<mlir::ModuleOp>()))
+      flags |= mapFlags::OMP_MAP_CLOSE;
     return llvm::to_underlying(flags);
   }
 
@@ -516,6 +532,75 @@ class MapInfoFinalizationPass
     op.replaceAllUsesWith(newMapInfoOp.getResult());
     op->erase();
     return newMapInfoOp;
+  }
+
+  // Expand mappings of type(C_PTR) to map their `__address` field explicitly
+  // as a single pointer-sized member (USM-gated at callsite). This helps in
+  // USM scenarios to ensure the pointer-sized mapping is used.
+  mlir::omp::MapInfoOp genCptrMemberMap(mlir::omp::MapInfoOp op,
+                                        fir::FirOpBuilder &builder) {
+    if (!op.getMembers().empty())
+      return op;
+
+    mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
+    if (!mlir::isa<fir::RecordType>(varTy))
+      return op;
+    auto recTy = mlir::cast<fir::RecordType>(varTy);
+    // If not a builtin C_PTR record, skip.
+    if (!recTy.getName().ends_with("__builtin_c_ptr"))
+      return op;
+
+    // Find the index of the c_ptr address component named "__address".
+    int32_t fieldIdx = recTy.getFieldIndex("__address");
+    if (fieldIdx < 0)
+      return op;
+
+    mlir::Location loc = op.getVarPtr().getLoc();
+    mlir::Type memTy = recTy.getType(fieldIdx);
+    fir::IntOrValue idxConst =
+        mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
+    mlir::Value coord = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(memTy), op.getVarPtr(),
+        llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
+
+    // Child for the `__address` member.
+    llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
+    mlir::ArrayAttr newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
+    // Force CLOSE in USM paths so the pointer gets device-local placement
+    // when required by tests relying on USM + close semantics.
+    uint64_t mapTypeVal =
+        op.getMapType() |
+        llvm::to_underlying(
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
+    mlir::IntegerAttr mapTypeAttr = builder.getIntegerAttr(
+        builder.getIntegerType(64, /*isSigned=*/false), mapTypeVal);
+
+    mlir::omp::MapInfoOp memberMap = mlir::omp::MapInfoOp::create(
+        builder, loc, coord.getType(), coord,
+        mlir::TypeAttr::get(fir::unwrapRefType(coord.getType())), mapTypeAttr,
+        builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
+            mlir::omp::VariableCaptureKind::ByRef),
+        /*varPtrPtr=*/mlir::Value{},
+        /*members=*/llvm::SmallVector<mlir::Value>{},
+        /*member_index=*/mlir::ArrayAttr{},
+        /*bounds=*/op.getBounds(),
+        /*mapperId=*/mlir::FlatSymbolRefAttr(),
+        /*name=*/op.getNameAttr(),
+        /*partial_map=*/builder.getBoolAttr(false));
+
+    // Rebuild the parent as a container with the `__address` member.
+    mlir::omp::MapInfoOp newParent = mlir::omp::MapInfoOp::create(
+        builder, op.getLoc(), op.getResult().getType(), op.getVarPtr(),
+        op.getVarTypeAttr(), mapTypeAttr, op.getMapCaptureTypeAttr(),
+        /*varPtrPtr=*/mlir::Value{},
+        /*members=*/llvm::SmallVector<mlir::Value>{memberMap},
+        /*member_index=*/newMembersAttr,
+        /*bounds=*/llvm::SmallVector<mlir::Value>{},
+        /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+        /*partial_map=*/builder.getBoolAttr(false));
+    op.replaceAllUsesWith(newParent.getResult());
+    op->erase();
+    return newParent;
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -1167,6 +1252,17 @@ class MapInfoFinalizationPass
 
         builder.setInsertionPoint(op);
         genBoxcharMemberMap(op, builder);
+      });
+
+      // Expand type(C_PTR) only when unified_shared_memory is required,
+      // to ensure device-visible pointer size/behavior in USM scenarios
+      // without changing default expectations elsewhere.
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        // Only expand C_PTR members when unified_shared_memory is required.
+        if (!moduleRequiresUSM(func->getParentOfType<mlir::ModuleOp>()))
+          return;
+        builder.setInsertionPoint(op);
+        genCptrMemberMap(op, builder);
       });
 
       func->walk([&](mlir::omp::MapInfoOp op) {
