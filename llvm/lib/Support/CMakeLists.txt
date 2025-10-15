@@ -147,9 +147,9 @@ add_llvm_component_library(LLVMSupport
   ARMBuildAttributes.cpp
   AArch64AttributeParser.cpp
   AArch64BuildAttributes.cpp
-  AllocToken.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
+  AllocToken.cpp
   Allocator.cpp
   AutoConvert.cpp
   Base64.cpp
