@@ -271,7 +271,7 @@ Non-comprehensive list of changes in this release
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
 
-- Clang now rejects the invalid use of ``constexpr`` with ``auto`` and an explicit type. (#GH163090)
+- Clang now rejects the invalid use of ``constexpr`` with ``auto`` and an explicit type in C. (#GH163090)
 
 New Compiler Flags
 ------------------
