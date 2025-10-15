@@ -939,8 +939,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Atomic:
   // FIXME: GCC treats block pointers as fundamental types?!
   case Type::BlockPointer:
-    cgm.errorNYI("VTableClassNameForType: __fundamental_type_info");
-    break;
+    return "_ZTVN10__cxxabiv123__fundamental_type_infoE";
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
