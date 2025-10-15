@@ -170,6 +170,20 @@ static uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
   return addr;
 }
 
+/// Attempts to parse a prefix of `number_str` as a uint64_t. If
+/// successful, the number is returned and the prefix is dropped from
+/// `number_str`.
+static std::optional<uint64_t> extract_u64(std::string_view &number_str) {
+  char *str_end = nullptr;
+  errno = 0;
+  uint64_t number = strtoull(number_str.data(), &str_end, 16);
+  if (errno != 0)
+    return std::nullopt;
+  assert(str_end);
+  number_str.remove_prefix(str_end - number_str.data());
+  return number;
+}
+
 static void append_hex_value(std::ostream &ostrm, const void *buf,
                              size_t buf_size, bool swap) {
   int i;
@@ -202,6 +216,25 @@ static void append_hexified_string(std::ostream &ostrm,
   for (size_t i = 0; i < string_size; i++) {
     ostrm << RAWHEX8(*(string_buf + i));
   }
+}
+
+/// Returns true if `str` starts with `prefix`.
+static bool starts_with(std::string_view str, std::string_view prefix) {
+  return str.substr(0, prefix.size()) == prefix;
+}
+
+/// Splits `list_str` into multiple string_views separated by `,`.
+static std::vector<std::string_view>
+parse_comma_separated_list(std::string_view list_str) {
+  std::vector<std::string_view> list;
+  while (!list_str.empty()) {
+    auto pos = list_str.find(',');
+    list.push_back(list_str.substr(0, pos));
+    if (pos == list_str.npos)
+      break;
+    list_str.remove_prefix(pos + 1);
+  }
+  return list;
 }
 
 // from System.framework/Versions/B/PrivateHeaders/sys/codesign.h
@@ -270,6 +303,11 @@ void RNBRemote::CreatePacketTable() {
                      "Read memory"));
   t.push_back(Packet(read_register, &RNBRemote::HandlePacket_p, NULL, "p",
                      "Read one register"));
+  // Careful: this *must* come before the `M` packet, as debugserver matches
+  // packet prefixes against known packet names. Inverting the order would match
+  // `MultiMemRead` as an `M` packet.
+  t.push_back(Packet(multi_mem_read, &RNBRemote::HandlePacket_MultiMemRead,
+                     NULL, "MultiMemRead", "Read multiple memory addresses"));
   t.push_back(Packet(write_memory, &RNBRemote::HandlePacket_M, NULL, "M",
                      "Write memory"));
   t.push_back(Packet(write_register, &RNBRemote::HandlePacket_P, NULL, "P",
@@ -3150,6 +3188,88 @@ rnb_err_t RNBRemote::HandlePacket_m(const char *p) {
   return SendPacket(ostrm.str());
 }
 
+rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
+  const std::string_view packet_name("MultiMemRead:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiMemRead packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  const std::string_view ranges_prefix("ranges:");
+  if (!starts_with(packet, ranges_prefix))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                  "Missing 'ranges' in MultiMemRead packet");
+  packet.remove_prefix(ranges_prefix.size());
+
+  std::vector<std::pair<nub_addr_t, std::size_t>> ranges;
+  std::size_t total_length = 0;
+
+  // Ranges should have the form: <addr>,<size>[,<addr>,<size>]*;
+  auto end_of_ranges_pos = packet.find(';');
+  if (end_of_ranges_pos == packet.npos)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                  "MultiMemRead missing end of ranges marker");
+
+  std::vector<std::string_view> numbers_list =
+      parse_comma_separated_list(packet.substr(0, end_of_ranges_pos));
+  packet.remove_prefix(end_of_ranges_pos + 1);
+
+  // Ranges are pairs, so the number of elements must be even.
+  if (numbers_list.size() % 2 == 1)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiMemRead has an odd number of numbers for the ranges");
+
+  for (unsigned idx = 0; idx < numbers_list.size(); idx += 2) {
+    std::optional<uint64_t> maybe_addr = extract_u64(numbers_list[idx]);
+    std::optional<uint64_t> maybe_length = extract_u64(numbers_list[idx + 1]);
+    if (!maybe_addr || !maybe_length)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                    "Invalid MultiMemRead range");
+    // A sanity check that the packet requested is not too large or a negative
+    // number.
+    if (*maybe_length > 4 * 1024 * 1024)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                    "MultiMemRead length is too large");
+
+    ranges.emplace_back(*maybe_addr, *maybe_length);
+    total_length += *maybe_length;
+  }
+
+  if (ranges.empty())
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "MultiMemRead has an empty range list");
+
+  if (!packet.empty())
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p, "MultiMemRead packet has unrecognized fields");
+
+  std::vector<std::vector<uint8_t>> buffers;
+  buffers.reserve(ranges.size());
+  for (auto [base_addr, length] : ranges) {
+    buffers.emplace_back(length, 0);
+    nub_size_t bytes_read = DNBProcessMemoryRead(m_ctx.ProcessID(), base_addr,
+                                                 length, buffers.back().data());
+    buffers.back().resize(bytes_read);
+  }
+
+  std::ostringstream reply_stream;
+  bool first = true;
+  for (const std::vector<uint8_t> &buffer : buffers) {
+    reply_stream << (first ? "" : ",") << std::hex << buffer.size();
+    first = false;
+  }
+  reply_stream << ';';
+
+  for (const std::vector<uint8_t> &buffer : buffers)
+    binary_encode_data_vector(reply_stream, buffer);
+
+  return SendPacket(reply_stream.str());
+}
+
 // Read memory, sent it up as binary data.
 // Usage:  xADDR,LEN
 // ADDR and LEN are both base 16.
@@ -3503,6 +3623,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   if (supports_memory_tagging())
     reply << "memory-tagging+;";
 
+  reply << "MultiMemRead+;";
   return SendPacket(reply.str().c_str());
 }
 
