@@ -2082,13 +2082,6 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,sve-b16b16"in {
   defm SVBFMAXNM : BfSingleMultiVector<"maxnm">;
 }
 
-let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,sve-bfscale" in {
-  // BFMUL
-  defm SVBFMUL : BfSingleMultiVector<"mul">;
-  // BFSCALE
-  defm SVBFSCALE : BfSingleMultiVector<"scale">;
-}
-
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
   // == ADD (vectors) ==
   def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
