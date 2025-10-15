@@ -141,7 +141,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
-      const TargetLibraryInfo &TLI);
+      const TargetLibraryInfo &TLI, bool FoldTailByMasking);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
