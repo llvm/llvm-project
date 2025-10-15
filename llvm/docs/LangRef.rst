@@ -30984,9 +30984,8 @@ Overview:
 """""""""
 
 The ``llvm.reloc.none`` intrinsic emits a no-op relocation against a given
-operand symbol. This can bring the symbol
-definition into the link without emitting any code or data to the binary for
-that purpose.
+operand symbol. This can bring the symbol definition into the link without
+emitting any code or data to the binary for that purpose.
 
 Arguments:
 """"""""""
@@ -30997,7 +30996,7 @@ argument.
 Semantics:
 """"""""""
 
-This intrinsic emits a no-op relocation for the symbol the location of the
+This intrinsic emits a no-op relocation for the symbol at the location of the
 intrinsic call.
 
 
