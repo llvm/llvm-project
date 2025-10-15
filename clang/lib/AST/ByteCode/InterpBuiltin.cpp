@@ -2790,6 +2790,34 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pshufb(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
+  const Pointer &Control = S.Stk.pop<Pointer>();
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElems = Dst.getNumElems();
+  assert(NumElems == Control.getNumElems());
+  assert(NumElems == Dst.getNumElems());
+
+  for (unsigned Idx = 0; Idx != NumElems; ++Idx) {
+    uint8_t Ctlb = static_cast<uint8_t>(Control.elem<int8_t>(Idx));
+
+    if (Ctlb & 0x80) {
+      Dst.elem<int8_t>(Idx) = 0;
+    } else {
+      unsigned LaneBase = (Idx / 16) * 16;
+      unsigned SrcOffset = Ctlb & 0x0F;
+      unsigned SrcIdx = LaneBase + SrcOffset;
+
+      Dst.elem<int8_t>(Idx) = Src.elem<int8_t>(SrcIdx);
+    }
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
                                        const CallExpr *Call, bool IsShufHW) {
   assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
@@ -3942,6 +3970,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_pshufb128:
+  case X86::BI__builtin_ia32_pshufb256:
+  case X86::BI__builtin_ia32_pshufb512:
+    return interp__builtin_ia32_pshufb(S, OpPC, Call);
 
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
