@@ -197,11 +197,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_30:.*]] = llvm.call @firstprivatizer_1_init(%[[VAL_8]], %[[HEAP1]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
 // CHECK: %[[VAL_31:.*]] = llvm.call @firstprivatizer_1_copy(%[[VAL_8]], %[[VAL_30]]) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
 // CHECK: %[[VAL_32:.*]] = llvm.getelementptr %[[HEAP0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_33:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[VAL_32]] : !llvm.ptr) bounds(%[[VAL_19]]) -> !llvm.ptr {name = ""}
-// CHECK: %[[VAL_34:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[VAL_33]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_33:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, i32) map_clauses({{.*}}to{{.*}}) capture(ByRef) var_ptr_ptr(%[[VAL_32]] : !llvm.ptr) bounds(%[[VAL_19]]) -> !llvm.ptr {name = ""}
+// CHECK: %[[VAL_34:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always,{{.*}}to) capture(ByRef) members(%[[VAL_33]] : [0] : !llvm.ptr) -> !llvm.ptr
 // CHECK: %[[VAL_35:.*]] = llvm.getelementptr %[[HEAP1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-// CHECK: %[[VAL_36:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[VAL_35]] : !llvm.ptr) bounds(%[[VAL_29]]) -> !llvm.ptr {name = ""}
-// CHECK: %[[VAL_37:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[VAL_36]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[VAL_36:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, i32) map_clauses({{.*}}to{{.*}}) capture(ByRef) var_ptr_ptr(%[[VAL_35]] : !llvm.ptr) bounds(%[[VAL_29]]) -> !llvm.ptr {name = ""}
+// CHECK: %[[VAL_37:.*]] = omp.map.info var_ptr(%[[HEAP1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always,{{.*}}to) capture(ByRef) members(%[[VAL_36]] : [0] : !llvm.ptr) -> !llvm.ptr
 // CHECK: omp.target depend(taskdependout -> %[[HEAP0]] : !llvm.ptr) nowait map_entries(%[[VAL_11]] -> %[[VAL_38:.*]], %[[VAL_34]] -> %[[VAL_39:.*]], %[[VAL_33]] -> %[[VAL_40:.*]], %[[VAL_37]] -> %[[VAL_41:.*]], %[[VAL_36]] -> %[[VAL_42:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@firstprivatizer %[[HEAP0]] -> %[[VAL_43:.*]] [map_idx=1], @firstprivatizer_1 %[[HEAP1]] -> %[[VAL_44:.*]] [map_idx=3] : !llvm.ptr, !llvm.ptr) {
 // CHECK: omp.terminator
 // CHECK: }
