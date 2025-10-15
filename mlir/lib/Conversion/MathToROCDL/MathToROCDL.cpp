@@ -198,13 +198,14 @@ void ConvertMathToROCDLPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
 
   // Only populate chipset-dependent patterns if chipset is specified
+  FailureOr<amdgpu::Chipset> maybeChipset;
   if (!chipset.empty()) {
-    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
+    maybeChipset = amdgpu::Chipset::parse(chipset);
     if (failed(maybeChipset)) {
       return signalPassFailure();
     }
-    populateMathToROCDLConversionPatterns(converter, patterns, *maybeChipset);
   }
+  populateMathToROCDLConversionPatterns(converter, patterns, *maybeChipset);
 
   ConversionTarget target(getContext());
   target
