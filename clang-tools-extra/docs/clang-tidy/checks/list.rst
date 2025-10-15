@@ -368,6 +368,7 @@ Clang-Tidy Checks
    :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
    :doc:`readability-ambiguous-smartptr-reset-call <readability/ambiguous-smartptr-reset-call>`, "Yes"
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
+   :doc:`readability-avoid-default-lambda-capture <readability/avoid-default-lambda-capture>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
@@ -377,7 +378,6 @@ Clang-Tidy Checks
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
    :doc:`readability-container-size-empty <readability/container-size-empty>`, "Yes"
    :doc:`readability-convert-member-functions-to-static <readability/convert-member-functions-to-static>`, "Yes"
-   :doc:`readability-avoid-default-lambda-capture <readability/avoid-default-lambda-capture>`, "Yes"
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
