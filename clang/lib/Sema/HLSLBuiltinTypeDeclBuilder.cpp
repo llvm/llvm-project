@@ -144,6 +144,7 @@ private:
     _2,
     _3,
     _4,
+    _5,
     Handle = 128,
     CounterHandle,
     LastStmt
@@ -190,6 +191,9 @@ public:
   template <typename T>
   BuiltinTypeMethodBuilder &
   accessCounterHandleFieldOnResource(T ResourceRecord);
+  template <typename ResourceT, typename ValueT>
+  BuiltinTypeMethodBuilder &
+  setCounterHandleFieldOnResource(ResourceT ResourceRecord, ValueT HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeMethodBuilder &returnThis();
   BuiltinTypeDeclBuilder &finalize();
@@ -205,6 +209,11 @@ private:
     if (!Method)
       createDecl();
   }
+
+  template <typename ResourceT, typename ValueT>
+  BuiltinTypeMethodBuilder &setFieldOnResource(ResourceT ResourceRecord,
+                                               ValueT HandleValue,
+                                               FieldDecl *HandleField);
 };
 
 TemplateParameterListBuilder::~TemplateParameterListBuilder() {
@@ -592,13 +601,27 @@ template <typename ResourceT, typename ValueT>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::setHandleFieldOnResource(ResourceT ResourceRecord,
                                                    ValueT HandleValue) {
+  return setFieldOnResource(ResourceRecord, HandleValue,
+                            DeclBuilder.getResourceHandleField());
+}
+
+template <typename ResourceT, typename ValueT>
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::setCounterHandleFieldOnResource(
+    ResourceT ResourceRecord, ValueT HandleValue) {
+  return setFieldOnResource(ResourceRecord, HandleValue,
+                            DeclBuilder.getResourceCounterHandleField());
+}
+
+template <typename ResourceT, typename ValueT>
+BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::setFieldOnResource(
+    ResourceT ResourceRecord, ValueT HandleValue, FieldDecl *HandleField) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
   Expr *HandleValueExpr = convertPlaceholder(HandleValue);
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
   MemberExpr *HandleMemberExpr = MemberExpr::CreateImplicit(
       AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
       OK_Ordinary);
@@ -829,6 +852,18 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
       .finalize();
 }
 
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addStaticInitializationFunctions(bool HasCounter) {
+  if (HasCounter) {
+    addCreateFromBindingWithImplicitCounter();
+    addCreateFromImplicitBindingWithImplicitCounter();
+  } else {
+    addCreateFromBinding();
+    addCreateFromImplicitBinding();
+  }
+  return *this;
+}
+
 // Adds static method that initializes resource from binding:
 //
 // static Resource<T> __createFromBinding(unsigned registerNo,
@@ -899,6 +934,102 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
                    HandleType, PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3,
                    PH::_4)
       .setHandleFieldOnResource(TmpVar, PH::LastStmt)
+      .returnValue(TmpVar)
+      .finalize();
+}
+
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T>
+// __createFromBindingWithImplicitCounter(unsigned registerNo,
+//                                        unsigned spaceNo, int range,
+//                                        unsigned index, const char *name,
+//                                        unsigned counterOrderId) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefrombinding(
+//       tmp.__handle, registerNo, spaceNo, range, index, name);
+//   tmp.__counter_handle =
+//       __builtin_hlsl_resource_counterhandlefromimplicitbinding(
+//           tmp.__handle, counterOrderId, spaceNo);
+//   return tmp;
+// }
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCreateFromBindingWithImplicitCounter() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+  QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
+  BuiltinTypeMethodBuilder::LocalVar TmpVar("tmp", RecordType);
+
+  return BuiltinTypeMethodBuilder(*this,
+                                  "__createFromBindingWithImplicitCounter",
+                                  RecordType, false, false, SC_Static)
+      .addParam("registerNo", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .addParam("counterOrderId", AST.UnsignedIntTy)
+      .declareLocalVar(TmpVar)
+      .accessHandleFieldOnResource(TmpVar)
+      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
+                   PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
+      .setHandleFieldOnResource(TmpVar, PH::LastStmt)
+      .accessHandleFieldOnResource(TmpVar)
+      .callBuiltin("__builtin_hlsl_resource_counterhandlefromimplicitbinding",
+                   HandleType, PH::LastStmt, PH::_5, PH::_1)
+      .setCounterHandleFieldOnResource(TmpVar, PH::LastStmt)
+      .returnValue(TmpVar)
+      .finalize();
+}
+
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T>
+// __createFromImplicitBindingWithImplicitCounter(unsigned orderId,
+//                                                unsigned spaceNo, int range,
+//                                                unsigned index,
+//                                                const char *name,
+//                                                unsigned counterOrderId) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefromimplicitbinding(
+//       tmp.__handle, orderId, spaceNo, range, index, name);
+//   tmp.__counter_handle =
+//       __builtin_hlsl_resource_counterhandlefromimplicitbinding(
+//           tmp.__handle, counterOrderId, spaceNo);
+//   return tmp;
+// }
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCreateFromImplicitBindingWithImplicitCounter() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+  QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
+  BuiltinTypeMethodBuilder::LocalVar TmpVar("tmp", RecordType);
+
+  return BuiltinTypeMethodBuilder(
+             *this, "__createFromImplicitBindingWithImplicitCounter",
+             RecordType, false, false, SC_Static)
+      .addParam("orderId", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .addParam("counterOrderId", AST.UnsignedIntTy)
+      .declareLocalVar(TmpVar)
+      .accessHandleFieldOnResource(TmpVar)
+      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
+                   HandleType, PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3,
+                   PH::_4)
+      .setHandleFieldOnResource(TmpVar, PH::LastStmt)
+      .accessHandleFieldOnResource(TmpVar)
+      .callBuiltin("__builtin_hlsl_resource_counterhandlefromimplicitbinding",
+                   HandleType, PH::LastStmt, PH::_5, PH::_1)
+      .setCounterHandleFieldOnResource(TmpVar, PH::LastStmt)
       .returnValue(TmpVar)
       .finalize();
 }
@@ -1048,7 +1179,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
   return BuiltinTypeMethodBuilder(*this, "IncrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
-                   PH::Handle, getConstantIntExpr(1))
+                   PH::CounterHandle, getConstantIntExpr(1))
       .finalize();
 }
 
@@ -1057,7 +1188,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
   return BuiltinTypeMethodBuilder(*this, "DecrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
-                   PH::Handle, getConstantIntExpr(-1))
+                   PH::CounterHandle, getConstantIntExpr(-1))
       .finalize();
 }
 
@@ -1102,7 +1233,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
   return BuiltinTypeMethodBuilder(*this, "Append", AST.VoidTy)
       .addParam("value", ElemTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
-                   PH::Handle, getConstantIntExpr(1))
+                   PH::CounterHandle, getConstantIntExpr(1))
       .callBuiltin("__builtin_hlsl_resource_getpointer",
                    AST.getPointerType(AddrSpaceElemTy), PH::Handle,
                    PH::LastStmt)
@@ -1119,7 +1250,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
       AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   return BuiltinTypeMethodBuilder(*this, "Consume", ElemTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
-                   PH::Handle, getConstantIntExpr(-1))
+                   PH::CounterHandle, getConstantIntExpr(-1))
       .callBuiltin("__builtin_hlsl_resource_getpointer",
                    AST.getPointerType(AddrSpaceElemTy), PH::Handle,
                    PH::LastStmt)

@@ -260,8 +260,12 @@ class NSAHelper {
 }
 
 class MIMGNSAHelper<int num_addrs,
-                    list<RegisterClass> addr_types=!listsplat(VGPR_32, num_addrs)>
-  : NSAHelper<> {
+                    list<RegisterOperand> addr_types_in=[]>
+    : NSAHelper<> {
+  list<RegisterOperand> addr_types =
+    !if(!empty(addr_types_in), !listsplat(VGPROp_32, num_addrs),
+        addr_types_in);
+
   list<string> AddrAsmNames = !foreach(i, !range(num_addrs), "vaddr" # i);
   let AddrIns = !dag(ins, addr_types, AddrAsmNames);
   let AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
@@ -358,7 +362,7 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
 // Base class for all NSA MIMG instructions.
 // Note that 1-dword addresses always use non-NSA variants.
 class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
-                     list<RegisterClass> addr_types=[],
+                     list<RegisterOperand> addr_types=[],
                      RegisterOperand LastAddrRC = VGPROp_32>
   : MIMG<outs, dns>, MIMGe_gfx11<op> {
   let SubtargetPredicate = isGFX11Only;
@@ -378,7 +382,7 @@ class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
 }
 
 class VIMAGE_gfx12<int op, dag outs, int num_addrs, string dns="",
-                   list<RegisterClass> addr_types=[]>
+                   list<RegisterOperand> addr_types=[]>
   : VIMAGE<outs, dns>, VIMAGEe<op> {
   let SubtargetPredicate = isGFX12Plus;
   let AssemblerPredicate = isGFX12Plus;
@@ -1521,12 +1525,12 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual, bit isBVH8> {
   int VAddrDwords = !srl(Size, 5);
 
   int GFX11PlusNSAAddrs = !if(IsA16, 4, 5);
-  RegisterClass node_ptr_type = !if(Is64, VReg_64, VGPR_32);
-  list<RegisterClass> GFX11PlusAddrTypes =
-     !cond(isBVH8 : [node_ptr_type, VReg_64, VReg_96, VReg_96, VGPR_32],
-           isDual : [node_ptr_type, VReg_64, VReg_96, VReg_96, VReg_64],
-           IsA16  : [node_ptr_type, VGPR_32, VReg_96, VReg_96],
-           true   : [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]);
+  RegisterOperand node_ptr_type = !if(Is64, VGPROp_64, VGPROp_32);
+  list<RegisterOperand> GFX11PlusAddrTypes =
+     !cond(isBVH8 : [node_ptr_type, VGPROp_64, VGPROp_96, VGPROp_96, VGPROp_32],
+           isDual : [node_ptr_type, VGPROp_64, VGPROp_96, VGPROp_96, VGPROp_64],
+           IsA16  : [node_ptr_type, VGPROp_32, VGPROp_96, VGPROp_96],
+           true   : [node_ptr_type, VGPROp_32, VGPROp_96, VGPROp_96, VGPROp_96]);
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterOperand AddrRC>
@@ -1552,7 +1556,7 @@ class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterOperand AddrRC>
 }
 
 class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
-                                  list<RegisterClass> addr_types>
+                                  list<RegisterOperand> addr_types>
     : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "GFX11",
                      addr_types> {
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128_XNULL:$srsrc, A16:$a16));
@@ -1561,7 +1565,7 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
 
 class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                                 bit isDual, bit isBVH8,
-                                list<RegisterClass> addr_types>
+                                list<RegisterOperand> addr_types>
     : VIMAGE_gfx12<op.GFX12, !if(!or(isDual, isBVH8),
                                  (outs VReg_320:$vdata, VReg_96:$ray_origin_out,
                                        VReg_96:$ray_dir_out),

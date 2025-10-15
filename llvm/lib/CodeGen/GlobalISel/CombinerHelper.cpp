@@ -1215,7 +1215,7 @@ bool CombinerHelper::isIndexedLoadStoreLegal(GLoadStore &LdSt) const {
   LLT MemTy = LdSt.getMMO().getMemoryType();
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs(
       {{MemTy, MemTy.getSizeInBits().getKnownMinValue(),
-        AtomicOrdering::NotAtomic}});
+        AtomicOrdering::NotAtomic, AtomicOrdering::NotAtomic}});
   unsigned IndexedOpc = getIndexedOpc(LdSt.getOpcode());
   SmallVector<LLT> OpTys;
   if (IndexedOpc == TargetOpcode::G_INDEXED_STORE)
@@ -1728,6 +1728,7 @@ static APFloat constantFoldFpUnary(const MachineInstr &MI,
     Result.clearSign();
     return Result;
   }
+  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     bool Unused;
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());

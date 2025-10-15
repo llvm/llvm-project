@@ -374,6 +374,12 @@ public:
                         resOperands, attrs);
   }
 
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+                           mlir::ValueRange operands = mlir::ValueRange(),
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
+  }
+
   cir::CallOp createTryCallOp(
       mlir::Location loc, mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
       mlir::Type returnType = cir::VoidType(),
@@ -443,6 +449,11 @@ public:
   mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
     assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
     return createBitcast(src, getPointerTo(newPointeeTy));
+  }
+
+  mlir::Value createPtrIsNull(mlir::Value ptr) {
+    mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
+    return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
   }
 
   //===--------------------------------------------------------------------===//
@@ -636,6 +647,12 @@ public:
 
   mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {
     return getI64IntegerAttr(size.getQuantity());
+  }
+
+  // Creates constant nullptr for pointer type ty.
+  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
+    return cir::ConstantOp::create(*this, loc, getConstPtrAttr(ty, 0));
   }
 
   /// Create a loop condition.

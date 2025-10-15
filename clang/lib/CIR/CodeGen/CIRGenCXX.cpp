@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
@@ -95,7 +96,63 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     return;
   }
 
-  cgf.cgm.errorNYI(vd->getSourceRange(), "global with destructor");
+  // If not constant storage we'll emit this regardless of NeedsDtor value.
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // Prepare the dtor region.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::Block *block = builder.createBlock(&addr.getDtorRegion());
+  CIRGenFunction::LexicalScope lexScope{cgf, addr.getLoc(),
+                                        builder.getInsertionBlock()};
+  lexScope.setAsGlobalInit();
+  builder.setInsertionPointToStart(block);
+
+  CIRGenModule &cgm = cgf.cgm;
+  QualType type = vd->getType();
+
+  // Special-case non-array C++ destructors, if they have the right signature.
+  // Under some ABIs, destructors return this instead of void, and cannot be
+  // passed directly to __cxa_atexit if the target does not allow this
+  // mismatch.
+  const CXXRecordDecl *record = type->getAsCXXRecordDecl();
+  bool canRegisterDestructor =
+      record && (!cgm.getCXXABI().hasThisReturn(
+                     GlobalDecl(record->getDestructor(), Dtor_Complete)) ||
+                 cgm.getCXXABI().canCallMismatchedFunctionType());
+
+  // If __cxa_atexit is disabled via a flag, a different helper function is
+  // generated elsewhere which uses atexit instead, and it takes the destructor
+  // directly.
+  cir::FuncOp fnOp;
+  if (record && (canRegisterDestructor || cgm.getCodeGenOpts().CXAAtExit)) {
+    if (vd->getTLSKind())
+      cgm.errorNYI(vd->getSourceRange(), "TLS destructor");
+    assert(!record->hasTrivialDestructor());
+    assert(!cir::MissingFeatures::openCL());
+    CXXDestructorDecl *dtor = record->getDestructor();
+    // In LLVM OG codegen this is done in registerGlobalDtor, but CIRGen
+    // relies on LoweringPrepare for further decoupling, so build the
+    // call right here.
+    auto gd = GlobalDecl(dtor, Dtor_Complete);
+    fnOp = cgm.getAddrAndTypeOfCXXStructor(gd).second;
+    cgf.getBuilder().createCallOp(
+        cgf.getLoc(vd->getSourceRange()),
+        mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
+        mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+  } else {
+    cgm.errorNYI(vd->getSourceRange(), "array destructor");
+  }
+  assert(fnOp && "expected cir.func");
+  cgm.getCXXABI().registerGlobalDtor(vd, fnOp, nullptr);
+
+  builder.setInsertionPointToEnd(block);
+  if (block->empty()) {
+    block->erase();
+    // Don't confuse lexical cleanup.
+    builder.clearInsertionPoint();
+  } else {
+    builder.create<cir::YieldOp>(addr.getLoc());
+  }
 }
 
 cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl gd) {

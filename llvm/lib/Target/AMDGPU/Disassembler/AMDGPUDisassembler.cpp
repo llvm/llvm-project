@@ -1551,7 +1551,7 @@ AMDGPUDisassembler::decodeMandatoryLiteral64Constant(uint64_t Val) const {
   HasLiteral = true;
   Literal = Literal64 = Val;
 
-  bool UseLit64 = Lo_32(Literal64) != 0;
+  bool UseLit64 = Hi_32(Literal64) == 0;
   return UseLit64 ? MCOperand::createExpr(AMDGPUMCExpr::createLit(
                         LitModifier::Lit64, Literal64, getContext()))
                   : MCOperand::createImm(Literal64);
@@ -1584,11 +1584,11 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   if (CanUse64BitLiterals) {
     if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
         OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT64)
-      UseLit64 = !isInt<32>(Val) || !isUInt<32>(Val);
+      UseLit64 = false;
     else if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
              OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
              OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64)
-      UseLit64 = Lo_32(Val) != 0;
+      UseLit64 = Hi_32(Literal64) == 0;
   }
 
   return UseLit64 ? MCOperand::createExpr(AMDGPUMCExpr::createLit(
@@ -1614,12 +1614,12 @@ AMDGPUDisassembler::decodeLiteral64Constant(const MCInst &Inst) const {
   const MCOperandInfo &OpDesc = Desc.operands()[Inst.getNumOperands()];
   if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
       OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT64) {
-    UseLit64 = !isInt<32>(Literal64) || !isUInt<32>(Literal64);
+    UseLit64 = false;
   } else {
     assert(OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
            OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
            OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64);
-    UseLit64 = Lo_32(Literal64) != 0;
+    UseLit64 = Hi_32(Literal64) == 0;
   }
 
   return UseLit64 ? MCOperand::createExpr(AMDGPUMCExpr::createLit(

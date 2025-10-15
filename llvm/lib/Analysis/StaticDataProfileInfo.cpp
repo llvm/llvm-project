@@ -6,6 +6,46 @@
 #include "llvm/ProfileData/InstrProf.h"
 
 using namespace llvm;
+
+namespace llvm {
+namespace memprof {
+// Returns true iff the global variable has custom section either by
+// __attribute__((section("name")))
+// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
+// or #pragma clang section directives
+// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
+static bool hasExplicitSectionName(const GlobalVariable &GVar) {
+  if (GVar.hasSection())
+    return true;
+
+  auto Attrs = GVar.getAttributes();
+  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
+      Attrs.hasAttribute("relro-section") ||
+      Attrs.hasAttribute("rodata-section"))
+    return true;
+  return false;
+}
+
+AnnotationKind getAnnotationKind(const GlobalVariable &GV) {
+  if (GV.isDeclarationForLinker())
+    return AnnotationKind::DeclForLinker;
+  // Skip 'llvm.'-prefixed global variables conservatively because they are
+  // often handled specially,
+  StringRef Name = GV.getName();
+  if (Name.starts_with("llvm."))
+    return AnnotationKind::ReservedName;
+  // Respect user-specified custom data sections.
+  if (hasExplicitSectionName(GV))
+    return AnnotationKind::ExplicitSection;
+  return AnnotationKind::AnnotationOK;
+}
+
+bool IsAnnotationOK(const GlobalVariable &GV) {
+  return getAnnotationKind(GV) == AnnotationKind::AnnotationOK;
+}
+} // namespace memprof
+} // namespace llvm
+
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
   if (!Count) {
@@ -20,6 +60,36 @@ void StaticDataProfileInfo::addConstantProfileCount(
     OriginalCount = getInstrMaxCountValue();
 }
 
+StaticDataProfileInfo::StaticDataHotness
+StaticDataProfileInfo::getConstantHotnessUsingProfileCount(
+    const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const {
+  // The accummulated counter shows the constant is hot. Return enum 'hot'
+  // whether this variable is seen by unprofiled functions or not.
+  if (PSI->isHotCount(Count))
+    return StaticDataHotness::Hot;
+  // The constant is not hot, and seen by unprofiled functions. We don't want to
+  // assign it to unlikely sections, even if the counter says 'cold'. So return
+  // enum 'LukewarmOrUnknown'.
+  if (ConstantWithoutCounts.count(C))
+    return StaticDataHotness::LukewarmOrUnknown;
+  // The accummulated counter shows the constant is cold so return enum 'cold'.
+  if (PSI->isColdCount(Count))
+    return StaticDataHotness::Cold;
+
+  return StaticDataHotness::LukewarmOrUnknown;
+}
+
+StringRef StaticDataProfileInfo::hotnessToStr(StaticDataHotness Hotness) const {
+  switch (Hotness) {
+  case StaticDataHotness::Cold:
+    return "unlikely";
+  case StaticDataHotness::Hot:
+    return "hot";
+  default:
+    return "";
+  }
+}
+
 std::optional<uint64_t>
 StaticDataProfileInfo::getConstantProfileCount(const Constant *C) const {
   auto I = ConstantProfileCounts.find(C);
@@ -30,23 +100,10 @@ StaticDataProfileInfo::getConstantProfileCount(const Constant *C) const {
 
 StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     const Constant *C, const ProfileSummaryInfo *PSI) const {
-  auto Count = getConstantProfileCount(C);
+  std::optional<uint64_t> Count = getConstantProfileCount(C);
   if (!Count)
     return "";
-  // The accummulated counter shows the constant is hot. Return 'hot' whether
-  // this variable is seen by unprofiled functions or not.
-  if (PSI->isHotCount(*Count))
-    return "hot";
-  // The constant is not hot, and seen by unprofiled functions. We don't want to
-  // assign it to unlikely sections, even if the counter says 'cold'. So return
-  // an empty prefix before checking whether the counter is cold.
-  if (ConstantWithoutCounts.count(C))
-    return "";
-  // The accummulated counter shows the constant is cold. Return 'unlikely'.
-  if (PSI->isColdCount(*Count))
-    return "unlikely";
-  // The counter says lukewarm. Return an empty prefix.
-  return "";
+  return hotnessToStr(getConstantHotnessUsingProfileCount(C, PSI, *Count));
 }
 
 bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {

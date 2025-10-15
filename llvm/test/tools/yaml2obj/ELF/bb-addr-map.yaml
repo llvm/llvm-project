@@ -72,6 +72,13 @@
 # CHECK-NEXT:     0000: 03202000 00000000 0000010E 01000203
 # CHECK-NEXT:   )
 
+# Case 10: Specify basic block hash.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 04602000 00000000 0000010E 01000203
+# CHECK-NEXT:     0010: 23010000 00000000
+# CHECK-NEXT:   )
+
 
 --- !ELF
 FileHeader:
@@ -176,6 +183,22 @@ Sections:
                Metadata:        0x00000003
                CallsiteEndOffsets: []
 
+## 10) We can produce a SHT_LLVM_BB_ADDR_MAP section with basic block hash.
+  - Name: '.llvm_bb_addr_map (10)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 4
+        Feature: 0x60
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+             - ID:              14
+               AddressOffset:   0x00000001
+               Size:            0x00000002
+               Metadata:        0x00000003
+               CallsiteEndOffsets: []
+               Hash:            0x123
+
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID
 # RUN: not yaml2obj --docnum=2 -DSIZE="0" %s 2>&1 | FileCheck %s --check-prefix=INVALID
@@ -197,7 +220,7 @@ Sections:
 
 ## Check that yaml2obj generates a warning when we use unsupported versions.
 # RUN: yaml2obj --docnum=3  %s 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
-# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 4; encoding using the most recent version
+# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 5; encoding using the most recent version
 
 --- !ELF
 FileHeader:
@@ -209,4 +232,4 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
 ##  Specify unsupported version
-      - Version: 4
+      - Version: 5
