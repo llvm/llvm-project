@@ -42,7 +42,6 @@
 # RUN: cat warn.txt | FileCheck %s --check-prefix=WARNING
 # WARNING: --script at path b.t will override --default-script at path def.t
 
-
 # RUN: not ld.lld --default-script not-exist.t b.t -T a.t a.o 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: error: cannot find linker script not-exist.t
 
@@ -72,4 +71,3 @@ SECTIONS {
   .foo1 : {}
   .foo0 : {}
 }
-
