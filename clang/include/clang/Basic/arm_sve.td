@@ -984,6 +984,11 @@ let SMETargetGuard = "sme2p2" in {
 def SVCOMPACT : SInst<"svcompact[_{d}]", "dPd",  "ilUiUlfd", MergeNone, "aarch64_sve_compact", [VerifyRuntimeMode]>;
 }
 
+let SVETargetGuard = "sve2p2|sme2p2",  SMETargetGuard = "sme2p2" in {
+def SVCOMPACT_BH : SInst<"svcompact[_{d}]", "dPd",  "cUcsUsmbh", MergeNone, "aarch64_sve_compact", [VerifyRuntimeMode]>;
+def SVEXPAND  : SInst<"svexpand[_{d}]",  "dPd",  "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_expand",  [VerifyRuntimeMode]>;
+}
+
 // Note: svdup_lane is implemented using the intrinsic for TBL to represent a
 // splat of any possible lane. It is upto LLVM to pick a more efficient
 // instruction such as DUP (indexed) if the lane index fits the range of the
@@ -1110,6 +1115,11 @@ def SVCNTD : SInst<"svcntd", "nv", "", MergeNone, "aarch64_sve_cntd", [IsAppendS
 
 def SVCNTP : SInst<"svcntp_{d}",  "nPP", "PcPsPiPl",         MergeNone, "aarch64_sve_cntp", [VerifyRuntimeMode]>;
 def SVLEN  : SInst<"svlen[_{d}]", "nd",  "csilUcUsUiUlhfdb", MergeNone, "", [VerifyRuntimeMode]>;
+
+let SVETargetGuard = "sve2p2|sme2p2",  SMETargetGuard = "sve2p2|sme2p2" in {
+  def SVFIRSTP  : SInst<"svfirstp_{d}", "lPP", "PcPsPiPl", MergeNone, "aarch64_sve_firstp", [VerifyRuntimeMode], []>;
+  def SVLASTP  : SInst<"svlastp_{d}", "lPP", "PcPsPiPl", MergeNone, "aarch64_sve_lastp", [VerifyRuntimeMode], []>;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Saturating scalar arithmetic
