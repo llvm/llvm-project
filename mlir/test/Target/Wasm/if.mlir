@@ -50,7 +50,7 @@
 )
 )
 */
-// CHECK-LABEL:   wasmssa.func nested @func_0(
+// CHECK-LABEL:   wasmssa.func @func_0(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 1 : i32
@@ -71,7 +71,7 @@
 // CHECK:         ^bb1(%[[VAL_11:.*]]: i32):
 // CHECK:           wasmssa.return %[[VAL_11]] : i32
 
-// CHECK-LABEL:   wasmssa.func nested @func_1(
+// CHECK-LABEL:   wasmssa.func @func_1(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
@@ -86,7 +86,7 @@
 // CHECK:         ^bb1(%[[VAL_7:.*]]: i32):
 // CHECK:           wasmssa.return %[[VAL_7]] : i32
 
-// CHECK-LABEL:   wasmssa.func nested @func_2(
+// CHECK-LABEL:   wasmssa.func @func_2(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.ctz %[[VAL_0]] : i32

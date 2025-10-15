@@ -12,7 +12,7 @@
     end))
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() -> i32 {
+// CHECK-LABEL:   wasmssa.func @func_0() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 14 : i32
 // CHECK:           wasmssa.block(%[[VAL_0]]) : i32 : {
 // CHECK:           ^bb0(%[[VAL_1:.*]]: i32):

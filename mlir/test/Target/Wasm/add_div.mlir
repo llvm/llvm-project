@@ -19,9 +19,9 @@
   (export "add" (func $add)))
 */
 
-// CHECK-LABEL:   wasmssa.import_func "twoTimes" from "env" as @func_0 {sym_visibility = "nested", type = (i32) -> i32}
+// CHECK-LABEL:   wasmssa.import_func "twoTimes" from "env" as @func_0 {type = (i32) -> i32}
 
-// CHECK-LABEL:   wasmssa.func public @add(
+// CHECK-LABEL:   wasmssa.func exported @add(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>,
 // CHECK-SAME:      %[[ARG1:.*]]: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
@@ -33,8 +33,8 @@
 // CHECK:           %[[VAL_6:.*]] = wasmssa.div_si %[[VAL_4]] %[[VAL_5]] : i32
 // CHECK:           wasmssa.return %[[VAL_6]] : i32
 // CHECK:         }
-// CHECK:         wasmssa.memory @memory public !wasmssa<limit[2:]>
+// CHECK:         wasmssa.memory exported @memory !wasmssa<limit[2:]>
 
-// CHECK-LABEL:   wasmssa.global @global_0 i32 mutable nested : {
+// CHECK-LABEL:   wasmssa.global @global_0 i32 mutable : {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 66560 : i32
 // CHECK:           wasmssa.return %[[VAL_0]] : i32

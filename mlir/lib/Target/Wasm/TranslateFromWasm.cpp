@@ -14,6 +14,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
@@ -1831,7 +1832,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::EXPORT>(ParserHead &ph,
     return failure();
 
   Operation *op = SymbolTable::lookupSymbolIn(mOp, *currentSymbol);
-  op->setAttr("sym_visibility", StringAttr::get(ctx, "public"));
+  op->setAttr("exported", UnitAttr::get(op->getContext()));
   StringAttr symName = SymbolTable::getSymbolName(op);
   return SymbolTable{mOp}.rename(symName, *exportName);
 }

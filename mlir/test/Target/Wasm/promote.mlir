@@ -8,7 +8,7 @@
   )
 )*/
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() -> f64 {
+// CHECK-LABEL:   wasmssa.func @func_0() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.050000e+01 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.promote %[[VAL_0]] : f32 to f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64

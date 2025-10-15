@@ -32,7 +32,7 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() {
+// CHECK-LABEL:   wasmssa.func @func_0() {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local of type i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.local of type i32
 // CHECK:           wasmssa.loop : {

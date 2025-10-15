@@ -19,32 +19,32 @@
   )
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() -> f64 {
+// CHECK-LABEL:   wasmssa.func @func_0() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const -1.210000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.ceil %[[VAL_0]] : f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64
 
-// CHECK-LABEL:   wasmssa.func nested @func_1() -> f32 {
+// CHECK-LABEL:   wasmssa.func @func_1() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.618000e+00 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.ceil %[[VAL_0]] : f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func nested @func_2() -> f64 {
+// CHECK-LABEL:   wasmssa.func @func_2() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const -1.210000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.floor %[[VAL_0]] : f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64
 
-// CHECK-LABEL:   wasmssa.func nested @func_3() -> f32 {
+// CHECK-LABEL:   wasmssa.func @func_3() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.618000e+00 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.floor %[[VAL_0]] : f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func nested @func_4() -> f64 {
+// CHECK-LABEL:   wasmssa.func @func_4() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const -1.210000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.trunc %[[VAL_0]] : f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64
 
-// CHECK-LABEL:   wasmssa.func nested @func_5() -> f32 {
+// CHECK-LABEL:   wasmssa.func @func_5() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.618000e+00 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.trunc %[[VAL_0]] : f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32

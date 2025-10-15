@@ -44,42 +44,42 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func public @convert_i32_u_to_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i32_u_to_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_u %[[VAL_0]] : i32 to f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func public @convert_i32_s_to_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i32_s_to_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 42 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_s %[[VAL_0]] : i32 to f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func public @convert_i64_u_to_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i64_u_to_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 17 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_u %[[VAL_0]] : i64 to f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func public @convert_i64s_to_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i64s_to_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_s %[[VAL_0]] : i64 to f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func public @convert_i32_u_to_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i32_u_to_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_u %[[VAL_0]] : i32 to f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64
 
-// CHECK-LABEL:   wasmssa.func public @convert_i32_s_to_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i32_s_to_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 42 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_s %[[VAL_0]] : i32 to f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64
 
-// CHECK-LABEL:   wasmssa.func public @convert_i64_u_to_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i64_u_to_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 17 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_u %[[VAL_0]] : i64 to f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64
 
-// CHECK-LABEL:   wasmssa.func public @convert_i64s_to_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @convert_i64s_to_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.convert_s %[[VAL_0]] : i64 to f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64

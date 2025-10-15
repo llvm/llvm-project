@@ -8,7 +8,7 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func public @i_am_a_block() {
+// CHECK-LABEL:   wasmssa.func exported @i_am_a_block() {
 // CHECK:           wasmssa.block : {
 // CHECK:             wasmssa.block_return
 // CHECK:           }> ^bb1

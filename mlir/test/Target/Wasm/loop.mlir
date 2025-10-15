@@ -8,7 +8,7 @@
   )
 )*/
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() {
+// CHECK-LABEL:   wasmssa.func @func_0() {
 // CHECK:           wasmssa.loop : {
 // CHECK:             wasmssa.block_return
 // CHECK:           }> ^bb1

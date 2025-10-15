@@ -10,12 +10,12 @@
     i64.eqz)
 )
 */
-// CHECK-LABEL:   wasmssa.func public @eqz_i32() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @eqz_i32() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 13 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.eqz %[[VAL_0]] : i32 -> i32
 // CHECK:           wasmssa.return %[[VAL_1]] : i32
 
-// CHECK-LABEL:   wasmssa.func public @eqz_i64() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @eqz_i64() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 13 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.eqz %[[VAL_0]] : i64 -> i32
 // CHECK:           wasmssa.return %[[VAL_1]] : i32

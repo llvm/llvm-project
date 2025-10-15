@@ -33,37 +33,37 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() -> i64 {
+// CHECK-LABEL:   wasmssa.func @func_0() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend_i32_s %[[VAL_0]] to i64
 // CHECK:           wasmssa.return %[[VAL_1]] : i64
 
-// CHECK-LABEL:   wasmssa.func nested @func_1() -> i64 {
+// CHECK-LABEL:   wasmssa.func @func_1() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend_i32_u %[[VAL_0]] to i64
 // CHECK:           wasmssa.return %[[VAL_1]] : i64
 
-// CHECK-LABEL:   wasmssa.func nested @func_2() -> i32 {
+// CHECK-LABEL:   wasmssa.func @func_2() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend 8 : ui32 low bits from %[[VAL_0]] : i32
 // CHECK:           wasmssa.return %[[VAL_1]] : i32
 
-// CHECK-LABEL:   wasmssa.func nested @func_3() -> i32 {
+// CHECK-LABEL:   wasmssa.func @func_3() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend 16 : ui32 low bits from %[[VAL_0]] : i32
 // CHECK:           wasmssa.return %[[VAL_1]] : i32
 
-// CHECK-LABEL:   wasmssa.func nested @func_4() -> i64 {
+// CHECK-LABEL:   wasmssa.func @func_4() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend 8 : ui32 low bits from %[[VAL_0]] : i64
 // CHECK:           wasmssa.return %[[VAL_1]] : i64
 
-// CHECK-LABEL:   wasmssa.func nested @func_5() -> i64 {
+// CHECK-LABEL:   wasmssa.func @func_5() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend 16 : ui32 low bits from %[[VAL_0]] : i64
 // CHECK:           wasmssa.return %[[VAL_1]] : i64
 
-// CHECK-LABEL:   wasmssa.func nested @func_6() -> i64 {
+// CHECK-LABEL:   wasmssa.func @func_6() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.extend 32 : ui32 low bits from %[[VAL_0]] : i64
 // CHECK:           wasmssa.return %[[VAL_1]] : i64

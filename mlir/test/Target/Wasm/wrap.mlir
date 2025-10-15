@@ -8,7 +8,7 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func public @i64_wrap(
+// CHECK-LABEL:   wasmssa.func exported @i64_wrap(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i64>) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.wrap %[[VAL_0]] : i64 to i32

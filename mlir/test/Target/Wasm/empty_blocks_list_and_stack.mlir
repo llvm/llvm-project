@@ -20,7 +20,7 @@
 
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0(
+// CHECK-LABEL:   wasmssa.func @func_0(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) {
 // CHECK:           wasmssa.block : {
 // CHECK:             wasmssa.block : {
@@ -36,7 +36,7 @@
 // CHECK:         ^bb1:
 // CHECK:           wasmssa.return
 
-// CHECK-LABEL:   wasmssa.func nested @func_1(
+// CHECK-LABEL:   wasmssa.func @func_1(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) {
 // CHECK:           wasmssa.block : {
 // CHECK:             wasmssa.block_return
