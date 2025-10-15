@@ -1263,31 +1263,25 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
       return N0;
   }
 
-  // Optimize (Constant XOR a) & b & ~c -> (Constant XOR a) & (b & ~c)
-  // This allows the andn operation to be done in parallel with the xor
+  // Optimize X & b & ~c -> X & (b & ~c) when ANDN is available
+  // This allows the ANDN operation to be done in parallel with computing X
   if (Opc == ISD::AND && (TLI.hasAndNot(N1) || TLI.hasAndNot(N0)) &&
-      sd_match(N1, m_Xor(m_Value(), m_AllOnes()))) {
-    // Look for pattern: AND(AND(XOR(Constant, a), b), NOT(c))
-    // Transform to: AND(XOR(Constant, a), AND(b, NOT(c)))
+      sd_match(N1, m_Not(m_Value()))) {
+    // Look for pattern: AND(AND(X, b), NOT(c))
+    // Transform to: AND(X, AND(b, NOT(c)))
 
-    SDValue XorOp, OtherOp;
-    APInt XorConst;
+    SDValue X, B;
 
-    // Match AND(XOR(X, Constant), b) in either operand order
-    // Constants are canonicalized to RHS, so we can rely on that
-    // Use m_c_BinOp to handle commutativity of the AND
-    if (!sd_match(N0, m_c_BinOp(ISD::AND,
-                                m_AllOf(m_Xor(m_Value(), m_ConstInt(XorConst)),
-                                        m_Value(XorOp)),
-                                m_Value(OtherOp))) ||
-        XorConst.isAllOnes()) {
-      return SDValue();
+    // Match AND(X, b) - check that N0 is an AND with one use
+    if (N0.getOpcode() == ISD::AND && N0->hasOneUse()) {
+      X = N00;
+      B = N01;
+
+      // Transform: AND(AND(X, b), NOT(c))
+      // To: AND(X, AND(b, NOT(c)))
+      SDValue AndBC = DAG.getNode(ISD::AND, DL, VT, B, N1);
+      return DAG.getNode(ISD::AND, DL, VT, X, AndBC);
     }
-
-    // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
-    // To: AND(XOR(Constant, a), AND(b, NOT(c)))
-    SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, N1);
-    return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
   }
   if (Opc == ISD::XOR) {
     // (N00 ^ N01) ^ N00 --> N01
