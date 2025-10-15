@@ -116,6 +116,10 @@
 // RUN:   | FileCheck %s -check-prefix=pantherlake
 // pantherlake: "-target-cpu" "pantherlake"
 //
+// RUN: %clang --target=x86_64 -c -### %s -march=wildcatlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=wildcatlake
+// wildcatlake: "-target-cpu" "wildcatlake"
+//
 // RUN: %clang --target=x86_64 -c -### %s -march=clearwaterforest 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=clearwaterforest
 // clearwaterforest: "-target-cpu" "clearwaterforest"

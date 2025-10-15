@@ -520,6 +520,13 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
