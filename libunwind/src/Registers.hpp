@@ -1951,7 +1951,7 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   // performed by setIP.
   uint64_t pcRegister = 0;
   memmove(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
-         sizeof(pcRegister));
+          sizeof(pcRegister));
   setIP(pcRegister);
 #endif
 }

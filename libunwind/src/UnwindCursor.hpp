@@ -2010,8 +2010,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
   // re-signed the pointer, and assigning directly will attempt to incorrectly
   // sign the already signed value.
   memmove(reinterpret_cast<void *>(&_info.handler),
-          reinterpret_cast<void *>(&personality),
-          sizeof(personality));
+          reinterpret_cast<void *>(&personality), sizeof(personality));
   _info.gp = 0;
   _info.flags = 0;
   _info.format = encoding;

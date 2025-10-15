@@ -302,7 +302,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
 
       isSignalFrame = cieInfo.isSignalFrame;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64) && \
+#if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
     !defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
       // There are two ways of return address signing: pac-ret (enabled via
       // -mbranch-protection=pac-ret) and ptrauth-returns (enabled as part of
