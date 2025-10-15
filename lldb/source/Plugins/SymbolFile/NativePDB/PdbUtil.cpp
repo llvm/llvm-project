@@ -991,7 +991,7 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::WideCharacter:
     return lldb::eBasicTypeWChar;
 
-  // unsupported
+  // Not supported.
   case SimpleTypeKind::Float48:
   case SimpleTypeKind::Complex16:
   case SimpleTypeKind::Complex48:
