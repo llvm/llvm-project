@@ -57,8 +57,8 @@ class GPUFuncOp(GPUFuncOp):
         body_builder: Optional[Callable[[GPUFuncOp], None]] = None,
     ):
         """
-        Create a GPUFuncOp with the provided `function_type`, `sym_name`, 
-        `kernel`, `workgroup_attrib_attrs`, `private_attrib_attrs`, `known_block_size`, 
+        Create a GPUFuncOp with the provided `function_type`, `sym_name`,
+        `kernel`, `workgroup_attrib_attrs`, `private_attrib_attrs`, `known_block_size`,
         `known_grid_size`, and `body_builder`.
         - `function_type` is a FunctionType or a TypeAttr.
         - `sym_name` is a string or a StringAttr representing the function name.
