@@ -750,16 +750,19 @@ The reply packet starts with a comma-separated list of numbers formatted in
 base-16, denoting how many bytes were read from each range, in the same order
 as the request packet. The list is followed by a `;`, followed by a sequence of
 bytes containing binary encoded data for all memory that was read. The length
-of this sequence must be equal to the sum of the numbers provided at the start
-of the reply. The order of the binary data is the same as the order of the
-ranges in the request packet.
+of the binary encodeed data, after being decoded as required by the GDB remote
+protocol, must be equal to the sum of the numbers provided at the start of the
+reply. The order of the binary data is the same as the order of the ranges in
+the request packet.
 
-If an entire range is not readable, the stub may perform a partial read of a
-prefix of the range.
+If some part of a range is not readable, the stub may perform a partial read of
+a prefix of the range. In other words, partial reads will only ever be from the
+start of the range, never the middle or end. Support for partial reads depends
+on the debug stub.
 
-If the stub is unable to read any bytes from a particular range, it must return
-a length of "zero" for that range in the reply packet; no bytes for this memory
-range are included in the sequence of bytes that follows.
+If, by applying the rules above, the stub has read zero bytes from a range, it
+must return a length of zero for that range in the reply packet; no bytes for
+this memory range are included in the sequence of bytes that follows.
 
 A stub that supports this packet must include `MultiMemRead+` in the reply to
 `qSupported`.
@@ -778,9 +781,7 @@ send packet: $MultiMemRead:ranges:100a00,0;
 read packet: $0;
 ```
 
-In the example above, a read of zero bytes was requested. A zero-length request
-provides an alternative way of testing whether the stub supports
-`MultiMemRead`.
+In the example above, a read of zero bytes was requested.
 
 **Priority to Implement:** Only required for performance, the debugger will
 fall back to doing separate read requests if this packet is unavailable.
