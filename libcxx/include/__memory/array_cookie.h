@@ -100,7 +100,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
       __has_array_cookie<_Tp>::value, "Trying to access the array cookie of a type that is not guaranteed to have one");
 
 #if defined(_LIBCPP_ABI_ITANIUM)
-  using _ArrayCookie = __itanium_array_cookie<_Tp>;
+  using _ArrayCookie = __itanium_array_cookie;
 #elif defined(_LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES)
   using _ArrayCookie = __arm_array_cookie<_Tp>;
 #else
