@@ -2419,7 +2419,7 @@ void IROutliner::pruneIncompatibleRegions(
     if (FnForCurrCand.hasOptNone())
       continue;
 
-    if (FnForCurrCand.hasFnAttribute("nooutline")) {
+    if (FnForCurrCand.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG({
         dbgs() << "... Skipping function with nooutline attribute: "
                << FnForCurrCand.getName() << "\n";

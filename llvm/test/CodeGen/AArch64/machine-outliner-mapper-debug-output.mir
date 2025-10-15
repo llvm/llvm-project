@@ -17,7 +17,7 @@
 
 --- |
   define void @block_too_small() noredzone { unreachable }
-  define void @no_outline() noredzone "nooutline" { unreachable }
+  define void @no_outline() noredzone nooutline { unreachable }
   define void @redzone() { unreachable }
   declare void @no_mf()
   define void @block_addr_fn() noredzone {
