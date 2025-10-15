@@ -179,7 +179,7 @@ void LiveIntervals::analyze(MachineFunction &fn) {
 }
 
 void LiveIntervals::print(raw_ostream &OS) const {
-  OS << "********** INTERVALS **********\n";
+  OS << "********** INTERVALS for function " << MF->getName() << '\n';
 
   // Dump the regunits.
   for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
