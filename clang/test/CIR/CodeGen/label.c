@@ -11,10 +11,14 @@ labelA:
 }
 
 // CIR:  cir.func no_proto dso_local @label
+// CIR:     cir.br ^bb1
+// CIR:  ^bb1:
 // CIR:    cir.label "labelA"
 // CIR:    cir.return
 
 // LLVM:define dso_local void @label
+// LLVM:   br label %1
+// LLVM: 1:
 // LLVM:  ret void
 
 // OGCG: define dso_local void @label
@@ -29,15 +33,19 @@ labelC:
 }
 
 // CIR:  cir.func no_proto dso_local @multiple_labels
-// CIR:    cir.label "labelB"
 // CIR:    cir.br ^bb1
-// CIR:  ^bb1:  // pred: ^bb0
+// CIR:  ^bb1:
+// CIR:    cir.label "labelB"
+// CIR:    cir.br ^bb2
+// CIR:  ^bb2:
 // CIR:    cir.label "labelC"
 // CIR:    cir.return
 
 // LLVM: define dso_local void @multiple_labels()
 // LLVM:   br label %1
 // LLVM: 1:
+// LLVM:   br label %2
+// LLVM: 2:
 // LLVM:   ret void
 
 // OGCG: define dso_local void @multiple_labels
@@ -56,6 +64,8 @@ labelD:
 
 // CIR:  cir.func dso_local @label_in_if
 // CIR:      cir.if {{.*}} {
+// CIR:        cir.br ^bb1
+// CIR:      ^bb1:
 // CIR:        cir.label "labelD"
 // CIR:        [[LOAD:%.*]] = cir.load align(4) [[COND:%.*]] : !cir.ptr<!s32i>, !s32i
 // CIR:        [[INC:%.*]] = cir.unary(inc, %3) nsw : !s32i, !s32i
@@ -68,15 +78,17 @@ labelD:
 // LLVM: 3:
 // LLVM:   [[LOAD:%.*]] = load i32, ptr [[COND:%.*]], align 4
 // LLVM:   [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
-// LLVM:   br i1 [[CMP]], label %6, label %9
+// LLVM:   br i1 [[CMP]], label %6, label %10
 // LLVM: 6:
+// LLVM:   br label %7
+// LLVM: 7:
 // LLVM:   [[LOAD2:%.*]] = load i32, ptr [[COND]], align 4
 // LLVM:   [[ADD1:%.*]] = add nsw i32 [[LOAD2]], 1
 // LLVM:   store i32 [[ADD1]], ptr [[COND]], align 4
-// LLVM:   br label %9
-// LLVM: 9:
 // LLVM:   br label %10
 // LLVM: 10:
+// LLVM:   br label %11
+// LLVM: 11:
 // LLVM:  ret void
 
 // OGCG: define dso_local void @label_in_if
@@ -142,11 +154,15 @@ end:
   return;
 }
 // CIR:  cir.func no_proto dso_local @labelWithoutMatch
+// CIR:    cir.br ^bb1
+// CIR:  ^bb1:
 // CIR:    cir.label "end"
 // CIR:    cir.return
 // CIR:  }
 
 // LLVM: define dso_local void @labelWithoutMatch
+// LLVM:   br label %1
+// LLVM: 1:
 // LLVM:   ret void
 
 // OGCG: define dso_local void @labelWithoutMatch
@@ -167,13 +183,17 @@ void foo() {
 
 // CIR: cir.func no_proto dso_local @foo
 // CIR:   cir.scope {
-// CIR:     cir.label "label"
 // CIR:     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+// CIR:      cir.br ^bb1
+// CIR:    ^bb1:
+// CIR:     cir.label "label"
 
 // LLVM:define dso_local void @foo() {
 // LLVM:  [[ALLOC:%.*]] = alloca %struct.S, i64 1, align 1
 // LLVM:  br label %2
 // LLVM:2:
+// LLVM:  br label %3
+// LLVM:3:
 // LLVM:  [[CALL:%.*]] = call %struct.S @get()
 // LLVM:  store %struct.S [[CALL]], ptr [[ALLOC]], align 1
 // LLVM:  [[LOAD:%.*]] = load %struct.S, ptr [[ALLOC]], align 1
