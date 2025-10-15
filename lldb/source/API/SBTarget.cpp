@@ -145,6 +145,14 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
   return SBModule(module_list.GetModuleAtIndex(idx));
 }
 
+const char *SBTarget::GetSessionNameFromEvent(const SBEvent &event) {
+  LLDB_INSTRUMENT_VA(event);
+
+  return ConstString(
+             Target::TargetEventData::GetSessionNameFromEvent(event.get()))
+      .AsCString();
+}
+
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
