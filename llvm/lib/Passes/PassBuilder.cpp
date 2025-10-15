@@ -1095,6 +1095,38 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<AllocTokenOptions> parseAllocTokenPassOptions(StringRef Params) {
+  AllocTokenOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("mode=")) {
+      auto Mode = StringSwitch<std::optional<AllocTokenMode>>(ParamName)
+                      .Case("increment", AllocTokenMode::Increment)
+                      .Case("random", AllocTokenMode::Random)
+                      .Case("typehash", AllocTokenMode::TypeHash)
+                      .Case("typehashpointersplit",
+                            AllocTokenMode::TypeHashPointerSplit)
+                      .Default(std::nullopt);
+      if (Mode)
+        Result.Mode = *Mode;
+      else
+        return make_error<StringError>(
+            formatv("invalid argument to AllocToken pass mode "
+                    "parameter: '{}'",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid AllocToken pass parameter '{}'", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 /// Parser of parameters for SimplifyCFG pass.
 Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
   SimplifyCFGOptions Result;
