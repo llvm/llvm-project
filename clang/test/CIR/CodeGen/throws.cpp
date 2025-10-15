@@ -123,3 +123,24 @@ void paren_expr() { (throw 0, 1 + 2); }
 // OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
 // OGCG: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIi, ptr null)
+
+void throw_complex_expr() {
+  throw __builtin_complex(1.1f, 2.2f);
+}
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 8 -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[EXCEPTION_VALUE:.*]] = cir.const #cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[EXCEPTION_VALUE]], %[[EXCEPTION_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, @_ZTICf
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
+// LLVM: store { float, float } { float 0x3FF19999A0000000, float 0x40019999A0000000 }, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
+// OGCG: %[[EXCEPTION_REAL:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[EXCEPTION_ADDR]], i32 0, i32 0
+// OGCG: %[[EXCEPTION_IMAG:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[EXCEPTION_ADDR]], i32 0, i32 1
+// OGCG: store float 0x3FF19999A0000000, ptr %[[EXCEPTION_REAL]], align 16
+// OGCG: store float 0x40019999A0000000, ptr %[[EXCEPTION_IMAG]], align 4
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
