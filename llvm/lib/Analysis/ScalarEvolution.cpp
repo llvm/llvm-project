@@ -15867,6 +15867,10 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         if (isa<SCEVConstant>(LHS)) {
           std::swap(LHS, RHS);
           Predicate = CmpInst::getSwappedPredicate(Predicate);
+        } else if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
+          // If RHS is SCEVUnknown, make sure the information is applied to it.
+          std::swap(LHS, RHS);
+          Predicate = CmpInst::getSwappedPredicate(Predicate);
         }
         GuardsToProcess.emplace_back(Predicate, LHS, RHS);
         continue;
