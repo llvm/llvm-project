@@ -386,6 +386,9 @@ class NextUseAnalysisParameterizedTest : public NextUseAnalysisTestBase,
                                          public testing::WithParamInterface<std::string> {
 };
 
+// Allow uninstantiated test when test files are not available
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(NextUseAnalysisParameterizedTest);
+
 std::string getTestDirectory() {
   // First try environment variable
   const char *testDirEnv = std::getenv("AMDGPU_NUA_TEST_DIR");
