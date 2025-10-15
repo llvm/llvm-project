@@ -672,6 +672,12 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
       !(A.existsInTarget(S.Context.getTargetInfo()) ||
         (S.Context.getLangOpts().SYCLIsDevice && Aux &&
          A.existsInTarget(*Aux)))) {
+    // Special case: musttail on WebAssembly without tail-call feature
+    if (A.getKind() == ParsedAttr::AT_MustTail &&
+        !S.Context.getTargetInfo().hasMustTail()) {
+      S.Diag(A.getLoc(), diag::err_wasm_musttail_unsupported);
+      return nullptr;
+    }
     if (A.isRegularKeywordAttribute()) {
       S.Diag(A.getLoc(), diag::err_keyword_not_supported_on_target)
           << A << A.getRange();

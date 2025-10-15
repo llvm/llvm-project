@@ -59,6 +59,7 @@ static const LangASMap FakeAddrSpaceMap = {
 TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
+  HasMustTail = true;
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   VLASupported = true;
