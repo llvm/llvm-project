@@ -11,13 +11,12 @@
 #include "src/sys/mman/msync.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
+#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <unistd.h>
-
-const size_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
+const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMsyncTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
