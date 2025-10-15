@@ -2077,7 +2077,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
   llvm::SmallString<32> FilePath = File;
   if (!WorkingDir.empty() && !path::is_absolute(FilePath))
-    fs::make_absolute(WorkingDir, FilePath);
+    path::make_absolute(WorkingDir, FilePath);
   // remove_dots switches to backslashes on windows as a side-effect!
   // We always want to suggest forward slashes for includes.
   // (not remove_dots(..., posix) as that misparses windows paths).
@@ -2091,7 +2091,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   // `BestPrefixLength` accordingly.
   auto CheckDir = [&](llvm::SmallString<32> Dir) -> bool {
     if (!WorkingDir.empty() && !path::is_absolute(Dir))
-      fs::make_absolute(WorkingDir, Dir);
+      path::make_absolute(WorkingDir, Dir);
     path::remove_dots(Dir, /*remove_dot_dot=*/true);
     for (auto NI = path::begin(File), NE = path::end(File),
               DI = path::begin(Dir), DE = path::end(Dir);

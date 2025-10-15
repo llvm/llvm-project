@@ -26,6 +26,8 @@
 
 using namespace llvm;
 
+namespace llvm {
+
 static cl::opt<unsigned>
     JumpTableSizeThreshold("jump-table-to-switch-size-threshold", cl::Hidden,
                            cl::desc("Only split jump tables with size less or "
@@ -42,6 +44,8 @@ static cl::opt<unsigned> FunctionSizeThreshold(
     cl::init(50));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 #define DEBUG_TYPE "jump-table-to-switch"
 
@@ -201,14 +205,12 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  InstrProfSymtab Symtab;
-  if (auto E = Symtab.create(*F.getParent()))
-    F.getContext().emitError(
-        "Could not create indirect call table, likely corrupted IR" +
-        toString(std::move(E)));
-  DenseMap<const Function *, GlobalValue::GUID> FToGuid;
-  for (const auto &[G, FPtr] : Symtab.getIDToNameMap())
-    FToGuid.insert({FPtr, G});
+  auto FuncToGuid = [&](const Function &Fct) {
+    if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
+      return AssignGUIDPass::getGUID(Fct);
+
+    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(F, InLTO));
+  };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     BasicBlock *CurrentBB = &BB;
@@ -230,12 +232,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         std::optional<JumpTableTy> JumpTable = parseJumpTable(GEP, PtrTy);
         if (!JumpTable)
           continue;
-        SplittedOutTail = expandToSwitch(
-            Call, *JumpTable, DTU, ORE, [&](const Function &Fct) {
-              if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
-                return AssignGUIDPass::getGUID(Fct);
-              return FToGuid.lookup_or(&Fct, 0U);
-            });
+        SplittedOutTail =
+            expandToSwitch(Call, *JumpTable, DTU, ORE, FuncToGuid);
         Changed = true;
         break;
       }

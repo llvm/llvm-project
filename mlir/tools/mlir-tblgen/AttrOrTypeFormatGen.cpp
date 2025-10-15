@@ -89,10 +89,7 @@ static ParameterElement *getEncapsulatedParameterElement(FormatElement *el) {
       .Case<ParameterElement>([&](auto param) { return param; })
       .Case<RefDirective>(
           [&](auto ref) { return cast<ParameterElement>(ref->getArg()); })
-      .Default([&](auto el) {
-        assert(false && "unexpected struct element type");
-        return nullptr;
-      });
+      .DefaultUnreachable("unexpected struct element type");
 }
 
 /// Shorthand functions that can be used with ranged-based conditions.
@@ -403,6 +400,7 @@ void DefFormat::genLiteralParser(StringRef value, FmtContext &ctx,
               .Case("]", "RSquare")
               .Case("?", "Question")
               .Case("+", "Plus")
+              .Case("-", "Minus")
               .Case("*", "Star")
               .Case("...", "Ellipsis")
        << "()";

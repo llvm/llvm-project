@@ -7330,9 +7330,8 @@ _mm256_mask_cvtusepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovusqw256mem_mask ((__v8hi *) __P, (__v4di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtepi32_epi8 (__m128i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtepi32_epi8(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v4si)__A, __v4qi), (__v4qi){0, 0, 0, 0}, 0, 1,
       2, 3, 4, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7);
@@ -7360,9 +7359,8 @@ _mm_mask_cvtepi32_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovdb128mem_mask ((__v16qi *) __P, (__v4si) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi32_epi8 (__m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi32_epi8(__m256i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v8si)__A, __v8qi),
       (__v8qi){0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
@@ -7370,8 +7368,7 @@ _mm256_cvtepi32_epi8 (__m256i __A)
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtepi32_epi8 (__m128i __O, __mmask8 __M, __m256i __A)
-{
+_mm256_mask_cvtepi32_epi8(__m128i __O, __mmask8 __M, __m256i __A) {
   return (__m128i) __builtin_ia32_pmovdb256_mask ((__v8si) __A,
               (__v16qi) __O, __M);
 }
@@ -7390,9 +7387,8 @@ _mm256_mask_cvtepi32_storeu_epi8 (void * __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovdb256mem_mask ((__v16qi *) __P, (__v8si) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtepi32_epi16 (__m128i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtepi32_epi16(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v4si)__A, __v4hi), (__v4hi){0, 0, 0, 0}, 0, 1,
       2, 3, 4, 5, 6, 7);
@@ -7419,9 +7415,8 @@ _mm_mask_cvtepi32_storeu_epi16 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovdw128mem_mask ((__v8hi *) __P, (__v4si) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi32_epi16 (__m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi32_epi16(__m256i __A) {
   return (__m128i)__builtin_convertvector((__v8si)__A, __v8hi);
 }
 
@@ -7446,9 +7441,8 @@ _mm256_mask_cvtepi32_storeu_epi16 (void *  __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovdw256mem_mask ((__v8hi *) __P, (__v8si) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtepi64_epi8 (__m128i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtepi64_epi8(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v2di)__A, __v2qi), (__v2qi){0, 0}, 0, 1, 2, 3,
       3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3);
@@ -7475,9 +7469,8 @@ _mm_mask_cvtepi64_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovqb128mem_mask ((__v16qi *) __P, (__v2di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi64_epi8 (__m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi64_epi8(__m256i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v4di)__A, __v4qi), (__v4qi){0, 0, 0, 0}, 0, 1,
       2, 3, 4, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7);
@@ -7504,9 +7497,8 @@ _mm256_mask_cvtepi64_storeu_epi8 (void * __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovqb256mem_mask ((__v16qi *) __P, (__v4di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtepi64_epi32 (__m128i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtepi64_epi32(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v2di)__A, __v2si), (__v2si){0, 0}, 0, 1, 2, 3);
 }
@@ -7532,23 +7524,20 @@ _mm_mask_cvtepi64_storeu_epi32 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovqd128mem_mask ((__v4si *) __P, (__v2di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi64_epi32 (__m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi64_epi32(__m256i __A) {
   return (__m128i)__builtin_convertvector((__v4di)__A, __v4si);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtepi64_epi32 (__m128i __O, __mmask8 __M, __m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mask_cvtepi64_epi32(__m128i __O, __mmask8 __M, __m256i __A) {
   return (__m128i)__builtin_ia32_selectd_128((__mmask8)__M,
                                              (__v4si)_mm256_cvtepi64_epi32(__A),
                                              (__v4si)__O);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtepi64_epi32 (__mmask8 __M, __m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_maskz_cvtepi64_epi32(__mmask8 __M, __m256i __A) {
   return (__m128i)__builtin_ia32_selectd_128((__mmask8)__M,
                                              (__v4si)_mm256_cvtepi64_epi32(__A),
                                              (__v4si)_mm_setzero_si128());
@@ -7560,9 +7549,8 @@ _mm256_mask_cvtepi64_storeu_epi32 (void * __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovqd256mem_mask ((__v4si *) __P, (__v4di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtepi64_epi16 (__m128i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtepi64_epi16(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v2di)__A, __v2hi), (__v2hi){0, 0}, 0, 1, 2, 3,
       3, 3, 3, 3);
@@ -7590,9 +7578,8 @@ _mm_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovqw128mem_mask ((__v8hi *) __P, (__v2di) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi64_epi16 (__m256i __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi64_epi16(__m256i __A) {
   return (__m128i)__builtin_shufflevector(
       __builtin_convertvector((__v4di)__A, __v4hi), (__v4hi){0, 0, 0, 0}, 0, 1,
       2, 3, 4, 5, 6, 7);

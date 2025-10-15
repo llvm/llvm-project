@@ -17,18 +17,8 @@ define i64 @remove_loop_region_int_iv_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store ptr null, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[IV]], %[[LOOP]] ], [ 15, %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 15
 ;
 entry:
   br label %loop
@@ -60,18 +50,8 @@ define i64 @remove_loop_region_int_iv_inc_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store ptr null, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[IV_NEXT]], %[[LOOP]] ], [ 16, %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 16
 ;
 entry:
   br label %loop
@@ -105,19 +85,8 @@ define ptr @remove_loop_region_ptr_iv_used_outside(ptr %dst) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -8
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[DST]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[INT_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INT_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
-; CHECK-NEXT:    [[INT_IV_NEXT]] = add i64 [[INT_IV]], 1
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 8
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[INT_IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP]] ], [ [[IND_ESCAPE]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    ret ptr [[IND_ESCAPE]]
 ;
 entry:
   br label %loop
@@ -151,19 +120,8 @@ define ptr @remove_loop_region_ptr_iv_inc_used_outside(ptr %dst) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[DST]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[INT_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INT_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
-; CHECK-NEXT:    [[INT_IV_NEXT]] = add i64 [[INT_IV]], 1
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 8
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[INT_IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV_NEXT]], %[[LOOP]] ], [ [[TMP0]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
   br label %loop

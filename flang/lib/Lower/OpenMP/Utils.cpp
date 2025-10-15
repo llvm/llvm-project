@@ -14,11 +14,12 @@
 
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Lower/OpenMP/Clauses.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
+#include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
+#include <flang/Lower/Support/PrivateReductionUtils.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Parser/openmp-utils.h>
@@ -180,16 +181,11 @@ static void generateArrayIndices(lower::AbstractConverter &converter,
   for (auto v : arr->subscript()) {
     if (std::holds_alternative<Triplet>(v.u))
       TODO(clauseLocation, "Triplet indexing in map clause is unsupported");
-
     auto expr = std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(v.u);
     mlir::Value subscript =
         fir::getBase(converter.genExprValue(toEvExpr(expr.value()), stmtCtx));
-    mlir::Value one = firOpBuilder.createIntegerConstant(
-        clauseLocation, firOpBuilder.getIndexType(), 1);
-    subscript = firOpBuilder.createConvert(
-        clauseLocation, firOpBuilder.getIndexType(), subscript);
-    indices.push_back(mlir::arith::SubIOp::create(firOpBuilder, clauseLocation,
-                                                  subscript, one));
+    indices.push_back(firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getIndexType(), subscript));
   }
 }
 
@@ -322,10 +318,42 @@ mlir::Value createParentSymAndGenIntermediateMaps(
                              subscriptIndices, objectList[i]);
         assert(!subscriptIndices.empty() &&
                "missing expected indices for map clause");
-        curValue = fir::CoordinateOp::create(
-            firOpBuilder, clauseLocation,
-            firOpBuilder.getRefType(arrType.getEleTy()), curValue,
-            subscriptIndices);
+        if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(curValue.getType())) {
+          // To accommodate indexing into box types of all dimensions including
+          // negative dimensions we have to take into consideration the lower
+          // bounds and extents of the data (stored in the box) and convey it
+          // to the ArrayCoorOp so that it can appropriately access the element
+          // utilising the subscript we provide and the runtime sizes stored in
+          // the Box. To do so we need to generate a ShapeShiftOp which combines
+          // both the lb (ShiftOp) and extent (ShapeOp) of the Box, giving the
+          // ArrayCoorOp the spatial information it needs to calculate the
+          // underlying address.
+          mlir::Value shapeShift = Fortran::lower::getShapeShift(
+              firOpBuilder, clauseLocation, curValue);
+          auto addrOp =
+              fir::BoxAddrOp::create(firOpBuilder, clauseLocation, curValue);
+          curValue = fir::ArrayCoorOp::create(
+              firOpBuilder, clauseLocation,
+              firOpBuilder.getRefType(arrType.getEleTy()), addrOp, shapeShift,
+              /*slice=*/mlir::Value{}, subscriptIndices,
+              /*typeparms=*/mlir::ValueRange{});
+        } else {
+          // We're required to negate by one in the non-Box case as I believe
+          // we do not have the shape generated from the dimensions to help
+          // adjust the indexing.
+          // TODO/FIXME: This may need adjusted to support bounds of unusual
+          // dimensions, if that's the case then it is likely best to fold this
+          // branch into the above.
+          mlir::Value one = firOpBuilder.createIntegerConstant(
+              clauseLocation, firOpBuilder.getIndexType(), 1);
+          for (auto &v : subscriptIndices)
+            v = mlir::arith::SubIOp::create(firOpBuilder, clauseLocation, v,
+                                            one);
+          curValue = fir::CoordinateOp::create(
+              firOpBuilder, clauseLocation,
+              firOpBuilder.getRefType(arrType.getEleTy()), curValue,
+              subscriptIndices);
+        }
       }
     }
 
@@ -415,7 +443,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
       currentIndicesIdx++;
     }
   }
-
   return curValue;
 }
 
@@ -652,7 +679,6 @@ int64_t collectLoopRelatedInfo(
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
   int64_t numCollapse = 1;
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
   lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
@@ -667,6 +693,25 @@ int64_t collectLoopRelatedInfo(
     numCollapse = collapseValue;
   }
 
+  collectLoopRelatedInfo(converter, currentLocation, eval, numCollapse, result,
+                         iv);
+  return numCollapse;
+}
+
+void collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, int64_t numCollapse,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // Collect the loops to collapse.
+  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
+  if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
+    TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
+  }
+
   // Collect sizes from tile directive if present.
   std::int64_t sizesLengthValue = 0l;
   if (auto *ompCons{eval.getIf<parser::OpenMPConstruct>()}) {
@@ -676,7 +721,7 @@ int64_t collectLoopRelatedInfo(
         });
   }
 
-  collapseValue = std::max(collapseValue, sizesLengthValue);
+  std::int64_t collapseValue = std::max(numCollapse, sizesLengthValue);
   std::size_t loopVarTypeSize = 0;
   do {
     lower::pft::Evaluation *doLoop =
@@ -709,8 +754,6 @@ int64_t collectLoopRelatedInfo(
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
-
-  return numCollapse;
 }
 
 } // namespace omp

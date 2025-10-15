@@ -284,6 +284,17 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpPredicatedLoadINTEL:
+        case SPIRV::OpPredicatedStoreINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
