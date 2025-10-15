@@ -788,9 +788,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                                                ScalarEvolution &SE) {
   VPValue *Incoming, *Mask;
   if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
-                     m_VPInstruction<VPInstruction::FirstActiveLane>(
-                         m_VPValue(Mask)),
-                     m_VPValue(Incoming))))
+                     m_FirstActiveLane(m_VPValue(Mask)), m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);
@@ -1974,9 +1972,7 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // the FOR phi.
     for (VPUser *U : RecurSplice->users()) {
       if (!match(U, m_VPInstruction<VPInstruction::ExtractLane>(
-                        m_VPInstruction<VPInstruction::LastActiveLane>(
-                            m_VPValue()),
-                        m_Specific(RecurSplice))))
+                        m_LastActiveLane(m_VPValue()), m_Specific(RecurSplice))))
         continue;
 
       VPBuilder B(cast<VPInstruction>(U));

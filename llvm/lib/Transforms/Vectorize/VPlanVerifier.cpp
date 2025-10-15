@@ -18,6 +18,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -43,6 +44,10 @@ class VPlanVerifier {
   /// EVL-based recipes as a last operand or VPInstruction::Add which is
   /// incoming value into EVL's recipe.
   bool verifyEVLRecipe(const VPInstruction &EVL) const;
+
+  /// Verify that \p LastActiveLane's operand is a header mask (either a
+  /// compare of wide canonical IV and trip count or an active.lane.mask).
+  bool verifyLastActiveLaneRecipe(const VPInstruction &LastActiveLane) const;
 
   bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
 
@@ -221,6 +226,41 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   });
 }
 
+bool VPlanVerifier::verifyLastActiveLaneRecipe(
+    const VPInstruction &LastActiveLane) const {
+  if (LastActiveLane.getOpcode() != VPInstruction::LastActiveLane) {
+    errs() << "verifyLastActiveLaneRecipe should only be called on "
+              "VPInstruction::LastActiveLane\n";
+    return false;
+  }
+
+  if (LastActiveLane.getNumOperands() < 1) {
+    errs() << "LastActiveLane must have at least one operand\n";
+    return false;
+  }
+
+  VPlan *Plan = const_cast<VPlan *>(LastActiveLane.getParent()->getPlan());
+  // All operands should be masks. This includes header masks (checked by
+  // isHeaderMask) or EVL-derived masks (ICmp of StepVector with
+  // Broadcast/EVL).
+  for (VPValue *Op : LastActiveLane.operands()) {
+    if (vputils::isHeaderMask(Op, *Plan))
+      continue;
+
+    // Accept ICmp(StepVector, Broadcast/EVL) or ICmp(Broadcast/EVL, StepVector).
+    auto BroadcastOrEVL = m_CombineOr(m_Broadcast(m_VPValue()), m_EVL(m_VPValue()));
+    if (match(Op, m_ICmp(m_StepVector(), BroadcastOrEVL)) ||
+        match(Op, m_ICmp(BroadcastOrEVL, m_StepVector())))
+      continue;
+
+    errs() << "LastActiveLane operand must be a header mask or an "
+              "EVL-derived mask (ICmp of StepVector with Broadcast/EVL)\n";
+    return false;
+  }
+
+  return true;
+}
+
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -302,6 +342,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       if (EVL->getOpcode() == VPInstruction::ExplicitVectorLength &&
           !verifyEVLRecipe(*EVL)) {
         errs() << "EVL VPValue is not used correctly\n";
+        return false;
+      }
+      if (EVL->getOpcode() == VPInstruction::LastActiveLane &&
+          !verifyLastActiveLaneRecipe(*EVL)) {
+        errs() << "LastActiveLane VPValue is not used correctly\n";
         return false;
       }
     }
