@@ -13,6 +13,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -63,16 +64,17 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
   };
 
   VPValue *A, *B;
-  using namespace VPlanPatternMatch;
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()), m_One(),
-                                     m_Specific(&Plan.getVF()))) ||
+           (match(A,
+                  m_ScalarIVSteps(
+                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
-  return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
-         IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
+  return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
+         B == Plan.getOrCreateBackedgeTakenCount();
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
@@ -90,7 +92,6 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  using namespace VPlanPatternMatch;
   // Live-ins are uniform.
   if (V->isLiveIn())
     return true;
@@ -103,7 +104,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
+  auto *CanonicalIV =
+      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
   // Canonical IV chain is uniform.
   if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
     return true;
@@ -141,11 +143,24 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }
 
+unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
+  if (!R)
+    return 1;
+  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
+    return RR->getVFScaleFactor();
+  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+    return RR->getVFScaleFactor();
+  assert(
+      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
+                                     VPInstruction::ReductionStartVector) &&
+      "getting scaling factor of reduction-start-vector not implemented yet");
+  return 1;
+}
+
 std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(VPlan &Plan,
                                       SmallVectorImpl<VPRecipeBase *> &Recipes,
                                       SmallVectorImpl<VPRecipeBase *> &GEPs) {
-  using namespace llvm::VPlanPatternMatch;
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison

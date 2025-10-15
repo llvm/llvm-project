@@ -1503,6 +1503,13 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
             getElementSizeForOpcode(PredOpcode))
       return PredOpcode;
 
+    // For PTEST_FIRST(PTRUE_ALL, WHILE), the PTEST_FIRST is redundant since
+    // WHILEcc performs an implicit PTEST with an all active mask, setting
+    // the N flag as the PTEST_FIRST would.
+    if (PTest->getOpcode() == AArch64::PTEST_PP_FIRST &&
+        isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31)
+      return PredOpcode;
+
     return {};
   }
 
@@ -2572,8 +2579,6 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STZ2Gi:
   case AArch64::STZGi:
   case AArch64::TAGPstack:
-  case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
-  case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
     return 2;
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1B_H_IMM:
@@ -4380,8 +4385,6 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 254;
     break;
-  case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
-  case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
     Scale = TypeSize::getScalable(16);
@@ -5061,17 +5064,15 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       (AArch64::GPR32spRegClass.contains(SrcReg) || SrcReg == AArch64::WZR)) {
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
-
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
       // If either operand is WSP, expand to ADD #0.
       if (Subtarget.hasZeroCycleRegMoveGPR64() &&
           !Subtarget.hasZeroCycleRegMoveGPR32()) {
         // Cyclone recognizes "ADD Xd, Xn, #0" as a zero-cycle register move.
-        MCRegister DestRegX = TRI->getMatchingSuperReg(
-            DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
-        MCRegister SrcRegX = TRI->getMatchingSuperReg(
-            SrcReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
+        MCRegister DestRegX = RI.getMatchingSuperReg(DestReg, AArch64::sub_32,
+                                                     &AArch64::GPR64spRegClass);
+        MCRegister SrcRegX = RI.getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                                    &AArch64::GPR64spRegClass);
         // This instruction is reading and writing X registers.  This may upset
         // the register scavenger and machine verifier, so we need to indicate
         // that we are reading an undefined value from SrcRegX, but a proper
@@ -5091,33 +5092,31 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    } else if (Subtarget.hasZeroCycleRegMoveGPR64() &&
+               !Subtarget.hasZeroCycleRegMoveGPR32()) {
+      // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
+      MCRegister DestRegX = RI.getMatchingSuperReg(DestReg, AArch64::sub_32,
+                                                   &AArch64::GPR64spRegClass);
+      assert(DestRegX.isValid() && "Destination super-reg not valid");
+      MCRegister SrcRegX =
+          SrcReg == AArch64::WZR
+              ? AArch64::XZR
+              : RI.getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                       &AArch64::GPR64spRegClass);
+      assert(SrcRegX.isValid() && "Source super-reg not valid");
+      // This instruction is reading and writing X registers.  This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegX, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestRegX)
+          .addReg(AArch64::XZR)
+          .addReg(SrcRegX, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
     } else {
-      if (Subtarget.hasZeroCycleRegMoveGPR64() &&
-          !Subtarget.hasZeroCycleRegMoveGPR32()) {
-        // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
-        MCRegister DestRegX = TRI->getMatchingSuperReg(
-            DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
-        assert(DestRegX.isValid() && "Destination super-reg not valid");
-        MCRegister SrcRegX =
-            SrcReg == AArch64::WZR
-                ? AArch64::XZR
-                : TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
-                                           &AArch64::GPR64spRegClass);
-        assert(SrcRegX.isValid() && "Source super-reg not valid");
-        // This instruction is reading and writing X registers.  This may upset
-        // the register scavenger and machine verifier, so we need to indicate
-        // that we are reading an undefined value from SrcRegX, but a proper
-        // value from SrcReg.
-        BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestRegX)
-            .addReg(AArch64::XZR)
-            .addReg(SrcRegX, RegState::Undef)
-            .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
-      } else {
-        // Otherwise, expand to ORR WZR.
-        BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
-            .addReg(AArch64::WZR)
-            .addReg(SrcReg, getKillRegState(KillSrc));
-      }
+      // Otherwise, expand to ORR WZR.
+      BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
+          .addReg(AArch64::WZR)
+          .addReg(SrcReg, getKillRegState(KillSrc));
     }
     return;
   }
@@ -5333,11 +5332,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::dsub,
-                                                     &AArch64::FPR128RegClass);
-      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::dsub,
-                                                    &AArch64::FPR128RegClass);
+      MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::dsub,
+                                                   &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::dsub,
+                                                  &AArch64::FPR128RegClass);
       // This instruction is reading and writing Q registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegQ, but a proper
@@ -5358,11 +5356,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
-                                                     &AArch64::FPR128RegClass);
-      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::ssub,
-                                                    &AArch64::FPR128RegClass);
+      MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
+                                                   &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
+                                                  &AArch64::FPR128RegClass);
       // This instruction is reading and writing Q registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegQ, but a proper
@@ -5373,11 +5370,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
     } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
                !Subtarget.hasZeroCycleRegMoveFPR32()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
-                                                     &AArch64::FPR64RegClass);
-      MCRegister SrcRegD = TRI->getMatchingSuperReg(SrcReg, AArch64::ssub,
-                                                    &AArch64::FPR64RegClass);
+      MCRegister DestRegD = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
+                                                   &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
+                                                  &AArch64::FPR64RegClass);
       // This instruction is reading and writing D registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegD, but a proper
@@ -5397,11 +5393,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
-                                                     &AArch64::FPR128RegClass);
-      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::hsub,
-                                                    &AArch64::FPR128RegClass);
+      MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                   &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                  &AArch64::FPR128RegClass);
       // This instruction is reading and writing Q registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegQ, but a proper
@@ -5412,11 +5407,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
     } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
                !Subtarget.hasZeroCycleRegMoveFPR32()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
-                                                     &AArch64::FPR64RegClass);
-      MCRegister SrcRegD = TRI->getMatchingSuperReg(SrcReg, AArch64::hsub,
-                                                    &AArch64::FPR64RegClass);
+      MCRegister DestRegD = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                   &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                  &AArch64::FPR64RegClass);
       // This instruction is reading and writing D registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegD, but a proper
@@ -5440,11 +5434,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
-                                                     &AArch64::FPR128RegClass);
-      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::bsub,
-                                                    &AArch64::FPR128RegClass);
+      MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
+                                                   &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
+                                                  &AArch64::FPR128RegClass);
       // This instruction is reading and writing Q registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegQ, but a proper
@@ -5455,11 +5448,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
     } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
                !Subtarget.hasZeroCycleRegMoveFPR32()) {
-      const TargetRegisterInfo *TRI = &getRegisterInfo();
-      MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
-                                                     &AArch64::FPR64RegClass);
-      MCRegister SrcRegD = TRI->getMatchingSuperReg(SrcReg, AArch64::bsub,
-                                                    &AArch64::FPR64RegClass);
+      MCRegister DestRegD = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
+                                                   &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
+                                                  &AArch64::FPR64RegClass);
       // This instruction is reading and writing D registers. This may upset
       // the register scavenger and machine verifier, so we need to indicate
       // that we are reading an undefined value from SrcRegD, but a proper
@@ -5531,9 +5523,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
 #ifndef NDEBUG
-  const TargetRegisterInfo &TRI = getRegisterInfo();
-  errs() << TRI.getRegAsmName(DestReg) << " = COPY "
-         << TRI.getRegAsmName(SrcReg) << "\n";
+  errs() << RI.getRegAsmName(DestReg) << " = COPY " << RI.getRegAsmName(SrcReg)
+         << "\n";
 #endif
   llvm_unreachable("unimplemented reg-to-reg copy");
 }
@@ -5592,7 +5583,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_PXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   }
@@ -5607,7 +5598,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::STRSui;
     else if (AArch64::PPR2RegClass.hasSubClassEq(RC)) {
       Opc = AArch64::STR_PPXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   case 8:
@@ -5642,11 +5633,6 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
-             "Unexpected predicate store without SVE store instructions");
-      Opc = AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO;
       StackID = TargetStackID::ScalableVector;
     }
     break;
@@ -5777,7 +5763,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       if (IsPNR)
         PNRReg = DestReg;
       Opc = AArch64::LDR_PXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   }
@@ -5792,7 +5778,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       Opc = AArch64::LDRSui;
     else if (AArch64::PPR2RegClass.hasSubClassEq(RC)) {
       Opc = AArch64::LDR_PPXI;
-      StackID = TargetStackID::ScalableVector;
+      StackID = TargetStackID::ScalablePredicateVector;
     }
     break;
   case 8:
@@ -5827,11 +5813,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
-             "Unexpected predicate load without SVE load instructions");
-      Opc = AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO;
       StackID = TargetStackID::ScalableVector;
     }
     break;

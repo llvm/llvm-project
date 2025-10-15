@@ -65,7 +65,7 @@ public:
     if (!Compiler.hasDiagnostics())
       return false;
 
-    Compiler.createSourceManager(*FileMgr);
+    Compiler.createSourceManager();
     Compiler.addDependencyCollector(std::make_shared<TestFileCollector>(
         Compiler.getInvocation().getDependencyOutputOpts(), Deps));
 

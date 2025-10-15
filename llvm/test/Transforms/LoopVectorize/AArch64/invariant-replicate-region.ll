@@ -51,22 +51,8 @@ define i32 @test_invariant_replicate_region(i32 %x, i1 %c) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[REM_1:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ], [ [[REM_1]], %[[THEN]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 99
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i32 [ [[RES]], %[[LOOP_LATCH]] ], [ [[TMP17]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[RES_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
 entry:
   br label %loop.header

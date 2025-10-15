@@ -153,6 +153,7 @@ clang_tidy_library(
     deps = [
         ":google",
         ":lib",
+        ":utils",
     ],
 )
 
@@ -261,6 +262,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "zircon",
     deps = [
+        ":fuchsia",
         ":lib",
         ":utils",
     ],
@@ -310,6 +312,7 @@ clang_tidy_library(
         ":google",
         ":lib",
         ":misc",
+        ":modernize",
         ":performance",
         ":readability",
         ":utils",

@@ -30,6 +30,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -1270,6 +1271,196 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
+}
+
+static bool
+typeContainsPointer(QualType T,
+                    llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
+                    bool &IncompleteType) {
+  QualType CanonicalType = T.getCanonicalType();
+  if (CanonicalType->isPointerType())
+    return true; // base case
+
+  // Look through typedef chain to check for special types.
+  for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
+       CurrentT = TT->getDecl()->getUnderlyingType()) {
+    const IdentifierInfo *II = TT->getDecl()->getIdentifier();
+    // Special Case: Syntactically uintptr_t is not a pointer; semantically,
+    // however, very likely used as such. Therefore, classify uintptr_t as a
+    // pointer, too.
+    if (II && II->isStr("uintptr_t"))
+      return true;
+  }
+
+  // The type is an array; check the element type.
+  if (const ArrayType *AT = dyn_cast<ArrayType>(CanonicalType))
+    return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
+  // The type is a struct, class, or union.
+  if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
+    if (!RD->isCompleteDefinition()) {
+      IncompleteType = true;
+      return false;
+    }
+    if (!VisitedRD.insert(RD).second)
+      return false; // already visited
+    // Check all fields.
+    for (const FieldDecl *Field : RD->fields()) {
+      if (typeContainsPointer(Field->getType(), VisitedRD, IncompleteType))
+        return true;
+    }
+    // For C++ classes, also check base classes.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Polymorphic types require a vptr.
+      if (CXXRD->isDynamicClass())
+        return true;
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (typeContainsPointer(Base.getType(), VisitedRD, IncompleteType))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
+  assert(SanOpts.has(SanitizerKind::AllocToken) &&
+         "Only needed with -fsanitize=alloc-token");
+
+  llvm::MDBuilder MDB(getLLVMContext());
+
+  // Get unique type name.
+  PrintingPolicy Policy(CGM.getContext().getLangOpts());
+  Policy.SuppressTagKeyword = true;
+  Policy.FullyQualifiedName = true;
+  SmallString<64> TypeName;
+  llvm::raw_svector_ostream TypeNameOS(TypeName);
+  AllocType.getCanonicalType().print(TypeNameOS, Policy);
+  auto *TypeNameMD = MDB.createString(TypeNameOS.str());
+
+  // Check if QualType contains a pointer. Implements a simple DFS to
+  // recursively check if a type contains a pointer type.
+  llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
+  bool IncompleteType = false;
+  const bool ContainsPtr =
+      typeContainsPointer(AllocType, VisitedRD, IncompleteType);
+  if (!ContainsPtr && IncompleteType)
+    return;
+  auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
+  auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
+
+  // Format: !{<type-name>, <contains-pointer>}
+  auto *MDN =
+      llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
+}
+
+namespace {
+/// Infer type from a simple sizeof expression.
+QualType inferTypeFromSizeofExpr(const Expr *E) {
+  const Expr *Arg = E->IgnoreParenImpCasts();
+  if (const auto *UET = dyn_cast<UnaryExprOrTypeTraitExpr>(Arg)) {
+    if (UET->getKind() == UETT_SizeOf) {
+      if (UET->isArgumentType())
+        return UET->getArgumentTypeInfo()->getType();
+      else
+        return UET->getArgumentExpr()->getType();
+    }
+  }
+  return QualType();
+}
+
+/// Infer type from an arithmetic expression involving a sizeof. For example:
+///
+///   malloc(sizeof(MyType) + padding);  // infers 'MyType'
+///   malloc(sizeof(MyType) * 32);       // infers 'MyType'
+///   malloc(32 * sizeof(MyType));       // infers 'MyType'
+///   malloc(sizeof(MyType) << 1);       // infers 'MyType'
+///   ...
+///
+/// More complex arithmetic expressions are supported, but are a heuristic, e.g.
+/// when considering allocations for structs with flexible array members:
+///
+///   malloc(sizeof(HasFlexArray) + sizeof(int) * 32);  // infers 'HasFlexArray'
+///
+QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
+  const Expr *Arg = E->IgnoreParenImpCasts();
+  // The argument is a lone sizeof expression.
+  if (QualType T = inferTypeFromSizeofExpr(Arg); !T.isNull())
+    return T;
+  if (const auto *BO = dyn_cast<BinaryOperator>(Arg)) {
+    // Argument is an arithmetic expression. Cover common arithmetic patterns
+    // involving sizeof.
+    switch (BO->getOpcode()) {
+    case BO_Add:
+    case BO_Div:
+    case BO_Mul:
+    case BO_Shl:
+    case BO_Shr:
+    case BO_Sub:
+      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getLHS());
+          !T.isNull())
+        return T;
+      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getRHS());
+          !T.isNull())
+        return T;
+      break;
+    default:
+      break;
+    }
+  }
+  return QualType();
+}
+
+/// If the expression E is a reference to a variable, infer the type from a
+/// variable's initializer if it contains a sizeof. Beware, this is a heuristic
+/// and ignores if a variable is later reassigned. For example:
+///
+///   size_t my_size = sizeof(MyType);
+///   void *x = malloc(my_size);  // infers 'MyType'
+///
+QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
+  const Expr *Arg = E->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (const Expr *Init = VD->getInit())
+        return inferPossibleTypeFromArithSizeofExpr(Init);
+    }
+  }
+  return QualType();
+}
+
+/// Deduces the allocated type by checking if the allocation call's result
+/// is immediately used in a cast expression. For example:
+///
+///   MyType *x = (MyType *)malloc(4096);  // infers 'MyType'
+///
+QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
+                                       const CastExpr *CastE) {
+  if (!CastE)
+    return QualType();
+  QualType PtrType = CastE->getType();
+  if (PtrType->isPointerType())
+    return PtrType->getPointeeType();
+  return QualType();
+}
+} // end anonymous namespace
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
+  QualType AllocType;
+  // First check arguments.
+  for (const Expr *Arg : E->arguments()) {
+    AllocType = inferPossibleTypeFromArithSizeofExpr(Arg);
+    if (AllocType.isNull())
+      AllocType = inferPossibleTypeFromVarInitSizeofExpr(Arg);
+    if (!AllocType.isNull())
+      break;
+  }
+  // Then check later casts.
+  if (AllocType.isNull())
+    AllocType = inferPossibleTypeFromCastExpr(E, CurCast);
+  // Emit if we were able to infer the type.
+  if (!AllocType.isNull())
+    EmitAllocToken(CB, AllocType);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -5642,6 +5833,9 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 /// are permitted with aggregate result, including noop aggregate casts, and
 /// cast from scalar to union.
 LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
+  auto RestoreCurCast =
+      llvm::make_scope_exit([this, Prev = CurCast] { CurCast = Prev; });
+  CurCast = E;
   switch (E->getCastKind()) {
   case CK_ToVoid:
   case CK_BitCast:
@@ -6587,15 +6781,23 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke,
                          E == MustTailCall, E->getExprLoc());
 
-  // Generate function declaration DISuprogram in order to be used
-  // in debug info about call sites.
-  if (CGDebugInfo *DI = getDebugInfo()) {
-    if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+  if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+    // Generate function declaration DISuprogram in order to be used
+    // in debug info about call sites.
+    if (CGDebugInfo *DI = getDebugInfo()) {
       FunctionArgList Args;
       QualType ResTy = BuildFunctionArgList(CalleeDecl, Args);
       DI->EmitFuncDeclForCallSite(LocalCallOrInvoke,
                                   DI->getFunctionType(CalleeDecl, ResTy, Args),
                                   CalleeDecl);
+    }
+    if (CalleeDecl->hasAttr<RestrictAttr>() ||
+        CalleeDecl->hasAttr<AllocSizeAttr>()) {
+      // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
+      if (SanOpts.has(SanitizerKind::AllocToken)) {
+        // Set !alloc_token metadata.
+        EmitAllocToken(LocalCallOrInvoke, E);
+      }
     }
   }
   if (CallOrInvoke)
@@ -6784,29 +6986,26 @@ LValue CodeGenFunction::EmitPseudoObjectLValue(const PseudoObjectExpr *E) {
   return emitPseudoObjectExpr(*this, E, true, AggValueSlot::ignored()).LV;
 }
 
-void CodeGenFunction::FlattenAccessAndType(
-    Address Addr, QualType AddrType,
-    SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-    SmallVectorImpl<QualType> &FlatTypes) {
-  // WorkList is list of type we are processing + the Index List to access
-  // the field of that type in Addr for use in a GEP
-  llvm::SmallVector<std::pair<QualType, llvm::SmallVector<llvm::Value *, 4>>,
-                    16>
+void CodeGenFunction::FlattenAccessAndTypeLValue(
+    LValue Val, SmallVectorImpl<LValue> &AccessList) {
+
+  llvm::SmallVector<
+      std::tuple<LValue, QualType, llvm::SmallVector<llvm::Value *, 4>>, 16>
       WorkList;
   llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(), 32);
-  // Addr should be a pointer so we need to 'dereference' it
-  WorkList.push_back({AddrType, {llvm::ConstantInt::get(IdxTy, 0)}});
+  WorkList.push_back({Val, Val.getType(), {llvm::ConstantInt::get(IdxTy, 0)}});
 
   while (!WorkList.empty()) {
-    auto [T, IdxList] = WorkList.pop_back_val();
+    auto [LVal, T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
     assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {
         llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
         IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
-        WorkList.emplace_back(CAT->getElementType(), IdxListCopy);
+        WorkList.emplace_back(LVal, CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
@@ -6814,44 +7013,75 @@ void CodeGenFunction::FlattenAccessAndType(
 
       const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);
 
-      llvm::SmallVector<QualType, 16> FieldTypes;
+      llvm::SmallVector<
+          std::tuple<LValue, QualType, llvm::SmallVector<llvm::Value *, 4>>, 16>
+          ReverseList;
       if (CXXD && CXXD->isStandardLayout())
         Record = CXXD->getStandardLayoutBaseWithFields();
 
       // deal with potential base classes
       if (CXXD && !CXXD->isStandardLayout()) {
-        for (auto &Base : CXXD->bases())
-          FieldTypes.push_back(Base.getType());
+        if (CXXD->getNumBases() > 0) {
+          assert(CXXD->getNumBases() == 1 &&
+                 "HLSL doesn't support multiple inheritance.");
+          auto Base = CXXD->bases_begin();
+          llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+          IdxListCopy.push_back(llvm::ConstantInt::get(
+              IdxTy, 0)); // base struct should be at index zero
+          ReverseList.emplace_back(LVal, Base->getType(), IdxListCopy);
+        }
       }
 
-      for (auto *FD : Record->fields())
-        FieldTypes.push_back(FD->getType());
+      const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(Record);
 
-      for (int64_t I = FieldTypes.size() - 1; I > -1; I--) {
-        llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
-        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
-        WorkList.insert(WorkList.end(), {FieldTypes[I], IdxListCopy});
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      LValue RLValue;
+      bool createdGEP = false;
+      for (auto *FD : Record->fields()) {
+        if (FD->isBitField()) {
+          if (FD->isUnnamedBitField())
+            continue;
+          if (!createdGEP) {
+            createdGEP = true;
+            Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList,
+                                                    LLVMT, Align, "gep");
+            RLValue = MakeAddrLValue(GEP, T);
+          }
+          LValue FieldLVal = EmitLValueForField(RLValue, FD, true);
+          ReverseList.push_back({FieldLVal, FD->getType(), {}});
+        } else {
+          llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+          IdxListCopy.push_back(
+              llvm::ConstantInt::get(IdxTy, Layout.getLLVMFieldNo(FD)));
+          ReverseList.emplace_back(LVal, FD->getType(), IdxListCopy);
+        }
       }
+
+      std::reverse(ReverseList.begin(), ReverseList.end());
+      llvm::append_range(WorkList, ReverseList);
     } else if (const auto *VT = dyn_cast<VectorType>(T)) {
       llvm::Type *LLVMT = ConvertTypeForMem(T);
       CharUnits Align = getContext().getTypeAlignInChars(T);
-      Address GEP =
-          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "vector.gep");
+      Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
+                                              Align, "vector.gep");
+      LValue Base = MakeAddrLValue(GEP, T);
       for (unsigned I = 0, E = VT->getNumElements(); I < E; I++) {
-        llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, I);
-        // gep on vector fields is not recommended so combine gep with
-        // extract/insert
-        AccessList.emplace_back(GEP, Idx);
-        FlatTypes.push_back(VT->getElementType());
+        llvm::Constant *Idx = llvm::ConstantInt::get(IdxTy, I);
+        LValue LV =
+            LValue::MakeVectorElt(Base.getAddress(), Idx, VT->getElementType(),
+                                  Base.getBaseInfo(), TBAAAccessInfo());
+        AccessList.emplace_back(LV);
       }
-    } else {
-      // a scalar/builtin type
-      llvm::Type *LLVMT = ConvertTypeForMem(T);
-      CharUnits Align = getContext().getTypeAlignInChars(T);
-      Address GEP =
-          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "gep");
-      AccessList.emplace_back(GEP, nullptr);
-      FlatTypes.push_back(T);
+    } else { // a scalar/builtin type
+      if (!IdxList.empty()) {
+        llvm::Type *LLVMT = ConvertTypeForMem(T);
+        CharUnits Align = getContext().getTypeAlignInChars(T);
+        Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList,
+                                                LLVMT, Align, "gep");
+        AccessList.emplace_back(MakeAddrLValue(GEP, T));
+      } else // must be a bitfield we already created an lvalue for
+        AccessList.emplace_back(LVal);
     }
   }
 }

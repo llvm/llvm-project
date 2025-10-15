@@ -117,10 +117,7 @@ define i1 @or_fcmp_redundant_and4(double %v0) {
 
 define i1 @or_fcmp_redundant_and_neg1(double %v0) {
 ; CHECK-LABEL: @or_fcmp_redundant_and_neg1(
-; CHECK-NEXT:    [[V1:%.*]] = fcmp olt double [[V0:%.*]], 1.000000e-02
-; CHECK-NEXT:    [[V2:%.*]] = fcmp ogt double [[V0]], 1.990000e+00
-; CHECK-NEXT:    [[V3:%.*]] = and i1 [[V1]], [[V2]]
-; CHECK-NEXT:    ret i1 [[V3]]
+; CHECK-NEXT:    ret i1 false
 ;
   %v1 = fcmp olt double %v0, 1.000000e-02
   %v2 = fcmp ogt double %v0, 1.990000e+00

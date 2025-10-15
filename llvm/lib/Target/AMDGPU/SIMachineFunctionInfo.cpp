@@ -33,16 +33,19 @@ using namespace llvm;
 // optimal RC for Opc and Dest of MFMA. In particular, there are high RP cases
 // where it is better to produce the VGPR form (e.g. if there are VGPR users
 // of the MFMA result).
-static cl::opt<bool> MFMAVGPRForm(
-    "amdgpu-mfma-vgpr-form", cl::Hidden,
+static cl::opt<bool, true> MFMAVGPRFormOpt(
+    "amdgpu-mfma-vgpr-form",
     cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
              "unspecified, default to compiler heuristics"),
-    cl::init(false));
+    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(false),
+    cl::Hidden);
 
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
   const SITargetLowering *TLI = STI->getTargetLowering();
   return static_cast<const GCNTargetMachine &>(TLI->getTargetMachine());
 }
+
+bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
@@ -81,14 +84,13 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
-  MayNeedAGPRs = ST.hasMAIInsts();
   if (ST.hasGFX90AInsts()) {
-    // FIXME: MayNeedAGPRs is a misnomer for how this is used. MFMA selection
-    // should be separated from availability of AGPRs
-    if (MFMAVGPRForm ||
-        (ST.getMaxNumVGPRs(F) <= ST.getAddressableNumArchVGPRs() &&
-         !mayUseAGPRs(F)))
-      MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+    // FIXME: Extract logic out of getMaxNumVectorRegs; we need to apply the
+    // allocation granule and clamping.
+    auto [MinNumAGPRAttr, MaxNumAGPRAttr] =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    MinNumAGPRs = MinNumAGPRAttr;
   }
 
   if (AMDGPU::isChainCC(CC)) {
