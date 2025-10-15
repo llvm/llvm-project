@@ -578,6 +578,24 @@ void foo() {
 
 } // autoreleased
 
+namespace sel_string {
+
+void consumeStr(NSString *);
+void consumeSel(SEL);
+void consumeClass(Class);
+void consumeProtocol(Protocol *);
+
+void foo() {
+  consumeStr(NSStringFromSelector(@selector(mutableCopy)));
+  consumeSel(NSSelectorFromString(@"mutableCopy"));
+  consumeStr(NSStringFromClass(NSNumber.class));
+  consumeClass(NSClassFromString(@"NSNumber"));
+  consumeStr(NSStringFromProtocol(@protocol(NSCopying)));
+  consumeProtocol(NSProtocolFromString(@"NSCopying"));
+}
+
+} // namespace sel_string
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
