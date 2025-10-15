@@ -973,6 +973,7 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
     custom<ShuffleType>(ref(type($v1)), type($res), ref($mask))
   }];
 
+  let hasFolder = 1;
   let hasVerifier = 1;
 
   string llvmInstName = "ShuffleVector";
