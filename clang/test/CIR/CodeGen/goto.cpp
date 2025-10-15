@@ -205,6 +205,8 @@ extern "C" void case_follow_label(int v) {
 // CIR: cir.func dso_local @case_follow_label
 // CIR: cir.switch
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:   cir.br ^bb1
+// CIR: ^bb1:
 // CIR:   cir.label "label"
 // CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR:   cir.call @action1()
@@ -215,9 +217,11 @@ extern "C" void case_follow_label(int v) {
 
 // LLVM: define dso_local void @case_follow_label
 // LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
-// LLVM:    i32 1, label %[[LABEL:.*]]
+// LLVM:    i32 1, label %[[CASE1:.*]]
 // LLVM:    i32 2, label %[[CASE2:.*]]
 // LLVM:  ]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[LABEL:.*]]
 // LLVM: [[LABEL]]:
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
@@ -303,3 +307,24 @@ extern "C" void default_follow_label(int v) {
 // OGCG:   br label %label
 // OGCG: sw.epilog:
 // OGCG:   ret void
+
+void g3() {
+label:
+  goto label;
+}
+
+// CIR:  cir.func dso_local @_Z2g3v
+// CIR:    cir.br ^bb1
+// CIR:  ^bb1:
+// CIR:    cir.label "label"
+// CIR:    cir.goto "label"
+
+// LLVM: define dso_local void @_Z2g3v()
+// LLVM:   br label %1
+// LLVM: 1:
+// LLVM:   br label %1
+
+// OGCG: define dso_local void @_Z2g3v()
+// OGCG:   br label %label
+// OGCG: label:
+// OGCG:   br label %label
