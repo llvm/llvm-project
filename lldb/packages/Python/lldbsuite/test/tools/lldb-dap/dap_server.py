@@ -341,7 +341,7 @@ class DebugCommunication(object):
         self,
         *,
         predicate: Optional[Callable[[ProtocolMessage], bool]] = None,
-        timeout: Optional[float] = None,
+        timeout: Optional[float] = DEFAULT_TIMEOUT,
     ) -> Optional[ProtocolMessage]:
         """Processes received packets from the adapter.
         Updates the DebugCommunication stateful properties based on the received
@@ -565,7 +565,7 @@ class DebugCommunication(object):
 
         return cast(
             Optional[Event],
-            self._recv_packet(predicate=predicate, timeout=DEFAULT_TIMEOUT),
+            self._recv_packet(predicate=predicate),
         )
 
     def wait_for_stopped(self) -> Optional[List[Event]]:
@@ -1609,7 +1609,7 @@ class DebugAdapterServer(DebugCommunication):
                     # new messages will arrive and it should shutdown on its
                     # own.
                     process.stdin.close()
-                    process.wait(timeout=20)
+                    process.wait(timeout=DEFAULT_TIMEOUT)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
