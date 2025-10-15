@@ -80,9 +80,7 @@ class GPUFuncOp(GPUFuncOp):
         elif isinstance(sym_name, StringAttr):
             self.attributes[self.SYM_NAME_ATTR_NAME] = sym_name
         else:
-            raise ValueError(
-                "sym_name must be a string or a StringAttr"
-            )
+            raise ValueError("sym_name must be a string or a StringAttr")
 
         if kernel:
             self.attributes[self.KERNEL_ATTR_NAME] = UnitAttr.get()
@@ -137,8 +135,8 @@ class GPUFuncOp(GPUFuncOp):
     def entry_block(self) -> Block:
         if len(self.body.blocks) == 0:
             raise RuntimeError(
-                f"Entry block does not exist for {self.name.value}." +
-                " Do you need to call the add_entry_block() method on this GPUFuncOp?"
+                f"Entry block does not exist for {self.name.value}."
+                + " Do you need to call the add_entry_block() method on this GPUFuncOp?"
             )
         return self.body.blocks[0]
 

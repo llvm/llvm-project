@@ -93,7 +93,10 @@ def testGPUFuncOp():
                 func.entry_block
                 assert False, "Expected RuntimeError"
             except RuntimeError as e:
-                assert str(e) == "Entry block does not exist for kernel0. Do you need to call the add_entry_block() method on this GPUFuncOp?"
+                assert (
+                    str(e)
+                    == "Entry block does not exist for kernel0. Do you need to call the add_entry_block() method on this GPUFuncOp?"
+                )
 
             block = func.add_entry_block()
             with InsertionPoint(block):
