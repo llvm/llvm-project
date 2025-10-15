@@ -451,7 +451,7 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]>
     OptionalAttr<I32Attr>:$location,
     OptionalAttr<I32Attr>:$binding,
     OptionalAttr<I32Attr>:$descriptor_set,
-    OptionalAttr<StrAttr>:$builtin,
+    OptionalAttr<StrAttr>:$built_in,
     OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes
   );
 

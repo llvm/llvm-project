@@ -1,6 +1,7 @@
 ; RUN: not llc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 ; CHECK:      error: couldn't allocate input reg for constraint '{d2}'
 ; CHECK-NEXT: error: couldn't allocate input reg for constraint '{s2}'
+; CHECK-NEXT: error: couldn't allocate input reg for constraint '{d3}'
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv8a-unknown-linux-gnueabihf"
@@ -23,3 +24,8 @@ entry:
   ret void
 }
 
+define void @_Z1dv() local_unnamed_addr {
+entry:
+  tail call void asm sideeffect "", "{d3}"(<16 x i8> splat (i8 -1))
+  ret void
+}

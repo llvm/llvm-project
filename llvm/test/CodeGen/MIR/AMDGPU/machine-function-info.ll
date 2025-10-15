@@ -20,6 +20,8 @@
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: numWaveDispatchSGPRs: 0
+; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT: frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
@@ -80,6 +82,8 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: numWaveDispatchSGPRs: 3
+; CHECK-NEXT: numWaveDispatchVGPRs: 1
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT: frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
@@ -144,6 +148,8 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: numWaveDispatchSGPRs: 16
+; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
 ; CHECK-NEXT: frameOffsetReg: '$sgpr33'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
@@ -200,6 +206,8 @@ define void @function() {
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: numWaveDispatchSGPRs: 16
+; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
 ; CHECK-NEXT: frameOffsetReg: '$sgpr33'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'

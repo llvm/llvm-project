@@ -110,7 +110,7 @@ void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
 }
 
 static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
-  assert(Tag == WebAssembly::CPP_EXCEPTION || WebAssembly::C_LONGJMP);
+  assert(Tag == WebAssembly::CPP_EXCEPTION || Tag == WebAssembly::C_LONGJMP);
   auto &MF = DAG->getMachineFunction();
   const auto &TLI = DAG->getTargetLoweringInfo();
   MVT PtrVT = TLI.getPointerTy(DAG->getDataLayout());
@@ -135,6 +135,15 @@ static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
     }
     if (VT == MVT::f64) {
       return wasm::ValType::F64;
+    }
+    if (VT == MVT::externref) {
+      return wasm::ValType::EXTERNREF;
+    }
+    if (VT == MVT::funcref) {
+      return wasm::ValType::FUNCREF;
+    }
+    if (VT == MVT::exnref) {
+      return wasm::ValType::EXNREF;
     }
     LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT
                       << "\n");

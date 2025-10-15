@@ -361,9 +361,6 @@ def err_drv_optimization_remark_format : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
-def err_drv_omp_host_ir_file_not_found : Error<
-  "provided host compiler IR file '%0' is required to generate code for OpenMP "
-  "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
@@ -393,6 +390,8 @@ def err_drv_small_columns : Error<
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
+
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -486,6 +485,9 @@ def warn_drv_overriding_option : Warning<
 def warn_drv_overriding_deployment_version
     : Warning<"overriding deployment version from '%0' to '%1'">,
       InGroup<DiagGroup<"overriding-deployment-version">>;
+def warn_drv_overriding_complex_range : Warning<
+  "'%1' sets complex range to \"%3\" overriding the setting of \"%2\" that was implied by '%0'">,
+  InGroup<DiagGroup<"overriding-complex-range">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
@@ -578,6 +580,13 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def remark_found_cxx20_module_usage : Remark<
+  "found C++20 module usage in file '%0'">,
+  InGroup<ModulesDriver>;
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -673,6 +682,9 @@ def warn_drv_fuse_ld_path : Warning<
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
+
+def err_drv_profile_instrument_use_path_with_no_kind : Error<
+  "option '-fprofile-instrument-use-path=' requires -fprofile-instrument-use=<kind>">;
 
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
@@ -876,4 +888,9 @@ def warn_drv_openacc_without_cir
     : Warning<"OpenACC directives will result in no runtime behavior; use "
               "-fclangir to enable runtime effect">,
       InGroup<SourceUsesOpenACC>;
+
+def warn_drv_gcc_install_dir_libstdcxx : Warning<
+    "future releases of the clang compiler will prefer GCC installations "
+    "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
+    InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
 }

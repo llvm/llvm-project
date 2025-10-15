@@ -443,9 +443,7 @@ void Sema::Initialize() {
   if (getLangOpts().MSVCCompat) {
     if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
-      PushOnScopeChains(
-          Context.buildImplicitRecord("type_info", TagTypeKind::Class),
-          TUScope);
+      PushOnScopeChains(Context.getMSTypeInfoTagDecl(), TUScope);
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
@@ -656,18 +654,19 @@ ASTMutationListener *Sema::getASTMutationListener() const {
   return getASTConsumer().GetASTMutationListener();
 }
 
-void Sema::addExternalSource(ExternalSemaSource *E) {
+void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
   assert(E && "Cannot use with NULL ptr");
 
   if (!ExternalSource) {
-    ExternalSource = E;
+    ExternalSource = std::move(E);
     return;
   }
 
-  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource))
-    Ex->AddSource(E);
+  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource.get()))
+    Ex->AddSource(std::move(E));
   else
-    ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
+    ExternalSource = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+        ExternalSource, std::move(E));
 }
 
 void Sema::PrintStats() const {
@@ -1435,7 +1434,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   //   translation unit contains a file scope declaration of that
   //   identifier, with the composite type as of the end of the
   //   translation unit, with an initializer equal to 0.
-  llvm::SmallSet<VarDecl *, 32> Seen;
+  llvm::SmallPtrSet<VarDecl *, 32> Seen;
   for (TentativeDefinitionsType::iterator
            T = TentativeDefinitions.begin(ExternalSource.get()),
            TEnd = TentativeDefinitions.end();
@@ -1883,21 +1882,21 @@ public:
     // Visit the dtors of all members
     for (const FieldDecl *FD : RD->fields()) {
       QualType FT = FD->getType();
-      if (const auto *RT = FT->getAs<RecordType>())
-        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-          if (ClassDecl->hasDefinition())
-            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
-              asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
+      if (const auto *ClassDecl = FT->getAsCXXRecordDecl();
+          ClassDecl &&
+          (ClassDecl->isBeingDefined() || ClassDecl->isCompleteDefinition()))
+        if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+          asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
     }
 
     // Also visit base class dtors
     for (const auto &Base : RD->bases()) {
       QualType BaseType = Base.getType();
-      if (const auto *RT = BaseType->getAs<RecordType>())
-        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-          if (BaseDecl->hasDefinition())
-            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
-              asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
+      if (const auto *BaseDecl = BaseType->getAsCXXRecordDecl();
+          BaseDecl &&
+          (BaseDecl->isBeingDefined() || BaseDecl->isCompleteDefinition()))
+        if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+          asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
     }
   }
 
@@ -1908,11 +1907,11 @@ public:
         if (VD->isThisDeclarationADefinition() &&
             VD->needsDestruction(S.Context)) {
           QualType VT = VD->getType();
-          if (const auto *RT = VT->getAs<RecordType>())
-            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-              if (ClassDecl->hasDefinition())
-                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
-                  asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
+          if (const auto *ClassDecl = VT->getAsCXXRecordDecl();
+              ClassDecl && (ClassDecl->isBeingDefined() ||
+                            ClassDecl->isCompleteDefinition()))
+            if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+              asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
 
     Inherited::VisitDeclStmt(DS);

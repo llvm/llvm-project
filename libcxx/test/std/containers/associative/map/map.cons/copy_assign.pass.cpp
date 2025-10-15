@@ -12,11 +12,11 @@
 
 // map& operator=(const map& m);
 
-#include <map>
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <iterator>
+#include <map>
 #include <vector>
 
 #include "test_macros.h"
@@ -24,274 +24,286 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-#if TEST_STD_VER >= 11
-std::vector<int> ca_allocs;
-std::vector<int> ca_deallocs;
-
 template <class T>
-class counting_allocatorT {
-public:
-  typedef T value_type;
-  int foo{0};
-  counting_allocatorT(int f) noexcept : foo(f) {}
+class tracking_allocator {
+  std::vector<void*>* allocs_;
 
+  template <class U>
+  friend class tracking_allocator;
+
+public:
+  using value_type                             = T;
   using propagate_on_container_copy_assignment = std::true_type;
+
+  tracking_allocator(std::vector<void*>& allocs) : allocs_(&allocs) {}
+
   template <class U>
-  counting_allocatorT(const counting_allocatorT<U>& other) noexcept {
-    foo = other.foo;
-  }
-  template <class U>
-  bool operator==(const counting_allocatorT<U>& other) const noexcept {
-    return foo == other.foo;
-  }
-  template <class U>
-  bool operator!=(const counting_allocatorT<U>& other) const noexcept {
-    return foo != other.foo;
+  tracking_allocator(const tracking_allocator<U>& other) : allocs_(other.allocs_) {}
+
+  T* allocate(std::size_t n) {
+    T* allocation = std::allocator<T>().allocate(n);
+    allocs_->push_back(allocation);
+    return allocation;
   }
 
-  T* allocate(std::size_t n) const {
-    ca_allocs.push_back(foo);
-    void* const pv = ::malloc(n * sizeof(T));
-    return static_cast<T*>(pv);
+  void deallocate(T* ptr, std::size_t n) TEST_NOEXCEPT {
+    auto res = std::remove(allocs_->begin(), allocs_->end(), ptr);
+    assert(res != allocs_->end() && "Trying to deallocate memory from different allocator?");
+    allocs_->erase(res);
+    std::allocator<T>().deallocate(ptr, n);
   }
-  void deallocate(T* p, std::size_t) const noexcept {
-    ca_deallocs.push_back(foo);
-    free(p);
+
+  friend bool operator==(const tracking_allocator& lhs, const tracking_allocator& rhs) {
+    return lhs.allocs_ == rhs.allocs_;
+  }
+
+  friend bool operator!=(const tracking_allocator& lhs, const tracking_allocator& rhs) {
+    return lhs.allocs_ != rhs.allocs_;
   }
 };
 
-template <class T>
-class counting_allocatorF {
-public:
-  typedef T value_type;
-  int foo{0};
-  counting_allocatorF(int f) noexcept : foo(f) {}
-
-  using propagate_on_container_copy_assignment = std::false_type;
-  template <class U>
-  counting_allocatorF(const counting_allocatorF<U>& other) noexcept {
-    foo = other.foo;
-  }
-  template <class U>
-  bool operator==(const counting_allocatorF<U>& other) const noexcept {
-    return foo == other.foo;
-  }
-  template <class U>
-  bool operator!=(const counting_allocatorF<U>& other) const noexcept {
-    return foo != other.foo;
-  }
-
-  T* allocate(std::size_t n) const {
-    ca_allocs.push_back(foo);
-    void* const pv = ::malloc(n * sizeof(T));
-    return static_cast<T*>(pv);
-  }
-  void deallocate(T* p, std::size_t) const noexcept {
-    ca_deallocs.push_back(foo);
-    free(p);
-  }
+struct NoOp {
+  void operator()() {}
 };
 
-bool balanced_allocs() {
-  std::vector<int> temp1, temp2;
+template <class Alloc, class AllocatorInvariant = NoOp>
+void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
+                const Alloc& rhs_alloc                   = Alloc(),
+                AllocatorInvariant check_alloc_invariant = NoOp()) {
+  {   // Test empty/non-empty map combinations
+    { // assign from a non-empty container into an empty one
+      using V   = std::pair<const int, int>;
+      using Map = std::map<int, int, std::less<int>, Alloc>;
 
-  std::printf("Allocations = %zu, deallocations = %zu\n", ca_allocs.size(), ca_deallocs.size());
-  if (ca_allocs.size() != ca_deallocs.size())
-    return false;
+      V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+      const Map orig(begin(arr), end(arr), std::less<int>(), rhs_alloc);
+      Map copy(lhs_alloc);
+      copy = orig;
+      assert(copy.size() == 3);
+      assert(*std::next(copy.begin(), 0) == V(1, 1));
+      assert(*std::next(copy.begin(), 1) == V(2, 3));
+      assert(*std::next(copy.begin(), 2) == V(3, 6));
+      assert(std::next(copy.begin(), 3) == copy.end());
 
-  temp1 = ca_allocs;
-  std::sort(temp1.begin(), temp1.end());
-  temp2.clear();
-  std::unique_copy(temp1.begin(), temp1.end(), std::back_inserter<std::vector<int>>(temp2));
-  std::printf("There were %zu different allocators\n", temp2.size());
+      // Check that orig is still what is expected
+      assert(orig.size() == 3);
+      assert(*std::next(orig.begin(), 0) == V(1, 1));
+      assert(*std::next(orig.begin(), 1) == V(2, 3));
+      assert(*std::next(orig.begin(), 2) == V(3, 6));
+      assert(std::next(orig.begin(), 3) == orig.end());
+    }
+    check_alloc_invariant();
+    { // assign from an empty container into an empty one
+      using Map = std::map<int, int, std::less<int>, Alloc>;
 
-  for (std::vector<int>::const_iterator it = temp2.begin(); it != temp2.end(); ++it) {
-    std::ptrdiff_t const allocs   = std::count(ca_allocs.begin(), ca_allocs.end(), *it);
-    std::ptrdiff_t const deallocs = std::count(ca_deallocs.begin(), ca_deallocs.end(), *it);
-    std::printf("%d: %td vs %td\n", *it, allocs, deallocs);
-    if (allocs != deallocs)
-      return false;
+      const Map orig(rhs_alloc);
+      Map copy(lhs_alloc);
+      copy = orig;
+      assert(copy.size() == 0);
+      assert(copy.begin() == copy.end());
+
+      // Check that orig is still what is expected
+      assert(orig.size() == 0);
+      assert(orig.begin() == orig.end());
+    }
+    check_alloc_invariant();
+    { // assign from an empty container into a non-empty one
+      using V   = std::pair<const int, int>;
+      using Map = std::map<int, int, std::less<int>, Alloc>;
+
+      V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+      const Map orig(rhs_alloc);
+      Map copy(begin(arr), end(arr), std::less<int>(), rhs_alloc);
+      copy = orig;
+      assert(copy.size() == 0);
+      assert(copy.begin() == copy.end());
+
+      // Check that orig is still what is expected
+      assert(orig.size() == 0);
+      assert(orig.begin() == orig.end());
+    }
   }
 
-  temp1 = ca_allocs;
-  std::sort(temp1.begin(), temp1.end());
-  temp2.clear();
-  std::unique_copy(temp1.begin(), temp1.end(), std::back_inserter<std::vector<int>>(temp2));
-  std::printf("There were %zu different (de)allocators\n", temp2.size());
+  {   // Ensure that self-assignment works correctly
+    { // with a non-empty map
+      using V   = std::pair<const int, int>;
+      using Map = std::map<int, int, std::less<int>, Alloc>;
 
-  for (std::vector<int>::const_iterator it = ca_deallocs.begin(); it != ca_deallocs.end(); ++it) {
-    std::ptrdiff_t const allocs   = std::count(ca_allocs.begin(), ca_allocs.end(), *it);
-    std::ptrdiff_t const deallocs = std::count(ca_deallocs.begin(), ca_deallocs.end(), *it);
-    std::printf("%d: %td vs %td\n", *it, allocs, deallocs);
-    if (allocs != deallocs)
-      return false;
+      V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+      Map orig(begin(arr), end(arr), std::less<int>(), rhs_alloc);
+      orig = static_cast<const Map&>(orig);
+
+      assert(orig.size() == 3);
+      assert(*std::next(orig.begin(), 0) == V(1, 1));
+      assert(*std::next(orig.begin(), 1) == V(2, 3));
+      assert(*std::next(orig.begin(), 2) == V(3, 6));
+      assert(std::next(orig.begin(), 3) == orig.end());
+    }
+    { // with an empty map
+      using Map = std::map<int, int, std::less<int>, Alloc>;
+
+      Map orig(rhs_alloc);
+      orig = static_cast<const Map&>(orig);
+
+      assert(orig.size() == 0);
+      assert(orig.begin() == orig.end());
+    }
   }
 
-  return true;
+  { // check assignment into a non-empty map
+    check_alloc_invariant();
+    { // LHS already contains elements, but fewer than the RHS
+      using V   = std::pair<const int, int>;
+      using Map = std::map<int, int, std::less<int>, Alloc>;
+
+      V lhs_arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+      const Map orig(begin(lhs_arr), end(lhs_arr), std::less<int>(), rhs_alloc);
+
+      V rhs_arr[] = {V(4, 2), V(5, 1)};
+      Map copy(begin(rhs_arr), end(rhs_arr), std::less<int>(), lhs_alloc);
+      copy = orig;
+      assert(copy.size() == 3);
+      assert(*std::next(copy.begin(), 0) == V(1, 1));
+      assert(*std::next(copy.begin(), 1) == V(2, 3));
+      assert(*std::next(copy.begin(), 2) == V(3, 6));
+      assert(std::next(copy.begin(), 3) == copy.end());
+
+      // Check that orig is still what is expected
+      assert(orig.size() == 3);
+      assert(*std::next(orig.begin(), 0) == V(1, 1));
+      assert(*std::next(orig.begin(), 1) == V(2, 3));
+      assert(*std::next(orig.begin(), 2) == V(3, 6));
+      assert(std::next(orig.begin(), 3) == orig.end());
+    }
+    check_alloc_invariant();
+    { // LHS contains the same number of elements as the RHS
+      using V   = std::pair<const int, int>;
+      using Map = std::map<int, int, std::less<int>, Alloc>;
+
+      V lhs_arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+      const Map orig(begin(lhs_arr), end(lhs_arr), std::less<int>(), rhs_alloc);
+
+      V rhs_arr[] = {V(4, 2), V(5, 1), V(6, 0)};
+      Map copy(begin(rhs_arr), end(rhs_arr), std::less<int>(), lhs_alloc);
+      copy = orig;
+      assert(copy.size() == 3);
+      assert(*std::next(copy.begin(), 0) == V(1, 1));
+      assert(*std::next(copy.begin(), 1) == V(2, 3));
+      assert(*std::next(copy.begin(), 2) == V(3, 6));
+      assert(std::next(copy.begin(), 3) == copy.end());
+
+      // Check that orig is still what is expected
+      assert(orig.size() == 3);
+      assert(*std::next(orig.begin(), 0) == V(1, 1));
+      assert(*std::next(orig.begin(), 1) == V(2, 3));
+      assert(*std::next(orig.begin(), 2) == V(3, 6));
+      assert(std::next(orig.begin(), 3) == orig.end());
+    }
+    check_alloc_invariant();
+    { // LHS already contains more elements than the RHS
+      using V   = std::pair<const int, int>;
+      using Map = std::map<int, int, std::less<int>, Alloc>;
+
+      V lhs_arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+      const Map orig(begin(lhs_arr), end(lhs_arr), std::less<int>(), rhs_alloc);
+
+      V rhs_arr[] = {V(4, 2), V(5, 1), V(6, 0), V(7, 9)};
+      Map copy(begin(rhs_arr), end(rhs_arr), std::less<int>(), lhs_alloc);
+      copy = orig;
+      assert(copy.size() == 3);
+      assert(*std::next(copy.begin(), 0) == V(1, 1));
+      assert(*std::next(copy.begin(), 1) == V(2, 3));
+      assert(*std::next(copy.begin(), 2) == V(3, 6));
+      assert(std::next(copy.begin(), 3) == copy.end());
+
+      // Check that orig is still what is expected
+      assert(orig.size() == 3);
+      assert(*std::next(orig.begin(), 0) == V(1, 1));
+      assert(*std::next(orig.begin(), 1) == V(2, 3));
+      assert(*std::next(orig.begin(), 2) == V(3, 6));
+      assert(std::next(orig.begin(), 3) == orig.end());
+    }
+    check_alloc_invariant();
+  }
+  { // Make a somewhat larger set to exercise the algorithm a bit
+    using V   = std::pair<const int, int>;
+    using Map = std::map<int, int, std::less<int>, Alloc>;
+
+    Map orig(rhs_alloc);
+    for (int i = 0; i != 50; ++i)
+      orig[i] = i + 3;
+
+    Map copy(lhs_alloc);
+    copy  = orig;
+    int i = 0;
+    for (auto v : copy) {
+      assert(v == V(i, i + 3));
+      ++i;
+    }
+  }
+  check_alloc_invariant();
 }
+
+void test() {
+  test_alloc<std::allocator<std::pair<const int, int> > >();
+#if TEST_STD_VER >= 11
+  test_alloc<min_allocator<std::pair<const int, int> > >();
+
+  { // Make sure we're allocating/deallocating nodes with the correct allocator
+    // See https://llvm.org/PR29001
+    class AssertEmpty {
+      std::vector<void*>* lhs_allocs_;
+      std::vector<void*>* rhs_allocs_;
+
+    public:
+      AssertEmpty(std::vector<void*>& lhs_allocs, std::vector<void*>& rhs_allocs)
+          : lhs_allocs_(&lhs_allocs), rhs_allocs_(&rhs_allocs) {}
+
+      void operator()() {
+        assert(lhs_allocs_->empty());
+        assert(rhs_allocs_->empty());
+      }
+    };
+
+    std::vector<void*> lhs_allocs;
+    std::vector<void*> rhs_allocs;
+    test_alloc<tracking_allocator<std::pair<const int, int> > >(
+        lhs_allocs, rhs_allocs, AssertEmpty(lhs_allocs, rhs_allocs));
+  }
 #endif
+
+  { // Ensure that the comparator is copied
+    using V   = std::pair<const int, int>;
+    using Map = std::map<int, int, test_less<int> >;
+
+    V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+    const Map orig(begin(arr), end(arr), test_less<int>(3));
+    Map copy;
+    copy = orig;
+    assert(copy.size() == 3);
+    assert(copy.key_comp() == test_less<int>(3));
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(orig.key_comp() == test_less<int>(3));
+  }
+
+  { // Make sure the color is copied as well
+    std::map<int, int> in;
+
+    for (int i = 0; i != 32; ++i)
+      in[i] = i;
+
+    std::map<int, int> out = in;
+
+    out.erase(std::next(out.begin(), 10), out.end());
+    out = in;
+    out.erase(std::next(out.begin(), 17), out.end());
+  }
+}
 
 int main(int, char**) {
-  {
-    typedef std::pair<const int, double> V;
-    V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
-    typedef test_less<int> C;
-    typedef test_allocator<V> A;
-    std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(2));
-    std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]) / 2, C(3), A(7));
-    m = mo;
-    assert(m.get_allocator() == A(7));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-
-    assert(mo.get_allocator() == A(2));
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 3);
-    assert(std::distance(mo.begin(), mo.end()) == 3);
-    assert(*mo.begin() == V(1, 1));
-    assert(*std::next(mo.begin()) == V(2, 1));
-    assert(*std::next(mo.begin(), 2) == V(3, 1));
-  }
-  {
-    typedef std::pair<const int, double> V;
-    const V ar[] = {
-        V(1, 1),
-        V(2, 1),
-        V(3, 1),
-    };
-    std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    std::map<int, double>* p = &m;
-    m                        = *p;
-
-    assert(m.size() == 3);
-    assert(std::equal(m.begin(), m.end(), ar));
-  }
-  {
-    typedef std::pair<const int, double> V;
-    V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
-    typedef test_less<int> C;
-    typedef other_allocator<V> A;
-    std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(2));
-    std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]) / 2, C(3), A(7));
-    m = mo;
-    assert(m.get_allocator() == A(2));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-
-    assert(mo.get_allocator() == A(2));
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 3);
-    assert(std::distance(mo.begin(), mo.end()) == 3);
-    assert(*mo.begin() == V(1, 1));
-    assert(*std::next(mo.begin()) == V(2, 1));
-    assert(*std::next(mo.begin(), 2) == V(3, 1));
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::pair<const int, double> V;
-    V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
-    typedef test_less<int> C;
-    typedef min_allocator<V> A;
-    std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A());
-    std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]) / 2, C(3), A());
-    m = mo;
-    assert(m.get_allocator() == A());
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-
-    assert(mo.get_allocator() == A());
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 3);
-    assert(std::distance(mo.begin(), mo.end()) == 3);
-    assert(*mo.begin() == V(1, 1));
-    assert(*std::next(mo.begin()) == V(2, 1));
-    assert(*std::next(mo.begin(), 2) == V(3, 1));
-  }
-  {
-    typedef std::pair<const int, double> V;
-    V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
-    typedef test_less<int> C;
-    typedef min_allocator<V> A;
-    std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A());
-    std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]) / 2, C(3), A());
-    m = mo;
-    assert(m.get_allocator() == A());
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-
-    assert(mo.get_allocator() == A());
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 3);
-    assert(std::distance(mo.begin(), mo.end()) == 3);
-    assert(*mo.begin() == V(1, 1));
-    assert(*std::next(mo.begin()) == V(2, 1));
-    assert(*std::next(mo.begin(), 2) == V(3, 1));
-  }
-
-  assert(balanced_allocs());
-  {
-    typedef std::pair<const int, double> V;
-    V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
-    typedef test_less<int> C;
-    typedef counting_allocatorT<V> A;
-    std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(1));
-    std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]) / 2, C(3), A(2));
-    m = mo;
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 3);
-    assert(std::distance(mo.begin(), mo.end()) == 3);
-    assert(*mo.begin() == V(1, 1));
-    assert(*std::next(mo.begin()) == V(2, 1));
-    assert(*std::next(mo.begin(), 2) == V(3, 1));
-  }
-  assert(balanced_allocs());
-  {
-    typedef std::pair<const int, double> V;
-    V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
-    typedef test_less<int> C;
-    typedef counting_allocatorF<V> A;
-    std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(100));
-    std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]) / 2, C(3), A(200));
-    m = mo;
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 3);
-    assert(std::distance(mo.begin(), mo.end()) == 3);
-    assert(*mo.begin() == V(1, 1));
-    assert(*std::next(mo.begin()) == V(2, 1));
-    assert(*std::next(mo.begin(), 2) == V(3, 1));
-  }
-  assert(balanced_allocs());
-#endif
+  test();
 
   return 0;
 }

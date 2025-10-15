@@ -147,8 +147,6 @@ static TypeLoc lookThroughTypedefOrTypeAliasLocs(TypeLoc &SrcTL) {
     return BlockPointerTL.getPointeeLoc().getUnqualifiedLoc();
   if (MemberPointerTypeLoc MemberPointerTL = TL.getAs<MemberPointerTypeLoc>())
     return MemberPointerTL.getPointeeLoc().getUnqualifiedLoc();
-  if (ElaboratedTypeLoc ETL = TL.getAs<ElaboratedTypeLoc>())
-    return ETL.getNamedTypeLoc();
 
   return TL;
 }

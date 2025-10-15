@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/index.json
+// RUN: FileCheck %s < %t/json/index.json
 
 static void myFunction() {}
 

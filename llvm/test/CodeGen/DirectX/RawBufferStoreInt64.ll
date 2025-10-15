@@ -4,10 +4,10 @@
 define void @storei64(i64 %0, i32 %index) {
   ; CHECK: [[Buf:%.*]] = tail call target("dx.RawBuffer", i64, 1, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i64_1_0t(
-  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
   %buffer = tail call target("dx.RawBuffer", i64, 1, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i64_1_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: call void @llvm.dx.resource.store.rawbuffer
@@ -30,10 +30,10 @@ define void @storei64(i64 %0, i32 %index) {
 define void @storev2i64(<2 x i64> %0, i32 %index) {
   ; CHECK: [[Buf:%.*]] = tail call target("dx.RawBuffer", <2 x i64>, 1, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v2i64_1_0t(
-  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
   %buffer = tail call target("dx.RawBuffer", <2 x i64>, 1, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v2i64_1_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: call void @llvm.dx.resource.store.rawbuffer
@@ -54,10 +54,10 @@ define void @storev2i64(<2 x i64> %0, i32 %index) {
 define void @storev3i64(<3 x i64> %0, i32 %index) {
   ; CHECK: [[Buf:%.*]] = tail call target("dx.RawBuffer", <3 x i64>, 1, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v3i64_1_0t(
-  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
   %buffer = tail call target("dx.RawBuffer", <3 x i64>, 1, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v3i64_1_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: call void @llvm.dx.resource.store.rawbuffer
@@ -80,10 +80,10 @@ define void @storev3i64(<3 x i64> %0, i32 %index) {
 define void @storev4i64(<4 x i64> %0, i32 %index) {
   ; CHECK: [[Buf:%.*]] = tail call target("dx.RawBuffer", <4 x i64>, 1, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4i64_1_0t(
-  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
   %buffer = tail call target("dx.RawBuffer", <4 x i64>, 1, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4i64_1_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: call void @llvm.dx.resource.store.rawbuffer
   ; CHECK63-SAME: target("dx.RawBuffer", <4 x i64>, 1, 0) [[Buf]], i32 %index, i32 0, <4 x i64> %0)

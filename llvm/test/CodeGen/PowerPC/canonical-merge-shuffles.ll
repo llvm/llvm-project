@@ -562,7 +562,6 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P8-NEXT:    bl dummy
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxlxor f0, f0, f0
-; CHECK-P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
@@ -577,7 +576,6 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P9-NEXT:    bl dummy
 ; CHECK-P9-NEXT:    nop
 ; CHECK-P9-NEXT:    xxlxor f0, f0, f0
-; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P9-NEXT:    stxv vs0, 0(r30)
 ;
@@ -591,7 +589,6 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P9-BE-NEXT:    bl dummy
 ; CHECK-P9-BE-NEXT:    nop
 ; CHECK-P9-BE-NEXT:    xxlxor f0, f0, f0
-; CHECK-P9-BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P9-BE-NEXT:    xxmrghd vs0, vs0, vs1
 ; CHECK-P9-BE-NEXT:    stxv vs0, 0(r30)
 ;
@@ -618,7 +615,6 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P7-NEXT:    bl dummy
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    xxlxor f0, f0, f0
-; CHECK-P7-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P7-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P7-NEXT:    xxswapd vs0, vs0
 ; CHECK-P7-NEXT:    stxvd2x vs0, 0, r30
@@ -633,7 +629,6 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; P8-AIX-64-NEXT:    bl .dummy[PR]
 ; P8-AIX-64-NEXT:    nop
 ; P8-AIX-64-NEXT:    xxlxor f0, f0, f0
-; P8-AIX-64-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-AIX-64-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8-AIX-64-NEXT:    stxvd2x vs0, 0, r31
 ;
@@ -647,7 +642,6 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; P8-AIX-32-NEXT:    bl .dummy[PR]
 ; P8-AIX-32-NEXT:    nop
 ; P8-AIX-32-NEXT:    xxlxor f0, f0, f0
-; P8-AIX-32-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-AIX-32-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8-AIX-32-NEXT:    stxvd2x vs0, 0, r31
 test_entry:

@@ -263,6 +263,19 @@ func.func @tensor_cast_to_buffer(%arg0 : tensor<4x6x16x32xi8>) ->
 // CHECK-SAME: memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
 // CHECK:   return %[[M1]] : memref<?x?x16x32xi8>
 
+// CHECK-LABEL: func @tensor_cast_to_unranked_buffer
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<4x6x16x32xi8>
+func.func @tensor_cast_to_unranked_buffer(%arg0 : tensor<4x6x16x32xi8>) ->
+  memref<*xi8> {
+  %0 = tensor.cast %arg0 : tensor<4x6x16x32xi8> to tensor<*xi8>
+  %1 = bufferization.to_buffer %0 read_only : tensor<*xi8> to memref<*xi8>
+  return %1 : memref<*xi8>
+}
+// CHECK:   %[[M:.+]] = bufferization.to_buffer %[[ARG0]] read_only : tensor<4x6x16x32xi8>
+// CHECK:   %[[M1:.+]] = memref.cast %[[M]]
+// CHECK-SAME: memref<4x6x16x32xi8> to memref<*xi8>
+// CHECK:   return %[[M1]] : memref<*xi8>
+
 // -----
 
 // CHECK-LABEL: func @tensor_cast_to_buffer

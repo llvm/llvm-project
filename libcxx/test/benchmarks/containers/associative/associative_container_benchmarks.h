@@ -151,7 +151,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Assignment
   /////////////////////////
-  bench("operator=(const&)", [=](auto& st) {
+  bench("operator=(const&) (into cleared Container)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -169,6 +169,42 @@ void associative_container_benchmarks(std::string container) {
         c[i].clear();
       }
       st.ResumeTiming();
+    }
+  });
+
+  bench("operator=(const&) (into partially populated Container)", [=](auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i].clear();
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("operator=(const&) (into populated Container)", [=](auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
     }
   });
 
@@ -223,14 +259,65 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
-  // a good way to compute a hint for unordered ones.
-  if constexpr (is_ordered_container) {
-    bench("insert(hint, value) (good hint)", [=](auto& st) {
+  if constexpr (is_map_like && !is_multi_key_container) {
+    bench("insert_or_assign(key, value) (already present)", [=](auto& st) {
+      const std::size_t size = st.range(0) ? st.range(0) : 1;
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+      Value to_insert        = in[in.size() / 2]; // pick any existing value
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+      typename Container::iterator inserted[BatchSize];
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          inserted[i] =
+              adapt_operations<Container>::get_iterator(c[i].insert_or_assign(to_insert.first, to_insert.second));
+          benchmark::DoNotOptimize(inserted[i]);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+      }
+    });
+
+    bench("insert_or_assign(key, value) (new value)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
       Value to_insert        = in.back();
       in.pop_back();
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          auto result = c[i].insert_or_assign(to_insert.first, to_insert.second);
+          benchmark::DoNotOptimize(result);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+        }
+        st.ResumeTiming();
+      }
+    });
+  }
+
+  // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
+  // a good way to compute a hint for unordered ones.
+  if constexpr (is_ordered_container) {
+    auto insert_good_hint_bench = [=](bool bench_end_iter, auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+      Value to_insert        = in[skipped_val];
+      { // Remove the element
+        std::vector<Value> tmp;
+        tmp.reserve(in.size() - 1);
+        for (size_t i = 0; i != in.size(); ++i)
+          if (i != skipped_val)
+            tmp.emplace_back(in[i]);
+        in = std::move(tmp);
+      }
 
       std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
       typename Container::iterator hints[BatchSize];
@@ -253,13 +340,23 @@ void associative_container_benchmarks(std::string container) {
         }
         st.ResumeTiming();
       }
-    });
+    };
+    bench("insert(hint, value) (good hint, end)", [=](auto& state) { insert_good_hint_bench(true, state); });
+    bench("insert(hint, value) (good hint, middle)", [=](auto& state) { insert_good_hint_bench(false, state); });
 
-    bench("insert(hint, value) (bad hint)", [=](auto& st) {
+    auto insert_bad_hint_bench = [=](bool bench_end_iter, auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
-      Value to_insert        = in.back();
-      in.pop_back();
+      auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+      Value to_insert        = in[skipped_val];
+      { // Remove the element
+        std::vector<Value> tmp;
+        tmp.reserve(in.size() - 1);
+        for (size_t i = 0; i != in.size(); ++i)
+          if (i != skipped_val)
+            tmp.emplace_back(in[i]);
+        in = std::move(tmp);
+      }
       std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
 
       while (st.KeepRunningBatch(BatchSize)) {
@@ -276,7 +373,10 @@ void associative_container_benchmarks(std::string container) {
         }
         st.ResumeTiming();
       }
-    });
+    };
+
+    bench("insert(hint, value) (bad hint, end)", [=](auto& state) { insert_bad_hint_bench(true, state); });
+    bench("insert(hint, value) (bad hint, middle)", [=](auto& state) { insert_bad_hint_bench(false, state); });
   }
 
   bench("insert(iterator, iterator) (all new keys)", [=](auto& st) {

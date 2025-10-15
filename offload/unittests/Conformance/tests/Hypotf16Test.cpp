@@ -25,10 +25,7 @@
 
 using namespace mathtest;
 
-extern "C" {
-
-float16 hypotf16(float16, float16);
-}
+extern "C" float16 hypotf16(float16, float16);
 
 namespace mathtest {
 

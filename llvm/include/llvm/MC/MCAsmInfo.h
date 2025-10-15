@@ -464,10 +464,10 @@ public:
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
 
-  /// Targets can implement this method to specify a section to switch to if the
-  /// translation unit doesn't have any trampolines that require an executable
-  /// stack.
-  virtual MCSection *getNonexecutableStackSection(MCContext &Ctx) const {
+  /// Targets can implement this method to specify a section to switch to
+  /// depending on whether the translation unit has any trampolines that require
+  /// an executable stack.
+  virtual MCSection *getStackSection(MCContext &Ctx, bool Exec) const {
     return nullptr;
   }
 

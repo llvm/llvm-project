@@ -73,7 +73,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -192,7 +192,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_rtn_f64(ptr addrspace(8) inreg 
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
@@ -311,7 +311,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -429,7 +429,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_add_rtn_f64(ptr addrspace(8) inr
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -547,7 +547,7 @@ define amdgpu_ps void @raw_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -666,7 +666,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inreg 
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
@@ -785,7 +785,7 @@ define amdgpu_ps void @struct_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -903,7 +903,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inr
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -1021,7 +1021,7 @@ define amdgpu_ps void @raw_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -1140,7 +1140,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inreg 
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
@@ -1259,7 +1259,7 @@ define amdgpu_ps void @struct_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -1377,7 +1377,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inr
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -1501,6 +1501,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %pt
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -1571,6 +1572,9 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -1645,6 +1649,7 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -1715,6 +1720,9 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -1792,6 +1800,7 @@ define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, doubl
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1902,6 +1911,9 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -1947,6 +1959,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -1987,6 +2000,9 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -2031,6 +2047,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -2107,6 +2124,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -2190,6 +2208,9 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -2243,36 +2264,22 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ;
 ; GFX1250-LABEL: local_atomic_fadd_f64_noret_pat:
 ; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    s_mov_b32 s1, exec_lo
-; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, s0, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1250-NEXT:    s_cbranch_execz .LBB51_3
+; GFX1250-NEXT:    s_cbranch_execz .LBB51_2
 ; GFX1250-NEXT:  ; %bb.1:
-; GFX1250-NEXT:    s_bcnt1_i32_b32 s1, s1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s1
-; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x24
+; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
-; GFX1250-NEXT:    ds_load_b64 v[2:3], v4
-; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
-; GFX1250-NEXT:  .LBB51_2: ; %atomicrmw.start
-; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    v_dual_mul_f64 v[0:1], 4.0, v[0:1] :: v_dual_mov_b32 v2, s0
+; GFX1250-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_f64_e32 v[6:7], v[2:3], v[0:1]
-; GFX1250-NEXT:    ds_cmpstore_rtn_b64 v[6:7], v4, v[6:7], v[2:3]
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[6:7], v[2:3]
-; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], v[6:7]
-; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execnz .LBB51_2
-; GFX1250-NEXT:  .LBB51_3:
+; GFX1250-NEXT:  .LBB51_2:
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -2322,36 +2329,22 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ;
 ; GFX1250-LABEL: local_atomic_fadd_f64_noret_pat_flush:
 ; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    s_mov_b32 s1, exec_lo
-; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, s0, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1250-NEXT:    s_cbranch_execz .LBB52_3
+; GFX1250-NEXT:    s_cbranch_execz .LBB52_2
 ; GFX1250-NEXT:  ; %bb.1:
-; GFX1250-NEXT:    s_bcnt1_i32_b32 s1, s1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s1
-; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x24
+; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
-; GFX1250-NEXT:    ds_load_b64 v[2:3], v4
-; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
-; GFX1250-NEXT:  .LBB52_2: ; %atomicrmw.start
-; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    v_dual_mul_f64 v[0:1], 4.0, v[0:1] :: v_dual_mov_b32 v2, s0
+; GFX1250-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_f64_e32 v[6:7], v[2:3], v[0:1]
-; GFX1250-NEXT:    ds_cmpstore_rtn_b64 v[6:7], v4, v[6:7], v[2:3]
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[6:7], v[2:3]
-; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], v[6:7]
-; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execnz .LBB52_2
-; GFX1250-NEXT:  .LBB52_3:
+; GFX1250-NEXT:  .LBB52_2:
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -2401,36 +2394,22 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ;
 ; GFX1250-LABEL: local_atomic_fadd_f64_noret_pat_flush_safe:
 ; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    s_mov_b32 s1, exec_lo
-; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, s0, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1250-NEXT:    s_cbranch_execz .LBB53_3
+; GFX1250-NEXT:    s_cbranch_execz .LBB53_2
 ; GFX1250-NEXT:  ; %bb.1:
-; GFX1250-NEXT:    s_bcnt1_i32_b32 s1, s1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s1
-; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x24
+; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
-; GFX1250-NEXT:    ds_load_b64 v[2:3], v4
-; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
-; GFX1250-NEXT:  .LBB53_2: ; %atomicrmw.start
-; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    v_dual_mul_f64 v[0:1], 4.0, v[0:1] :: v_dual_mov_b32 v2, s0
+; GFX1250-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_f64_e32 v[6:7], v[2:3], v[0:1]
-; GFX1250-NEXT:    ds_cmpstore_rtn_b64 v[6:7], v4, v[6:7], v[2:3]
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[6:7], v[2:3]
-; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], v[6:7]
-; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execnz .LBB53_2
-; GFX1250-NEXT:  .LBB53_3:
+; GFX1250-NEXT:  .LBB53_2:
 ; GFX1250-NEXT:    s_endpgm
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -2459,23 +2438,10 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1250-NEXT:    ds_load_b64 v[0:1], v0
-; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:  .LBB54_1: ; %atomicrmw.start
-; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_add_f64_e32 v[0:1], 4.0, v[4:5]
-; GFX1250-NEXT:    ds_cmpstore_rtn_b64 v[0:1], v2, v[0:1], v[4:5]
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execnz .LBB54_1
-; GFX1250-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst

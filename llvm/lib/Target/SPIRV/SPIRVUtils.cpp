@@ -181,7 +181,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD) {
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -193,6 +193,20 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     if (!DecorationId)
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
+
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
                    .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
@@ -371,6 +385,12 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
+  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
+  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
+  return MI->getOperand(1).getCImm()->getSExtValue();
+}
+
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
   if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
@@ -463,8 +483,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-      .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
@@ -756,7 +778,7 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
   for (unsigned I = 0; I < MaxIters; ++I) {
     std::string OrdName = Name + Twine(I).str();
     if (!M.getFunction(OrdName)) {
-      Name = OrdName;
+      Name = std::move(OrdName);
       return true;
     }
   }

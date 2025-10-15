@@ -685,6 +685,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
+  KEYWORD(cheriot_compartmentcallcc);
+  KEYWORD(cheriot_compartmentcalleecc);
+  KEYWORD(cheriot_librarycallcc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -928,6 +931,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(fptoui,      FPToUI);
   INSTKEYWORD(fptosi,      FPToSI);
   INSTKEYWORD(inttoptr,    IntToPtr);
+  INSTKEYWORD(ptrtoaddr,   PtrToAddr);
   INSTKEYWORD(ptrtoint,    PtrToInt);
   INSTKEYWORD(bitcast,     BitCast);
   INSTKEYWORD(addrspacecast, AddrSpaceCast);
@@ -978,6 +982,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(ATE, DwarfAttEncoding);
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
   DWKEYWORD(LANG, DwarfLang);
+  DWKEYWORD(LNAME, DwarfSourceLangName);
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);

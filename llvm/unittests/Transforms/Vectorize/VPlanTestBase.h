@@ -65,17 +65,19 @@ protected:
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader) {
+  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildPlainCFG(L, *LI);
-    VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
-    VPlanTransforms::prepareForVectorization(*Plan, IntegerType::get(*Ctx, 64),
-                                             PSE, true, false, L, {}, false, R);
+    auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
+                                             {}, PSE);
+
+    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
+    VPlanTransforms::addMiddleCheck(*Plan, true, false);
+
     VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
   }

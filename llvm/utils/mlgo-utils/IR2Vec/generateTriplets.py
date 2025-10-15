@@ -124,7 +124,7 @@ class IR2VecTripletGenerator:
 
             # Run llvm-ir2vec with opt's output as input
             ir2vec_proc = subprocess.Popen(
-                [self.ir2vec_binary, "--mode=triplets", "-", "-o", "-"],
+                [self.ir2vec_binary, "triplets", "-", "-o", "-"],
                 stdin=opt_proc.stdout,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -223,7 +223,7 @@ class IR2VecTripletGenerator:
     def _generate_entity2id(self, output_file: Path) -> None:
         """Generate entity2id.txt using llvm-ir2vec"""
         subprocess.run(
-            [str(self.ir2vec_binary), "--mode=entities", "-o", str(output_file)],
+            [str(self.ir2vec_binary), "entities", "-o", str(output_file)],
             check=True,
             capture_output=True,
         )

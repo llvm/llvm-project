@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This doesn't work on Windows because in the MSVC UCRT headers the math.h is
-// actually intended to implement the full C++ spec requirements. For details
-// see https://github.com/llvm/llvm-project/issues/70225#issuecomment-1992528828
-// XFAIL: msvc
-
 // <cmath>
 
 #include <cmath>
@@ -1215,7 +1210,7 @@ void test_hypot()
     assert(std::hypot(1,4,8) == 9);
 
     // Check for undue over-/underflows of intermediate results.
-    // See discussion at https://github.com/llvm/llvm-project/issues/92782.
+    // See discussion at https://llvm.org/PR92782.
     types::for_each(types::floating_point_types(), TestHypot3());
 #endif
 }

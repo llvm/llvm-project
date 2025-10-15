@@ -16,6 +16,9 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 namespace cir {

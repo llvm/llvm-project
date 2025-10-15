@@ -104,6 +104,10 @@ file formats.
  Do not demangle symbol names in the output. This option is only for ELF and
  XCOFF file formats. The option is enabled by default.
 
+.. option:: --offloading
+
+ Display list of HIP offload bundles.
+
 .. option:: --relocations, --relocs, -r
 
  Display the relocation entries in the file.
