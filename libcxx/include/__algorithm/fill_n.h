@@ -18,6 +18,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/negation.h>
 #include <__utility/convert_to_integral.h>
 
@@ -37,8 +38,8 @@ template <class _OutputIterator,
           class _Tp
 #ifndef _LIBCPP_CXX03_LANG
           ,
-          __enable_if_t<!(__is_segmented_iterator_v<_OutputIterator> &&
-                          __has_random_access_local_iterator<_OutputIterator>::value),
+          __enable_if_t<!_And<_BoolConstant<__is_segmented_iterator_v<_OutputIterator>>,
+                              __has_random_access_local_iterator<_OutputIterator>>::value,
                         int> = 0
 #endif
           >
@@ -53,8 +54,8 @@ __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
 template < class _OutputIterator,
            class _Size,
            class _Tp,
-           __enable_if_t<__is_segmented_iterator_v<_OutputIterator> &&
-                             __has_random_access_local_iterator<_OutputIterator>::value,
+           __enable_if_t<_And<_BoolConstant<__is_segmented_iterator_v<_OutputIterator>>,
+                              __has_random_access_local_iterator<_OutputIterator>>::value,
                          int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _OutputIterator __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
