@@ -2009,6 +2009,18 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, GoodLambda) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_use_test_defs.h"
+
+    int target() {
+      STATUSOR_INT sor = Make<STATUSOR_INT>();
+      if (sor.ok()) return [&s = sor.value()] { return s; }();
+      return 0;
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, Status) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_use_test_defs.h"
@@ -2461,18 +2473,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, SubclassOperator) {
           *opt;  // [[unsafe]]
         }
       )cc");
-}
-
-TEST_P(UncheckedStatusOrAccessModelTest, GoodLambda) {
-  ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_use_test_defs.h"
-
-    int target() {
-      STATUSOR_INT sor = Make<STATUSOR_INT>();
-      if (sor.ok()) return [&s = sor.value()] { return s; }();
-      return 0;
-    }
-  )cc");
 }
 
 } // namespace
