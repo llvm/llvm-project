@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangStandard.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -244,48 +245,45 @@ LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
   llvm::errs() << "\n";
 }
 
-std::optional<clang::LangOptionsBase::CPlusPlusLangStd>
-LangOptions::getCPlusPlusLangStd() const {
+std::optional<uint32_t> LangOptions::getCPlusPlusLangStd() const {
   if (!CPlusPlus)
     return std::nullopt;
 
+  LangStandard::Kind Std;
   if (CPlusPlus26)
-    return clang::LangOptionsBase::CPP_26;
+    Std = LangStandard::lang_cxx26;
+  else if (CPlusPlus23)
+    Std = LangStandard::lang_cxx23;
+  else if (CPlusPlus20)
+    Std = LangStandard::lang_cxx20;
+  else if (CPlusPlus17)
+    Std = LangStandard::lang_cxx17;
+  else if (CPlusPlus14)
+    Std = LangStandard::lang_cxx14;
+  else if (CPlusPlus11)
+    Std = LangStandard::lang_cxx11;
+  else
+    Std = LangStandard::lang_cxx98;
 
-  if (CPlusPlus23)
-    return clang::LangOptionsBase::CPP_23;
-
-  if (CPlusPlus20)
-    return clang::LangOptionsBase::CPP_20;
-
-  if (CPlusPlus17)
-    return clang::LangOptionsBase::CPP_17;
-
-  if (CPlusPlus14)
-    return clang::LangOptionsBase::CPP_14;
-
-  if (CPlusPlus11)
-    return clang::LangOptionsBase::CPP_11;
-
-  return clang::LangOptionsBase::CPP_03;
+  return LangStandard::getLangStandardForKind(Std).getVersion();
 }
 
-std::optional<clang::LangOptionsBase::CLangStd>
-LangOptions::getCLangStd() const {
+std::optional<uint32_t> LangOptions::getCLangStd() const {
+  LangStandard::Kind Std;
   if (C2y)
-    return clang::LangOptionsBase::C_2y;
+    Std = LangStandard::lang_c2y;
+  else if (C23)
+    Std = LangStandard::lang_c23;
+  else if (C17)
+    Std = LangStandard::lang_c17;
+  else if (C11)
+    Std = LangStandard::lang_c11;
+  else if (C99)
+    Std = LangStandard::lang_c99;
+  else if (!GNUMode && Digraphs)
+    Std = LangStandard::lang_c94;
+  else
+    return std::nullopt;
 
-  if (C23)
-    return clang::LangOptionsBase::C_23;
-
-  if (C17)
-    return clang::LangOptionsBase::C_17;
-
-  if (C11)
-    return clang::LangOptionsBase::C_11;
-
-  if (C99)
-    return clang::LangOptionsBase::C_99;
-
-  return std::nullopt;
+  return LangStandard::getLangStandardForKind(Std).getVersion();
 }
