@@ -1,0 +1,115 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -passes=si-shrink-instructions -amdgpu-enable-shrink-readfirstlane -o - %s | FileCheck %s
+
+---
+name: test_shrink_readfirstlane_no_change0
+body: |
+  ; CHECK-LABEL: name: test_shrink_readfirstlane_no_change0
+  ; CHECK: bb.0:
+  ; CHECK-NEXT: successors: %bb.1
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT:  %0:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:  successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT: %1:vgpr_32 = V_MUL_U32_U24_e64 %0, %0, 0, implicit $exec
+  ; CHECK-NEXT: %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
+  ; CHECK-NEXT: %3:sgpr_32 = V_READFIRSTLANE_B32 %2, implicit $exec
+  bb.0:
+    successors: %bb.1
+    %360:sgpr_32 = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %24:vgpr_32 = V_MUL_U32_U24_e64 %360, %360, 0, implicit $exec
+
+    ; dest %1462 has one loop variant operand %24, so no changes
+    %1462:vgpr_32 = V_ADD_U32_e32 %360, %24, implicit $exec
+    %4802:sgpr_32 = V_READFIRSTLANE_B32 %1462, implicit $exec
+    
+    SI_INIT_M0 %4802, implicit-def $m0    
+    S_CMP_LT_I32 %360, killed %360, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+
+---
+name: test_shrink_readfirstlane_no_change1
+body: |
+  ; CHECK-LABEL: name: test_shrink_readfirstlane_no_change1
+  ; CHECK: bb.0:
+  ; CHECK-NEXT: successors: %bb.1
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT:  %0:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:  %1:vgpr_32 = V_MUL_U32_U24_e64 %0, %0, 0, implicit $exec
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT:    %2:vgpr_32 = V_ADD_U32_e32 %1, %1, implicit $exec
+  ; CHECK-NEXT:    %3:sgpr_32 = V_READFIRSTLANE_B32 %2, implicit $exec
+  bb.0:
+    successors: %bb.1
+
+    %700:sgpr_32 = IMPLICIT_DEF
+    %25:vgpr_32 = V_MUL_U32_U24_e64 %700, %700, 0, implicit $exec
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    ; two vgpr in the target, no changes
+    %1463:vgpr_32 = V_ADD_U32_e32 %25, %25, implicit $exec
+    %4803:sgpr_32 = V_READFIRSTLANE_B32 %1463, implicit $exec    
+    SI_INIT_M0 %4803, implicit-def $m0
+
+    S_CMP_LT_I32 %700, killed %4803, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+...
+
+---
+name: test_shrink_readfirstlane
+body: |
+  ; CHECK-LABEL: name: test_shrink_readfirstlane
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:    successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT:    %0:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:%TmpDestSReg32_0:sgpr_32 = V_READFIRSTLANE_B32 %0, implicit $exec
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT: successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT: {{ $}}
+  ; CHECK-NEXT: %1:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT: %NewResultSReg32_1:sgpr_32 = S_ADD_U32 %TmpDestSReg32_0, %1, implicit-def $scc
+  bb.0:
+    successors: %bb.3
+
+    %25:vgpr_32 = IMPLICIT_DEF
+
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+    %360:sgpr_32 = IMPLICIT_DEF
+
+    ; condition matches and change is applied.
+    %1464:vgpr_32 = V_ADD_U32_e32 %360, %25, implicit $exec
+    %4804:sgpr_32 = V_READFIRSTLANE_B32 %1464, implicit $exec    
+    SI_INIT_M0 %4804, implicit-def $m0
+
+    S_CMP_LT_I32 %4804, killed %360, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_ENDPGM 0
+
+...
