@@ -21,14 +21,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Generator>
 struct __fn {
-  __fn(_Generator& __g) : __gen(__g) {}
+  _LIBCPP_HIDE_FROM_ABI __fn(_Generator& __gen) : __gen_(__gen) {}
 
   template <typename _Tp>
-  void operator()(_Tp&& __element) const {
-    std::forward<_Tp>(__element) = __gen();
+  _LIBCPP_HIDE_FROM_ABI void operator()(_Tp&& __element) const {
+    std::forward<_Tp>(__element) = __gen_();
   }
 
-  _Generator& __gen;
+  _Generator& __gen_;
 };
 
 template <class _ForwardIterator, class _Generator>
