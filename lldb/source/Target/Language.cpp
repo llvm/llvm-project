@@ -259,7 +259,7 @@ static uint32_t num_languages =
 LanguageType Language::GetLanguageTypeFromString(llvm::StringRef string) {
   for (const auto &L : language_names) {
     if (string.equals_insensitive(L.name))
-      return static_cast<LanguageType>(L.type);
+      return L.type;
   }
 
   return eLanguageTypeUnknown;
@@ -270,6 +270,10 @@ const char *Language::GetNameForLanguageType(LanguageType language) {
     return language_names[language].name;
   else
     return language_names[eLanguageTypeUnknown].name;
+}
+
+llvm::StringRef Language::GetDisplayNameForLanguageType(LanguageType language) {
+  return SourceLanguage(language).GetDescription();
 }
 
 void Language::PrintSupportedLanguagesForExpressions(Stream &s,
@@ -544,9 +548,26 @@ Language::Language() = default;
 // Destructor
 Language::~Language() = default;
 
+static std::optional<llvm::dwarf::SourceLanguage>
+ToDwarfSourceLanguage(lldb::LanguageType language_type) {
+  if (language_type <= lldb::eLanguageTypeLastStandardLanguage)
+    return static_cast<llvm::dwarf::SourceLanguage>(language_type);
+
+  switch (language_type) {
+  case eLanguageTypeMipsAssembler:
+    return llvm::dwarf::DW_LANG_Mips_Assembler;
+  default:
+    return std::nullopt;
+  }
+}
+
 SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
-  auto lname =
-      llvm::dwarf::toDW_LNAME((llvm::dwarf::SourceLanguage)language_type);
+  std::optional<llvm::dwarf::SourceLanguage> dwarf_lang =
+      ToDwarfSourceLanguage(language_type);
+  if (!dwarf_lang)
+    return;
+
+  auto lname = llvm::dwarf::toDW_LNAME(*dwarf_lang);
   if (!lname)
     return;
   name = lname->first;
@@ -561,11 +582,8 @@ lldb::LanguageType SourceLanguage::AsLanguageType() const {
 }
 
 llvm::StringRef SourceLanguage::GetDescription() const {
-  LanguageType type = AsLanguageType();
-  if (type)
-    return Language::GetNameForLanguageType(type);
   return llvm::dwarf::LanguageDescription(
-      (llvm::dwarf::SourceLanguageName)name);
+      static_cast<llvm::dwarf::SourceLanguageName>(name), version);
 }
 bool SourceLanguage::IsC() const { return name == llvm::dwarf::DW_LNAME_C; }
 
