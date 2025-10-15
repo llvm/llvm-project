@@ -29,30 +29,25 @@
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
 #endif
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_broadcastmb_epi64 (__mmask8 __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastmb_epi64(__mmask8 __A) {
   return (__m128i) _mm_set1_epi64x((long long) __A);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastmb_epi64 (__mmask8 __A)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastmb_epi64(__mmask8 __A) {
   return (__m256i) _mm256_set1_epi64x((long long)__A);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_broadcastmw_epi32 (__mmask16 __A)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastmw_epi32(__mmask16 __A) {
   return (__m128i) _mm_set1_epi32((int)__A);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastmw_epi32 (__mmask16 __A)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastmw_epi32(__mmask16 __A) {
   return (__m256i) _mm256_set1_epi32((int)__A);
 }
-
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_conflict_epi64 (__m128i __A)

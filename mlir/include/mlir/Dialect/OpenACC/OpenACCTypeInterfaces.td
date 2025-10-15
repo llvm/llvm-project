@@ -83,7 +83,15 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         The `originalVar` parameter is optional but enables support for dynamic
         types (e.g., dynamic memrefs). When provided, implementations can extract
         runtime dimension information from the original variable to create
-        allocations with matching dynamic sizes.
+        allocations with matching dynamic sizes. When generating recipe bodies,
+        `originalVar` should be the block argument representing the original
+        variable in the recipe region.
+
+        The `needsFree` output parameter indicates whether the allocated memory
+        requires explicit deallocation. Implementations should set this to true
+        for heap allocations that need a matching deallocation operation (e.g.,
+        alloc) and false for stack-based allocations (e.g., alloca). During
+        recipe generation, this determines whether a destroy region is created.
 
         Returns a Value representing the result of the allocation. If no value
         is returned, it means the allocation was not successfully generated.
@@ -94,7 +102,8 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
                     "::mlir::Location":$loc,
                     "::llvm::StringRef":$varName,
                     "::mlir::Type":$varType,
-                    "::mlir::Value":$originalVar),
+                    "::mlir::Value":$originalVar,
+                    "bool &":$needsFree),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return {};
@@ -102,23 +111,34 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Generates deallocation operations for the pointer-like type. It deallocates
-        the instance provided.
+        Generates deallocation operations for the pointer-like type.
 
-        The `varPtr` parameter is required and must represent an instance that was
-        previously allocated. If the current type is represented in a way that it
-        does not capture the pointee type, `varType` must be passed in to provide
-        the necessary type information. Nothing is generated in case the allocate
-        is `alloca`-like.
+        The `varToFree` parameter is required and must represent an instance
+        that was previously allocated. When generating recipe bodies, this
+        should be the block argument representing the private variable in the
+        destroy region.
 
-        Returns true if deallocation was successfully generated or successfully
-        deemed as not needed to be generated, false otherwise.
+        The `allocRes` parameter is optional and provides the result of the
+        corresponding allocation from the init region. This allows implementations
+        to inspect the allocation operation to determine the appropriate
+        deallocation strategy. This is necessary because in recipe generation,
+        the allocation and deallocation occur in separate regions. Dialects that
+        use only one allocation type or can determine deallocation from type
+        information alone may ignore this parameter.
+
+        The `varType` parameter must be provided if the current type does not
+        capture the pointee type information. No deallocation is generated for
+        stack-based allocations (e.g., alloca).
+
+        Returns true if deallocation was successfully generated or determined to
+        be unnecessary, false otherwise.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"genFree",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
                     "::mlir::Location":$loc,
-                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varToFree,
+                    "::mlir::Value":$allocRes,
                     "::mlir::Type":$varType),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{

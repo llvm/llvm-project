@@ -1040,8 +1040,8 @@ private:
     if (auto *S = N.get<Stmt>())
       return refInStmt(S, Resolver);
     if (auto *NNSL = N.get<NestedNameSpecifierLoc>()) {
-      if (auto TL = NNSL->getAsTypeLoc())
-        return refInTypeLoc(NNSL->getAsTypeLoc(), Resolver);
+      if (TypeLoc TL = NNSL->getAsTypeLoc())
+        return refInTypeLoc(TL, Resolver);
       // (!) 'DeclRelation::Alias' ensures we do not lose namespace aliases.
       NestedNameSpecifierLoc Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
       SourceLocation NameLoc = NNSL->getLocalBeginLoc();
