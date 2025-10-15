@@ -88,7 +88,7 @@ function (gen_rst_file_from_td output_file td_option source target)
   endif()
   get_filename_component(TABLEGEN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${source}" DIRECTORY)
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${TABLEGEN_INCLUDE_DIR}")
-  list(APPEND LLVM_TABLEGEN_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/../../clang/include/clang/Driver/")
+  list(APPEND LLVM_TABLEGEN_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/../../clang/include/clang/Options/")
   clang_tablegen(Source/${output_file} ${td_option} SOURCE ${source} TARGET ${target})
 endfunction()
 
