@@ -238,7 +238,7 @@ inline std::string platformSymbolName(const std::string &name) {
 
 struct TestLibrary {
   std::string path;
-  std::vector<std::string> symbols;
+  std::vector<std::string> Syms;
 };
 
 class LibraryResolverIT : public ::testing::Test {
@@ -263,7 +263,7 @@ protected:
   }
 
   const std::vector<std::string> &sym(const std::string &key) {
-    return libs[key].symbols;
+    return libs[key].Syms;
   }
   const std::string &lib(const std::string &key) { return libs[key].path; }
   const std::string libdir(const std::string &key) {
@@ -295,7 +295,7 @@ static bool endsWith(const std::string &s, const std::string &suffix) {
 TEST_F(LibraryResolverIT, EnumerateSymbolsFromARespectsDefaults) {
   const std::string libC = lib("C");
 
-  SymbolEnumeratorOptions opts = SymbolEnumeratorOptions::defaultOptions();
+  SymbolEnumeratorOptions Opts = SymbolEnumeratorOptions::defaultOptions();
 
   std::vector<std::string> seen;
   auto onEach = [&](llvm::StringRef sym) -> EnumerateResult {
@@ -303,7 +303,7 @@ TEST_F(LibraryResolverIT, EnumerateSymbolsFromARespectsDefaults) {
     return EnumerateResult::Continue;
   };
 
-  const bool ok = SymbolEnumerator::enumerateSymbols(libC, onEach, opts);
+  const bool ok = SymbolEnumerator::enumerateSymbols(libC, onEach, Opts);
   ASSERT_TRUE(ok) << "enumerateSymbols failed on " << libC;
 
   // We expect to see sayA (export) and not an undefined reference to printf.
@@ -319,7 +319,7 @@ TEST_F(LibraryResolverIT, EnumerateSymbolsFromARespectsDefaults) {
 
 TEST_F(LibraryResolverIT, EnumerateSymbols_ExportsOnly_DefaultFlags) {
   const std::string libC = lib("C");
-  SymbolEnumeratorOptions opts = SymbolEnumeratorOptions::defaultOptions();
+  SymbolEnumeratorOptions Opts = SymbolEnumeratorOptions::defaultOptions();
 
   std::vector<std::string> seen;
   auto onEach = [&](llvm::StringRef sym) -> EnumerateResult {
@@ -327,7 +327,7 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_ExportsOnly_DefaultFlags) {
     return EnumerateResult::Continue;
   };
 
-  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libC, onEach, opts));
+  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libC, onEach, Opts));
 
   // sayC is exported, others are undefined → only sayC expected
   EXPECT_TRUE(any_of(seen, [&](const std::string &s) {
@@ -347,8 +347,8 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_ExportsOnly_DefaultFlags) {
 TEST_F(LibraryResolverIT, EnumerateSymbols_IncludesUndefineds) {
   const std::string libC = lib("C");
 
-  SymbolEnumeratorOptions opts;
-  opts.FilterFlags =
+  SymbolEnumeratorOptions Opts;
+  Opts.FilterFlags =
       SymbolEnumeratorOptions::IgnoreWeak |
       SymbolEnumeratorOptions::IgnoreIndirect; // no IgnoreUndefined
 
@@ -358,7 +358,7 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_IncludesUndefineds) {
     return EnumerateResult::Continue;
   };
 
-  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libC, onEach, opts));
+  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libC, onEach, Opts));
 
   // Now we should see both sayC (export) and the undefined refs sayA, sayB,
   // sayZ
@@ -379,8 +379,8 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_IncludesUndefineds) {
 TEST_F(LibraryResolverIT, EnumerateSymbols_IndirectExportRespected) {
   const std::string libD = lib("D");
 
-  SymbolEnumeratorOptions opts;
-  opts.FilterFlags = SymbolEnumeratorOptions::IgnoreWeak; // allow indirects
+  SymbolEnumeratorOptions Opts;
+  Opts.FilterFlags = SymbolEnumeratorOptions::IgnoreWeak; // allow indirects
 
   std::vector<std::string> seen;
   auto onEach = [&](llvm::StringRef sym) -> EnumerateResult {
@@ -388,7 +388,7 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_IndirectExportRespected) {
     return EnumerateResult::Continue;
   };
 
-  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libD, onEach, opts));
+  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libD, onEach, Opts));
 
   // sayA is re-exported from A, so should appear unless IgnoreIndirect was set
   EXPECT_TRUE(any_of(seen, [&](const std::string &s) {
@@ -401,51 +401,51 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_IndirectExportRespected) {
 TEST_F(LibraryResolverIT, EnumerateSymbolsIncludesUndefWhenNotIgnored) {
   const std::string libA = lib("A");
 
-  SymbolEnumeratorOptions opts = SymbolEnumeratorOptions::defaultOptions();
+  SymbolEnumeratorOptions Opts = SymbolEnumeratorOptions::defaultOptions();
   // Start from defaults but allow undefined
-  opts.FilterFlags &= ~SymbolEnumeratorOptions::IgnoreUndefined;
+  Opts.FilterFlags &= ~SymbolEnumeratorOptions::IgnoreUndefined;
 
-  bool sawPrintf = false;
+  bool SawPrintf = false;
   auto onEach = [&](llvm::StringRef sym) -> EnumerateResult {
     if (matchesEitherUnderscore(sym.str(), "printf") ||
         matchesEitherUnderscore(sym.str(), "puts"))
-      sawPrintf = true;
+      SawPrintf = true;
     return EnumerateResult::Continue;
   };
 
-  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libA, onEach, opts));
-  EXPECT_TRUE(sawPrintf)
+  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libA, onEach, Opts));
+  EXPECT_TRUE(SawPrintf)
       << "Expected to see undefined symbol printf when not filtered";
 }
 
 // --- 3) Full resolution via LibraryResolutionDriver/LibraryResolver ---
 TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
   // Create the resolver from real base paths (our fixtures dir)
-  auto setup = LibraryResolver::Setup::create({BaseDir});
+  auto Stup = LibraryResolver::Setup::create({BaseDir});
 
   // Full system behavior: no mocks
-  auto driver = LibraryResolutionDriver::create(setup);
-  ASSERT_NE(driver, nullptr);
+  auto Driver = LibraryResolutionDriver::create(Stup);
+  ASSERT_NE(Driver, nullptr);
 
-  // Tell the driver about the scan path kinds (User/System) as your production
+  // Tell the Driver about the scan path kinds (User/System) as your production
   // code expects.
-  driver->addScanPath(libdir("A"), PathType::User);
-  driver->addScanPath(libdir("B"), PathType::User);
-  driver->addScanPath(libdir("Z"), PathType::User);
+  Driver->addScanPath(libdir("A"), PathType::User);
+  Driver->addScanPath(libdir("B"), PathType::User);
+  Driver->addScanPath(libdir("Z"), PathType::User);
 
   // Symbols to resolve (bare names; class handles underscore differences
   // internally)
-  std::vector<std::string> symbols = {platformSymbolName("sayA"),
-                                      platformSymbolName("sayB"),
-                                      platformSymbolName("sayZ")};
+  std::vector<std::string> Syms = {platformSymbolName("sayA"),
+                                   platformSymbolName("sayB"),
+                                   platformSymbolName("sayZ")};
 
-  bool callbackRan = false;
-  driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
-    callbackRan = true;
+  bool CallbackRan = false;
+  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+    CallbackRan = true;
 
     // sayA should resolve to A.dylib
     {
-      auto lib = query.getResolvedLib(platformSymbolName("sayA"));
+      auto lib = Q.getResolvedLib(platformSymbolName("sayA"));
       ASSERT_TRUE(lib.has_value()) << "sayA should be resolved";
       EXPECT_TRUE(endsWith(lib->str(), libname("A")))
           << "sayA resolved to: " << lib->str();
@@ -453,7 +453,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
 
     // sayB should resolve to B.dylib
     {
-      auto lib = query.getResolvedLib(platformSymbolName("sayB"));
+      auto lib = Q.getResolvedLib(platformSymbolName("sayB"));
       ASSERT_TRUE(lib.has_value()) << "sayB should be resolved";
       EXPECT_TRUE(endsWith(lib->str(), libname("B")))
           << "sayB resolved to: " << lib->str();
@@ -461,48 +461,48 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
 
     // sayZ should resolve to B.dylib
     {
-      auto lib = query.getResolvedLib(platformSymbolName("sayZ"));
+      auto lib = Q.getResolvedLib(platformSymbolName("sayZ"));
       ASSERT_TRUE(lib.has_value()) << "sayZ should be resolved";
       EXPECT_TRUE(endsWith(lib->str(), libname("Z")))
           << "sayZ resolved to: " << lib->str();
     }
 
-    EXPECT_TRUE(query.allResolved());
+    EXPECT_TRUE(Q.allResolved());
   });
 
-  EXPECT_TRUE(callbackRan);
+  EXPECT_TRUE(CallbackRan);
 }
 
 // --- 4) Cross-library reference visibility (C references A) ---
 TEST_F(LibraryResolverIT, EnumeratorSeesInterLibraryRelationship) {
   const std::string libC = lib("C");
 
-  SymbolEnumeratorOptions onlyUndef = SymbolEnumeratorOptions::defaultOptions();
+  SymbolEnumeratorOptions OnlyUndef = SymbolEnumeratorOptions::defaultOptions();
   // Show only undefined (drop IgnoreUndefined) to see C's reference to sayA
-  onlyUndef.FilterFlags &= ~SymbolEnumeratorOptions::IgnoreUndefined;
+  OnlyUndef.FilterFlags &= ~SymbolEnumeratorOptions::IgnoreUndefined;
 
-  bool sawSayAAsUndef = false;
+  bool SawSayAAsUndef = false;
   auto onEach = [&](llvm::StringRef sym) -> EnumerateResult {
     if (matchesEitherUnderscore(sym.str(), "sayA"))
-      sawSayAAsUndef = true;
+      SawSayAAsUndef = true;
     return EnumerateResult::Continue;
   };
 
-  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libC, onEach, onlyUndef));
-  EXPECT_TRUE(sawSayAAsUndef)
+  ASSERT_TRUE(SymbolEnumerator::enumerateSymbols(libC, onEach, OnlyUndef));
+  EXPECT_TRUE(SawSayAAsUndef)
       << "libC should have an undefined reference to sayA (defined in libA)";
 }
 
 // // // --- 5) Optional: stress SymbolQuery with the real resolve flow
 // // // And resolve libC dependency libA, libB, libZ ---
 TEST_F(LibraryResolverIT, ResolveManySymbols) {
-  auto setup = LibraryResolver::Setup::create({BaseDir});
-  auto driver = LibraryResolutionDriver::create(setup);
-  ASSERT_NE(driver, nullptr);
-  driver->addScanPath(libdir("C"), PathType::User);
+  auto Stup = LibraryResolver::Setup::create({BaseDir});
+  auto Driver = LibraryResolutionDriver::create(Stup);
+  ASSERT_NE(Driver, nullptr);
+  Driver->addScanPath(libdir("C"), PathType::User);
 
   // Many duplicates to provoke concurrent updates inside SymbolQuery
-  std::vector<std::string> symbols = {
+  std::vector<std::string> Syms = {
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayZ"), platformSymbolName("sayZ"),
@@ -510,38 +510,38 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayA"), platformSymbolName("sayB")};
 
-  bool callbackRan = false;
-  driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
-    callbackRan = true;
-    EXPECT_TRUE(query.isResolved(platformSymbolName("sayA")));
-    EXPECT_TRUE(query.isResolved(platformSymbolName("sayB")));
-    EXPECT_TRUE(query.isResolved(platformSymbolName("sayZ")));
+  bool CallbackRan = false;
+  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+    CallbackRan = true;
+    EXPECT_TRUE(Q.isResolved(platformSymbolName("sayA")));
+    EXPECT_TRUE(Q.isResolved(platformSymbolName("sayB")));
+    EXPECT_TRUE(Q.isResolved(platformSymbolName("sayZ")));
 
-    auto a = query.getResolvedLib(platformSymbolName("sayA"));
-    auto b = query.getResolvedLib(platformSymbolName("sayB"));
-    auto z = query.getResolvedLib(platformSymbolName("sayZ"));
-    ASSERT_TRUE(a.has_value());
-    ASSERT_TRUE(b.has_value());
-    ASSERT_TRUE(z.has_value());
-    EXPECT_TRUE(endsWith(a->str(), libname("A")));
-    EXPECT_TRUE(endsWith(b->str(), libname("B")));
-    EXPECT_TRUE(endsWith(z->str(), libname("Z")));
-    EXPECT_TRUE(query.allResolved());
+    auto A = Q.getResolvedLib(platformSymbolName("sayA"));
+    auto B = Q.getResolvedLib(platformSymbolName("sayB"));
+    auto Z = Q.getResolvedLib(platformSymbolName("sayZ"));
+    ASSERT_TRUE(A.has_value());
+    ASSERT_TRUE(B.has_value());
+    ASSERT_TRUE(Z.has_value());
+    EXPECT_TRUE(endsWith(A->str(), libname("A")));
+    EXPECT_TRUE(endsWith(B->str(), libname("B")));
+    EXPECT_TRUE(endsWith(Z->str(), libname("Z")));
+    EXPECT_TRUE(Q.allResolved());
   });
 
-  EXPECT_TRUE(callbackRan);
+  EXPECT_TRUE(CallbackRan);
 }
 
 // // // --- 5) Optional: stress SymbolQuery with the real resolve flow
 // // // And resolve libD dependency libA ---
 TEST_F(LibraryResolverIT, ResolveManySymbols2) {
-  auto setup = LibraryResolver::Setup::create({BaseDir});
-  auto driver = LibraryResolutionDriver::create(setup);
-  ASSERT_NE(driver, nullptr);
-  driver->addScanPath(libdir("D"), PathType::User);
+  auto Stup = LibraryResolver::Setup::create({BaseDir});
+  auto Driver = LibraryResolutionDriver::create(Stup);
+  ASSERT_NE(Driver, nullptr);
+  Driver->addScanPath(libdir("D"), PathType::User);
 
   // Many duplicates to provoke concurrent updates inside SymbolQuery
-  std::vector<std::string> symbols = {
+  std::vector<std::string> Syms = {
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayZ"), platformSymbolName("sayZ"),
@@ -550,43 +550,43 @@ TEST_F(LibraryResolverIT, ResolveManySymbols2) {
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayA"), platformSymbolName("sayB")};
 
-  driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
-    EXPECT_TRUE(query.isResolved(platformSymbolName("sayA")));
-    EXPECT_TRUE(query.isResolved(platformSymbolName("sayD")));
+  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+    EXPECT_TRUE(Q.isResolved(platformSymbolName("sayA")));
+    EXPECT_TRUE(Q.isResolved(platformSymbolName("sayD")));
 
-    auto a = query.getResolvedLib(platformSymbolName("sayA"));
-    auto d = query.getResolvedLib(platformSymbolName("sayD"));
-    ASSERT_TRUE(a.has_value());
-    ASSERT_TRUE(d.has_value());
-    EXPECT_TRUE(endsWith(a->str(), libname("A")));
-    EXPECT_TRUE(endsWith(d->str(), libname("D")));
-    EXPECT_FALSE(query.allResolved());
+    auto A = Q.getResolvedLib(platformSymbolName("sayA"));
+    auto D = Q.getResolvedLib(platformSymbolName("sayD"));
+    ASSERT_TRUE(A.has_value());
+    ASSERT_TRUE(D.has_value());
+    EXPECT_TRUE(endsWith(A->str(), libname("A")));
+    EXPECT_TRUE(endsWith(D->str(), libname("D")));
+    EXPECT_FALSE(Q.allResolved());
   });
 }
 
 TEST_F(LibraryResolverIT, ScanSingleUserPath) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
-  LibraryScanHelper scanH({}, cache, presolver);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
+  LibraryScanHelper ScanH({}, LibPathCache, PResolver);
 
-  scanH.addBasePath(libdir("C"), PathType::User);
+  ScanH.addBasePath(libdir("C"), PathType::User);
 
-  std::error_code ec;
-  auto libCPathOpt = presolver->resolve(lib("C"), ec);
+  std::error_code EC;
+  auto libCPathOpt = PResolver->resolve(lib("C"), EC);
 
-  if (!libCPathOpt || ec) {
+  if (!libCPathOpt || EC) {
     FAIL();
   }
 
   std::string libCPath = *libCPathOpt;
 
-  LibraryManager mgr;
-  LibraryScanner scanner(scanH, mgr);
+  LibraryManager LibMgr;
+  LibraryScanner Scanner(ScanH, LibMgr);
 
-  scanner.scanNext(PathType::User, 0);
+  Scanner.scanNext(PathType::User, 0);
 
   bool found = false;
-  mgr.forEachLibrary([&](const LibraryInfo &lib) {
+  LibMgr.forEachLibrary([&](const LibraryInfo &lib) {
     if (lib.getFullPath() == libCPath) {
       found = true;
     }
@@ -596,19 +596,19 @@ TEST_F(LibraryResolverIT, ScanSingleUserPath) {
 }
 
 TEST_F(LibraryResolverIT, ScanAndCheckDeps) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
-  LibraryScanHelper scanH({}, cache, presolver);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
+  LibraryScanHelper ScanH({}, LibPathCache, PResolver);
 
-  scanH.addBasePath(libdir("C"), PathType::User);
+  ScanH.addBasePath(libdir("C"), PathType::User);
 
-  LibraryManager mgr;
-  LibraryScanner scanner(scanH, mgr);
+  LibraryManager LibMgr;
+  LibraryScanner Scanner(ScanH, LibMgr);
 
-  scanner.scanNext(PathType::User, 0);
+  Scanner.scanNext(PathType::User, 0);
 
   size_t count = 0;
-  mgr.forEachLibrary([&](const LibraryInfo &) {
+  LibMgr.forEachLibrary([&](const LibraryInfo &) {
     count++;
     return true;
   });
@@ -617,19 +617,19 @@ TEST_F(LibraryResolverIT, ScanAndCheckDeps) {
 }
 
 TEST_F(LibraryResolverIT, ScanEmptyPath) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
-  LibraryScanHelper scanH({}, cache, presolver);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
+  LibraryScanHelper ScanH({}, LibPathCache, PResolver);
 
-  scanH.addBasePath("/tmp/empty", PathType::User);
+  ScanH.addBasePath("/tmp/empty", PathType::User);
 
-  LibraryManager mgr;
-  LibraryScanner scanner(scanH, mgr);
+  LibraryManager LibMgr;
+  LibraryScanner Scanner(ScanH, LibMgr);
 
-  scanner.scanNext(PathType::User, 0);
+  Scanner.scanNext(PathType::User, 0);
 
   size_t count = 0;
-  mgr.forEachLibrary([&](const LibraryInfo &) {
+  LibMgr.forEachLibrary([&](const LibraryInfo &) {
     count++;
     return true;
   });
@@ -637,86 +637,86 @@ TEST_F(LibraryResolverIT, ScanEmptyPath) {
 }
 
 TEST_F(LibraryResolverIT, PathResolverResolvesKnownPaths) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  std::error_code ec;
-  auto missing = presolver->resolve("temp/foo/bar", ec);
-  EXPECT_FALSE(missing.has_value()) << "Unexpectedly resolved a bogus path";
-  EXPECT_TRUE(ec) << "Expected error resolving path";
+  std::error_code EC;
+  auto Missing = PResolver->resolve("temp/foo/bar", EC);
+  EXPECT_FALSE(Missing.has_value()) << "Unexpectedly resolved a bogus path";
+  EXPECT_TRUE(EC) << "Expected error resolving path";
 
-  auto DirPath = presolver->resolve(BaseDir, ec);
+  auto DirPath = PResolver->resolve(BaseDir, EC);
   ASSERT_TRUE(DirPath.has_value());
-  EXPECT_FALSE(ec) << "Expected no error resolving path";
+  EXPECT_FALSE(EC) << "Expected no error resolving path";
   EXPECT_EQ(*DirPath, BaseDir);
 
-  auto DylibPath = presolver->resolve(lib("C"), ec);
+  auto DylibPath = PResolver->resolve(lib("C"), EC);
   ASSERT_TRUE(DylibPath.has_value());
-  EXPECT_FALSE(ec) << "Expected no error resolving path";
+  EXPECT_FALSE(EC) << "Expected no error resolving path";
   EXPECT_EQ(*DylibPath, lib("C"));
 }
 
 TEST_F(LibraryResolverIT, PathResolverNormalizesDotAndDotDot) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  std::error_code ec;
+  std::error_code EC;
 
   // e.g. BaseDir + "/./C/../C/C.dylib" → BaseDir + "/C.dylib"
-  std::string messy = BaseDir + "/C/./../C/./libC" + ext;
-  auto resolved = presolver->resolve(messy, ec);
-  ASSERT_TRUE(resolved.has_value());
-  EXPECT_FALSE(ec);
-  EXPECT_EQ(*resolved, lib("C")) << "Expected realpath to collapse . and ..";
+  std::string Messy = BaseDir + "/C/./../C/./libC" + ext;
+  auto Resolved = PResolver->resolve(Messy, EC);
+  ASSERT_TRUE(Resolved.has_value());
+  EXPECT_FALSE(EC);
+  EXPECT_EQ(*Resolved, lib("C")) << "Expected realpath to collapse . and ..";
 }
 
 #if !defined(_WIN32)
 TEST_F(LibraryResolverIT, PathResolverFollowsSymlinks) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  std::error_code ec;
+  std::error_code EC;
 
   // Create a symlink temp -> BaseDir (only if filesystem allows it)
   std::string linkName = BaseDir + withext("/link_to_C");
   std::string target = lib("C");
   ::symlink(target.c_str(), linkName.c_str());
 
-  auto resolved = presolver->resolve(linkName, ec);
+  auto resolved = PResolver->resolve(linkName, EC);
   ASSERT_TRUE(resolved.has_value());
-  EXPECT_FALSE(ec);
+  EXPECT_FALSE(EC);
   EXPECT_EQ(*resolved, target);
 
   ::unlink(linkName.c_str()); // cleanup
 }
 
 TEST_F(LibraryResolverIT, PathResolverCachesResults) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  SmallString<128> tmpDylib;
-  sys::fs::createUniqueFile(withext("A-copy"), tmpDylib);
-  sys::fs::copy_file(lib("A"), tmpDylib);
+  SmallString<128> TmpDylib;
+  sys::fs::createUniqueFile(withext("A-copy"), TmpDylib);
+  sys::fs::copy_file(lib("A"), TmpDylib);
 
-  std::error_code ec;
+  std::error_code EC;
 
-  // First resolve -> should populate cache
-  auto first = presolver->resolve(tmpDylib, ec);
+  // First resolve -> should populate LibPathCache
+  auto first = PResolver->resolve(TmpDylib, EC);
   ASSERT_TRUE(first.has_value());
 
   // Forcefully remove the file from disk
-  ::unlink(tmpDylib.c_str());
+  ::unlink(TmpDylib.c_str());
 
-  // Second resolve -> should still succeed from cache
-  auto second = presolver->resolve(tmpDylib, ec);
+  // Second resolve -> should still succeed from LibPathCache
+  auto second = PResolver->resolve(TmpDylib, EC);
   EXPECT_TRUE(second.has_value());
   EXPECT_EQ(*second, *first);
 }
 #endif
 
 TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
   DylibSubstitutor substitutor;
   substitutor.configure(libdir("C"));
@@ -732,18 +732,18 @@ TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve) {
   EXPECT_EQ(substituted, lib("C"));
 
   // Now try resolving the substituted path
-  std::error_code ec;
-  auto resolved = presolver->resolve(substituted, ec);
+  std::error_code EC;
+  auto resolved = PResolver->resolve(substituted, EC);
   ASSERT_TRUE(resolved.has_value()) << "Expected to resolve substituted dylib";
   EXPECT_EQ(*resolved, lib("C"));
-  EXPECT_FALSE(ec) << "Expected no error resolving substituted dylib";
+  EXPECT_FALSE(EC) << "Expected no error resolving substituted dylib";
 }
 
 TEST_F(LibraryResolverIT, ResolveFromUsrOrSystemPaths) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*presolver);
+  DylibPathValidator validator(*PResolver);
 
   std::vector<std::string> Paths = {"/foo/bar/", "temp/foo",  libdir("C"),
                                     libdir("A"), libdir("B"), libdir("Z")};
@@ -754,48 +754,48 @@ TEST_F(LibraryResolverIT, ResolveFromUsrOrSystemPaths) {
   Resolver.configure("", {{P, SearchPathType::UsrOrSys}});
 
   // Check "C"
-  auto valOptC = Resolver.resolve("libC", true);
-  EXPECT_TRUE(valOptC.has_value());
-  EXPECT_EQ(*valOptC, lib("C"));
+  auto ValOptC = Resolver.resolve("libC", true);
+  EXPECT_TRUE(ValOptC.has_value());
+  EXPECT_EQ(*ValOptC, lib("C"));
 
-  auto valOptCdylib = Resolver.resolve(withext("libC"));
-  EXPECT_TRUE(valOptCdylib.has_value());
-  EXPECT_EQ(*valOptCdylib, lib("C"));
+  auto ValOptCdylib = Resolver.resolve(withext("libC"));
+  EXPECT_TRUE(ValOptCdylib.has_value());
+  EXPECT_EQ(*ValOptCdylib, lib("C"));
 
   // Check "A"
-  auto valOptA = Resolver.resolve("libA", true);
-  EXPECT_TRUE(valOptA.has_value());
-  EXPECT_EQ(*valOptA, lib("A"));
+  auto ValOptA = Resolver.resolve("libA", true);
+  EXPECT_TRUE(ValOptA.has_value());
+  EXPECT_EQ(*ValOptA, lib("A"));
 
-  auto valOptAdylib = Resolver.resolve(withext("libA"));
-  EXPECT_TRUE(valOptAdylib.has_value());
-  EXPECT_EQ(*valOptAdylib, lib("A"));
+  auto ValOptAdylib = Resolver.resolve(withext("libA"));
+  EXPECT_TRUE(ValOptAdylib.has_value());
+  EXPECT_EQ(*ValOptAdylib, lib("A"));
 
   // Check "B"
-  auto valOptB = Resolver.resolve("libB", true);
-  EXPECT_TRUE(valOptB.has_value());
-  EXPECT_EQ(*valOptB, lib("B"));
+  auto ValOptB = Resolver.resolve("libB", true);
+  EXPECT_TRUE(ValOptB.has_value());
+  EXPECT_EQ(*ValOptB, lib("B"));
 
-  auto valOptBdylib = Resolver.resolve(withext("libB"));
-  EXPECT_TRUE(valOptBdylib.has_value());
-  EXPECT_EQ(*valOptBdylib, lib("B"));
+  auto ValOptBdylib = Resolver.resolve(withext("libB"));
+  EXPECT_TRUE(ValOptBdylib.has_value());
+  EXPECT_EQ(*ValOptBdylib, lib("B"));
 
   // Check "Z"
-  auto valOptZ = Resolver.resolve("libZ", true);
-  EXPECT_TRUE(valOptZ.has_value());
-  EXPECT_EQ(*valOptZ, lib("Z"));
+  auto ValOptZ = Resolver.resolve("libZ", true);
+  EXPECT_TRUE(ValOptZ.has_value());
+  EXPECT_EQ(*ValOptZ, lib("Z"));
 
-  auto valOptZdylib = Resolver.resolve(withext("libZ"));
-  EXPECT_TRUE(valOptZdylib.has_value());
-  EXPECT_EQ(*valOptZdylib, lib("Z"));
+  auto ValOptZdylib = Resolver.resolve(withext("libZ"));
+  EXPECT_TRUE(ValOptZdylib.has_value());
+  EXPECT_EQ(*ValOptZdylib, lib("Z"));
 }
 
 #if defined(__APPLE__)
 TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*presolver);
+  DylibPathValidator validator(*PResolver);
 
   std::vector<std::string> Paths = {"@loader_path/../A", "@loader_path/../B",
                                     "@loader_path/../D", "@loader_path/../Z"};
@@ -808,40 +808,40 @@ TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
   Resolver.configure(lib("C"), {{P, SearchPathType::RPath}});
 
   // --- Check A ---
-  auto valOptA = Resolver.resolve("@rpath/libA", true);
-  EXPECT_TRUE(valOptA.has_value());
-  EXPECT_EQ(*valOptA, lib("A"));
+  auto ValOptA = Resolver.resolve("@rpath/libA", true);
+  EXPECT_TRUE(ValOptA.has_value());
+  EXPECT_EQ(*ValOptA, lib("A"));
 
-  auto valOptAdylib = Resolver.resolve(withext("@rpath/libA"));
-  EXPECT_TRUE(valOptAdylib.has_value());
-  EXPECT_EQ(*valOptAdylib, lib("A"));
+  auto ValOptAdylib = Resolver.resolve(withext("@rpath/libA"));
+  EXPECT_TRUE(ValOptAdylib.has_value());
+  EXPECT_EQ(*ValOptAdylib, lib("A"));
 
   // --- Check B ---
-  auto valOptB = Resolver.resolve("@rpath/libB", true);
-  EXPECT_TRUE(valOptB.has_value());
-  EXPECT_EQ(*valOptB, lib("B"));
+  auto ValOptB = Resolver.resolve("@rpath/libB", true);
+  EXPECT_TRUE(ValOptB.has_value());
+  EXPECT_EQ(*ValOptB, lib("B"));
 
-  auto valOptBdylib = Resolver.resolve(withext("@rpath/libB"));
-  EXPECT_TRUE(valOptBdylib.has_value());
-  EXPECT_EQ(*valOptBdylib, lib("B"));
+  auto ValOptBdylib = Resolver.resolve(withext("@rpath/libB"));
+  EXPECT_TRUE(ValOptBdylib.has_value());
+  EXPECT_EQ(*ValOptBdylib, lib("B"));
 
   // --- Check Z ---
-  auto valOptZ = Resolver.resolve("@rpath/libZ", true);
-  EXPECT_TRUE(valOptZ.has_value());
-  EXPECT_EQ(*valOptZ, lib("Z"));
+  auto ValOptZ = Resolver.resolve("@rpath/libZ", true);
+  EXPECT_TRUE(ValOptZ.has_value());
+  EXPECT_EQ(*ValOptZ, lib("Z"));
 
-  auto valOptZdylib = Resolver.resolve(withext("@rpath/libZ"));
-  EXPECT_TRUE(valOptZdylib.has_value());
-  EXPECT_EQ(*valOptZdylib, lib("Z"));
+  auto ValOptZdylib = Resolver.resolve(withext("@rpath/libZ"));
+  EXPECT_TRUE(ValOptZdylib.has_value());
+  EXPECT_EQ(*ValOptZdylib, lib("Z"));
 }
 #endif
 
 #if defined(__linux__)
 TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
+  auto LibPathCache = std::make_shared<LibraryPathCache>();
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*presolver);
+  DylibPathValidator validator(*PResolver);
 
   // On Linux, $ORIGIN works like @loader_path
   std::vector<std::string> Paths = {"$ORIGIN/../A", "$ORIGIN/../B",
@@ -855,27 +855,27 @@ TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
   Resolver.configure(lib("C"), {{P, SearchPathType::RunPath}});
 
   // --- Check A ---
-  auto valOptA = Resolver.resolve("libA", true);
-  EXPECT_TRUE(valOptA.has_value());
-  EXPECT_EQ(*valOptA, lib("A"));
+  auto ValOptA = Resolver.resolve("libA", true);
+  EXPECT_TRUE(ValOptA.has_value());
+  EXPECT_EQ(*ValOptA, lib("A"));
 
   auto valOptASO = Resolver.resolve(withext("libA"));
   EXPECT_TRUE(valOptASO.has_value());
   EXPECT_EQ(*valOptASO, lib("A"));
 
   // --- Check B ---
-  auto valOptB = Resolver.resolve("libB", true);
-  EXPECT_TRUE(valOptB.has_value());
-  EXPECT_EQ(*valOptB, lib("B"));
+  auto ValOptB = Resolver.resolve("libB", true);
+  EXPECT_TRUE(ValOptB.has_value());
+  EXPECT_EQ(*ValOptB, lib("B"));
 
   auto valOptBSO = Resolver.resolve(withext("libB"));
   EXPECT_TRUE(valOptBSO.has_value());
   EXPECT_EQ(*valOptBSO, lib("B"));
 
   // --- Check Z ---
-  auto valOptZ = Resolver.resolve("libZ", true);
-  EXPECT_TRUE(valOptZ.has_value());
-  EXPECT_EQ(*valOptZ, lib("Z"));
+  auto ValOptZ = Resolver.resolve("libZ", true);
+  EXPECT_TRUE(ValOptZ.has_value());
+  EXPECT_EQ(*ValOptZ, lib("Z"));
 
   auto valOptZSO = Resolver.resolve(withext("libZ"));
   EXPECT_TRUE(valOptZSO.has_value());
