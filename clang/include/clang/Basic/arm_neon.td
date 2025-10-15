@@ -1469,46 +1469,46 @@ def SCALAR_FCVTXN  : IInst<"vcvtx_f32", "(1F<)(1!)", "Sd">;
 
 def SCALAR_FCVTN_F32toSS  : SInst<"vcvtn_s32", "(1S)1", "Sf">;
 def SCALAR_FCVTN_F32toUS  : SInst<"vcvtn_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTN_F64toSS  : SInst<"vcvtn_s32", "(1S)1", "Sd">;
-def SCALAR_FCVTN_F64toUS  : SInst<"vcvtn_u32", "(1U)1", "Sd">;
-def SCALAR_FCVTN_F32toSD  : SInst<"vcvtn_s64", "(1S)1", "Sf">;
-def SCALAR_FCVTN_F32toUD  : SInst<"vcvtn_u64", "(1U)1", "Sf">;
+def SCALAR_FCVTN_F64toSS  : SInst<"vcvtn_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTN_F64toUS  : SInst<"vcvtn_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTN_F32toSD  : SInst<"vcvtn_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTN_F32toUD  : SInst<"vcvtn_u64", "(1U>)1", "Sf">;
 def SCALAR_FCVTN_F64toSD  : SInst<"vcvtn_s64", "(1S)1", "Sd">;
 def SCALAR_FCVTN_F64toUD  : SInst<"vcvtn_u64", "(1U)1", "Sd">;
 
 def SCALAR_FCVTM_F32toSS  : SInst<"vcvtm_s32", "(1S)1", "Sf">;
 def SCALAR_FCVTM_F32toUS  : SInst<"vcvtm_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTM_F64toSS  : SInst<"vcvtm_s32", "(1S)1", "Sd">;
-def SCALAR_FCVTM_F64toUS  : SInst<"vcvtm_u32", "(1U)1", "Sd">;
-def SCALAR_FCVTM_F32toSD  : SInst<"vcvtm_s64", "(1S)1", "Sf">;
-def SCALAR_FCVTM_F32toUD  : SInst<"vcvtm_u64", "(1U)1", "Sf">;
+def SCALAR_FCVTM_F64toSS  : SInst<"vcvtm_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTM_F64toUS  : SInst<"vcvtm_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTM_F32toSD  : SInst<"vcvtm_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTM_F32toUD  : SInst<"vcvtm_u64", "(1U>)1", "Sf">;
 def SCALAR_FCVTM_F64toSD  : SInst<"vcvtm_s64", "(1S)1", "Sd">;
 def SCALAR_FCVTM_F64toUD  : SInst<"vcvtm_u64", "(1U)1", "Sd">;
 
 def SCALAR_FCVTA_F32toSS  : SInst<"vcvta_s32", "(1S)1", "Sf">;
 def SCALAR_FCVTA_F32toUS  : SInst<"vcvta_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTA_F64toSS  : SInst<"vcvta_s32", "(1S)1", "Sd">;
-def SCALAR_FCVTA_F64toUS  : SInst<"vcvta_u32", "(1U)1", "Sd">;
-def SCALAR_FCVTA_F32toSD  : SInst<"vcvta_s64", "(1S)1", "Sf">;
-def SCALAR_FCVTA_F32toUD  : SInst<"vcvta_u64", "(1U)1", "Sf">;
+def SCALAR_FCVTA_F64toSS  : SInst<"vcvta_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTA_F64toUS  : SInst<"vcvta_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTA_F32toSD  : SInst<"vcvta_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTA_F32toUD  : SInst<"vcvta_u64", "(1U>)1", "Sf">;
 def SCALAR_FCVTA_F64toSD  : SInst<"vcvta_s64", "(1S)1", "Sd">;
 def SCALAR_FCVTA_F64toUD  : SInst<"vcvta_u64", "(1U)1", "Sd">;
 
 def SCALAR_FCVTP_F32toSS  : SInst<"vcvtp_s32", "(1S)1", "Sf">;
 def SCALAR_FCVTP_F32toUS  : SInst<"vcvtp_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTP_F64toSS  : SInst<"vcvtp_s32", "(1S)1", "Sd">;
-def SCALAR_FCVTP_F64toUS  : SInst<"vcvtp_u32", "(1U)1", "Sd">;
-def SCALAR_FCVTP_F32toSD  : SInst<"vcvtp_s64", "(1S)1", "Sf">;
-def SCALAR_FCVTP_F32toUD  : SInst<"vcvtp_u64", "(1U)1", "Sf">;
+def SCALAR_FCVTP_F64toSS  : SInst<"vcvtp_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTP_F64toUS  : SInst<"vcvtp_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTP_F32toSD  : SInst<"vcvtp_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTP_F32toUD  : SInst<"vcvtp_u64", "(1U>)1", "Sf">;
 def SCALAR_FCVTP_F64toSD  : SInst<"vcvtp_s64", "(1S)1", "Sd">;
 def SCALAR_FCVTP_F64toUD  : SInst<"vcvtp_u64", "(1U)1", "Sd">;
 
 def SCALAR_FCVTZ_F32toSS  : SInst<"vcvt_s32", "(1S)1", "Sf">;
 def SCALAR_FCVTZ_F32toUS  : SInst<"vcvt_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTZ_F64toSS  : SInst<"vcvt_s32", "(1S)1", "Sd">;
-def SCALAR_FCVTZ_F64toUS  : SInst<"vcvt_u32", "(1U)1", "Sd">;
-def SCALAR_FCVTZ_F32toSD  : SInst<"vcvt_s64", "(1S)1", "Sf">;
-def SCALAR_FCVTZ_F32toUD  : SInst<"vcvt_u64", "(1U)1", "Sf">;
+def SCALAR_FCVTZ_F64toSS  : SInst<"vcvt_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTZ_F64toUS  : SInst<"vcvt_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTZ_F32toSD  : SInst<"vcvt_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTZ_F32toUD  : SInst<"vcvt_u64", "(1U>)1", "Sf">;
 def SCALAR_FCVTZ_F64toSD  : SInst<"vcvt_s64", "(1S)1", "Sd">;
 def SCALAR_FCVTZ_F64toUD  : SInst<"vcvt_u64", "(1U)1", "Sd">;
 
