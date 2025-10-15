@@ -426,12 +426,11 @@ define i64 @select_wo_optsize_minsize(i64 %true, i64 %false, i1 zeroext %c) {
 define i64 @select_w_optsize(i64 %true, i64 %false, i1 zeroext %c) optsize {
 ; RV32ZICOND-LABEL: select_w_optsize:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
-; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
-; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a4
-; RV32ZICOND-NEXT:    or a0, a0, a2
-; RV32ZICOND-NEXT:    or a1, a1, a3
+; RV32ZICOND-NEXT:    bnez a4, .LBB16_2
+; RV32ZICOND-NEXT:  # %bb.1:
+; RV32ZICOND-NEXT:    mv a0, a2
+; RV32ZICOND-NEXT:    mv a1, a3
+; RV32ZICOND-NEXT:  .LBB16_2:
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: select_w_optsize:
@@ -447,12 +446,11 @@ define i64 @select_w_optsize(i64 %true, i64 %false, i1 zeroext %c) optsize {
 define i64 @select_w_minsize(i64 %true, i64 %false, i1 zeroext %c) minsize {
 ; RV32ZICOND-LABEL: select_w_minsize:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
-; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
-; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a4
-; RV32ZICOND-NEXT:    or a0, a0, a2
-; RV32ZICOND-NEXT:    or a1, a1, a3
+; RV32ZICOND-NEXT:    bnez a4, .LBB17_2
+; RV32ZICOND-NEXT:  # %bb.1:
+; RV32ZICOND-NEXT:    mv a0, a2
+; RV32ZICOND-NEXT:    mv a1, a3
+; RV32ZICOND-NEXT:  .LBB17_2:
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: select_w_minsize:
