@@ -9,8 +9,10 @@ TARGET:
 
 .global INVALID_VENDOR
 .reloc 1f, R_RISCV_VENDOR, INVALID_VENDOR+0
+.reloc 1f, R_RISCV_VENDOR, INVALID_VENDOR+0
 .reloc 1f, R_RISCV_CUSTOM255, TARGET
 1:
   nop
 
+# CHECK: error: {{.*}} malformed consecutive R_RISCV_VENDOR relocations
 # CHECK: error: {{.*}} unknown vendor-specific relocation (255) in vendor namespace "INVALID_VENDOR" against symbol TARGET

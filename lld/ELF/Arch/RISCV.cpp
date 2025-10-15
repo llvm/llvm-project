@@ -1503,7 +1503,8 @@ void RISCVRelocScan::scan(typename Relocs<RelTy>::const_iterator &it,
 
   if (type == R_RISCV_VENDOR) {
     if (!rvVendor.empty())
-      Err(ctx) << "found consecutive R_RISCV_VENDOR relocations";
+      Err(ctx) << getErrorLoc(ctx, sec->content().data() + it->r_offset)
+               << "malformed consecutive R_RISCV_VENDOR relocations";
     rvVendor = sym.getName();
     return;
   } else if (!rvVendor.empty()) {
@@ -1511,6 +1512,7 @@ void RISCVRelocScan::scan(typename Relocs<RelTy>::const_iterator &it,
              << "unknown vendor-specific relocation (" << type.v
              << ") in vendor namespace \"" << rvVendor << "\" against symbol "
              << &sym;
+    rvVendor = "";
     return;
   }
 
@@ -1523,12 +1525,6 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
-  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
-  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
-  SmallVector<RelTy, 0> storage;
-  if (ctx.arg.emachine == EM_S390)
-    rels = sortRels(rels, storage);
-
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     auto type = it->getType(false);
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
@@ -1537,21 +1533,16 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20, ALIGN relocations, R_PPC64_ADDR64 and the
   // branch-to-branch optimization.
-  if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
-      (ctx.arg.emachine == EM_PPC64 && sec.name == ".toc") ||
-      ctx.arg.branchToBranch)
-    llvm::stable_sort(sec.relocs(),
-                      [](const Relocation &lhs, const Relocation &rhs) {
-                        return lhs.offset < rhs.offset;
-                      });
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
 }
 
 template <class ELFT> void RISCV::scanSection1(InputSectionBase &sec) {
   const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
   if (rels.areRelocsCrel())
     scanSectionImpl<ELFT>(sec, rels.crels);
-  else if (rels.areRelocsRel())
-    scanSectionImpl<ELFT>(sec, rels.rels);
   else
     scanSectionImpl<ELFT>(sec, rels.relas);
 }
