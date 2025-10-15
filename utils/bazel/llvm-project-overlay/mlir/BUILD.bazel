@@ -1412,6 +1412,13 @@ td_library(
 )
 
 td_library(
+    name = "InferStridedMetadataInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/InferStridedMetadataInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "InferTypeOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/InferTypeOpInterface.td"],
     includes = ["include"],
@@ -4159,6 +4166,7 @@ cc_library(
         ":MathToLibm",
         ":MathToROCDL",
         ":MathToSPIRV",
+        ":MathToXeVM",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
@@ -5227,6 +5235,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LLVMDialectBytecodeIncGen",
         ":LLVMDialectInterfaceIncGen",
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
@@ -5679,6 +5688,16 @@ td_library(
     ],
 )
 
+td_library(
+    name = "LLVMDialectBytecodeTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td"],
+    includes = ["include"],
+    deps = [
+        ":BytecodeTdFiles",
+        ":LLVMOpsTdFiles",
+    ],
+)
+
 cc_library(
     name = "GPUCommonTransforms",
     hdrs = [
@@ -6029,6 +6048,17 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMOps.td",
     deps = [":LLVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LLVMDialectBytecodeIncGen",
+    tbl_outs = {"include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.cpp.inc": [
+        "-gen-bytecode",
+        "-bytecode-dialect=LLVM",
+    ]},
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td",
+    deps = [":LLVMDialectBytecodeTdFiles"],
 )
 
 gentbl_cc_library(
@@ -7027,6 +7057,33 @@ cc_library(
 )
 
 cc_library(
+    name = "MathToXeVM",
+    srcs = glob([
+        "lib/Conversion/MathToXeVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/MathToXeVM/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/MathToXeVM",
+    ],
+    deps = [
+        ":ArithAttrToLLVMConversion",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+        ":Transforms",
+        ":XeVMDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "FuncToEmitC",
     srcs = glob([
         "lib/Conversion/FuncToEmitC/*.cpp",
@@ -7597,6 +7654,30 @@ cc_library(
     deps = [
         ":IR",
         ":InferIntRangeInterfaceIncGen",
+    ],
+)
+
+gentbl_cc_library(
+    name = "InferStridedMetadataInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/InferStridedMetadataInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/InferStridedMetadataInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/InferStridedMetadataInterface.td",
+    deps = [":InferStridedMetadataInterfaceTdFiles"],
+)
+
+cc_library(
+    name = "InferStridedMetadataInterface",
+    srcs = ["lib/Interfaces/InferStridedMetadataInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/InferStridedMetadataInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":InferIntRangeInterface",
+        ":InferStridedMetadataInterfaceIncGen",
+        "//llvm:Support",
     ],
 )
 
@@ -8528,9 +8609,11 @@ cc_library(
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
         ":InferIntRangeInterface",
+        ":InferStridedMetadataInterface",
         ":LoopLikeInterface",
         ":Pass",
         ":SideEffectInterfaces",
@@ -12452,6 +12535,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferStridedMetadataInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":Pass",
@@ -12673,6 +12757,7 @@ td_library(
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":InferStridedMetadataInterfaceTdFiles",
         ":MemOpInterfacesTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
@@ -12763,6 +12848,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferStridedMetadataInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":MemOpInterfaces",

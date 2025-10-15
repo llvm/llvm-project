@@ -2780,6 +2780,25 @@ usual build cycle when using sample profilers for optimization:
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
        code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
+   [OPTIONAL] Pseudo instrumentation can be used as the anchor for accurate
+   profile mapping with the ``-fpseudo-probe-for-profiling`` option.
+
+   On Linux:
+
+   .. code-block:: console
+
+     $ clang++ -O2 -gline-tables-only \
+       -fpseudo-probe-for-profiling -funique-internal-linkage-names \
+       code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /O2 -gdwarf -gline-tables-only ^
+       -fpseudo-probe-for-profiling /clang:-funique-internal-linkage-names ^
+       code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
+
 .. note::
 
    :ref:`-funique-internal-linkage-names <funique_internal_linkage_names>`
@@ -2879,6 +2898,25 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       -fprofile-sample-use=code.prof code.cc /Fe:code
+
+   [OPTIONAL] Pseudo instrumentation can be used as the anchor for accurate
+   profile mapping with the ``-fpseudo-probe-for-profiling`` option.
+
+   On Linux:
+
+   .. code-block:: console
+
+     $ clang++ -O2 \
+        -fpseudo-probe-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /O2 ^
+       -fpseudo-probe-for-profiling /clang:-funique-internal-linkage-names ^
        -fprofile-sample-use=code.prof code.cc /Fe:code
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
