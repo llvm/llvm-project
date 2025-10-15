@@ -37,8 +37,8 @@ template <class _OutputIterator,
           class _Tp
 #ifndef _LIBCPP_CXX03_LANG
           ,
-          __enable_if_t<!_And<__is_segmented_iterator<_OutputIterator>,
-                              __has_random_access_local_iterator<_OutputIterator> >::value,
+          __enable_if_t<!(__is_segmented_iterator_v<_OutputIterator> &&
+                          __has_random_access_local_iterator<_OutputIterator>::value),
                         int> = 0
 #endif
           >
@@ -53,11 +53,11 @@ __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
 template < class _OutputIterator,
            class _Size,
            class _Tp,
-           __enable_if_t<_And<__is_segmented_iterator<_OutputIterator>,
-                              __has_random_access_local_iterator<_OutputIterator> >::value,
+           __enable_if_t<__is_segmented_iterator_v<_OutputIterator> &&
+                             __has_random_access_local_iterator<_OutputIterator>::value,
                          int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _OutputIterator
-__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _OutputIterator __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
   using __local_iterator_t = typename __segmented_iterator_traits<_OutputIterator>::__local_iterator;
   return std::__for_each_n_segment(__first, __n, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
     std::__fill_n(__lfirst, __llast - __lfirst, __value);
