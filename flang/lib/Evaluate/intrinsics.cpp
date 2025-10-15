@@ -111,7 +111,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     atomicIntKind, // atomic_int_kind from iso_fortran_env
     atomicIntOrLogicalKind, // atomic_int_kind or atomic_logical_kind
     sameAtom, // same type and kind as atom
-    ExtensibleOrUnlimitedType, // extensible or unlimited polymorphic type
+    extensibleOrUnlimitedType, // extensible or unlimited polymorphic type
 )
 
 struct TypePattern {
@@ -162,7 +162,7 @@ static constexpr TypePattern AnyLogical{LogicalType, KindCode::any};
 static constexpr TypePattern AnyRelatable{RelatableType, KindCode::any};
 static constexpr TypePattern AnyIntrinsic{IntrinsicType, KindCode::any};
 static constexpr TypePattern ExtensibleDerived{
-    DerivedType, KindCode::ExtensibleOrUnlimitedType};
+    DerivedType, KindCode::extensibleOrUnlimitedType};
 static constexpr TypePattern AnyData{AnyType, KindCode::any};
 
 // Type is irrelevant, but not BOZ (for PRESENT(), OPTIONAL(), &c.)
@@ -2107,7 +2107,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     } else if (!d.typePattern.categorySet.test(type->category())) {
       std::string expectedText;
       switch (d.typePattern.kindCode) {
-      case KindCode::ExtensibleOrUnlimitedType:
+      case KindCode::extensibleOrUnlimitedType:
         expectedText = "extensible derived or unlimited polymorphic type";
         break;
       default:
@@ -2255,13 +2255,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         return std::nullopt;
       }
       break;
-    case KindCode::ExtensibleOrUnlimitedType:
+    case KindCode::extensibleOrUnlimitedType:
       argOk = type->IsUnlimitedPolymorphic() ||
           (type->category() == TypeCategory::Derived &&
               IsExtensibleType(GetDerivedTypeSpec(type)));
       if (!argOk) {
         messages.Say(arg->sourceLocation(),
-            "Actual argument for '%s=' has bad type '%s', expected extensible derived or unlimited polymorphic type"_err_en_US,
+            "Actual argument for '%s=' has type '%s', but was expected to be an extensible derived or unlimited polymorphic type"_err_en_US,
             d.keyword, type->AsFortran());
         return std::nullopt;
       }
