@@ -95,6 +95,7 @@ static void addChipsetDependentPatterns(const LLVMTypeConverter &converter,
                                         amdgpu::Chipset chipset) {
 
   // V_MED3_F16/F32 only exists in gfx9+ architectures
+  // Only populate chipset-dependent patterns if chipset is specified
   if (chipset.majorVersion >= 9) {
     patterns.add<ClampFOpConversion>(converter, chipset);
   }
@@ -197,7 +198,6 @@ void ConvertMathToROCDLPass::runOnOperation() {
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
 
-  // Only populate chipset-dependent patterns if chipset is specified
   FailureOr<amdgpu::Chipset> maybeChipset;
   if (!chipset.empty()) {
     maybeChipset = amdgpu::Chipset::parse(chipset);
