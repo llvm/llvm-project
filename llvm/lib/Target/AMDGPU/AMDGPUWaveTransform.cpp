@@ -317,9 +317,14 @@ public:
 
     DenseSet<BlockT *> VisitedBlocks;
     SmallVector<BlockT *, 32> BlockStack;
-    // DoneIdxStack contains ((size of BlockStack before pop) << 1) |
-    // isCycleHeart
-    SmallVector<unsigned, 32> DoneIdxStack;
+    struct DoneIdxStackElt {
+      unsigned SizeOfBlockStackBeforePop : 31;
+      bool IsCycleHeart : 1;
+
+      DoneIdxStackElt(unsigned Size, bool IsCycle)
+          : SizeOfBlockStackBeforePop(Size), IsCycleHeart(IsCycle) {}
+    };
+    SmallVector<DoneIdxStackElt, 32> DoneIdxStack;
     SmallVector<HapoCycle, 8> CycleStack;
     unsigned CurrentCycleStackIdx = 0;
 
@@ -329,15 +334,15 @@ public:
 
     // The entry block is not marked as a cycle header, so that we don't attempt
     // to pop the root cycle: it is handled at the very end after the loop.
-    DoneIdxStack.push_back(BlockStack.size() << 1);
+    DoneIdxStack.emplace_back(BlockStack.size(), false);
     llvm::append_range(BlockStack, successors(EntryBlock));
 
     do {
       MachineBasicBlock *Block = BlockStack.back();
-      unsigned DoneBack = DoneIdxStack.back();
+      const DoneIdxStackElt &DoneBack = DoneIdxStack.back();
 
-      if (BlockStack.size() == (DoneBack >> 1)) {
-        if (!(DoneBack & 1)) {
+      if (BlockStack.size() == DoneBack.SizeOfBlockStackBeforePop) {
+        if (!DoneBack.IsCycleHeart) {
           // Post-order visit of a regular Block.
           CycleStack[CurrentCycleStackIdx].Order.push_back(Block);
           BlockStack.pop_back();
@@ -387,7 +392,7 @@ public:
 
       if (BlockCycle == CurrentCycle ||
           (CurrentHeart && CurrentHeart == getHeartBlock(BlockCycle))) {
-        DoneIdxStack.push_back(BlockStack.size() << 1);
+        DoneIdxStack.emplace_back(BlockStack.size(), false);
         llvm::append_range(BlockStack, successors(Block));
         continue;
       }
@@ -414,7 +419,7 @@ public:
           VisitedBlocks.insert(EffectiveHeart);
         }
 
-        DoneIdxStack.push_back((BlockStack.size() << 1) | 1);
+        DoneIdxStack.emplace_back(BlockStack.size(), true);
         llvm::append_range(BlockStack, successors(Block));
         continue;
       }
