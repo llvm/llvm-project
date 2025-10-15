@@ -575,8 +575,8 @@ TEST_F(OpenMPDecompositionTest, Lastprivate3) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (21), (27)
-  ASSERT_EQ(Dir1, "parallel shared(x)");          // (22)
-  ASSERT_EQ(Dir2, "do lastprivate(, (x))");       // (21)
+  ASSERT_EQ(Dir1, "parallel shared(x)");           // (22)
+  ASSERT_EQ(Dir2, "do lastprivate(, (x))");        // (21)
 }
 
 // SHARED
