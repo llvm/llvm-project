@@ -9117,24 +9117,26 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
 
   if (ST.useRealTrue16Insts()) {
     Register SrcReg0, SrcReg1;
-    if (!Src0.isReg() || (Src0.isReg() && !RI.isVGPR(MRI, Src0.getReg()))) {
+    if (!Src0.isReg() || !RI.isVGPR(MRI, Src0.getReg())) {
       SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
-    } else
+    } else {
       SrcReg0 = Src0.getReg();
+    }
 
-    if (!Src1.isReg() || (Src1.isReg() && !RI.isVGPR(MRI, Src1.getReg()))) {
+    if (!Src1.isReg() || !RI.isVGPR(MRI, Src1.getReg())) {
       SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
-    } else
+    } else {
       SrcReg1 = Src1.getReg();
+    }
 
     bool isSrc0Reg16 = MRI.constrainRegClass(SrcReg0, &AMDGPU::VGPR_16RegClass);
     bool isSrc1Reg16 = MRI.constrainRegClass(SrcReg1, &AMDGPU::VGPR_16RegClass);
 
     auto NewMI = BuildMI(*MBB, Inst, DL, get(AMDGPU::REG_SEQUENCE), ResultReg);
     switch (Inst.getOpcode()) {
-    case AMDGPU::S_PACK_LL_B32_B16: {
+    case AMDGPU::S_PACK_LL_B32_B16:
       NewMI
           .addReg(SrcReg0, 0,
                   isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
@@ -9142,28 +9144,28 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
           .addReg(SrcReg1, 0,
                   isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::hi16);
-    } break;
-    case AMDGPU::S_PACK_LH_B32_B16: {
+      break;
+    case AMDGPU::S_PACK_LH_B32_B16:
       NewMI
           .addReg(SrcReg0, 0,
                   isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::lo16)
           .addReg(SrcReg1, 0, AMDGPU::hi16)
           .addImm(AMDGPU::hi16);
-    } break;
-    case AMDGPU::S_PACK_HL_B32_B16: {
+      break;
+    case AMDGPU::S_PACK_HL_B32_B16:
       NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
           .addImm(AMDGPU::lo16)
           .addReg(SrcReg1, 0,
                   isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::hi16);
-    } break;
-    case AMDGPU::S_PACK_HH_B32_B16: {
+      break;
+    case AMDGPU::S_PACK_HH_B32_B16:
       NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
           .addImm(AMDGPU::lo16)
           .addReg(SrcReg1, 0, AMDGPU::hi16)
           .addImm(AMDGPU::hi16);
-    } break;
+      break;
     default:
       llvm_unreachable("unhandled s_pack_* instruction");
     }
