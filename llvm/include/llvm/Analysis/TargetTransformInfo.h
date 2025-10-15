@@ -574,6 +574,9 @@ public:
     /// The cost threshold for the unrolled loop, like Threshold, but used
     /// for partial/runtime unrolling (set to UINT_MAX to disable).
     unsigned PartialThreshold;
+    /// The cost threshold for the unrolled loop, like Threshold, but used
+    /// for calculating unroll count for loop.
+    unsigned ScaledThreshold;
     /// The cost threshold for the unrolled loop when optimizing for size, like
     /// OptSizeThreshold, but used for partial/runtime unrolling (set to
     /// UINT_MAX to disable).
