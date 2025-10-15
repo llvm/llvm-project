@@ -128,7 +128,8 @@ inline DebugOptionTy &getDebugOption() {
         {"tool", DEBUG_INFOTYPE_TOOL},     {"api", DEBUG_INFOTYPE_API},
         {"all", DEBUG_INFOTYPE_ALL},       {nullptr, 0},
     };
-    // Check string value of the option
+    // Check string value of the option. Comma-separated list of the known
+    // keywords are accepted.
     std::istringstream Tokens(EnvStr);
     for (std::string Token; std::getline(Tokens, Token, ',');) {
       for (int I = 0; DebugStrToBit[I].Str; I++) {
