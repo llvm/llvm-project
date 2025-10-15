@@ -5188,8 +5188,8 @@ struct AADereferenceableCallSiteReturned final
 
 namespace {
 
-Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
-                                  const IntrinsicInst &II) {
+static Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
+                                         const IntrinsicInst &II) {
   Align Alignment;
   switch (II.getIntrinsicID()) {
   case Intrinsic::ptrmask: {
@@ -5199,8 +5199,8 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II.getOperand(0))),
                             DepClassTy::REQUIRED);
     if (ConstVals && ConstVals->isValidState()) {
-      unsigned ShiftValue =
-          std::min(ConstVals->getAssumedMinTrailingZeros(), 63U);
+      unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
+                                     Value::MaxAlignmentExponent);
       Alignment = Align(UINT64_C(1) << ShiftValue);
     }
     if (AlignAA && AlignAA->isValidState())
