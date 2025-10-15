@@ -54,15 +54,14 @@ struct RangeSpanList {
 };
 
 /// Tracks abstract and concrete DIEs for debug info entities of a certain type.
-template <typename DINodeT, typename DbgEntityT> class DINodeInfoHolder {
+template <typename DINodeT, typename DbgEntityT> class DINodeMap {
 public:
   using AbstractMapT = DenseMap<const DINodeT *, DIE *>;
-  using ConcreteMapT =
-      DenseMap<const DINodeT *, SmallDenseMap<const DbgEntityT *, DIE *, 2>>;
+  using EntityMapT = SmallDenseMap<const DbgEntityT *, DIE *, 2>;
 
 private:
   AbstractMapT AbstractMap;
-  ConcreteMapT ConcreteMap;
+  DenseMap<const DINodeT *, EntityMapT> ConcreteMap;
 
 public:
   void insertAbstractDIE(const DINodeT *N, DIE *D) {
@@ -84,23 +83,21 @@ public:
 
   DIE *getAbstractDIE(const DINodeT *N) const { return AbstractMap.lookup(N); }
 
-  std::optional<
-      std::reference_wrapper<const typename ConcreteMapT::mapped_type>>
-  getConcreteDIEs(const DINodeT *N) const {
-    if (auto I = ConcreteMap.find(N); I != ConcreteMap.end())
-      return std::make_optional(std::ref(I->second));
-    return std::nullopt;
+  const EntityMapT *getConcreteDIEs(const DINodeT *N) const {
+    if (const auto I = ConcreteMap.find(N); I != ConcreteMap.end())
+      return &I->second;
+    return nullptr;
   }
 
   DIE *getConcreteDIE(const DINodeT *N, const DbgEntityT *E) const {
     if (auto I = getConcreteDIEs(N))
-      return I->get().lookup(E);
+      return I->lookup(E);
     return nullptr;
   }
 
   DIE *getAnyConcreteDIE(const DINodeT *N) const {
-    if (auto I = getConcreteDIEs(N))
-      return I->get().empty() ? nullptr : I->get().begin()->second;
+    if (auto *I = getConcreteDIEs(N))
+      return I->empty() ? nullptr : I->begin()->second;
     return nullptr;
   }
 
@@ -109,7 +106,6 @@ public:
   DIE *getDIE(const DINodeT *N) const {
     if (DIE *D = getAbstractDIE(N))
       return D;
-
     return getAnyConcreteDIE(N);
   }
 
@@ -120,13 +116,21 @@ public:
 /// These DIEs can be shared across CUs, that is why we keep the map here
 /// instead of in DwarfCompileUnit.
 class DwarfInfoHolder {
+public:
+  using LVMapT = DINodeMap<DILocalVariable, DbgVariable>;
+  using LabelMapT = DINodeMap<DILabel, DbgLabel>;
+  using AbstractEntityMapT =
+      DenseMap<const DINode *, std::unique_ptr<DbgEntity>>;
+  using AbstractScopeMapT = DenseMap<const DILocalScope *, DIE *>;
+
+private:
   /// DIEs of local DbgVariables.
-  DINodeInfoHolder<DILocalVariable, DbgVariable> LVHolder;
+  LVMapT LVMap;
   /// DIEs of labels.
-  DINodeInfoHolder<DILabel, DbgLabel> LabelHolder;
-  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
+  LabelMapT LabelMap;
+  AbstractEntityMapT AbstractEntities;
   // List of abstract local scopes (either DISubprogram or DILexicalBlock).
-  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
+  AbstractScopeMapT AbstractLocalScopeDIEs;
   /// Keeps track of abstract subprograms to populate them only once.
   // FIXME: merge creation and population of abstract scopes.
   SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
@@ -154,11 +158,11 @@ public:
     return D;
   }
 
-  auto &getLVs() { return LVHolder; }
-  auto &getLVs() const { return LVHolder; }
+  LVMapT &getLVs() { return LVMap; }
+  const LVMapT &getLVs() const { return LVMap; }
 
-  auto &getLabels() { return LabelHolder; }
-  auto &getLabels() const { return LabelHolder; }
+  LabelMapT &getLabels() { return LabelMap; }
+  const LabelMapT &getLabels() const { return LabelMap; }
 
   /// For a global variable, returns DIE of the variable.
   ///
@@ -171,13 +175,9 @@ public:
     return getDIE(V);
   }
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
-    return AbstractLocalScopeDIEs;
-  }
+  AbstractScopeMapT &getAbstractScopeDIEs() { return AbstractLocalScopeDIEs; }
 
-  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
-    return AbstractEntities;
-  }
+  AbstractEntityMapT &getAbstractEntities() { return AbstractEntities; }
 
   auto &getFinalizedAbstractSubprograms() {
     return FinalizedAbstractSubprograms;
