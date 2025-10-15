@@ -415,7 +415,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
             Root.getOperator() == CGP.get_intrinsic_wo_chain_sdnode() ||
             PInfo.getNumOperands() > 1 || PInfo.hasProperty(SDNPHasChain) ||
             PInfo.hasProperty(SDNPInGlue) || PInfo.hasProperty(SDNPOptInGlue) ||
-            PInfo.hasProperty(SDNPMayHaveChain);
+            PInfo.hasProperty(SDNPOptChain);
       }
 
       if (NeedCheck)
@@ -438,7 +438,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     checkFoldableChain();
   }
 
-  if (N.NodeHasProperty(SDNPMayHaveChain, CGP)) {
+  if (N.NodeHasProperty(SDNPOptChain, CGP)) {
     // Record the node and remember it in our possibly-chained nodes list.
     AddMatcher(new RecordOptionalChainMatcher());
     MatchedOptionalChainNodes.push_back(NextRecordedOperandNo++);
@@ -987,7 +987,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
          "Node has no result");
 
   bool NodeMayHaveChain =
-      Pattern.getSrcPattern().TreeHasProperty(SDNPMayHaveChain, CGP);
+      Pattern.getSrcPattern().TreeHasProperty(SDNPOptChain, CGP);
   AddMatcher(new EmitNodeMatcher(II, ResultVTs, InstOps, NodeHasChain,
                                  TreeHasInGlue, TreeHasOutGlue, NodeHasMemRefs,
                                  NodeMayHaveChain, NumFixedArityOperands,

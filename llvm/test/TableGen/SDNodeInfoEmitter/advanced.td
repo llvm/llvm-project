@@ -49,7 +49,7 @@ def my_node_3 : SDNode<
 def my_node_4 : SDNode<
     "MyTargetISD::NODE_4",
     SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, f32>]>,
-    [SDNPMayHaveChain]
+    [SDNPOptChain]
 >;
 
 // CHECK:       namespace llvm::MyTargetISD {
@@ -58,7 +58,7 @@ def my_node_4 : SDNode<
 // CHECK-NEXT:    NODE_1 = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:    NODE_2,
 // CHECK-NEXT:    NODE_3,
-// CHECK-NEXT:    NODE_4
+// CHECK-NEXT:    NODE_4,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NODE_4 + 1;
@@ -96,7 +96,7 @@ def my_node_4 : SDNode<
 // CHECK-NEXT:          {1, 1, 0|1<<SDNPHasChain, 0, 0, 1, 0, 2}, // NODE_1
 // CHECK-NEXT:          {3, 1, 0|1<<SDNPVariadic|1<<SDNPMemOperand, 0, 42, 21, 11, 4}, // NODE_2
 // CHECK-NEXT:          {2, -1, 0|1<<SDNPHasChain|1<<SDNPOutGlue|1<<SDNPInGlue|1<<SDNPOptInGlue, 0|1<<SDNFIsStrictFP, 24, 41, 2, 13}, // NODE_3
-// CHECK-NEXT:          {1, 1, 0|1<<SDNPMayHaveChain, 0, 0, 61, 15, 2}, // NODE_4
+// CHECK-NEXT:          {1, 1, 0|1<<SDNPOptChain, 0, 0, 61, 15, 2}, // NODE_4
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: static const SDNodeInfo MyTargetGenSDNodeInfo(

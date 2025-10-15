@@ -4467,7 +4467,7 @@ bool SelectionDAGISel::mayRaiseFPException(SDNode *N) const {
     const SelectionDAGTargetInfo &TSI = CurDAG->getSelectionDAGInfo();
     return TSI.mayRaiseFPException(N->getOpcode());
   }
-  return N->isStrictFPOpcode() || N->isFPOperation();
+  return N->isStrictFPOpcode();
 }
 
 bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {

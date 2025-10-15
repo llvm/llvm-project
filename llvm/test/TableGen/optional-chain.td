@@ -15,7 +15,7 @@ def GPR : RegisterClass<"MyTarget", [i32, f32], 32, (add R0)>;
 def a_nearbyint : SDNode<
     "MyTargetISD::A_NEARBYINT",
     SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>,
-    [SDNPMayHaveChain]
+    [SDNPOptChain]
 >;
 
 def I_NEARBYINT : Instruction {

@@ -753,7 +753,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
       if (Pattern.hasProperty(SDNPHasChain))
         OS << " + chain result";
-      if (Pattern.hasProperty(SDNPMayHaveChain))
+      if (Pattern.hasProperty(SDNPOptChain))
         OS << " + optional chain result";
     }
     OS << '\n';

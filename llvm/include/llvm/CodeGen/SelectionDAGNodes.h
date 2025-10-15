@@ -717,7 +717,6 @@ public:
       case ISD::STRICT_FP_TO_FP16:
       case ISD::STRICT_BF16_TO_FP:
       case ISD::STRICT_FP_TO_BF16:
-#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -725,21 +724,16 @@ public:
     }
   }
 
-  /// Test if this node is a floating-point operation which can exist in two
-  /// forms, - with chain or without it.
-  bool isFPOperation() const {
-    switch (NodeType) {
-    default:
-      return false;
-#define FP_OPERATION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN) case ISD::DAGN:
-#include "llvm/IR/ConstrainedOps.def"
-      return true;
-    }
-  }
-
-  /// Test if this node has an input chain.
+  /// Test if this node has a chain.
   bool hasChain() const {
-    return NumOperands > 0 && OperandList[0].getValueType() == MVT::Other;
+    if (NumValues > 0) {
+      if (ValueList[NumValues - 1] == MVT::Other)
+        return true;
+      if (ValueList[NumValues - 1] == MVT::Glue)
+        if (NumValues > 1 && ValueList[NumValues - 2] == MVT::Other)
+          return true;
+    }
+    return false;
   }
 
   /// Test if this node is an assert operation.

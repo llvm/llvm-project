@@ -26,7 +26,7 @@ enum SDNP {
   SDNPOptInGlue,
   SDNPMemOperand,
   SDNPVariadic,
-  SDNPMayHaveChain
+  SDNPOptChain,
 };
 
 enum SDTC : uint8_t {

@@ -3745,7 +3745,7 @@ public:
       isVariadic = true;
     if (N.NodeHasProperty(SDNPHasChain, CDP))
       hasChain = true;
-    if (N.NodeHasProperty(SDNPMayHaveChain, CDP))
+    if (N.NodeHasProperty(SDNPOptChain, CDP))
       mayHaveChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N.getIntrinsicInfo(CDP)) {
@@ -3815,7 +3815,6 @@ static bool InferFromPattern(CodeGenInstruction &InstInfo,
     InstInfo.isBitcast |= PatInfo.isBitcast;
     InstInfo.hasChain |= PatInfo.hasChain;
     InstInfo.hasChain_Inferred = true;
-    InstInfo.mayHaveChain |= PatInfo.mayHaveChain;
   }
 
   // Don't infer isVariadic. This flag means something different on SDNodes and

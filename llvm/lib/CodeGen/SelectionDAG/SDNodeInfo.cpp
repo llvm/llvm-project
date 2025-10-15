@@ -47,13 +47,14 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
   bool HasInGlue = Desc.hasProperty(SDNPInGlue);
   bool HasOptInGlue = Desc.hasProperty(SDNPOptInGlue);
   bool IsVariadic = Desc.hasProperty(SDNPVariadic);
-  bool MayHaveChain = Desc.hasProperty(SDNPMayHaveChain);
+  bool HasOptChain = Desc.hasProperty(SDNPOptChain);
 
-  if (HasChain && MayHaveChain)
-    reportNodeError(
-        DAG, N, "Flags 'HasChain' and 'MayHaveChain' cannot be both specified");
+  if (HasChain && HasOptChain)
+    reportNodeError(DAG, N,
+                    "Properties 'SDNPHasChain' and 'SDNPOptChain' cannot be "
+                    "both specified");
 
-  if (MayHaveChain && N->getNumOperands() > 0 &&
+  if (HasOptChain && N->getNumOperands() > 0 &&
       N->getOperand(0).getValueType() == MVT::Other) {
     HasChain = true;
   }

@@ -28,7 +28,7 @@ enum SDNP {
   SDNPSideEffect,
   SDNPMemOperand,
   SDNPVariadic,
-  SDNPMayHaveChain
+  SDNPOptChain,
 };
 
 unsigned parseSDPatternOperatorProperties(const Record *R);
