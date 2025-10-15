@@ -126,8 +126,16 @@ void test_init_captures() {
     return nx - ref;
   }();
 
+  int y3 = [=, &ref = x, z = x + 5]() {
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: int y3 = [nx, &ref = x, z = x + 5]() {
+    ref += 2;
+    return nx + z - ref;
+  }();
+
   (void)y1;
   (void)y2;
+  (void)y3;
 }
 
 void test_vla_no_crash() {
