@@ -1305,7 +1305,7 @@ __m512 test_mm512_mask_broadcast_f32x8(__m512 __O, __mmask16 __M, float const* _
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_broadcast_f32x8(__O, __M, _mm256_loadu_ps(__A)); 
 }
-TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x8(_mm512_setzero_ps(), 0xFFFF, _mm256_set1_ps(5.0f)), 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5));
+TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x8(_mm512_setzero_ps(), 0xAAAA, (__m256)(__v8sf){5.0f,5.0f,5.0f,5.0f,5.0f,5.0f,5.0f,5.0f}), 0,5,0,5,0,5,0,5,0,5,0,5,0,5,0,5));
 
 __m512 test_mm512_maskz_broadcast_f32x8(__mmask16 __M, float const* __A) {
   // CHECK-LABEL: test_mm512_maskz_broadcast_f32x8
