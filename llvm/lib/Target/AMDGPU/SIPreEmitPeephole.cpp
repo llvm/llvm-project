@@ -654,7 +654,6 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
       InstrsToUnpack.insert(&Instr);
   }
-  return;
 }
 
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
@@ -681,7 +680,6 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   HiDstOp.setIsRenamable(DstOp.isRenamable());
 
   I.eraseFromParent();
-  return;
 }
 
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
