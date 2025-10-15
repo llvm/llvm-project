@@ -5416,6 +5416,45 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   if (B && D && B == D && NoOp0WrapProblem && NoOp1WrapProblem)
     return new ICmpInst(Pred, A, C);
 
+  // icmp (A-B), (C-B) -> icmp A, C for comparisons of pointer subtraction
+  // that is, if A, B and C are all ptrs converted to integers.
+  //
+  // Tricky case because pointers are effectively unsigned integers, but the
+  // result of their subtraction is signed. Also, these subtractions ought to
+  // have NSW semantics, except we cannot give that to them because the results
+  // are considered signed, but if we optimize away the subtraction, the
+  // underlying pointers need to be treated as unsigned, thus special handling
+  // is required. In this scenario, we must ensure that the comparison is
+  // unsigned after removing the subtraction operations.
+  if (B && D && B == D && isa<PtrToIntOperator>(A) &&
+      isa<PtrToIntOperator>(B) && isa<PtrToIntOperator>(C)) {
+    CmpInst::Predicate UnsignedPred;
+    switch (Pred) {
+    default:
+      // If already unsigned, explicit cast from ptr to unsigned,
+      // so cannot optimize
+      UnsignedPred = CmpInst::BAD_ICMP_PREDICATE;
+      break;
+    case ICmpInst::ICMP_SGT:
+      UnsignedPred = ICmpInst::ICMP_UGT;
+      break;
+    case ICmpInst::ICMP_SLT:
+      UnsignedPred = ICmpInst::ICMP_ULT;
+      break;
+    case ICmpInst::ICMP_SGE:
+      UnsignedPred = ICmpInst::ICMP_UGE;
+      break;
+    case ICmpInst::ICMP_SLE:
+      UnsignedPred = ICmpInst::ICMP_ULE;
+      break;
+    }
+    if (UnsignedPred != CmpInst::BAD_ICMP_PREDICATE) {
+      PtrToIntOperator *AOp = dyn_cast<PtrToIntOperator>(A);
+      PtrToIntOperator *COp = dyn_cast<PtrToIntOperator>(C);
+      return new ICmpInst(UnsignedPred, AOp->getOperand(0), COp->getOperand(0));
+    }
+  }
+
   // icmp (A-B), (A-D) -> icmp D, B for equalities or if there is no overflow.
   if (A && C && A == C && NoOp0WrapProblem && NoOp1WrapProblem)
     return new ICmpInst(Pred, D, B);
