@@ -16,14 +16,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 static std::string generateCaptureText(const LambdaCapture &Capture) {
-  if (Capture.capturesThis()) {
+  if (Capture.capturesThis())
     return Capture.getCaptureKind() == LCK_StarThis ? "*this" : "this";
-  }
 
   std::string Result;
-  if (Capture.getCaptureKind() == LCK_ByRef) {
+  if (Capture.getCaptureKind() == LCK_ByRef)
     Result += "&";
-  }
+
   Result += Capture.getCapturedVar()->getName().str();
   return Result;
 }
