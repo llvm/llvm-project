@@ -895,6 +895,26 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
 }
 
 namespace {
+mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
+                                  const CXXDestructorDecl *dd) {
+  if (Expr *thisArg = dd->getOperatorDeleteThisArg())
+    return cgf.emitScalarExpr(thisArg);
+  return cgf.loadCXXThis();
+}
+
+/// Call the operator delete associated with the current destructor.
+struct CallDtorDelete final : EHScopeStack::Cleanup {
+  CallDtorDelete() {}
+
+  void emit(CIRGenFunction &cgf) override {
+    const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
+    const CXXRecordDecl *classDecl = dtor->getParent();
+    cgf.emitDeleteCall(dtor->getOperatorDelete(),
+                       loadThisForDtorDelete(cgf, dtor),
+                       cgf.getContext().getCanonicalTagType(classDecl));
+  }
+};
+
 class DestroyField final : public EHScopeStack::Cleanup {
   const FieldDecl *field;
   CIRGenFunction::Destroyer *destroyer;
@@ -932,7 +952,18 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
   // The deleting-destructor phase just needs to call the appropriate
   // operator delete that Sema picked up.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dd->getSourceRange(), "deleting destructor cleanups");
+    assert(dd->getOperatorDelete() &&
+           "operator delete missing - EnterDtorCleanups");
+    if (cxxStructorImplicitParamValue) {
+      cgm.errorNYI(dd->getSourceRange(), "deleting destructor with vtt");
+    } else {
+      if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
+        cgm.errorNYI(dd->getSourceRange(),
+                     "deleting destructor with destroying operator delete");
+      } else {
+        ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
+      }
+    }
     return;
   }
 

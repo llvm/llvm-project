@@ -199,7 +199,7 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  handleSimpleAttribute<DeviceKernelAttr>(*this, D, AL);
+  handleSimpleAttribute<SYCLKernelAttr>(*this, D, AL);
 }
 
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
