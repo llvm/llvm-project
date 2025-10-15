@@ -1,71 +1,37 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL
-// RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-pixel -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
+// RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-pixel -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
 // NOTE: SPIRV codegen for resource methods is not yet implemented
 
-RasterizerOrderedStructuredBuffer<float> ROSB1;
-RasterizerOrderedStructuredBuffer<int2> ROSB2;
+RWStructuredBuffer<float> RWSB1, RWSB2;
+RasterizerOrderedStructuredBuffer<float> ROSB1, ROSB2;
 
-// %"class.hlsl::RasterizerOrderedStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 1), target("dx.RawBuffer", float, 1, 1) }
-// %"class.hlsl::RasterizerOrderedStructuredBuffer.0" = type { target("dx.RawBuffer", <2 x i32>, 1, 1), target("dx.RawBuffer", <2 x i32>, 1, 1) }
-
-// CHECK: @ROSB1 = internal global %"class.hlsl::RasterizerOrderedStructuredBuffer" poison
-// CHECK: @ROSB2 = internal global %"class.hlsl::RasterizerOrderedStructuredBuffer.0" poison
+// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0), target("dx.RawBuffer", float, 1, 0) }
 
 export void TestIncrementCounter() {
+// CHECK: define void @_Z20TestIncrementCounterv()
+// CHECK-DXIL: call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
+// CHECK-DXIL: call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %{{[0-9]+}}, i8 1)
+    RWSB1.IncrementCounter();
     ROSB1.IncrementCounter();
 }
 
-// CHECK: define void @TestIncrementCounter()()
-// CHECK: call noundef i32 @hlsl::RasterizerOrderedStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} @ROSB1)
-// CHECK-NEXT: ret void
-
-// CHECK: define {{.*}} i32 @hlsl::RasterizerOrderedStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} %this)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
-// DXIL-NEXT: %[[VAL:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i8 1)
-// CHECK-NEXT: ret i32 %[[VAL]]
-
 export void TestDecrementCounter() {
+// CHECK: define void @_Z20TestDecrementCounterv()
+// CHECK-DXIL: call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 -1)
+// CHECK-DXIL: call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %{{[0-9]+}}, i8 -1)
+    RWSB2.DecrementCounter();
     ROSB2.DecrementCounter();
 }
 
-// CHECK: define void @TestDecrementCounter()()
-// CHECK: call noundef i32 @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::DecrementCounter()(ptr {{.*}} @ROSB2)
-// CHECK-NEXT: ret void
-
-// CHECK: define {{.*}} i32 @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::DecrementCounter()(ptr {{.*}} %this)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr %{{.*}}, i32 0, i32 0
-// CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
-// DXIL-NEXT: %[[VAL:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[HANDLE]], i8 -1)
-// CHECK-NEXT: ret i32 %[[VAL]]
-
 export float TestLoad() {
-    return ROSB1.Load(10).x + ROSB2.Load(20).x;
+    return ROSB1.Load(10);
 }
 
-// CHECK: define {{.*}} float @TestLoad()()
-// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @ROSB1, i32 noundef 10)
-// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int)(ptr {{.*}} @ROSB2, i32 noundef 20)
-// CHECK: ret
+// CHECK: define noundef nofpclass(nan inf) float @_Z8TestLoadv()
+// CHECK: %[[PTR1:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %{{[0-9]+}}, i32 %{{[0-9]+}})
+// CHECK: %[[VALUE1:.*]] = load float, ptr %[[PTR1]]
 
-// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %Index)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr {{.*}}, i32 0, i32 0
-// CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
-// CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[BUFPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[BUFPTR]]
-// CHECK-NEXT: ret float %[[VAL]]
-
-// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int)(ptr {{.*}} %Index)
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr {{.*}}, i32 0, i32 0
-// CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
-// CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[BUFPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: %[[VAL:.*]] = load <2 x i32>, ptr %[[BUFPTR]]
-// CHECK-NEXT: ret <2 x i32> %[[VAL]]
-
-// DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i8)
-// DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1), i8)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i32)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1), i32)
+// CHECK: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
+// CHECK: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i8)
+// CHECK: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i32)
