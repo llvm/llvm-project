@@ -1,5 +1,5 @@
 // This test checks that we ignore functions which add an entry point that
-// is in a costant island.
+// is in a constant island.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -pie -Wl,-q -o %t.exe
