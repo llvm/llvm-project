@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fexceptions -fcxx-exceptions -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fexceptions -fcxx-exceptions -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 int x(int y) {
@@ -10,11 +10,11 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> !s32i
-// CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
-// CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> !s32i{{.*}}{
+// CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+// CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
-// CIR: [[YVAL:%.+]] = cir.load align(4) [[Y]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[YVAL:%.+]] = cir.load{{.*}} [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
 // CIR: [[CMP:%.+]] = cir.cmp(gt, [[YVAL]], [[ZERO]]) : !s32i, !cir.bool
 // CIR: [[THREE:%.+]] = cir.const #cir.int<3> : !s32i
@@ -52,21 +52,21 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> !s32i
-// CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
-// CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
-// CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> !s32i{{.*}}{
+// CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
-// CIR: [[ALOAD:%.+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[BLOAD:%.+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[ALOAD:%.+]] = cir.load{{.*}} [[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[BLOAD:%.+]] = cir.load{{.*}} [[B]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP:%.+]] = cir.cmp(lt, [[ALOAD]], [[BLOAD]]) : !s32i, !cir.bool
 // CIR: [[TERNARY_RES:%.+]] = cir.ternary([[CMP]], true {
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.yield [[ZERO]] : !s32i
 // CIR: }, false {
-// CIR: [[ALOAD2:%.+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[ALOAD2:%.+]] = cir.load{{.*}} [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.yield [[ALOAD2]] : !s32i
 // CIR: }) : (!cir.bool) -> !s32i
 // CIR: [[CAST:%.+]] = cir.cast int_to_bool [[TERNARY_RES]] : !s32i -> !cir.bool
@@ -145,3 +145,288 @@ int foo(int a, int b) {
 // OGCG: [[RETURN]]:
 // OGCG: %[[RET2:.*]] = load i32, ptr %[[RETVAL]]
 // OGCG: ret i32 %[[RET2]]
+
+void test_cond_lvalue_assign(bool flag) {
+  int a = 1;
+  int b = 2;
+  (flag ? a : b) = 42;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z23test_cond_lvalue_assignb(
+// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]]
+// CIR: %[[TERNARY_PTR:.*]] = cir.ternary(%[[FLAG_VAL]], true {
+// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %{{.*}}, %[[TERNARY_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: define{{.*}} void @_Z23test_cond_lvalue_assignb(
+// LLVM: %[[FLAG:.*]] = alloca i8
+// LLVM: %[[A:.*]] = alloca i32
+// LLVM: %[[B:.*]] = alloca i32
+// LLVM: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
+// LLVM: %[[COND:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// LLVM: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   br label %[[MERGE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   br label %[[MERGE_BB]]
+// LLVM: [[MERGE_BB]]:
+// LLVM:   %[[PHI_PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT_BB:.*]]
+// LLVM: [[CONT_BB]]:
+// LLVM:   store i32 42, ptr %[[PHI_PTR]]
+
+// OGCG-LABEL: define{{.*}} void @_Z23test_cond_lvalue_assignb(
+// OGCG: %[[FLAG:.*]] = alloca i8
+// OGCG: %[[A:.*]] = alloca i32
+// OGCG: %[[B:.*]] = alloca i32
+// OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
+// OGCG: %[[COND:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   br label %[[MERGE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   br label %[[MERGE_BB]]
+// OGCG: [[MERGE_BB]]:
+// OGCG:   %[[PHI_PTR:.*]] = phi ptr [ %[[A]], %[[TRUE_BB]] ], [ %[[B]], %[[FALSE_BB]] ]
+// OGCG:   store i32 42, ptr %[[PHI_PTR]]
+
+int& test_cond_lvalue_ref(bool cond, int x, int y) {
+  return cond ? x : y;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z20test_cond_lvalue_refbii(
+// CIR: %[[COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cond", init]
+// CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR: %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+// CIR: %[[COND_VAL:.*]] = cir.load{{.*}} %[[COND]]
+// CIR: %[[REF_PTR:.*]] = cir.ternary(%[[COND_VAL]], true {
+// CIR:   cir.yield %[[X]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   cir.yield %[[Y]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR: cir.store %[[REF_PTR]]
+// CIR: %[[RET_VAL:.*]] = cir.load
+// CIR: cir.return %[[RET_VAL]] : !cir.ptr<!s32i>
+
+// LLVM-LABEL: define{{.*}} ptr @_Z20test_cond_lvalue_refbii(
+// LLVM: %[[COND:.*]] = alloca i8
+// LLVM: %[[X:.*]] = alloca i32
+// LLVM: %[[Y:.*]] = alloca i32
+// LLVM: %[[COND_VAL:.*]] = load i8, ptr %[[COND]]
+// LLVM: %[[BOOL:.*]] = trunc i8 %[[COND_VAL]] to i1
+// LLVM: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   br label %[[MERGE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   br label %[[MERGE_BB]]
+// LLVM: [[MERGE_BB]]:
+// LLVM:   %[[PHI:.*]] = phi ptr [ %[[Y]], %[[FALSE_BB]] ], [ %[[X]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT:.*]]
+// LLVM: [[CONT]]:
+// LLVM:   store ptr %[[PHI]]
+// LLVM:   %[[RET:.*]] = load ptr
+// LLVM:   ret ptr %[[RET]]
+
+// OGCG-LABEL: define{{.*}} ptr @_Z20test_cond_lvalue_refbii(
+// OGCG: %[[COND:.*]] = alloca i8
+// OGCG: %[[X:.*]] = alloca i32
+// OGCG: %[[Y:.*]] = alloca i32
+// OGCG: %[[COND_VAL:.*]] = load i8, ptr %[[COND]]
+// OGCG: %[[BOOL:.*]] = trunc i8 %[[COND_VAL]] to i1
+// OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   br label %[[MERGE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   br label %[[MERGE_BB]]
+// OGCG: [[MERGE_BB]]:
+// OGCG:   %[[PHI:.*]] = phi ptr [ %[[X]], %[[TRUE_BB]] ], [ %[[Y]], %[[FALSE_BB]] ]
+// OGCG:   ret ptr %[[PHI]]
+
+// Test ConditionalOperator as lvalue - compound assignment
+void test_cond_lvalue_compound(bool flag) {
+  int a = 5;
+  int b = 10;
+  (flag ? a : b) += 3;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z25test_cond_lvalue_compoundb(
+// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]]
+// CIR: %[[LVAL_PTR:.*]] = cir.ternary(%[[FLAG_VAL]], true {
+// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR: %[[OLD_VAL:.*]] = cir.load{{.*}} %[[LVAL_PTR]]
+// CIR: %[[NEW_VAL:.*]] = cir.binop(add, %[[OLD_VAL]], %{{.*}})
+// CIR: cir.store{{.*}} %[[NEW_VAL]], %[[LVAL_PTR]]
+
+// LLVM-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(
+// LLVM: %[[FLAG:.*]] = alloca i8
+// LLVM: %[[A:.*]] = alloca i32
+// LLVM: %[[B:.*]] = alloca i32
+// LLVM: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
+// LLVM: %[[BOOL:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// LLVM: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   br label %[[MERGE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   br label %[[MERGE_BB]]
+// LLVM: [[MERGE_BB]]:
+// LLVM:   %[[PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT:.*]]
+// LLVM: [[CONT]]:
+// LLVM:   %[[OLD:.*]] = load i32, ptr %[[PTR]]
+// LLVM:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 3
+// LLVM:   store i32 %[[NEW]], ptr %[[PTR]]
+
+// OGCG-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(
+// OGCG: %[[FLAG:.*]] = alloca i8
+// OGCG: %[[A:.*]] = alloca i32
+// OGCG: %[[B:.*]] = alloca i32
+// OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
+// OGCG: %[[BOOL:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   br label %[[MERGE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   br label %[[MERGE_BB]]
+// OGCG: [[MERGE_BB]]:
+// OGCG:   %[[PTR:.*]] = phi ptr [ %[[A]], %[[TRUE_BB]] ], [ %[[B]], %[[FALSE_BB]] ]
+// OGCG:   %[[OLD:.*]] = load i32, ptr %[[PTR]]
+// OGCG:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 3
+// OGCG:   store i32 %[[NEW]], ptr %[[PTR]]
+
+const int& test_cond_throw_false(bool flag) {
+  const int a = 10;
+  return flag ? a : throw 0;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z21test_cond_throw_falseb(
+// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR: %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
+// CIR: cir.store{{.*}} %[[TEN]], %[[A]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.ternary(%[[FLAG_VAL]], true {
+// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.unreachable
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+
+// LLVM-LABEL: define{{.*}} ptr @_Z21test_cond_throw_falseb(
+// LLVM: %[[FLAG_ALLOCA:.*]] = alloca i8
+// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[A_ALLOCA:.*]] = alloca i32
+// LLVM: %[[ZEXT:.*]] = zext i1 %{{.*}} to i8
+// LLVM: store i8 %[[ZEXT]], ptr %[[FLAG_ALLOCA]]
+// LLVM: store i32 10, ptr %[[A_ALLOCA]]
+// LLVM: %[[LOAD:.*]] = load i8, ptr %[[FLAG_ALLOCA]]
+// LLVM: %[[BOOL:.*]] = trunc i8 %[[LOAD]] to i1
+// LLVM: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   br label %[[PHI_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   %[[EXC:.*]] = call{{.*}} ptr @__cxa_allocate_exception
+// LLVM:   store i32 0, ptr %[[EXC]]
+// LLVM:   call void @__cxa_throw(ptr %[[EXC]], ptr @_ZTIi
+// LLVM:   unreachable
+// LLVM: [[PHI_BB]]:
+// LLVM:   %[[PHI:.*]] = phi ptr [ %[[A_ALLOCA]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT_BB:.*]]
+// LLVM: [[CONT_BB]]:
+// LLVM:   store ptr %[[A_ALLOCA]], ptr %[[RET_ALLOCA]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
+// LLVM:   ret ptr %[[RET]]
+
+// OGCG-LABEL: define{{.*}} ptr @_Z21test_cond_throw_falseb(
+// OGCG: %{{.*}} = alloca i8
+// OGCG: %[[A:.*]] = alloca i32
+// OGCG: store i32 10, ptr %[[A]]
+// OGCG: %{{.*}} = load i8, ptr %{{.*}}
+// OGCG: %[[BOOL:.*]] = trunc i8 %{{.*}} to i1
+// OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   br label %[[END:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   %{{.*}} = call{{.*}} ptr @__cxa_allocate_exception
+// OGCG:   store i32 0, ptr %{{.*}}
+// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// OGCG:   unreachable
+// OGCG: [[END]]:
+// OGCG:   ret ptr %[[A]]
+
+const int& test_cond_throw_true(bool flag) {
+  const int a = 10;
+  return flag ? throw 0 : a;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z20test_cond_throw_trueb(
+// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR: %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
+// CIR: cir.store{{.*}} %[[TEN]], %[[A]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.ternary(%[[FLAG_VAL]], true {
+// CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.unreachable
+// CIR: }, false {
+// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+
+// LLVM-LABEL: define{{.*}} ptr @_Z20test_cond_throw_trueb(
+// LLVM: %[[FLAG_ALLOCA:.*]] = alloca i8
+// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[A_ALLOCA:.*]] = alloca i32
+// LLVM: %[[ZEXT:.*]] = zext i1 %{{.*}} to i8
+// LLVM: store i8 %[[ZEXT]], ptr %[[FLAG_ALLOCA]]
+// LLVM: store i32 10, ptr %[[A_ALLOCA]]
+// LLVM: %[[LOAD:.*]] = load i8, ptr %[[FLAG_ALLOCA]]
+// LLVM: %[[BOOL:.*]] = trunc i8 %[[LOAD]] to i1
+// LLVM: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   %[[EXC:.*]] = call{{.*}} ptr @__cxa_allocate_exception
+// LLVM:   store i32 0, ptr %[[EXC]]
+// LLVM:   call void @__cxa_throw(ptr %[[EXC]], ptr @_ZTIi
+// LLVM:   unreachable
+// LLVM: [[FALSE_BB]]:
+// LLVM:   br label %[[PHI_BB:.*]]
+// LLVM: [[PHI_BB]]:
+// LLVM:   %[[PHI:.*]] = phi ptr [ %[[A_ALLOCA]], %[[FALSE_BB]] ]
+// LLVM:   br label %[[CONT_BB:.*]]
+// LLVM: [[CONT_BB]]:
+// LLVM:   store ptr %[[A_ALLOCA]], ptr %[[RET_ALLOCA]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
+// LLVM:   ret ptr %[[RET]]
+
+// OGCG-LABEL: define{{.*}} ptr @_Z20test_cond_throw_trueb(
+// OGCG: %{{.*}} = alloca i8
+// OGCG: %[[A:.*]] = alloca i32
+// OGCG: store i32 10, ptr %[[A]]
+// OGCG: %{{.*}} = load i8, ptr %{{.*}}
+// OGCG: %[[BOOL:.*]] = trunc i8 %{{.*}} to i1
+// OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   %{{.*}} = call{{.*}} ptr @__cxa_allocate_exception
+// OGCG:   store i32 0, ptr %{{.*}}
+// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// OGCG:   unreachable
+// OGCG: [[FALSE_BB]]:
+// OGCG:   br label %[[END:.*]]
+// OGCG: [[END]]:
+// OGCG:   ret ptr %[[A]]

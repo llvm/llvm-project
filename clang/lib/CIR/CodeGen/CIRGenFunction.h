@@ -1518,6 +1518,10 @@ public:
 
   LValue emitMemberExpr(const MemberExpr *e);
 
+  LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
+
+  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
+
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
   ///

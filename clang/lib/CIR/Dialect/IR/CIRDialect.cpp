@@ -1978,13 +1978,18 @@ void cir::TernaryOp::build(
   result.addOperands(cond);
   OpBuilder::InsertionGuard guard(builder);
   Region *trueRegion = result.addRegion();
-  Block *block = builder.createBlock(trueRegion);
+  Block *trueBlock = builder.createBlock(trueRegion);
   trueBuilder(builder, result.location);
   Region *falseRegion = result.addRegion();
-  builder.createBlock(falseRegion);
+  Block *falseBlock = builder.createBlock(falseRegion);
   falseBuilder(builder, result.location);
 
-  auto yield = dyn_cast<YieldOp>(block->getTerminator());
+  // Get result type from whichever branch has a yield (the other may have
+  // unreachable from a throw expression)
+  YieldOp yield = dyn_cast_or_null<YieldOp>(trueRegion->back().getTerminator());
+  if (!yield)
+    yield = dyn_cast_or_null<YieldOp>(falseRegion->back().getTerminator());
+  
   assert((yield && yield.getNumOperands() <= 1) &&
          "expected zero or one result type");
   if (yield.getNumOperands() == 1)
