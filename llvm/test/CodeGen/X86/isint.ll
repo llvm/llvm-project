@@ -207,8 +207,9 @@ define i32 @isuint_return(double %d) nounwind {
 ;
 ; X86-LABEL: isuint_return:
 ; X86:       # %bb.0:
-; X86-NEXT:    cvttpd2dq %xmm0, %xmm1
-; X86-NEXT:    cvtdq2pd %xmm1, %xmm1
+; X86-NEXT:    cvttsd2si %xmm0, %rax
+; X86-NEXT:    movl %eax, %eax
+; X86-NEXT:    cvtsi2sd %rax, %xmm1
 ; X86-NEXT:    cmpeqsd %xmm0, %xmm1
 ; X86-NEXT:    movq %xmm1, %rax
 ; X86-NEXT:    andl $1, %eax
@@ -218,8 +219,17 @@ define i32 @isuint_return(double %d) nounwind {
 ; SSE2-LABEL: isuint_return:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm1
-; SSE2-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE2-NEXT:    cvttsd2si %xmm0, %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    sarl $31, %ecx
+; SSE2-NEXT:    movapd %xmm0, %xmm1
+; SSE2-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; SSE2-NEXT:    cvttsd2si %xmm1, %edx
+; SSE2-NEXT:    andl %ecx, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    movd %edx, %xmm1
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; SSE2-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; SSE2-NEXT:    cmpeqsd %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    andl $1, %eax
@@ -227,8 +237,8 @@ define i32 @isuint_return(double %d) nounwind {
 ;
 ; AVX512VL-LABEL: isuint_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttpd2dq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvttsd2usi %xmm0, %eax
+; AVX512VL-NEXT:    vcvtusi2sd %eax, %xmm15, %xmm1
 ; AVX512VL-NEXT:    vcmpeqsd %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq

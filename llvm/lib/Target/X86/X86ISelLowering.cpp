@@ -19963,6 +19963,8 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
     ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
   } else {
     // SSE2
+    if (IsUnsigned)
+      return SDValue();
     ToIntOpcode =
         SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
     ToFPOpcode =
