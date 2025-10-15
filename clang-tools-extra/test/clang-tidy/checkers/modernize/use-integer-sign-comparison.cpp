@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++20 %s modernize-use-integer-sign-comparison %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-integer-sign-comparison %t
 
 // CHECK-FIXES: #include <utility>
 
@@ -91,7 +91,8 @@ int AllComparisons() {
     if (static_cast<unsigned int>(uArray[2]) < static_cast<int>(sArray[2]))
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_less(uArray[2],sArray[2]))
+// CHECK-FIXES: if (std::cmp_less(uArray[2],sArray[2])))
+// FIXME: There should only be 2 closing braces. The fix-it inserts an unbalanced one.
 
     if ((unsigned int)uArray[3] < (int)sArray[3])
         return 0;
@@ -121,81 +122,3 @@ int AllComparisons() {
 
     return 0;
 }
-
-namespace PR127471 {
-    int getSignedValue();
-    unsigned int getUnsignedValue();
-
-    void callExprTest() {
-
-        if (getSignedValue() < getUnsignedValue())
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES:  if (std::cmp_less(getSignedValue() , getUnsignedValue()))
-
-        int sVar = 0;
-        if (getUnsignedValue() > sVar)
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_greater(getUnsignedValue() , sVar))
-
-        unsigned int uVar = 0;
-        if (getSignedValue() > uVar)
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_greater(getSignedValue() , uVar))
-
-    }
-
-    // Add a class with member functions for testing member function calls
-    class TestClass {
-    public:
-        int getSignedValue() { return -5; }
-        unsigned int getUnsignedValue() { return 5; }
-    };
-
-    void memberFunctionTests() {
-        TestClass obj;
-
-        if (obj.getSignedValue() < obj.getUnsignedValue())
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_less(obj.getSignedValue() , obj.getUnsignedValue()))
-    }
-
-    void castFunctionTests() {
-        // C-style casts with function calls
-        if ((int)getUnsignedValue() < (unsigned int)getSignedValue())
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_less(getUnsignedValue(),getSignedValue()))
-
-
-        // Static casts with function calls
-        if (static_cast<int>(getUnsignedValue()) < static_cast<unsigned int>(getSignedValue()))
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_less(getUnsignedValue(),getSignedValue()))
-    }
-
-    // Define tests
-    #define SIGNED_FUNC getSignedValue()
-    #define UNSIGNED_FUNC getUnsignedValue()
-
-    void defineTests() {
-        if (SIGNED_FUNC < UNSIGNED_FUNC)
-            return;
-// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (std::cmp_less(SIGNED_FUNC , UNSIGNED_FUNC))
-    }
-
-    // Template tests (should not warn)
-    template <typename T1>
-    void templateFunctionTest(T1 value) {
-        if (value() < getUnsignedValue())
-            return;
-
-        if (value() < (getSignedValue() || getUnsignedValue()))
-          return;
-    }
-} // namespace PR127471

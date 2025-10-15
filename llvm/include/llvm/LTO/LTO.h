@@ -15,6 +15,7 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -91,7 +92,7 @@ LLVM_ABI std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
                                           StringRef NewPrefix);
 
 /// Setup optimization remarks.
-LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
+LLVM_ABI Expected<LLVMRemarkFileHandle> setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0, int Count = -1);
@@ -542,21 +543,23 @@ private:
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
                             bool InSummary);
 
-  // These functions take a range of symbol resolutions [ResI, ResE) and consume
-  // the resolutions used by a single input module by incrementing ResI. After
-  // these functions return, [ResI, ResE) will refer to the resolution range for
-  // the remaining modules in the InputFile.
-  Error addModule(InputFile &Input, unsigned ModI,
-                  const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  // These functions take a range of symbol resolutions and consume the
+  // resolutions used by a single input module. Functions return ranges refering
+  // to the resolutions for the remaining modules in the InputFile.
+  Expected<ArrayRef<SymbolResolution>>
+  addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+            unsigned ModI, ArrayRef<SymbolResolution> Res);
 
-  Expected<RegularLTOState::AddedModule>
-  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
+  addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+                BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+                ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
-  Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<ArrayRef<SymbolResolution>>
+  addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+             ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
@@ -577,7 +580,7 @@ private:
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
 
   // Diagnostic optimization remarks file
-  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  LLVMRemarkFileHandle DiagnosticOutputFile;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

@@ -59,7 +59,7 @@ class CodeGenTarget {
   const Record *TargetRec;
 
   mutable DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>>
-      Instructions;
+      InstructionMap;
   mutable std::unique_ptr<CodeGenRegBank> RegBank;
   mutable ArrayRef<const Record *> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
@@ -134,6 +134,14 @@ public:
 
   const CodeGenRegisterClass &getRegisterClass(const Record *R) const;
 
+  /// Convenience wrapper to avoid hardcoding the name of RegClassByHwMode
+  /// everywhere. This is here instead of CodeGenRegBank to avoid the fatal
+  /// error that occurs when no RegisterClasses are defined when constructing
+  /// the bank.
+  ArrayRef<const Record *> getAllRegClassByHwMode() const {
+    return Records.getAllDerivedDefinitions("RegClassByHwMode");
+  }
+
   /// getRegisterVTs - Find the union of all possible SimpleValueTypes for the
   /// specified physical register.
   std::vector<ValueTypeByHwMode> getRegisterVTs(const Record *R) const;
@@ -143,6 +151,21 @@ public:
       ReadLegalValueTypes();
     return LegalValueTypes;
   }
+
+  /// If \p V is a DefInit that can be interpreted as a RegisterClass (e.g.,
+  /// it's a RegisterOperand, or a direct RegisterClass reference), return the
+  /// Record for that RegisterClass.
+  ///
+  /// AssumeRegClassByHwModeIsDefault is a hack which should be removed. It only
+  /// happens to be adequate for the current GlobalISel usage.
+  const Record *
+  getInitValueAsRegClass(const Init *V,
+                         bool AssumeRegClassByHwModeIsDefault = false) const;
+
+  /// If \p V is a DefInit that can be interpreted as a RegisterClassLike,
+  /// return the Record. This is used as a convenience function to handle direct
+  /// RegisterClass references, or those wrapped in a RegisterOperand.
+  const Record *getInitValueAsRegClassLike(const Init *V) const;
 
   CodeGenSchedModels &getSchedModels() const;
 
@@ -154,30 +177,21 @@ public:
 
 private:
   DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &
-  getInstructions() const {
-    if (Instructions.empty())
+  getInstructionMap() const {
+    if (InstructionMap.empty())
       ReadInstructions();
-    return Instructions;
+    return InstructionMap;
   }
 
 public:
   CodeGenInstruction &getInstruction(const Record *InstRec) const {
-    if (Instructions.empty())
-      ReadInstructions();
-    auto I = Instructions.find(InstRec);
-    assert(I != Instructions.end() && "Not an instruction");
+    auto I = getInstructionMap().find(InstRec);
+    assert(I != InstructionMap.end() && "Not an instruction");
     return *I->second;
   }
 
   /// Returns the number of predefined instructions.
   static unsigned getNumFixedInstructions();
-
-  /// Returns the number of pseudo instructions.
-  unsigned getNumPseudoInstructions() const {
-    if (InstrsByEnum.empty())
-      ComputeInstrsByEnum();
-    return NumPseudoInstructions;
-  }
 
   /// Return all of the instructions defined by the target, ordered by their
   /// enum value.
@@ -185,10 +199,28 @@ public:
   /// - fixed / generic instructions as declared in TargetOpcodes.def, in order;
   /// - pseudo instructions in lexicographical order sorted by name;
   /// - other instructions in lexicographical order sorted by name.
-  ArrayRef<const CodeGenInstruction *> getInstructionsByEnumValue() const {
+  ArrayRef<const CodeGenInstruction *> getInstructions() const {
     if (InstrsByEnum.empty())
       ComputeInstrsByEnum();
     return InstrsByEnum;
+  }
+
+  // Functions that return various slices of `getInstructions`, ordered by
+  // their enum values.
+  ArrayRef<const CodeGenInstruction *> getGenericInstructions() const {
+    return getInstructions().take_front(getNumFixedInstructions());
+  }
+
+  ArrayRef<const CodeGenInstruction *> getTargetInstructions() const {
+    return getInstructions().drop_front(getNumFixedInstructions());
+  }
+
+  ArrayRef<const CodeGenInstruction *> getTargetPseudoInstructions() const {
+    return getTargetInstructions().take_front(NumPseudoInstructions);
+  }
+
+  ArrayRef<const CodeGenInstruction *> getTargetNonPseudoInstructions() const {
+    return getTargetInstructions().drop_front(NumPseudoInstructions);
   }
 
   /// Return the integer enum value corresponding to this instruction record.
@@ -197,12 +229,6 @@ public:
       ComputeInstrsByEnum();
     return getInstruction(R).EnumVal;
   }
-
-  typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;
-  inst_iterator inst_begin() const {
-    return getInstructionsByEnumValue().begin();
-  }
-  inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
 
   /// Return whether instructions have variable length encodings on this target.
   bool hasVariableLengthEncodings() const { return HasVariableLengthEncodings; }

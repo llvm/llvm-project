@@ -94,7 +94,7 @@ static_assert(
     !CanInsertOrAssignIter<std::flat_map<int, AssignFrom<V>, TransparentComparator>, ConvertibleTransparent<int>, V>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -212,9 +212,14 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<Moveable>>();
-  test<std::deque<int>, std::vector<Moveable>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<int>, std::vector<Moveable>>();
+  }
   test<MinSequenceContainer<int>, MinSequenceContainer<Moveable>>();
   test<std::vector<int, min_allocator<int>>, std::vector<Moveable, min_allocator<Moveable>>>();
 
@@ -237,22 +242,24 @@ int main(int, char**) {
     assert(transparent_used);
   }
 
-  {
-    auto insert_or_assign = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      m.insert_or_assign(ConvertibleTransparent<Key>{key_arg}, value_arg);
-    };
-    test_emplace_exception_guarantee(insert_or_assign);
-  }
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    {
+      auto insert_or_assign = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        m.insert_or_assign(ConvertibleTransparent<Key>{key_arg}, value_arg);
+      };
+      test_emplace_exception_guarantee(insert_or_assign);
+    }
 
-  {
-    auto insert_or_assign_iter = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      m.insert_or_assign(m.begin(), ConvertibleTransparent<Key>{key_arg}, value_arg);
-    };
-    test_emplace_exception_guarantee(insert_or_assign_iter);
+    {
+      auto insert_or_assign_iter = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        m.insert_or_assign(m.begin(), ConvertibleTransparent<Key>{key_arg}, value_arg);
+      };
+      test_emplace_exception_guarantee(insert_or_assign_iter);
+    }
   }
   {
     // LWG4239 std::string and C string literal
@@ -266,6 +273,15 @@ int main(int, char**) {
     assert(it2 == m.begin() + 2);
     assert(it2->second == 2);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

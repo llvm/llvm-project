@@ -177,7 +177,7 @@ CUresult launch_kernel(CUmodule binary, CUstream stream, rpc::Server &server,
     handle_error(err);
 
   // Set up the arguments to the '_start' kernel on the GPU.
-  uint64_t args_size = sizeof(args_t);
+  uint64_t args_size = std::is_empty_v<args_t> ? 0 : sizeof(args_t);
   void *args_config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, &kernel_args,
                          CU_LAUNCH_PARAM_BUFFER_SIZE, &args_size,
                          CU_LAUNCH_PARAM_END};
@@ -342,7 +342,7 @@ int load_nvptx(int argc, const char **argv, const char **envp, void *image,
   if (CUresult err = cuStreamSynchronize(stream))
     handle_error(err);
 
-  end_args_t fini_args = {host_ret};
+  end_args_t fini_args = {};
   if (CUresult err =
           launch_kernel(binary, stream, server, single_threaded_params, "_end",
                         fini_args, print_resource_usage))

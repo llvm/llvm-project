@@ -290,7 +290,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       auto *Op1C = cast<Constant>(Op1);
       return replaceInstUsesWith(
           I, Builder.CreateMul(NegOp0, ConstantExpr::getNeg(Op1C), "",
-                               /* HasNUW */ false,
+                               /*HasNUW=*/false,
                                HasNSW && Op1C->isNotMinSignedValue()));
     }
 
@@ -1072,6 +1072,18 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     return Result;
   }
 
+  // tan(X) * cos(X) -> sin(X)
+  if (I.hasAllowContract() &&
+      match(&I,
+            m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
+                     m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
+    auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
+      Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
+    }
+    return replaceInstUsesWith(I, Sin);
+  }
+
   return nullptr;
 }
 
@@ -1243,8 +1255,8 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
       // or divisor has nsw and operator is sdiv.
       Value *Dividend = Builder.CreateShl(
           One, Y, "shl.dividend",
-          /*HasNUW*/ true,
-          /*HasNSW*/
+          /*HasNUW=*/true,
+          /*HasNSW=*/
           IsSigned ? (Shl0->hasNoUnsignedWrap() || Shl1->hasNoUnsignedWrap())
                    : Shl0->hasNoSignedWrap());
       return Builder.CreateLShr(Dividend, Z, "", I.isExact());
@@ -1630,10 +1642,11 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   }
 
   Constant *C;
+  auto &DL = IC.getDataLayout();
   if (isa<Instruction>(N) && match(N, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(D, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 
@@ -1644,7 +1657,7 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   if (isa<Instruction>(D) && match(D, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(N, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 

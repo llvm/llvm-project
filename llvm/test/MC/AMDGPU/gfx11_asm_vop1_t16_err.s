@@ -1231,3 +1231,9 @@ v_trunc_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
 
 v_trunc_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_ceil_f16_e32 v[5:5].s, 0xfe0b
+// GFX11: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_ceil_f16_e32 v[6:7].l, 0xfe0b
+// GFX11: :[[@LINE-1]]:16: error: invalid operand for instruction

@@ -36,9 +36,9 @@ func.func @extract_scalar_from_from_elements(%a: f32, %b: f32) -> (f32, f32, f32
 //  CHECK-SAME:      %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_1d_from_from_elements(%a: f32, %b: f32) -> (vector<3xf32>, vector<3xf32>) {
   %0 = vector.from_elements %a, %a, %a, %b, %b, %b : vector<2x3xf32>
-  // CHECK: %[[SPLAT1:.*]] = vector.splat %[[A]] : vector<3xf32>
+  // CHECK: %[[SPLAT1:.*]] = vector.broadcast %[[A]] : f32 to vector<3xf32>
   %1 = vector.extract %0[0] : vector<3xf32> from vector<2x3xf32>
-  // CHECK: %[[SPLAT2:.*]] = vector.splat %[[B]] : vector<3xf32>
+  // CHECK: %[[SPLAT2:.*]] = vector.broadcast %[[B]] : f32 to vector<3xf32>
   %2 = vector.extract %0[1] : vector<3xf32> from vector<2x3xf32>
   // CHECK: return %[[SPLAT1]], %[[SPLAT2]]
   return %1, %2 : vector<3xf32>, vector<3xf32>
@@ -63,11 +63,11 @@ func.func @extract_2d_from_from_elements(%a: f32, %b: f32) -> (vector<2x2xf32>, 
 // CHECK-LABEL: func @from_elements_to_splat(
 //  CHECK-SAME:      %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<2x3xf32>, vector<f32>) {
-  // CHECK: %[[SPLAT:.*]] = vector.splat %[[A]] : vector<2x3xf32>
+  // CHECK: %[[SPLAT:.*]] = vector.broadcast %[[A]] : f32 to vector<2x3xf32>
   %0 = vector.from_elements %a, %a, %a, %a, %a, %a : vector<2x3xf32>
   // CHECK: %[[FROM_EL:.*]] = vector.from_elements {{.*}} : vector<2x3xf32>
   %1 = vector.from_elements %a, %a, %a, %a, %b, %a : vector<2x3xf32>
-  // CHECK: %[[SPLAT2:.*]] = vector.splat %[[A]] : vector<f32>
+  // CHECK: %[[SPLAT2:.*]] = vector.broadcast %[[A]] : f32 to vector<f32>
   %2 = vector.from_elements %a : vector<f32>
   // CHECK: return %[[SPLAT]], %[[FROM_EL]], %[[SPLAT2]]
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
@@ -170,7 +170,7 @@ func.func @large_source_with_shape_cast_required(%arg0: vector<2x2x2x2xi8>) -> v
 // Could match, but handled by `rewriteFromElementsAsSplat`.
 // CHECK-LABEL: func @extract_single_elm(
 //  CHECK-NEXT:      vector.extract
-//  CHECK-NEXT:      vector.splat
+//  CHECK-NEXT:      vector.broadcast
 //  CHECK-NEXT:      return
 func.func @extract_single_elm(%arg0 : vector<2x3xi8>) -> vector<1xi8> {
   %0 = vector.extract %arg0[0, 0] : i8 from vector<2x3xi8>

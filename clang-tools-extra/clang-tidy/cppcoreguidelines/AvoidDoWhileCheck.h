@@ -1,4 +1,4 @@
-//===--- AvoidDoWhileCheck.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// subtle bugs.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-do-while.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-do-while.html
 class AvoidDoWhileCheck : public ClangTidyCheck {
 public:
   AvoidDoWhileCheck(StringRef Name, ClangTidyContext *Context);

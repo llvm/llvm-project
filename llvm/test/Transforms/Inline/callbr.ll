@@ -10,8 +10,8 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    [[I1_I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I1_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I1_I]])
 ; CHECK-NEXT:    store i32 0, ptr [[I1_I]], align 4
 ; CHECK-NEXT:    [[I2_I:%.*]] = load i32, ptr [[I1_I]], align 4
 ; CHECK-NEXT:    callbr void asm sideeffect "", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 [[I2_I]])
@@ -27,8 +27,8 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    br label [[T32_EXIT]]
 ; CHECK:       t32.exit:
 ; CHECK-NEXT:    [[I7_I:%.*]] = load i32, ptr [[I_I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[I_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[I1_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I1_I]])
 ; CHECK-NEXT:    ret i32 [[I7_I]]
 ;
 bb:

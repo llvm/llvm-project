@@ -4,7 +4,7 @@
 
 ; Use VGPRs above the input arguments.
 ; CHECK-LABEL: _miss_1:
-; CHECK: .vgpr_count:{{.*}}0x1d{{$}}
+; CHECK: .vgpr_count: 0x1d{{$}}
 
 define amdgpu_cs_chain void @_miss_1(ptr inreg %next.callee, i32 inreg %global.table, i32 inreg %max.outgoing.vgpr.count,
                                     i32 %vcr, { i32 } %system.data,

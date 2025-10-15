@@ -186,8 +186,9 @@ define <16 x i8> @concat_v16s8_v4s8_load(ptr %ptrA, ptr %ptrB, ptr %ptrC, ptr %p
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
-; CHECK-NEXT:    ld1 { v0.s }[2], [x2]
-; CHECK-NEXT:    ld1 { v0.s }[3], [x3]
+; CHECK-NEXT:    ldr s1, [x2]
+; CHECK-NEXT:    ld1 { v1.s }[1], [x3]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
     %A = load <4 x i8>, ptr %ptrA
     %B = load <4 x i8>, ptr %ptrB

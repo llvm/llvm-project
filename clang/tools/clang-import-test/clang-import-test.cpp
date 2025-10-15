@@ -207,15 +207,16 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
 
   auto Ins = std::make_unique<CompilerInstance>(std::move(Inv));
 
-  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
-                         /*ShouldOwnClient=*/true);
+  Ins->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DC.get());
+  Ins->createDiagnostics(DC.release(), /*ShouldOwnClient=*/true);
 
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
       Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());
   Ins->setTarget(TI);
-  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts());
+  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts(),
+                          /*AuxTarget=*/nullptr);
   Ins->createFileManager();
-  Ins->createSourceManager(Ins->getFileManager());
+  Ins->createSourceManager();
   Ins->createPreprocessor(TU_Complete);
 
   return Ins;
@@ -235,7 +236,7 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
   return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
+      CI.getDiagnostics(), ModuleName, CI.getVirtualFileSystemPtr(),
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
       LLVMCtx));
 }

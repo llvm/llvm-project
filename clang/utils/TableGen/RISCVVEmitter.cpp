@@ -133,28 +133,20 @@ static BasicType ParseBasicType(char c) {
   switch (c) {
   case 'c':
     return BasicType::Int8;
-    break;
   case 's':
     return BasicType::Int16;
-    break;
   case 'i':
     return BasicType::Int32;
-    break;
   case 'l':
     return BasicType::Int64;
-    break;
   case 'x':
     return BasicType::Float16;
-    break;
   case 'f':
     return BasicType::Float32;
-    break;
   case 'd':
     return BasicType::Float64;
-    break;
   case 'y':
     return BasicType::BFloat16;
-    break;
   default:
     return BasicType::Unknown;
   }
@@ -165,6 +157,8 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
   return static_cast<VectorTypeModifier>(
       static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
+
+static const unsigned UnknownIndex = (unsigned)-1;
 
 static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
   // We need a special rule for segment load/store since the data width is not
@@ -183,7 +177,7 @@ static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
   if (IRName.starts_with("vsoxseg") || IRName.starts_with("vsuxseg"))
     return RVVI->isMasked() ? 1 : 0;
 
-  return (unsigned)-1;
+  return UnknownIndex;
 }
 
 // This function is used to get the log2SEW of each segment load/store, this
@@ -249,19 +243,21 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
 
   OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
-  OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
-     << ";\n";
+  unsigned IndexedLoadStorePtrIdx = getIndexedLoadStorePtrIdx(RVVI);
+  if (IndexedLoadStorePtrIdx != UnknownIndex) {
+    OS << "  {\n";
+    OS << "    auto PointeeType = E->getArg(" << IndexedLoadStorePtrIdx
+       << ")->getType()->getPointeeType();\n";
+    OS << "    SegInstSEW = "
+          "llvm::Log2_64(getContext().getTypeSize(PointeeType));\n";
+    OS << "  }\n";
+  } else {
+    OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
+       << ";\n";
+  }
 
   if (RVVI->hasManualCodegen()) {
     OS << "IsMasked = " << (RVVI->isMasked() ? "true" : "false") << ";\n";
-
-    // Skip the non-indexed load/store and compatible header load/store.
-    OS << "if (SegInstSEW == (unsigned)-1) {\n";
-    OS << "  auto PointeeType = E->getArg(" << getIndexedLoadStorePtrIdx(RVVI)
-       << "      )->getType()->getPointeeType();\n";
-    OS << "  SegInstSEW = "
-          "      llvm::Log2_64(getContext().getTypeSize(PointeeType));\n}\n";
-
     OS << RVVI->getManualCodegen();
     OS << "break;\n";
     return;

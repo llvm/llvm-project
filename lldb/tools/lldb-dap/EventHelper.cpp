@@ -12,9 +12,11 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFileSpec.h"
 #include "llvm/Support/Error.h"
+#include <utility>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -38,20 +40,37 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-void SendTargetBasedCapabilities(DAP &dap) {
+/// Get capabilities based on the configured target.
+static llvm::DenseSet<AdapterFeature> GetTargetBasedCapabilities(DAP &dap) {
+  llvm::DenseSet<AdapterFeature> capabilities;
   if (!dap.target.IsValid())
-    return;
+    return capabilities;
 
-  protocol::CapabilitiesEventBody body;
+  const llvm::StringRef target_triple = dap.target.GetTriple();
+  if (target_triple.starts_with("x86"))
+    capabilities.insert(protocol::eAdapterFeatureStepInTargetsRequest);
 
   // We only support restarting launch requests not attach requests.
   if (dap.last_launch_request)
-    body.capabilities.supportedFeatures.insert(
-        protocol::eAdapterFeatureRestartRequest);
+    capabilities.insert(protocol::eAdapterFeatureRestartRequest);
+
+  return capabilities;
+}
+
+void SendExtraCapabilities(DAP &dap) {
+  protocol::Capabilities capabilities = dap.GetCustomCapabilities();
+  llvm::DenseSet<AdapterFeature> target_capabilities =
+      GetTargetBasedCapabilities(dap);
+
+  capabilities.supportedFeatures.insert(target_capabilities.begin(),
+                                        target_capabilities.end());
+
+  protocol::CapabilitiesEventBody body;
+  body.capabilities = std::move(capabilities);
 
   // Only notify the client if supportedFeatures changed.
   if (!body.capabilities.supportedFeatures.empty())
-    dap.Send(protocol::Event{"capabilities", body});
+    dap.Send(protocol::Event{"capabilities", std::move(body)});
 }
 
 // "ProcessEvent": {
@@ -213,15 +232,7 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
 // Send a "terminated" event to indicate the process is done being
 // debugged.
-void SendTerminatedEvent(DAP &dap) {
-  // Prevent races if the process exits while we're being asked to disconnect.
-  llvm::call_once(dap.terminated_event_flag, [&] {
-    dap.RunTerminateCommands();
-    // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
-    dap.SendJSON(llvm::json::Value(std::move(event)));
-  });
-}
+void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
 
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
@@ -262,6 +273,26 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
   body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
+void SendInvalidatedEvent(
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureInvalidatedEvent))
+    return;
+  protocol::InvalidatedEventBody body;
+  body.areas = areas;
+  dap.Send(protocol::Event{"invalidated", std::move(body)});
+}
+
+void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureMemoryEvent))
+    return;
+  protocol::MemoryEventBody body;
+  body.memoryReference = variable.GetLoadAddress();
+  body.count = variable.GetByteSize();
+  if (body.memoryReference == LLDB_INVALID_ADDRESS)
+    return;
+  dap.Send(protocol::Event{"memory", std::move(body)});
 }
 
 } // namespace lldb_dap

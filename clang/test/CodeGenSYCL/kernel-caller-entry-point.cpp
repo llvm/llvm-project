@@ -100,11 +100,8 @@ int main() {
 
 // Verify that SYCL kernel caller functions are emitted for each device target.
 //
-// FIXME: The following set of matches are used to skip over the declaration of
-// main(). main() shouldn't be emitted in device code, but that pruning isn't
-// performed yet.
-// CHECK-DEVICE:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-// CHECK-DEVICE-NEXT: define {{[a-z_ ]*}}noundef i32 @main() #0
+// main() shouldn't be emitted in device code.
+// CHECK-NOT: @main()
 
 // IR for the SYCL kernel caller function generated for
 // single_purpose_kernel_task with single_purpose_kernel_name as the SYCL kernel

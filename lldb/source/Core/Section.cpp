@@ -153,6 +153,8 @@ const char *Section::GetTypeAsCString() const {
     return "lldb-formatters";
   case eSectionTypeSwiftModules:
     return "swift-modules";
+  case eSectionTypeWasmName:
+    return "wasm-name";
   case eSectionTypeOther:
     return "regular";
   }
@@ -415,6 +417,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeCompactUnwind:
   case eSectionTypeGoSymtab:
   case eSectionTypeAbsoluteAddress:
+  case eSectionTypeWasmName:
   case eSectionTypeOther:
   // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
   // information that we parse at all. This was causing system files with no

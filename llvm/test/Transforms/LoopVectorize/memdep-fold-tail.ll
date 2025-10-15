@@ -24,7 +24,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @maxvf3() {
 ; CHECK-LABEL: @maxvf3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -69,20 +69,7 @@ define void @maxvf3() {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[J_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[AJ:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[J]]
-; CHECK-NEXT:    store i8 69, ptr [[AJ]], align 8
-; CHECK-NEXT:    [[JP3:%.*]] = add nuw nsw i32 3, [[J]]
-; CHECK-NEXT:    [[AJP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[JP3]]
-; CHECK-NEXT:    store i8 7, ptr [[AJP3]], align 8
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[J_NEXT]], 15
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

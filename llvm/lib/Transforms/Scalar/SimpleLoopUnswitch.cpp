@@ -98,6 +98,9 @@ static cl::opt<bool> EnableUnswitchCostMultiplier(
 static cl::opt<int> UnswitchSiblingsToplevelDiv(
     "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
     cl::desc("Toplevel siblings divisor for cost multiplier."));
+static cl::opt<int> UnswitchParentBlocksDiv(
+    "unswitch-parent-blocks-div", cl::init(8), cl::Hidden,
+    cl::desc("Outer loop size divisor for cost multiplier."));
 static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
     "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
     cl::desc("Number of unswitch candidates that are ignored when calculating "
@@ -2809,9 +2812,9 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 }
 
 /// Cost multiplier is a way to limit potentially exponential behavior
-/// of loop-unswitch. Cost is multipied in proportion of 2^number of unswitch
-/// candidates available. Also accounting for the number of "sibling" loops with
-/// the idea to account for previous unswitches that already happened on this
+/// of loop-unswitch. Cost is multiplied in proportion of 2^number of unswitch
+/// candidates available. Also consider the number of "sibling" loops with
+/// the idea of accounting for previous unswitches that already happened on this
 /// cluster of loops. There was an attempt to keep this formula simple,
 /// just enough to limit the worst case behavior. Even if it is not that simple
 /// now it is still not an attempt to provide a detailed heuristic size
@@ -2842,7 +2845,19 @@ static int CalculateUnswitchCostMultiplier(
     return 1;
   }
 
+  // Each invariant non-trivial condition, after being unswitched, is supposed
+  // to have its own specialized sibling loop (the invariant condition has been
+  // hoisted out of the child loop into a newly-cloned loop). When unswitching
+  // conditions in nested loops, the basic block size of the outer loop should
+  // not be altered. If such a size significantly increases across unswitching
+  // invocations, something may be wrong; so adjust the final cost taking this
+  // into account.
   auto *ParentL = L.getParentLoop();
+  int ParentLoopSizeMultiplier = 1;
+  if (ParentL)
+    ParentLoopSizeMultiplier =
+        std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
+
   int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
                                : std::distance(LI.begin(), LI.end()));
   // Count amount of clones that all the candidates might cause during
@@ -2887,14 +2902,16 @@ static int CalculateUnswitchCostMultiplier(
   // at an upper bound.
   int CostMultiplier;
   if (ClonesPower > Log2_32(UnswitchThreshold) ||
-      SiblingsMultiplier > UnswitchThreshold)
+      SiblingsMultiplier > UnswitchThreshold ||
+      ParentLoopSizeMultiplier > UnswitchThreshold)
     CostMultiplier = UnswitchThreshold;
   else
     CostMultiplier = std::min(SiblingsMultiplier * (1 << ClonesPower),
                               (int)UnswitchThreshold);
 
   LLVM_DEBUG(dbgs() << "  Computed multiplier  " << CostMultiplier
-                    << " (siblings " << SiblingsMultiplier << " * clones "
+                    << " (siblings " << SiblingsMultiplier << " * parent size "
+                    << ParentLoopSizeMultiplier << " * clones "
                     << (1 << ClonesPower) << ")"
                     << " for unswitch candidate: " << TI << "\n");
   return CostMultiplier;

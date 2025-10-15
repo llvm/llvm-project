@@ -41,6 +41,7 @@ add_llvm_target(DirectXCodeGen
   LINK_COMPONENTS
   Analysis
   AsmPrinter
+  BinaryFormat
   CodeGen
   CodeGenTypes
   Core
@@ -49,6 +50,7 @@ add_llvm_target(DirectXCodeGen
   DirectXInfo
   DirectXPointerTypeAnalysis
   FrontendHLSL
+  IPO
   MC
   ScalarOpts
   SelectionDAG

@@ -97,17 +97,7 @@ void Prescanner::Prescan(ProvenanceRange range) {
   while (!IsAtEnd()) {
     Statement();
   }
-  if (inFixedForm_ != beganInFixedForm) {
-    std::string dir{"!dir$ "};
-    if (beganInFixedForm) {
-      dir += "fixed";
-    } else {
-      dir += "free";
-    }
-    dir += '\n';
-    TokenSequence tokens{dir, allSources_.AddCompilerInsertion(dir).start()};
-    tokens.Emit(cooked_);
-  }
+  inFixedForm_ = beganInFixedForm;
 }
 
 void Prescanner::Statement() {
@@ -157,6 +147,11 @@ void Prescanner::Statement() {
         directiveSentinel_[4] == '\0') {
       // CUDA conditional compilation line.
       condOffset = 5;
+    } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'a' &&
+        directiveSentinel_[2] == 'c' && directiveSentinel_[3] == 'c' &&
+        directiveSentinel_[4] == '\0') {
+      // OpenACC conditional compilation line.
+      condOffset = 5;
     }
     if (condOffset && !preprocessingOnly_) {
       at_ += *condOffset, column_ += *condOffset;
@@ -179,7 +174,9 @@ void Prescanner::Statement() {
         EmitChar(tokens, *sp);
       }
       if (inFixedForm_) {
-        while (column_ < 6) {
+        // We need to add the whitespace after the sentinel because otherwise
+        // the line cannot be re-categorised as a compiler directive.
+        while (column_ <= 6) {
           if (*at_ == '\t') {
             tabInCurrentLine_ = true;
             ++at_;
@@ -322,10 +319,11 @@ void Prescanner::Statement() {
       }
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
-      SourceFormChange(preprocessed->ToString());
-      CheckAndEmitLine(
-          preprocessed->ClipComment(*this, true /* skip first ! */),
-          newlineProvenance);
+      if (!SourceFormChange(preprocessed->ToString())) {
+        CheckAndEmitLine(
+            preprocessed->ClipComment(*this, true /* skip first ! */),
+            newlineProvenance);
+      }
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
@@ -368,14 +366,16 @@ void Prescanner::Statement() {
         }
       }
       tokens.ToLowerCase();
-      SourceFormChange(tokens.ToString());
+      if (!SourceFormChange(tokens.ToString())) {
+        CheckAndEmitLine(tokens, newlineProvenance);
+      }
     } else { // Kind::Source
       tokens.ToLowerCase();
       if (inFixedForm_) {
         EnforceStupidEndStatementRules(tokens);
       }
+      CheckAndEmitLine(tokens, newlineProvenance);
     }
-    CheckAndEmitLine(tokens, newlineProvenance);
   }
   directiveSentinel_ = nullptr;
 }
@@ -593,13 +593,13 @@ bool Prescanner::SkipToNextSignificantCharacter() {
     return false;
   } else {
     auto anyContinuationLine{false};
-    bool mightNeedSpace{false};
+    bool atNewline{false};
     if (MustSkipToEndOfLine()) {
       SkipToEndOfLine();
     } else {
-      mightNeedSpace = *at_ == '\n';
+      atNewline = *at_ == '\n';
     }
-    for (; Continuation(mightNeedSpace); mightNeedSpace = false) {
+    for (; Continuation(atNewline); atNewline = false) {
       anyContinuationLine = true;
       ++continuationLines_;
       if (MustSkipToEndOfLine()) {
@@ -641,7 +641,7 @@ void Prescanner::SkipSpaces() {
   while (IsSpaceOrTab(at_)) {
     NextChar();
   }
-  insertASpace_ = false;
+  brokenToken_ = false;
 }
 
 const char *Prescanner::SkipWhiteSpace(const char *p) {
@@ -745,10 +745,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       }
     }
   }
-  if (insertASpace_) {
-    tokens.PutNextTokenChar(' ', spaceProvenance_);
-    insertASpace_ = false;
-  }
+  brokenToken_ = false;
   if (*at_ == '\n') {
     return false;
   }
@@ -808,7 +805,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     bool anyDefined{false};
     bool hadContinuation{false};
     // Subtlety: When an identifier is split across continuation lines,
-    // its parts are kept as distinct pp-tokens if that macro replacement
+    // its parts are kept as distinct pp-tokens if macro replacement
     // should operate on them independently.  This trick accommodates the
     // historic practice of using line continuation for token pasting after
     // replacement.
@@ -822,6 +819,9 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       ++at_, ++column_;
       hadContinuation = SkipToNextSignificantCharacter();
       if (hadContinuation && IsLegalIdentifierStart(*at_)) {
+        if (brokenToken_) {
+          break;
+        }
         // Continued identifier
         tokens.CloseToken();
         ++parts;
@@ -915,12 +915,21 @@ bool Prescanner::HandleExponent(TokenSequence &tokens) {
     int startColumn{column_};
     TokenSequence possible;
     EmitCharAndAdvance(possible, *at_);
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     if (*at_ == '+' || *at_ == '-') {
       EmitCharAndAdvance(possible, *at_);
+      if (InFixedFormSource()) {
+        SkipSpaces();
+      }
     }
     if (IsDecimalDigit(*at_)) { // it's an exponent; scan it
       while (IsDecimalDigit(*at_)) {
         EmitCharAndAdvance(possible, *at_);
+        if (InFixedFormSource()) {
+          SkipSpaces();
+        }
       }
       possible.CloseToken();
       tokens.AppendRange(possible, 0); // appends to current token
@@ -940,13 +949,22 @@ bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
   TokenSequence withUnderscore, separate;
   EmitChar(withUnderscore, '_');
   EmitCharAndAdvance(separate, '_');
+  if (InFixedFormSource()) {
+    SkipSpaces();
+  }
   if (IsLegalInIdentifier(*at_)) {
     separate.CloseToken();
     EmitChar(withUnderscore, *at_);
     EmitCharAndAdvance(separate, *at_);
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     while (IsLegalInIdentifier(*at_)) {
       EmitChar(withUnderscore, *at_);
       EmitCharAndAdvance(separate, *at_);
+      if (InFixedFormSource()) {
+        SkipSpaces();
+      }
     }
   }
   withUnderscore.CloseToken();
@@ -1330,7 +1348,7 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
   return false;
 }
 
-const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
+const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
   if (IsAtEnd()) {
     return nullptr;
   }
@@ -1363,8 +1381,8 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
       }
       const char *col6{nextLine_ + 5};
       if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
-        if (mightNeedSpace && !IsSpace(nextLine_ + 6)) {
-          insertASpace_ = true;
+        if (atNewline && !IsSpace(nextLine_ + 6)) {
+          brokenToken_ = true;
         }
         return nextLine_ + 6;
       }
@@ -1377,7 +1395,9 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
         nextLine_[4] == ' ' && IsCompilerDirectiveSentinel(&nextLine_[1], 1)) {
       if (const char *col6{nextLine_ + 5};
           *col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
-        insertASpace_ |= mightNeedSpace && !IsSpace(nextLine_ + 6);
+        if (atNewline && !IsSpace(nextLine_ + 6)) {
+          brokenToken_ = true;
+        }
         return nextLine_ + 6;
       } else {
         return nullptr;
@@ -1446,7 +1466,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     p = SkipWhiteSpace(p);
     if (*p == '&') {
       if (!ampersand) {
-        insertASpace_ = true;
+        brokenToken_ = true;
       }
       return p + 1;
     } else if (ampersand) {
@@ -1476,7 +1496,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     } else if (p > lineStart && IsSpaceOrTab(p - 1)) {
       --p;
     } else {
-      insertASpace_ = true;
+      brokenToken_ = true;
     }
     return p;
   } else {
@@ -1484,14 +1504,14 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   }
 }
 
-bool Prescanner::FixedFormContinuation(bool mightNeedSpace) {
+bool Prescanner::FixedFormContinuation(bool atNewline) {
   // N.B. We accept '&' as a continuation indicator in fixed form, too,
   // but not in a character literal.
   if (*at_ == '&' && inCharLiteral_) {
     return false;
   }
   do {
-    if (const char *cont{FixedFormContinuationLine(mightNeedSpace)}) {
+    if (const char *cont{FixedFormContinuationLine(atNewline)}) {
       BeginSourceLine(cont);
       column_ = 7;
       NextLine();
@@ -1752,11 +1772,15 @@ Prescanner::LineClassification Prescanner::ClassifyLine(
   return classification;
 }
 
-void Prescanner::SourceFormChange(std::string &&dir) {
+bool Prescanner::SourceFormChange(std::string &&dir) {
   if (dir == "!dir$ free") {
     inFixedForm_ = false;
+    return true;
   } else if (dir == "!dir$ fixed") {
     inFixedForm_ = true;
+    return true;
+  } else {
+    return false;
   }
 }
 

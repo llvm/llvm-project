@@ -208,7 +208,7 @@ exit:
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     EMIT vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     EMIT-SCALAR vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, ir<1>, vp<[[VF]]
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
@@ -243,10 +243,9 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK-LABEL: @first_order_recurrence_using_induction(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDUCTION1:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[TMP3]], 0
-; CHECK-NEXT:    [[INDUCTION1]] = add i32 [[TMP3]], 1
+; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-NEXT:    store i32 [[INDUCTION]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
@@ -285,7 +284,7 @@ define i16 @reduction_with_casts() {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label %scalar.ph
+; CHECK-NEXT:    br label %scalar.ph
 ;
 entry:
   br label %loop

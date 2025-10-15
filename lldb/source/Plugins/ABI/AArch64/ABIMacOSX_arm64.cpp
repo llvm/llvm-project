@@ -757,42 +757,39 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  addr_t mask = 0;
+constexpr addr_t tbi_mask = 0xff80000000000000ULL;
+constexpr addr_t pac_sign_extension = 0x0080000000000000ULL;
 
-  if (ProcessSP process_sp = GetProcessSP()) {
-    mask = process_sp->GetCodeAddressMask();
-    if (pc & pac_sign_extension) {
-      addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
-      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-        mask = highmem_mask;
-    }
-  }
+/// Consults the process for its {code, data} address masks and applies it to
+/// `addr`.
+static addr_t DoFixAddr(addr_t addr, bool is_code, ProcessSP process_sp) {
+  if (!process_sp)
+    return addr;
+
+  addr_t mask = is_code ? process_sp->GetCodeAddressMask()
+                        : process_sp->GetDataAddressMask();
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
-  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+  if (addr & pac_sign_extension) {
+    addr_t highmem_mask = is_code ? process_sp->GetHighmemCodeAddressMask()
+                                  : process_sp->GetHighmemCodeAddressMask();
+    if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
+      return addr | highmem_mask;
+    return addr | mask;
+  }
+
+  return addr & (~mask);
 }
 
-addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  addr_t mask = 0;
+addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
+  ProcessSP process_sp = GetProcessSP();
+  return DoFixAddr(pc, true /*is_code*/, GetProcessSP());
+}
 
-  if (ProcessSP process_sp = GetProcessSP()) {
-    mask = process_sp->GetDataAddressMask();
-    if (pc & pac_sign_extension) {
-      addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-        mask = highmem_mask;
-    }
-  }
-  if (mask == LLDB_INVALID_ADDRESS_MASK)
-    mask = tbi_mask;
-
-  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+addr_t ABIMacOSX_arm64::FixDataAddress(addr_t addr) {
+  ProcessSP process_sp = GetProcessSP();
+  return DoFixAddr(addr, false /*is_code*/, GetProcessSP());
 }
 
 void ABIMacOSX_arm64::Initialize() {

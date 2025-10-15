@@ -5,16 +5,16 @@ define void @main(ptr %0) {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uzp1 v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    neg v0.2s, v0.2s
-; CHECK-NEXT:    smov x8, v0.s[0]
-; CHECK-NEXT:    smov x9, v0.s[1]
-; CHECK-NEXT:    mov z1.d, p0/m, x8
-; CHECK-NEXT:    mov z1.d, p0/m, x9
-; CHECK-NEXT:    str z1, [x0]
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    uzp1 v1.2s, v0.2s, v1.2s
+; CHECK-NEXT:    neg v1.2s, v1.2s
+; CHECK-NEXT:    smov x8, v1.s[0]
+; CHECK-NEXT:    smov x9, v1.s[1]
+; CHECK-NEXT:    mov z0.d, p0/m, x8
+; CHECK-NEXT:    mov z0.d, p0/m, x9
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 "entry":
   %1 = bitcast <vscale x 2 x i64> zeroinitializer to <vscale x 4 x i32>
