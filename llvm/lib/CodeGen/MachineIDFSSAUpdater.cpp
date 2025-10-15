@@ -126,8 +126,9 @@ Register MachineIDFSSAUpdater::computeValue(MachineBasicBlock *BB,
   }
 
   if (!V) {
-    V = createInst(TargetOpcode::IMPLICIT_DEF, TopDomBB,
-                   TopDomBB->getFirstNonPHI())
+    V = createInst(RunOnGenericRegs ? TargetOpcode::G_IMPLICIT_DEF
+                                    : TargetOpcode::IMPLICIT_DEF,
+                   TopDomBB, TopDomBB->getFirstNonPHI())
             .getReg(0);
   }
 

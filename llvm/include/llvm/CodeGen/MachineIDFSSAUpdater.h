@@ -27,6 +27,7 @@ class MachineIDFSSAUpdater {
     Register LiveOutValue;
   };
 
+  const bool RunOnGenericRegs;
   MachineDominatorTree &DT;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
@@ -45,13 +46,15 @@ class MachineIDFSSAUpdater {
 
 public:
   MachineIDFSSAUpdater(MachineDominatorTree &DT, MachineFunction &MF,
-                       const MachineRegisterInfo::VRegAttrs &RegAttr)
+                       const MachineRegisterInfo::VRegAttrs &RegAttr,
+                       bool RunOnGenericRegs = false)
       : DT(DT), MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
-        RegAttrs(RegAttr) {}
+        RegAttrs(RegAttr), RunOnGenericRegs(RunOnGenericRegs) {}
 
   MachineIDFSSAUpdater(MachineDominatorTree &DT, MachineFunction &MF,
-                       Register Reg)
-      : MachineIDFSSAUpdater(DT, MF, MF.getRegInfo().getVRegAttrs(Reg)) {}
+                       Register Reg, bool RunOnGenericRegs = false)
+      : MachineIDFSSAUpdater(DT, MF, MF.getRegInfo().getVRegAttrs(Reg),
+                             RunOnGenericRegs) {}
 
   /// Indicate that a rewritten value is available in the specified block
   /// with the specified value. Must be called before invoking Calculate().
