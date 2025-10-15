@@ -12,7 +12,7 @@
 class Cls1 {
 public:
   // FT-LABEL: define {{.*}} ptr @_ZN4Cls18receiverEPcPf(
-  // FT: {{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
+  // FT-SAME: {{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
   static int *receiver(char *a, float *b) { return 0; }
 };
 
