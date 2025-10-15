@@ -23,10 +23,10 @@ namespace __generate {
 
 template <typename _Generator>
 struct __fn {
-  _LIBCPP_HIDE_FROM_ABI __fn(_Generator& __gen) : __gen_(__gen) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __fn(_Generator& __gen) : __gen_(__gen) {}
 
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI void operator()(_Tp&& __element) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()(_Tp&& __element) const {
     std::forward<_Tp>(__element) = __gen_();
   }
 
