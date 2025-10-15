@@ -612,6 +612,9 @@ let Predicates = [UseHVX] in {
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
   def: Pat<(VecQ32 (trunc HVI32:$Vs)),
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
+  def: Pat<(VecQ16 (trunc HWI32:$Vss)),
+           (Combineq(VecQ32(V6_vandvrt (HiVec $Vss), (ToI32 0x01010101))),
+           (VecQ32 (V6_vandvrt (LoVec $Vss), (ToI32 0x01010101))))>;
 }
 
 let Predicates = [UseHVX] in {
