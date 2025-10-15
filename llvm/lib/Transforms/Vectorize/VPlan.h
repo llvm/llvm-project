@@ -4271,9 +4271,7 @@ public:
       BackedgeTakenCount = new VPValue();
     return BackedgeTakenCount;
   }
-  VPValue *getBackedgeTakenCount() const {
-    return BackedgeTakenCount;
-  }
+  VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
 
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }

@@ -228,23 +228,19 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
 
 bool VPlanVerifier::verifyLastActiveLaneRecipe(
     const VPInstruction &LastActiveLane) const {
-  if (LastActiveLane.getOpcode() != VPInstruction::LastActiveLane) {
-    errs() << "verifyLastActiveLaneRecipe should only be called on "
-              "VPInstruction::LastActiveLane\n";
-    return false;
-  }
+  assert(LastActiveLane.getOpcode() == VPInstruction::LastActiveLane &&
+         "must be called with VPInstruction::LastActiveLane");
 
   if (LastActiveLane.getNumOperands() < 1) {
     errs() << "LastActiveLane must have at least one operand\n";
     return false;
   }
 
-  VPlan *Plan = const_cast<VPlan *>(LastActiveLane.getParent()->getPlan());
-  // All operands should be masks. This includes header masks (checked by
-  // isHeaderMask) or EVL-derived masks (ICmp of StepVector with
-  // Broadcast/EVL).
+  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
+  // All operands should be masks without gaps. This includes header masks or
+  // EVL-derived masks.
   for (VPValue *Op : LastActiveLane.operands()) {
-    if (vputils::isHeaderMask(Op, *Plan))
+    if (vputils::isHeaderMask(Op, Plan))
       continue;
 
     // Accept ICmp(StepVector, Broadcast/EVL) or ICmp(Broadcast/EVL, StepVector).
@@ -254,7 +250,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
       continue;
 
     errs() << "LastActiveLane operand must be a header mask or an "
-              "EVL-derived mask (ICmp of StepVector with Broadcast/EVL)\n";
+              "EVL-derived mask)\n";
     return false;
   }
 
@@ -338,14 +334,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
-    if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
-      if (EVL->getOpcode() == VPInstruction::ExplicitVectorLength &&
-          !verifyEVLRecipe(*EVL)) {
+    if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
+      if (VPI->getOpcode() == VPInstruction::ExplicitVectorLength &&
+          !verifyEVLRecipe(*VPI)) {
         errs() << "EVL VPValue is not used correctly\n";
         return false;
-      }
-      if (EVL->getOpcode() == VPInstruction::LastActiveLane &&
-          !verifyLastActiveLaneRecipe(*EVL)) {
+      } else if (VPI->getOpcode() == VPInstruction::LastActiveLane &&
+                 !verifyLastActiveLaneRecipe(*VPI)) {
         errs() << "LastActiveLane VPValue is not used correctly\n";
         return false;
       }
