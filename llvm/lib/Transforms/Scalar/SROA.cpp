@@ -551,12 +551,10 @@ public:
   }
 
   /// Support comparison with a single offset to allow binary searches.
-  friend LLVM_ATTRIBUTE_UNUSED bool operator<(const Slice &LHS,
-                                              uint64_t RHSOffset) {
+  [[maybe_unused]] friend bool operator<(const Slice &LHS, uint64_t RHSOffset) {
     return LHS.beginOffset() < RHSOffset;
   }
-  friend LLVM_ATTRIBUTE_UNUSED bool operator<(uint64_t LHSOffset,
-                                              const Slice &RHS) {
+  [[maybe_unused]] friend bool operator<(uint64_t LHSOffset, const Slice &RHS) {
     return LHSOffset < RHS.beginOffset();
   }
 
