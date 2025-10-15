@@ -4375,6 +4375,26 @@ def : Pat <(v1i64 (scalar_to_vector (i64
                (load (ro64.Xpat GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend))))),
            (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend)>;
 
+// Patterns for scalar_to_vector with zero-extended loads.
+// Enables direct SIMD register loads for small integer types (i8/i16) that are
+// naturally zero-extended to i32/i64.
+multiclass ScalarToVectorExtLoad<ValueType VecTy, ValueType ScalarTy> {
+  def : Pat<(VecTy (scalar_to_vector (ScalarTy (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
+  def : Pat<(VecTy (scalar_to_vector (ScalarTy (extloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
+
+  def : Pat<(VecTy (scalar_to_vector (ScalarTy (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
+  def : Pat<(VecTy (scalar_to_vector (ScalarTy (extloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
+}
+
+defm : ScalarToVectorExtLoad<v16i8, i32>;
+defm : ScalarToVectorExtLoad<v8i16, i32>;
+defm : ScalarToVectorExtLoad<v4i32, i32>;
+defm : ScalarToVectorExtLoad<v2i64, i64>;
+
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
                   [(AArch64Prefetch timm:$Rt,
