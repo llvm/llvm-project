@@ -860,13 +860,13 @@ your private interface remains private and undisturbed by outsiders.
     It's okay to put extra implementation methods in a public class itself. Just
     make them private (or protected) and all is well.
 
-Use Namespace Qualifiers to Define Previously Declared Variables and Functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use Namespace Qualifiers to Define Previously Declared Entities
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When providing an out-of-line definition of a variable or a function in a source
-file, do not open namespace blocks in the source file. Instead, use namespace
-qualifiers to help ensure that your definition matches an existing declaration.
-Do this:
+When providing an out-of-line definition for various entities (variables,
+functions, opaque classes) in a source file, do not open namespace blocks in the
+source file. Instead, use namespace qualifiers to help ensure that your
+definition matches an existing declaration. Do this:
 
 .. code-block:: c++
 
@@ -874,7 +874,11 @@ Do this:
   namespace llvm {
   extern int FooVal;
   int foo(const char *s);
-  }
+
+  namespace detail {
+  class FooImpl;
+  } // namespace detail
+  } // namespace llvm
 
   // Foo.cpp
   #include "Foo.h"
@@ -883,6 +887,10 @@ Do this:
   int llvm::FooVal;
 
   int llvm::foo(const char *s) {
+    // ...
+  }
+
+  class detail::FooImpl {
     // ...
   }
 
