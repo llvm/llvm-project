@@ -141,7 +141,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
       Kind = AArch64ABIKind::DarwinPCS;
-    else if (Triple.isOSWindows())
+    else if (Triple.isOSWindows() || Triple.isUEFI())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;

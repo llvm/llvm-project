@@ -848,7 +848,6 @@ class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
-    llvm::outs() << "define macro \n";
     Builder.defineMacro("__UEFI__");
   }
 

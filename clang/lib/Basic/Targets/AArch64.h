@@ -357,7 +357,6 @@ class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
 public:
   UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
-    llvm::outs() << "In targetinfo constructor\n";
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
     // This is an LLP64 platform.
     // int:4, long:4, long long:8, long double:8.
