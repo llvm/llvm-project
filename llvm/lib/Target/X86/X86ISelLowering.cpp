@@ -28,7 +28,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -3634,7 +3633,7 @@ bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
 }
 
 bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -3649,7 +3648,7 @@ bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
     // the fold for non-splats yet.
     return N->getOperand(1) == N->getOperand(0).getOperand(1);
   }
-  return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N, Level);
+  return TargetLoweringBase::shouldFoldConstantShiftPairToMask(N);
 }
 
 bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {

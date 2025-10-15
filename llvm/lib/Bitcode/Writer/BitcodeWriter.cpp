@@ -118,6 +118,10 @@ static cl::opt<bool>
 #endif
                                 cl::desc(""));
 
+static cl::opt<bool> PreserveBitcodeUseListOrder(
+    "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
+    cl::desc("Preserve use-list order when writing LLVM bitcode."));
+
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
@@ -217,7 +221,10 @@ public:
                           bool ShouldPreserveUseListOrder,
                           const ModuleSummaryIndex *Index)
       : BitcodeWriterBase(Stream, StrtabBuilder), M(M),
-        VE(M, ShouldPreserveUseListOrder), Index(Index) {
+        VE(M, PreserveBitcodeUseListOrder.getNumOccurrences()
+                  ? PreserveBitcodeUseListOrder
+                  : ShouldPreserveUseListOrder),
+        Index(Index) {
     // Assign ValueIds to any callee values in the index that came from
     // indirect call profiles and were recorded as a GUID not a Value*
     // (which would have been assigned an ID by the ValueEnumerator).
@@ -2108,7 +2115,13 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   assert(N->isDistinct() && "Expected distinct compile units");
   Record.push_back(/* IsDistinct */ true);
 
-  Record.push_back(N->getSourceLanguage().getUnversionedName());
+  auto Lang = N->getSourceLanguage();
+  Record.push_back(Lang.getName());
+  // Set bit so the MetadataLoader can distniguish between versioned and
+  // unversioned names.
+  if (Lang.hasVersionedName())
+    Record.back() ^= (uint64_t(1) << 63);
+
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());

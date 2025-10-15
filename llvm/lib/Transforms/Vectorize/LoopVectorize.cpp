@@ -5696,7 +5696,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     Instruction *I = Worklist.pop_back_val();
     for (auto &Op : I->operands())
       if (auto *InstOp = dyn_cast<Instruction>(Op))
-        if ((InstOp->getParent() == I->getParent()) && !isa<PHINode>(InstOp) &&
+        if (TheLoop->contains(InstOp) && !isa<PHINode>(InstOp) &&
             AddrDefs.insert(InstOp).second)
           Worklist.push_back(InstOp);
   }
@@ -8774,13 +8774,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(RecurrenceKind) &&
              "Unexpected truncated min-max recurrence!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
-      auto *Trunc =
-          new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
+      VPWidenCastRecipe *Trunc;
       Instruction::CastOps ExtendOpc =
           RdxDesc.isSigned() ? Instruction::SExt : Instruction::ZExt;
-      auto *Extnd = new VPWidenCastRecipe(ExtendOpc, Trunc, PhiTy);
-      Trunc->insertAfter(NewExitingVPV->getDefiningRecipe());
-      Extnd->insertAfter(Trunc);
+      VPWidenCastRecipe *Extnd;
+      {
+        VPBuilder::InsertPointGuard Guard(Builder);
+        Builder.setInsertPoint(
+            NewExitingVPV->getDefiningRecipe()->getParent(),
+            std::next(NewExitingVPV->getDefiningRecipe()->getIterator()));
+        Trunc =
+            Builder.createWidenCast(Instruction::Trunc, NewExitingVPV, RdxTy);
+        Extnd = Builder.createWidenCast(ExtendOpc, Trunc, PhiTy);
+      }
       if (PhiR->getOperand(1) == NewExitingVPV)
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
@@ -9348,13 +9354,12 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  // Ensure that the start values for all header phi recipes are updated before
-  // vectorizing the epilogue loop.
   VPCanonicalIVPHIRecipe *IV = Plan.getCanonicalIV();
-  // When vectorizing the epilogue loop, the canonical induction start
-  // value needs to be changed from zero to the value after the main
-  // vector loop. Find the resume value created during execution of the main
-  // VPlan. It must be the first phi in the loop preheader.
+  // When vectorizing the epilogue loop, the canonical induction needs to be
+  // adjusted by the value after the main vector loop. Find the resume value
+  // created during execution of the main VPlan. It must be the first phi in the
+  // loop preheader. Use the value to increment the canonical IV, and update all
+  // users in the loop region to use the adjusted value.
   // FIXME: Improve modeling for canonical IV start values in the epilogue
   // loop.
   using namespace llvm::PatternMatch;
@@ -9389,10 +9394,16 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
-  IV->setOperand(0, VPV);
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  IV->replaceAllUsesWith(Add);
+  Add->setOperand(0, IV);
 
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;
+  // Ensure that the start values for all header phi recipes are updated before
+  // vectorizing the epilogue loop. Skip the canonical IV, which has been
+  // handled above.
   for (VPRecipeBase &R : drop_begin(Header->phis())) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.

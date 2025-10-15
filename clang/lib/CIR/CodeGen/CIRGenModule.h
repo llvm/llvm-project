@@ -159,6 +159,13 @@ public:
                                       bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
 
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
+
   bool shouldZeroInitPadding() const {
     // In C23 (N3096) $6.7.10:
     // """
@@ -479,6 +486,10 @@ public:
   cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
+
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
 
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
 

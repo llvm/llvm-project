@@ -506,11 +506,17 @@ OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
 OpenACCReductionClause *OpenACCReductionClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
     OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
-    ArrayRef<OpenACCReductionRecipe> Recipes,
+    ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
     SourceLocation EndLoc) {
-  void *Mem = C.Allocate(
-      OpenACCReductionClause::totalSizeToAlloc<Expr *, OpenACCReductionRecipe>(
-          VarList.size(), Recipes.size()));
+  size_t NumCombiners = llvm::accumulate(
+      Recipes, 0, [](size_t Num, const OpenACCReductionRecipe &R) {
+        return Num + R.CombinerRecipes.size();
+      });
+
+  void *Mem = C.Allocate(OpenACCReductionClause::totalSizeToAlloc<
+                         Expr *, OpenACCReductionRecipe,
+                         OpenACCReductionRecipe::CombinerRecipe>(
+      VarList.size(), Recipes.size(), NumCombiners));
   return new (Mem) OpenACCReductionClause(BeginLoc, LParenLoc, Operator,
                                           VarList, Recipes, EndLoc);
 }

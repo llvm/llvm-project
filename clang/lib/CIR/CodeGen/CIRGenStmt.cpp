@@ -154,6 +154,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitWhileStmt(cast<WhileStmt>(*s));
   case Stmt::DoStmtClass:
     return emitDoStmt(cast<DoStmt>(*s));
+  case Stmt::CXXTryStmtClass:
+    return emitCXXTryStmt(cast<CXXTryStmt>(*s));
   case Stmt::CXXForRangeStmtClass:
     return emitCXXForRangeStmt(cast<CXXForRangeStmt>(*s), attr);
   case Stmt::OpenACCComputeConstructClass:
@@ -199,7 +201,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CoroutineBodyStmtClass:
     return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
   case Stmt::CoreturnStmtClass:
-  case Stmt::CXXTryStmtClass:
   case Stmt::IndirectGotoStmtClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:

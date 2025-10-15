@@ -4727,6 +4727,13 @@ def PtrauthStringDiscriminator : Builtin {
   let Prototype = "size_t(char const*)";
 }
 
+// AllocToken builtins.
+def InferAllocToken : Builtin {
+  let Spellings = ["__builtin_infer_alloc_token"];
+  let Attributes = [NoThrow, Const, Pure, CustomTypeChecking, Constexpr, UnevaluatedArguments];
+  let Prototype = "size_t(...)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {
@@ -4942,6 +4949,12 @@ def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
 def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_handlefromimplicitbinding"];
   let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 

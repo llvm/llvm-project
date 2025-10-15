@@ -103,52 +103,52 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::Untyped, V64RegClass);
 
   addRegisterClass(MVT::v3i32, &AMDGPU::SGPR_96RegClass);
-  addRegisterClass(MVT::v3f32, TRI->getVGPRClassForBitWidth(96));
+  addRegisterClass(MVT::v3f32, &AMDGPU::VReg_96RegClass);
 
   addRegisterClass(MVT::v2i64, &AMDGPU::SGPR_128RegClass);
   addRegisterClass(MVT::v2f64, &AMDGPU::SGPR_128RegClass);
 
   addRegisterClass(MVT::v4i32, &AMDGPU::SGPR_128RegClass);
-  addRegisterClass(MVT::v4f32, TRI->getVGPRClassForBitWidth(128));
+  addRegisterClass(MVT::v4f32, &AMDGPU::VReg_128RegClass);
 
   addRegisterClass(MVT::v5i32, &AMDGPU::SGPR_160RegClass);
-  addRegisterClass(MVT::v5f32, TRI->getVGPRClassForBitWidth(160));
+  addRegisterClass(MVT::v5f32, &AMDGPU::VReg_160RegClass);
 
   addRegisterClass(MVT::v6i32, &AMDGPU::SGPR_192RegClass);
-  addRegisterClass(MVT::v6f32, TRI->getVGPRClassForBitWidth(192));
+  addRegisterClass(MVT::v6f32, &AMDGPU::VReg_192RegClass);
 
   addRegisterClass(MVT::v3i64, &AMDGPU::SGPR_192RegClass);
-  addRegisterClass(MVT::v3f64, TRI->getVGPRClassForBitWidth(192));
+  addRegisterClass(MVT::v3f64, &AMDGPU::VReg_192RegClass);
 
   addRegisterClass(MVT::v7i32, &AMDGPU::SGPR_224RegClass);
-  addRegisterClass(MVT::v7f32, TRI->getVGPRClassForBitWidth(224));
+  addRegisterClass(MVT::v7f32, &AMDGPU::VReg_224RegClass);
 
   addRegisterClass(MVT::v8i32, &AMDGPU::SGPR_256RegClass);
-  addRegisterClass(MVT::v8f32, TRI->getVGPRClassForBitWidth(256));
+  addRegisterClass(MVT::v8f32, &AMDGPU::VReg_256RegClass);
 
   addRegisterClass(MVT::v4i64, &AMDGPU::SGPR_256RegClass);
-  addRegisterClass(MVT::v4f64, TRI->getVGPRClassForBitWidth(256));
+  addRegisterClass(MVT::v4f64, &AMDGPU::VReg_256RegClass);
 
   addRegisterClass(MVT::v9i32, &AMDGPU::SGPR_288RegClass);
-  addRegisterClass(MVT::v9f32, TRI->getVGPRClassForBitWidth(288));
+  addRegisterClass(MVT::v9f32, &AMDGPU::VReg_288RegClass);
 
   addRegisterClass(MVT::v10i32, &AMDGPU::SGPR_320RegClass);
-  addRegisterClass(MVT::v10f32, TRI->getVGPRClassForBitWidth(320));
+  addRegisterClass(MVT::v10f32, &AMDGPU::VReg_320RegClass);
 
   addRegisterClass(MVT::v11i32, &AMDGPU::SGPR_352RegClass);
-  addRegisterClass(MVT::v11f32, TRI->getVGPRClassForBitWidth(352));
+  addRegisterClass(MVT::v11f32, &AMDGPU::VReg_352RegClass);
 
   addRegisterClass(MVT::v12i32, &AMDGPU::SGPR_384RegClass);
-  addRegisterClass(MVT::v12f32, TRI->getVGPRClassForBitWidth(384));
+  addRegisterClass(MVT::v12f32, &AMDGPU::VReg_384RegClass);
 
   addRegisterClass(MVT::v16i32, &AMDGPU::SGPR_512RegClass);
-  addRegisterClass(MVT::v16f32, TRI->getVGPRClassForBitWidth(512));
+  addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
 
   addRegisterClass(MVT::v8i64, &AMDGPU::SGPR_512RegClass);
-  addRegisterClass(MVT::v8f64, TRI->getVGPRClassForBitWidth(512));
+  addRegisterClass(MVT::v8f64, &AMDGPU::VReg_512RegClass);
 
   addRegisterClass(MVT::v16i64, &AMDGPU::SGPR_1024RegClass);
-  addRegisterClass(MVT::v16f64, TRI->getVGPRClassForBitWidth(1024));
+  addRegisterClass(MVT::v16f64, &AMDGPU::VReg_1024RegClass);
 
   if (Subtarget->has16BitInsts()) {
     if (Subtarget->useRealTrue16Insts()) {
@@ -180,7 +180,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
-  addRegisterClass(MVT::v32f32, TRI->getVGPRClassForBitWidth(1024));
+  addRegisterClass(MVT::v32f32, &AMDGPU::VReg_1024RegClass);
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 

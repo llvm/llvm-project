@@ -234,9 +234,12 @@ public:
 };
 } // namespace
 
-static AllocTokenOptions getAllocTokenOptions(const CodeGenOptions &CGOpts) {
+static AllocTokenOptions getAllocTokenOptions(const LangOptions &LangOpts,
+                                              const CodeGenOptions &CGOpts) {
   AllocTokenOptions Opts;
-  Opts.MaxTokens = CGOpts.AllocTokenMax;
+  if (LangOpts.AllocTokenMode)
+    Opts.Mode = *LangOpts.AllocTokenMode;
+  Opts.MaxTokens = LangOpts.AllocTokenMax;
   Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
   Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
   return Opts;
@@ -473,6 +476,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.StackUsageOutput = CodeGenOpts.StackUsageOutput;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
+  Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
   Options.EnableAIXExtendedAltivecABI = LangOpts.EnableAIXExtendedAltivecABI;
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
@@ -807,7 +811,7 @@ static void addSanitizers(const Triple &TargetTriple,
         // memory allocation function detection.
         MPM.addPass(InferFunctionAttrsPass());
       }
-      MPM.addPass(AllocTokenPass(getAllocTokenOptions(CodeGenOpts)));
+      MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
     }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {

@@ -30,7 +30,7 @@ def _getAndroidDeviceApi(cfg):
             r"""
                 #include <android/api-level.h>
                 #include <stdio.h>
-                int main() {
+                int main(int, char**) {
                     printf("%d\n", android_get_device_api_level());
                     return 0;
                 }
@@ -66,7 +66,7 @@ def _mingwSupportsModules(cfg):
         #else
         // __MINGW64_VERSION_MAJOR > 12 should be ok.
         #endif
-        int main() { return 0; }
+        int main(int, char**) { return 0; }
         """,
     )
 
@@ -474,7 +474,7 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
         #include <wchar.h>
 
         // Print each requested locale conversion member on separate lines.
-        int main() {
+        int main(int, char**) {
           const char* locales[] = { %s };
           for (int loc_i = 0; loc_i < %d; ++loc_i) {
             if (!setlocale(LC_ALL, locales[loc_i])) {
@@ -629,7 +629,7 @@ DEFAULT_FEATURES += [
             """
             #include <stdio.h>
             #include <windows.h>
-            int main() {
+            int main(int, char**) {
               CHAR tempDirPath[MAX_PATH];
               DWORD tempPathRet = GetTempPathA(MAX_PATH, tempDirPath);
               if (tempPathRet == 0 || tempPathRet > MAX_PATH) {
