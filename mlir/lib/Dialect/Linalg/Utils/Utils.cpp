@@ -240,15 +240,14 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
   return iteratorType == utils::IteratorType::reduction;
 }
 
-// -------------------------------
-// ---------- CONV ---------------
-// -------------------------------
+//===----------------------------------------------------------------------===//
+// Convolution matcher utilities
+//===----------------------------------------------------------------------===//
 
 /// Utility to match block body for linalg.pool* ops.
 template <typename... OpTypes>
 static bool bodyMatcherForPoolOps(Value yieldVal, Block *body) {
   Operation *defOp = yieldVal.getDefiningOp();
-  // if (!defOp) return false;
   if (!(isa_and_present<OpTypes>(defOp) || ...))
     return false;
 
@@ -402,7 +401,7 @@ static bool updateConvDilationsAndStrides(SmallVector<int64_t> *dilations,
   return true;
 }
 
-bool isaConv1DOp(LinalgOp op) {
+static bool isaConv1DOp(LinalgOp op) {
   if (isa<linalg::Conv1DOp>(op))
     return true;
 
@@ -423,8 +422,8 @@ bool isaConv1DOp(LinalgOp op) {
                                     tempStrides[0]);
 }
 
-bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                       SmallVector<int64_t> *strides) {
+static bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                              SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv1DNwcWcfOp>(op))
     return true;
 
@@ -453,8 +452,8 @@ bool isaConv1DNwcWcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                       SmallVector<int64_t> *strides) {
+static bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                              SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv1DNcwFcwOp>(op))
     return true;
 
@@ -483,8 +482,9 @@ bool isaConv1DNcwFcwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv1DNcwCwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                               SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv1DNcwCwOp(LinalgOp op,
+                                      SmallVector<int64_t> *dilations,
+                                      SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv1DNcwCwOp>(op))
     return true;
 
@@ -514,8 +514,9 @@ bool isaDepthwiseConv1DNcwCwOp(LinalgOp op, SmallVector<int64_t> *dilations,
 }
 
 // -------------------
-bool isaDepthwiseConv1DNwcWcOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                               SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv1DNwcWcOp(LinalgOp op,
+                                      SmallVector<int64_t> *dilations,
+                                      SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv1DNwcWcOp>(op))
     return true;
 
@@ -544,8 +545,9 @@ bool isaDepthwiseConv1DNwcWcOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op,
+                                       SmallVector<int64_t> *dilations,
+                                       SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv1DNwcWcmOp>(op))
     return true;
 
@@ -575,7 +577,7 @@ bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DOp(LinalgOp op) {
+static bool isaConv2DOp(LinalgOp op) {
   if (isa<linalg::Conv2DOp>(op))
     return true;
 
@@ -599,8 +601,8 @@ bool isaConv2DOp(LinalgOp op) {
                                      tempStrides[1]));
 }
 
-bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNhwcFhwcOp>(op))
     return true;
 
@@ -632,8 +634,8 @@ bool isaConv2DNhwcFhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNhwcHwcfOp>(op))
     return true;
 
@@ -665,8 +667,8 @@ bool isaConv2DNhwcHwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNchwFchwOp>(op))
     return true;
 
@@ -698,8 +700,8 @@ bool isaConv2DNchwFchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwcFhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                          SmallVector<int64_t> *strides) {
+static bool isaConv2DNhwcFhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNhwcFhwcQOp>(op))
     return true;
 
@@ -732,8 +734,8 @@ bool isaConv2DNhwcFhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNchwFchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                          SmallVector<int64_t> *strides) {
+static bool isaConv2DNchwFchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNchwFchwQOp>(op))
     return true;
 
@@ -766,8 +768,8 @@ bool isaConv2DNchwFchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNgchwFgchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                           SmallVector<int64_t> *strides) {
+static bool isaConv2DNgchwFgchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNgchwFgchwOp>(op))
     return true;
 
@@ -802,8 +804,8 @@ bool isaConv2DNgchwFgchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNgchwGfchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                           SmallVector<int64_t> *strides) {
+static bool isaConv2DNgchwGfchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNgchwGfchwOp>(op))
     return true;
 
@@ -838,8 +840,8 @@ bool isaConv2DNgchwGfchwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwcHwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                          SmallVector<int64_t> *strides) {
+static bool isaConv2DNhwcHwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNhwcHwcfQOp>(op))
     return true;
 
@@ -872,8 +874,8 @@ bool isaConv2DNhwcHwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwgcGfhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                            SmallVector<int64_t> *strides) {
+static bool isaConv2DNhwgcGfhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                   SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNhwgcGfhwcQOp>(op))
     return true;
 
@@ -908,8 +910,8 @@ bool isaConv2DNhwgcGfhwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNgchwGfchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                            SmallVector<int64_t> *strides) {
+static bool isaConv2DNgchwGfchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                   SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNgchwGfchwQOp>(op))
     return true;
 
@@ -945,8 +947,8 @@ bool isaConv2DNgchwGfchwQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv2DNhwgcGfhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                           SmallVector<int64_t> *strides) {
+static bool isaConv2DNhwgcGfhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv2DNhwgcGfhwcOp>(op))
     return true;
 
@@ -981,8 +983,9 @@ bool isaConv2DNhwgcGfhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNchwChwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                 SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv2DNchwChwOp(LinalgOp op,
+                                        SmallVector<int64_t> *dilations,
+                                        SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv2DNchwChwOp>(op))
     return true;
 
@@ -1014,8 +1017,9 @@ bool isaDepthwiseConv2DNchwChwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                 SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op,
+                                        SmallVector<int64_t> *dilations,
+                                        SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv2DNhwcHwcOp>(op))
     return true;
 
@@ -1047,8 +1051,9 @@ bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                  SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op,
+                                         SmallVector<int64_t> *dilations,
+                                         SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv2DNhwcHwcmOp>(op))
     return true;
 
@@ -1081,8 +1086,9 @@ bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                   SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op,
+                                          SmallVector<int64_t> *dilations,
+                                          SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv2DNhwcHwcmQOp>(op))
     return true;
 
@@ -1116,8 +1122,9 @@ bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                  SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op,
+                                         SmallVector<int64_t> *dilations,
+                                         SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv2DNhwcHwcQOp>(op))
     return true;
 
@@ -1150,7 +1157,7 @@ bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv3DOp(LinalgOp op) {
+static bool isaConv3DOp(LinalgOp op) {
   if (isa<linalg::Conv3DOp>(op))
     return true;
 
@@ -1177,8 +1184,8 @@ bool isaConv3DOp(LinalgOp op) {
                                      tempStrides[2]));
 }
 
-bool isaConv3DNcdhwFcdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                           SmallVector<int64_t> *strides) {
+static bool isaConv3DNcdhwFcdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv3DNcdhwFcdhwOp>(op))
     return true;
 
@@ -1214,8 +1221,8 @@ bool isaConv3DNcdhwFcdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv3DNdhwcDhwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                           SmallVector<int64_t> *strides) {
+static bool isaConv3DNdhwcDhwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                  SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv3DNdhwcDhwcfOp>(op))
     return true;
 
@@ -1251,8 +1258,8 @@ bool isaConv3DNdhwcDhwcfOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaConv3DNdhwcDhwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                            SmallVector<int64_t> *strides) {
+static bool isaConv3DNdhwcDhwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                   SmallVector<int64_t> *strides) {
   if (isa<linalg::Conv3DNdhwcDhwcfQOp>(op))
     return true;
 
@@ -1289,9 +1296,9 @@ bool isaConv3DNdhwcDhwcfQOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
-                                    SmallVector<int64_t> *dilations,
-                                    SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
+                                           SmallVector<int64_t> *dilations,
+                                           SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv3DNdhwcDhwcmOp>(op))
     return true;
 
@@ -1328,8 +1335,9 @@ bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                   SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op,
+                                          SmallVector<int64_t> *dilations,
+                                          SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv3DNcdhwCdhwOp>(op))
     return true;
 
@@ -1365,8 +1373,9 @@ bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                   SmallVector<int64_t> *strides) {
+static bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op,
+                                          SmallVector<int64_t> *dilations,
+                                          SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv3DNdhwcDhwcOp>(op))
     return true;
 
@@ -1402,8 +1411,8 @@ bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNchwMaxOp>(op))
     return true;
 
@@ -1438,8 +1447,8 @@ bool isaPoolingNchwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNchwSumOp>(op))
     return true;
 
@@ -1474,8 +1483,8 @@ bool isaPoolingNchwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMaxOp>(op))
     return true;
 
@@ -1510,8 +1519,8 @@ bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMinOp>(op))
     return true;
 
@@ -1546,8 +1555,8 @@ bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                         SmallVector<int64_t> *strides) {
+static bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcSumOp>(op))
     return true;
 
@@ -1582,8 +1591,9 @@ bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                 SmallVector<int64_t> *strides) {
+static bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op,
+                                        SmallVector<int64_t> *dilations,
+                                        SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMaxUnsignedOp>(op))
     return true;
 
@@ -1618,8 +1628,9 @@ bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNhwcMinUnsignedOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                 SmallVector<int64_t> *strides) {
+static bool isaPoolingNhwcMinUnsignedOp(LinalgOp op,
+                                        SmallVector<int64_t> *dilations,
+                                        SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMinUnsignedOp>(op))
     return true;
 
@@ -1654,8 +1665,8 @@ bool isaPoolingNhwcMinUnsignedOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                        SmallVector<int64_t> *strides) {
+static bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNcwMaxOp>(op))
     return true;
 
@@ -1687,8 +1698,8 @@ bool isaPoolingNcwMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                        SmallVector<int64_t> *strides) {
+static bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNcwSumOp>(op))
     return true;
 
@@ -1720,8 +1731,8 @@ bool isaPoolingNcwSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                        SmallVector<int64_t> *strides) {
+static bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNwcMaxOp>(op))
     return true;
 
@@ -1753,8 +1764,8 @@ bool isaPoolingNwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                        SmallVector<int64_t> *strides) {
+static bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNwcMinOp>(op))
     return true;
 
@@ -1786,8 +1797,8 @@ bool isaPoolingNwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                        SmallVector<int64_t> *strides) {
+static bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                               SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNwcSumOp>(op))
     return true;
 
@@ -1819,8 +1830,8 @@ bool isaPoolingNwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNdhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                          SmallVector<int64_t> *strides) {
+static bool isaPoolingNdhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNdhwcMaxOp>(op))
     return true;
 
@@ -1859,8 +1870,8 @@ bool isaPoolingNdhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNdhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                          SmallVector<int64_t> *strides) {
+static bool isaPoolingNdhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNdhwcMinOp>(op))
     return true;
 
@@ -1899,8 +1910,8 @@ bool isaPoolingNdhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-bool isaPoolingNdhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                          SmallVector<int64_t> *strides) {
+static bool isaPoolingNdhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
+                                 SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNdhwcSumOp>(op))
     return true;
 
@@ -1938,6 +1949,263 @@ bool isaPoolingNdhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
   return returnVal && updateConvDilationsAndStrides(dilations, strides,
                                                     tempDilations, tempStrides);
 }
+
+template <typename ConvOpTy>
+bool isaConvolutionOpOfType(LinalgOp op, SmallVector<int64_t> *dilations,
+                            SmallVector<int64_t> *strides) {
+  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp>) {
+    return isaConv1DOp(op);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DNwcWcfOp>) {
+    return isaConv1DNwcWcfOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DNcwFcwOp>) {
+    return isaConv1DNcwFcwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv1DNcwCwOp>) {
+    return isaDepthwiseConv1DNcwCwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv1DNwcWcOp>) {
+    return isaDepthwiseConv1DNwcWcOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv1DNwcWcmOp>) {
+    return isaDepthwiseConv1DNwcWcmOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DOp>) {
+    return isaConv2DOp(op);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNhwcFhwcOp>) {
+    return isaConv2DNhwcFhwcOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNhwcHwcfOp>) {
+    return isaConv2DNhwcHwcfOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNchwFchwOp>) {
+    return isaConv2DNchwFchwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNhwcFhwcQOp>) {
+    return isaConv2DNhwcFhwcQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNchwFchwQOp>) {
+    return isaConv2DNchwFchwQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNgchwFgchwOp>) {
+    return isaConv2DNgchwFgchwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNgchwGfchwOp>) {
+    return isaConv2DNgchwGfchwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNhwcHwcfQOp>) {
+    return isaConv2DNhwcHwcfQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNhwgcGfhwcQOp>) {
+    return isaConv2DNhwgcGfhwcQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNgchwGfchwQOp>) {
+    return isaConv2DNgchwGfchwQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv2DNhwgcGfhwcOp>) {
+    return isaConv2DNhwgcGfhwcOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv2DNchwChwOp>) {
+    return isaDepthwiseConv2DNchwChwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv2DNhwcHwcOp>) {
+    return isaDepthwiseConv2DNhwcHwcOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv2DNhwcHwcmOp>) {
+    return isaDepthwiseConv2DNhwcHwcmOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv2DNhwcHwcQOp>) {
+    return isaDepthwiseConv2DNhwcHwcQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv2DNhwcHwcmQOp>) {
+    return isaDepthwiseConv2DNhwcHwcmQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
+    return isaConv3DOp(op);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv3DNcdhwFcdhwOp>) {
+    return isaConv3DNcdhwFcdhwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv3DNdhwcDhwcfOp>) {
+    return isaConv3DNdhwcDhwcfOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::Conv3DNdhwcDhwcfQOp>) {
+    return isaConv3DNdhwcDhwcfQOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv3DNdhwcDhwcmOp>) {
+    return isaDepthwiseConv3DNdhwcDhwcmOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv3DNcdhwCdhwOp>) {
+    return isaDepthwiseConv3DNcdhwCdhwOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::DepthwiseConv3DNdhwcDhwcOp>) {
+    return isaDepthwiseConv3DNdhwcDhwcOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNchwMaxOp>) {
+    return isaPoolingNchwMaxOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNchwSumOp>) {
+    return isaPoolingNchwSumOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNhwcMaxOp>) {
+    return isaPoolingNhwcMaxOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNhwcMinOp>) {
+    return isaPoolingNhwcMinOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNhwcSumOp>) {
+    return isaPoolingNhwcSumOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::PoolingNhwcMaxUnsignedOp>) {
+    return isaPoolingNhwcMaxUnsignedOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy,
+                                      linalg::PoolingNhwcMinUnsignedOp>) {
+    return isaPoolingNhwcMinUnsignedOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNcwMaxOp>) {
+    return isaPoolingNcwMaxOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNcwSumOp>) {
+    return isaPoolingNcwSumOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNwcMaxOp>) {
+    return isaPoolingNwcMaxOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNwcMinOp>) {
+    return isaPoolingNwcMinOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNwcSumOp>) {
+    return isaPoolingNwcSumOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNdhwcMaxOp>) {
+    return isaPoolingNdhwcMaxOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNdhwcMinOp>) {
+    return isaPoolingNdhwcMinOp(op, dilations, strides);
+  } else if constexpr (std::is_same_v<ConvOpTy, linalg::PoolingNdhwcSumOp>) {
+    return isaPoolingNdhwcSumOp(op, dilations, strides);
+  } else {
+    return false;
+  }
+}
+
+template bool
+isaConvolutionOpOfType<linalg::Conv1DOp>(LinalgOp op,
+                                         SmallVector<int64_t> *dilations,
+                                         SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::Conv1DNwcWcfOp>(LinalgOp op,
+                                               SmallVector<int64_t> *dilations,
+                                               SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::Conv1DNcwFcwOp>(LinalgOp op,
+                                               SmallVector<int64_t> *dilations,
+                                               SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcmOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::Conv2DOp>(LinalgOp op,
+                                         SmallVector<int64_t> *dilations,
+                                         SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNhwcFhwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNhwcHwcfOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNchwFchwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNhwcFhwcQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNchwFchwQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNgchwFgchwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNgchwGfchwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNhwcHwcfQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNhwgcGfhwcQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNgchwGfchwQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv2DNhwgcGfhwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcmOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcmQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::Conv3DOp>(LinalgOp op,
+                                         SmallVector<int64_t> *dilations,
+                                         SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv3DNcdhwFcdhwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv3DNdhwcDhwcfOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::Conv3DNdhwcDhwcfQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNcdhwCdhwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNchwMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNchwSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::PoolingNcwMaxOp>(LinalgOp op,
+                                                SmallVector<int64_t> *dilations,
+                                                SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::PoolingNcwSumOp>(LinalgOp op,
+                                                SmallVector<int64_t> *dilations,
+                                                SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::PoolingNwcMaxOp>(LinalgOp op,
+                                                SmallVector<int64_t> *dilations,
+                                                SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::PoolingNwcMinOp>(LinalgOp op,
+                                                SmallVector<int64_t> *dilations,
+                                                SmallVector<int64_t> *strides);
+template bool
+isaConvolutionOpOfType<linalg::PoolingNwcSumOp>(LinalgOp op,
+                                                SmallVector<int64_t> *dilations,
+                                                SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNdhwcMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNdhwcMinOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
+template bool isaConvolutionOpOfType<linalg::PoolingNdhwcSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides);
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold,
