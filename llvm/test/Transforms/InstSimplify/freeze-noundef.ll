@@ -156,3 +156,16 @@ define {i8, i32} @noundef_metadata2(ptr %p) {
   %v.fr = freeze {i8, i32} %v
   ret {i8, i32} %v.fr
 }
+
+; For splats only the poison-ness of the value being splatted matters.
+define <4 x i32> @splat(i32 noundef %x) {
+; CHECK-LABEL: @splat(
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[INS]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SPLAT]]
+;
+  %ins = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
+  %splat.fr = freeze <4 x i32> %splat
+  ret <4 x i32> %splat.fr
+}

@@ -7678,9 +7678,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         return true;
     }
 
-    Value *Splat;
     if (!::canCreateUndefOrPoison(Opr, Kind,
                                   /*ConsiderFlagsAndMetadata=*/true)) {
+      Value *Splat;
       if (const auto *PN = dyn_cast<PHINode>(V)) {
         unsigned Num = PN->getNumIncomingValues();
         bool IsWellDefined = true;
