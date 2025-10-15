@@ -52,7 +52,8 @@ TEST_P(UncheckedStatusOrAccessModelTest,
 #include "unchecked_statusor_use_test_defs.h"
 
     void target(STATUSOR_INT sor) {
-      sor.value();  // [[unsafe]]
+      sor.  // force newline
+      value();  // [[unsafe]]
     }
   )cc");
 }
