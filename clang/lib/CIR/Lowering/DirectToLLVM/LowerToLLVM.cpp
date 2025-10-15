@@ -1531,12 +1531,17 @@ mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
     auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
         op.getLoc(), llvmDstTy, typeSize);
 
-    if (dstTy.isUnsigned())
-      resultVal =
+    if (dstTy.isUnsigned()) {
+      auto uDiv =
           rewriter.create<mlir::LLVM::UDivOp>(op.getLoc(), diff, typeSizeVal);
-    else
-      resultVal =
+      uDiv.setIsExact(true);
+      resultVal = uDiv.getResult();
+    } else {
+      auto sDiv =
           rewriter.create<mlir::LLVM::SDivOp>(op.getLoc(), diff, typeSizeVal);
+      sDiv.setIsExact(true);
+      resultVal = sDiv.getResult();
+    }
   }
   rewriter.replaceOp(op, resultVal);
   return mlir::success();
