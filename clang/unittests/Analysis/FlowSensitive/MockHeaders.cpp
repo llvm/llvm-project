@@ -1888,7 +1888,7 @@ constexpr const char AbslLogHeader[] = R"cc(
 #define PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #define ABSL_LOG_INTERNAL_STRIP_STRING_LITERAL(lit) lit
 
-#define ABSL_LOG_INTERNAL_STATELESS_CONDITION(condition) \
+#define ABSL_LOG_INTERNAL_STATELESS_CONDITION(condition)   \
     switch (0)                                             \
     case 0:                                                \
     default:                                               \
@@ -1903,12 +1903,12 @@ constexpr const char AbslLogHeader[] = R"cc(
 #define ABSL_LOG_INTERNAL_CONDITION_QFATAL(type, condition) \
     ABSL_LOG_INTERNAL_##type##_CONDITION(condition)
 
-#define ABSL_CHECK_IMPL(condition, condition_text)                    \
+#define ABSL_CHECK_IMPL(condition, condition_text)                      \
     ABSL_LOG_INTERNAL_CONDITION_FATAL(STATELESS,                        \
                                       ABSL_PREDICT_FALSE(!(condition))) \
     ABSL_LOG_INTERNAL_CHECK(condition_text).InternalStream()
 
-#define ABSL_QCHECK_IMPL(condition, condition_text)                    \
+#define ABSL_QCHECK_IMPL(condition, condition_text)                      \
     ABSL_LOG_INTERNAL_CONDITION_QFATAL(STATELESS,                        \
                                        ABSL_PREDICT_FALSE(!(condition))) \
     ABSL_LOG_INTERNAL_QCHECK(condition_text).InternalStream()
@@ -1951,13 +1951,13 @@ constexpr const char AbslLogHeader[] = R"cc(
   }  // namespace absl
   // TODO(tkd): this still doesn't allow operator<<, unlike the real CHECK_
   // macros.
-#define ABSL_LOG_INTERNAL_CHECK_OP(name, op, val1, val2)        \
+#define ABSL_LOG_INTERNAL_CHECK_OP(name, op, val1, val2)          \
     while (char* _result = ::absl::log_internal::name##Impl(      \
                ::absl::log_internal::GetReferenceableValue(val1), \
                ::absl::log_internal::GetReferenceableValue(val2), \
                #val1 " " #op " " #val2))                          \
     (void)0
-#define ABSL_LOG_INTERNAL_QCHECK_OP(name, op, val1, val2)       \
+#define ABSL_LOG_INTERNAL_QCHECK_OP(name, op, val1, val2)         \
     while (char* _result = ::absl::log_internal::name##Impl(      \
                ::absl::log_internal::GetReferenceableValue(val1), \
                ::absl::log_internal::GetReferenceableValue(val2), \
@@ -1987,7 +1987,7 @@ constexpr const char AbslLogHeader[] = R"cc(
     ::absl::log_internal::LogMessageFatal()
 #define ABSL_LOG_INTERNAL_QCHECK(failure_message) \
     ::absl::log_internal::LogMessageQuietlyFatal()
-#define ABSL_LOG_INTERNAL_CHECK_OK(val)                                      \
+#define ABSL_LOG_INTERNAL_CHECK_OK(val)                                        \
     for (::std::pair<const ::absl::Status*, ::std::string*>                    \
              absl_log_internal_check_ok_goo;                                   \
          absl_log_internal_check_ok_goo.first =                                \
@@ -2001,7 +2001,7 @@ constexpr const char AbslLogHeader[] = R"cc(
          !ABSL_PREDICT_TRUE(absl_log_internal_check_ok_goo.first->ok());)      \
     ABSL_LOG_INTERNAL_CHECK(*absl_log_internal_check_ok_goo.second)            \
         .InternalStream()
-#define ABSL_LOG_INTERNAL_QCHECK_OK(val)                                     \
+#define ABSL_LOG_INTERNAL_QCHECK_OK(val)                                       \
     for (::std::pair<const ::absl::Status*, ::std::string*>                    \
              absl_log_internal_check_ok_goo;                                   \
          absl_log_internal_check_ok_goo.first =                                \
@@ -2080,7 +2080,7 @@ constexpr const char TestingDefsHeader[] = R"cc(
                                    const T1& lhs, const T2& rhs);
   };
 
-#define GTEST_IMPL_CMP_HELPER_(op_name)                                    \
+#define GTEST_IMPL_CMP_HELPER_(op_name)                                      \
     template <typename T1, typename T2>                                      \
     AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
                                        const T1& val1, const T2& val2);
@@ -2167,7 +2167,7 @@ constexpr const char TestingDefsHeader[] = R"cc(
   }  // namespace absl_testing
 
   using testing::AssertionResult;
-#define EXPECT_TRUE(x)                                          \
+#define EXPECT_TRUE(x)                                            \
     switch (0)                                                    \
     case 0:                                                       \
     default:                                                      \
@@ -2176,12 +2176,12 @@ constexpr const char TestingDefsHeader[] = R"cc(
         ::testing::Message()
 #define EXPECT_FALSE(x) EXPECT_TRUE(!(x))
 
-#define GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
+#define GTEST_AMBIGUOUS_ELSE_BLOCKER_   \
     switch (0)                          \
     case 0:                             \
     default:
 
-#define GTEST_ASSERT_(expression, on_failure)                   \
+#define GTEST_ASSERT_(expression, on_failure)                     \
     GTEST_AMBIGUOUS_ELSE_BLOCKER_                                 \
     if (const ::testing::AssertionResult gtest_ar = (expression)) \
       ;                                                           \
@@ -2191,7 +2191,7 @@ constexpr const char TestingDefsHeader[] = R"cc(
     GTEST_ASSERT_(pred_format(#v1, v1), on_failure)
 #define GTEST_PRED_FORMAT2_(pred_format, v1, v2, on_failure) \
     GTEST_ASSERT_(pred_format(#v1, #v2, v1, v2), on_failure)
-#define GTEST_MESSAGE_AT_(file, line, message, result_type)             \
+#define GTEST_MESSAGE_AT_(file, line, message, result_type)               \
     ::testing::internal::AssertHelper(result_type, file, line, message) = \
         ::testing::Message()
 #define GTEST_MESSAGE_(message, result_type) \
@@ -2206,7 +2206,7 @@ constexpr const char TestingDefsHeader[] = R"cc(
 #define ASSERT_PRED_FORMAT2(pred_format, v1, v2) \
     GTEST_PRED_FORMAT2_(pred_format, v1, v2, GTEST_FATAL_FAILURE_)
 
-#define ASSERT_THAT(value, matcher)                                    \
+#define ASSERT_THAT(value, matcher)                                      \
     ASSERT_PRED_FORMAT1(                                                 \
         ::testing::internal::MakePredicateFormatterFromMatcher(matcher), \
         value)
@@ -2216,13 +2216,13 @@ constexpr const char TestingDefsHeader[] = R"cc(
     GTEST_PRED_FORMAT1_(pred_format, v1, GTEST_NONFATAL_FAILURE_)
 #define EXPECT_PRED_FORMAT2(pred_format, v1, v2) \
     GTEST_PRED_FORMAT2_(pred_format, v1, v2, GTEST_NONFATAL_FAILURE_)
-#define EXPECT_THAT(value, matcher)                                    \
+#define EXPECT_THAT(value, matcher)                                      \
     EXPECT_PRED_FORMAT1(                                                 \
         ::testing::internal::MakePredicateFormatterFromMatcher(matcher), \
         value)
 #define EXPECT_OK(expression) EXPECT_THAT(expression, ::testing::status::IsOk())
 
-#define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail) \
+#define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail)   \
     GTEST_AMBIGUOUS_ELSE_BLOCKER_                                       \
     if (const ::testing::AssertionResult gtest_ar_ =                    \
             ::testing::AssertionResult(expression))                     \
@@ -2233,7 +2233,7 @@ constexpr const char TestingDefsHeader[] = R"cc(
                .c_str())
 #define GTEST_ASSERT_TRUE(condition) \
     GTEST_TEST_BOOLEAN_(condition, #condition, false, true, GTEST_FATAL_FAILURE_)
-#define GTEST_ASSERT_FALSE(condition)                        \
+#define GTEST_ASSERT_FALSE(condition)                          \
     GTEST_TEST_BOOLEAN_(!(condition), #condition, true, false, \
                         GTEST_FATAL_FAILURE_)
 #define ASSERT_TRUE(condition) GTEST_ASSERT_TRUE(condition)
