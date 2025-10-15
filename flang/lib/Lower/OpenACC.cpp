@@ -4112,12 +4112,26 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
     DeclareOp::create(builder, loc, mlir::Value{},
                       mlir::ValueRange(entryOp.getAccVar()));
   if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
-    ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
-                   entryOp.getBounds(), entryOp.getAsyncOperands(),
-                   entryOp.getAsyncOperandsDeviceTypeAttr(),
-                   entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
-                   /*structured=*/false, /*implicit=*/false,
-                   builder.getStringAttr(*entryOp.getName()));
+    if constexpr (std::is_same_v<ExitOp, mlir::acc::DeclareLinkOp>) {
+      // No destructor emission for declare link in this path to avoid
+      // complex var/varType/varPtrPtr signatures. The ctor registers the link.
+    } else if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
+                         std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>) {
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getVar(), entryOp.getVarType(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+    } else {
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+    }
   }
   mlir::acc::TerminatorOp::create(builder, loc);
   modBuilder.setInsertionPointAfter(declareGlobalOp);
@@ -4329,6 +4343,58 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           createClause->v;
       const auto &accObjectList =
           std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      // Emit module-level declare for COMMON symbols in this clause.
+      for (const auto &obj : accObjectList.v) {
+        Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
+        if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
+            Fortran::semantics::FindCommonBlockContaining(sym)) {
+          std::string globalName = converter.mangleName(sym);
+          fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+          if (!globalOp) {
+            if (Fortran::semantics::FindEquivalenceSet(sym)) {
+              for (Fortran::semantics::EquivalenceObject eqObj :
+                   *Fortran::semantics::FindEquivalenceSet(sym)) {
+                std::string eqName = converter.mangleName(eqObj.symbol);
+                globalOp = builder.getNamedGlobal(eqName);
+                if (globalOp)
+                  break;
+              }
+            }
+          }
+          if (!globalOp)
+            llvm::report_fatal_error("could not retrieve global symbol");
+          std::stringstream ctorName;
+          ctorName << globalName << "_acc_ctor";
+          if (!builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
+                  ctorName.str())) {
+            mlir::Location operandLocation = genOperandLocation(converter, obj);
+            addDeclareAttr(builder, globalOp.getOperation(),
+                mlir::acc::DataClause::acc_create);
+            mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
+            modBuilder.setInsertionPointAfter(globalOp);
+            std::stringstream asFortran;
+            asFortran << sym.name().ToString();
+            auto savedIP = builder.saveInsertionPoint();
+            createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                                  mlir::acc::CreateOp,
+                                  mlir::acc::DeclareEnterOp,
+                                  mlir::acc::DeleteOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_create, ctorName.str(),
+                    /*implicit=*/false, asFortran);
+            std::stringstream dtorName;
+            dtorName << globalName << "_acc_dtor";
+            createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
+                                  mlir::acc::GetDevicePtrOp,
+                                  mlir::acc::DeclareExitOp,
+                                  mlir::acc::DeleteOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_create, dtorName.str(),
+                    /*implicit=*/false, asFortran);
+            builder.restoreInsertionPoint(savedIP);
+          }
+        }
+      }
       auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
           accObjectList, converter, semanticsContext, stmtCtx,
@@ -4349,6 +4415,61 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                                   dataClauseOperands.end());
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      // Emit module-level declare for COMMON symbols in this clause.
+      const auto &listWithModifier = copyinClause->v;
+      const auto &copyinObjs =
+          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      for (const auto &obj : copyinObjs.v) {
+        Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
+        if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
+            Fortran::semantics::FindCommonBlockContaining(sym)) {
+          std::string globalName = converter.mangleName(sym);
+          fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+          if (!globalOp) {
+            if (Fortran::semantics::FindEquivalenceSet(sym)) {
+              for (Fortran::semantics::EquivalenceObject eqObj :
+                   *Fortran::semantics::FindEquivalenceSet(sym)) {
+                std::string eqName = converter.mangleName(eqObj.symbol);
+                globalOp = builder.getNamedGlobal(eqName);
+                if (globalOp)
+                  break;
+              }
+            }
+          }
+          if (!globalOp)
+            llvm::report_fatal_error("could not retrieve global symbol");
+          std::stringstream ctorName;
+          ctorName << globalName << "_acc_ctor";
+          if (!builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
+                  ctorName.str())) {
+            mlir::Location operandLocation = genOperandLocation(converter, obj);
+            addDeclareAttr(builder, globalOp.getOperation(),
+                mlir::acc::DataClause::acc_copyin);
+            mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
+            modBuilder.setInsertionPointAfter(globalOp);
+            std::stringstream asFortran;
+            asFortran << sym.name().ToString();
+            auto savedIP = builder.saveInsertionPoint();
+            createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                                  mlir::acc::CopyinOp,
+                                  mlir::acc::DeclareEnterOp,
+                                  mlir::acc::DeleteOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_copyin, ctorName.str(),
+                    /*implicit=*/false, asFortran);
+            std::stringstream dtorName;
+            dtorName << globalName << "_acc_dtor";
+            createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
+                                  mlir::acc::GetDevicePtrOp,
+                                  mlir::acc::DeclareExitOp,
+                                  mlir::acc::DeleteOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_copyin, dtorName.str(),
+                    /*implicit=*/false, asFortran);
+            builder.restoreInsertionPoint(savedIP);
+          }
+        }
+      }
       auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                                   mlir::acc::DeleteOp>(
@@ -4365,6 +4486,58 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           copyoutClause->v;
       const auto &accObjectList =
           std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      // Emit module-level declare for COMMON symbols in this clause.
+      for (const auto &obj : accObjectList.v) {
+        Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
+        if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
+            Fortran::semantics::FindCommonBlockContaining(sym)) {
+          std::string globalName = converter.mangleName(sym);
+          fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+          if (!globalOp) {
+            if (Fortran::semantics::FindEquivalenceSet(sym)) {
+              for (Fortran::semantics::EquivalenceObject eqObj :
+                   *Fortran::semantics::FindEquivalenceSet(sym)) {
+                std::string eqName = converter.mangleName(eqObj.symbol);
+                globalOp = builder.getNamedGlobal(eqName);
+                if (globalOp)
+                  break;
+              }
+            }
+          }
+          if (!globalOp)
+            llvm::report_fatal_error("could not retrieve global symbol");
+          std::stringstream ctorName;
+          ctorName << globalName << "_acc_ctor";
+          if (!builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
+                  ctorName.str())) {
+            mlir::Location operandLocation = genOperandLocation(converter, obj);
+            addDeclareAttr(builder, globalOp.getOperation(),
+                mlir::acc::DataClause::acc_copyout);
+            mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
+            modBuilder.setInsertionPointAfter(globalOp);
+            std::stringstream asFortran;
+            asFortran << sym.name().ToString();
+            auto savedIP = builder.saveInsertionPoint();
+            createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                                  mlir::acc::CreateOp,
+                                  mlir::acc::DeclareEnterOp,
+                                  mlir::acc::CopyoutOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_copyout, ctorName.str(),
+                    /*implicit=*/false, asFortran);
+            std::stringstream dtorName;
+            dtorName << globalName << "_acc_dtor";
+            createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
+                                  mlir::acc::GetDevicePtrOp,
+                                  mlir::acc::DeclareExitOp,
+                                  mlir::acc::CopyoutOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_copyout, dtorName.str(),
+                    /*implicit=*/false, asFortran);
+            builder.restoreInsertionPoint(savedIP);
+          }
+        }
+      }
       auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::CreateOp,
                                       mlir::acc::CopyoutOp>(
@@ -4383,6 +4556,50 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*implicit=*/false);
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
+      // Emit module-level declare for COMMON symbols in this clause.
+      const auto &linkObjs = linkClause->v;
+      for (const auto &obj : linkObjs.v) {
+        Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
+        if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
+            Fortran::semantics::FindCommonBlockContaining(sym)) {
+          std::string globalName = converter.mangleName(sym);
+          fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+          if (!globalOp) {
+            if (Fortran::semantics::FindEquivalenceSet(sym)) {
+              for (Fortran::semantics::EquivalenceObject eqObj :
+                   *Fortran::semantics::FindEquivalenceSet(sym)) {
+                std::string eqName = converter.mangleName(eqObj.symbol);
+                globalOp = builder.getNamedGlobal(eqName);
+                if (globalOp)
+                  break;
+              }
+            }
+          }
+          if (!globalOp)
+            llvm::report_fatal_error("could not retrieve global symbol");
+          std::stringstream ctorName;
+          ctorName << globalName << "_acc_ctor";
+          if (!builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
+                  ctorName.str())) {
+            mlir::Location operandLocation = genOperandLocation(converter, obj);
+            addDeclareAttr(builder, globalOp.getOperation(),
+                mlir::acc::DataClause::acc_declare_link);
+            mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
+            modBuilder.setInsertionPointAfter(globalOp);
+            std::stringstream asFortran;
+            asFortran << sym.name().ToString();
+            auto savedIP = builder.saveInsertionPoint();
+            createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                                  mlir::acc::DeclareLinkOp,
+                                  mlir::acc::DeclareEnterOp,
+                                  mlir::acc::DeclareLinkOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_declare_link, ctorName.str(),
+                    /*implicit=*/false, asFortran);
+            builder.restoreInsertionPoint(savedIP);
+          }
+        }
+      }
       genDeclareDataOperandOperations<mlir::acc::DeclareLinkOp,
                                       mlir::acc::DeclareLinkOp>(
           linkClause->v, converter, semanticsContext, stmtCtx,
@@ -4391,6 +4608,51 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceResidentClause =
                    std::get_if<Fortran::parser::AccClause::DeviceResident>(
                        &clause.u)) {
+      // Emit module-level declare for COMMON symbols in this clause.
+      const auto &devResObjs = deviceResidentClause->v;
+      for (const auto &obj : devResObjs.v) {
+        Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
+        if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
+            Fortran::semantics::FindCommonBlockContaining(sym)) {
+          std::string globalName = converter.mangleName(sym);
+          fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+          if (!globalOp) {
+            if (Fortran::semantics::FindEquivalenceSet(sym)) {
+              for (Fortran::semantics::EquivalenceObject eqObj :
+                   *Fortran::semantics::FindEquivalenceSet(sym)) {
+                std::string eqName = converter.mangleName(eqObj.symbol);
+                globalOp = builder.getNamedGlobal(eqName);
+                if (globalOp)
+                  break;
+              }
+            }
+          }
+          if (!globalOp)
+            llvm::report_fatal_error("could not retrieve global symbol");
+          std::stringstream ctorName;
+          ctorName << globalName << "_acc_ctor";
+          if (!builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
+                  ctorName.str())) {
+            mlir::Location operandLocation = genOperandLocation(converter, obj);
+            addDeclareAttr(builder, globalOp.getOperation(),
+                mlir::acc::DataClause::acc_declare_device_resident);
+            mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
+            modBuilder.setInsertionPointAfter(globalOp);
+            std::stringstream asFortran;
+            asFortran << sym.name().ToString();
+            auto savedIP = builder.saveInsertionPoint();
+            createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                                  mlir::acc::DeclareDeviceResidentOp,
+                                  mlir::acc::DeclareEnterOp,
+                                  mlir::acc::DeleteOp>(modBuilder, builder,
+                    operandLocation, globalOp,
+                    mlir::acc::DataClause::acc_declare_device_resident,
+                    ctorName.str(),
+                    /*implicit=*/false, asFortran);
+            builder.restoreInsertionPoint(savedIP);
+          }
+        }
+      }
       auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::DeclareDeviceResidentOp,
                                       mlir::acc::DeleteOp>(
