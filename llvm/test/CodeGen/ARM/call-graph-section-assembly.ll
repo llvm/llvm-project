@@ -1,8 +1,8 @@
 ;; Test if temporary labels are generated for each indirect callsite.
-;; Test if the .callgraph section contains the MD5 hash of callees' type (type id)
+;; Test if the .llvm.callgraph section contains the MD5 hash of callees' type (type id)
 ;; is correctly paired with its corresponding temporary label generated for indirect
 ;; call sites annotated with !callee_type metadata.
-;; Test if the .callgraph section contains unique direct callees.
+;; Test if the .llvm.callgraph section contains unique direct callees.
 
 ; RUN: llc -mtriple=arm-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
@@ -36,7 +36,7 @@ entry:
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
 
-; CHECK: .section .callgraph,"o",%progbits,.text
+; CHECK: .section .llvm.callgraph,"o",%progbits,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
