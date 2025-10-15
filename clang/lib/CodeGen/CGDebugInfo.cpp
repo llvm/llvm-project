@@ -5469,8 +5469,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
       Ty = CreateSelfType(VD->getType(), Ty);
 
   // Get location information.
-  const unsigned Line =
-      getLineNumber(Loc.isValid() ? Loc : CurLoc);
+  const unsigned Line = getLineNumber(Loc.isValid() ? Loc : CurLoc);
   unsigned Column = getColumnNumber(Loc);
 
   const llvm::DataLayout &target = CGM.getDataLayout();
@@ -5579,7 +5578,8 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
   const BlockDecl *blockDecl = block.getBlockDecl();
 
   // Collect some general information about the block's location.
-  SourceLocation loc = getRefinedSpellingLocation(blockDecl->getCaretLocation());
+  SourceLocation loc =
+      getRefinedSpellingLocation(blockDecl->getCaretLocation());
   llvm::DIFile *tunit = getOrCreateFile(loc);
   unsigned line = getLineNumber(loc);
   unsigned column = getColumnNumber(loc);
@@ -6111,8 +6111,8 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
     }
 
   GV.reset(DBuilder.createGlobalVariableExpression(
-      DContext, Name, StringRef(), Unit, getLineNumber(Loc), Ty,
-      true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
+      DContext, Name, StringRef(), Unit, getLineNumber(Loc), Ty, true, true,
+      InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       TemplateParameters, Align));
 }
 
@@ -6131,8 +6131,8 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
   llvm::DIScope *DContext = getDeclContextDescriptor(D);
   llvm::DIGlobalVariableExpression *GVE =
       DBuilder.createGlobalVariableExpression(
-          DContext, Name, StringRef(), Unit, getLineNumber(Loc),
-          Ty, false, false, nullptr, nullptr, nullptr, Align);
+          DContext, Name, StringRef(), Unit, getLineNumber(Loc), Ty, false,
+          false, nullptr, nullptr, nullptr, Align);
   Var->addDebugInfo(GVE);
 }
 
@@ -6228,8 +6228,8 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
   llvm::DIFile *File = getOrCreateFile(Loc);
   llvm::DIGlobalVariableExpression *Debug =
       DBuilder.createGlobalVariableExpression(
-          nullptr, StringRef(), StringRef(), File,
-          getLineNumber(Loc), getOrCreateType(S->getType(), File), true);
+          nullptr, StringRef(), StringRef(), File, getLineNumber(Loc),
+          getOrCreateType(S->getType(), File), true);
   GV->addDebugInfo(Debug);
 }
 
