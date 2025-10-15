@@ -5188,32 +5188,6 @@ struct AADereferenceableCallSiteReturned final
 
 namespace {
 
-Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
-                                const IntrinsicInst &II) {
-  switch (II.getIntrinsicID()) {
-  case Intrinsic::ptrmask: {
-    const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
-        QueryingAA, IRPosition::value(*II.getOperand(1)), DepClassTy::NONE);
-    // Is it appropriate to pull attribute in initialization?
-    const auto *AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(II),
-                                              DepClassTy::NONE);
-    if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
-      unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
-                                     Value::MaxAlignmentExponent);
-      Align ConstAlign(UINT64_C(1) << ShiftValue);
-      if (ConstAlign >= AlignAA->getKnownAlign())
-        return Align(1);
-    }
-    if (AlignAA)
-      return AlignAA->getKnownAlign();
-    break;
-  }
-  default:
-    break;
-  }
-  return Align(1);
-}
-
 Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
                                   const IntrinsicInst &II) {
   Align Alignment;
@@ -5256,7 +5230,27 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
     return 0;
   }
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    return getKnownAlignForIntrinsic(A, QueryingAA, *II).value();
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::ptrmask: {
+      // Is it appropriate to pull attribute in initialization?
+      const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+          QueryingAA, IRPosition::value(*II->getOperand(1)), DepClassTy::NONE);
+      const auto *AlignAA = A.getAAFor<AAAlign>(
+          QueryingAA, IRPosition::value(*II), DepClassTy::NONE);
+      if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
+        unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
+                                       Value::MaxAlignmentExponent);
+        Align ConstAlign(UINT64_C(1) << ShiftValue);
+        if (ConstAlign >= AlignAA->getKnownAlign())
+          return Align(1).value();
+      }
+      if (AlignAA)
+        return AlignAA->getKnownAlign().value();
+      break;
+    }
+    default:
+      break;
+    }
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
