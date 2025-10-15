@@ -2087,15 +2087,16 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
                                     // escaping values in the new `WarpOp`.
     SmallVector<Value> newForOpOperands;
     for (size_t i = initArgsStartIdx; i < escapingValuesStartIdx; ++i)
-      newForOpOperands.push_back(newWarpOp.getResult(i));
+      newForOpOperands.push_back(newWarpOp.getResult(newIndices[i]));
 
     // Create a new `ForOp` outside the new `WarpOp` region.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
     auto newForOp = scf::ForOp::create(
-        rewriter, forOp.getLoc(), /**LowerBound=**/ newWarpOp.getResult(0),
-        /**UpperBound=**/ newWarpOp.getResult(1),
-        /**Step=**/ newWarpOp.getResult(2), newForOpOperands,
+        rewriter, forOp.getLoc(),
+        /**LowerBound=**/ newWarpOp.getResult(newIndices[0]),
+        /**UpperBound=**/ newWarpOp.getResult(newIndices[1]),
+        /**Step=**/ newWarpOp.getResult(newIndices[2]), newForOpOperands,
         /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
     // Next, we insert a new `WarpOp` (called inner `WarpOp`) inside the
     // newly created `ForOp`. This `WarpOp` will contain all ops that were
