@@ -568,6 +568,18 @@ llvm.func @clusterlaunchcontrol_query_cancel_get_first_cta_id_invalid_return_typ
   llvm.return
 }
 
+// -----
+
+// Test that ensures invalid row/col layouts for matrices A and B are not accepted
+llvm.func @nvvm_mma_m16n8k32_s4_s4(%a0 : i32, %a1 : i32, %b0 : i32, %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32,i32,i32,i32)> {
+  // expected-error@+1 {{Only m8n8k4 with f16 supports other layouts.}}
+  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
+    {layoutA = #nvvm.mma_layout<col>, layoutB = #nvvm.mma_layout<col>,
+     multiplicandAPtxType = #nvvm.mma_type<s4>, multiplicandBPtxType = #nvvm.mma_type<s4>,
+     intOverflowBehavior=#nvvm.mma_int_overflow<satfinite>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 32>} : (i32, i32, i32) -> !llvm.struct<(i32,i32,i32,i32)>
+  llvm.return %0 : !llvm.struct<(i32,i32,i32,i32)>
+}
 
 // -----
 
