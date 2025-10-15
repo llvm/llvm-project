@@ -917,6 +917,14 @@ let ParentPackage = Security in {
 
   def ArrayBoundChecker : Checker<"ArrayBound">,
                           HelpText<"Warn about out of bounds access to memory">,
+                            CheckerOptions<[
+                              CmdLineOption<Boolean,
+                                            "AggressiveReport",
+                                            "Treat all unknown values as tainted and report a waning if"
+                                            "such values are used as offsets to access array elements",
+                                            "false",
+                                            InAlpha>
+                          ]>,
                           Documentation<HasDocumentation>;
 
   def FloatLoopCounter

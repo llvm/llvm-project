@@ -177,6 +177,10 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   static bool isInAddressOf(const Stmt *S, ASTContext &AC);
 
 public:
+  // When this parameter is set to true, the checker treats all
+  // unknown values as tainted and reports wanings if such values
+  // are used as offsets to access array elements
+  bool IsAggressive = false;
   void checkPostStmt(const ArraySubscriptExpr *E, CheckerContext &C) const {
     performCheck(E, C);
   }
@@ -696,27 +700,36 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }
-      // ...and it can be valid as well...
-      if (isTainted(State, ByteOffset)) {
-        // ...but it's tainted, so report an error.
+      if (!IsAggressive) {
+        // ...and it can be valid as well...
+        if (isTainted(State, ByteOffset)) {
+          // ...but it's tainted, so report an error.
 
-        // Diagnostic detail: saying "tainted offset" is always correct, but
-        // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
-        // nicer to say "tainted index".
-        const char *OffsetName = "offset";
-        if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-          if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
-            OffsetName = "index";
+          // Diagnostic detail: saying "tainted offset" is always correct, but
+          // the common case is that 'idx' is tainted in 'arr[idx]' and then
+          // it's nicer to say "tainted index".
+          const char *OffsetName = "offset";
+          if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+            if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
+              OffsetName = "index";
 
+          Messages Msgs =
+              getTaintMsgs(Space, Reg, OffsetName, AlsoMentionUnderflow);
+          reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
+                    /*IsTaintBug=*/true);
+          return;
+        }
+
+        // ...and it isn't tainted, so the checker will (optimistically) assume
+        // that the offset is in bounds and mention this in the note tag.
+        SUR.recordUpperBoundAssumption(*KnownSize);
+      } else {
         Messages Msgs =
-            getTaintMsgs(Space, Reg, OffsetName, AlsoMentionUnderflow);
+            getTaintMsgs(Space, Reg, "offset", AlsoMentionUnderflow);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
                   /*IsTaintBug=*/true);
         return;
       }
-      // ...and it isn't tainted, so the checker will (optimistically) assume
-      // that the offset is in bounds and mention this in the note tag.
-      SUR.recordUpperBoundAssumption(*KnownSize);
     }
 
     // Actually update the state. The "if" only fails in the extremely unlikely
@@ -837,7 +850,9 @@ bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
 }
 
 void ento::registerArrayBoundChecker(CheckerManager &mgr) {
-  mgr.registerChecker<ArrayBoundChecker>();
+  ArrayBoundChecker *checker = mgr.registerChecker<ArrayBoundChecker>();
+  checker->IsAggressive = mgr.getAnalyzerOptions().getCheckerBooleanOption(
+      checker, "AggressiveReport");
 }
 
 bool ento::shouldRegisterArrayBoundChecker(const CheckerManager &mgr) {
