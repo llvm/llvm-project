@@ -48966,9 +48966,16 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
         DAG.ComputeNumSignBits(BC) > (BCNumEltBits - NumEltBits)) {
       SDLoc DL(EFLAGS);
       APInt CmpMask = APInt::getLowBitsSet(32, IsAnyOf ? 0 : BCNumElts);
-      return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
-                         DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BC),
-                         DAG.getConstant(CmpMask, DL, MVT::i32));
+      if (CmpMask.isZero()) {
+        return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
+                           DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BC),
+                           DAG.getConstant(CmpMask, DL, MVT::i32));
+      } else {
+        SDVTList CmpVTs = DAG.getVTList(MVT::i32, MVT::i32);
+        return DAG.getNode(X86ISD::SUB, DL, CmpVTs,
+                           DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BC),
+                           DAG.getConstant(CmpMask, DL, MVT::i32)).getValue(1);
+      }
     }
   }
 
@@ -48987,9 +48994,16 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
                               DAG.getBitcast(SubVT, Ops[0]),
                               DAG.getBitcast(SubVT, Ops[1]));
       V = DAG.getBitcast(VecVT.getHalfNumVectorElementsVT(), V);
-      return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
-                         DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V),
-                         DAG.getConstant(CmpMask, DL, MVT::i32));
+      if (CmpMask.isZero()) {
+        return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
+                           DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V),
+                           DAG.getConstant(CmpMask, DL, MVT::i32));
+      } else {
+        SDVTList CmpVTs = DAG.getVTList(MVT::i32, MVT::i32);
+        return DAG.getNode(X86ISD::SUB, DL, CmpVTs,
+                           DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V),
+                           DAG.getConstant(CmpMask, DL, MVT::i32)).getValue(1);
+      }
     }
   }
 
@@ -49072,8 +49086,14 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
           Result = DAG.getNode(ISD::AND, DL, MVT::i32, Result,
                                DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
         }
-        return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
-                           DAG.getConstant(CmpMask, DL, MVT::i32));
+        if (CmpMask == 0) {
+          return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
+                             DAG.getConstant(CmpMask, DL, MVT::i32));
+        } else {
+          SDVTList CmpVTs = DAG.getVTList(MVT::i32, MVT::i32);
+          return DAG.getNode(X86ISD::SUB, DL, CmpVTs, Result,
+                             DAG.getConstant(CmpMask, DL, MVT::i32)).getValue(1);
+        }
       }
     }
   }
@@ -49106,7 +49126,13 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
     Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
     Result =
         DAG.getZExtOrTrunc(Result, DL, EFLAGS.getOperand(0).getValueType());
-    return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result, EFLAGS.getOperand(1));
+    SDValue CmpVal = EFLAGS.getOperand(1);
+    if (isNullConstant(CmpVal)) {
+      return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result, CmpVal);
+    } else {
+      SDVTList CmpVTs = DAG.getVTList(Result.getValueType(), MVT::i32);
+      return DAG.getNode(X86ISD::SUB, DL, CmpVTs, Result, CmpVal).getValue(1);
+    }
   }
 
   // MOVMSKPS(V) !=/== 0 -> TESTPS(V,V)
