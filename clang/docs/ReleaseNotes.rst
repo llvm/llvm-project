@@ -613,6 +613,9 @@ Crash and bug fixes
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 
+- Fixed a crash when analyzing default bindings as compound literals in
+  designated initializers for bitfields in unions. (#GH146050)
+
 Improvements
 ^^^^^^^^^^^^
 
