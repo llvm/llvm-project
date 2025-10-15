@@ -2469,6 +2469,7 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
 
 void SelectionDAGISel::Select_INLINEASM(SDNode *N) {
   SDLoc DL(N);
+
   std::vector<SDValue> Ops(N->op_begin(), N->op_end());
   SelectInlineAsmMemoryOperands(Ops, DL);
 
