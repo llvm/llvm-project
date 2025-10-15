@@ -9458,8 +9458,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
-    // Unless we have the short forward branch optimization.
-    if (!Subtarget.hasConditionalMoveFusion())
+    // Unless we have the short forward branch optimization or CondV has one use
+    // when optimizaing for size.
+    if (!Subtarget.hasConditionalMoveFusion() &&
+        (!DAG.shouldOptForSize() ||
+         (DAG.shouldOptForSize() && CondV.hasOneUse())))
       return DAG.getNode(
           ISD::OR, DL, VT,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),

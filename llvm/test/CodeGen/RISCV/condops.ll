@@ -1364,12 +1364,13 @@ define i64 @basic_optsize(i1 zeroext %rc, i64 %rs1, i64 %rs2) optsize {
 ;
 ; RV32XVENTANACONDOPS-LABEL: basic_optsize:
 ; RV32XVENTANACONDOPS:       # %bb.0:
-; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a3, a3, a0
-; RV32XVENTANACONDOPS-NEXT:    vt.maskc a1, a1, a0
-; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a4, a4, a0
-; RV32XVENTANACONDOPS-NEXT:    vt.maskc a2, a2, a0
-; RV32XVENTANACONDOPS-NEXT:    or a0, a1, a3
-; RV32XVENTANACONDOPS-NEXT:    or a1, a2, a4
+; RV32XVENTANACONDOPS-NEXT:    bnez a0, .LBB23_2
+; RV32XVENTANACONDOPS-NEXT:  # %bb.1:
+; RV32XVENTANACONDOPS-NEXT:    mv a1, a3
+; RV32XVENTANACONDOPS-NEXT:    mv a2, a4
+; RV32XVENTANACONDOPS-NEXT:  .LBB23_2:
+; RV32XVENTANACONDOPS-NEXT:    mv a0, a1
+; RV32XVENTANACONDOPS-NEXT:    mv a1, a2
 ; RV32XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XVENTANACONDOPS-LABEL: basic_optsize:
@@ -1387,12 +1388,13 @@ define i64 @basic_optsize(i1 zeroext %rc, i64 %rs1, i64 %rs2) optsize {
 ;
 ; RV32ZICOND-LABEL: basic_optsize:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    czero.nez a3, a3, a0
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a0
-; RV32ZICOND-NEXT:    czero.nez a4, a4, a0
-; RV32ZICOND-NEXT:    czero.eqz a2, a2, a0
-; RV32ZICOND-NEXT:    or a0, a1, a3
-; RV32ZICOND-NEXT:    or a1, a2, a4
+; RV32ZICOND-NEXT:    bnez a0, .LBB23_2
+; RV32ZICOND-NEXT:  # %bb.1:
+; RV32ZICOND-NEXT:    mv a1, a3
+; RV32ZICOND-NEXT:    mv a2, a4
+; RV32ZICOND-NEXT:  .LBB23_2:
+; RV32ZICOND-NEXT:    mv a0, a1
+; RV32ZICOND-NEXT:    mv a1, a2
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: basic_optsize:
