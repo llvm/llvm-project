@@ -411,15 +411,6 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
-  fprintf(stderr, "Printing Inline ASM:\n");
-  MI->dump();
-  fprintf(stderr, "Operand #%i to be printed:\n", OpNo);
-  MI->getOperand(OpNo).dump();
-  for(int i = 0; i < MI->getNumOperands(); i++) {
-    if (i == OpNo) continue;
-    fprintf(stderr, "Other Operand #%i:\n", i);
-    MI->getOperand(i).dump();
-  }
   auto reportAsmMemError = [&] (StringRef errMsg) {
     const char *AsmStr = MI->getOperand(0).getSymbolName();
     const MDNode *LocMD = MI->getLocCookieMD();
@@ -431,7 +422,6 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
     return true;
   };
   if (ExtraCode && ExtraCode[0]) {
-    fprintf(stderr, "ExtraCode[0] is %c\n", ExtraCode[0]);
     if (ExtraCode[1] != 0)
       return reportAsmMemError("Unknown modifier in inline asm:");
 

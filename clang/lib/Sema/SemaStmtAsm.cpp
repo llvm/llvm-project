@@ -306,9 +306,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     std::string ConstraintStr =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
 
-    fprintf(stderr, "Expr: ");
-    Exprs[i]->dump();
-        TargetInfo::ConstraintInfo Info(ConstraintStr, OutputName);
+    TargetInfo::ConstraintInfo Info(ConstraintStr, OutputName);
     if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
         !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice)) {
       targetDiag(Constraint->getBeginLoc(),

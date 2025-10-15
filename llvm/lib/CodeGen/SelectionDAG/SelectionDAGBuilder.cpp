@@ -10296,8 +10296,6 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       }
 
-      fprintf(stderr,"ConstraintType: %i\n",OpInfo.ConstraintType);
-      fprintf(stderr,"ConstraintCode: %s\n",OpInfo.ConstraintCode.c_str());
       // Treat indirect 'X' constraint as memory.
       if (OpInfo.ConstraintType == TargetLowering::C_Other &&
           OpInfo.isIndirect)
@@ -10380,8 +10378,6 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       }
 
-      fprintf(stderr,"ConstraintType: %i\n",OpInfo.ConstraintType);
-      fprintf(stderr,"ConstraintCode: %s\n",OpInfo.ConstraintCode.c_str());
       if (OpInfo.ConstraintType != TargetLowering::C_RegisterClass &&
           OpInfo.ConstraintType != TargetLowering::C_Register) {
         emitInlineAsmError(Call, "unknown asm constraint '" +

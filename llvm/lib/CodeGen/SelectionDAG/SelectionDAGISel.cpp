@@ -2300,10 +2300,6 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
   while (i != e) {
     InlineAsm::Flag Flags(Ops[i]->getAsZExtVal());
-    fprintf(stderr,"inlineasm nodes during select:");
-    Ops[i].dump();
-    fprintf(stderr,"Op %x flag kind:%s\n", i, Flags.getKindName().str().c_str());
-    Ops[i + 1].dump();
     if (!Flags.isMemKind() && !Flags.isFuncKind()) {
       // Just skip over this operand, copying the operands verbatim.
       Handles.insert(Handles.end(), Ops.begin() + i,
@@ -2328,8 +2324,6 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
       std::vector<SDValue> SelOps;
       const InlineAsm::ConstraintCode ConstraintID =
           Flags.getMemoryConstraintID();
-      fprintf(stderr,"inlineasm node during target select:");
-      Ops[i + 1].dump();
       if (SelectInlineAsmMemoryOperand(Ops[i + 1], ConstraintID, SelOps))
         report_fatal_error("Could not match memory address.  Inline asm"
                            " failure!");
@@ -2475,8 +2469,6 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
 
 void SelectionDAGISel::Select_INLINEASM(SDNode *N) {
   SDLoc DL(N);
-  fprintf(stderr,"inlineasm node before select:");
-  N->dump();
   std::vector<SDValue> Ops(N->op_begin(), N->op_end());
   SelectInlineAsmMemoryOperands(Ops, DL);
 
@@ -2485,8 +2477,6 @@ void SelectionDAGISel::Select_INLINEASM(SDNode *N) {
   New->setNodeId(-1);
   ReplaceUses(N, New.getNode());
   CurDAG->RemoveDeadNode(N);
-  fprintf(stderr,"inlineasm node after select:");
-  New->dump();
 }
 
 void SelectionDAGISel::Select_READ_REGISTER(SDNode *Op) {
