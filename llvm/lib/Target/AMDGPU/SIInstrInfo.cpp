@@ -3408,7 +3408,7 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 }
 
-bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) const {
+bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B16_t16_e32:
   case AMDGPU::V_MOV_B32_e32:
@@ -3951,13 +3951,12 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   return false;
 }
 
-bool SIInstrInfo::getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
-                                 int64_t &Imm,
-                                 MachineInstr **DefMI = nullptr) const {
+static bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
+                           int64_t &Imm, MachineInstr **DefMI = nullptr) {
   if (Reg.isPhysical())
     return false;
   auto *Def = MRI.getUniqueVRegDef(Reg);
-  if (Def && isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
+  if (Def && SIInstrInfo::isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
     Imm = Def->getOperand(1).getImm();
     if (DefMI)
       *DefMI = Def;
@@ -3966,8 +3965,8 @@ bool SIInstrInfo::getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
   return false;
 }
 
-bool SIInstrInfo::getFoldableImm(const MachineOperand *MO, int64_t &Imm,
-                                 MachineInstr **DefMI = nullptr) const {
+static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm,
+                           MachineInstr **DefMI = nullptr) {
   if (!MO->isReg())
     return false;
   const MachineFunction *MF = MO->getParent()->getParent()->getParent();
@@ -4691,12 +4690,12 @@ bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
 }
 
 bool SIInstrInfo::hasModifiersSet(const MachineInstr &MI,
-                                  AMDGPU::OpName OpName) const {
+                                  AMDGPU::OpName OpName) {
   const MachineOperand *Mods = getNamedOperand(MI, OpName);
   return Mods && Mods->getImm();
 }
 
-bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) const {
+bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) {
   return any_of(ModifierOpNames,
                 [&](AMDGPU::OpName Name) { return hasModifiersSet(MI, Name); });
 }
@@ -9338,7 +9337,7 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
 }
 
 MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
-                                             AMDGPU::OpName OperandName) const {
+                                             AMDGPU::OpName OperandName) {
   if (OperandName == AMDGPU::OpName::NUM_OPERAND_NAMES)
     return nullptr;
 
@@ -10619,11 +10618,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     int64_t Mask;
-    const auto isMask = [&Mask, SrcSize,
-                         this](const MachineOperand *MO) -> bool {
+    const auto isMask = [&Mask, SrcSize](const MachineOperand *MO) -> bool {
       if (MO->isImm())
         Mask = MO->getImm();
-      else if (!this->getFoldableImm(MO, Mask))
+      else if (!getFoldableImm(MO, Mask))
         return false;
       Mask &= maxUIntN(SrcSize);
       return isPowerOf2_64(Mask);
