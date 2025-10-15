@@ -87,6 +87,12 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+static cl::opt<bool> EnablePExtCodeGen(
+    DEBUG_TYPE "-enable-p-ext-codegen", cl::Hidden,
+    cl::desc("Turn on P Extension codegen(This is a temporary switch where "
+             "only partial codegen is currently supported."),
+    cl::init(false));
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -280,7 +286,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // fixed vector is stored in GPRs for P extension packed operations
-  if (Subtarget.hasStdExtP()) {
+  if (Subtarget.hasStdExtP() && EnablePExtCodeGen) {
     addRegisterClass(MVT::v2i16, &RISCV::GPRRegClass);
     addRegisterClass(MVT::v4i8, &RISCV::GPRRegClass);
     if (Subtarget.is64Bit()) {
@@ -490,7 +496,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
 
-  if (Subtarget.hasStdExtP()) {
+  if (Subtarget.hasStdExtP() && EnablePExtCodeGen) {
     setTargetDAGCombine(ISD::TRUNCATE);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
@@ -4349,7 +4355,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
   // Handle P extension packed vector BUILD_VECTOR with PLI for splat constants
-  if (Subtarget.hasStdExtP()) {
+  if (Subtarget.hasStdExtP() && EnablePExtCodeGen) {
     bool IsPExtVector =
         (VT == MVT::v2i16 || VT == MVT::v4i8) ||
         (Subtarget.is64Bit() &&
@@ -16151,7 +16157,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (Subtarget.hasStdExtP() && VT.isFixedLengthVector())
+  if (Subtarget.hasStdExtP() && VT.isFixedLengthVector() && EnablePExtCodeGen)
     return combinePExtTruncate(N, DAG, Subtarget);
 
   // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
