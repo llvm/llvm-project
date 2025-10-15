@@ -479,8 +479,7 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
 
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
                                PredicatedScalarEvolution &PSE, Loop *TheLoop) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
 
   auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
   canonicalHeaderAndLatch(HeaderVPBB, VPDT);
@@ -622,8 +621,7 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan,
 }
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
   for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);

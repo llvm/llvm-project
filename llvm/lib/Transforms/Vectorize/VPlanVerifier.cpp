@@ -489,8 +489,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 }
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(const_cast<VPlan &>(Plan));
+  VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPTypeAnalysis TypeInfo(Plan);
   VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
   return Verifier.verify(Plan);

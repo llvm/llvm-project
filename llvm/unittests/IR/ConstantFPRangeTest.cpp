@@ -8,6 +8,7 @@
 
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "gtest/gtest.h"
@@ -1063,6 +1064,181 @@ TEST_F(ConstantFPRangeTest, sub) {
       },
       SparseLevel::SpecialValuesOnly);
 #endif
+}
+
+TEST_F(ConstantFPRangeTest, mul) {
+  EXPECT_EQ(Full.mul(Full), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(Full.mul(Empty), Empty);
+  EXPECT_EQ(Empty.mul(Full), Empty);
+  EXPECT_EQ(Empty.mul(Empty), Empty);
+  EXPECT_EQ(One.mul(One), ConstantFPRange(APFloat(1.0)));
+  EXPECT_EQ(Some.mul(Some),
+            ConstantFPRange::getNonNaN(APFloat(-9.0), APFloat(9.0)));
+  EXPECT_EQ(SomePos.mul(SomeNeg),
+            ConstantFPRange::getNonNaN(APFloat(-9.0), APFloat(-0.0)));
+  EXPECT_EQ(PosInf.mul(PosInf), PosInf);
+  EXPECT_EQ(NegInf.mul(NegInf), PosInf);
+  EXPECT_EQ(PosInf.mul(Finite), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(NegInf.mul(Finite), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(PosInf.mul(NegInf), NegInf);
+  EXPECT_EQ(NegInf.mul(PosInf), NegInf);
+  EXPECT_EQ(PosZero.mul(NegZero), NegZero);
+  EXPECT_EQ(PosZero.mul(Zero), Zero);
+  EXPECT_EQ(NegZero.mul(NegZero), PosZero);
+  EXPECT_EQ(NegZero.mul(Zero), Zero);
+  EXPECT_EQ(NaN.mul(NaN), QNaN);
+  EXPECT_EQ(NaN.mul(Finite), QNaN);
+
+#if defined(EXPENSIVE_CHECKS)
+  EnumerateTwoInterestingConstantFPRanges(
+      [](const ConstantFPRange &LHS, const ConstantFPRange &RHS) {
+        ConstantFPRange Res = LHS.mul(RHS);
+        ConstantFPRange Expected =
+            ConstantFPRange::getEmpty(LHS.getSemantics());
+        EnumerateValuesInConstantFPRange(
+            LHS,
+            [&](const APFloat &LHSC) {
+              EnumerateValuesInConstantFPRange(
+                  RHS,
+                  [&](const APFloat &RHSC) {
+                    APFloat Prod = LHSC * RHSC;
+                    EXPECT_TRUE(Res.contains(Prod))
+                        << "Wrong result for " << LHS << " * " << RHS
+                        << ". The result " << Res << " should contain " << Prod;
+                    if (!Expected.contains(Prod))
+                      Expected = Expected.unionWith(ConstantFPRange(Prod));
+                  },
+                  /*IgnoreNaNPayload=*/true);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for " << LHS << " * " << RHS << ". Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
+#endif
+}
+
+TEST_F(ConstantFPRangeTest, div) {
+  EXPECT_EQ(Full.div(Full), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(Full.div(Empty), Empty);
+  EXPECT_EQ(Empty.div(Full), Empty);
+  EXPECT_EQ(Empty.div(Empty), Empty);
+  EXPECT_EQ(One.div(One), ConstantFPRange(APFloat(1.0)));
+  EXPECT_EQ(Some.div(Some), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(SomePos.div(SomeNeg),
+            ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/true),
+                            APFloat::getZero(Sem, /*Negative=*/true),
+                            /*MayBeQNaN=*/true, /*MayBeSNaN=*/false));
+  EXPECT_EQ(PosInf.div(PosInf), QNaN);
+  EXPECT_EQ(NegInf.div(NegInf), QNaN);
+  EXPECT_EQ(PosInf.div(Finite), NonNaN);
+  EXPECT_EQ(NegInf.div(Finite), NonNaN);
+  EXPECT_EQ(PosInf.div(NegInf), QNaN);
+  EXPECT_EQ(NegInf.div(PosInf), QNaN);
+  EXPECT_EQ(Zero.div(Zero), QNaN);
+  EXPECT_EQ(SomePos.div(PosInf), PosZero);
+  EXPECT_EQ(SomeNeg.div(PosInf), NegZero);
+  EXPECT_EQ(PosInf.div(SomePos), PosInf);
+  EXPECT_EQ(NegInf.div(SomeNeg), PosInf);
+  EXPECT_EQ(NegInf.div(Some), NonNaN);
+  EXPECT_EQ(NaN.div(NaN), QNaN);
+  EXPECT_EQ(NaN.div(Finite), QNaN);
+
+#if defined(EXPENSIVE_CHECKS)
+  EnumerateTwoInterestingConstantFPRanges(
+      [](const ConstantFPRange &LHS, const ConstantFPRange &RHS) {
+        ConstantFPRange Res = LHS.div(RHS);
+        ConstantFPRange Expected =
+            ConstantFPRange::getEmpty(LHS.getSemantics());
+        EnumerateValuesInConstantFPRange(
+            LHS,
+            [&](const APFloat &LHSC) {
+              EnumerateValuesInConstantFPRange(
+                  RHS,
+                  [&](const APFloat &RHSC) {
+                    APFloat Val = LHSC / RHSC;
+                    EXPECT_TRUE(Res.contains(Val))
+                        << "Wrong result for " << LHS << " / " << RHS
+                        << ". The result " << Res << " should contain " << Val;
+                    if (!Expected.contains(Val))
+                      Expected = Expected.unionWith(ConstantFPRange(Val));
+                  },
+                  /*IgnoreNaNPayload=*/true);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for " << LHS << " / " << RHS << ". Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
+#endif
+}
+
+TEST_F(ConstantFPRangeTest, flushDenormals) {
+  const fltSemantics &FP8Sem = APFloat::Float8E4M3();
+  APFloat NormalVal = APFloat::getSmallestNormalized(FP8Sem);
+  APFloat Subnormal1 = NormalVal;
+  Subnormal1.next(/*nextDown=*/true);
+  APFloat Subnormal2 = APFloat::getSmallest(FP8Sem);
+  APFloat ZeroVal = APFloat::getZero(FP8Sem);
+  APFloat EdgeValues[8] = {-NormalVal, -Subnormal1, -Subnormal2, -ZeroVal,
+                           ZeroVal,    Subnormal2,  Subnormal1,  NormalVal};
+  constexpr DenormalMode::DenormalModeKind Modes[4] = {
+      DenormalMode::IEEE, DenormalMode::PreserveSign,
+      DenormalMode::PositiveZero, DenormalMode::Dynamic};
+  for (uint32_t I = 0; I != 8; ++I) {
+    for (uint32_t J = I; J != 8; ++J) {
+      ConstantFPRange OriginCR =
+          ConstantFPRange::getNonNaN(EdgeValues[I], EdgeValues[J]);
+      for (auto Mode : Modes) {
+        StringRef ModeName = denormalModeKindName(Mode);
+        ConstantFPRange FlushedCR = OriginCR;
+        FlushedCR.flushDenormals(Mode);
+
+        ConstantFPRange Expected = ConstantFPRange::getEmpty(FP8Sem);
+        auto CheckFlushedV = [&](const APFloat &V, const APFloat &FlushedV) {
+          EXPECT_TRUE(FlushedCR.contains(FlushedV))
+              << "Wrong result for flushDenormal(" << V << ", " << ModeName
+              << "). The result " << FlushedCR << " should contain "
+              << FlushedV;
+          if (!Expected.contains(FlushedV))
+            Expected = Expected.unionWith(ConstantFPRange(FlushedV));
+        };
+        EnumerateValuesInConstantFPRange(
+            OriginCR,
+            [&](const APFloat &V) {
+              if (V.isDenormal()) {
+                switch (Mode) {
+                case DenormalMode::IEEE:
+                  break;
+                case DenormalMode::PreserveSign:
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem, V.isNegative()));
+                  break;
+                case DenormalMode::PositiveZero:
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem));
+                  break;
+                case DenormalMode::Dynamic:
+                  // PreserveSign
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem, V.isNegative()));
+                  // PositiveZero
+                  CheckFlushedV(V, APFloat::getZero(FP8Sem));
+                  break;
+                default:
+                  llvm_unreachable("unknown denormal mode");
+                }
+              }
+              // It is not mandated that flushing to zero occurs.
+              CheckFlushedV(V, V);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(FlushedCR, Expected)
+            << "Suboptimal result for flushDenormal(" << OriginCR << ", "
+            << ModeName << "). Expected " << Expected << ", but got "
+            << FlushedCR;
+      }
+    }
+  }
 }
 
 } // anonymous namespace
