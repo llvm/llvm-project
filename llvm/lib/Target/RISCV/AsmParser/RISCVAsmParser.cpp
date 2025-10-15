@@ -3356,10 +3356,10 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
 
 bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
   return StringSwitch<bool>(Format)
-      .Cases("r", "r4", "i", "b", "sb", "u", "j", "uj", "s", true)
-      .Cases("cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj",
+      .Cases({"r", "r4", "i", "b", "sb", "u", "j", "uj", "s"}, true)
+      .Cases({"cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj"},
              STI.hasFeature(RISCV::FeatureStdExtZca))
-      .Cases("qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es",
+      .Cases({"qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es"},
              !STI.hasFeature(RISCV::Feature64Bit))
       .Default(false);
 }
