@@ -5,6 +5,8 @@
 
 import argparse
 import os
+import platform
+import sys
 
 import requests
 
@@ -45,5 +47,10 @@ if __name__ == "__main__":
         "build_log_files", help="Paths to JUnit report files and ninja logs.", nargs="*"
     )
     args = parser.parse_args()
+
+    # Skip uploading results on AArch64 for now because the premerge advisor
+    # service is not available on AWS currently.
+    if platform.machine() == "arm64":
+        sys.exit(0)
 
     main(args.commit_sha, args.workflow_run_number, args.build_log_files)
