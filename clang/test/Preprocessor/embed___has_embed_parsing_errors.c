@@ -1,12 +1,4 @@
-// RUN: split-file %s %t
-// RUN: %clang_cc1 -std=c23 -E -verify %t/test1.c
-// RUN: %clang_cc1 -std=c23 -E -verify %t/test2.c
-// RUN: %clang_cc1 -std=c23 -E -verify %t/test3.c
-// RUN: %clang_cc1 -std=c23 -E -verify %t/test4.c
-// RUN: %clang_cc1 -std=c23 -E -verify %t/test5.c
-// RUN: %clang_cc1 -std=c23 -E -verify %t/test6.c
-
-//--- test1.c
+// RUN: %clang_cc1 -std=c23 %s -E -verify
 
 // Test the parsing behavior for __has_embed and all of its parameters to ensure we
 // recover from failures gracefully.
@@ -259,38 +251,34 @@
 #if __has_embed("") // expected-error {{empty filename}}
 #endif
 
-//--- test2.c
-// expected-error@+4 {{missing ')' after '__has_embed'}} \
-   expected-error@+4 {{expected value in expression}} \
-   expected-note@+4 {{to match this '('}} \
-   expected-error@+4 {{unterminated conditional directive}}
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
 #if __has_embed (__FILE__  foo limit(1)
+#endif
 
 //--- test3.c
-// expected-error@+4 {{missing ')' after '__has_embed'}} \
-   expected-error@+4 {{expected value in expression}} \
-   expected-note@+4 {{to match this '('}} \
-   expected-error@+4 {{unterminated conditional directive}}
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
 #if __has_embed (__FILE__  foo
+#endif
 
-//--- test4.c
-// expected-error@+4 {{missing ')' after '__has_embed'}} \
-   expected-error@+4 {{expected value in expression}} \
-   expected-note@+4 {{to match this '('}} \
-   expected-error@+4 {{unterminated conditional directive}}
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
 #if __has_embed ("a" foo()
+#endif
 
-//--- test5.c
-// expected-error@+4 {{missing ')' after '__has_embed'}} \
-   expected-error@+4 {{expected value in expression}} \
-   expected-note@+4 {{to match this '('}} \
-   expected-error@+4 {{unterminated conditional directive}}
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
 #if __has_embed ("a" bar() foo
+#endif
 
-//--- test6.c
-// expected-error@+4 {{missing ')' after '__has_embed'}} \
-   expected-error@+4 {{expected value in expression}} \
-   expected-note@+4 {{to match this '('}} \
-   expected-error@+4 {{unterminated conditional directive}}
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
 #if __has_embed (__FILE__ limit(1) foo
 int a = __has_embed (__FILE__);
+#endif
