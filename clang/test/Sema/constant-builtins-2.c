@@ -487,6 +487,13 @@ float h10 = __builtin_bswapg(1.0f); // expected-error {{1st argument must be a s
 double h12 = __builtin_bswapg(1.0L); // expected-error {{1st argument must be a scalar integer type (was 'long double')}}
 char *h13 = __builtin_bswapg("hello"); // expected-error {{1st argument must be a scalar integer type (was 'char[6]')}}
 int h14 = __builtin_bswapg(1, 2); // expected-error {{too many arguments to function call, expected 1, have 2}}
+int *h15 = __builtin_bswapg(&h9); // expected-error {{1st argument must be a scalar integer type (was 'int *')}}
+int arr[4] = {0x12, 0x34, 0x56, 0x78};
+int h16 = __builtin_bswapg(arr); // expected-error {{1st argument must be a scalar integer type (was 'int[4]')}}
+enum BasicEnum {
+  ENUM_VALUE1 = 0x1234,
+};
+int h17 = __builtin_bswapg(ENUM_VALUE1) == 0x34120000 ? 1 : f();
 extern long int bi0;
 extern __typeof__(__builtin_expect(0, 0)) bi0;
 

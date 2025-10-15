@@ -140,21 +140,63 @@ void test_argument_count_errors() {
 }
 
 void test_lvalue_reference(int& a) {
-    auto result = __builtin_bswapg(a);
-    static_assert(__is_same(int, decltype(result)), "Should decay reference to value type");
+  auto result = __builtin_bswapg(a);
+  static_assert(__is_same(int, decltype(result)), "Should decay reference to value type");
 }
 
 void test_const_lvalue_reference(const int& a) {
-    auto result = __builtin_bswapg(a);
-    static_assert(__is_same(int, decltype(result)), "Should decay const reference to value type");
+  auto result = __builtin_bswapg(a);
+  static_assert(__is_same(int, decltype(result)), "Should decay const reference to value type");
 }
 
 void test_rvalue_reference(int&& a) {
-    auto result = __builtin_bswapg(a);
-    static_assert(__is_same(int, decltype(result)), "Should decay rvalue reference to value type");
+  auto result = __builtin_bswapg(a);
+  static_assert(__is_same(int, decltype(result)), "Should decay rvalue reference to value type");
 }
 
 void test_const_rvalue_reference(const int&& a) {
-    auto result = __builtin_bswapg(a);
-    static_assert(__is_same(int, decltype(result)), "Should decay const rvalue reference to value type");
+	auto result = __builtin_bswapg(a);
+  static_assert(__is_same(int, decltype(result)), "Should decay const rvalue reference to value type");
+}
+
+void test_array() {
+  int arr[4] = {0x12, 0x34, 0x56, 0x78};
+	__builtin_bswapg(arr);
+	// expected-error@-1 {{1st argument must be a scalar integer type (was 'int[4]')}}
+}
+
+void test_pointer() {
+  int x = 0x12345678;
+	int *ptr = &x;
+	__builtin_bswapg(ptr);
+	// expected-error@-1 {{1st argument must be a scalar integer type (was 'int *')}}
+}
+
+enum BasicEnum {
+  ENUM_VALUE1 = 0x1234,
+  ENUM_VALUE2 = 0x34120000
+};
+
+void test_enum() {
+	const BasicEnum e = ENUM_VALUE1;
+	static_assert(__builtin_bswapg(e) == ENUM_VALUE2, "");
+}
+
+class testClass {
+public:
+  int value;
+  testClass(int v) : value(v) {}
+
+	int getValue() { return value; }
+};
+
+void test_class() {
+	testClass c((int)0x12345678);
+	__builtin_bswapg(c);
+	// expected-error@-1 {{1st argument must be a scalar integer type (was 'testClass')}}
+}
+
+void test_nullptr() {
+	__builtin_bswapg(nullptr);
+	// expected-error@-1 {{1st argument must be a scalar integer type (was 'std::nullptr_t')}}
 }
