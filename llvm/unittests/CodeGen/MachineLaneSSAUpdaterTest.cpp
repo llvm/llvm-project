@@ -32,6 +32,8 @@
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
+#define DEBUG_TYPE "machine-lane-ssa-updater-test"
+
 using namespace llvm;
 
 // TestPass needs to be defined outside anonymous namespace for INITIALIZE_PASS
@@ -297,13 +299,9 @@ TEST(MachineLaneSSAUpdaterTest, NewDefInsertsPhiAndRewritesUses) {
       EXPECT_TRUE(LIS.hasInterval(NewReg)) << "New register should have live interval";
       EXPECT_TRUE(LIS.hasInterval(OrigReg)) << "Original register should still have live interval";
       
-      // Note: MachineFunction verification happens in TestPassT::runOnMachineFunction
-      // If verification fails, print the MachineFunction for debugging
-      if (!MF.verify(nullptr, /* Banner=*/nullptr, /*OS=*/nullptr, /* AbortOnError=*/false)) {
-        llvm::errs() << "MachineFunction verification failed after SSA repair:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid after SSA repair
+      EXPECT_TRUE(MF.verify(nullptr, /* Banner=*/nullptr, /*OS=*/nullptr, /* AbortOnError=*/false))
+          << "MachineFunction verification failed after SSA repair";
     });
 }
 
@@ -405,7 +403,7 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
         ++UseCountBefore;
       }
       ASSERT_GT(UseCountBefore, 0u) << "Original register should have uses";
-      llvm::errs() << "Original register has " << UseCountBefore << " uses before SSA repair\n";
+      LLVM_DEBUG(dbgs() << "Original register has " << UseCountBefore << " uses before SSA repair\n");
       
       // Get V_MOV opcode from bb.0
       MachineBasicBlock *BB0 = MF.getBlockNumbered(0);
@@ -442,8 +440,8 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
           if (MI.isPHI()) {
             ++PHICount;
             ++BlockPHIs;
-            llvm::errs() << "Found PHI in BB#" << MBB.getNumber() << ": ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Found PHI in BB#" << MBB.getNumber() << ": ");
+            LLVM_DEBUG(MI.print(dbgs()));
           }
         }
         if (BlockPHIs > 0) {
@@ -451,15 +449,15 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
         }
       }
       
-      llvm::errs() << "Total PHI nodes inserted: " << PHICount << "\n";
+      LLVM_DEBUG(dbgs() << "Total PHI nodes inserted: " << PHICount << "\n");
       
       // Check for first PHI in bb.6 (joins bb.4 and bb.5)
       bool FoundPHIInBB6 = false;
       for (MachineInstr &MI : *BB6) {
         if (MI.isPHI()) {
           FoundPHIInBB6 = true;
-          llvm::errs() << "First PHI in bb.6: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "First PHI in bb.6: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           // Verify it has 2 incoming values (4 operands: 2 x (reg, mbb))
           unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
           EXPECT_EQ(NumIncoming, 2u) << "First PHI in bb.6 should have 2 incoming values (from bb.4 and bb.5)";
@@ -473,8 +471,8 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
       for (MachineInstr &MI : *BB7) {
         if (MI.isPHI()) {
           FoundPHIInBB7 = true;
-          llvm::errs() << "Second PHI in bb.7: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Second PHI in bb.7: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           // Verify it has 2 incoming values (4 operands: 2 x (reg, mbb))
           unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
           EXPECT_EQ(NumIncoming, 2u) << "Second PHI in bb.7 should have 2 incoming values (from bb.2 with %1 and bb.6 with first PHI result)";
@@ -490,12 +488,9 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
       EXPECT_TRUE(LIS.hasInterval(NewReg)) << "New register should have live interval";
       EXPECT_TRUE(LIS.hasInterval(OrigReg)) << "Original register should have live interval";
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -587,18 +582,18 @@ TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
       
       const TargetRegisterClass *RC64 = MRI.getRegClass(Reg64);
       ASSERT_EQ(TRI->getRegSizeInBits(*RC64), 64u) << "Register %3 should be 64-bit";
-      llvm::errs() << "Using 64-bit register: %" << Reg64.virtRegIndex() << " (raw: " << Reg64 << ")\n";
+      LLVM_DEBUG(dbgs() << "Using 64-bit register: %" << Reg64.virtRegIndex() << " (raw: " << Reg64 << ")\n");
       
       // Verify it has subranges for lane tracking
       ASSERT_TRUE(LIS.hasInterval(Reg64)) << "Register should have live interval";
       LiveInterval &LI = LIS.getInterval(Reg64);
       if (LI.hasSubRanges()) {
-        llvm::errs() << "Register has subranges (lane tracking active)\n";
+        LLVM_DEBUG(dbgs() << "Register has subranges (lane tracking active)\n");
         for (const LiveInterval::SubRange &SR : LI.subranges()) {
-          llvm::errs() << "  Lane mask: " << PrintLaneMask(SR.LaneMask) << "\n";
+          LLVM_DEBUG(dbgs() << "  Lane mask: " << PrintLaneMask(SR.LaneMask) << "\n");
         }
       } else {
-        llvm::errs() << "Warning: Register does not have subranges\n";
+        LLVM_DEBUG(dbgs() << "Warning: Register does not have subranges\n");
       }
       
       // Find the subreg index for a 32-bit subreg of the 64-bit register
@@ -612,8 +607,8 @@ TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
       }
       ASSERT_NE(Sub0Idx, 0u) << "Could not find 32-bit subregister index";
       LaneBitmask Sub0Mask = TRI->getSubRegIndexLaneMask(Sub0Idx);
-      llvm::errs() << "Sub0 index=" << Sub0Idx << " (" << TRI->getSubRegIndexName(Sub0Idx) 
-                   << "), mask=" << PrintLaneMask(Sub0Mask) << "\n";
+      LLVM_DEBUG(dbgs() << "Sub0 index=" << Sub0Idx << " (" << TRI->getSubRegIndexName(Sub0Idx)
+                   << "), mask=" << PrintLaneMask(Sub0Mask) << "\n");
       
       // Insert new definition in bb.3 that defines Reg64.sub0 (partial update, violating SSA)
       // Use V_MOV with immediate - no liveness dependencies
@@ -655,7 +650,7 @@ TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, Reg64);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << " (raw: " << NewReg << ")\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << " (raw: " << NewReg << ")\n");
       
       // VERIFY RESULTS:
       
@@ -676,8 +671,8 @@ TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
       for (MachineInstr &MI : *BB4) {
         if (MI.isPHI()) {
           FoundPHI = true;
-          llvm::errs() << "Found PHI in bb.4: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found PHI in bb.4: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           break;
         }
       }
@@ -686,12 +681,9 @@ TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
       // 4. Verify LiveIntervals are valid
       EXPECT_TRUE(LIS.hasInterval(NewReg)) << "New register should have live interval";
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -843,7 +835,7 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, RegX);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << " (raw: " << NewReg << ")\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << " (raw: " << NewReg << ")\n");
       
       // VERIFY RESULTS:
       
@@ -864,8 +856,8 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
         if (MI.isPHI()) {
           FoundPHI = true;
           PHIReg = MI.getOperand(0).getReg();
-          llvm::errs() << "PHI in bb.7 after SSA repair: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "PHI in bb.7 after SSA repair: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           break;
         }
       }
@@ -877,8 +869,8 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
       for (MachineInstr &MI : *BB6) {
         if (MI.getOpcode() == TargetOpcode::REG_SEQUENCE) {
           FoundREGSEQ = true;
-          llvm::errs() << "Found REG_SEQUENCE in bb.6: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found REG_SEQUENCE in bb.6: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           
           // Should combine new sub0 with original sub1
           EXPECT_GE(MI.getNumOperands(), 5u) << "REG_SEQUENCE should have result + 2 source pairs";
@@ -891,12 +883,9 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
       EXPECT_TRUE(LIS.hasInterval(NewReg));
       EXPECT_TRUE(LIS.hasInterval(PHIReg));
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -985,7 +974,7 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
       Register OrigReg = OrigDefMI->getOperand(0).getReg();
       ASSERT_TRUE(OrigReg.isValid()) << "Could not get original register";
       
-      llvm::errs() << "Original register: %" << OrigReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Original register: %" << OrigReg.virtRegIndex() << "\n");
       
       // Insert new definition in loop body (bb.2)
       // This violates SSA because %1 is defined both in bb.0 and bb.2
@@ -1008,7 +997,7 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
       // VERIFY RESULTS:
       
@@ -1024,8 +1013,8 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
       for (MachineInstr &MI : *BB1) {
         if (MI.isPHI()) {
           FoundPHIInHeader = true;
-          llvm::errs() << "Found PHI in loop header (bb.1): ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found PHI in loop header (bb.1): ");
+          LLVM_DEBUG(MI.print(dbgs()));
           
           // Verify PHI has 2 incoming values
           unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
@@ -1044,11 +1033,11 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
             if (IncomingMBB == BB0) {
               HasEntryPath = true;
               EXPECT_EQ(IncomingReg, OrigReg) << "Entry path should use OrigReg";
-              llvm::errs() << "  Entry path (bb.0): %" << IncomingReg.virtRegIndex() << "\n";
+              LLVM_DEBUG(dbgs() << "  Entry path (bb.0): %" << IncomingReg.virtRegIndex() << "\n");
             } else if (IncomingMBB == BB2) {
               HasBackEdge = true;
               EXPECT_EQ(IncomingReg, NewReg) << "Back edge should use NewReg";
-              llvm::errs() << "  Back edge (bb.2): %" << IncomingReg.virtRegIndex() << "\n";
+              LLVM_DEBUG(dbgs() << "  Back edge (bb.2): %" << IncomingReg.virtRegIndex() << "\n");
             }
           }
           
@@ -1064,12 +1053,9 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
       EXPECT_TRUE(LIS.hasInterval(NewReg));
       EXPECT_TRUE(LIS.hasInterval(OrigReg));
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -1194,7 +1180,7 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
       Register OrigReg = OrigDefMI->getOperand(0).getReg();
       ASSERT_TRUE(OrigReg.isValid()) << "Could not get original register X";
       
-      llvm::errs() << "Original register X: %" << OrigReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Original register X: %" << OrigReg.virtRegIndex() << "\n");
       
       // Find the use-before-def in bb.1 (loop header)
       MachineInstr *UseBeforeDefMI = nullptr;
@@ -1209,8 +1195,8 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
         }
       }
       ASSERT_TRUE(UseBeforeDefMI) << "Could not find use-before-def in loop header";
-      llvm::errs() << "Found use-before-def in bb.1: %"
-                   << UseBeforeDefMI->getOperand(0).getReg().virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Found use-before-def in bb.1: %"
+                   << UseBeforeDefMI->getOperand(0).getReg().virtRegIndex() << "\n");
       
       // Insert new definition in bb.3 (else branch): X = 99
       MachineInstr *MovInst = &*BB0->begin();
@@ -1232,7 +1218,7 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
       // VERIFY RESULTS:
       
@@ -1248,8 +1234,8 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
         if (MI.isPHI()) {
           FoundPHI1 = true;
           PHI1Reg = MI.getOperand(0).getReg();
-          llvm::errs() << "Found PHI1 in diamond join (bb.4): ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found PHI1 in diamond join (bb.4): ");
+          LLVM_DEBUG(MI.print(dbgs()));
           
           // Should have 2 incoming: OrigReg from bb.2, NewReg from bb.3
           unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
@@ -1266,7 +1252,7 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
         if (MI.isPHI())
           TotalPHICount++;
       }
-      llvm::errs() << "Total PHIs in loop header: " << TotalPHICount << "\n";
+      LLVM_DEBUG(dbgs() << "Total PHIs in loop header: " << TotalPHICount << "\n");
       EXPECT_EQ(TotalPHICount, 2u) << "Loop header should have 2 PHIs (induction var + SSA repair)";
       
       // Now find the SSA repair PHI (not the induction variable PHI %3)
@@ -1283,8 +1269,8 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
           
           FoundPHI2 = true;
           PHI2Reg = PHIResult;
-          llvm::errs() << "Found PHI2 (SSA repair) in loop header (bb.1): ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found PHI2 (SSA repair) in loop header (bb.1): ");
+          LLVM_DEBUG(MI.print(dbgs()));
           
           // Should have 2 incoming: OrigReg from bb.0, PHI1Reg from bb.5
           unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
@@ -1316,8 +1302,8 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
       // 4. Use-before-def in bb.1 should be rewritten to PHI2
       EXPECT_EQ(UseBeforeDefMI->getOperand(1).getReg(), PHI2Reg)
           << "Use-before-def should be rewritten to PHI2 result";
-      llvm::errs() << "Use-before-def correctly rewritten to PHI2: %"
-                   << PHI2Reg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Use-before-def correctly rewritten to PHI2: %"
+                   << PHI2Reg.virtRegIndex() << "\n");
       
       // 5. Use in latch (bb.5) should be rewritten to PHI1
       // Find instruction using PHI1 (originally used %1)
@@ -1331,9 +1317,9 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
         for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
           MachineOperand &MO = MI.getOperand(i);
           if (MO.isReg() && MO.isUse() && MO.getReg() == PHI1Reg) {
-            llvm::errs() << "Latch use correctly rewritten to PHI1: %"
-                         << PHI1Reg.virtRegIndex() << " in: ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Latch use correctly rewritten to PHI1: %"
+                         << PHI1Reg.virtRegIndex() << " in: ");
+            LLVM_DEBUG(MI.print(dbgs()));
             FoundLatchUse = true;
             break;
           }
@@ -1348,12 +1334,9 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
       EXPECT_TRUE(LIS.hasInterval(PHI1Reg));
       EXPECT_TRUE(LIS.hasInterval(PHI2Reg));
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -1442,7 +1425,7 @@ body: |
              [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
       LiveIntervals &LIS = LISWrapper.getLIS();
       MachineDominatorTree MDT(MF);
-      llvm::errs() << "\n=== MultipleSubregRedefsInLoop Test ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== MultipleSubregRedefsInLoop Test ===\n");
       
       // Get basic blocks
       auto BBI = MF.begin();
@@ -1480,8 +1463,8 @@ body: |
       ASSERT_NE(Sub0Idx, 0u) << "Should find sub0 index";
       ASSERT_NE(Sub1Idx, 0u) << "Should find sub1 index";
       
-      llvm::errs() << "Using 64-bit register: %" << OrigReg.virtRegIndex() 
-                   << " with sub0=" << Sub0Idx << ", sub1=" << Sub1Idx << "\n";
+      LLVM_DEBUG(dbgs() << "Using 64-bit register: %" << OrigReg.virtRegIndex()
+                   << " with sub0=" << Sub0Idx << ", sub1=" << Sub1Idx << "\n");
       
       // Get V_MOV opcode and EXEC register from existing instruction
       MachineInstr *MovInst = nullptr;
@@ -1497,7 +1480,7 @@ body: |
       unsigned MovOpcode = MovInst->getOpcode();
       
       // === FIRST INSERTION: X.sub0 in BB5 (else branch) ===
-      llvm::errs() << "\n=== First insertion: X.sub0 in BB5 ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== First insertion: X.sub0 in BB5 ===\n");
       
       // Find insertion point in BB5 (after the use of X.sub0)
       MachineInstr *InsertPoint1 = nullptr;
@@ -1517,17 +1500,17 @@ body: |
           .addReg(ExecReg, RegState::Implicit);
       
       MachineInstr &NewDefMI1 = *MIB1;
-      llvm::errs() << "Created first def in BB5: ";
-      NewDefMI1.print(llvm::errs());
+      LLVM_DEBUG(dbgs() << "Created first def in BB5: ");
+      LLVM_DEBUG(NewDefMI1.print(dbgs()));
       
       // Create SSA updater and repair after first insertion
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg1 = Updater.repairSSAForNewDef(NewDefMI1, OrigReg);
       
-      llvm::errs() << "SSA repair #1 created new register: %" << NewReg1.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair #1 created new register: %" << NewReg1.virtRegIndex() << "\n");
       
       // === SECOND INSERTION: X.sub1 in BB3 (after increment) ===
-      llvm::errs() << "\n=== Second insertion: X.sub1 in BB3 (after increment) ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== Second insertion: X.sub1 in BB3 (after increment) ===\n");
       
       // Find the increment instruction in BB3 (look for vreg_64 def)
       MachineInstr *IncrementMI = nullptr;
@@ -1539,8 +1522,8 @@ body: |
           if (DefReg.isVirtual() && DefReg == Register::index2VirtReg(3)) {
             IncrementMI = &MI;
             IncrementReg = DefReg; // This is %3
-            llvm::errs() << "Found increment: ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Found increment: ");
+            LLVM_DEBUG(MI.print(dbgs()));
             break;
           }
         }
@@ -1557,22 +1540,22 @@ body: |
           .addReg(ExecReg, RegState::Implicit);
       
       MachineInstr &NewDefMI2 = *MIB2;
-      llvm::errs() << "Created second def in BB3 (redefining %3.sub1): ";
-      NewDefMI2.print(llvm::errs());
+      LLVM_DEBUG(dbgs() << "Created second def in BB3 (redefining %3.sub1): ");
+      LLVM_DEBUG(NewDefMI2.print(dbgs()));
       
       // Repair SSA after second insertion (for %3, the increment result)
       Register NewReg2 = Updater.repairSSAForNewDef(NewDefMI2, IncrementReg);
       
-      llvm::errs() << "SSA repair #2 created new register: %" << NewReg2.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair #2 created new register: %" << NewReg2.virtRegIndex() << "\n");
       
       // === Verification ===
-      llvm::errs() << "\n=== Verification ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== Verification ===\n");
       
       // Print final MIR
-      llvm::errs() << "Final BB3 (latch):\n";
-      for (MachineInstr &MI : *BB3) {
-        MI.print(llvm::errs());
-      }
+      LLVM_DEBUG(dbgs() << "Final BB3 (latch):\n");
+      LLVM_DEBUG(for (MachineInstr &MI : *BB3) {
+        MI.print(dbgs());
+      });
       
       // 1. Should have PHI for 32-bit X.sub0 at BB3 (diamond join)
       bool FoundSub0PHI = false;
@@ -1581,8 +1564,8 @@ body: |
           Register PHIResult = MI.getOperand(0).getReg();
           if (PHIResult != Register::index2VirtReg(3)) { // Not the increment result PHI
             FoundSub0PHI = true;
-            llvm::errs() << "Found sub0 PHI in BB3: ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Found sub0 PHI in BB3: ");
+            LLVM_DEBUG(MI.print(dbgs()));
           }
         }
       }
@@ -1593,8 +1576,8 @@ body: |
       for (MachineInstr &MI : *BB3) {
         if (MI.getOpcode() == TargetOpcode::REG_SEQUENCE) {
           FoundREGSEQ = true;
-          llvm::errs() << "Found REG_SEQUENCE in BB3: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found REG_SEQUENCE in BB3: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           
           // Verify it composes both lanes
           unsigned NumSources = (MI.getNumOperands() - 1) / 2;
@@ -1608,12 +1591,9 @@ body: |
       EXPECT_TRUE(LIS.hasInterval(NewReg1));
       EXPECT_TRUE(LIS.hasInterval(NewReg2));
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -1715,7 +1695,7 @@ body: |
              [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
       LiveIntervals &LIS = LISWrapper.getLIS();
       MachineDominatorTree MDT(MF);
-      llvm::errs() << "\n=== NestedLoopsWithSSARepair Test ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== NestedLoopsWithSSARepair Test ===\n");
       
       // Get basic blocks
       auto BBI = MF.begin();
@@ -1733,7 +1713,7 @@ body: |
       Register OrigReg = Register::index2VirtReg(0);
       ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
       
-      llvm::errs() << "Original register: %" << OrigReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Original register: %" << OrigReg.virtRegIndex() << "\n");
       
       // Get V_MOV opcode and EXEC register
       MachineInstr *MovInst = &*BB0->begin();
@@ -1741,14 +1721,14 @@ body: |
       Register ExecReg = MovInst->getOperand(2).getReg();
       
       // Print initial state
-      llvm::errs() << "\nInitial BB2 (inner loop header):\n";
+      LLVM_DEBUG(dbgs() << "\nInitial BB2 (inner loop header):\n");
       for (MachineInstr &MI : *BB2) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
-      llvm::errs() << "\nInitial BB1 (outer loop header):\n";
+      LLVM_DEBUG(dbgs() << "\nInitial BB1 (outer loop header):\n");
       for (MachineInstr &MI : *BB1) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
       // Insert new definition in BB3 (inner loop body)
@@ -1768,31 +1748,31 @@ body: |
           .addImm(999)
           .addReg(ExecReg, RegState::Implicit);
       
-      llvm::errs() << "\nInserted new def in BB3 (inner loop body): ";
-      NewDefMI->print(llvm::errs());
+      LLVM_DEBUG(dbgs() << "\nInserted new def in BB3 (inner loop body): ");
+      LLVM_DEBUG(NewDefMI->print(dbgs()));
       
       // Create SSA updater and repair
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
       // === Verification ===
-      llvm::errs() << "\n=== Verification ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== Verification ===\n");
       
-      llvm::errs() << "\nFinal BB2 (inner loop header):\n";
+      LLVM_DEBUG(dbgs() << "\nFinal BB2 (inner loop header):\n");
       for (MachineInstr &MI : *BB2) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
-      llvm::errs() << "\nFinal BB1 (outer loop header):\n";
+      LLVM_DEBUG(dbgs() << "\nFinal BB1 (outer loop header):\n");
       for (MachineInstr &MI : *BB1) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
-      llvm::errs() << "\nFinal BB4 (outer loop body after inner):\n";
+      LLVM_DEBUG(dbgs() << "\nFinal BB4 (outer loop body after inner):\n");
       for (MachineInstr &MI : *BB4) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
       // 1. Inner loop header (BB2) should have NEW PHI created by SSA repair
@@ -1808,8 +1788,8 @@ body: |
             if (IncomingMBB == BB3 && IncomingReg == NewReg) {
               FoundSSARepairPHI = true;
               SSARepairPHIReg = MI.getOperand(0).getReg();
-              llvm::errs() << "Found SSA repair PHI in inner loop header: ";
-              MI.print(llvm::errs());
+              LLVM_DEBUG(dbgs() << "Found SSA repair PHI in inner loop header: ");
+              LLVM_DEBUG(MI.print(dbgs()));
               
               // Should have incoming from BB1 and BB3
               unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
@@ -1828,8 +1808,8 @@ body: |
       for (MachineInstr &MI : *BB1) {
         if (MI.isPHI() && MI.getOperand(0).getReg() == Register::index2VirtReg(1)) {
           FoundOuterPHI = true;
-          llvm::errs() << "Found outer loop PHI: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found outer loop PHI: ");
+          LLVM_DEBUG(MI.print(dbgs()));
         }
       }
       EXPECT_TRUE(FoundOuterPHI) << "Should find outer loop PHI in BB1";
@@ -1843,8 +1823,8 @@ body: |
               Register UseReg = MI.getOperand(i).getReg();
               if (UseReg.isVirtual()) {
                 FoundUseInBB4 = true;
-                llvm::errs() << "Found use in BB4: %" << UseReg.virtRegIndex() << " in ";
-                MI.print(llvm::errs());
+                LLVM_DEBUG(dbgs() << "Found use in BB4: %" << UseReg.virtRegIndex() << " in ");
+                LLVM_DEBUG(MI.print(dbgs()));
               }
             }
           }
@@ -1855,12 +1835,9 @@ body: |
       // 4. Verify LiveIntervals
       EXPECT_TRUE(LIS.hasInterval(NewReg));
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -2003,7 +1980,7 @@ body: |
              [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
       LiveIntervals &LIS = LISWrapper.getLIS();
       MachineDominatorTree MDT(MF);
-      llvm::errs() << "\n=== MultipleSubregUsesAcrossDiamonds Test ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== MultipleSubregUsesAcrossDiamonds Test ===\n");
       
       // Get basic blocks
       auto BBI = MF.begin();
@@ -2023,7 +2000,7 @@ body: |
       Register OrigReg = Register::index2VirtReg(0);
       ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
       
-      llvm::errs() << "Using 128-bit register: %" << OrigReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Using 128-bit register: %" << OrigReg.virtRegIndex() << "\n");
       
       // Find sub2_3 subregister index (64-bit covering bits 64-127)
       unsigned Sub2_3Idx = 0;
@@ -2035,9 +2012,9 @@ body: |
         // sub2_3 should have mask 0xF0 (lanes for bits 64-127)
         if (SubRegSize == 64 && (Mask.getAsInteger() & 0xF0) == 0xF0) {
           Sub2_3Idx = Idx;
-          llvm::errs() << "Found sub2_3 index: " << Idx 
-                       << " (size=" << SubRegSize 
-                       << ", mask=0x" << llvm::format("%X", Mask.getAsInteger()) << ")\n";
+          LLVM_DEBUG(dbgs() << "Found sub2_3 index: " << Idx
+                       << " (size=" << SubRegSize
+                       << ", mask=0x" << llvm::format("%X", Mask.getAsInteger()) << ")\n");
           break;
         }
       }
@@ -2065,8 +2042,8 @@ body: |
         .addDef(OrigReg, RegState::Define, Sub2_3Idx);
       
       MachineInstr *NewDefMI = MIB.getInstr();
-      llvm::errs() << "Inserted new def in BB4: ";
-      NewDefMI->print(llvm::errs());
+      LLVM_DEBUG(dbgs() << "Inserted new def in BB4: ");
+      LLVM_DEBUG(NewDefMI->print(dbgs()));
       
       // Index the new instruction
       LIS.InsertMachineInstrInMaps(*NewDefMI);
@@ -2079,12 +2056,12 @@ body: |
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
       // Print final state of key blocks
-      llvm::errs() << "\nFinal BB5 (diamond1 join):\n";
+      LLVM_DEBUG(dbgs() << "\nFinal BB5 (diamond1 join):\n");
       for (MachineInstr &MI : *BB5) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
       // Verify SSA repair results
@@ -2095,8 +2072,8 @@ body: |
         if (MI.isPHI()) {
           Register PHIResult = MI.getOperand(0).getReg();
           if (PHIResult.isVirtual()) {
-            llvm::errs() << "Found PHI in BB5: ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Found PHI in BB5: ");
+            LLVM_DEBUG(MI.print(dbgs()));
             
             // Check that it has 2 incoming values
             unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
@@ -2113,14 +2090,14 @@ body: |
               
               if (IncomingMBB == BB4) {
                 HasNewRegFromBB4 = (IncomingReg == NewReg);
-                llvm::errs() << "  Incoming from BB4: %" << IncomingReg.virtRegIndex() << "\n";
+                LLVM_DEBUG(dbgs() << "  Incoming from BB4: %" << IncomingReg.virtRegIndex() << "\n");
               } else if (IncomingMBB == BB3) {
                 // Should be %0.sub2_3 (the lanes we redefined)
-                llvm::errs() << "  Incoming from BB3: %" << IncomingReg.virtRegIndex();
+                LLVM_DEBUG(dbgs() << "  Incoming from BB3: %" << IncomingReg.virtRegIndex());
                 if (IncomingSubReg) {
-                  llvm::errs() << "." << TRI->getSubRegIndexName(IncomingSubReg);
+                  LLVM_DEBUG(dbgs() << "." << TRI->getSubRegIndexName(IncomingSubReg));
                 }
-                llvm::errs() << "\n";
+                LLVM_DEBUG(dbgs() << "\n");
                 
                 // Verify it's using sub2_3
                 if (IncomingReg == OrigReg && IncomingSubReg == Sub2_3Idx) {
@@ -2144,12 +2121,9 @@ body: |
       LiveInterval &OrigLI = LIS.getInterval(OrigReg);
       EXPECT_TRUE(OrigLI.hasSubRanges()) << "OrigReg should have subranges after partial redef";
       
-      // Debug output if verification fails
-      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
-        llvm::errs() << "MachineFunction verification failed:\n";
-        MF.print(llvm::errs());
-        LIS.print(llvm::errs());
-      }
+      // Verify the MachineFunction is still valid
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed";
     });
 }
 
@@ -2229,7 +2203,7 @@ body: |
              [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
       LiveIntervals &LIS = LISWrapper.getLIS();
       MachineDominatorTree MDT(MF);
-      llvm::errs() << "\n=== NonContiguousLaneMaskREGSEQUENCE Test ===\n";
+      LLVM_DEBUG(dbgs() << "\n=== NonContiguousLaneMaskREGSEQUENCE Test ===\n");
       
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -2248,7 +2222,7 @@ body: |
       // Find %0 (the vreg_128)
       Register OrigReg = Register::index2VirtReg(0);
       ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
-      llvm::errs() << "Using 128-bit register: %" << OrigReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "Using 128-bit register: %" << OrigReg.virtRegIndex() << "\n");
       
       // Find sub1 subregister index
       unsigned Sub1Idx = 0;
@@ -2268,8 +2242,8 @@ body: |
         .addDef(OrigReg, RegState::Define, Sub1Idx);
       
       MachineInstr *NewDefMI = MIB.getInstr();
-      llvm::errs() << "Inserted new def in BB3: ";
-      NewDefMI->print(llvm::errs());
+      LLVM_DEBUG(dbgs() << "Inserted new def in BB3: ");
+      LLVM_DEBUG(NewDefMI->print(dbgs()));
       
       // Index the new instruction
       LIS.InsertMachineInstrInMaps(*NewDefMI);
@@ -2282,12 +2256,12 @@ body: |
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
       
-      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
       // Print final state
-      llvm::errs() << "\nFinal BB4 (diamond join):\n";
+      LLVM_DEBUG(dbgs() << "\nFinal BB4 (diamond join):\n");
       for (MachineInstr &MI : *BB4) {
-        MI.print(llvm::errs());
+        LLVM_DEBUG(MI.print(dbgs()));
       }
       
       // Verify SSA repair results
@@ -2299,8 +2273,8 @@ body: |
         if (MI.isPHI()) {
           PHIReg = MI.getOperand(0).getReg();
           if (PHIReg.isVirtual()) {
-            llvm::errs() << "Found PHI in BB4: ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Found PHI in BB4: ");
+            LLVM_DEBUG(MI.print(dbgs()));
             FoundPHI = true;
             
             // Check that it has 2 incoming values
@@ -2333,13 +2307,13 @@ body: |
       
       for (MachineInstr &MI : *BB4) {
         if (MI.getOpcode() == TargetOpcode::REG_SEQUENCE) {
-          llvm::errs() << "Found REG_SEQUENCE: ";
-          MI.print(llvm::errs());
+          LLVM_DEBUG(dbgs() << "Found REG_SEQUENCE: ");
+          LLVM_DEBUG(MI.print(dbgs()));
           FoundREGSEQUENCE = true;
           
           // Count sources (each source is: register + subregidx, so pairs)
           NumREGSEQSources = (MI.getNumOperands() - 1) / 2;
-          llvm::errs() << "  REG_SEQUENCE has " << NumREGSEQSources << " sources\n";
+          LLVM_DEBUG(dbgs() << "  REG_SEQUENCE has " << NumREGSEQSources << " sources\n");
           
           // We expect at least 2 sources for non-contiguous case:
           // 1. PHI result covering sub1
@@ -2370,8 +2344,8 @@ body: |
         if (MI.getOpcode() == TargetOpcode::COPY) {
           MachineOperand &SrcOp = MI.getOperand(1);
           if (SrcOp.isReg() && SrcOp.getReg().isVirtual() && SrcOp.getReg() != OrigReg) {
-            llvm::errs() << "Found rewritten COPY: ";
-            MI.print(llvm::errs());
+            LLVM_DEBUG(dbgs() << "Found rewritten COPY: ");
+            LLVM_DEBUG(MI.print(dbgs()));
             FoundRewrittenUse = true;
             break;
           }
@@ -2381,12 +2355,12 @@ body: |
       EXPECT_TRUE(FoundRewrittenUse) << "COPY should be rewritten to use REG_SEQUENCE result";
       
       // Print summary
-      llvm::errs() << "\n=== Test Summary ===\n";
-      llvm::errs() << "✓ Redefined sub1 (middle lane) of vreg_128\n";
-      llvm::errs() << "✓ Created PHI for sub1 lane\n";
-      llvm::errs() << "✓ Created REG_SEQUENCE with " << NumREGSEQSources 
-                   << " sources to handle non-contiguous lanes (sub0 + sub2 + sub3)\n";
-      llvm::errs() << "✓ This test exercises getCoveringSubRegsForLaneMask!\n";
+      LLVM_DEBUG(dbgs() << "\n=== Test Summary ===\n");
+      LLVM_DEBUG(dbgs() << "✓ Redefined sub1 (middle lane) of vreg_128\n");
+      LLVM_DEBUG(dbgs() << "✓ Created PHI for sub1 lane\n");
+      LLVM_DEBUG(dbgs() << "✓ Created REG_SEQUENCE with " << NumREGSEQSources
+                   << " sources to handle non-contiguous lanes (sub0 + sub2 + sub3)\n");
+      LLVM_DEBUG(dbgs() << "✓ This test exercises getCoveringSubRegsForLaneMask!\n");
     });
 }
 
