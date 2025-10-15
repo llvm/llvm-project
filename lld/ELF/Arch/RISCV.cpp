@@ -770,7 +770,7 @@ static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i,
                                  r.offset + (r.type == R_RISCV_JAL ? 0 : 4));
   const uint8_t rd = extractBits(jalr, 11, 7);
   int tblEntryIndex = -1;
-  if (rd == 0) {
+  if (rd == X_X0) {
     tblEntryIndex = ctx.in.riscvTableJumpSection->getCMJTEntryIndex(r.sym);
   } else if (rd == X_RA) {
     tblEntryIndex = ctx.in.riscvTableJumpSection->getCMJALTEntryIndex(r.sym);
@@ -1635,7 +1635,7 @@ void TableJumpSection::finalizeContents() {
       finalizeEntry(CMJALTEntryCandidates, maxCMJALTEntrySize);
   CMJALTEntryCandidates.clear();
 
-  if (finalizedCMJALTEntries.size() > 0 &&
+  if (!finalizedCMJALTEntries.empty() &&
       getSizeReduction() < CMJTSizeReduction) {
     // Stop relax to cm.jalt if there will be the code reduction of cm.jalt is
     // smaller then the size of padding 0 for doing cm.jalt optmise
@@ -1674,7 +1674,7 @@ TableJumpSection::finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap,
             tempEntryVector.begin(), tempEntryVector.begin() + maxSize);
 
   // Drop any items that have a negative effect (i.e. increase code size).
-  while (finalizedVector.size()) {
+  while (!finalizedVector.empty()) {
     if (finalizedVector.rbegin()->second < ctx.arg.wordsize)
       finalizedVector.pop_back();
     else

@@ -411,11 +411,11 @@ private:
   void padWords(uint8_t *buf, const uint8_t maxWordCount);
 
   // used in finalizeContents function.
-  static const size_t maxCMJTEntrySize = 32;
-  static const size_t maxCMJALTEntrySize = 224;
+  static constexpr size_t maxCMJTEntrySize = 32;
+  static constexpr size_t maxCMJALTEntrySize = 224;
 
-  static const size_t startCMJTEntryIdx = 0;
-  static const size_t startCMJALTEntryIdx = 32;
+  static constexpr size_t startCMJTEntryIdx = 0;
+  static constexpr size_t startCMJALTEntryIdx = 32;
 
   llvm::DenseMap<const Symbol *, int> CMJTEntryCandidates;
   SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
