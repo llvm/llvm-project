@@ -109,17 +109,14 @@ _mm512_maskz_lzcnt_epi64(__mmask8 __U, __m512i __A) {
                                              (__v8di)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_broadcastmb_epi64 (__mmask8 __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_broadcastmb_epi64(__mmask8 __A) {
   return (__m512i) _mm512_set1_epi64((long long) __A);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_broadcastmw_epi32 (__mmask16 __A)
-{
-  return (__m512i) _mm512_set1_epi32((int) __A);
-
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_broadcastmw_epi32(__mmask16 __A) {
+  return (__m512i)_mm512_set1_epi32((int)__A);
 }
 
 #undef __DEFAULT_FN_ATTRS

@@ -20,6 +20,7 @@ __m128i test_mm_broadcastmb_epi64(__m128i a,__m128i b) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   return _mm_broadcastmb_epi64(_mm_cmpeq_epi32_mask (a, b)); 
 }
+TEST_CONSTEXPR(match_v2du(_mm_broadcastmb_epi64((__mmask8)(76)), 76, 76));
 
 __m256i test_mm256_broadcastmb_epi64(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_broadcastmb_epi64
@@ -32,6 +33,7 @@ __m256i test_mm256_broadcastmb_epi64(__m256i a, __m256i b) {
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 3
   return _mm256_broadcastmb_epi64(_mm256_cmpeq_epi64_mask ( a, b)); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_broadcastmb_epi64((__mmask8)(67)), 67, 67, 67, 67));
 
 __m128i test_mm_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK-LABEL: test_mm_broadcastmw_epi32
@@ -43,6 +45,7 @@ __m128i test_mm_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 3
   return _mm_broadcastmw_epi32(_mm512_cmpeq_epi32_mask ( a, b));
 }
+TEST_CONSTEXPR(match_v4su(_mm_broadcastmw_epi32((__mmask16)(0xbabe)), 0xbabe, 0xbabe, 0xbabe, 0xbabe));
 
 __m256i test_mm256_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK-LABEL: test_mm256_broadcastmw_epi32
@@ -58,6 +61,7 @@ __m256i test_mm256_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 7
   return _mm256_broadcastmw_epi32(_mm512_cmpeq_epi32_mask ( a, b)); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_broadcastmw_epi32((__mmask16)(0xcafe)), 0xcafe,0xcafe,0xcafe,0xcafe, 0xcafe,0xcafe,0xcafe,0xcafe));
 
 __m128i test_mm_conflict_epi64(__m128i __A) {
   // CHECK-LABEL: test_mm_conflict_epi64
