@@ -257,6 +257,9 @@ Non-comprehensive list of changes in this release
 
 - Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
+- A new generic byte swap builtin function ``__builtin_bswapg`` that extends the existing 
+  __builtin_bswap{16,32,64} function family to support all standard integer types.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
