@@ -17,8 +17,8 @@ define void @doit1(ptr %ptr) {
 ; CHECK-NEXT:    store <4 x i32> [[I32_IV]], ptr [[GEP1]], align 4
 
 ; CHECK-NEXT:    [[MAIN_IV_NEXT]] = add nuw i32 [[MAIN_IV]], 4
-; CHECK-NEXT:    [[I32_IV_NEXT]] = add <4 x i32> [[I32_IV]], splat (i32 36)
-; CHECK-NEXT:    [[IV_FROM_TRUNC_NEXT]] = add <4 x i8> [[IV_FROM_TRUNC]], splat (i8 36)
+; CHECK-NEXT:    [[I32_IV_NEXT]] = add nuw nsw <4 x i32> [[I32_IV]], splat (i32 36)
+; CHECK-NEXT:    [[IV_FROM_TRUNC_NEXT]] = add nuw nsw <4 x i8> [[IV_FROM_TRUNC]], splat (i8 36)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[MAIN_IV_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ;

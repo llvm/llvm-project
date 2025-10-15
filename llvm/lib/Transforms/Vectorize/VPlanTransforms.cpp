@@ -3157,12 +3157,13 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
-  // FIXME: The newly created binary instructions should contain nsw/nuw
-  // flags, which can be found from the original scalar operations.
   VPIRFlags Flags;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
+    if (auto *BO = ID.getInductionBinOp())
+      Flags = VPIRFlags::WrapFlagsTy(BO->hasNoUnsignedWrap(),
+                                     BO->hasNoSignedWrap());
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
