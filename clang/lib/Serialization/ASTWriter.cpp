@@ -330,13 +330,19 @@ public:
 };
 
 class TypeLocWriter : public TypeLocVisitor<TypeLocWriter> {
-  ASTRecordWriter &Record;
+  using LocSeq = SourceLocationSequence;
 
-  void addSourceLocation(SourceLocation Loc) { Record.AddSourceLocation(Loc); }
-  void addSourceRange(SourceRange Range) { Record.AddSourceRange(Range); }
+  ASTRecordWriter &Record;
+  LocSeq *Seq;
+
+  void addSourceLocation(SourceLocation Loc) {
+    Record.AddSourceLocation(Loc, Seq);
+  }
+  void addSourceRange(SourceRange Range) { Record.AddSourceRange(Range, Seq); }
 
 public:
-  TypeLocWriter(ASTRecordWriter &Record) : Record(Record) {}
+  TypeLocWriter(ASTRecordWriter &Record, LocSeq *Seq)
+      : Record(Record), Seq(Seq) {}
 
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
 #define TYPELOC(CLASS, PARENT) \
@@ -2493,12 +2499,13 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
       Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      AddSourceLocation(Expansion.getSpellingLoc(), Record);
-      AddSourceLocation(Expansion.getExpansionLocStart(), Record);
+      LocSeq::State Seq;
+      AddSourceLocation(Expansion.getSpellingLoc(), Record, Seq);
+      AddSourceLocation(Expansion.getExpansionLocStart(), Record, Seq);
       AddSourceLocation(Expansion.isMacroArgExpansion()
                             ? SourceLocation()
                             : Expansion.getExpansionLocEnd(),
-                        Record);
+                        Record, Seq);
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
@@ -6757,8 +6764,8 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
 }
 
 SourceLocationEncoding::RawLocEncoding
-ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
-  SourceLocation::UIntTy BaseOffset = 0;
+ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
+  unsigned BaseOffset = 0;
   unsigned ModuleFileIndex = 0;
 
   // See SourceLocationEncoding.h for the encoding details.
@@ -6776,17 +6783,19 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
     assert(&getChain()->getModuleManager()[F->Index] == F);
   }
 
-  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
+  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex, Seq);
 }
 
-void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
+void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                                  SourceLocationSequence *Seq) {
   Loc = getAdjustedLocation(Loc);
-  Record.push_back(getRawSourceLocationEncoding(Loc));
+  Record.push_back(getRawSourceLocationEncoding(Loc, Seq));
 }
 
-void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
-  AddSourceLocation(Range.getBegin(), Record);
-  AddSourceLocation(Range.getEnd(), Record);
+void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record,
+                               SourceLocationSequence *Seq) {
+  AddSourceLocation(Range.getBegin(), Record, Seq);
+  AddSourceLocation(Range.getEnd(), Record, Seq);
 }
 
 void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
@@ -6906,8 +6915,9 @@ void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
   AddTypeLoc(TInfo->getTypeLoc());
 }
 
-void ASTRecordWriter::AddTypeLoc(TypeLoc TL) {
-  TypeLocWriter TLW(*this);
+void ASTRecordWriter::AddTypeLoc(TypeLoc TL, LocSeq *OuterSeq) {
+  LocSeq::State Seq(OuterSeq);
+  TypeLocWriter TLW(*this, Seq);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
     TLW.Visit(TL);
 }
