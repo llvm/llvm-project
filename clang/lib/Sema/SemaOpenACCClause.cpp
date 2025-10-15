@@ -1772,7 +1772,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   }
 
   SmallVector<Expr *> ValidVars;
-  SmallVector<OpenACCReductionRecipe> Recipes;
+  SmallVector<OpenACCReductionRecipeWithStorage> Recipes;
 
   for (Expr *Var : Clause.getVarList()) {
     ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
@@ -2196,7 +2196,7 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
     SourceLocation EndLoc) {
   if (DirectiveKind == OpenACCDirectiveKind::Loop ||
       isOpenACCCombinedDirectiveKind(DirectiveKind)) {

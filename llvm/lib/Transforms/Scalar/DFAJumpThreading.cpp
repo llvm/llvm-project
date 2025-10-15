@@ -1479,9 +1479,12 @@ bool DFAJumpThreading::run(Function &F) {
   DTU->flush();
 
 #ifdef EXPENSIVE_CHECKS
-  assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full));
   verifyFunction(F, &dbgs());
 #endif
+
+  if (MadeChanges && VerifyDomInfo)
+    assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full) &&
+           "Failed to maintain validity of domtree!");
 
   return MadeChanges;
 }

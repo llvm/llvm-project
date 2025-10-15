@@ -10,6 +10,24 @@
 
 namespace llvm {
 
+namespace memprof {
+// Represents the eligibility status of a global variable for section prefix
+// annotation. Other than AnnotationOk, each enum value indicates a specific
+// reason for ineligibility.
+enum class AnnotationKind : uint8_t {
+  AnnotationOK,
+  DeclForLinker,
+  ExplicitSection,
+  ReservedName,
+};
+/// Returns the annotation kind of the global variable \p GV.
+AnnotationKind getAnnotationKind(const GlobalVariable &GV);
+
+/// Returns true if the annotation kind of the global variable \p GV is
+/// AnnotationOK.
+bool IsAnnotationOK(const GlobalVariable &GV);
+} // namespace memprof
+
 /// A class that holds the constants that represent static data and their
 /// profile information and provides methods to operate on them.
 class StaticDataProfileInfo {
