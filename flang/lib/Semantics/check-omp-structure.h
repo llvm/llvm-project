@@ -262,10 +262,10 @@ private:
   void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
       llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
-  void CheckAtomicType(
-      SymbolRef sym, parser::CharBlock source, std::string_view name);
-  void CheckAtomicVariable(
-      const evaluate::Expr<evaluate::SomeType> &, parser::CharBlock);
+  void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
+      std::string_view name, bool checkTypeOnPointer = true);
+  void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
+      parser::CharBlock, bool checkTypeOnPointer = true);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
