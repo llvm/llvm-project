@@ -310,7 +310,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // This also covers anonymous structs and unions, which have a different
       // compatibility rule, but it doesn't matter because you can never have a
       // pointer to an anonymous struct or union.
-      if (!RT->getOriginalDecl()->getDeclName())
+      if (!RT->getDecl()->getDeclName())
         return getAnyPtr(PtrDepth);
 
       // For non-builtin types use the mangled name of the canonical type.
@@ -332,7 +332,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {
-    const EnumDecl *ED = ETy->getOriginalDecl()->getDefinitionOrSelf();
+    const EnumDecl *ED = ETy->getDecl()->getDefinitionOrSelf();
     if (!Features.CPlusPlus)
       return getTypeInfo(ED->getIntegerType());
 
@@ -433,7 +433,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
           llvm::MDBuilder::TBAAStructField(BaseOffset, Size, TBAATag));
       return true;
     }
-    const RecordDecl *RD = TTy->getOriginalDecl()->getDefinition();
+    const RecordDecl *RD = TTy->getDecl()->getDefinition();
     if (RD->hasFlexibleArrayMember())
       return false;
 
@@ -514,7 +514,7 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
 
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
   if (auto *TTy = dyn_cast<RecordType>(Ty)) {
-    const RecordDecl *RD = TTy->getOriginalDecl()->getDefinition();
+    const RecordDecl *RD = TTy->getDecl()->getDefinition();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     using TBAAStructField = llvm::MDBuilder::TBAAStructField;
     SmallVector<TBAAStructField, 4> Fields;

@@ -4660,7 +4660,7 @@ const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
   if (const auto *RecordTy = getRecordTy(Ty))
-    return getRecord(RecordTy->getOriginalDecl()->getDefinitionOrSelf());
+    return getRecord(RecordTy->getDecl()->getDefinitionOrSelf());
   return nullptr;
 }
 

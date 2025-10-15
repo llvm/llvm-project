@@ -26,7 +26,7 @@ TypedefUnderlyingTypeResolver::getUnderlyingTypeDecl(QualType Type) const {
   if (TypedefTy)
     TypeDecl = TypedefTy->getDecl();
   if (const TagType *TagTy = Type->getAs<TagType>()) {
-    TypeDecl = TagTy->getOriginalDecl();
+    TypeDecl = TagTy->getDecl();
   } else if (const ObjCInterfaceType *ObjCITy =
                  Type->getAs<ObjCInterfaceType>()) {
     TypeDecl = ObjCITy->getDecl();

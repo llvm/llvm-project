@@ -743,7 +743,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     // Pure scalable types are never unions and never contain unions.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (RD->isUnion())
       return false;
 

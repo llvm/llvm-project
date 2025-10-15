@@ -396,7 +396,7 @@ llvm::json::Array JSONNodeDumper::createCastPath(const CastExpr *C) {
   for (auto I = C->path_begin(), E = C->path_end(); I != E; ++I) {
     const CXXBaseSpecifier *Base = *I;
     const auto *RD = cast<CXXRecordDecl>(
-        Base->getType()->castAsCanonical<RecordType>()->getOriginalDecl());
+        Base->getType()->castAsCanonical<RecordType>()->getDecl());
 
     llvm::json::Object Val{{"name", RD->getName()}};
     if (Base->isVirtual())
@@ -764,7 +764,7 @@ void JSONNodeDumper::VisitTagType(const TagType *TT) {
     Qualifier.print(OS, PrintPolicy, /*ResolveTemplateArguments=*/true);
     JOS.attribute("qualifier", Str);
   }
-  JOS.attribute("decl", createBareDeclRef(TT->getOriginalDecl()));
+  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (TT->isTagOwned())
     JOS.attribute("isTagOwned", true);
 }
@@ -816,7 +816,7 @@ void JSONNodeDumper::VisitTemplateSpecializationType(
 
 void JSONNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *ICNT) {
-  JOS.attribute("decl", createBareDeclRef(ICNT->getOriginalDecl()));
+  JOS.attribute("decl", createBareDeclRef(ICNT->getDecl()));
 }
 
 void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {

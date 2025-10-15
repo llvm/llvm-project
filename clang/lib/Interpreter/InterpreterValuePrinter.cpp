@@ -66,10 +66,10 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   const QualType NonRefTy = QT.getNonReferenceType();
 
   if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TTy->getOriginalDecl());
+    return DeclTypeToString(NonRefTy, TTy->getDecl());
 
   if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TRy->getOriginalDecl());
+    return DeclTypeToString(NonRefTy, TRy->getDecl());
 
   const QualType Canon = NonRefTy.getCanonicalType();
 

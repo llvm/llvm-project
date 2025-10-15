@@ -908,7 +908,7 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
     LookupResult FieldResult(*this, &Context.Idents.get(NextMember),
                              SourceLocation(), LookupMemberName);
 
-    RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (!LookupQualifiedName(FieldResult, RD))
       return true;
 

@@ -1502,6 +1502,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_auxv",
+    hdrs = ["src/__support/OSUtil/linux/auxv.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":__support_threads_callonce",
+        ":hdr_fcntl_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_vdso",
     hdrs = [
         "src/__support/OSUtil/linux/vdso.h",
@@ -6333,6 +6348,19 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+    ],
+)
+
+# WARNING: NOT FULLY IMPLEMENTED, FOR TESTING USE ONLY
+libc_function(
+    name = "sysconf",
+    srcs = ["src/unistd/linux/sysconf.cpp"],
+    hdrs = ["src/unistd/sysconf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_linux_auxv",
+        ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 

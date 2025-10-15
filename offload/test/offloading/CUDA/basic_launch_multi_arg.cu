@@ -8,7 +8,7 @@
 // REQUIRES: gpu
 //
 // FIXME: https://github.com/llvm/llvm-project/issues/161265
-// XFAIL: gpu
+// UNSUPPORTED: gpu
 
 #include <stdio.h>
 

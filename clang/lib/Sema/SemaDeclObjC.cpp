@@ -3232,10 +3232,8 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   assert(lt && rt && lt != rt);
 
   if (!isa<RecordType>(lt) || !isa<RecordType>(rt)) return false;
-  RecordDecl *left =
-      cast<RecordType>(lt)->getOriginalDecl()->getDefinitionOrSelf();
-  RecordDecl *right =
-      cast<RecordType>(rt)->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *left = cast<RecordType>(lt)->getDecl()->getDefinitionOrSelf();
+  RecordDecl *right = cast<RecordType>(rt)->getDecl()->getDefinitionOrSelf();
 
   // Require union-hood to match.
   if (left->isUnion() != right->isUnion()) return false;

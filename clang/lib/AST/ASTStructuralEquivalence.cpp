@@ -878,10 +878,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // Treat the enumeration as its underlying type and use the builtin type
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
-        T1 = cast<EnumType>(T1)->getOriginalDecl()->getIntegerType();
+        T1 = cast<EnumType>(T1)->getDecl()->getIntegerType();
         assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
       } else if (T2->getTypeClass() == Type::Enum) {
-        T2 = cast<EnumType>(T2)->getOriginalDecl()->getIntegerType();
+        T2 = cast<EnumType>(T2)->getDecl()->getIntegerType();
         assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
       }
       TC = Type::Builtin;
@@ -1300,8 +1300,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, TT1->getQualifier(),
                                   TT2->getQualifier()))
       return false;
-    if (!IsStructurallyEquivalent(Context, TT1->getOriginalDecl(),
-                                  TT2->getOriginalDecl()))
+    if (!IsStructurallyEquivalent(Context, TT1->getDecl(), TT2->getDecl()))
       return false;
     break;
   }
@@ -1531,8 +1530,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // types
   if (Field1->isAnonymousStructOrUnion() &&
       Field2->isAnonymousStructOrUnion()) {
-    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getOriginalDecl();
-    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getOriginalDecl();
+    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getDecl();
+    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getDecl();
     return IsStructurallyEquivalent(Context, D1, D2);
   }
 
@@ -2587,7 +2586,7 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // struct { ... } A;
     QualType FieldType = F->getType();
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
-      const RecordDecl *RecDecl = RecType->getOriginalDecl();
+      const RecordDecl *RecDecl = RecType->getDecl();
       if (RecDecl->getDeclContext() == Owner && !RecDecl->getIdentifier()) {
         if (Context.hasSameType(FieldType, AnonTy))
           break;

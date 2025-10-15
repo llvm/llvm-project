@@ -357,7 +357,7 @@ CXIndexDataConsumer::CXXBasesListInfo::CXXBasesListInfo(const CXXRecordDecl *D,
           TST = T->getAs<TemplateSpecializationType>()) {
       BaseD = TST->getTemplateName().getAsTemplateDecl();
     } else if (const RecordType *RT = T->getAs<RecordType>()) {
-      BaseD = RT->getOriginalDecl();
+      BaseD = RT->getDecl();
     }
 
     if (BaseD)
