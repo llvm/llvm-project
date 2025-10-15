@@ -501,7 +501,8 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
 /// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
 /// recipe, if it exists.
 static void removeRedundantCanonicalIVs(VPlan &Plan) {
-  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPCanonicalIVPHIRecipe *CanonicalIV = LoopRegion->getCanonicalIV();
   VPWidenCanonicalIVRecipe *WidenNewIV = nullptr;
   for (VPUser *U : CanonicalIV->users()) {
     WidenNewIV = dyn_cast<VPWidenCanonicalIVRecipe>(U);
@@ -512,7 +513,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   if (!WidenNewIV)
     return;
 
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
@@ -582,8 +583,9 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     FPMathOperator *FPBinOp, Instruction *TruncI,
                     VPValue *StartV, VPValue *Step, DebugLoc DL,
                     VPBuilder &Builder) {
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  VPCanonicalIVPHIRecipe *CanonicalIV = LoopRegion->getCanonicalIV();
   VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
       Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
 
@@ -800,8 +802,9 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
     return nullptr;
 
   // Calculate the final index.
-  VPValue *EndValue = Plan.getCanonicalIV();
-  auto CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *CanonicalIV = LoopRegion->getCanonicalIV();
+  Type *CanonicalIVType = CanonicalIV->getScalarType();
   VPBuilder B(cast<VPBasicBlock>(PredVPBB));
 
   DebugLoc DL = cast<VPInstruction>(Op)->getDebugLoc();
@@ -810,7 +813,8 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   Type *FirstActiveLaneType = TypeInfo.inferScalarType(FirstActiveLane);
   FirstActiveLane = B.createScalarZExtOrTrunc(FirstActiveLane, CanonicalIVType,
                                               FirstActiveLaneType, DL);
-  EndValue = B.createNaryOp(Instruction::Add, {EndValue, FirstActiveLane}, DL);
+  VPValue *EndValue =
+      B.createNaryOp(Instruction::Add, {CanonicalIV, FirstActiveLane}, DL);
 
   // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
   // changed it means the exit is using the incremented value, so we need to
@@ -1530,7 +1534,7 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
       return isConditionTrueViaVFAndUF(C, Plan, BestVF, BestUF, SE);
     });
 
-  auto *CanIV = Plan.getCanonicalIV();
+  auto *CanIV = Plan.getVectorLoopRegion()->getCanonicalIV();
   if (!match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
                                   m_Specific(CanIV->getBackedgeValue()),
                                   m_Specific(&Plan.getVectorTripCount()))))
@@ -2319,7 +2323,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
     VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
-  auto *CanonicalIVPHI = Plan.getCanonicalIV();
+  auto *CanonicalIVPHI = TopRegion->getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
   auto *CanonicalIVIncrement =
@@ -2358,7 +2362,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
   // Create the active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
-      ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
+      ConstantInt::get(TopRegion->getCanonicalIV()->getScalarType(), 1));
   auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                         {EntryIncrement, TC, ALMMultiplier}, DL,
                                         "active.lane.mask.entry");
@@ -2394,13 +2398,15 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// for the header-mask pattern manually.
 static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser = find_if(Plan.getCanonicalIV()->users(),
-                                            IsaPred<VPWidenCanonicalIVRecipe>);
-  assert(count_if(Plan.getCanonicalIV()->users(),
+  auto *FoundWidenCanonicalIVUser = find_if(
+      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  assert(count_if(LoopRegion->getCanonicalIV()->users(),
                   IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
+  if (FoundWidenCanonicalIVUser !=
+      LoopRegion->getCanonicalIV()->users().end()) {
     auto *WideCanonicalIV =
         cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
     WideCanonicalIVs.push_back(WideCanonicalIV);
@@ -2408,7 +2414,7 @@ static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
 
   // Also include VPWidenIntOrFpInductionRecipes that represent a widened
   // version of the canonical induction.
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (WidenOriginalIV && WidenOriginalIV->isCanonical())
@@ -2441,8 +2447,9 @@ void VPlanTransforms::addActiveLaneMask(
          "DataAndControlFlowWithoutRuntimeCheck implies "
          "UseActiveLaneMaskForControlFlow");
 
-  auto *FoundWidenCanonicalIVUser = find_if(Plan.getCanonicalIV()->users(),
-                                            IsaPred<VPWidenCanonicalIVRecipe>);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *FoundWidenCanonicalIVUser = find_if(
+      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
   assert(FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = findHeaderMask(Plan);
@@ -2455,7 +2462,7 @@ void VPlanTransforms::addActiveLaneMask(
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
-        ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
+        ConstantInt::get(LoopRegion->getCanonicalIV()->getScalarType(), 1));
     LaneMask =
         B.createNaryOp(VPInstruction::ActiveLaneMask,
                        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
@@ -2565,9 +2572,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   });
 
   assert(all_of(Plan.getVFxUF().users(),
-                [&Plan](VPUser *U) {
-                  return match(U, m_c_Add(m_Specific(Plan.getCanonicalIV()),
-                                          m_Specific(&Plan.getVFxUF()))) ||
+                [&LoopRegion, &Plan](VPUser *U) {
+                  return match(U,
+                               m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                                       m_Specific(&Plan.getVFxUF()))) ||
                          isa<VPWidenPointerInductionRecipe>(U);
                 }) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
@@ -2722,9 +2730,10 @@ void VPlanTransforms::addExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   if (Plan.hasScalarVFOnly())
     return;
-  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  auto *CanonicalIVPHI = Plan.getCanonicalIV();
+  auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
   auto *CanIVTy = CanonicalIVPHI->getScalarType();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
@@ -4164,7 +4173,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  auto *CanIV = Plan.getCanonicalIV();
+  auto *CanIV = VectorLoop->getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
