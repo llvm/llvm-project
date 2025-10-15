@@ -42,7 +42,7 @@ void AvoidDefaultLambdaCaptureCheck::check(
     return;
 
   std::vector<std::string> ImplicitCaptures;
-  for (const auto &Capture : Lambda->implicit_captures()) {
+  for (const LambdaCapture &Capture : Lambda->implicit_captures()) {
     // It is impossible to explicitly capture a VLA in C++, since VLAs don't
     // exist in ISO C++ and so the syntax was never created to capture them.
     if (Capture.getCaptureKind() == LCK_VLAType)
@@ -59,9 +59,7 @@ void AvoidDefaultLambdaCaptureCheck::check(
   if (ImplicitCaptures.empty() && Lambda->isGenericLambda())
     return;
 
-  const auto ReplacementText = [&ImplicitCaptures]() {
-    return llvm::join(ImplicitCaptures, ", ");
-  }();
+  const std::string ReplacementText = llvm::join(ImplicitCaptures, ", ");
 
   Diag << FixItHint::CreateReplacement(Lambda->getCaptureDefaultLoc(),
                                        ReplacementText);
