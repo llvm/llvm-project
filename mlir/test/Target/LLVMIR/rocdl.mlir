@@ -1498,6 +1498,31 @@ llvm.func @rocdl.cvt.scalef32.pk16(%v16xf32: vector<16xf32>, %v16xf16: vector<16
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.cvt.scalef32.sr.pk16
+// CHECK-SAME:(<16 x float> %[[V16F32:.+]], <16 x half> %[[V16F16:.+]], <16 x bfloat> %[[V16BF16:.+]], i32 %[[SEED:.+]],  float %[[SCALE:.+]])
+llvm.func @rocdl.cvt.scalef32.sr.pk16(%v16xf32: vector<16xf32>,
+                                     %v16xf16: vector<16xf16>,
+                                     %v16xbf16: vector<16xbf16>,
+                                     %seed: i32,
+                                     %scale: f32) {
+
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.f16(<16 x half> %[[V16F16]], i32 %[[SEED]], float %[[SCALE]])
+  %0 = rocdl.cvt.scalef32.sr.pk16.fp6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.bf16(<16 x bfloat> %[[V16BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %1 = rocdl.cvt.scalef32.sr.pk16.fp6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.f32(<16 x float> %[[V16F32]], i32 %[[SEED]], float %[[SCALE]])
+  %2 = rocdl.cvt.scalef32.sr.pk16.fp6.f32 %v16xf32, %seed, %scale : vector<3xi32>
+
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.f16(<16 x half> %[[V16F16]], i32 %[[SEED]], float %[[SCALE]])
+  %3 = rocdl.cvt.scalef32.sr.pk16.bf6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.bf16(<16 x bfloat> %[[V16BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %4 = rocdl.cvt.scalef32.sr.pk16.bf6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.f32(<16 x float> %[[V16F32]], i32 %[[SEED]], float %[[SCALE]])
+  %5 = rocdl.cvt.scalef32.sr.pk16.bf6.f32 %v16xf32, %seed, %scale : vector<3xi32>
+
+  llvm.return
+}
+
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
