@@ -700,7 +700,7 @@ static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
 // csel instruction. If so, return the folded opcode, and the replacement
 // register.
 static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
-                                unsigned *NewVReg = nullptr) {
+                                unsigned *NewReg = nullptr) {
   VReg = removeCopies(MRI, VReg);
   if (!Register::isVirtualRegister(VReg))
     return 0;
@@ -724,8 +724,13 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     DefMI = MRI.getVRegDef(DefMI->getOperand(2).getReg());
     if (DefMI->getOpcode() != AArch64::MOVi32imm)
       return 0;
-    // fall-through to MOVi32imm case.
-    [[fallthrough]];
+    if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 1)
+      return 0;
+    assert(Is64Bit);
+    SrcReg = AArch64::XZR;
+    Opc = AArch64::CSINCXr;
+    break;
+
   case AArch64::MOVi32imm:
   case AArch64::MOVi64imm:
     if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 1)
@@ -786,8 +791,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   }
   assert(Opc && SrcReg && "Missing parameters");
 
-  if (NewVReg)
-    *NewVReg = SrcReg;
+  if (NewReg)
+    *NewReg = SrcReg;
   return Opc;
 }
 
@@ -988,30 +993,30 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   // Try folding simple instructions into the csel.
   if (TryFold) {
-    unsigned NewVReg = 0;
-    unsigned FoldedOpc = canFoldIntoCSel(MRI, TrueReg, &NewVReg);
+    unsigned NewReg = 0;
+    unsigned FoldedOpc = canFoldIntoCSel(MRI, TrueReg, &NewReg);
     if (FoldedOpc) {
       // The folded opcodes csinc, csinc and csneg apply the operation to
       // FalseReg, so we need to invert the condition.
       CC = AArch64CC::getInvertedCondCode(CC);
       TrueReg = FalseReg;
     } else
-      FoldedOpc = canFoldIntoCSel(MRI, FalseReg, &NewVReg);
+      FoldedOpc = canFoldIntoCSel(MRI, FalseReg, &NewReg);
 
     // Fold the operation. Leave any dead instructions for DCE to clean up.
     if (FoldedOpc) {
       // NewVReg might be XZR/WZR. In that case create a COPY into a virtual
       // register.
-      if (!Register::isVirtualRegister(NewVReg)) {
-        unsigned ZeroReg = NewVReg;
-        NewVReg = MRI.createVirtualRegister(RC);
-        BuildMI(MBB, I, DL, get(TargetOpcode::COPY), NewVReg).addReg(ZeroReg);
+      if (!Register::isVirtualRegister(NewReg)) {
+        unsigned ZeroReg = NewReg;
+        NewReg = MRI.createVirtualRegister(RC);
+        BuildMI(MBB, I, DL, get(TargetOpcode::COPY), NewReg).addReg(ZeroReg);
       }
 
-      FalseReg = NewVReg;
+      FalseReg = NewReg;
       Opc = FoldedOpc;
       // The extends the live range of NewVReg.
-      MRI.clearKillFlags(NewVReg);
+      MRI.clearKillFlags(NewReg);
     }
   }
 
