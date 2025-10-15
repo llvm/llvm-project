@@ -31,10 +31,6 @@ def run(f):
 def testManualReconstructedKernel():
     module = Module.create()
 
-    # Add required module attributes
-    module.operation.attributes["dlti.dl_spec"] = Attribute.parse("#dlti.dl_spec<>")
-    module.operation.attributes["gpu.container_module"] = UnitAttr.get()
-
     i32 = IntegerType.get_signless(32)
     i64 = IntegerType.get_signless(64)
     f32 = F32Type.get()
@@ -102,14 +98,9 @@ def testManualReconstructedKernel():
             loop_block = Block.create_at_start(parent=loop_op.region, arg_types=[i64])
 
             with InsertionPoint(loop_block):
-                idx0 = arith.index_cast(
-                    out=IndexType.get(), in_=loop_block.arguments[0]
-                )
-                val = memref.load(memref=f.arguments[1], indices=[idx0])
-                idx1 = arith.index_cast(
-                    out=IndexType.get(), in_=loop_block.arguments[0]
-                )
-                memref.store(value=val, memref=f.arguments[0], indices=[idx1])
+                idx = arith.index_cast(out=IndexType.get(), in_=loop_block.arguments[0])
+                val = memref.load(memref=f.arguments[1], indices=[idx])
+                memref.store(value=val, memref=f.arguments[0], indices=[idx])
                 openacc.YieldOp([])
 
             openacc.YieldOp([])
@@ -118,8 +109,8 @@ def testManualReconstructedKernel():
 
     print(module)
 
-    # CHECK-LABEL:   func.func public @memcpy_idiom
-    # CHECK-SAME:    (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: i64) {
+    # CHECK-LABEL:   func.func public @memcpy_idiom(
+    # CHECK-SAME:      %[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: i64) {
     # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1024 : i32
     # CHECK:           %[[CONSTANT_1:.*]] = arith.constant 128 : i32
     # CHECK:           acc.parallel num_gangs({%[[CONSTANT_0]] : i32}) vector_length(%[[CONSTANT_1]] : i32) {
@@ -127,11 +118,10 @@ def testManualReconstructedKernel():
     # CHECK:             %[[CONSTANT_3:.*]] = arith.constant 1 : i64
     # CHECK:             acc.loop gang control(%[[VAL_0:.*]] : i64) = (%[[CONSTANT_2]] : i64) to (%[[ARG2]] : i64)  step (%[[CONSTANT_3]] : i64) {
     # CHECK:               %[[INDEX_CAST_0:.*]] = arith.index_cast %[[VAL_0]] : i64 to index
-    # CHECK:               %[[LOAD_0:.*]] = memref.load %[[ARG1]][%[[INDEX_CAST_0]]] : memref<?xf32>
-    # CHECK:               %[[INDEX_CAST_1:.*]] = arith.index_cast %[[VAL_0]] : i64 to index
-    # CHECK:               memref.store %[[LOAD_0]], %[[ARG0]][%[[INDEX_CAST_1]]] : memref<?xf32>
+    # CHECK:               %[[LOAD_0:.*]] = memref.load %[[ARG1]]{{\[}}%[[INDEX_CAST_0]]] : memref<?xf32>
+    # CHECK:               memref.store %[[LOAD_0]], %[[ARG0]]{{\[}}%[[INDEX_CAST_0]]] : memref<?xf32>
     # CHECK:               acc.yield
-    # CHECK:             }
+    # CHECK:             } attributes {independent = [#acc.device_type<none>]}
     # CHECK:             acc.yield
     # CHECK:           }
     # CHECK:           return
