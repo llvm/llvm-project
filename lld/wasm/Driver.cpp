@@ -1496,6 +1496,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Provide the indirect function table if needed.
   ctx.sym.indirectFunctionTable =
       symtab->resolveIndirectFunctionTable(/*required =*/false);
+  ctx.sym.externrefTable = symtab->resolveExternrefTable();
 
   if (errorCount())
     return;

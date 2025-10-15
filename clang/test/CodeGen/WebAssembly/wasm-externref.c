@@ -16,3 +16,43 @@ void helper(externref_t);
 void handle(externref_t obj) {
   helper(obj);
 }
+
+static externref_t __externref_table[0];
+
+externref_t* p = 0;
+
+__attribute__((constructor))
+// CHECK-LABEL: @set_p(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call ptr addrspace(10) @llvm.wasm.ref.null.extern()
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.wasm.table.grow.externref(ptr addrspace(1) @__externref_table, ptr addrspace(10) [[TMP0]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to ptr
+// CHECK-NEXT:    store ptr [[TMP2]], ptr @p, align 4
+// CHECK-NEXT:    ret void
+//
+void set_p(void) {
+    p = (externref_t *)__builtin_wasm_table_grow(__externref_table, __builtin_wasm_ref_null_extern(), 1);
+}
+
+// CHECK-LABEL: @load_ref(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @p, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(10), ptr [[TMP0]], align 1
+// CHECK-NEXT:    ret ptr addrspace(10) [[TMP1]]
+//
+externref_t load_ref() {
+    return *p;
+}
+
+// CHECK-LABEL: @store_ref(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(10), align 1
+// CHECK-NEXT:    store ptr addrspace(10) [[X:%.*]], ptr [[X_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(10), ptr [[X_ADDR]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @p, align 4
+// CHECK-NEXT:    store ptr addrspace(10) [[TMP0]], ptr [[TMP1]], align 1
+// CHECK-NEXT:    ret void
+//
+void store_ref(externref_t x) {
+    *p = x;
+}

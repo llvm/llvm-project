@@ -946,6 +946,15 @@ static void finalizeIndirectFunctionTable() {
   ctx.sym.indirectFunctionTable->setLimits(limits);
 }
 
+static void finalizeExternrefTable() {
+  if (!ctx.sym.externrefTable)
+    return;
+
+  uint32_t tableSize = 0;
+  WasmLimits limits = {0, tableSize, 0, 0};
+  ctx.sym.externrefTable->setLimits(limits);
+}
+
 static void scanRelocations() {
   for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "scanRelocations: " << file->getName() << "\n");
@@ -1773,6 +1782,8 @@ void Writer::run() {
   scanRelocations();
   log("-- finalizeIndirectFunctionTable");
   finalizeIndirectFunctionTable();
+  log("-- finalizeExternrefTable");
+  finalizeExternrefTable();
   log("-- createSyntheticInitFunctions");
   createSyntheticInitFunctions();
   log("-- assignIndexes");

@@ -227,6 +227,49 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
 
+  case ISD::LOAD: {
+    LoadSDNode *LN = cast<LoadSDNode>(Node);
+    EVT VT = LN->getValueType(0);
+
+    if (VT == MVT::externref) {
+      MCSymbol *Table = WebAssembly::getOrCreateExternrefTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue Ptr = LN->getOperand(1);
+
+      MachineSDNode *TableGet = CurDAG->getMachineNode(
+          WebAssembly::TABLE_GET_EXTERNREF, DL, MVT::externref, MVT::Other,
+          TableSym, Ptr, LN->getChain());
+
+      ReplaceNode(Node, TableGet);
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
+  }
+
+  case ISD::STORE: {
+    StoreSDNode *SN = cast<StoreSDNode>(Node);
+    SDValue Value = SN->getOperand(1);
+    EVT VT = Value.getValueType();
+
+    if (VT == MVT::externref) {
+      MCSymbol *Table = WebAssembly::getOrCreateExternrefTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue Ptr = SN->getOperand(2);
+
+      MachineSDNode *TableSet = CurDAG->getMachineNode(
+          WebAssembly::TABLE_SET_EXTERNREF, DL, MVT::Other,
+          {TableSym, Ptr, Value, SN->getChain()});
+
+      ReplaceNode(Node, TableSet);
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
+  }
+
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {

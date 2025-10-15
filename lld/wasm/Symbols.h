@@ -25,6 +25,7 @@ extern const char *defaultModule;
 
 // The name under which to import or export the wasm table.
 extern const char *functionTableName;
+extern const char *externrefTableName;
 
 // The name under which to import or export the wasm memory.
 extern const char *memoryName;
