@@ -204,9 +204,9 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
   return MDNode::get(Ctx, MDVals);
 }
 
-MDTuple *constructEntryMetadata(const Function *EntryFn, MDTuple *Signatures,
-                                MDNode *Resources, MDTuple *Properties,
-                                LLVMContext &Ctx) {
+static MDTuple *constructEntryMetadata(const Function *EntryFn,
+                                       MDTuple *Signatures, MDNode *Resources,
+                                       MDTuple *Properties, LLVMContext &Ctx) {
   // Each entry point metadata record specifies:
   //  * reference to the entry point function global symbol
   //  * unmangled name

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file contains pases and utilities to convert a modern LLVM
+/// \file This file contains passes and utilities to convert a modern LLVM
 /// module into a module compatible with the LLVM 3.7-based DirectX Intermediate
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
@@ -27,7 +27,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "dxil-prepare"
@@ -224,7 +223,7 @@ public:
     const dxil::ModuleMetadataInfo MetadataInfo =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
     VersionTuple ValVer = MetadataInfo.ValidatorVersion;
-    bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
+    bool AllowExperimental = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
     // construct allowlist of valid metadata node kinds
     std::array<unsigned, 6> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
@@ -235,7 +234,7 @@ public:
       // Only remove string attributes if we are not skipping validation.
       // This will reserve the experimental attributes when validation version
       // is 0.0 for experiment mode.
-      removeStringFunctionAttributes(F, SkipValidation);
+      removeStringFunctionAttributes(F, AllowExperimental);
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
@@ -245,9 +244,17 @@ public:
 
           I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
 
+          if (auto *CB = dyn_cast<CallBase>(&I)) {
+            CB->removeFnAttrs(AttrMask);
+            CB->removeRetAttrs(AttrMask);
+            for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
+              CB->removeParamAttrs(Idx, AttrMask);
+            continue;
+          }
+
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
-          if (auto LI = dyn_cast<LoadInst>(&I)) {
+          if (auto *LI = dyn_cast<LoadInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, LI->getPointerOperand(),
                     LI->getType())) {
@@ -257,7 +264,7 @@ public:
             }
             continue;
           }
-          if (auto SI = dyn_cast<StoreInst>(&I)) {
+          if (auto *SI = dyn_cast<StoreInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, SI->getPointerOperand(),
                     SI->getValueOperand()->getType())) {
@@ -268,18 +275,11 @@ public:
             }
             continue;
           }
-          if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, GEP->getPointerOperand(),
                     GEP->getSourceElementType()))
               GEP->setOperand(0, NoOpBitcast);
-            continue;
-          }
-          if (auto *CB = dyn_cast<CallBase>(&I)) {
-            CB->removeFnAttrs(AttrMask);
-            CB->removeRetAttrs(AttrMask);
-            for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
-              CB->removeParamAttrs(Idx, AttrMask);
             continue;
           }
         }
