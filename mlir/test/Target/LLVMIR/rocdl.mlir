@@ -276,6 +276,20 @@ llvm.func @rocdl.s.wait.expcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.wait.asynccnt() {
+  // CHECK-LABEL: rocdl.s.wait.asynccnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.asynccnt(i16 0)
+  rocdl.s.wait.asynccnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.tensorcnt() {
+  // CHECK-LABEL: rocdl.s.wait.tensorcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
+  rocdl.s.wait.tensorcnt 0
+  llvm.return
+}
+
 llvm.func @rocdl.setprio() {
   // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
   rocdl.s.setprio 0

@@ -1035,6 +1035,20 @@ llvm.func @rocdl.s.wait.expcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.wait.asynccnt() {
+  // CHECK-LABEL: rocdl.s.wait.asynccnt
+  // CHECK: rocdl.s.wait.asynccnt 0
+  rocdl.s.wait.asynccnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.tensorcnt() {
+  // CHECK-LABEL: rocdl.s.wait.tensorcnt
+  // CHECK: rocdl.s.wait.tensorcnt 0
+  rocdl.s.wait.tensorcnt 0
+  llvm.return
+}
+
 // -----
 
 llvm.func @rocdl.readfirstlane(%src : f32) -> f32 {
