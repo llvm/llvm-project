@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
-#include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
@@ -92,8 +92,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
 //===----------------------------------------------------------------------===//
 // Post-GPU pipeline for both Host and GPU.
 //===----------------------------------------------------------------------===//
-void buildPostGPUCommonPassPipeline(OpPassManager &pm,
-                           const mlir::gpu::GPUToXeVMPipelineOptions &options) {
+void buildPostGPUCommonPassPipeline(
+    OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
