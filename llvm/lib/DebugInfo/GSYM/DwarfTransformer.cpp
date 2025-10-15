@@ -338,9 +338,13 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     if (FilePath.empty()) {
       // If we had a DW_AT_decl_file, but got no file then we need to emit a
       // warning.
+      const uint64_t DwarfFileIdx = dwarf::toUnsigned(
+          Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
+      // Check if there is no DW_AT_decl_line attribute, and don't report an
+      // error if it isn't there.
+      if (DwarfFileIdx == UINT32_MAX)
+        return;
       Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream &OS) {
-        const uint64_t DwarfFileIdx = dwarf::toUnsigned(
-            Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
         OS << "error: function DIE at " << HEX32(Die.getOffset())
            << " has an invalid file index " << DwarfFileIdx
            << " in its DW_AT_decl_file attribute, unable to create a single "
