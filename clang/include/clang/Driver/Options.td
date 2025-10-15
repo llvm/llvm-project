@@ -9604,9 +9604,9 @@ def fhlsl_spv_enable_maximal_reconvergence
     : Flag<["-"], "fspv-enable-maximal-reconvergence">,
       Group<dxc_Group>,
       Visibility<[CC1Option, DXCOption]>,
-      HelpText<"Enables maximal reconvergence for SPIR-V codegen. This ensures "
-               "that all control flow merges at the nearest possible merge point "
-               "as defined by the Vulkan spec.">,
+      HelpText<"Enables the MaximallyReconvergesKHR execution mode for this "
+               "module. This ensures that control flow reconverges at "
+               "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
