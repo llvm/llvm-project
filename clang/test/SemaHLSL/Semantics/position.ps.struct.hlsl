@@ -9,6 +9,7 @@ struct S {
 // CHECK:   HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <col:15> <<<NULL>>> 3 SemanticExplicitIndex
 };
 
+// FIXME(Keenuts): add mandatory output semantic once those are implemented.
 float4 main(S s) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (S)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:15 s 'S'
