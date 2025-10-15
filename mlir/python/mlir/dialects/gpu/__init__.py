@@ -132,37 +132,3 @@ class GPUFuncOp(GPUFuncOp):
     @property
     def arguments(self) -> Sequence[Type]:
         return self.function_type.value.inputs
-
-    @property
-    def arg_attrs(self):
-        if self.ARGUMENT_ATTR_NAME not in self.attributes:
-            return ArrayAttr.get(
-                [DictAttr.get({}) for _ in self.function_type.value.inputs]
-            )
-        return ArrayAttr(self.attributes[self.ARGUMENT_ATTR_NAME])
-
-    @arg_attrs.setter
-    def arg_attrs(self, attribute: Union[ArrayAttr, Sequence[Attribute]]):
-        if isinstance(attribute, ArrayAttr):
-            self.attributes[self.ARGUMENT_ATTR_NAME] = attribute
-        else:
-            self.attributes[self.ARGUMENT_ATTR_NAME] = ArrayAttr.get(
-                attribute, context=self.context
-            )
-
-    @property
-    def result_attrs(self) -> Optional[ArrayAttr]:
-        if self.RESULT_ATTR_NAME not in self.attributes:
-            return ArrayAttr.get(
-                [DictAttr.get({}) for _ in self.function_type.value.results]
-            )
-        return self.attributes[self.RESULT_ATTR_NAME]
-
-    @result_attrs.setter
-    def result_attrs(self, attribute: Union[ArrayAttr, Sequence[Attribute]]):
-        if isinstance(attribute, ArrayAttr):
-            self.attributes[self.RESULT_ATTR_NAME] = attribute
-        else:
-            self.attributes[self.RESULT_ATTR_NAME] = ArrayAttr.get(
-                attribute, context=self.context
-            )
