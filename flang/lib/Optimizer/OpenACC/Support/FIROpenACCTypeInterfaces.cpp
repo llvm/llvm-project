@@ -353,6 +353,14 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // calculation op.
   mlir::Value baseRef =
       llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+          .Case<fir::DeclareOp>([&](auto op) {
+            // If this declare binds a view with an underlying storage operand,
+            // treat that storage as the base reference. Otherwise, fall back
+            // to the declared memref.
+            if (auto storage = op.getStorage())
+              return storage;
+            return mlir::Value(varPtr);
+          })
           .Case<hlfir::DesignateOp>([&](auto op) {
             // Get the base object.
             return op.getMemref();
