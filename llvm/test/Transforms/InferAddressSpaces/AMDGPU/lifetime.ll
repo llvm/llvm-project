@@ -4,17 +4,17 @@
 define i32 @lifetime_flat_pointer() {
 ; CHECK-LABEL: define i32 @lifetime_flat_pointer() {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[ALLOCA]])
 ; CHECK-NEXT:    store i32 1, ptr addrspace(5) [[ALLOCA]], align 4
 ; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr addrspace(5) [[ALLOCA]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[ALLOCA]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %alloca = alloca i32, align 4, addrspace(5)
   %flat = addrspacecast ptr addrspace(5) %alloca to ptr
-  call void @llvm.lifetime.start(i64 4, ptr addrspace(5) %alloca)
+  call void @llvm.lifetime.start(ptr addrspace(5) %alloca)
   store i32 1, ptr %flat, align 4
   %ret = load i32, ptr %flat, align 4
-  call void @llvm.lifetime.end(i64 4, ptr addrspace(5) %alloca)
+  call void @llvm.lifetime.end(ptr addrspace(5) %alloca)
   ret i32 %ret
 }

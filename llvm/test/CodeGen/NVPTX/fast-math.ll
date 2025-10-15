@@ -22,7 +22,7 @@ define float @sqrt_div(float %a, float %b) {
   ret float %t2
 }
 
-define float @sqrt_div_fast(float %a, float %b) #0 {
+define float @sqrt_div_fast(float %a, float %b) {
 ; CHECK-LABEL: sqrt_div_fast(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -34,29 +34,25 @@ define float @sqrt_div_fast(float %a, float %b) #0 {
 ; CHECK-NEXT:    div.approx.f32 %r4, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %t1 = tail call float @llvm.sqrt.f32(float %a)
-  %t2 = fdiv float %t1, %b
+  %t1 = tail call afn float @llvm.sqrt.f32(float %a)
+  %t2 = fdiv afn float %t1, %b
   ret float %t2
 }
 
-define float @sqrt_div_fast_ninf(float %a, float %b) #0 {
+define float @sqrt_div_fast_ninf(float %a, float %b) {
 ; CHECK-LABEL: sqrt_div_fast_ninf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [sqrt_div_fast_ninf_param_0];
 ; CHECK-NEXT:    sqrt.approx.f32 %r2, %r1;
-; CHECK-NEXT:    abs.f32 %r3, %r1;
-; CHECK-NEXT:    setp.lt.f32 %p1, %r3, 0f00800000;
-; CHECK-NEXT:    selp.f32 %r4, 0f00000000, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r5, [sqrt_div_fast_ninf_param_1];
-; CHECK-NEXT:    div.approx.f32 %r6, %r4, %r5;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ld.param.b32 %r3, [sqrt_div_fast_ninf_param_1];
+; CHECK-NEXT:    div.approx.f32 %r4, %r2, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
   %t1 = tail call ninf afn float @llvm.sqrt.f32(float %a)
-  %t2 = fdiv float %t1, %b
+  %t2 = fdiv afn float %t1, %b
   ret float %t2
 }
 
@@ -77,7 +73,7 @@ define float @sqrt_div_ftz(float %a, float %b) #1 {
   ret float %t2
 }
 
-define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
+define float @sqrt_div_fast_ftz(float %a, float %b) #1 {
 ; CHECK-LABEL: sqrt_div_fast_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -89,35 +85,32 @@ define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
 ; CHECK-NEXT:    div.approx.ftz.f32 %r4, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %t1 = tail call float @llvm.sqrt.f32(float %a)
-  %t2 = fdiv float %t1, %b
+  %t1 = tail call afn float @llvm.sqrt.f32(float %a)
+  %t2 = fdiv afn float %t1, %b
   ret float %t2
 }
 
-define float @sqrt_div_fast_ftz_ninf(float %a, float %b) #0 #1 {
+define float @sqrt_div_fast_ftz_ninf(float %a, float %b) #1 {
 ; CHECK-LABEL: sqrt_div_fast_ftz_ninf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [sqrt_div_fast_ftz_ninf_param_0];
-; CHECK-NEXT:    setp.eq.ftz.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    sqrt.approx.ftz.f32 %r2, %r1;
-; CHECK-NEXT:    selp.f32 %r3, 0f00000000, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r4, [sqrt_div_fast_ftz_ninf_param_1];
-; CHECK-NEXT:    div.approx.ftz.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ld.param.b32 %r3, [sqrt_div_fast_ftz_ninf_param_1];
+; CHECK-NEXT:    div.approx.ftz.f32 %r4, %r2, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
   %t1 = tail call ninf afn float @llvm.sqrt.f32(float %a)
-  %t2 = fdiv float %t1, %b
+  %t2 = fdiv afn float %t1, %b
   ret float %t2
 }
 
 ; There are no fast-math or ftz versions of sqrt and div for f64.  We use
 ; reciprocal(rsqrt(x)) for sqrt(x), and emit a vanilla divide.
 
-define double @sqrt_div_fast_ftz_f64(double %a, double %b) #0 #1 {
+define double @sqrt_div_fast_ftz_f64(double %a, double %b) #1 {
 ; CHECK-LABEL: sqrt_div_fast_ftz_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
@@ -134,22 +127,17 @@ define double @sqrt_div_fast_ftz_f64(double %a, double %b) #0 #1 {
   ret double %t2
 }
 
-define double @sqrt_div_fast_ftz_f64_ninf(double %a, double %b) #0 #1 {
+define double @sqrt_div_fast_ftz_f64_ninf(double %a, double %b) #1 {
 ; CHECK-LABEL: sqrt_div_fast_ftz_f64_ninf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [sqrt_div_fast_ftz_f64_ninf_param_0];
-; CHECK-NEXT:    abs.f64 %rd2, %rd1;
-; CHECK-NEXT:    setp.lt.f64 %p1, %rd2, 0d0010000000000000;
-; CHECK-NEXT:    rsqrt.approx.f64 %rd3, %rd1;
-; CHECK-NEXT:    rcp.approx.ftz.f64 %rd4, %rd3;
-; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
-; CHECK-NEXT:    ld.param.b64 %rd6, [sqrt_div_fast_ftz_f64_ninf_param_1];
-; CHECK-NEXT:    div.rn.f64 %rd7, %rd5, %rd6;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd7;
+; CHECK-NEXT:    sqrt.rn.f64 %rd2, %rd1;
+; CHECK-NEXT:    ld.param.b64 %rd3, [sqrt_div_fast_ftz_f64_ninf_param_1];
+; CHECK-NEXT:    div.rn.f64 %rd4, %rd2, %rd3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %t1 = tail call ninf afn double @llvm.sqrt.f64(double %a)
   %t2 = fdiv double %t1, %b
@@ -172,7 +160,7 @@ define float @rsqrt(float %a) {
   ret float %ret
 }
 
-define float @rsqrt_fast(float %a) #0 {
+define float @rsqrt_fast(float %a) {
 ; CHECK-LABEL: rsqrt_fast(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -182,12 +170,12 @@ define float @rsqrt_fast(float %a) #0 {
 ; CHECK-NEXT:    rsqrt.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %b = tail call float @llvm.sqrt.f32(float %a)
-  %ret = fdiv float 1.0, %b
+  %b = tail call afn float @llvm.sqrt.f32(float %a)
+  %ret = fdiv afn float 1.0, %b
   ret float %ret
 }
 
-define float @rsqrt_fast_ftz(float %a) #0 #1 {
+define float @rsqrt_fast_ftz(float %a) #1 {
 ; CHECK-LABEL: rsqrt_fast_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -197,8 +185,8 @@ define float @rsqrt_fast_ftz(float %a) #0 #1 {
 ; CHECK-NEXT:    rsqrt.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %b = tail call float @llvm.sqrt.f32(float %a)
-  %ret = fdiv float 1.0, %b
+  %b = tail call afn float @llvm.sqrt.f32(float %a)
+  %ret = fdiv afn float 1.0, %b
   ret float %ret
 }
 
@@ -263,35 +251,7 @@ define float @fcos_approx_afn(float %a) {
   ret float %r
 }
 
-define float @fsin_approx(float %a) #0 {
-; CHECK-LABEL: fsin_approx(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [fsin_approx_param_0];
-; CHECK-NEXT:    sin.approx.f32 %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    ret;
-  %r = tail call float @llvm.sin.f32(float %a)
-  ret float %r
-}
-
-define float @fcos_approx(float %a) #0 {
-; CHECK-LABEL: fcos_approx(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [fcos_approx_param_0];
-; CHECK-NEXT:    cos.approx.f32 %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    ret;
-  %r = tail call float @llvm.cos.f32(float %a)
-  ret float %r
-}
-
-define float @fsin_approx_ftz(float %a) #0 #1 {
+define float @fsin_approx_ftz(float %a) #1 {
 ; CHECK-LABEL: fsin_approx_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -301,11 +261,11 @@ define float @fsin_approx_ftz(float %a) #0 #1 {
 ; CHECK-NEXT:    sin.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %r = tail call float @llvm.sin.f32(float %a)
+  %r = tail call afn float @llvm.sin.f32(float %a)
   ret float %r
 }
 
-define float @fcos_approx_ftz(float %a) #0 #1 {
+define float @fcos_approx_ftz(float %a) #1 {
 ; CHECK-LABEL: fcos_approx_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -315,7 +275,7 @@ define float @fcos_approx_ftz(float %a) #0 #1 {
 ; CHECK-NEXT:    cos.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %r = tail call float @llvm.cos.f32(float %a)
+  %r = tail call afn float @llvm.cos.f32(float %a)
   ret float %r
 }
 
@@ -423,7 +383,7 @@ define float @repeated_div_recip_allowed_ftz_sel(i1 %pred, float %a, float %b, f
   ret float %w
 }
 
-define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0 {
+define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) {
 ; CHECK-LABEL: repeated_div_fast(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -444,14 +404,14 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0
 ; CHECK-NEXT:    selp.f32 %r8, %r7, %r6, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
-  %z = fmul float %x, %y
+  %x = fdiv afn arcp float %a, %divisor
+  %y = fdiv afn arcp contract float %b, %divisor
+  %z = fmul contract float %x, %y
   %w = select i1 %pred, float %z, float %y
   ret float %w
 }
 
-define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) #0 {
+define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) {
 ; CHECK-LABEL: repeated_div_fast_sel(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -469,13 +429,13 @@ define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor
 ; CHECK-NEXT:    div.approx.f32 %r5, %r3, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
+  %x = fdiv afn float %a, %divisor
+  %y = fdiv afn float %b, %divisor
   %w = select i1 %pred, float %x, float %y
   ret float %w
 }
 
-define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor) #1 {
 ; CHECK-LABEL: repeated_div_fast_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -496,14 +456,14 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 ; CHECK-NEXT:    selp.f32 %r8, %r7, %r6, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
-  %z = fmul float %x, %y
+  %x = fdiv afn arcp float %a, %divisor
+  %y = fdiv afn arcp contract float %b, %divisor
+  %z = fmul contract float %x, %y
   %w = select i1 %pred, float %z, float %y
   ret float %w
 }
 
-define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #1 {
 ; CHECK-LABEL: repeated_div_fast_ftz_sel(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -521,13 +481,13 @@ define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %div
 ; CHECK-NEXT:    div.approx.ftz.f32 %r5, %r3, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
+  %x = fdiv afn float %a, %divisor
+  %y = fdiv afn float %b, %divisor
   %w = select i1 %pred, float %x, float %y
   ret float %w
 }
 
-define float @frem(float %a, float %b) #0 {
+define float @frem(float %a, float %b) {
 ; CHECK-LABEL: frem(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
@@ -541,11 +501,11 @@ define float @frem(float %a, float %b) #0 {
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %rem = frem float %a, %b
+  %rem = frem afn arcp contract ninf float %a, %b
   ret float %rem
 }
 
-define float @frem_ftz(float %a, float %b) #0 #1 {
+define float @frem_ftz(float %a, float %b) #1 {
 ; CHECK-LABEL: frem_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
@@ -559,11 +519,11 @@ define float @frem_ftz(float %a, float %b) #0 #1 {
 ; CHECK-NEXT:    fma.rn.ftz.f32 %r6, %r5, %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %rem = frem float %a, %b
+  %rem = frem afn contract ninf float %a, %b
   ret float %rem
 }
 
-define double @frem_f64(double %a, double %b) #0 {
+define double @frem_f64(double %a, double %b) {
 ; CHECK-LABEL: frem_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
@@ -577,9 +537,8 @@ define double @frem_f64(double %a, double %b) #0 {
 ; CHECK-NEXT:    fma.rn.f64 %rd6, %rd5, %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %rem = frem double %a, %b
+  %rem = frem ninf double %a, %b
   ret double %rem
 }
 
-attributes #0 = { "unsafe-fp-math" = "true" }
 attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }

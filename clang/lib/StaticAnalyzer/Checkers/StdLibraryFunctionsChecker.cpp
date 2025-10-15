@@ -1589,7 +1589,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       // and we have a TypedefDecl with the name 'FILE'.
       for (Decl *D : LookupRes)
         if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-          return ACtx.getTypeDeclType(TD).getCanonicalType();
+          return ACtx.getCanonicalTypeDeclType(TD);
 
       // Find the first TypeDecl.
       // There maybe cases when a function has the same name as a struct.
@@ -1597,7 +1597,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       //   int stat(const char *restrict path, struct stat *restrict buf);
       for (Decl *D : LookupRes)
         if (auto *TD = dyn_cast<TypeDecl>(D))
-          return ACtx.getTypeDeclType(TD).getCanonicalType();
+          return ACtx.getCanonicalTypeDeclType(TD);
       return std::nullopt;
     }
   } lookupTy(ACtx);

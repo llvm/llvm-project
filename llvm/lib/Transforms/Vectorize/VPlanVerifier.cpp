@@ -24,6 +24,7 @@
 #define DEBUG_TYPE "loop-vectorize"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPlanVerifier {
@@ -166,7 +167,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           return VerifyEVLUse(*R, 2);
         })
-        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
+              VPInterleaveEVLRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPInstructionWithType>(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
@@ -183,6 +185,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           case Instruction::ZExt:
           case Instruction::Mul:
           case Instruction::FMul:
+          case VPInstruction::Broadcast:
             // Opcodes above can only use EVL after wide inductions have been
             // expanded.
             if (!VerifyLate) {
@@ -196,11 +199,11 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           // EVLIVIncrement is only used by EVLIV & BranchOnCount.
           // Having more than two users is unexpected.
-          if ((I->getNumUsers() != 1) &&
-              (I->getNumUsers() != 2 || none_of(I->users(), [&I](VPUser *U) {
-                 using namespace llvm::VPlanPatternMatch;
-                 return match(U, m_BranchOnCount(m_Specific(I), m_VPValue()));
-               }))) {
+          if (I->getOpcode() != VPInstruction::Broadcast &&
+              I->getNumUsers() != 1 &&
+              (I->getNumUsers() != 2 ||
+               none_of(I->users(), match_fn(m_BranchOnCount(m_Specific(I),
+                                                            m_VPValue()))))) {
             errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
@@ -250,17 +253,15 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
-          for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
-            VPValue *IncomingVPV = Phi->getIncomingValue(Idx);
+          for (const auto &[IncomingVPV, IncomingVPBB] :
+               Phi->incoming_values_and_blocks()) {
             if (IncomingVPV != V)
               continue;
 
-            const VPBasicBlock *IncomingVPBB = Phi->getIncomingBlock(Idx);
             if (VPDT.dominates(VPBB, IncomingVPBB))
               continue;
 
-            errs() << "Incoming def at index " << Idx
-                   << " does not dominate incoming block!\n";
+            errs() << "Incoming def does not dominate incoming block!\n";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
             VPSlotTracker Tracker(VPBB->getPlan());
             IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
@@ -413,7 +414,7 @@ bool VPlanVerifier::verifyRegion(const VPRegionBlock *Region) {
   const VPBlockBase *Exiting = Region->getExiting();
 
   // Entry and Exiting shouldn't have any predecessor/successor, respectively.
-  if (Entry->getNumPredecessors() != 0) {
+  if (Entry->hasPredecessors()) {
     errs() << "region entry block has predecessors\n";
     return false;
   }
@@ -478,8 +479,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!LastInst || (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
-                    LastInst->getOpcode() != VPInstruction::BranchOnCond)) {
+  if (!match(LastInst, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()))) {
     errs() << "VPlan vector loop exit must end with BranchOnCount or "
               "BranchOnCond VPInstruction\n";
     return false;
@@ -489,8 +489,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 }
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(const_cast<VPlan &>(Plan));
+  VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPTypeAnalysis TypeInfo(Plan);
   VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
   return Verifier.verify(Plan);

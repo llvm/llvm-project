@@ -124,12 +124,12 @@ namespace user_namespace {
 // DEFAULT-NEXT:    [[B:%.*]] = alloca [[STRUCT_USER_BFLOAT16]], align 1, addrspace(5)
 // DEFAULT-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // DEFAULT-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B]] to ptr
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 1, ptr addrspace(5) [[A]]) #[[ATTR11:[0-9]+]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[A]]) #[[ATTR11:[0-9]+]]
 // DEFAULT-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[A_ASCAST]], float noundef 1.000000e+00) #[[ATTR10]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 1, ptr addrspace(5) [[B]]) #[[ATTR11]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
 // DEFAULT-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[B_ASCAST]], float noundef 2.000000e+00) #[[ATTR10]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 1, ptr addrspace(5) [[B]]) #[[ATTR11]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 1, ptr addrspace(5) [[A]]) #[[ATTR11]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[A]]) #[[ATTR11]]
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: @_ZN14user_namespace8test_fmaEv(
@@ -138,12 +138,12 @@ namespace user_namespace {
 // FINITEONLY-NEXT:    [[B:%.*]] = alloca [[STRUCT_USER_BFLOAT16]], align 1, addrspace(5)
 // FINITEONLY-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // FINITEONLY-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B]] to ptr
-// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 1, ptr addrspace(5) [[A]]) #[[ATTR11:[0-9]+]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[A]]) #[[ATTR11:[0-9]+]]
 // FINITEONLY-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[A_ASCAST]], float noundef nofpclass(nan inf) 1.000000e+00) #[[ATTR10]]
-// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 1, ptr addrspace(5) [[B]]) #[[ATTR11]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
 // FINITEONLY-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[B_ASCAST]], float noundef nofpclass(nan inf) 2.000000e+00) #[[ATTR10]]
-// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 1, ptr addrspace(5) [[B]]) #[[ATTR11]]
-// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 1, ptr addrspace(5) [[A]]) #[[ATTR11]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[A]]) #[[ATTR11]]
 // FINITEONLY-NEXT:    ret void
 //
   __global__ void test_fma() {

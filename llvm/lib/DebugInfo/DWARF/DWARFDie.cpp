@@ -149,7 +149,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   if (!Name.empty())
     WithColor(OS, Color) << Name;
   else if (Attr == DW_AT_decl_line || Attr == DW_AT_decl_column ||
-           Attr == DW_AT_call_line || Attr == DW_AT_call_column) {
+           Attr == DW_AT_call_line || Attr == DW_AT_call_column ||
+           Attr == DW_AT_language_version) {
     if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
       OS << *Val;
     else

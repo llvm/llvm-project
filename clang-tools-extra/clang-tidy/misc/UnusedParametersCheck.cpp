@@ -1,4 +1,4 @@
-//===--- UnusedParametersCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -136,7 +136,7 @@ UnusedParametersCheck::~UnusedParametersCheck() = default;
 UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       IgnoreVirtual(Options.get("IgnoreVirtual", false)) {}
 
 void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

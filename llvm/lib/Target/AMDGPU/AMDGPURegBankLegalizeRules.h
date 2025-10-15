@@ -176,6 +176,7 @@ enum RegBankLLTMappingApplyID {
 
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
+  UniInVgprS16,
   UniInVgprS32,
   UniInVgprV2S16,
   UniInVgprV4S32,
@@ -211,6 +212,7 @@ enum LoweringMethodID {
   VccExtToSel,
   UniExtToSel,
   UnpackBitShift,
+  UnpackMinMax,
   S_BFE,
   V_BFE,
   VgprToVccCopy,
@@ -221,6 +223,7 @@ enum LoweringMethodID {
   UniCstExt,
   SplitLoad,
   WidenLoad,
+  WidenMMOToS32
 };
 
 enum FastRulesTypes {

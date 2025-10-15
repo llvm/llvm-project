@@ -11,11 +11,11 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION add_sat
+#define __CLC_FUNCTION add_sat
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_INTEGER_ADD_SAT_H__

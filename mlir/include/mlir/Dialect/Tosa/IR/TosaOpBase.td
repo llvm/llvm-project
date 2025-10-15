@@ -201,9 +201,9 @@ def Tosa_PadOpQuantInfoBuilder : OpBuilder<
 // and optional initial value. The builder will extract var_shape and element type
 // attributes from variable type.
 def Tosa_VariableOpBuilder : OpBuilder<
-  (ins "StringRef":$name, "Type":$variable_type, "Attribute":$initial_value),
+  (ins "StringRef":$sym_name, "Type":$variable_type, "Attribute":$initial_value),
   [{
-    buildVariableOp($_builder, $_state, name, variable_type, initial_value);
+    buildVariableOp($_builder, $_state, sym_name, variable_type, initial_value);
   }]>;
 
 
@@ -245,6 +245,19 @@ def Tosa_NONE : I32EnumAttrCase<"none", 0>;
 def Tosa_PRO_INT   : I32EnumAttrCase<"pro_int", 1>;
 def Tosa_PRO_FP   : I32EnumAttrCase<"pro_fp", 2>;
 
+def Tosa_ProfileAttr
+    : Tosa_I32EnumAttr<"Profile", "supported TOSA profiles", "prof",
+                       [Tosa_PRO_INT, Tosa_PRO_FP, Tosa_NONE]> {
+  let extraClassDeclaration = [{
+    static llvm::SmallVector<Profile, 2> getAllValues() {
+      return {Profile::pro_int, Profile::pro_fp};
+    }
+  }];
+}
+
+def Tosa_ProfileArrayAttr
+    : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
+
 def Tosa_EXT_NONE         : I32EnumAttrCase<"none", 0>;
 def Tosa_EXT_INT16        : I32EnumAttrCase<"int16", 1>;
 def Tosa_EXT_INT4         : I32EnumAttrCase<"int4", 2>;
@@ -264,17 +277,27 @@ def Tosa_ExtensionAttr
       Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
       Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
       Tosa_EXT_DYNAMIC
-    ]>;
+    ]> {
+  let extraClassDeclaration = [{
+    static llvm::SmallVector<Extension, 11> getAllValues() {
+      return {
+        Extension::int16, Extension::int4, Extension::bf16,
+        Extension::fp8e4m3, Extension::fp8e5m2, Extension::fft,
+        Extension::variable, Extension::controlflow, Extension::doubleround,
+        Extension::inexactround, Extension::dynamic
+      };
+    }
+  }];
+}
 
 def Tosa_ExtensionArrayAttr
     : TypedArrayAttrBase<Tosa_ExtensionAttr, "TOSA extension array attribute">;
 
-def Tosa_ProfileAttr
-    : Tosa_I32EnumAttr<"Profile", "supported TOSA profiles", "prof",
-                       [Tosa_PRO_INT, Tosa_PRO_FP, Tosa_NONE]>;
+def Tosa_LVL_NONE : I32EnumAttrCase<"none", 0>;
+def Tosa_LVL_8K   : I32EnumAttrCase<"eightK", 1, "8k">;
 
-def Tosa_ProfileArrayAttr
-    : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
+def Tosa_LevelAttr
+    : Tosa_I32EnumAttr<"Level", "supported TOSA levels", "level", [Tosa_LVL_NONE, Tosa_LVL_8K]>;
 
 // The base class for defining op availability dimensions.
 class Availability {
@@ -382,6 +405,49 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA target environment.
+//===----------------------------------------------------------------------===//
+def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
+  let summary = "Target environment information.";
+  let parameters = ( ins
+    "Level": $level,
+    ArrayRefParameter<"Profile">: $profiles,
+    ArrayRefParameter<"Extension">: $extensions
+  );
+
+  let assemblyFormat = "`<` `level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
+                       "`extensions` `=` `[` $extensions `]` `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// Iterable attributes.
+//===----------------------------------------------------------------------===//
+// Defined in `section 3. Enumerations` of the TOSA specification.
+
+def Tosa_RESIZE_NEAREST_NEIGHBOR          : I32EnumAttrCase<"NEAREST_NEIGHBOR", 1>;
+def Tosa_RESIZE_BILINEAR                  : I32EnumAttrCase<"BILINEAR", 2>;
+
+def Tosa_ResizeModeAttr
+    : Tosa_I32EnumAttr<"ResizeMode", "Supported resize/upsampling strategies", "resize_mode",
+                    [Tosa_RESIZE_NEAREST_NEIGHBOR, Tosa_RESIZE_BILINEAR]>;
+
+def Tosa_NANPROPAGATION_PROPAGATE : I32EnumAttrCase<"PROPAGATE", 1>;
+def Tosa_NANPROPAGATION_IGNORE    : I32EnumAttrCase<"IGNORE", 2>;
+
+def Tosa_NanPropagationModeAttr
+    : Tosa_I32EnumAttr<"NanPropagationMode", "Supported NaN propagation strategies", "nan_mode",
+                    [Tosa_NANPROPAGATION_PROPAGATE, Tosa_NANPROPAGATION_IGNORE]>;
+
+def Tosa_ROUNDING_SINGLE_ROUND    : I32EnumAttrCase<"SINGLE_ROUND", 1>;
+def Tosa_ROUNDING_INEXACT_ROUND   : I32EnumAttrCase<"INEXACT_ROUND", 2>;
+def Tosa_ROUNDING_DOUBLE_ROUND    : I32EnumAttrCase<"DOUBLE_ROUND", 3>;
+
+def Tosa_RoundingModeAttr
+    : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
+                    [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;
+
+
+//===----------------------------------------------------------------------===//
 // TOSA Interfaces.
 //===----------------------------------------------------------------------===//
 
@@ -444,10 +510,7 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
               ResultsBroadcastableShape,
               TosaElementwiseOperator,
               SameOperandsAndResultRank,
-              Pure])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+              Pure])> {}
 
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
@@ -455,22 +518,18 @@ class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
               SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {}
 
 class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {}
 
 // The "SameVariadicOperandSize" trait allows us to pass optional arguments
 // for multiple zero points in convolution ops.
 class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
     : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
       [SameVariadicOperandSize])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TOSA_OP_BASE

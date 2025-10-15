@@ -40,7 +40,7 @@ static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::Required);
 
-Value createPredicate(OpBuilder &builder, tblgen::Pred pred) {
+static Value createPredicate(OpBuilder &builder, tblgen::Pred pred) {
   MLIRContext *ctx = builder.getContext();
 
   if (pred.isCombined()) {
@@ -68,21 +68,22 @@ Value createPredicate(OpBuilder &builder, tblgen::Pred pred) {
   return op;
 }
 
-Value typeToConstraint(OpBuilder &builder, Type type) {
+static Value typeToConstraint(OpBuilder &builder, Type type) {
   MLIRContext *ctx = builder.getContext();
   auto op =
       irdl::IsOp::create(builder, UnknownLoc::get(ctx), TypeAttr::get(type));
   return op.getOutput();
 }
 
-Value baseToConstraint(OpBuilder &builder, StringRef baseClass) {
+static Value baseToConstraint(OpBuilder &builder, StringRef baseClass) {
   MLIRContext *ctx = builder.getContext();
   auto op = irdl::BaseOp::create(builder, UnknownLoc::get(ctx),
                                  StringAttr::get(ctx, baseClass));
   return op.getOutput();
 }
 
-std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
+static std::optional<Type> recordToType(MLIRContext *ctx,
+                                        const Record &predRec) {
   if (predRec.isSubClassOf("I")) {
     auto width = predRec.getValueAsInt("bitwidth");
     return IntegerType::get(ctx, width, IntegerType::Signless);
@@ -171,7 +172,8 @@ std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
   return std::nullopt;
 }
 
-Value createTypeConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
+static Value createTypeConstraint(OpBuilder &builder,
+                                  tblgen::Constraint constraint) {
   MLIRContext *ctx = builder.getContext();
   const Record &predRec = constraint.getDef();
 
@@ -260,7 +262,8 @@ Value createTypeConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   return createPredicate(builder, constraint.getPredicate());
 }
 
-Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
+static Value createAttrConstraint(OpBuilder &builder,
+                                  tblgen::Constraint constraint) {
   MLIRContext *ctx = builder.getContext();
   const Record &predRec = constraint.getDef();
 
@@ -341,7 +344,8 @@ Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   return createPredicate(builder, constraint.getPredicate());
 }
 
-Value createRegionConstraint(OpBuilder &builder, tblgen::Region constraint) {
+static Value createRegionConstraint(OpBuilder &builder,
+                                    tblgen::Region constraint) {
   MLIRContext *ctx = builder.getContext();
   const Record &predRec = constraint.getDef();
 
@@ -383,8 +387,8 @@ static StringRef getAttrName(tblgen::AttrDef &tblgenType) {
 }
 
 /// Extract an operation to IRDL.
-irdl::OperationOp createIRDLOperation(OpBuilder &builder,
-                                      tblgen::Operator &tblgenOp) {
+static irdl::OperationOp createIRDLOperation(OpBuilder &builder,
+                                             tblgen::Operator &tblgenOp) {
   MLIRContext *ctx = builder.getContext();
   StringRef opName = getOperatorName(tblgenOp);
 
@@ -488,7 +492,8 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   return op;
 }
 
-irdl::TypeOp createIRDLType(OpBuilder &builder, tblgen::TypeDef &tblgenType) {
+static irdl::TypeOp createIRDLType(OpBuilder &builder,
+                                   tblgen::TypeDef &tblgenType) {
   MLIRContext *ctx = builder.getContext();
   StringRef typeName = getTypeName(tblgenType);
   std::string combined = ("!" + typeName).str();
@@ -501,8 +506,8 @@ irdl::TypeOp createIRDLType(OpBuilder &builder, tblgen::TypeDef &tblgenType) {
   return op;
 }
 
-irdl::AttributeOp createIRDLAttr(OpBuilder &builder,
-                                 tblgen::AttrDef &tblgenAttr) {
+static irdl::AttributeOp createIRDLAttr(OpBuilder &builder,
+                                        tblgen::AttrDef &tblgenAttr) {
   MLIRContext *ctx = builder.getContext();
   StringRef attrName = getAttrName(tblgenAttr);
   std::string combined = ("#" + attrName).str();

@@ -207,7 +207,8 @@ define float @fmaxnum_1(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP3]], [[TMP5]]
@@ -217,8 +218,7 @@ define float @fmaxnum_1(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP3]], i64 [[IV]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP7]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP3]], true
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[CMP_N]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -274,7 +274,8 @@ define float @fmaxnum_2(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP3]], [[TMP5]]
@@ -284,8 +285,7 @@ define float @fmaxnum_2(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP3]], i64 [[IV]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP7]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP3]], true
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[CMP_N]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -343,7 +343,8 @@ define float @fmaxnum_induction_starts_at_10(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[TMP4]]
@@ -354,8 +355,7 @@ define float @fmaxnum_induction_starts_at_10(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 10, [[TMP9]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[CMP_N]], [[TMP13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -413,7 +413,8 @@ define float @fmaxnum_induction_starts_at_value(ptr %src, i64 %start, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[TMP4]]
@@ -424,8 +425,7 @@ define float @fmaxnum_induction_starts_at_value(ptr %src, i64 %start, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[START]], [[TMP9]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[CMP_N]], [[TMP13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -682,4 +682,50 @@ loop:
 
 exit:
   ret float %max.next
+}
+
+define float @test_fmax_and_fmax(ptr %src.0, ptr %src.1, i64 %n) {
+; CHECK-LABEL: define float @test_fmax_and_fmax(
+; CHECK-SAME: ptr [[SRC_0:%.*]], ptr [[SRC_1:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_0]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_1]], i64 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load float, ptr [[GEP_SRC_0]], align 4
+; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[GEP_SRC_1]], align 4
+; CHECK-NEXT:    [[MAX_NEXT]] = tail call noundef float @llvm.maxnum.f32(float [[MAX]], float [[L_0]])
+; CHECK-NEXT:    [[MIN_NEXT]] = tail call noundef float @llvm.minnum.f32(float [[MIN]], float [[L_1]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_NEXT_LCSSA:%.*]] = phi float [ [[MIN_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[MAX_NEXT_LCSSA]], [[MIN_NEXT_LCSSA]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = phi float [ 0.000000e+00, %entry ], [ %min.next, %loop ]
+  %max = phi float [ 0.000000e+00, %entry ], [ %max.next, %loop ]
+  %gep.src.0 = getelementptr inbounds nuw float, ptr %src.0, i64 %iv
+  %gep.src.1 = getelementptr inbounds nuw float, ptr %src.1, i64 %iv
+  %l.0 = load float, ptr %gep.src.0, align 4
+  %l.1 = load float, ptr %gep.src.1, align 4
+  %max.next = tail call noundef float @llvm.maxnum.f32(float %max, float %l.0)
+  %min.next = tail call noundef float @llvm.minnum.f32(float %min, float %l.1)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %sub = fsub float %max.next, %min.next
+  ret float %sub
 }

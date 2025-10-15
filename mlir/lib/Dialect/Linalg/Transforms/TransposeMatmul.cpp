@@ -59,12 +59,12 @@ FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
                                                  ArrayRef<int64_t>{1, 0});
   Operation *newMatmulOp;
   if (transposeLHS) {
-    newMatmulOp = linalg::MatmulTransposeAOp::create(
+    newMatmulOp = MatmulTransposeAOp::create(
         rewriter, loc, matmulOp.getResultTypes(),
         ValueRange{transposeOp->getResult(0), matmulOp.getInputs()[1]},
         matmulOp.getOutputs());
   } else {
-    newMatmulOp = linalg::MatmulTransposeBOp::create(
+    newMatmulOp = MatmulTransposeBOp::create(
         rewriter, loc, matmulOp.getResultTypes(),
         ValueRange{matmulOp.getInputs()[0], transposeOp->getResult(0)},
         matmulOp.getOutputs());
@@ -116,12 +116,12 @@ mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
                                                  ArrayRef<int64_t>{0, 2, 1});
   Operation *newMatmulOp;
   if (transposeLHS) {
-    newMatmulOp = linalg::BatchMatmulTransposeAOp::create(
+    newMatmulOp = BatchMatmulTransposeAOp::create(
         rewriter, loc, batchMatmulOp.getResultTypes(),
         ValueRange{transposeOp->getResult(0), batchMatmulOp.getInputs()[1]},
         batchMatmulOp.getOutputs());
   } else {
-    newMatmulOp = linalg::BatchMatmulTransposeBOp::create(
+    newMatmulOp = BatchMatmulTransposeBOp::create(
         rewriter, loc, batchMatmulOp.getResultTypes(),
         ValueRange{batchMatmulOp.getInputs()[0], transposeOp->getResult(0)},
         batchMatmulOp.getOutputs());

@@ -383,7 +383,7 @@ const MCSymbol &MachObjectWriter::findAliasedSymbol(const MCSymbol &Sym) const {
 }
 
 void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
-  auto *Symbol = static_cast<const MCSymbolMachO *>(MSD.Symbol);
+  auto *Symbol = MSD.Symbol;
   const auto &Data = static_cast<const MCSymbolMachO &>(*Symbol);
   auto *AliasedSymbol =
       static_cast<const MCSymbolMachO *>(&findAliasedSymbol(*Symbol));
@@ -602,15 +602,16 @@ void MachObjectWriter::computeSymbolTable(
   // match 'as'. Even though it doesn't matter for correctness, this is
   // important for letting us diff .o files.
   for (const MCSymbol &Symbol : Asm.symbols()) {
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     // Ignore non-linker visible symbols.
-    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
+    if (!Sym.isSymbolLinkerVisible())
       continue;
 
-    if (!Symbol.isExternal() && !Symbol.isUndefined())
+    if (!Sym.isExternal() && !Sym.isUndefined())
       continue;
 
     MachSymbolData MSD;
-    MSD.Symbol = &Symbol;
+    MSD.Symbol = &Sym;
     MSD.StringIndex = StringTable.getOffset(Symbol.getName());
 
     if (Symbol.isUndefined()) {
@@ -628,15 +629,16 @@ void MachObjectWriter::computeSymbolTable(
 
   // Now add the data for local symbols.
   for (const MCSymbol &Symbol : Asm.symbols()) {
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     // Ignore non-linker visible symbols.
-    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
+    if (!Sym.isSymbolLinkerVisible())
       continue;
 
-    if (Symbol.isExternal() || Symbol.isUndefined())
+    if (Sym.isExternal() || Sym.isUndefined())
       continue;
 
     MachSymbolData MSD;
-    MSD.Symbol = &Symbol;
+    MSD.Symbol = &Sym;
     MSD.StringIndex = StringTable.getOffset(Symbol.getName());
 
     if (Symbol.isAbsolute()) {

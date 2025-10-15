@@ -653,7 +653,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
   const MCInstrDesc& MCID = PacketMI.getDesc();
 
   // First operand is always the result.
-  const TargetRegisterClass *PacketRC = HII->getRegClass(MCID, 0, HRI, MF);
+  const TargetRegisterClass *PacketRC = HII->getRegClass(MCID, 0, HRI);
   // Double regs can not feed into new value store: PRM section: 5.4.2.2.
   if (PacketRC == &Hexagon::DoubleRegsRegClass)
     return false;
@@ -866,7 +866,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
     return false;
 
   const MCInstrDesc& MCID = PI.getDesc();
-  const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0, HRI, MF);
+  const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0, HRI);
   if (DisableVecDblNVStores && VecRC == &Hexagon::HvxWRRegClass)
     return false;
 

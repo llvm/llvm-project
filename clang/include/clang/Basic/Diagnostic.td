@@ -30,6 +30,7 @@ def CLASS_REMARK    : DiagClass;
 def CLASS_WARNING   : DiagClass;
 def CLASS_EXTENSION : DiagClass;
 def CLASS_ERROR     : DiagClass;
+def CLASS_TRAP      : DiagClass;
 
 // Responses to a diagnostic in a SFINAE context.
 class SFINAEResponse;
@@ -144,7 +145,8 @@ class Extension<string str> : Diagnostic<str, CLASS_EXTENSION, SEV_Ignored>;
 class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION, SEV_Warning>;
 // Notes can provide supplementary information on errors, warnings, and remarks.
 class Note<string str>      : Diagnostic<str, CLASS_NOTE, SEV_Fatal/*ignored*/>;
-
+// Trap messages attached to traps in debug info.
+class Trap<string str>      : Diagnostic<str, CLASS_TRAP, SEV_Fatal/*ignored*/>;
 
 class DefaultIgnore { Severity DefaultSeverity = SEV_Ignored; }
 class DefaultWarn   { Severity DefaultSeverity = SEV_Warning; }
@@ -235,3 +237,4 @@ include "DiagnosticParseKinds.td"
 include "DiagnosticRefactoringKinds.td"
 include "DiagnosticSemaKinds.td"
 include "DiagnosticSerializationKinds.td"
+include "DiagnosticTrapKinds.td"

@@ -253,10 +253,12 @@ def MapOp : LinalgStructuredBase_Op<"map", [
           }
     ```
 
-    Shortened print form is available. Applies to simple maps with one
-    non-yield operation inside the body.
+    Shortened print form is available for simple maps where the body contains exactly
+    two operations (the payload operation and a yield), the payload operation has
+    the same number of operands as block arguments with operands matching block
+    arguments in order, and the yield operand is the result of the payload operation.
 
-    The example above will be printed as:
+    The example above will be printed using the shortened form as:
     ```mlir
       %add = linalg.map { arith.addf }
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
@@ -340,13 +342,15 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
           }
     ```
 
-    Shortened print form is available. Applies to simple (not variadic) reduces
-    with one non-yield operation inside the body. Applies only if the operation
-    takes `%out` as the first argument.
+    Shortened print form is available for simple reduces where the body contains exactly
+    two operations (the payload operation and a yield), the payload operation has the
+    same number of operands as block arguments, the first block argument (init) is the
+    last operand of the payload operation with remaining operands matching remaining
+    block arguments in order, and the yield operand is the result of the payload operation.
 
-    The example above will be printed as:
+    The example above will be printed using the shortened form as:
     ```mlir
-          %reduce = linalg.reduce { arith.addf }
+      %reduce = linalg.reduce { arith.addf }
           ins(%input:tensor<16x32x64xf32>)
           outs(%init:tensor<16x64xf32>)
           dimensions = [1]
@@ -785,6 +789,9 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       /// Returns a list of AffineMap with the default matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
+      /// Returns true if the AffineMap is the default matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
+
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);
 
@@ -1057,6 +1064,9 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
       /// Returns a list with default AffineMap(s), i.e. without broadcasts and transpositions.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
+      /// Returns true if the AffineMap is the default batch matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
+
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS = true);
 
@@ -1180,6 +1190,9 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
 
       /// Returns a list of AffineMap with the default batch_reduce_matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the AffineMap is the default batch reduce matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS = true);
