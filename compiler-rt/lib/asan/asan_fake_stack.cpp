@@ -214,11 +214,11 @@ void FakeStack::ForEachFakeFrame(RangeIteratorCallback callback, void *arg) {
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 static THREADLOCAL FakeStack *fake_stack_tls;
 
-FakeStack* GetTLSFakeStack() { return fake_stack_tls; }
+static FakeStack* GetTLSFakeStack() { return fake_stack_tls; }
 static void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
 void ResetTLSFakeStack() { fake_stack_tls = nullptr; }
 #else
-FakeStack* GetTLSFakeStack() { return 0; }
+static FakeStack* GetTLSFakeStack() { return 0; }
 static void SetTLSFakeStack(FakeStack*) {}
 void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
