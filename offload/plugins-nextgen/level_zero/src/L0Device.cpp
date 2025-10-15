@@ -545,14 +545,6 @@ Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return Plugin::success();
 }
 
-Error L0DeviceTy::initDeviceInfoImpl(__tgt_device_info *Info) {
-  if (!Info->Context)
-    Info->Context = getZeContext();
-  if (!Info->Device)
-    Info->Device = reinterpret_cast<void *>(getZeDevice());
-  return Plugin::success();
-}
-
 static const char *DriverVersionToStrTable[] = {
     "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
     "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"};

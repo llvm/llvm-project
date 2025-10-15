@@ -607,7 +607,6 @@ public:
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
-  Error initDeviceInfoImpl(__tgt_device_info *Info) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
