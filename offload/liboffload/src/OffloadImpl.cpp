@@ -1004,7 +1004,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
 Error olMemcpyRect_impl(ol_queue_handle_t Queue, ol_memcpy_rect_t DstRect,
                         ol_device_handle_t DstDevice, ol_memcpy_rect_t SrcRect,
                         ol_device_handle_t SrcDevice, ol_dimensions_t Size) {
-  auto Host = OffloadContext::get().HostDevice();
+  auto Host = OffloadContext::get().HostDevice;
   if (DstDevice == Host && SrcDevice == Host) {
     return createOffloadError(
         ErrorCode::INVALID_ARGUMENT,
