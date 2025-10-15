@@ -27,11 +27,11 @@ class MachineIDFSSAUpdater {
     Register LiveOutValue;
   };
 
-  const bool RunOnGenericRegs;
   MachineDominatorTree &DT;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
   MachineRegisterInfo::VRegAttrs RegAttrs;
+  const bool RunOnGenericRegs;
 
   SmallVector<std::pair<MachineBasicBlock *, Register>, 4> Defines;
   SmallVector<MachineBasicBlock *, 4> UseBlocks;
