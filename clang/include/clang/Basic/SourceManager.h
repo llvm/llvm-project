@@ -1261,7 +1261,8 @@ public:
   SourceLocation getRefinedSpellingLoc(SourceLocation Loc) const {
     // Handle the non-mapped case inline, defer to out of line code to handle
     // expansions.
-    if (Loc.isFileID()) return Loc;
+    if (Loc.isFileID())
+      return Loc;
     return getRefinedSpellingLocSlowCase(Loc);
   }
 
