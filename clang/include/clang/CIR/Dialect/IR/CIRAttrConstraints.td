@@ -61,7 +61,7 @@ def CIR_AnyIntOrGlobalViewAttr
   string cppType = "::mlir::TypedAttr";
 }
 
-def CIR_AnyGlobalViewOrCatchAllOrUnwindAttr
+def CIR_TryHandlerAttr
     : AnyAttrOf<[CIR_AnyGlobalViewAttr, CIR_AnyCatchAllAttr, CIR_AnyUnwindAttr],
                 "catch all or unwind or global view attribute"> {
   string cppType = "::mlir::TypedAttr";
@@ -79,8 +79,7 @@ def CIR_IntOrGlobalViewArrayAttr : TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr
   string cppType = "::mlir::ArrayAttr";
 }
 
-def CIR_GlobalViewOrCatchAllOrUnwindArrayAttr
-    : TypedArrayAttrBase<CIR_AnyGlobalViewOrCatchAllOrUnwindAttr,
+def CIR_TryHandlerArrayAttr : TypedArrayAttrBase<CIR_TryHandlerAttr,
                          "catch all or unwind or global view array attribute">;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD

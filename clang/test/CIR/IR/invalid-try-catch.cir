@@ -22,7 +22,7 @@ module {
 
 cir.func dso_local @invalid_catch_rtti_type() {
   cir.scope {
-    // expected-error @below {{'cir.try' op attribute 'catch_types' failed to satisfy constraint: catch all or unwind or global view array attribute}}
+    // expected-error @below {{'cir.try' op attribute 'handler_types' failed to satisfy constraint: catch all or unwind or global view array attribute}}
     cir.try {
       cir.yield
     } catch [type #cir.undef] {
@@ -40,7 +40,7 @@ module {
 
 cir.func dso_local @invalid_catch_empty_block() {
   cir.scope {
-    // expected-error @below {{'cir.try' op region #1 ('catch_regions') failed to verify constraint: region with at least 1 blocks}}
+    // expected-error @below {{'cir.try' op region #1 ('handler_regions') failed to verify constraint: region with at least 1 blocks}}
     cir.try {
       cir.yield
     } catch all {

@@ -2931,47 +2931,49 @@ void cir::TryOp::getSuccessorRegions(
 
   // TODO(CIR): If we know a target function never throws a specific type, we
   // can remove the catch handler.
-  for (mlir::Region &handler : this->getHandlers())
-    regions.push_back(mlir::RegionSuccessor(&handler));
+  for (mlir::Region &handlerRegion : this->getHandlerRegions())
+    regions.push_back(mlir::RegionSuccessor(&handlerRegion));
 }
 
-static void printCatchRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
-                              mlir::MutableArrayRef<mlir::Region> regions,
-                              mlir::ArrayAttr catchersAttr) {
-  if (!catchersAttr)
+static void
+printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
+                       mlir::MutableArrayRef<mlir::Region> handlerRegions,
+                       mlir::ArrayAttr handlerTypes) {
+  if (!handlerTypes)
     return;
 
-  for (const auto [catcherIdx, catcherAttr] : llvm::enumerate(catchersAttr)) {
-    if (catcherIdx)
+  for (const auto [typeIdx, typeAttr] : llvm::enumerate(handlerTypes)) {
+    if (typeIdx)
       printer << " ";
 
-    if (mlir::isa<cir::CatchAllAttr>(catcherAttr)) {
+    if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
       printer << "catch all ";
-    } else if (mlir::isa<cir::UnwindAttr>(catcherAttr)) {
+    } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
       printer << "unwind ";
     } else {
       printer << "catch [type ";
-      printer.printAttribute(catcherAttr);
+      printer.printAttribute(typeAttr);
       printer << "] ";
     }
 
-    printer.printRegion(regions[catcherIdx], /*printEntryBLockArgs=*/false,
+    printer.printRegion(handlerRegions[typeIdx],
+                        /*printEntryBLockArgs=*/false,
                         /*printBlockTerminators=*/true);
   }
 }
 
-static mlir::ParseResult
-parseCatchRegions(mlir::OpAsmParser &parser,
-                  llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &regions,
-                  mlir::ArrayAttr &catchersAttr) {
+static mlir::ParseResult parseTryHandlerRegions(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &handlerRegions,
+    mlir::ArrayAttr &handlerTypes) {
 
   auto parseCheckedCatcherRegion = [&]() -> mlir::ParseResult {
-    regions.emplace_back(new mlir::Region);
+    handlerRegions.emplace_back(new mlir::Region);
 
-    mlir::Region &currRegion = *regions.back();
+    mlir::Region &currRegion = *handlerRegions.back();
     mlir::SMLoc regionLoc = parser.getCurrentLocation();
     if (parser.parseRegion(currRegion)) {
-      regions.clear();
+      handlerRegions.clear();
       return failure();
     }
 
@@ -3032,7 +3034,7 @@ parseCatchRegions(mlir::OpAsmParser &parser,
       return mlir::failure();
   }
 
-  catchersAttr = parser.getBuilder().getArrayAttr(catcherAttrs);
+  handlerTypes = parser.getBuilder().getArrayAttr(catcherAttrs);
   return mlir::success();
 }
 

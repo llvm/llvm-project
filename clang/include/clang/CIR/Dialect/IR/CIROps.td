@@ -4366,19 +4366,19 @@ def CIR_TryOp : CIR_Op<"try",[
   let arguments = (ins
     UnitAttr:$synthetic,
     UnitAttr:$cleanup,
-    CIR_GlobalViewOrCatchAllOrUnwindArrayAttr:$catch_types
+    CIR_TryHandlerArrayAttr:$handler_types
   );
 
   let regions = (region
     AnyRegion:$try_region,
-    VariadicRegion<MinSizedRegion<1>>:$handlers
+    VariadicRegion<MinSizedRegion<1>>:$handler_regions
   );
 
   let assemblyFormat = [{
     (`synthetic` $synthetic^)?
     (`cleanup` $cleanup^)?
     $try_region
-    custom<CatchRegions>($handlers, $catch_types)
+    custom<TryHandlerRegions>($handler_regions, $handler_types)
     attr-dict
   }];
 
@@ -4387,10 +4387,11 @@ def CIR_TryOp : CIR_Op<"try",[
       "llvm::function_ref<void(mlir::OpBuilder &, "
         "mlir::Location)>":$tryBuilder,
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, "
-        "mlir::OperationState &)>":$catchBuilder),
+        "mlir::OperationState &)>":$handlersBuilder),
     [{
       assert(tryBuilder && "expected builder callback for 'cir.try' body");
-      assert(catchBuilder && "expected builder callback for 'catch' body");
+      assert(handlersBuilder
+        && "expected builder callback for 'handlers' body");
 
       OpBuilder::InsertionGuard guard($_builder);
 
@@ -4400,7 +4401,7 @@ def CIR_TryOp : CIR_Op<"try",[
       // Create try body region and set insertion point
       $_builder.createBlock(tryBodyRegion);
       tryBuilder($_builder, $_state.location);
-      catchBuilder($_builder, $_state.location, $_state);
+      handlersBuilder($_builder, $_state.location, $_state);
     }]>
   ];
 
