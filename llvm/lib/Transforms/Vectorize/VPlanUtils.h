@@ -84,6 +84,12 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (PreservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
+  if (isa<VPPartialReductionRecipe>(VPV))
+    return false;
+  if (isa<VPReductionRecipe>(VPV))
+    return true;
+  if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
+    return Expr->isSingleScalar();
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
