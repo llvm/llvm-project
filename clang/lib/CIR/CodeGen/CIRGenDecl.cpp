@@ -80,7 +80,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     assert(!cir::MissingFeatures::openMP());
     if (!didCallStackSave) {
       // Save the stack.
-      auto defaultTy = AllocaInt8PtrTy;
+      cir::PointerType defaultTy = AllocaInt8PtrTy;
       CharUnits align = CharUnits::fromQuantity(
           cgm.getDataLayout().getAlignment(defaultTy, false));
       Address stack = createTempAlloca(defaultTy, align, loc, "saved_stack");
@@ -96,7 +96,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
       pushStackRestore(NormalCleanup, stack);
     }
 
-    auto vlaSize = getVLASize(ty);
+    VlaSizePair vlaSize = getVLASize(ty);
     mlir::Type memTy = convertTypeForMem(vlaSize.type);
 
     // Allocate memory for the array.
@@ -733,7 +733,7 @@ struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
   void emit(CIRGenFunction &cgf) override {
-    auto loc = stack.getPointer().getLoc();
+    mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
     cgf.getBuilder().createStackRestore(loc, v);
   }
