@@ -141,7 +141,8 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/openacc.py
   DIALECT_NAME acc
-  DEPENDS acc_common_td)
+  DEPENDS acc_common_td
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
