@@ -1211,9 +1211,8 @@ static LogicalResult replaceAffineDelinearizeIndexInverseExpression(
     if (asResult.getOwner() == delinOp.getOperation())
       resToExpr[asResult.getResultNumber()] = getAffineSymbolExpr(pos, ctx);
   }
-  if (llvm::any_of(resToExpr, [](auto e) { return e == AffineExpr(); })) {
+  if (llvm::is_contained(resToExpr, AffineExpr()))
     return failure();
-  }
 
   bool isDimReplacement = llvm::all_of(resToExpr, llvm::IsaPred<AffineDimExpr>);
   int64_t stride = 1;
