@@ -1042,7 +1042,9 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
-    if (I->getOpcode() == Instruction::FRem) {
+
+    switch (I->getOpcode()) {
+    case Instruction::FRem: {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
           auto Res = std::make_optional<SimplifyQuery>(
@@ -1054,11 +1056,18 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       }();
 
       expandFRem(cast<BinaryOperator>(*I), SQ);
-    } else if (I->getOpcode() == Instruction::FPToUI ||
-               I->getOpcode() == Instruction::FPToSI) {
+      break;
+    }
+
+    case Instruction::FPToUI:
+    case Instruction::FPToSI:
       expandFPToI(I);
-    } else {
+      break;
+
+    case Instruction::UIToFP:
+    case Instruction::SIToFP:
       expandIToFP(I);
+      break;
     }
   }
 
