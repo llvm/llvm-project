@@ -36,7 +36,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
