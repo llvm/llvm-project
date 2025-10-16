@@ -1,6 +1,5 @@
-! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=50 %s | FileCheck %s
+! RUN: not %flang_fc1 -fopenmp -fopenmp-version=50 %s 2>&1 | FileCheck %s
 program main
-!CHECK-LABEL:  MainProgram scope: MAIN
   integer, parameter :: n = 256
   real(8) :: a(256)
   !$omp target map(mapper(xx), from:a)
@@ -8,7 +7,6 @@ program main
      a(i) = 4.2
   end do
   !$omp end target
-!CHECK:    OtherConstruct scope: size=0 alignment=1 sourceRange=74 bytes
-!CHECK:    OtherClause scope: size=0 alignment=1 sourceRange=0 bytes
-!CHECK:    xx: Misc ConstructName
 end program main
+
+! CHECK: error: '{{.*}}' not declared
