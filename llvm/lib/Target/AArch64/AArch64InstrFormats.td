@@ -1166,21 +1166,6 @@ def timm32_0_15 : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm0_15Operand;
 }
 
-// timm32_1_16 predicate - True if the 32-bit immediate is in the range [1,16]
-def timm32_1_16 : Operand<i32>, TImmLeaf<i32, [{
-  return ((uint32_t)Imm > 0 && (uint32_t)Imm < 17);
-}]> {
-  let ParserMatchClass = Imm1_16Operand;
-}
-
-// timm32_1_8 predicate - True if the 32-bit immediate is in the range [1,8]
-def timm32_1_8 : Operand<i32>, TImmLeaf<i32, [{
- return ((uint32_t)Imm > 0 && (uint32_t)Imm < 9);
-}]> {
-  let ParserMatchClass = Imm1_8Operand;
-}
-
-
 // timm32_0_31 predicate - True if the 32-bit immediate is in the range [0,31]
 def timm32_0_31 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 32;
