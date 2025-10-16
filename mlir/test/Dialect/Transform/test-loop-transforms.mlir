@@ -79,3 +79,37 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @nested_loops_both_having_invariant_code_transform() {
+  %m = memref.alloc() : memref<10xf32>
+  %cf7 = arith.constant 7.0 : f32
+  %cf8 = arith.constant 8.0 : f32
+  affine.for %arg0 = 0 to 10 {
+    %v0 = arith.addf %cf7, %cf8 : f32
+    affine.for %arg1 = 0 to 10 {
+      %v1 = arith.addf %v0, %cf8 : f32
+      affine.store %v0, %m[%arg0] : memref<10xf32>
+    }
+  }
+
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: %[[CST0:.*]] = arith.constant 7.000000e+00 : f32
+  // CHECK-NEXT: %[[CST1:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[ADD0:.*]] = arith.addf %[[CST0]], %[[CST1]] : f32
+  // CHECK-NEXT: arith.addf %[[ADD0]], %[[CST1]] : f32
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: affine.store
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+       %arg0: !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match interface{LoopLikeInterface} in %arg0 : (!transform.any_op) -> !transform.any_op 
+    transform.loop.hoist_loop_invariant_code_motion %loop : !transform.any_op
+    transform.yield
+  }
+}

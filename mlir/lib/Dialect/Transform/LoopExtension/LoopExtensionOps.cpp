@@ -32,3 +32,22 @@ void transform::HoistLoopInvariantSubsetsOp::getEffects(
   transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
+
+//===----------------------------------------------------------------------===//
+// HoistLoopInvariantCodeMotionOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::HoistLoopInvariantCodeMotionOp::applyToOne(
+    transform::TransformRewriter &rewriter, LoopLikeOpInterface loopLikeOp,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  (void)moveLoopInvariantCode(loopLikeOp);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::HoistLoopInvariantCodeMotionOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTargetMutable(), effects);
+  transform::modifiesPayload(effects);
+}

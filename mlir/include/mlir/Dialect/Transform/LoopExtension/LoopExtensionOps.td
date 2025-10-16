@@ -73,4 +73,60 @@ def HoistLoopInvariantSubsetsOp
   }];
 }
 
+def HoistLoopInvariantCodeMotionOp
+    : TransformDialectOp<"loop.hoist_loop_invariant_code_motion",
+        [TransformOpInterface, TransformEachOpTrait,
+         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+         ReportTrackingListenerFailuresOpTrait]> {
+  let summary = "Hoist loop invariant instructions outside of the loop";
+  let description = [{
+    This transform hoists loop-invariant instructions out of the targeted
+    loop-like op.
+
+    Example:
+    ```
+    %m = memref.alloc() : memref<10xf32>
+    %cf7 = arith.constant 7.0 : f32
+    %cf8 = arith.constant 8.0 : f32
+
+    affine.for %arg0 = 0 to 10 {
+      affine.for %arg1 = 0 to 10 {
+        %v0 = arith.addf %cf7, %cf8 : f32
+      }
+    }
+    ```
+    Is transformed to:
+    ```
+    %alloc = memref.alloc() : memref<10xf32>
+    %cst = arith.constant 7.000000e+00 : f32
+    %cst_0 = arith.constant 8.000000e+00 : f32
+    %0 = arith.addf %cst, %cst_0 : f32
+    affine.for %arg0 = 0 to 10 {
+    }
+    affine.for %arg0 = 0 to 10 {
+    }
+    ```
+
+    loop-invariant instructions are hoisted only if they are pure ops and
+    they are ancestors of the parent regionOp of all operands.
+
+    This transform reads the target handle and modifies the payload. This
+    transform does not invalidate any handles, but loop-like ops are replaced
+    with new loop-like ops when a loop-invariant op is hoisted. The transform
+    rewriter updates all handles accordingly.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
+      ::mlir::LoopLikeOpInterface loopLikeOp,
+      ::mlir::transform::ApplyToEachResultList &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // MLIR_DIALECT_TRANSFORM_LOOPEXTENSION_LOOPEXTENSIONOPS
