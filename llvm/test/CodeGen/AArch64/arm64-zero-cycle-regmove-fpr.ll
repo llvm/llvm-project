@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 | FileCheck %s -check-prefixes=NOZCM-FPR128-ATTR --match-full-lines
 ; RUN: llc < %s -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 | FileCheck %s -check-prefixes=ZCM-FPR128-ATTR --match-full-lines
 
-define void @zero_cycle_regmov_FPR64(double %a, double %b, double %c, double %d) {
+define void @zero_cycle_regmove_FPR64(double %a, double %b, double %c, double %d) {
 entry:
 ; CHECK-LABEL: t:
 ; NOZCM-FPR128-CPU: fmov d0, d2
@@ -45,7 +45,7 @@ entry:
 
 declare float @foo_double(double, double)
 
-define void @zero_cycle_regmov_FPR32(float %a, float %b, float %c, float %d) {
+define void @zero_cycle_regmove_FPR32(float %a, float %b, float %c, float %d) {
 entry:
 ; CHECK-LABEL: t:
 ; NOZCM-FPR128-CPU: fmov s0, s2
@@ -86,7 +86,7 @@ entry:
 
 declare float @foo_float(float, float)
 
-define void @zero_cycle_regmov_FPR16(half %a, half %b, half %c, half %d) {
+define void @zero_cycle_regmove_FPR16(half %a, half %b, half %c, half %d) {
 entry:
 ; CHECK-LABEL: t:
 ; NOZCM-FPR128-CPU: fmov s0, s2
