@@ -31,12 +31,12 @@ defm constexpr_body_multiple_return : CXX14Compat<
 defm variable_template : CXX14Compat<"variable templates are">;
 
 // C++17 compatibility with C++14 and earlier.
-defm decomp_decl : CXX17Compat<"decomposition declarations are">;
+defm decomp_decl : CXX17Compat<"structured binding declarations are">;
 defm inline_variable : CXX17Compat<"inline variables are">;
 
 // C++20 compatibility with C++17 and earlier.
 defm decomp_decl_spec
-    : CXX20Compat<"decomposition declaration declared '%0' is">;
+    : CXX20Compat<"structured binding declaration declared '%0' is">;
 defm constexpr_local_var_no_init : CXX20Compat<
   "uninitialized variable in a constexpr %select{function|constructor}0 is">;
 defm constexpr_function_try_block : CXX20Compat<
@@ -591,58 +591,58 @@ def warn_modifying_shadowing_decl :
 
 // C++ decomposition declarations
 def err_decomp_decl_context : Error<
-  "decomposition declaration not permitted in this context">;
+  "structured binding declaration not permitted in this context">;
 def err_decomp_decl_spec
-    : Error<"decomposition declaration cannot be declared '%0'">;
+    : Error<"structured binding declaration cannot be declared '%0'">;
 def err_decomp_decl_type : Error<
-  "decomposition declaration cannot be declared with type %0; "
+  "structured binding declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
 def err_decomp_decl_constraint : Error<
-  "decomposition declaration cannot be declared with constrained 'auto'">;
+  "structured binding declaration cannot be declared with constrained 'auto'">;
 def err_decomp_decl_parens : Error<
-  "decomposition declaration cannot be declared with parentheses">;
+  "structured binding declaration cannot be declared with parentheses">;
 def err_decomp_decl_template : Error<
-  "decomposition declaration cannot be a template">;
+  "structured binding declaration cannot be a template">;
 def err_decomp_decl_not_alone : Error<
-  "decomposition declaration must be the only declaration in its group">;
+  "structured binding declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
-  "decomposition declaration %0 requires an initializer">;
+  "structured binding declaration %0 requires an initializer">;
 def err_decomp_decl_wrong_number_bindings : Error<
-  "type %0 decomposes into %3 %plural{1:element|:elements}2, but "
+  "type %0 binds to %3 %plural{1:element|:elements}2, but "
   "%select{%plural{0:no|:only %1}1|%1}4 "
   "%plural{1:name was|:names were}1 provided">;
 def err_decomp_decl_unbindable_type : Error<
-  "cannot decompose %select{union|non-class, non-array}1 type %2">;
+  "cannot bind %select{union|non-class, non-array}1 type %2">;
 def err_decomp_decl_multiple_bases_with_members : Error<
-  "cannot decompose class type %1: "
+  "cannot bind class type %1: "
   "%select{its base classes %2 and|both it and its base class}0 %3 "
   "have non-static data members">;
 def err_decomp_decl_ambiguous_base : Error<
-  "cannot decompose members of ambiguous base class %1 of %0:%2">;
+  "cannot bind members of ambiguous base class %1 of %0:%2">;
 def err_decomp_decl_inaccessible_base : Error<
-  "cannot decompose members of inaccessible base class %1 of %0">,
+  "cannot bind members of inaccessible base class %1 of %0">,
   AccessControl;
 def err_decomp_decl_inaccessible_field : Error<
-  "cannot decompose %select{private|protected}0 member %1 of %3">,
+  "cannot bind %select{private|protected}0 member %1 of %3">,
   AccessControl;
 def err_decomp_decl_lambda : Error<
-  "cannot decompose lambda closure type">;
+  "cannot bind lambda closure type">;
 def err_decomp_decl_anon_union_member : Error<
-  "cannot decompose class type %0 because it has an anonymous "
+  "cannot bind class type %0 because it has an anonymous "
   "%select{struct|union}1 member">;
 def err_decomp_decl_std_tuple_element_not_specialized : Error<
-  "cannot decompose this type; 'std::tuple_element<%0>::type' "
+  "cannot bind this type; 'std::tuple_element<%0>::type' "
   "does not name a type">;
 def err_decomp_decl_std_tuple_size_not_constant : Error<
-  "cannot decompose this type; 'std::tuple_size<%0>::value' "
+  "cannot bind this type; 'std::tuple_size<%0>::value' "
   "is not a valid integral constant expression">;
 def err_decomp_decl_std_tuple_size_invalid
-    : Error<"cannot decompose this type; 'std::tuple_size<%0>::value' "
+    : Error<"cannot bind this type; 'std::tuple_size<%0>::value' "
             "is not a valid size: %1">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
 def err_arg_is_not_destructurable : Error<
-  "type %0 cannot be decomposed">;
+  "type %0 cannot be bound">;
 
 def err_std_type_trait_not_class_template : Error<
   "unsupported standard library implementation: "
@@ -2620,7 +2620,7 @@ def err_auto_variable_cannot_appear_in_own_initializer
           "declared with deduced type %2 cannot appear in its own initializer">;
 def err_binding_cannot_appear_in_own_initializer : Error<
   "binding %0 cannot appear in the initializer of its own "
-  "decomposition declaration">;
+  "structured binding declaration">;
 def err_new_array_of_auto : Error<
   "cannot allocate array of 'auto'">;
 def err_auto_not_allowed : Error<

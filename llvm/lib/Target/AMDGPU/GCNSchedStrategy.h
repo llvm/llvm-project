@@ -67,10 +67,8 @@ protected:
   bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                            SchedBoundary *Zone) const;
 
-#ifndef NDEBUG
   void printCandidateDecision(const SchedCandidate &Current,
                               const SchedCandidate &Preferred);
-#endif
 
   std::vector<unsigned> Pressure;
 
