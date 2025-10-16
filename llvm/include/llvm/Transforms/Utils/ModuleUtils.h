@@ -96,18 +96,6 @@ getOrCreateSanitizerCtorAndInitFunctions(
 /// the list of public globals in the module.
 LLVM_ABI bool nameUnamedGlobals(Module &M);
 
-/// Adds global values to the llvm.used list.
-LLVM_ABI void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
-
-/// Adds global values to the llvm.compiler.used list.
-LLVM_ABI void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
-
-/// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
-/// ShouldRemove should return true for any initializer field that should not be
-/// included in the replacement global.
-LLVM_ABI void removeFromUsedLists(Module &M,
-                                  function_ref<bool(Constant *)> ShouldRemove);
-
 /// Filter out potentially dead comdat functions where other entries keep the
 /// entire comdat group alive.
 ///

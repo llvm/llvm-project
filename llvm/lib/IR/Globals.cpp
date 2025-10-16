@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -670,4 +671,81 @@ void GlobalIFunc::applyAlongResolverPath(
     function_ref<void(const GlobalValue &)> Op) const {
   DenseSet<const GlobalAlias *> Aliases;
   findBaseObject(getResolver(), Aliases, Op);
+}
+
+static void collectUsedGlobals(GlobalVariable *GV,
+                               SmallSetVector<Constant *, 16> &Init) {
+  if (!GV || !GV->hasInitializer())
+    return;
+
+  auto *CA = cast<ConstantArray>(GV->getInitializer());
+  for (Use &Op : CA->operands())
+    Init.insert(cast<Constant>(Op));
+}
+
+static void appendToUsedList(Module &M, StringRef Name,
+                             ArrayRef<GlobalValue *> Values) {
+  GlobalVariable *GV = M.getGlobalVariable(Name);
+
+  SmallSetVector<Constant *, 16> Init;
+  collectUsedGlobals(GV, Init);
+  Type *ArrayEltTy = GV ? GV->getValueType()->getArrayElementType()
+                        : PointerType::getUnqual(M.getContext());
+  if (GV)
+    GV->eraseFromParent();
+
+  for (auto *V : Values)
+    Init.insert(ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, ArrayEltTy));
+
+  if (Init.empty())
+    return;
+
+  ArrayType *ATy = ArrayType::get(ArrayEltTy, Init.size());
+  GV = new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
+                          ConstantArray::get(ATy, Init.getArrayRef()), Name);
+  GV->setSection("llvm.metadata");
+}
+
+void llvm::appendToUsed(Module &M, ArrayRef<GlobalValue *> Values) {
+  appendToUsedList(M, "llvm.used", Values);
+}
+
+void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
+  appendToUsedList(M, "llvm.compiler.used", Values);
+}
+
+static void removeFromUsedList(Module &M, StringRef Name,
+                               function_ref<bool(Constant *)> ShouldRemove) {
+  GlobalVariable *GV = M.getNamedGlobal(Name);
+  if (!GV)
+    return;
+
+  SmallSetVector<Constant *, 16> Init;
+  collectUsedGlobals(GV, Init);
+
+  Type *ArrayEltTy = cast<ArrayType>(GV->getValueType())->getElementType();
+
+  SmallVector<Constant *, 16> NewInit;
+  for (Constant *MaybeRemoved : Init) {
+    if (!ShouldRemove(MaybeRemoved->stripPointerCasts()))
+      NewInit.push_back(MaybeRemoved);
+  }
+
+  if (!NewInit.empty()) {
+    ArrayType *ATy = ArrayType::get(ArrayEltTy, NewInit.size());
+    GlobalVariable *NewGV =
+        new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
+                           ConstantArray::get(ATy, NewInit), "", GV,
+                           GV->getThreadLocalMode(), GV->getAddressSpace());
+    NewGV->setSection(GV->getSection());
+    NewGV->takeName(GV);
+  }
+
+  GV->eraseFromParent();
+}
+
+void llvm::removeFromUsedLists(Module &M,
+                               function_ref<bool(Constant *)> ShouldRemove) {
+  removeFromUsedList(M, "llvm.used", ShouldRemove);
+  removeFromUsedList(M, "llvm.compiler.used", ShouldRemove);
 }
