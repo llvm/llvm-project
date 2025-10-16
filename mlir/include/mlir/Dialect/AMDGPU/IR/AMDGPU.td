@@ -157,6 +157,8 @@ def AMDGPU_ScaledExtPacked816Op
     Note: the layout for the scales generally mirrors how the WMMA
     instructions use for matix scales. These selection operands allows
     one to choose portions of the matrix to convert.
+
+    Available on gfx1250+.
   }];
 
   let assemblyFormat = [{
