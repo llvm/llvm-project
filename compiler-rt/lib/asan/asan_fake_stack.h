@@ -195,7 +195,7 @@ class FakeStack {
   void *true_start;
 };
 
-void SetTLSFakeStack(FakeStack *fs);
+void SetTLSFakeStack(FakeStack* fs);
 
 }  // namespace __asan
 
