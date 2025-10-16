@@ -1771,6 +1771,10 @@ defm RELAXED_DOT_ADD :
             "i32x4.relaxed_dot_i8x16_i7x16_add_s\t$dst, $lhs, $rhs, $acc",
             "i32x4.relaxed_dot_i8x16_i7x16_add_s", 0x113>;
 
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$lhs),
+                                                         (v16i8 V128:$rhs))),
+          (RELAXED_DOT_ADD $lhs, $rhs, $acc)>, Requires<[HasRelaxedSIMD]>;
+
 //===----------------------------------------------------------------------===//
 // Relaxed BFloat16 dot product
 //===----------------------------------------------------------------------===//
