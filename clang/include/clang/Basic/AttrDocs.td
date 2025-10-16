@@ -862,6 +862,36 @@ with ``__noinline__`` defined as a macro as ``__attribute__((noinline))``.
   }];
 }
 
+def NoOutlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute suppresses outlining from the annotated function.
+
+Outlining is the process where common parts of separate functions are extracted
+into a separate function (or assembly snippet), and calls to that function or
+snippet are inserted in the original functions. In this way, it can be seen as
+the opposite of inlining. It can help to reduce code size.
+
+.. code-block:: c
+
+  [[clang::nooutline]] int x1(int y) {
+    int z = COMPLEX_MACRO(y); // Not outlined
+    return z + const1;
+  }
+
+  int x2(int y) {
+    int z = COMPLEX_MACRO(y); // May be outlined
+    return z * const2;
+  }
+
+  int x3(int y) {
+    int z = COMPLEX_MACRO(y); // May be outlined
+    reutrn z / const3;
+  }
+
+  }];
+}
+
 def MustTailDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

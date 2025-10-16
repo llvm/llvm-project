@@ -2372,9 +2372,9 @@ def NoInline : DeclOrStmtAttr {
 }
 
 def NoOutline : DeclOrStmtAttr {
-  let Spellings = [CXX11<"clang", "nooutline">, C23<"clang", "nooutline">];
+  let Spellings = [Clang<"nooutline">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [Undocumented];
+  let Documentation = [NoOutlineDocs];
   let SimpleHandler = 1;
 }
 
