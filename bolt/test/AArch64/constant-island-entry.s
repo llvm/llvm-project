@@ -27,9 +27,3 @@ constant_island:
 caller:
   bl constant_island
   ret
-
-.globl main
-.type main, %function
-main:
-  bl caller
-  ret
