@@ -426,11 +426,11 @@ f4(0);
 // expected-note@#concept-arg-one {{because 'int' does not satisfy 'False'}}
 // expected-note@#concept-arg-False {{because 'false' evaluated to false}}
 
+}
 
 template <typename T, template <typename...> concept C1>
 concept TestBinary = T::a || C1<T>;
 static_assert(TestBinary<int, A>);
 
-}
 
 }
