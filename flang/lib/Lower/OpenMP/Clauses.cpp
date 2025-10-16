@@ -16,8 +16,6 @@
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-
 #include <list>
 #include <optional>
 #include <tuple>
