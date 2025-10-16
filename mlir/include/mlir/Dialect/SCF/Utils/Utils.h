@@ -221,6 +221,20 @@ FailureOr<scf::ForallOp> normalizeForallOp(RewriterBase &rewriter,
 /// 4. Each region iter arg and result has exactly one use
 bool isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops);
 
+/// Generate unrolled copies of an scf loop's 'loopBodyBlock', with 'iterArgs'
+/// and 'yieldedValues' as the block arguments and yielded values of the loop.
+/// The content of the loop body is replicated 'unrollFactor' times, calling
+/// 'ivRemapFn' to remap 'iv' for each unrolled body. If specified, annotates
+/// the Ops in each unrolled iteration using annotateFn. If provided,
+/// 'clonedToSrcOpsMap' is populated with the mappings from the cloned ops to
+/// the original op.
+void generateUnrolledLoop(
+    Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
+    function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    ValueRange iterArgs, ValueRange yieldedValues,
+    IRMapping *clonedToSrcOpsMap = nullptr);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_SCF_UTILS_UTILS_H_
