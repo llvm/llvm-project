@@ -10206,10 +10206,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     APInt Cst;
     if (sd_match(N, m_Xor(m_Or(m_Value(A), m_Value(B)), m_ConstInt(Cst))) &&
         Cst.isAllOnes()) {
+      auto Ty = N->getValueType(0);
       return DAG.getNode(
           ISD::AND, DL, VT,
-          DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(-1, DL, VT)),
-          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(-1, DL, VT)));
+          DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(Cst, DL, Ty)),
+          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(Cst, DL, Ty)));
     }
   }
 
