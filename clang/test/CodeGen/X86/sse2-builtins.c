@@ -1314,6 +1314,11 @@ __m128d test_mm_shuffle_pd(__m128d A, __m128d B) {
   return _mm_shuffle_pd(A, B, 1);
 }
 
+TEST_CONSTEXPR((match_m128d(_mm_shuffle_pd(((__m128d)(__v2df){1.0, 2.0}), ((__m128d)(__v2df){3.0, 4.0}), 3), 2.0, 4.0)));
+TEST_CONSTEXPR((match_m128d(_mm_shuffle_pd(((__m128d)(__v2df){1.0, 2.0}), ((__m128d)(__v2df){3.0, 4.0}), 0), 1.0, 3.0)));
+TEST_CONSTEXPR((match_m128d(_mm_shuffle_pd(((__m128d)(__v2df){1.0, 2.0}), ((__m128d)(__v2df){3.0, 4.0}), 1), 2.0, 3.0)));
+TEST_CONSTEXPR((match_m128d(_mm_shuffle_pd(((__m128d)(__v2df){1.0, 2.0}), ((__m128d)(__v2df){3.0, 4.0}), 2), 1.0, 4.0)));
+
 __m128i test_mm_shufflehi_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_shufflehi_epi16
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
