@@ -322,7 +322,11 @@ public:
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
-    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
+    VPIRFlags Flags;
+    if (Opcode == Instruction::Trunc)
+      Flags = VPIRFlags::TruncFlagsTy(false, false);
+    return tryInsertInstruction(
+        new VPWidenCastRecipe(Opcode, Op, ResultTy, Flags));
   }
 
   VPScalarIVStepsRecipe *
