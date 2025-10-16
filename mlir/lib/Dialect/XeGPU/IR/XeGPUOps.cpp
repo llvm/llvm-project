@@ -20,8 +20,8 @@
 
 #define DEBUG_TYPE "xegpu"
 
-namespace mlir {
-namespace xegpu {
+using namespace mlir;
+using namespace mlir::xegpu;
 
 static bool isSharedMemory(const MemRefType &memrefTy) {
   Attribute attr = memrefTy.getMemorySpace();
@@ -1131,9 +1131,6 @@ LogicalResult StoreMatrixOp::verify() {
   return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
                                [&]() { return emitError(); });
 }
-
-} // namespace xegpu
-} // namespace mlir
 
 namespace mlir {
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.cpp.inc>
