@@ -4938,7 +4938,7 @@ static void emitOpDefShard(const RecordKeeper &records,
                            ArrayRef<const Record *> defs,
                            const Dialect &dialect, unsigned shardIndex,
                            unsigned shardCount, raw_ostream &os) {
-  IfDefEmitter scope(os, Twine("GET_OP_DEFS_") + Twine(shardIndex));
+  IfDefEmitter scope(os, "GET_OP_DEFS_" + Twine(shardIndex));
 
   // Emit the op registration hook in the first shard.
   const char *const opRegistrationHook =
