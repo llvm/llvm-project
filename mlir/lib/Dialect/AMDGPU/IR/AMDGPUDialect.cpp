@@ -757,13 +757,13 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
         offset = numElements - 4l;
       }
       Type scaleSrcElemType = scaleSrcType.getElementType();
-      auto newSrcType = VectorType::get(SmallVector<int64_t>({numElements}),
-                                        scaleSrcElemType);
+      auto newSrcType =
+          VectorType::get(ArrayRef{numElements}, scaleSrcElemType);
       Value newScaleSrc =
           vector::ShapeCastOp::create(rewriter, loc, newSrcType, scaleSrc);
       auto extract = vector::ExtractStridedSliceOp::create(
-          rewriter, loc, newScaleSrc, ArrayRef<int64_t>{offset},
-          ArrayRef<int64_t>{size}, ArrayRef<int64_t>{1});
+          rewriter, loc, newScaleSrc, ArrayRef{offset}, ArrayRef{size},
+          ArrayRef{int64_t(1)});
       rewriter.modifyOpInPlace(op, [&] {
         op->setOperand(opIdx, extract);
         setOpsel(opIdx, opsel);
