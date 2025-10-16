@@ -355,17 +355,22 @@ private:
                               unsigned VecElemBits) const;
 
   /// Before attempting to fill gaps, check if the chain is a candidate for
-  /// a masked store, to save compile time if it is not possible for the address
-  /// space and element type.
-  bool shouldAttemptMaskedStore(const ArrayRef<ChainElem> C) const;
+  /// a masked load/store, to save compile time if it is not possible for the
+  /// address space and element type.
+  bool shouldAttemptMaskedLoadStore(const ArrayRef<ChainElem> C) const;
 
   /// Create a new GEP and a new Load/Store instruction such that the GEP
   /// is pointing at PrevElem + Offset. In the case of stores, store poison.
-  /// Extra elements will either be combined into a vector/masked store or
+  /// Extra elements will either be combined into a masked load/store or
   /// deleted before the end of the pass.
   ChainElem createExtraElementAfter(const ChainElem &PrevElem, APInt Offset,
                                     StringRef Prefix,
                                     Align Alignment = Align());
+
+  /// Create a mask that masks off the extra elements in the chain, to be used
+  /// for the creation of a masked load/store vector.
+  Value *createMaskForExtraElements(const ArrayRef<ChainElem> C, Type *VecTy,
+                                    Align Alignment, unsigned AS);
 
   /// Delete dead GEPs and extra Load/Store instructions created by
   /// createExtraElementAfter
@@ -660,15 +665,11 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
 
   // If the chain is not contiguous, we try to fill the gap with "extra"
   // elements to artificially make it contiguous, to try to enable
-  // vectorization.
-  // - Filling gaps in loads is always ok if the target supports widening loads.
-  // - For stores, we only fill gaps if there is a potentially legal masked
-  //   store for the target. If later on, we don't end up with a chain that
-  //   could be vectorized into a legal masked store, the chains with extra
-  //   elements will be filtered out in splitChainByAlignment.
-  bool TryFillGaps = isa<LoadInst>(C[0].Inst)
-                         ? TTI.isLegalToWidenLoads(F.getContext())
-                         : shouldAttemptMaskedStore(C);
+  // vectorization. We only fill gaps if there is a potentially legal masked
+  // load/store for the target. If later on, we don't end up with a chain that
+  // could be vectorized into a legal masked load/store, the chains with extra
+  // elements will be filtered out in splitChainByAlignment.
+  bool TryFillGaps = shouldAttemptMaskedLoadStore(C);
 
   unsigned ASPtrBits =
       DL.getIndexSizeInBits(getLoadStoreAddressSpace(C[0].Inst));
@@ -826,11 +827,9 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
 
   // For compile time reasons, we cache whether or not the superset
   // of all candidate chains contains any extra stores from earlier gap
-  // filling.
-  bool CandidateChainsMayContainExtraStores =
-      !IsLoadChain && any_of(C, [this](const ChainElem &E) {
-        return ExtraElements.contains(E.Inst);
-      });
+  // of all candidate chains contains any extra loads/stores from earlier gap
+  bool CandidateChainsMayContainExtraLoadsStores = any_of(
+      C, [this](const ChainElem &E) { return ExtraElements.contains(E.Inst); });
 
   std::vector<Chain> Ret;
   for (unsigned CBegin = 0; CBegin < C.size(); ++CBegin) {
@@ -925,10 +924,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         // otherwise we may unnecessary split the chain when the target actually
         // supports non-pow2 VF.
         if (accessIsAllowedAndFast(NewSizeBytes, AS, Alignment, VecElemBits) &&
-            ((IsLoadChain ? TTI.isLegalToWidenLoads(F.getContext())
-                          : TTI.isLegalMaskedStore(
-                                FixedVectorType::get(VecElemTy, NewNumVecElems),
-                                Alignment, AS, /*IsMaskConstant=*/true)))) {
+            ((IsLoadChain &&
+              TTI.isLegalMaskedLoad(
+                  FixedVectorType::get(VecElemTy, NewNumVecElems), Alignment,
+                  AS, true)) ||
+             (!IsLoadChain &&
+              TTI.isLegalMaskedStore(
+                  FixedVectorType::get(VecElemTy, NewNumVecElems), Alignment,
+                  AS, true)))) {
           LLVM_DEBUG(dbgs()
                      << "LSV: extending " << (IsLoadChain ? "load" : "store")
                      << " chain of " << NumVecElems << " "
@@ -972,31 +975,34 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         continue;
       }
 
-      if (CandidateChainsMayContainExtraStores) {
-        // The legality of adding extra stores to ExtendingLoadsStores has
+      if (CandidateChainsMayContainExtraLoadsStores) {
+        // The legality of adding extra loads/stores to ExtendingLoadsStores has
         // already been checked, but if the candidate chain contains extra
-        // stores from an earlier optimization, confirm legality now.
+        // loads/stores from an earlier optimization, confirm legality now.
         // This filter is essential because, when filling gaps in
         // splitChainByContinuity, we queried the API to check that (for a given
-        // element type and address space) there *may* be a legal masked store
-        // we can try to create. Now, we need to check if the actual chain we
-        // ended up with is legal to turn into a masked store.
-        // This is relevant for NVPTX targets, for example, where a masked store
-        // is only legal if we have ended up with a 256-bit vector.
-        bool CandidateChainContainsExtraStores = llvm::any_of(
+        // element type and address space) there *may* be a legal masked
+        // load/store we can aspire to create. Now, we need to check if the
+        // actual chain we ended up with is legal to turn into a masked
+        // load/store. This is relevant for NVPTX, for example, where a masked
+        // store is only legal if we have ended up with a 256-bit vector.
+        bool CandidateChainContainsExtraLoadsStores = llvm::any_of(
             ArrayRef<ChainElem>(C).slice(CBegin, CEnd - CBegin + 1),
             [this](const ChainElem &E) {
               return ExtraElements.contains(E.Inst);
             });
 
-        if (CandidateChainContainsExtraStores &&
-            !TTI.isLegalMaskedStore(
-                FixedVectorType::get(VecElemTy, NumVecElems), Alignment, AS,
-                /*IsMaskConstant=*/true)) {
+        if (CandidateChainContainsExtraLoadsStores &&
+            ((IsLoadChain && !TTI.isLegalMaskedLoad(
+                                 FixedVectorType::get(VecElemTy, NumVecElems),
+                                 Alignment, AS, true)) ||
+             (!IsLoadChain && !TTI.isLegalMaskedStore(
+                                  FixedVectorType::get(VecElemTy, NumVecElems),
+                                  Alignment, AS, true)))) {
           LLVM_DEBUG(dbgs()
                      << "LSV: splitChainByAlignment discarding candidate chain "
-                        "because it contains extra stores that we cannot "
-                        "legally vectorize into a masked store \n");
+                        "because it contains extra loads/stores that we cannot "
+                        "legally vectorize into a masked load/store \n");
           continue;
         }
       }
@@ -1023,6 +1029,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   if (C.size() == 2 &&
       (ExtraElements.contains(C[0].Inst) || ExtraElements.contains(C[1].Inst)))
     return false;
+
+  bool ChainContainsExtraLoadsStores = llvm::any_of(
+      C, [this](const ChainElem &E) { return ExtraElements.contains(E.Inst); });
 
   sortChainInOffsetOrder(C);
 
@@ -1070,11 +1079,19 @@ bool Vectorizer::vectorizeChain(Chain &C) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
 
-    // Chain is in offset order, so C[0] is the instr with the lowest offset,
-    // i.e. the root of the vector.
-    VecInst = Builder.CreateAlignedLoad(VecTy,
-                                        getLoadStorePointerOperand(C[0].Inst),
-                                        Alignment);
+    // If the chain contains extra loads, we need to vectorize into a
+    // masked load.
+    if (ChainContainsExtraLoadsStores) {
+      assert(TTI.isLegalMaskedLoad(VecTy, Alignment, AS, true));
+      Value *Mask = createMaskForExtraElements(C, VecTy, Alignment, AS);
+      VecInst = Builder.CreateMaskedLoad(
+          VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment, Mask);
+    } else {
+      // Chain is in offset order, so C[0] is the instr with the lowest offset,
+      // i.e. the root of the vector.
+      VecInst = Builder.CreateAlignedLoad(
+          VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment);
+    }
 
     unsigned VecIdx = 0;
     for (const ChainElem &E : C) {
@@ -1145,31 +1162,10 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
     // If the chain originates from extra stores, we need to vectorize into a
     // masked store.
-    bool ChainContainsExtraStores = llvm::any_of(C, [this](const ChainElem &E) {
-      return ExtraElements.contains(E.Inst);
-    });
-    if (ChainContainsExtraStores) {
-      assert(TTI.isLegalMaskedStore(Vec->getType(), Alignment, AS,
-                                    /*IsMaskConstant=*/true));
-      unsigned MaskIdx = 0;
-      // loop through the chain and create a mask for the masked store
-      Value *Mask = PoisonValue::get(FixedVectorType::get(
-          Builder.getInt1Ty(), cast<FixedVectorType>(VecTy)->getNumElements()));
-      for (const ChainElem &E : C) {
-        bool IsExtraStore = ExtraElements.contains(E.Inst);
-        if (FixedVectorType *VT =
-                dyn_cast<FixedVectorType>(getLoadStoreType(E.Inst))) {
-          for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
-            Mask = Builder.CreateInsertElement(Mask,
-                                               Builder.getInt1(!IsExtraStore),
-                                               Builder.getInt32(MaskIdx++));
-          }
-        } else {
-          Mask =
-              Builder.CreateInsertElement(Mask, Builder.getInt1(!IsExtraStore),
-                                          Builder.getInt32(MaskIdx++));
-        }
-      }
+    if (ChainContainsExtraLoadsStores) {
+      assert(TTI.isLegalMaskedStore(Vec->getType(), Alignment, AS, true));
+      Value *Mask =
+          createMaskForExtraElements(C, Vec->getType(), Alignment, AS);
       VecInst = Builder.CreateMaskedStore(
           Vec, getLoadStorePointerOperand(C[0].Inst), Alignment, Mask);
     } else {
@@ -1862,8 +1858,9 @@ bool Vectorizer::accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS,
   return true;
 }
 
-bool Vectorizer::shouldAttemptMaskedStore(const ArrayRef<ChainElem> C) const {
-  assert(isa<StoreInst>(C[0].Inst));
+bool Vectorizer::shouldAttemptMaskedLoadStore(
+    const ArrayRef<ChainElem> C) const {
+  bool IsLoadChain = isa<LoadInst>(C[0].Inst);
 
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
   Type *ElementType = getLoadStoreType(C[0].Inst)->getScalarType();
@@ -1875,17 +1872,20 @@ bool Vectorizer::shouldAttemptMaskedStore(const ArrayRef<ChainElem> C) const {
       VecRegBits / DL.getTypeSizeInBits(ElementType);
 
   // Attempt to find the smallest power-of-two number of elements that, if
-  // well aligned, could be represented as a legal masked store.
+  // well aligned, could be represented as a legal masked load/store.
   // If one exists for a given element type and address space, it is worth
-  // attempting to fill gaps as we may be able to create a legal masked store.
-  // If we do not end up with a legal masked store, chains with extra elements
-  // will be discarded.
+  // attempting to fill gaps as we may be able to create a legal masked
+  // load/store. If we do not end up with a legal masked load/store, chains with
+  // extra elements will be discarded.
   const unsigned MinMaskedStoreNumElems = 4;
   for (unsigned NumElems = MinMaskedStoreNumElems;
        NumElems <= MaxVectorNumElems; NumElems *= 2) {
     FixedVectorType *VectorType = FixedVectorType::get(ElementType, NumElems);
-    if (TTI.isLegalMaskedStore(VectorType, OptimisticAlign, AS,
-                               /*IsMaskConstant=*/true))
+    bool IsLegalMaskedInstruction =
+        IsLoadChain
+            ? TTI.isLegalMaskedLoad(VectorType, OptimisticAlign, AS, true)
+            : TTI.isLegalMaskedStore(VectorType, OptimisticAlign, AS, true);
+    if (IsLegalMaskedInstruction)
       return true;
   }
   return false;
@@ -1925,6 +1925,29 @@ ChainElem Vectorizer::createExtraElementAfter(const ChainElem &Prev,
                     << *NewElement
                     << " OffsetFromLeader: " << NewOffsetFromLeader << "\n");
   return ChainElem{NewElement, NewOffsetFromLeader};
+}
+
+Value *Vectorizer::createMaskForExtraElements(const ArrayRef<ChainElem> C,
+                                              Type *VecTy, Align Alignment,
+                                              unsigned AS) {
+  unsigned MaskIdx = 0;
+  Value *Mask = PoisonValue::get(FixedVectorType::get(
+      Builder.getInt1Ty(), cast<FixedVectorType>(VecTy)->getNumElements()));
+  for (const ChainElem &E : C) {
+    bool IsExtraElement = ExtraElements.contains(E.Inst);
+    if (FixedVectorType *VT =
+            dyn_cast<FixedVectorType>(getLoadStoreType(E.Inst))) {
+      for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
+        Mask =
+            Builder.CreateInsertElement(Mask, Builder.getInt1(!IsExtraElement),
+                                        Builder.getInt32(MaskIdx++));
+      }
+    } else {
+      Mask = Builder.CreateInsertElement(Mask, Builder.getInt1(!IsExtraElement),
+                                         Builder.getInt32(MaskIdx++));
+    }
+  }
+  return Mask;
 }
 
 void Vectorizer::deleteExtraElements() {
