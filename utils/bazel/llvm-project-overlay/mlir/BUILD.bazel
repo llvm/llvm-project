@@ -713,6 +713,19 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIShape",
+    srcs = ["lib/CAPI/Dialect/Shape.cpp"],
+    hdrs = ["include/mlir-c/Dialect/Shape.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ShapeDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPITarget",
     srcs = ["lib/CAPI/Target/LLVMIR.cpp"],
     hdrs = ["include/mlir-c/Target/LLVMIR.h"],
@@ -730,6 +743,19 @@ mlir_c_api_cc_library(
         ":ToLLVMIRTranslation",
         ":ToLLVMIRTranslationRegistration",
         "//llvm:Core",
+    ],
+)
+
+mlir_c_api_cc_library(
+    name = "CAPITensor",
+    srcs = ["lib/CAPI/Dialect/Tensor.cpp"],
+    hdrs = ["include/mlir-c/Dialect/Tensor.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":TensorDialect",
     ],
 )
 
