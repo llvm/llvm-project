@@ -640,12 +640,15 @@ Value *VPInstruction::generate(VPTransformState &State) {
     llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
-    bool OnlyFirstLaneUsed =
-        vputils::onlyFirstLaneUsed(this) ||
-        (isa<VPInstruction>(getOperand(1)) &&
-         cast<VPInstruction>(getOperand(1))->isVectorToScalar() &&
-         isa<VPInstruction>(getOperand(2)) &&
-         cast<VPInstruction>(getOperand(2))->isVectorToScalar());
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    if (!OnlyFirstLaneUsed) {
+      auto IsVectorToScalar = [](VPValue *V) {
+        auto *VI = dyn_cast<VPInstruction>(V);
+        return VI && VI->isVectorToScalar();
+      };
+      OnlyFirstLaneUsed =
+          IsVectorToScalar(getOperand(1)) && IsVectorToScalar(getOperand(2));
+    }
     Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);

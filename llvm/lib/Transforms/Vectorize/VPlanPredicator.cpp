@@ -319,8 +319,7 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       auto *ExitIRI = cast<VPIRPhi>(&P);
       VPValue *Inc = ExitIRI->getIncomingValue(0);
       VPValue *Op;
-      if (!match(Inc, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                          m_VPValue(Op))))
+      if (!match(Inc, m_ExtractLastElement(m_VPValue(Op))))
         continue;
 
       if (!LastActiveLane) {
