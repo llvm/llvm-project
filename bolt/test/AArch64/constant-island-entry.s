@@ -10,7 +10,6 @@
 .globl func
 .type func, %function
 func:
-  ret
   nop
   b .Lafter_constant
 
