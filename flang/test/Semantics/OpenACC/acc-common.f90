@@ -7,13 +7,24 @@ module acc_common_decl
   data a/42/
 end module acc_common_decl
 
-program acc_decl_test
+module acc_common_intermediate
   use acc_common_decl
+  implicit none
+  integer b
+  common /b_common/ b
+!$acc declare create (/b_common/)
+end module acc_common_intermediate
+
+program acc_decl_test
+  use acc_common_intermediate
   implicit none
 
   a = 1
+  b = 10
 !$acc update device (/a_common/)
   a = 2
+!$acc update device (/b_common/)
+  b = 20
 !ERROR: Could not find COMMON block 'a_common_bad' used in OpenACC directive
 !$acc update device (/a_common_bad/)
 end program

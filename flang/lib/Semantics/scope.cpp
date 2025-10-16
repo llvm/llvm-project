@@ -184,7 +184,7 @@ Scope *Scope::FindSubmodule(const SourceName &name) const {
 }
 
 bool Scope::AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol) {
-  return useCommonBlocks_.emplace(name, cbSymbol).second;
+  return commonBlockUses_.emplace(name, cbSymbol).second;
 }
 
 bool Scope::AddSubmodule(const SourceName &name, Scope &submodule) {
