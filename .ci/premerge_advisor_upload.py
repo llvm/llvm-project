@@ -29,7 +29,7 @@ def main(commit_sha, workflow_run_number, build_log_files):
         "base_commit_sha": commit_sha,
         "source_id": workflow_run_number,
         "failures": [],
-        "platform": current_platform
+        "platform": current_platform,
     }
     if test_failures:
         for name, failure_message in test_failures:
