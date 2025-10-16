@@ -773,10 +773,10 @@ static void instantiateDependentHLSLParamModifierAttr(
   if (OldParmTy->isDependentType() && Attr->isAnyOut())
     NewParm->setType(S.HLSL().getInoutParameterType(NewParm->getType()));
 
-  assert(!Attr->isAnyOut() || (NewParm->getType().isRestrictQualified() &&
-                               NewParm->getType()->isReferenceType()) &&
-                                  "out or inout parameter type must be a "
-                                  "reference and restrict qualified");
+  assert(
+      (!Attr->isAnyOut() || (NewParm->getType().isRestrictQualified() &&
+                             NewParm->getType()->isReferenceType())) &&
+      "out or inout parameter type must be a reference and restrict qualified");
 }
 
 void Sema::InstantiateAttrsForDecl(
