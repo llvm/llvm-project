@@ -61,7 +61,7 @@ void test(Container& c) {
     node.empty();
     irt.inserted;
     irt.node.empty();
-    irt.position->first == i && irt.position->second == i + 1;
+    irt.position->first == i&& irt.position->second == i + 1;
     verify_insert_return_type<Container>(irt);
   }
 
