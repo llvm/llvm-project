@@ -9601,6 +9601,15 @@ def fhlsl_spv_use_unknown_image_format
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
 
+def fhlsl_spv_enable_maximal_reconvergence
+    : Flag<["-"], "fspv-enable-maximal-reconvergence">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Enables the MaximallyReconvergesKHR execution mode for this "
+               "module. This ensures that control flow reconverges at "
+               "well-defined merge points as defined by the Vulkan spec.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
+
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,
