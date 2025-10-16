@@ -147,9 +147,17 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-      // Remove all leading unit dimensions from inst_data
-      while (!instData.empty() && instData.front() == 1)
-        instData.erase(instData.begin());
+      // Remove leading unit dimensions from inst_data
+      // Skip it for xegpu nd ops since it will be 2D
+      Operation *definingOp = value.getDefiningOp();
+      bool skipLeadingUnitDimRemoval =
+          definingOp &&
+          (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::DpasOp,
+               xegpu::StoreNdOp, xegpu::PrefetchNdOp>(definingOp));
+      if (!skipLeadingUnitDimRemoval) {
+        while (!instData.empty() && instData.front() == 1)
+          instData.erase(instData.begin());
+      }
       return instData;
     }
 
@@ -359,7 +367,6 @@ void XeGPUBlockingPass::runOnOperation() {
           // To create a new attribute with a different chunk_size:
           auto newEncoding = xegpu::ScatterTensorDescAttr::get(
               ctx, tdescTy.getMemorySpace(), blockedChunkSize);
-
           encoding = newEncoding;
         }
       }
