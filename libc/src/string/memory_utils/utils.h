@@ -115,7 +115,7 @@ template <typename T> struct StrictIntegralType {
 
   // Can only be constructed from a T.
   template <typename U, cpp::enable_if_t<cpp::is_same_v<U, T>, bool> = 0>
-  LIBC_INLINE StrictIntegralType(U value) : value(value) {}
+  LIBC_INLINE StrictIntegralType(U val) : value(val) {}
 
   // Allows using the type in an if statement.
   LIBC_INLINE explicit operator bool() const { return value; }

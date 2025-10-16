@@ -30,7 +30,7 @@ TEST(LlvmLibcQueueTest, SList) {
 
   struct Contains : public testing::Matcher<Head> {
     string s;
-    Contains(string s) : s(s) {}
+    Contains(string str) : s(str) {}
     bool match(Head head) {
       Entry *e;
       CharVector v;
@@ -97,7 +97,7 @@ TEST(LlvmLibcQueueTest, STailQ) {
 
   struct Contains : public testing::Matcher<Head> {
     string s;
-    Contains(string s) : s(s) {}
+    Contains(string str) : s(str) {}
     bool match(Head head) {
       Entry *e;
       CharVector v;

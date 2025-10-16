@@ -88,15 +88,15 @@ template <bool Invert> struct Process {
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
   uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
-  RPC_ATTRS Process(uint32_t port_count, void *buffer)
-      : port_count(port_count), inbox(reinterpret_cast<uint32_t *>(
-                                    advance(buffer, inbox_offset(port_count)))),
+  RPC_ATTRS Process(uint32_t n_ports, void *buffer)
+      : port_count(n_ports), inbox(reinterpret_cast<uint32_t *>(
+                                 advance(buffer, inbox_offset(n_ports)))),
         outbox(reinterpret_cast<uint32_t *>(
-            advance(buffer, outbox_offset(port_count)))),
+            advance(buffer, outbox_offset(n_ports)))),
         header(reinterpret_cast<Header *>(
-            advance(buffer, header_offset(port_count)))),
+            advance(buffer, header_offset(n_ports)))),
         packet(reinterpret_cast<Buffer *>(
-            advance(buffer, buffer_offset(port_count)))) {}
+            advance(buffer, buffer_offset(n_ports)))) {}
 
   /// Allocate a memory buffer sufficient to store the following equivalent
   /// representation in memory.
@@ -292,10 +292,10 @@ RPC_ATTRS static void invoke_rpc(F &&fn, uint32_t lane_size, uint64_t lane_mask,
 /// processes. A port is conceptually an index into the memory provided by the
 /// underlying process that is guarded by a lock bit.
 template <bool T> struct Port {
-  RPC_ATTRS Port(Process<T> &process, uint64_t lane_mask, uint32_t lane_size,
-                 uint32_t index, uint32_t out)
-      : process(process), lane_mask(lane_mask), lane_size(lane_size),
-        index(index), out(out), receive(false), owns_buffer(true) {}
+  RPC_ATTRS Port(Process<T> &proc, uint64_t l_mask, uint32_t l_size,
+                 uint32_t idx, uint32_t o)
+      : process(proc), lane_mask(l_mask), lane_size(l_size), index(idx), out(o),
+        receive(false), owns_buffer(true) {}
   RPC_ATTRS ~Port() = default;
 
 private:

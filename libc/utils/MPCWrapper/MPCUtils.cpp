@@ -54,17 +54,16 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<_Complex float, XType>, bool> = 0>
-  MPCNumber(XType x,
-            unsigned int precision = mpfr::ExtraPrecision<float>::VALUE,
+  MPCNumber(XType x, unsigned int prec = mpfr::ExtraPrecision<float>::VALUE,
             RoundingMode rnd = RoundingMode::Nearest)
-      : precision(precision),
+      : precision(prec),
         mpc_rounding(MPC_RND(mpfr::get_mpfr_rounding_mode(rnd),
                              mpfr::get_mpfr_rounding_mode(rnd))) {
-    mpc_init2(value, precision);
+    mpc_init2(value, prec);
     Complex<float> x_c = cpp::bit_cast<Complex<float>>(x);
     mpfr_t real, imag;
-    mpfr_init2(real, precision);
-    mpfr_init2(imag, precision);
+    mpfr_init2(real, prec);
+    mpfr_init2(imag, prec);
     mpfr_set_flt(real, x_c.real, mpfr::get_mpfr_rounding_mode(rnd));
     mpfr_set_flt(imag, x_c.imag, mpfr::get_mpfr_rounding_mode(rnd));
     mpc_set_fr_fr(value, real, imag, mpc_rounding);
@@ -74,13 +73,12 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<_Complex double, XType>, bool> = 0>
-  MPCNumber(XType x,
-            unsigned int precision = mpfr::ExtraPrecision<double>::VALUE,
+  MPCNumber(XType x, unsigned int prec = mpfr::ExtraPrecision<double>::VALUE,
             RoundingMode rnd = RoundingMode::Nearest)
-      : precision(precision),
+      : precision(prec),
         mpc_rounding(MPC_RND(mpfr::get_mpfr_rounding_mode(rnd),
                              mpfr::get_mpfr_rounding_mode(rnd))) {
-    mpc_init2(value, precision);
+    mpc_init2(value, prec);
     Complex<double> x_c = cpp::bit_cast<Complex<double>>(x);
     mpc_set_d_d(value, x_c.real, x_c.imag, mpc_rounding);
   }

@@ -102,8 +102,8 @@ template <bool packed> class StructArgList {
   void *end;
 
 public:
-  LIBC_INLINE StructArgList(void *ptr, size_t size)
-      : ptr(ptr), end(reinterpret_cast<unsigned char *>(ptr) + size) {}
+  LIBC_INLINE StructArgList(void *p, size_t size)
+      : ptr(p), end(reinterpret_cast<unsigned char *>(p) + size) {}
   LIBC_INLINE StructArgList(const StructArgList &other) {
     ptr = other.ptr;
     end = other.end;

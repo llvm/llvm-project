@@ -97,7 +97,7 @@ class StreamReader : public Reader<StreamReader> {
   ::FILE *stream;
 
 public:
-  LIBC_INLINE StreamReader(::FILE *stream) : stream(stream) {}
+  LIBC_INLINE StreamReader(::FILE *s) : stream(s) {}
 
   LIBC_INLINE char getc() {
     return static_cast<char>(internal::getc(static_cast<FILE *>(stream)));

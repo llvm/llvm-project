@@ -207,8 +207,8 @@ private:
 
 struct MemfunctionBenchmarkDistribution final
     : public MemfunctionBenchmarkBase {
-  MemfunctionBenchmarkDistribution(MemorySizeDistribution Distribution)
-      : Distribution(Distribution), Probabilities(Distribution.Probabilities),
+  MemfunctionBenchmarkDistribution(MemorySizeDistribution Dist)
+      : Distribution(Dist), Probabilities(Distribution.Probabilities),
         SizeSampler(Probabilities.begin(), Probabilities.end()),
         OffsetSampler(MemfunctionBenchmarkBase::BufferSize,
                       Probabilities.size() - 1, MaybeAlign(AlignedAccess)) {}

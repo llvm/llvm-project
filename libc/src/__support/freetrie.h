@@ -62,9 +62,8 @@ public:
     size_t min;
     size_t width;
 
-    LIBC_INLINE constexpr SizeRange(size_t min, size_t width)
-        : min(min), width(width) {
-      LIBC_ASSERT(!(width & (width - 1)) && "width must be a power of two");
+    LIBC_INLINE constexpr SizeRange(size_t m, size_t w) : min(m), width(w) {
+      LIBC_ASSERT(!(w & (w - 1)) && "width must be a power of two");
     }
 
     /// @returns The lower half of the size range.
@@ -83,7 +82,7 @@ public:
   };
 
   LIBC_INLINE constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
-  LIBC_INLINE constexpr FreeTrie(SizeRange range) : range(range) {}
+  LIBC_INLINE constexpr FreeTrie(SizeRange r) : range(r) {}
 
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.

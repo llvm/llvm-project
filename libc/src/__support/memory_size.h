@@ -37,7 +37,7 @@ class SafeMemSize {
 private:
   using type = cpp::make_signed_t<size_t>;
   type value;
-  LIBC_INLINE explicit SafeMemSize(type value) : value(value) {}
+  LIBC_INLINE explicit SafeMemSize(type val) : value(val) {}
 
 public:
   LIBC_INLINE_VAR static constexpr size_t MAX_MEM_SIZE =

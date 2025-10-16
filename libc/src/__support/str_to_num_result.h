@@ -32,12 +32,12 @@ template <typename T> struct StrToNumResult {
   int error;
   ptrdiff_t parsed_len;
 
-  LIBC_INLINE constexpr StrToNumResult(T value)
-      : value(value), error(0), parsed_len(0) {}
-  LIBC_INLINE constexpr StrToNumResult(T value, ptrdiff_t parsed_len)
-      : value(value), error(0), parsed_len(parsed_len) {}
-  LIBC_INLINE constexpr StrToNumResult(T value, ptrdiff_t parsed_len, int error)
-      : value(value), error(error), parsed_len(parsed_len) {}
+  LIBC_INLINE constexpr StrToNumResult(T val)
+      : value(val), error(0), parsed_len(0) {}
+  LIBC_INLINE constexpr StrToNumResult(T val, ptrdiff_t parsed_length)
+      : value(val), error(0), parsed_len(parsed_length) {}
+  LIBC_INLINE constexpr StrToNumResult(T val, ptrdiff_t parsed_length, int err)
+      : value(val), error(err), parsed_len(parsed_length) {}
 
   LIBC_INLINE constexpr bool has_error() { return error != 0; }
 

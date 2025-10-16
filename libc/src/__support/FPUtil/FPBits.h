@@ -210,9 +210,9 @@ protected:
   // different semantics.
   template <typename T> struct TypedInt {
     using value_type = T;
-    LIBC_INLINE constexpr explicit TypedInt(T value) : value(value) {}
-    LIBC_INLINE constexpr TypedInt(const TypedInt &value) = default;
-    LIBC_INLINE constexpr TypedInt &operator=(const TypedInt &value) = default;
+    LIBC_INLINE constexpr explicit TypedInt(T v) : value(v) {}
+    LIBC_INLINE constexpr TypedInt(const TypedInt &v) = default;
+    LIBC_INLINE constexpr TypedInt &operator=(const TypedInt &v) = default;
 
     LIBC_INLINE constexpr explicit operator T() const { return value; }
 

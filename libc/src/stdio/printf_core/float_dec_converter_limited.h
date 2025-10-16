@@ -81,9 +81,9 @@ struct DigitsInput {
   // and shifts it up to the top of the UInt128 so that a function consuming
   // this struct afterwards doesn't have to remember which format it came from.
   DigitsInput(int32_t fraction_len, StorageType mantissa_, int exponent_,
-              Sign sign)
+              Sign sign_)
       : mantissa(UInt128(mantissa_) << (127 - fraction_len)),
-        exponent(exponent_), sign(sign) {
+        exponent(exponent_), sign(sign_) {
     if (!(mantissa & (UInt128(1) << 127)) && mantissa != 0) {
       // Normalize a denormalized input.
       int shift = cpp::countl_zero(mantissa);

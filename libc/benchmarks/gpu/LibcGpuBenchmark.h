@@ -156,10 +156,10 @@ public:
     add_benchmark(this);
   }
 
-  Benchmark(uint64_t (*f)(uint32_t), char const *suite_name,
-            char const *test_name, uint32_t num_threads)
-      : target(BenchmarkTarget(f)), suite_name(suite_name),
-        test_name(test_name), num_threads(num_threads) {
+  Benchmark(uint64_t (*f)(uint32_t), char const *suite, char const *test,
+            uint32_t n_threads)
+      : target(BenchmarkTarget(f)), suite_name(suite), test_name(test),
+        num_threads(n_threads) {
     add_benchmark(this);
   }
 

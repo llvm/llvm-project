@@ -118,7 +118,7 @@ class HashTable {
 public:
   HashTable(uint64_t size, uint64_t seed)
       : table(internal::HashTable::allocate(size, seed)) {}
-  HashTable(internal::HashTable *table) : table(table) {}
+  HashTable(internal::HashTable *t) : table(t) {}
   ~HashTable() { internal::HashTable::deallocate(table); }
   HashTable(HashTable &&other) : table(other.table) { other.table = nullptr; }
   bool is_valid() const { return table != nullptr; }

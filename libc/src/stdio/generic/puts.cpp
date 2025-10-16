@@ -21,7 +21,7 @@ namespace {
 
 // Simple helper to unlock the file once destroyed.
 struct ScopedLock {
-  ScopedLock(LIBC_NAMESPACE::File *stream) : stream(stream) { stream->lock(); }
+  ScopedLock(LIBC_NAMESPACE::File *s) : stream(s) { s->lock(); }
   ~ScopedLock() { stream->unlock(); }
 
 private:

@@ -34,7 +34,7 @@ class Symbol {
 public:
   LIBC_INLINE_VAR static constexpr size_t COUNT =
       static_cast<size_t>(VDSOSym::VDSOSymCount);
-  LIBC_INLINE constexpr explicit Symbol(VDSOSym sym) : sym(sym) {}
+  LIBC_INLINE constexpr explicit Symbol(VDSOSym s) : sym(s) {}
   LIBC_INLINE constexpr Symbol(size_t idx) : sym(static_cast<VDSOSym>(idx)) {}
   LIBC_INLINE constexpr cpp::string_view name() const {
     return symbol_name(sym);

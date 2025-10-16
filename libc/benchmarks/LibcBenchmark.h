@@ -279,8 +279,8 @@ public:
     size_t Offset;
 
   public:
-    explicit const_iterator(llvm::ArrayRef<T> Array, size_t Index = 0)
-        : Array(Array), Index(Index), Offset(Index % Array.size()) {}
+    explicit const_iterator(llvm::ArrayRef<T> Arr, size_t Idx = 0)
+        : Array(Arr), Index(Idx), Offset(Idx % Arr.size()) {}
     const_iterator &operator++() {
       ++Index;
       ++Offset;
@@ -293,9 +293,8 @@ public:
     const T &operator*() const { return Array[Offset]; }
   };
 
-  CircularArrayRef(llvm::ArrayRef<T> Array, size_t Size)
-      : Array(Array), Size(Size) {
-    assert(Array.size() > 0);
+  CircularArrayRef(llvm::ArrayRef<T> Arr, size_t S) : Array(Arr), Size(S) {
+    assert(Arr.size() > 0);
   }
 
   const_iterator begin() const { return const_iterator(Array); }

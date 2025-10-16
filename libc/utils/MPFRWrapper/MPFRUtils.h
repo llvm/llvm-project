@@ -230,8 +230,8 @@ class MPFRMatcher : public testing::Matcher<OutputType> {
   RoundingMode rounding;
 
 public:
-  MPFRMatcher(InputType testInput, double ulp_tolerance, RoundingMode rounding)
-      : input(testInput), ulp_tolerance(ulp_tolerance), rounding(rounding) {}
+  MPFRMatcher(InputType testInput, double tolerance, RoundingMode r)
+      : input(testInput), ulp_tolerance(tolerance), rounding(r) {}
 
   bool match(OutputType libcResult) {
     match_value = libcResult;

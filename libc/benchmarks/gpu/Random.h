@@ -74,10 +74,10 @@ template <typename T> class UniformExponent {
 public:
   explicit UniformExponent(int min_exp = -FPBits::EXP_BIAS,
                            int max_exp = FPBits::EXP_BIAS,
-                           cpp::optional<Sign> forced_sign = cpp::nullopt)
+                           cpp::optional<Sign> sign = cpp::nullopt)
       : min_exp(clamp_exponent(cpp::min(min_exp, max_exp))),
-        max_exp(clamp_exponent(cpp::max(min_exp, max_exp))),
-        forced_sign(forced_sign) {}
+        max_exp(clamp_exponent(cpp::max(min_exp, max_exp))), forced_sign(sign) {
+  }
 
   LIBC_INLINE T operator()(RandomGenerator &rng) const noexcept {
     // Sample unbiased exponent e uniformly in [min_exp, max_exp] without modulo

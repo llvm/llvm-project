@@ -54,18 +54,18 @@ template <WriteMode write_mode> struct WriteBuffer {
   // stream writer with function pointers.
   [[maybe_unused]] WriteMode write_mode_;
 
-  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len, StreamWriter hook,
+  LIBC_INLINE WriteBuffer(char *buf, size_t buf_len, StreamWriter hook,
                           void *target)
-      : buff(buff), init_buff(buff), buff_len(buff_len), stream_writer(hook),
+      : buff(buf), init_buff(buf), buff_len(buf_len), stream_writer(hook),
         output_target(target), write_mode_(WriteMode::FLUSH_TO_STREAM) {}
 
-  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len)
-      : buff(buff), init_buff(buff), buff_len(buff_len), stream_writer(nullptr),
+  LIBC_INLINE WriteBuffer(char *buf, size_t buf_len)
+      : buff(buf), init_buff(buf), buff_len(buf_len), stream_writer(nullptr),
         output_target(nullptr),
         write_mode_(WriteMode::FILL_BUFF_AND_DROP_OVERFLOW) {}
 
-  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len, StreamWriter hook)
-      : buff(buff), init_buff(buff), buff_len(buff_len), stream_writer(hook),
+  LIBC_INLINE WriteBuffer(char *buf, size_t buf_len, StreamWriter hook)
+      : buff(buf), init_buff(buf), buff_len(buf_len), stream_writer(hook),
         output_target(this), write_mode_(WriteMode::RESIZE_AND_FILL_BUFF) {}
 
   LIBC_INLINE int flush_to_stream(cpp::string_view new_str) {
@@ -156,7 +156,7 @@ template <WriteMode write_mode> class Writer final {
   }
 
 public:
-  LIBC_INLINE Writer(WriteBuffer<write_mode> &wb) : wb(wb) {}
+  LIBC_INLINE Writer(WriteBuffer<write_mode> &buf) : wb(buf) {}
 
   // Takes a string, copies it into the buffer if there is space, else passes it
   // to the overflow mechanism to be handled separately.

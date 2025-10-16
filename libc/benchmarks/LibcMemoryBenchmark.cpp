@@ -49,9 +49,9 @@ OffsetDistribution::OffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
 // Precomputes offset where to insert mismatches between the two buffers.
 MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
                                                        size_t MaxSizeValue,
-                                                       size_t MismatchAt)
-    : MismatchAt(MismatchAt) {
-  if (MismatchAt <= 1)
+                                                       size_t MisAt)
+    : MismatchAt(MisAt) {
+  if (MisAt <= 1)
     return;
   for (size_t i = MaxSizeValue + 1; i < BufferSize; i += MaxSizeValue)
     MismatchIndices.push_back(i);

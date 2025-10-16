@@ -41,13 +41,13 @@ enum class Aligned : bool { NO = false, YES = true };
 struct Buffer : private PoisonedBuffer {
   static constexpr size_t kAlign = 64;
   static constexpr size_t kLeeway = 2 * kAlign;
-  Buffer(size_t size, Aligned aligned = Aligned::YES)
-      : PoisonedBuffer(size + kLeeway), size(size) {
+  Buffer(size_t s, Aligned aligned = Aligned::YES)
+      : PoisonedBuffer(size + kLeeway), size(s) {
     offset_ptr = ptr;
     offset_ptr += distance_to_next_aligned<kAlign>(ptr);
     if (aligned == Aligned::NO)
       ++offset_ptr;
-    ASAN_UNPOISON_MEMORY_REGION(offset_ptr, size);
+    ASAN_UNPOISON_MEMORY_REGION(offset_ptr, s);
   }
   cpp::span<char> span() { return cpp::span<char>(offset_ptr, size); }
 

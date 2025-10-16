@@ -60,7 +60,7 @@ namespace internal {
 // A simple location object to allow consistent passing of __FILE__ and
 // __LINE__.
 struct Location {
-  Location(const char *file, int line) : file(file), line(line) {}
+  Location(const char *f, int l) : file(f), line(l) {}
   const char *file;
   int line;
 };
@@ -215,7 +215,7 @@ protected:
   template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
     struct Callable : public testutils::FunctionCaller {
       Func f;
-      Callable(Func f) : f(f) {}
+      Callable(Func func) : f(func) {}
       void operator()() override { f(); }
     };
 

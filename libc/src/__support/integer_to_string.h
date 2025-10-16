@@ -113,7 +113,7 @@ template <bool forward> class StringBufferWriterImpl {
 
 public:
   StringBufferWriterImpl(const StringBufferWriterImpl &) = delete;
-  StringBufferWriterImpl(cpp::span<char> buffer) : buffer(buffer) {}
+  StringBufferWriterImpl(cpp::span<char> buf) : buffer(buf) {}
 
   LIBC_INLINE size_t size() const { return index; }
   LIBC_INLINE size_t remainder_size() const { return buffer.size() - size(); }

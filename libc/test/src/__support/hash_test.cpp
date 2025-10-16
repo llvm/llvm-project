@@ -17,13 +17,13 @@ template <class T> struct AlignedMemory {
   T *data;
   size_t offset;
   std::align_val_t alignment;
-  AlignedMemory(size_t size, size_t alignment, size_t offset)
-      : offset(offset), alignment{alignment} {
+  AlignedMemory(size_t size, size_t alignment_, size_t offset_)
+      : offset(offset_), alignment{alignment_} {
     size_t sz = size * sizeof(T);
-    size_t aligned = sz + ((-sz) & (alignment - 1)) + alignment;
+    size_t aligned = sz + ((-sz) & (alignment_ - 1)) + alignment_;
     LIBC_NAMESPACE::AllocChecker ac;
     data = static_cast<T *>(operator new(aligned, this->alignment, ac));
-    data += offset % alignment;
+    data += offset % alignment_;
   }
   ~AlignedMemory() { operator delete(data - offset, alignment); }
 };

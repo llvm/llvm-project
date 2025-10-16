@@ -21,7 +21,7 @@ template <class T> class unexpected {
   T value;
 
 public:
-  LIBC_INLINE constexpr explicit unexpected(T value) : value(value) {}
+  LIBC_INLINE constexpr explicit unexpected(T val) : value(val) {}
   LIBC_INLINE constexpr T error() { return value; }
 };
 
@@ -35,7 +35,7 @@ template <class T, class E> class expected {
   bool is_expected;
 
 public:
-  LIBC_INLINE constexpr expected(T exp) : exp(exp), is_expected(true) {}
+  LIBC_INLINE constexpr expected(T e) : exp(e), is_expected(true) {}
   LIBC_INLINE constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}
 

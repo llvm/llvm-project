@@ -24,8 +24,8 @@ class StringReader : public Reader<StringReader> {
   size_t buff_cur = 0;
 
 public:
-  LIBC_INLINE StringReader(const char *buffer, size_t buff_len)
-      : buffer(buffer), buff_len(buff_len) {}
+  LIBC_INLINE StringReader(const char *buf, size_t buf_len)
+      : buffer(buf), buff_len(buf_len) {}
 
   LIBC_INLINE char getc() {
     char output = buffer[buff_cur];

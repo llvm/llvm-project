@@ -65,9 +65,9 @@ public:
     WaitingQueue &queue;
     bool is_pshared;
 
-    LIBC_INLINE Guard(WaitingQueue &queue, bool is_pshared)
-        : queue(queue), is_pshared(is_pshared) {
-      queue.lock(cpp::nullopt, is_pshared);
+    LIBC_INLINE Guard(WaitingQueue &q, bool pshared)
+        : queue(q), is_pshared(pshared) {
+      queue.lock(cpp::nullopt, pshared);
     }
 
   public:
@@ -154,7 +154,7 @@ private:
 
 public:
   // Construction and conversion functions.
-  LIBC_INLINE constexpr RwState(int state = 0) : state(state) {}
+  LIBC_INLINE constexpr RwState(int s = 0) : state(s) {}
   LIBC_INLINE constexpr operator int() const { return state; }
 
   // Utilities to check the state of the RwLock.

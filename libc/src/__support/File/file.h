@@ -27,7 +27,7 @@ struct FileIOResult {
   int error;
 
   constexpr FileIOResult(size_t val) : value(val), error(0) {}
-  constexpr FileIOResult(size_t val, int error) : value(val), error(error) {}
+  constexpr FileIOResult(size_t val, int err) : value(val), error(err) {}
 
   constexpr bool has_error() { return error != 0; }
 

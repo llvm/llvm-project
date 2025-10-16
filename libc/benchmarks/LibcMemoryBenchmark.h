@@ -110,10 +110,10 @@ class AlignedBuffer {
 public:
   static constexpr size_t Alignment = 512;
 
-  explicit AlignedBuffer(size_t Size)
+  explicit AlignedBuffer(size_t S)
       : Buffer(static_cast<char *>(
-            aligned_alloc(Alignment, alignTo(Size, Alignment)))),
-        Size(Size) {}
+            aligned_alloc(Alignment, alignTo(S, Alignment)))),
+        Size(S) {}
   ~AlignedBuffer() { free(Buffer); }
 
   inline char *operator+(size_t Index) { return Buffer + Index; }
