@@ -596,6 +596,8 @@ void foo() {
 
 } // namespace sel_string
 
+SomeObj *allocObj();
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
@@ -618,6 +620,7 @@ void foo() {
   [self doWork:__null];
   [self doWork:nil];
   [NSApp run];
+  adoptNS([allocObj() init]);
 }
 
 - (SomeObj *)getSomeObj {
