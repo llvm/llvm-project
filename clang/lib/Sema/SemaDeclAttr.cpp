@@ -5758,8 +5758,7 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
-    S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported)
-        << "__cluster_dims__";
+    S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
     return;
   }
 
@@ -5778,8 +5777,7 @@ static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
-    S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported)
-        << "__no_cluster__";
+    S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
     return;
   }
 
