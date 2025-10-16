@@ -1087,6 +1087,15 @@ Map make(const parser::OmpClause::Map &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
+      convertAttachMod, parser::OmpAttachModifier::Value, Map::AttachModifier,
+      // clang-format off
+      MS(Always,  Always)
+      MS(Auto,    Auto)
+      MS(Never,   Never)
+      // clang-format on
+  );
+
+  CLAUSET_ENUM_CONVERT( //
       convertRefMod, parser::OmpRefModifier::Value, Map::RefModifier,
       // clang-format off
       MS(Ref_Ptee,     RefPtee)
@@ -1133,6 +1142,13 @@ Map make(const parser::OmpClause::Map &inp,
   if (!modSet.empty())
     maybeTypeMods = Map::MapTypeModifiers(modSet.begin(), modSet.end());
 
+  auto attachMod = [&]() -> std::optional<Map::AttachModifier> {
+    if (auto *t =
+            semantics::OmpGetUniqueModifier<parser::OmpAttachModifier>(mods))
+      return convertAttachMod(t->v);
+    return std::nullopt;
+  }();
+
   auto refMod = [&]() -> std::optional<Map::RefModifier> {
     if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpRefModifier>(mods))
       return convertRefMod(t->v);
@@ -1153,6 +1169,7 @@ Map make(const parser::OmpClause::Map &inp,
 
   return Map{{/*MapType=*/std::move(type),
               /*MapTypeModifiers=*/std::move(maybeTypeMods),
+              /*AttachModifier=*/std::move(attachMod),
               /*RefModifier=*/std::move(refMod), /*Mapper=*/std::move(mappers),
               /*Iterator=*/std::move(iterator),
               /*LocatorList=*/makeObjects(t2, semaCtx)}};
