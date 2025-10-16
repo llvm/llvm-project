@@ -32,17 +32,16 @@ class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
 public:
   explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem(),
       const std::vector<std::string> &AllowlistFiles =
           std::vector<std::string>(),
       const std::vector<std::string> &BlocklistFiles =
           std::vector<std::string>())
       : Options(Options) {
     if (AllowlistFiles.size() > 0)
-      Allowlist = SpecialCaseList::createOrDie(AllowlistFiles,
-                                               *vfs::getRealFileSystem());
+      Allowlist = SpecialCaseList::createOrDie(AllowlistFiles, *VFS);
     if (BlocklistFiles.size() > 0)
-      Blocklist = SpecialCaseList::createOrDie(BlocklistFiles,
-                                               *vfs::getRealFileSystem());
+      Blocklist = SpecialCaseList::createOrDie(BlocklistFiles, *VFS);
   }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
