@@ -317,7 +317,7 @@ Changes in existing checks
   
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by omitting the custom 
-  replacement string, when the Reason starts with the character `>` in the
+  replacement string, when the reason starts with the character `>` in the
   `CustomFunctions` option.
 
 - Improved :doc:`cppcoreguidelines-init-variables
