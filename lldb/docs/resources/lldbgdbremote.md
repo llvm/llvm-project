@@ -2491,7 +2491,7 @@ The packet below are supported by the
 ### qWasmCallStack
 
 Get the Wasm call stack for the given thread id. This returns a hex-encoded
-list of PC values, one for each frame of the call stack. To match the Wasm
+list (with no delimiters) of 64-bit PC values, one for each frame of the call stack. To match the Wasm
 specification, the addresses are encoded in little endian byte order, even if
 the endian of the Wasm runtime's host is not little endian.
 
