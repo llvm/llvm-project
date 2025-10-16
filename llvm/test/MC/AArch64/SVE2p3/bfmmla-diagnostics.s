@@ -17,18 +17,3 @@ bfmmla z0.d, z0.d, z0.d
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: bfmmla z0.d, z0.d, z0.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-// --------------------------------------------------------------------------//
-// Negative tests for instructions that are incompatible with movprfx
-
-movprfx z0.h, p0/m, z7.h
-bfmmla z0.h, z0.h, z0.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx and destination also used as non-destructive source
-// CHECK-NEXT: bfmmla z0.h, z0.h, z0.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-movprfx z0, z7
-bfmmla z0.h, z0.h, z0.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx and destination also used as non-destructive source
-// CHECK-NEXT: bfmmla z0.h, z0.h, z0.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

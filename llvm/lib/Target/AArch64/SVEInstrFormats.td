@@ -3833,7 +3833,7 @@ class sve_intx_dot_by_indexed_elem_x<bit opc, string asm>
  bits<3> iop;
  bits<3> Zm;
  let Inst{23}    = 0b0;
- let Inst{22}    = iop{2-2};
+ let Inst{22}    = iop{2};
  let Inst{20-19} = iop{1-0};
  let Inst{18-16} = Zm;
 }
