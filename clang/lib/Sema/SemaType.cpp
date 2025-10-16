@@ -1238,8 +1238,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for typeof?");
     if (!Result->isDependentType())
-      if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getOriginalDecl(), DS.getTypeSpecTypeLoc());
+      if (const auto *TT = Result->getAs<TagType>())
+        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(
         Result, DS.getTypeSpecType() == DeclSpec::TST_typeof_unqualType
@@ -9699,7 +9699,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   if (!E->isTypeDependent()) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
-      DiagnoseUseOfDecl(TT->getOriginalDecl(), E->getExprLoc());
+      DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9865,7 +9865,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
                                       SourceLocation Loc) {
   assert(BaseType->isEnumeralType());
-  EnumDecl *ED = BaseType->castAs<EnumType>()->getOriginalDecl();
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
 
   S.DiagnoseUseOfDecl(ED, Loc);
 

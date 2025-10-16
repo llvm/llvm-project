@@ -1301,23 +1301,26 @@ struct OpenACCReductionRecipe {
   // AST), or in a separate collection when being semantically analyzed.
   llvm::ArrayRef<CombinerRecipe> CombinerRecipes;
 
+  bool isSet() const { return AllocaDecl; }
+
+private:
+  friend class OpenACCReductionClause;
   OpenACCReductionRecipe(VarDecl *A, llvm::ArrayRef<CombinerRecipe> Combiners)
       : AllocaDecl(A), CombinerRecipes(Combiners) {}
-
-  bool isSet() const { return AllocaDecl; }
 };
 
 // A version of the above that is used for semantic analysis, at a time before
 // the OpenACCReductionClause node has been created.  This one has storage for
 // the CombinerRecipe, since Trailing storage for it doesn't exist yet.
-struct OpenACCReductionRecipeWithStorage : OpenACCReductionRecipe {
-  llvm::SmallVector<CombinerRecipe, 1> CombinerRecipeStorage;
+struct OpenACCReductionRecipeWithStorage {
+  VarDecl *AllocaDecl;
+  llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe, 1> CombinerRecipes;
 
-  OpenACCReductionRecipeWithStorage(VarDecl *A,
-                                    llvm::ArrayRef<CombinerRecipe> Combiners)
-      : OpenACCReductionRecipe(A, {}), CombinerRecipeStorage(Combiners) {
-    CombinerRecipes = CombinerRecipeStorage;
-  }
+  OpenACCReductionRecipeWithStorage(
+      VarDecl *A,
+      llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
+
   static OpenACCReductionRecipeWithStorage Empty() {
     return OpenACCReductionRecipeWithStorage(/*AllocaDecl=*/nullptr, {});
   }

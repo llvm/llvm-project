@@ -3514,15 +3514,16 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // xacquire <insn>      ; xacquire must be accompanied by 'lock'
   bool IsPrefix =
       StringSwitch<bool>(Name)
-          .Cases("cs", "ds", "es", "fs", "gs", "ss", true)
-          .Cases("rex64", "data32", "data16", "addr32", "addr16", true)
-          .Cases("xacquire", "xrelease", true)
-          .Cases("acquire", "release", isParsingIntelSyntax())
+          .Cases({"cs", "ds", "es", "fs", "gs", "ss"}, true)
+          .Cases({"rex64", "data32", "data16", "addr32", "addr16"}, true)
+          .Cases({"xacquire", "xrelease"}, true)
+          .Cases({"acquire", "release"}, isParsingIntelSyntax())
           .Default(false);
 
   auto isLockRepeatNtPrefix = [](StringRef N) {
     return StringSwitch<bool>(N)
-        .Cases("lock", "rep", "repe", "repz", "repne", "repnz", "notrack", true)
+        .Cases({"lock", "rep", "repe", "repz", "repne", "repnz", "notrack"},
+               true)
         .Default(false);
   };
 
