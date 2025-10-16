@@ -612,10 +612,10 @@ define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) 
 ; GFX1250-NEXT:    v_med3_num_f32 v2, v2, v3, v4
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-  %tmp0 = call float @llvm.minnum.f32(float %x, float %y)
-  %tmp1 = call float @llvm.maxnum.f32(float %x, float %y)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %z)
-  %tmp3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %x, float %y)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %x, float %y)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %z)
+  %tmp3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %tmp3, ptr addrspace(1) %arg
   ret void
 }
@@ -646,10 +646,10 @@ define void @test_med3_minimumnum_maximumnum_f32(ptr addrspace(1) %arg, float %x
 ; GFX1250-NEXT:    v_med3_num_f32 v2, v2, v3, v4
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-  %tmp0 = call float @llvm.minimumnum.f32(float %x, float %y)
-  %tmp1 = call float @llvm.maximumnum.f32(float %x, float %y)
-  %tmp2 = call float @llvm.minimumnum.f32(float %tmp1, float %z)
-  %tmp3 = call float @llvm.maximumnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minimumnum.f32(float %x, float %y)
+  %tmp1 = call nnan float @llvm.maximumnum.f32(float %x, float %y)
+  %tmp2 = call nnan float @llvm.minimumnum.f32(float %tmp1, float %z)
+  %tmp3 = call nnan float @llvm.maximumnum.f32(float %tmp0, float %tmp2)
   store float %tmp3, ptr addrspace(1) %arg
   ret void
 }
@@ -1280,10 +1280,10 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; GISEL-GFX1250-FAKE16-NEXT:    v_med3_num_f16 v2, v2, v3, v4
 ; GISEL-GFX1250-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GISEL-GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %tmp0 = call half @llvm.minnum.f16(half %x, half %y)
-  %tmp1 = call half @llvm.maxnum.f16(half %x, half %y)
-  %tmp2 = call half @llvm.minnum.f16(half %tmp1, half %z)
-  %tmp3 = call half @llvm.maxnum.f16(half %tmp0, half %tmp2)
+  %tmp0 = call nnan half @llvm.minnum.f16(half %x, half %y)
+  %tmp1 = call nnan half @llvm.maxnum.f16(half %x, half %y)
+  %tmp2 = call nnan half @llvm.minnum.f16(half %tmp1, half %z)
+  %tmp3 = call nnan half @llvm.maxnum.f16(half %tmp0, half %tmp2)
   store half %tmp3, ptr addrspace(1) %arg
   ret void
 }
