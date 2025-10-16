@@ -1,0 +1,156 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module {
+
+cir.func dso_local @invalid_catch_without_all_or_type() {
+  cir.scope {
+    cir.try {
+      cir.yield
+     // expected-error @below {{'cir.try' expected 'all' or 'type' keyword}}
+    } catch [invalid_keyword {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+module {
+
+cir.func dso_local @invalid_catch_rtti_type() {
+  cir.scope {
+    // expected-error @below {{'cir.try' op attribute 'handler_types' failed to satisfy constraint: catch all or unwind or global view array attribute}}
+    cir.try {
+      cir.yield
+    } catch [type #cir.undef] {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+module {
+
+cir.func dso_local @invalid_catch_empty_block() {
+  cir.scope {
+    // expected-error @below {{'cir.try' op region #1 ('handler_regions') failed to verify constraint: region with at least 1 blocks}}
+    cir.try {
+      cir.yield
+    } catch all {
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.func dso_local @invalid_catch_not_terminated() {
+  %a = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+  cir.scope {
+    cir.try {
+      cir.yield
+    } 
+    // expected-error @below {{'cir.try' blocks are expected to be explicitly terminated}}
+    catch all {
+       %tmp_a = cir.load %a : !cir.ptr<!s32i>, !s32i
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+module {
+
+cir.func dso_local @invalid_catch_multiple_catch_all() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } catch all {
+      cir.yield
+    } 
+    // expected-error @below {{op 'cir.try' can't have more than one catch all}}
+    catch all {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+module {
+
+cir.func dso_local @invalid_catch_without_type_info() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } 
+    // expected-error @below {{expected attribute value}}
+    // expected-error @below {{op 'cir.try' expected valid RTTI info attribute}}
+    catch [type] {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+module {
+
+cir.func dso_local @invalid_catch_all_with_type_info() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    }
+    // expected-error @below {{op 'cir.try' catch all dosen't need RTTI info attribute}}
+    catch [all] {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+module {
+
+cir.func dso_local @invalid_unwind_with_catch_all() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    }
+    catch all {
+      cir.yield
+    }
+    // expected-error @below {{op 'cir.try' unwind can't be used with catch all}}
+    unwind {
+
+    }
+  }
+  cir.return
+}
+
+}
