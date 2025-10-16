@@ -840,6 +840,7 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
   SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
   SmallVector<int64_t> blockShape = getBlockShape();
   SmallVector<int64_t> strides = getStrideShape();
+  SmallVector<OpFoldResult> blockedOffsets;
 
   // blockshape equal to matrixshape means no blocking
   if (llvm::equal(blockShape, matrixShape)) {
@@ -850,7 +851,7 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
            "offsets and blockShape must have the same size");
     // say the original offset is [y, x], and the block shape is [By, Bx],
     // then the blocked offset is [y/By, x/Bx, y%By, x%Bx]
-    SmallVector<OpFoldResult> blockedOffsets;
+
     SmallVector<OpFoldResult> divs, rems;
 
     for (auto [offset, block] : llvm::zip(offsets, blockShape)) {
@@ -859,7 +860,6 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
     }
     blockedOffsets.append(divs.begin(), divs.end());
     blockedOffsets.append(rems.begin(), rems.end());
-
     offsets = blockedOffsets;
   }
 
