@@ -2859,8 +2859,8 @@ static bool interp__builtin_elementwise_triop(
 }
 
 static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
-                                                 const CallExpr *Call,
-                                                 unsigned ID) {
+                                               const CallExpr *Call,
+                                               unsigned ID) {
   assert(Call->getNumArgs() == 2);
 
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
@@ -2893,7 +2893,8 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr OpPC,
+static bool interp__builtin_x86_extract_vector_masked(InterpState &S,
+                                                      CodePtr OpPC,
                                                       const CallExpr *Call,
                                                       unsigned ID) {
   assert(Call->getNumArgs() == 4);
@@ -2903,7 +2904,8 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr Op
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
   const Pointer &Src = S.Stk.pop<Pointer>();
 
-  if (!Src.getFieldDesc()->isPrimitiveArray() || !Merge.getFieldDesc()->isPrimitiveArray())
+  if (!Src.getFieldDesc()->isPrimitiveArray() ||
+      !Merge.getFieldDesc()->isPrimitiveArray())
     return false;
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
@@ -2924,7 +2926,7 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr Op
       if (MaskAPS[I])
         Dst.elem<T>(I) = Src.elem<T>(Base + I);
       else
-        Dst.elem<T>(I) = Merge.elem<T>(I);   
+        Dst.elem<T>(I) = Merge.elem<T>(I);
     }
   });
 
@@ -3564,10 +3566,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
-  case X86::BI__builtin_ia32_extract128i256:       
-  case X86::BI__builtin_ia32_vextractf128_pd256:  
-  case X86::BI__builtin_ia32_vextractf128_ps256:  
-  case X86::BI__builtin_ia32_vextractf128_si256:   
+  case X86::BI__builtin_ia32_extract128i256:
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256:
     return interp__builtin_x86_extract_vector(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_extractf32x4_256_mask:
