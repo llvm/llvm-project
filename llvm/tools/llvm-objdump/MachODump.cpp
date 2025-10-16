@@ -7321,6 +7321,19 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   CHECK_TARGET_INFO_CREATION(IP);
   // Set the display preference for hex vs. decimal immediates.
   IP->setPrintImmHex(PrintImmHex);
+  // Set up disassembler color output.
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    IP->setUseColor(true);
+    break;
+  case ColorOutput::Auto:
+    IP->setUseColor(outs().has_colors());
+    break;
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    IP->setUseColor(false);
+    break;
+  }
   // Comment stream and backing vector.
   SmallString<128> CommentsToEmit;
   raw_svector_ostream CommentStream(CommentsToEmit);
@@ -7374,6 +7387,19 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
     // Set the display preference for hex vs. decimal immediates.
     ThumbIP->setPrintImmHex(PrintImmHex);
+    // Set up disassembler color output.
+    switch (DisassemblyColor) {
+    case ColorOutput::Enable:
+      ThumbIP->setUseColor(true);
+      break;
+    case ColorOutput::Auto:
+      ThumbIP->setUseColor(outs().has_colors());
+      break;
+    case ColorOutput::Disable:
+    case ColorOutput::Invalid:
+      ThumbIP->setUseColor(false);
+      break;
+    }
   }
 
 #undef CHECK_TARGET_INFO_CREATION
