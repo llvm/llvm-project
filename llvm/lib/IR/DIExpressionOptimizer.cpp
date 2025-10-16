@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements functions to constant fold DIExpressions. Which were
-// declared in DIExpressionOptimizer.h
+// declared in DebugInfoMetadata.h
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 using namespace llvm;
 
 /// Returns true if the Op is a DW_OP_constu.
-static std::optional<uint64_t> isConstantVal(DIExpression::ExprOperand Op) {
+static std::optional<uint64_t> isConstantVal(ExprOperand Op) {
   if (Op.getOp() == dwarf::DW_OP_constu)
     return Op.getArg(0);
   return std::nullopt;
@@ -96,7 +96,7 @@ static bool operationsAreFoldableAndCommutative(dwarf::LocationAtom Operator1,
 
 /// Consume one operator and its operand(s).
 static void consumeOneOperator(DIExpressionCursor &Cursor, uint64_t &Loc,
-                               const DIExpression::ExprOperand &Op) {
+                               const ExprOperand &Op) {
   Cursor.consume(1);
   Loc = Loc + Op.getSize();
 }
@@ -190,8 +190,7 @@ optimizeDwarfOperations(ArrayRef<uint64_t> WorkingOps) {
 
 /// {DW_OP_constu, 0, DW_OP_[plus, minus, shl, shr]} -> {}
 /// {DW_OP_constu, 1, DW_OP_[mul, div]} -> {}
-static bool tryFoldNoOpMath(uint64_t Const1,
-                            ArrayRef<DIExpression::ExprOperand> Ops,
+static bool tryFoldNoOpMath(uint64_t Const1, ArrayRef<ExprOperand> Ops,
                             uint64_t &Loc, DIExpressionCursor &Cursor,
                             SmallVectorImpl<uint64_t> &WorkingOps) {
 
@@ -206,8 +205,7 @@ static bool tryFoldNoOpMath(uint64_t Const1,
 /// {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_[plus,
 /// minus, mul, div, shl, shr] -> {DW_OP_constu, Const1 [+, -, *, /, <<, >>]
 /// Const2}
-static bool tryFoldConstants(uint64_t Const1,
-                             ArrayRef<DIExpression::ExprOperand> Ops,
+static bool tryFoldConstants(uint64_t Const1, ArrayRef<ExprOperand> Ops,
                              uint64_t &Loc, DIExpressionCursor &Cursor,
                              SmallVectorImpl<uint64_t> &WorkingOps) {
 
@@ -231,8 +229,7 @@ static bool tryFoldConstants(uint64_t Const1,
 /// {DW_OP_constu, Const1, DW_OP_[plus, mul], DW_OP_constu, Const2,
 /// DW_OP_[plus, mul]} -> {DW_OP_constu, Const1 [+, *] Const2, DW_OP_[plus,
 /// mul]}
-static bool tryFoldCommutativeMath(uint64_t Const1,
-                                   ArrayRef<DIExpression::ExprOperand> Ops,
+static bool tryFoldCommutativeMath(uint64_t Const1, ArrayRef<ExprOperand> Ops,
                                    uint64_t &Loc, DIExpressionCursor &Cursor,
                                    SmallVectorImpl<uint64_t> &WorkingOps) {
 
@@ -260,7 +257,7 @@ static bool tryFoldCommutativeMath(uint64_t Const1,
 /// {DW_OP_constu, Const1 [+, *] Const2, DW_OP_[plus, mul], DW_OP_LLVM_arg,
 /// Arg1, DW_OP_[plus, mul]}
 static bool tryFoldCommutativeMathWithArgInBetween(
-    uint64_t Const1, ArrayRef<DIExpression::ExprOperand> Ops, uint64_t &Loc,
+    uint64_t Const1, ArrayRef<ExprOperand> Ops, uint64_t &Loc,
     DIExpressionCursor &Cursor, SmallVectorImpl<uint64_t> &WorkingOps) {
 
   auto Const2 = isConstantVal(Ops[4]);
@@ -291,7 +288,7 @@ DIExpression *DIExpression::foldConstantMath() {
   uint64_t Loc = 0;
   SmallVector<uint64_t> ResultOps = canonicalizeDwarfOperations(WorkingOps);
   DIExpressionCursor Cursor(ResultOps);
-  SmallVector<DIExpression::ExprOperand, 8> Ops;
+  SmallVector<ExprOperand, 8> Ops;
 
   // Iterate over all Operations in a DIExpression to match the smallest pattern
   // that can be folded.
