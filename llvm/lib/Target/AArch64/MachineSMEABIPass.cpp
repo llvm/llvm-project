@@ -294,6 +294,12 @@ struct MachineSMEABI : public MachineFunctionPass {
                                     MachineBasicBlock::iterator MBBI,
                                     LiveRegs PhysLiveRegs);
 
+  /// Attempts to find an insertion point before \p Inst where the status flags
+  /// are not live. If \p Inst is `Block.Insts.end()` a point before the end of
+  /// the block is found.
+  std::pair<MachineBasicBlock::iterator, LiveRegs>
+  findStateChangeInsertionPoint(MachineBasicBlock &MBB, const BlockInfo &Block,
+                                SmallVectorImpl<InstInfo>::const_iterator Inst);
   void emitStateChange(EmitContext &, MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MBBI, ZAState From,
                        ZAState To, LiveRegs PhysLiveRegs);
@@ -337,6 +343,28 @@ private:
   MachineRegisterInfo *MRI = nullptr;
 };
 
+static LiveRegs getPhysLiveRegs(LiveRegUnits const &LiveUnits) {
+  LiveRegs PhysLiveRegs = LiveRegs::None;
+  if (!LiveUnits.available(AArch64::NZCV))
+    PhysLiveRegs |= LiveRegs::NZCV;
+  // We have to track W0 and X0 separately as otherwise things can get
+  // confused if we attempt to preserve X0 but only W0 was defined.
+  if (!LiveUnits.available(AArch64::W0))
+    PhysLiveRegs |= LiveRegs::W0;
+  if (!LiveUnits.available(AArch64::W0_HI))
+    PhysLiveRegs |= LiveRegs::W0_HI;
+  return PhysLiveRegs;
+}
+
+static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
+  if (PhysLiveRegs & LiveRegs::NZCV)
+    LiveUnits.addReg(AArch64::NZCV);
+  if (PhysLiveRegs & LiveRegs::W0)
+    LiveUnits.addReg(AArch64::W0);
+  if (PhysLiveRegs & LiveRegs::W0_HI)
+    LiveUnits.addReg(AArch64::W0_HI);
+}
+
 FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
   assert((SMEFnAttrs.hasAgnosticZAInterface() || SMEFnAttrs.hasZT0State() ||
           SMEFnAttrs.hasZAState()) &&
@@ -362,26 +390,13 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
     LiveRegUnits LiveUnits(*TRI);
     LiveUnits.addLiveOuts(MBB);
 
-    auto GetPhysLiveRegs = [&] {
-      LiveRegs PhysLiveRegs = LiveRegs::None;
-      if (!LiveUnits.available(AArch64::NZCV))
-        PhysLiveRegs |= LiveRegs::NZCV;
-      // We have to track W0 and X0 separately as otherwise things can get
-      // confused if we attempt to preserve X0 but only W0 was defined.
-      if (!LiveUnits.available(AArch64::W0))
-        PhysLiveRegs |= LiveRegs::W0;
-      if (!LiveUnits.available(AArch64::W0_HI))
-        PhysLiveRegs |= LiveRegs::W0_HI;
-      return PhysLiveRegs;
-    };
-
-    Block.PhysLiveRegsAtExit = GetPhysLiveRegs();
+    Block.PhysLiveRegsAtExit = getPhysLiveRegs(LiveUnits);
     auto FirstTerminatorInsertPt = MBB.getFirstTerminator();
     auto FirstNonPhiInsertPt = MBB.getFirstNonPHI();
     for (MachineInstr &MI : reverse(MBB)) {
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
-      LiveRegs PhysLiveRegs = GetPhysLiveRegs();
+      LiveRegs PhysLiveRegs = getPhysLiveRegs(LiveUnits);
       // The SMEStateAllocPseudo marker is added to a function if the save
       // buffer was allocated in SelectionDAG. It marks the end of the
       // allocation -- which is a safe point for this pass to insert any TPIDR2
@@ -476,6 +491,49 @@ MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
   return BundleStates;
 }
 
+std::pair<MachineBasicBlock::iterator, LiveRegs>
+MachineSMEABI::findStateChangeInsertionPoint(
+    MachineBasicBlock &MBB, const BlockInfo &Block,
+    SmallVectorImpl<InstInfo>::const_iterator Inst) {
+  LiveRegs PhysLiveRegs;
+  MachineBasicBlock::iterator InsertPt;
+  if (Inst != Block.Insts.end()) {
+    InsertPt = Inst->InsertPt;
+    PhysLiveRegs = Inst->PhysLiveRegs;
+  } else {
+    InsertPt = MBB.getFirstTerminator();
+    PhysLiveRegs = Block.PhysLiveRegsAtExit;
+  }
+
+  if (!(PhysLiveRegs & LiveRegs::NZCV))
+    return {InsertPt, PhysLiveRegs}; // Nothing to do (no live flags).
+
+  // Find the previous state change. We can not move before this point.
+  MachineBasicBlock::iterator PrevStateChangeI;
+  if (Inst == Block.Insts.begin()) {
+    PrevStateChangeI = MBB.begin();
+  } else {
+    // Note: `std::prev(Inst)` is the previous InstInfo. We only create an
+    // InstInfo object for instructions that require a specific ZA state, so the
+    // InstInfo is the site of the previous state change in the block (which can
+    // be several MIs earlier).
+    PrevStateChangeI = std::prev(Inst)->InsertPt;
+  }
+
+  // Note: LiveUnits will only accurately track X0 and NZCV.
+  LiveRegUnits LiveUnits(*TRI);
+  setPhysLiveRegs(LiveUnits, PhysLiveRegs);
+  for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
+    // Don't move before/into a call (which may have a state change before it).
+    if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
+      break;
+    LiveUnits.stepBackward(*I);
+    if (LiveUnits.available(AArch64::NZCV))
+      return {I, getPhysLiveRegs(LiveUnits)};
+  }
+  return {InsertPt, PhysLiveRegs};
+}
+
 void MachineSMEABI::insertStateChanges(EmitContext &Context,
                                        const FunctionInfo &FnInfo,
                                        const EdgeBundles &Bundles,
@@ -490,10 +548,13 @@ void MachineSMEABI::insertStateChanges(EmitContext &Context,
       CurrentState = InState;
 
     for (auto &Inst : Block.Insts) {
-      if (CurrentState != Inst.NeededState)
-        emitStateChange(Context, MBB, Inst.InsertPt, CurrentState,
-                        Inst.NeededState, Inst.PhysLiveRegs);
-      CurrentState = Inst.NeededState;
+      if (CurrentState != Inst.NeededState) {
+        auto [InsertPt, PhysLiveRegs] =
+            findStateChangeInsertionPoint(MBB, Block, &Inst);
+        emitStateChange(Context, MBB, InsertPt, CurrentState, Inst.NeededState,
+                        PhysLiveRegs);
+        CurrentState = Inst.NeededState;
+      }
     }
 
     if (MBB.succ_empty())
@@ -501,9 +562,12 @@ void MachineSMEABI::insertStateChanges(EmitContext &Context,
 
     ZAState OutState =
         BundleStates[Bundles.getBundle(MBB.getNumber(), /*Out=*/true)];
-    if (CurrentState != OutState)
-      emitStateChange(Context, MBB, MBB.getFirstTerminator(), CurrentState,
-                      OutState, Block.PhysLiveRegsAtExit);
+    if (CurrentState != OutState) {
+      auto [InsertPt, PhysLiveRegs] =
+          findStateChangeInsertionPoint(MBB, Block, Block.Insts.end());
+      emitStateChange(Context, MBB, InsertPt, CurrentState, OutState,
+                      PhysLiveRegs);
+    }
   }
 }
 

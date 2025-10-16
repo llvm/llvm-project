@@ -139,6 +139,8 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `-mcpu=wildcatlake` is now supported.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -174,6 +176,9 @@ Changes to LLDB
 
 * LLDB can now set breakpoints, show backtraces, and display variables when
   debugging Wasm with supported runtimes (WAMR and V8).
+* LLDB no longer stops processes by default when receiving SIGWINCH signals 
+  (window resize events) on Linux. This is the default on other Unix platforms.
+  You can re-enable it using `process handle --notify=true --stop=true SIGWINCH`.
 * The `show-progress` setting, which became a NOOP with the introduction of the
   statusline, now defaults to off and controls using OSC escape codes to show a
   native progress bar in supporting terminals like Ghostty and ConEmu.
