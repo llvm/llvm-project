@@ -16,6 +16,7 @@
 #include "flang/Semantics/module-dependences.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <array>
 #include <functional>
@@ -50,32 +51,31 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpMemoryOrderType;
-
 public:
-  ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,
-      DynamicAllocators);
-  using RequiresFlags = common::EnumSet<RequiresFlag, RequiresFlag_enumSize>;
+  // The set of requirements for any program unit include requirements
+  // from any module used in the program unit.
+  using RequiresClauses =
+      common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
   bool has_ompRequires() const { return ompRequires_.has_value(); }
-  const RequiresFlags *ompRequires() const {
+  const RequiresClauses *ompRequires() const {
     return ompRequires_ ? &*ompRequires_ : nullptr;
   }
-  void set_ompRequires(RequiresFlags flags) { ompRequires_ = flags; }
+  void set_ompRequires(RequiresClauses clauses) { ompRequires_ = clauses; }
 
   bool has_ompAtomicDefaultMemOrder() const {
     return ompAtomicDefaultMemOrder_.has_value();
   }
-  const OmpAtomicOrderType *ompAtomicDefaultMemOrder() const {
+  const common::OmpMemoryOrderType *ompAtomicDefaultMemOrder() const {
     return ompAtomicDefaultMemOrder_ ? &*ompAtomicDefaultMemOrder_ : nullptr;
   }
-  void set_ompAtomicDefaultMemOrder(OmpAtomicOrderType flags) {
+  void set_ompAtomicDefaultMemOrder(common::OmpMemoryOrderType flags) {
     ompAtomicDefaultMemOrder_ = flags;
   }
 
 private:
-  std::optional<RequiresFlags> ompRequires_;
-  std::optional<OmpAtomicOrderType> ompAtomicDefaultMemOrder_;
+  std::optional<RequiresClauses> ompRequires_;
+  std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
 };
 
 // A module or submodule.
