@@ -15,6 +15,13 @@ module mod1
 
   real(kind=8), device, allocatable, dimension(:) :: p
 
+  interface
+    function __sum(a_d) result(res_h)
+      integer(4), managed, intent(in) :: a_d(:,:,:,:)
+      integer(4), allocatable, managed :: res_h(:,:,:)
+    end function
+  end interface
+
 contains
   function dev1(a)
     integer, device :: a(:)
@@ -522,3 +529,16 @@ end subroutine
 ! CHECK: hlfir.yield_element %[[CONV]] : f32
 ! CHECK: }
 ! CHECKL: hlfir.assign %[[ELE]] to %[[HD]]#0 : !hlfir.expr<10x20x30xf32>, !fir.ref<!fir.array<10x20x30xf32>>
+
+subroutine sub28(N1,N2,N3,N4)
+  use mod1
+  integer(4), managed :: a(N1,N2,N3,N4) 
+  integer(4), managed :: bres(N1,N2,N3)
+  bres = __sum(a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub28
+! CHECK: fir.call @_QP__sum
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign
+! CHECK-NOT: cuf.data_transfer

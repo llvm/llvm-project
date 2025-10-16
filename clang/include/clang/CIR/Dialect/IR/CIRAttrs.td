@@ -814,6 +814,14 @@ def CIR_GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor"> {
   }];
 }
 
+def CIR_GlobalDtorAttr : CIR_GlobalCtorDtor<"Dtor", "dtor"> {
+  let summary = "Marks a function as a global destructor";
+  let description = [{
+      Marks a function as a global destructor in the module dtors list.
+      The function will be executed before the module unloading.
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
 //===----------------------------------------------------------------------===//
@@ -958,6 +966,21 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
   let assemblyFormat = [{
     `<` custom<RecordMembers>($data) `>`
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// CatchAllAttr & UnwindAttr
+//===----------------------------------------------------------------------===//
+
+// Represents the catch_all region.
+def CIR_CatchAllAttr : CIR_UnitAttr<"CatchAll", "all"> {
+  let storageType = [{ CatchAllAttr }];
+}
+
+// Represents the unwind region where unwind continues or
+// the program std::terminate's.
+def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
+  let storageType = [{ CatchUnwind }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
