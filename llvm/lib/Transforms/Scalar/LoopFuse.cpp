@@ -368,7 +368,7 @@ private:
     Valid = false;
   }
 
-  bool reportInvalidCandidate(llvm::Statistic &Stat) const {
+  bool reportInvalidCandidate(Statistic &Stat) const {
     using namespace ore;
     assert(L && Preheader && "Fusion candidate not initialized properly!");
 #if LLVM_ENABLE_STATS
@@ -445,8 +445,18 @@ struct FusionCandidateCompare {
         "No dominance relationship between these fusion candidates!");
   }
 };
+} // namespace
 
 using LoopVector = SmallVector<Loop *, 4>;
+
+#ifndef NDEBUG
+static void printLoopVector(const LoopVector &LV) {
+  dbgs() << "****************************\n";
+  for (const Loop *L : LV)
+    printLoop(*L, dbgs());
+  dbgs() << "****************************\n";
+}
+#endif
 
 // Set of Control Flow Equivalent (CFE) Fusion Candidates, sorted in dominance
 // order. Thus, if FC0 comes *before* FC1 in a FusionCandidateSet, then FC0
@@ -462,8 +472,7 @@ using FusionCandidateSet = std::set<FusionCandidate, FusionCandidateCompare>;
 using FusionCandidateCollection = SmallVector<FusionCandidateSet, 4>;
 
 #if !defined(NDEBUG)
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidate &FC) {
+static raw_ostream &operator<<(raw_ostream &OS, const FusionCandidate &FC) {
   if (FC.isValid())
     OS << FC.Preheader->getName();
   else
@@ -472,8 +481,8 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidateSet &CandSet) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const FusionCandidateSet &CandSet) {
   for (const FusionCandidate &FC : CandSet)
     OS << FC << '\n';
 
@@ -490,6 +499,8 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
   }
 }
 #endif
+
+namespace {
 
 /// Collect all loops in function at the same nest level, starting at the
 /// outermost level.
@@ -549,15 +560,6 @@ private:
   /// Vector of loops at the current depth level that have the same parent loop
   LoopsOnLevelTy LoopsOnLevel;
 };
-
-#ifndef NDEBUG
-static void printLoopVector(const LoopVector &LV) {
-  dbgs() << "****************************\n";
-  for (auto *L : LV)
-    printLoop(*L, dbgs());
-  dbgs() << "****************************\n";
-}
-#endif
 
 struct LoopFuser {
 private:
@@ -1850,7 +1852,7 @@ private:
   ///       <Cand1 Preheader> and <Cand2 Preheader>: <Stat Description>
   template <typename RemarkKind>
   void reportLoopFusion(const FusionCandidate &FC0, const FusionCandidate &FC1,
-                        llvm::Statistic &Stat) {
+                        Statistic &Stat) {
     assert(FC0.Preheader && FC1.Preheader &&
            "Expecting valid fusion candidates");
     using namespace ore;
