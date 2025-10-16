@@ -84,7 +84,7 @@ private:
     LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
     /// \returns \p true if \p S matches this glob pattern
     LLVM_ABI bool match(StringRef S) const;
-    StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
+    StringRef getPat() const { return Pat; }
 
     // Brackets with their end position and matched bytes.
     struct Bracket {
@@ -92,9 +92,10 @@ private:
       BitVector Bytes;
     };
     SmallVector<Bracket, 0> Brackets;
-    SmallVector<char, 0> Pat;
+    StringRef Pat;
   };
   SmallVector<SubGlobPattern, 1> SubGlobs;
+  SmallVector<std::string, 0> BraceExpansions;
 };
 }
 
