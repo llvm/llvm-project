@@ -1289,16 +1289,7 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool IsCUDADeviceSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-      return true;
-    }
-  }
-  return false;
-}
+bool IsCUDADeviceSymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1520,6 +1511,9 @@ bool IsVarSubexpressionOf(
 // If the input is not Operation, Designator, FunctionRef or Constant,
 // it returns std::nullopt.
 std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
+
+// How many ancestors does have a derived type have?
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 
 } // namespace Fortran::evaluate
 

@@ -161,12 +161,10 @@ using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
 /// Helper which adds two underlying types of enumeration type.
 /// Implicit conversion to a common type is accepted.
 template <typename EnumTy1, typename EnumTy2,
-          typename UT1 = std::enable_if_t<std::is_enum<EnumTy1>::value,
-                                          std::underlying_type_t<EnumTy1>>,
-          typename UT2 = std::enable_if_t<std::is_enum<EnumTy2>::value,
-                                          std::underlying_type_t<EnumTy2>>>
+          typename = std::enable_if_t<std::is_enum_v<EnumTy1> &&
+                                      std::is_enum_v<EnumTy2>>>
 constexpr auto addEnumValues(EnumTy1 LHS, EnumTy2 RHS) {
-  return static_cast<UT1>(LHS) + static_cast<UT2>(RHS);
+  return llvm::to_underlying(LHS) + llvm::to_underlying(RHS);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1371,7 +1369,7 @@ public:
   offset_base(const std::pair<BaseT, ptrdiff_t> &base, ptrdiff_t index) {
     // We encode the internal base as a pair of the derived base and a start
     // index into the derived base.
-    return std::make_pair(base.first, base.second + index);
+    return {base.first, base.second + index};
   }
   /// See `detail::indexed_accessor_range_base` for details.
   static ReferenceT
@@ -1690,6 +1688,28 @@ template <typename R> constexpr size_t range_size(R &&Range) {
 template <typename R, typename E> auto accumulate(R &&Range, E &&Init) {
   return std::accumulate(adl_begin(Range), adl_end(Range),
                          std::forward<E>(Init));
+}
+
+/// Wrapper for std::accumulate with a binary operator.
+template <typename R, typename E, typename BinaryOp>
+auto accumulate(R &&Range, E &&Init, BinaryOp &&Op) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init), std::forward<BinaryOp>(Op));
+}
+
+/// Returns the sum of all values in `Range` with `Init` initial value.
+/// The default initial value is 0.
+template <typename R, typename E = detail::ValueOfRange<R>>
+auto sum_of(R &&Range, E Init = E{0}) {
+  return accumulate(std::forward<R>(Range), std::move(Init));
+}
+
+/// Returns the product of all values in `Range` with `Init` initial value.
+/// The default initial value is 1.
+template <typename R, typename E = detail::ValueOfRange<R>>
+auto product_of(R &&Range, E Init = E{1}) {
+  return accumulate(std::forward<R>(Range), std::move(Init),
+                    std::multiplies<>{});
 }
 
 /// Provide wrappers to std::for_each which take ranges instead of having to

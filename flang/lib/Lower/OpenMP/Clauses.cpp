@@ -221,8 +221,6 @@ MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
 MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
-MAKE_EMPTY_CLASS(GraphId, GraphId);
-MAKE_EMPTY_CLASS(GraphReset, GraphReset);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
@@ -254,9 +252,12 @@ MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
 MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
+MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
+MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
@@ -1035,6 +1036,11 @@ Link make(const parser::OmpClause::Link &inp,
   return Link{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
+LoopRange make(const parser::OmpClause::Looprange &inp,
+               semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: looprange");
+}
+
 Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
@@ -1059,6 +1065,15 @@ Map make(const parser::OmpClause::Map &inp,
       MS(Close,     Close)
       MS(Ompx_Hold, OmpxHold)
       MS(Present,   Present)
+      // clang-format on
+  );
+
+  CLAUSET_ENUM_CONVERT( //
+      convertAttachMod, parser::OmpAttachModifier::Value, Map::AttachModifier,
+      // clang-format off
+      MS(Always,  Always)
+      MS(Auto,    Auto)
+      MS(Never,   Never)
       // clang-format on
   );
 
@@ -1109,6 +1124,13 @@ Map make(const parser::OmpClause::Map &inp,
   if (!modSet.empty())
     maybeTypeMods = Map::MapTypeModifiers(modSet.begin(), modSet.end());
 
+  auto attachMod = [&]() -> std::optional<Map::AttachModifier> {
+    if (auto *t =
+            semantics::OmpGetUniqueModifier<parser::OmpAttachModifier>(mods))
+      return convertAttachMod(t->v);
+    return std::nullopt;
+  }();
+
   auto refMod = [&]() -> std::optional<Map::RefModifier> {
     if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpRefModifier>(mods))
       return convertRefMod(t->v);
@@ -1129,6 +1151,7 @@ Map make(const parser::OmpClause::Map &inp,
 
   return Map{{/*MapType=*/std::move(type),
               /*MapTypeModifiers=*/std::move(maybeTypeMods),
+              /*AttachModifier=*/std::move(attachMod),
               /*RefModifier=*/std::move(refMod), /*Mapper=*/std::move(mappers),
               /*Iterator=*/std::move(iterator),
               /*LocatorList=*/makeObjects(t2, semaCtx)}};

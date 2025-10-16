@@ -6613,6 +6613,9 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
                                              const ToolChain &TC) const {
   std::string error = "<NOT PRESENT>";
 
+  if (C.getArgs().hasArg(options::OPT_nostdlib))
+    return error;
+
   switch (TC.GetCXXStdlibType(C.getArgs())) {
   case ToolChain::CST_Libcxx: {
     auto evaluate = [&](const char *library) -> std::optional<std::string> {
@@ -6833,6 +6836,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::VEToolChain>(*this, Target, Args);
       else if (Target.isOHOSFamily())
         TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
+      else if (Target.isWALI())
+        TC = std::make_unique<toolchains::WebAssembly>(*this, Target, Args);
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
       break;
