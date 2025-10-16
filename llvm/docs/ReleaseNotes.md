@@ -63,6 +63,9 @@ Changes to the LLVM IR
   address component of a pointer type variable but unlike `ptrtoint` does not
   capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
 
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
+
 Changes to LLVM infrastructure
 ------------------------------
 
