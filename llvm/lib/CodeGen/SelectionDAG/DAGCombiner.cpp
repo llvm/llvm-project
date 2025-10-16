@@ -6714,6 +6714,9 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
                                  DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM);
 
       if (NewOpcode != ISD::DELETED_NODE) {
+        // Propagate fast-math flags from setcc.
+        SelectionDAG::FlagInserter FlagInserter(DAG, LHS->getFlags() &
+                                                         RHS->getFlags());
         SDValue MinMaxValue =
             DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
         return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
