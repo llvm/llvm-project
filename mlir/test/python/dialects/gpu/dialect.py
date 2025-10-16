@@ -159,6 +159,7 @@ def testGPUFuncOp():
     # CHECK:   gpu.return
     # CHECK: }
 
+
 # CHECK-LABEL: testGPULaunchFuncOp
 @run
 def testGPULaunchFuncOp():
