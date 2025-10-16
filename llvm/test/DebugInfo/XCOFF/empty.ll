@@ -61,7 +61,7 @@ entry:
 ; ASM32-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM32-NEXT:          .byte   0x00                            # Version = 0
 ; ASM32-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; ASM32-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM32-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM32-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM32-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; ASM32-NEXT:                                          # -IsFloatingPointPresent
@@ -264,7 +264,7 @@ entry:
 ; ASM64-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM64-NEXT:          .byte   0x00                            # Version = 0
 ; ASM64-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; ASM64-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM64-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM64-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM64-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; ASM64-NEXT:                                          # -IsFloatingPointPresent

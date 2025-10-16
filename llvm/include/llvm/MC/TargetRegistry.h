@@ -737,7 +737,8 @@ struct TargetRegistry {
   /// \param TripleStr - The triple to use for finding a target.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  // TODO: Drop this in favor of the method accepting Triple.
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
+  [[deprecated("Use overload accepting Triple instead")]]
   static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
     return lookupTarget(Triple(TripleStr), Error);
   }

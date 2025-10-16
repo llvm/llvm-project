@@ -236,8 +236,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
-      .addCreateFromBinding()
-      .addCreateFromImplicitBinding();
+      .addStaticInitializationFunctions(HasCounter);
 }
 
 // This function is responsible for constructing the constraint expression for

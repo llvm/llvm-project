@@ -435,7 +435,7 @@ public:
 
   size_t Remove(ModuleList &module_list);
 
-  bool RemoveIfOrphaned(const Module *module_ptr);
+  bool RemoveIfOrphaned(const lldb::ModuleWP module_ptr);
 
   size_t RemoveOrphans(bool mandatory);
 
@@ -489,7 +489,7 @@ public:
 
   static size_t RemoveOrphanSharedModules(bool mandatory);
 
-  static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
+  static bool RemoveSharedModuleIfOrphaned(const lldb::ModuleWP module_ptr);
 
   /// Applies 'callback' to each module in this ModuleList.
   /// If 'callback' returns false, iteration terminates.
@@ -530,6 +530,9 @@ protected:
   mutable std::recursive_mutex m_modules_mutex;
 
   Notifier *m_notifier = nullptr;
+
+  /// An orphaned module that lives only in the ModuleList has a count of 1.
+  static constexpr long kUseCountModuleListOrphaned = 1;
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>

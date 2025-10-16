@@ -1271,6 +1271,12 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
                PDiag(diag::note_building_deduction_guide_here));
       break;
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      // Workaround for a workaround: don't produce a note if we are merely
+      // instantiating some other template which contains this alias template.
+      // This would be redundant either with the error itself, or some other
+      // context note attached to it.
+      if (Active->NumTemplateArgs == 0)
+        break;
       DiagFunc(Active->PointOfInstantiation,
                PDiag(diag::note_template_type_alias_instantiation_here)
                    << cast<TypeAliasTemplateDecl>(Active->Entity)
@@ -1675,7 +1681,7 @@ namespace {
           ICNT && SemaRef.CodeSynthesisContexts.back().Kind ==
                       Sema::CodeSynthesisContext::BuildingDeductionGuides) {
         Type = inherited::TransformType(
-            ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+            ICNT->getDecl()->getCanonicalTemplateSpecializationType(
                 SemaRef.Context));
         TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
       }
@@ -2099,7 +2105,7 @@ TemplateInstantiator::TransformFirstQualifierInScope(NamedDecl *D,
         return cast_or_null<NamedDecl>(TransformDecl(Loc, D));
 
       if (const TagType *Tag = T->getAs<TagType>())
-        return Tag->getOriginalDecl();
+        return Tag->getDecl();
 
       // The resulting type is not a tag; complain.
       getSema().Diag(Loc, diag::err_nested_name_spec_non_tag) << T;

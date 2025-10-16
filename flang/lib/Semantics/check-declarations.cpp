@@ -1984,9 +1984,8 @@ bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
   const Procedure *p1{Characterize(f1)};
   const Procedure *p2{Characterize(f2)};
   if (p1 && p2) {
-    std::optional<bool> areDistinct{characteristics::Distinguishable(
-        context_.languageFeatures(), *p1, *p2)};
-    if (areDistinct.value_or(false)) {
+    if (characteristics::Distinguishable(context_.languageFeatures(), *p1, *p2)
+            .value_or(false)) {
       return true;
     }
     if (auto *msg{messages_.Say(f1Name,
@@ -3623,6 +3622,7 @@ void CheckHelper::CheckDioDtvArg(const Symbol &proc, const Symbol &subp,
                 ioKind == common::DefinedIo::ReadUnformatted
             ? Attr::INTENT_INOUT
             : Attr::INTENT_IN);
+    CheckDioDummyIsScalar(subp, *arg);
   }
 }
 
@@ -3688,6 +3688,7 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
           "Dummy argument '%s' of a defined input/output procedure must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());
     }
+    CheckDioDummyIsScalar(subp, *arg);
   }
 }
 

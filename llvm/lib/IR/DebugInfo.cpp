@@ -1078,7 +1078,7 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
   auto File = unwrapDI<DIFile>(FileRef);
 
   return wrap(unwrap(Builder)->createCompileUnit(
-      map_from_llvmDWARFsourcelanguage(Lang), File,
+      DISourceLanguageName(map_from_llvmDWARFsourcelanguage(Lang)), File,
       StringRef(Producer, ProducerLen), isOptimized, StringRef(Flags, FlagsLen),
       RuntimeVer, StringRef(SplitName, SplitNameLen),
       static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,

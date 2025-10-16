@@ -2171,17 +2171,29 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // T(1) or T(PT=PT(1)).  There may be multiple parent components.
       if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
-        for (auto parent{components.begin()};
-             parent != afterLastParentComponentIter; ++parent) {
-          if (auto parentType{DynamicType::From(*parent)}; parentType &&
-              parent->test(Symbol::Flag::ParentComp) &&
-              valueType->IsEquivalentTo(*parentType)) {
-            symbol = &*parent;
-            nextAnonymous = ++parent;
-            Warn(LanguageFeature::AnonymousParents, source,
-                "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
-                symbol->name());
-            break;
+        auto parent{components.begin()};
+        if (!parent->test(Symbol::Flag::ParentComp)) {
+          // Ensure that the first value can't initialize the first actual
+          // component.
+          if (auto firstComponentType{DynamicType::From(*parent)}) {
+            if (firstComponentType->IsTkCompatibleWith(*valueType) &&
+                value.Rank() == parent->Rank()) {
+              parent = afterLastParentComponentIter; // skip next loop
+            }
+          }
+        }
+        for (; parent != afterLastParentComponentIter; ++parent) {
+          if (auto parentType{DynamicType::From(*parent)}) {
+            if (parent->test(Symbol::Flag::ParentComp) &&
+                valueType->IsEquivalentTo(*parentType) &&
+                value.Rank() == 0 /* scalar only */) {
+              symbol = &*parent;
+              nextAnonymous = ++parent;
+              Warn(LanguageFeature::AnonymousParents, source,
+                  "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
+                  symbol->name());
+              break;
+            }
           }
         }
       }
@@ -2317,7 +2329,7 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
               auto checked{CheckConformance(messages, *componentShape,
                   *valueShape, CheckConformanceFlags::RightIsExpandableDeferred,
                   "component", "value")};
-              if (checked && *checked && GetRank(*componentShape) > 0 &&
+              if (checked.value_or(false) && GetRank(*componentShape) > 0 &&
                   GetRank(*valueShape) == 0 &&
                   (IsDeferredShape(*symbol) ||
                       !IsExpandableScalar(*converted, foldingContext,

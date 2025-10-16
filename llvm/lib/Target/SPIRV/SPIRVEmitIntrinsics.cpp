@@ -17,6 +17,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -2028,9 +2029,13 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
 
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
-  // Skip special artifical variable llvm.global.annotations.
-  if (GV.getName() == "llvm.global.annotations")
+  // Skip special artificial variables.
+  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
+                                             "llvm.compiler.used"};
+
+  if (ArtificialGlobals.contains(GV.getName()))
     return;
+
   Constant *Init = nullptr;
   if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
@@ -2811,9 +2816,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     GetElementPtrInst *NewGEP = simplifyZeroLengthArrayGepInst(Ref);
     if (NewGEP) {
       Ref->replaceAllUsesWith(NewGEP);
-      if (isInstructionTriviallyDead(Ref))
-        DeadInsts.insert(Ref);
-
+      DeadInsts.insert(Ref);
       Ref = NewGEP;
     }
     if (Type *GepTy = getGEPType(Ref))

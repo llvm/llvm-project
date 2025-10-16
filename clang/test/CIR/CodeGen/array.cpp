@@ -114,12 +114,12 @@ void func() {
 // CIR: %[[INIT_2:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e2", init]
 // CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR" cir.store %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR" cir.store %[[TMP]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
@@ -156,16 +156,16 @@ void func2() {
 // CIR: %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: cir.store{{.*}} %[[FIVE]], %[[ARR_0]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[OFFSET_0:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[ARR_0]] : !cir.ptr<!s32i>, %[[OFFSET_0]] : !s64i), !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_0]], %[[OFFSET_0]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ELE_PTR]], %[[ARR_PTR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
-// CIR: %[[ARR_END:.*]] = cir.ptr_stride(%[[ARR_0]] : !cir.ptr<!s32i>, %[[TWO]] : !s64i), !cir.ptr<!s32i>
+// CIR: %[[ARR_END:.*]] = cir.ptr_stride %[[ARR_0]], %[[TWO]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: cir.do {
 // CIR:   %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[ARR_CUR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:   %[[ARR_NEXT:.*]] = cir.ptr_stride(%[[ARR_CUR]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i), !cir.ptr<!s32i>
+// CIR:   %[[ARR_NEXT:.*]] = cir.ptr_stride %[[ARR_CUR]], %[[ONE]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %[[ARR_NEXT]], %[[ARR_PTR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.yield
 // CIR: } while {
@@ -213,14 +213,14 @@ void func3() {
 // CIR: %[[V0:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: cir.store{{.*}} %[[V0]], %[[ARR_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[OFFSET_0:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ELE_1_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[OFFSET_0]] : !s64i), !cir.ptr<!s32i>
+// CIR: %[[ELE_1_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[OFFSET_0]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: %[[V1:.*]] = cir.const #cir.int<6> : !s32i
 // CIR: cir.store{{.*}} %[[V1]], %[[ELE_1_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[IDX_V:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[IDX_V]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP_IDX:.*]] = cir.load{{.*}} %[[IDX]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[TMP_IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[TMP_IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR: %[[ELE_TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[ELE_TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -263,16 +263,16 @@ void func4() {
 // CIR: %[[V_0_0:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: cir.store{{.*}} %[[V_0_0]], %[[ARR_0_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[OFFSET:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ARR_1:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!cir.array<!s32i x 1>>, %[[OFFSET]] : !s64i), !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ARR_1:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[OFFSET]] : (!cir.ptr<!cir.array<!s32i x 1>>, !s64i) -> !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: %[[ARR_1_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_1]] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
 // CIR: %[[V_1_0:.*]] = cir.const #cir.int<6> : !s32i
 // CIR: cir.store{{.*}} %[[V_1_0]], %[[ARR_1_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[IDX_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>> -> !cir.ptr<!cir.array<!s32i x 1>>
-// CIR: %[[ARR_1:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!cir.array<!s32i x 1>>, %[[IDX_1]] : !s32i), !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ARR_1:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX_1]] : (!cir.ptr<!cir.array<!s32i x 1>>, !s32i) -> !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: %[[ARR_1_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_1]] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_0:.*]] = cir.ptr_stride(%[[ARR_1_PTR]] : !cir.ptr<!s32i>, %[[IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR: %[[ELE_0:.*]] = cir.ptr_stride %[[ARR_1_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_0]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -311,16 +311,16 @@ void func5() {
 // CIR: %[[V_0_0:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: cir.store{{.*}} %[[V_0_0]], %[[ARR_0_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[OFFSET:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ARR_1:.*]] = cir.ptr_stride(%[[ARR_0]] : !cir.ptr<!cir.array<!s32i x 1>>, %[[OFFSET]] : !s64i), !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ARR_1:.*]] = cir.ptr_stride %[[ARR_0]], %[[OFFSET]] : (!cir.ptr<!cir.array<!s32i x 1>>, !s64i) -> !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: cir.store{{.*}} %[[ARR_1]], %[[ARR_PTR]] : !cir.ptr<!cir.array<!s32i x 1>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 1>>>
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
-// CIR: %[[ARR_END:.*]] = cir.ptr_stride(%[[ARR_0]] : !cir.ptr<!cir.array<!s32i x 1>>, %[[TWO]] : !s64i), !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ARR_END:.*]] = cir.ptr_stride %[[ARR_0]], %[[TWO]] : (!cir.ptr<!cir.array<!s32i x 1>>, !s64i) -> !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: cir.do {
 // CIR:   %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!cir.array<!s32i x 1>>>, !cir.ptr<!cir.array<!s32i x 1>>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!s32i x 1>
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[ARR_CUR]] : !cir.array<!s32i x 1>, !cir.ptr<!cir.array<!s32i x 1>>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:   %[[ARR_NEXT:.*]] = cir.ptr_stride(%[[ARR_CUR]] : !cir.ptr<!cir.array<!s32i x 1>>, %[[ONE]] : !s64i), !cir.ptr<!cir.array<!s32i x 1>>
+// CIR:   %[[ARR_NEXT:.*]] = cir.ptr_stride %[[ARR_CUR]], %[[ONE]] : (!cir.ptr<!cir.array<!s32i x 1>>, !s64i) -> !cir.ptr<!cir.array<!s32i x 1>>
 // CIR:   cir.store{{.*}} %[[ARR_NEXT]], %[[ARR_PTR]] : !cir.ptr<!cir.array<!s32i x 1>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 1>>>
 // CIR:   cir.yield
 // CIR: } while {
@@ -368,7 +368,7 @@ void func6() {
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VAR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP]], %[[ARR_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[OFFSET:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[OFFSET]] : !s64i), !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[OFFSET]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: %[[V1:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: cir.store{{.*}} %[[V1]], %[[ELE_PTR]] : !s32i, !cir.ptr<!s32i>
 
@@ -399,13 +399,13 @@ void func7() {
 // CIR: %[[ARR_0:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR: cir.store{{.*}} %[[ARR_0]], %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ARR_END:.*]] = cir.ptr_stride(%[[ARR_0]] : !cir.ptr<!cir.ptr<!s32i>>, %[[ONE]] : !s64i), !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[ARR_END:.*]] = cir.ptr_stride %[[ARR_0]], %[[ONE]] : (!cir.ptr<!cir.ptr<!s32i>>, !s64i) -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR: cir.do {
 // CIR:   %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %[[NULL_PTR]], %[[ARR_CUR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:   %[[ARR_NEXT:.*]] = cir.ptr_stride(%[[ARR_CUR]] : !cir.ptr<!cir.ptr<!s32i>>, %[[ONE]] : !s64i), !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[ARR_NEXT:.*]] = cir.ptr_stride %[[ARR_CUR]], %[[ONE]] : (!cir.ptr<!cir.ptr<!s32i>>, !s64i) -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.store{{.*}} %[[ARR_NEXT]], %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR:   cir.yield
 // CIR: } while {
@@ -449,12 +449,12 @@ void func8(int arr[10]) {
 // CIR:  cir.store{{.*}} %[[ARG]], %[[ARR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:  %[[IDX:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:  %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR:  %[[ELE_0:.*]] = cir.ptr_stride(%[[TMP_1]] : !cir.ptr<!s32i>, %[[IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR:  %[[ELE_0:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ELE_0]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 // CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:  %[[TMP_3:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR:  %[[ELE_1:.*]] = cir.ptr_stride(%[[TMP_3]] : !cir.ptr<!s32i>, %[[IDX_1]] : !s32i), !cir.ptr<!s32i>
+// CIR:  %[[ELE_1:.*]] = cir.ptr_stride %[[TMP_3]], %[[IDX_1]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_4:.*]] = cir.load{{.*}} %[[ELE_1]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_4]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
@@ -496,9 +496,9 @@ void func9(int arr[10][5]) {
 // CIR:  %[[IDX:.*]] = cir.const #cir.int<2> : !s32i
 // CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:  %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>, !cir.ptr<!cir.array<!s32i x 5>>
-// CIR:  %[[ARR_1:.*]] = cir.ptr_stride(%[[TMP_1]] : !cir.ptr<!cir.array<!s32i x 5>>, %[[IDX_1]] : !s32i), !cir.ptr<!cir.array<!s32i x 5>>
+// CIR:  %[[ARR_1:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX_1]] : (!cir.ptr<!cir.array<!s32i x 5>>, !s32i) -> !cir.ptr<!cir.array<!s32i x 5>>
 // CIR:  %[[ARR_1_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_1]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CIR:  %[[ARR_1_2:.*]] = cir.ptr_stride(%[[ARR_1_PTR]] : !cir.ptr<!s32i>, %[[IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR:  %[[ARR_1_2:.*]] = cir.ptr_stride %[[ARR_1_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ARR_1_2]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -532,7 +532,7 @@ void func10(int *a) {
 // CIR: cir.store{{.*}} %[[ARG]], %[[ARR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR: %[[ELE:.*]] = cir.ptr_stride(%[[TMP_1]] : !cir.ptr<!s32i>, %[[IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR: %[[ELE:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR: %[[TMP_2:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -585,7 +585,7 @@ void array_with_complex_elements() {
 // CIR: %[[CONST_COMPLEX_0:.*]] = cir.const #cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[CONST_COMPLEX_0]], %[[ARR_0]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ARR_1:.*]] = cir.ptr_stride(%1 : !cir.ptr<!cir.complex<!cir.float>>, %[[IDX_1]] : !s64i), !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[ARR_1:.*]] = cir.ptr_stride %1, %[[IDX_1]] : (!cir.ptr<!cir.complex<!cir.float>>, !s64i) -> !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[CONST_COMPLEX_1:.*]] = cir.const #cir.const_complex<#cir.fp<3.300000e+00> : !cir.float, #cir.fp<4.400000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[CONST_COMPLEX_1]], %[[ARR_1]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
