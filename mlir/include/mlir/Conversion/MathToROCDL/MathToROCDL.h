@@ -20,8 +20,8 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate the given list with patterns that convert from Math to ROCDL calls.
-// `chipset` specifies the AMDGPU chipset to target. If `std::nullopt`, a
-// default selection of ROCm functions is used.
+// `chipset` specifies the AMDGPU chipset to target. If `std::nullopt`,
+// none of the chipset dependent patterns are added.
 void populateMathToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     std::optional<amdgpu::Chipset> chipset);

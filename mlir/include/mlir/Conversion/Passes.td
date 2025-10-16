@@ -780,7 +780,7 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     This pass converts supported Math ops to ROCDL library calls.
 
     The chipset option specifies the target AMDGPU architecture. If the chipset
-    is empty, none of the chipset-dependent patterns are added and the pass
+    is empty, none of the chipset-dependent patterns are added, and the pass
     will not attempt to parse the chipset.
   }];
   let dependentDialects = [

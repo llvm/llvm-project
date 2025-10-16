@@ -54,7 +54,7 @@ struct ClampFOpConversion final
                   ConversionPatternRewriter &rewriter) const override {
     // Only f16 and f32 types are supported by fmed3
     Type opTy = op.getType();
-    auto resultType = getTypeConverter()->convertType(opTy);
+    Type resultType = getTypeConverter()->convertType(opTy);
 
     if (auto vectorType = dyn_cast<VectorType>(opTy))
       opTy = vectorType.getElementType();
