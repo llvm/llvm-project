@@ -24,7 +24,9 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <optional>
 
@@ -1199,16 +1201,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_AddressSpaceConversion: {
-    LValue lv = emitLValue(e->getSubExpr());
-    QualType destTy = getContext().getPointerType(e->getType());
-    mlir::Value v = getTargetHooks().performAddrSpaceCast(
-        *this, lv.getPointer(), convertType(destTy));
-
-    return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
-                                  lv.getAddress().getAlignment()),
-                          e->getType(), lv.getBaseInfo());
-  }
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1222,7 +1214,23 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
     return {};
   }
+  case CK_AddressSpaceConversion: {
+    LValue lv = emitLValue(e->getSubExpr());
+    QualType destTy = getContext().getPointerType(e->getType());
 
+    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
+    cir::TargetAddressSpaceAttr srcAS;
+    if (clang::isTargetAddressSpace(srcLangAS)) {
+      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+    }
+
+    mlir::Value v = getTargetHooks().performAddrSpaceCast(
+        *this, lv.getPointer(), srcAS, convertType(destTy));
+
+    return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
+                                  lv.getAddress().getAlignment()),
+                          e->getType(), lv.getBaseInfo());
+  }
   case CK_LValueBitCast: {
     // This must be a reinterpret_cast (or c-style equivalent).
     const auto *ce = cast<ExplicitCastExpr>(e);
@@ -2334,7 +2342,7 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   }
 
   if (dstTyAS != allocaAS) {
-    getTargetHooks().performAddrSpaceCast(*this, v,
+    getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),
                                           builder.getPointerTo(ty, dstTyAS));
   }
   return Address(v, ty, align);
