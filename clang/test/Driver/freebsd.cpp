@@ -11,13 +11,8 @@
 
 // RUN: %clangxx %s -### -pg --target=amd64-unknown-freebsd -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-DEFAULT %s
-// RUN: %clangxx %s -### -pg --target=amd64-unknown-freebsd14.0 -stdlib=platform 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-PG-FOURTEEN %s
-// RUN: %clangxx %s -### -pg --target=amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-PG-TEN %s
 // CHECK-PG-DEFAULT: "-lc++" "-lm"
-// CHECK-PG-FOURTEEN: "-lc++" "-lm"
-// CHECK-PG-TEN: "-lc++_p" "-lm_p"
+// CHECK-PG-DEFAULT-NOT: "-lc++_p" "-lm_p"
 
 // Test include paths with a sysroot.
 // RUN: %clangxx %s -### -fsyntax-only 2>&1 \
