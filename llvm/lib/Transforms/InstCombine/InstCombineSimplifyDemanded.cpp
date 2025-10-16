@@ -110,8 +110,8 @@ static Value *simplifyShiftSelectingPackedElement(Instruction *I,
                               ShrAmt->getName() + ".z");
   // There is no existing !prof metadata we can derive the !prof metadata for
   // this select.
-  Value *Select = IC.createSelectInstWithUnknownProfile(ShrAmtZ, Lower, Upper);
-  IC.Builder.Insert(Select);
+  Value *Select = IC.Builder.CreateSelectWithUnknownProfile(ShrAmtZ, Lower,
+                                                            Upper, DEBUG_TYPE);
   Select->takeName(I);
   return Select;
 }

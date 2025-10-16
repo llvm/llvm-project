@@ -218,7 +218,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 
   if (SpvExtensionArg.compare_insensitive("DXC") == 0) {
     bool first = true;
-    std::string Operand;
     for (StringRef E : DxcSupportedExtensions) {
       if (!first)
         out << ",";

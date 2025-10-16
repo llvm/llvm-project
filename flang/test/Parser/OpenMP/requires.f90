@@ -30,4 +30,18 @@
 !PARSE-TREE: | OmpClause -> ReverseOffload
 !PARSE-TREE: | Flags = None
 
+!$omp requires self_maps(.true.) unified_address(.false.)
+
+!UNPARSE: !$OMP REQUIRES SELF_MAPS(.true._4) UNIFIED_ADDRESS(.false._4)
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
+!PARSE-TREE: | OmpClauseList -> OmpClause -> SelfMaps -> OmpSelfMapsClause -> Scalar -> Logical -> Constant -> Expr = '.true._4'
+!PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
+!PARSE-TREE: | | | bool = 'true'
+!PARSE-TREE: | OmpClause -> UnifiedAddress -> OmpUnifiedAddressClause -> Scalar -> Logical -> Constant -> Expr = '.false._4'
+!PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
+!PARSE-TREE: | | | bool = 'false'
+!PARSE-TREE: | Flags = None
+
 end
