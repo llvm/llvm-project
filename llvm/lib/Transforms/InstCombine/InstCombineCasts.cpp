@@ -1659,16 +1659,18 @@ static Type *shrinkFPConstant(LLVMContext &Ctx, APFloat F, bool PreferBFloat) {
   // See if the value can be truncated to float and then reextended.
   if (fitsInFPType(F, APFloat::IEEEsingle()))
     return Type::getFloatTy(Ctx);
+  if (&F.getSemantics() == &APFloat::IEEEdouble())
+    return nullptr; // Won't shrink.
   // See if the value can be truncated to double and then reextended.
   if (fitsInFPType(F, APFloat::IEEEdouble()))
     return Type::getDoubleTy(Ctx);
-  // Does not shrink.
+  // Don't try to shrink to various long double types.
   return nullptr;
 }
 
 static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
   Type *Ty = CFP->getType();
-  if (Ty->getScalarType() == Type::getPPC_FP128Ty(CFP->getContext()))
+  if (Ty->getScalarType()->isPPC_FP128Ty())
     return nullptr; // No constant folding of this.
 
   Type *ShrinkTy =
@@ -1676,8 +1678,7 @@ static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
   if (auto *VecTy = dyn_cast<VectorType>(Ty))
     ShrinkTy = VectorType::get(ShrinkTy, VecTy);
 
-  // Does it shrink?
-  return ShrinkTy != Ty ? ShrinkTy : nullptr;
+  return ShrinkTy;
 }
 
 // Determine if this is a vector of ConstantFPs and if so, return the minimal
