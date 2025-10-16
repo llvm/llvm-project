@@ -355,22 +355,18 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
 }
 
 bool IndexedReference::tryDelinearizeFixedSize(
-    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts) {
-  SmallVector<int, 4> ArraySizes;
-  if (!tryDelinearizeFixedSizeImpl(&SE, &StoreOrLoadInst, AccessFn, Subscripts,
-                                   ArraySizes))
+    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts,
+    const SCEV *ElementSize) {
+  const SCEV *Offset = SE.removePointerBase(AccessFn);
+  if (!delinearizeFixedSizeArray(SE, Offset, Subscripts, Sizes, ElementSize)) {
+    Sizes.clear();
     return false;
+  }
 
-  // Populate Sizes with scev expressions to be used in calculations later.
-  for (auto Idx : seq<unsigned>(1, Subscripts.size()))
-    Sizes.push_back(
-        SE.getConstant(Subscripts[Idx]->getType(), ArraySizes[Idx - 1]));
-
-  LLVM_DEBUG({
-    dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst)
-           << "\n";
-  });
+  // Drop the last element of Sizes which is the same as ElementSize.
+  assert(!Sizes.empty() && Sizes.back() == ElementSize &&
+         "Expecting the last one to be the element size");
+  Sizes.pop_back();
   return true;
 }
 
@@ -397,7 +393,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
 
     bool IsFixedSize = false;
     // Try to delinearize fixed-size arrays.
-    if (tryDelinearizeFixedSize(AccessFn, Subscripts)) {
+    if (tryDelinearizeFixedSize(AccessFn, Subscripts, ElemSize)) {
       IsFixedSize = true;
       // The last element of Sizes is the element size.
       Sizes.push_back(ElemSize);
