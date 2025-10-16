@@ -2828,7 +2828,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, EqualityCheck) {
   )cc");
 }
 
-
 } // namespace
 
 std::string

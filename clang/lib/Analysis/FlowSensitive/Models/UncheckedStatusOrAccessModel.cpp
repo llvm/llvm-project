@@ -116,13 +116,12 @@ static auto valueOperatorCall() {
 }
 
 static clang::ast_matchers::TypeMatcher statusType() {
-  using namespace ::clang::ast_matchers;  // NOLINT: Too many names
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return hasCanonicalType(qualType(hasDeclaration(statusClass())));
 }
 
-
 static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
-  using namespace ::clang::ast_matchers;  // NOLINT: Too many names
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName(operator_name), argumentCountIs(2),
       hasArgument(0, anyOf(hasType(statusType()), hasType(statusOrType()))),
@@ -318,10 +317,10 @@ static void transferStatusUpdateCall(const CXXMemberCallExpr *Expr,
   State.Env.setValue(locForOk(*ThisLoc), NewVal);
 }
 
-static BoolValue* evaluateStatusEquality(RecordStorageLocation& LhsStatusLoc,
-                                         RecordStorageLocation& RhsStatusLoc,
-                                         Environment& Env) {
-  auto& A = Env.arena();
+static BoolValue *evaluateStatusEquality(RecordStorageLocation &LhsStatusLoc,
+                                         RecordStorageLocation &RhsStatusLoc,
+                                         Environment &Env) {
+  auto &A = Env.arena();
   // Logically, a Status object is composed of an error code that could take one
   // of multiple possible values, including the "ok" value. We track whether a
   // Status object has an "ok" value and represent this as an `ok` bit. Equality
@@ -331,10 +330,10 @@ static BoolValue* evaluateStatusEquality(RecordStorageLocation& LhsStatusLoc,
   // only track the `ok` bits, we can't make any conclusions about equality when
   // we know that two Status objects have non-ok values.
 
-  auto& LhsOkVal = valForOk(LhsStatusLoc, Env);
-  auto& RhsOkVal = valForOk(RhsStatusLoc, Env);
+  auto &LhsOkVal = valForOk(LhsStatusLoc, Env);
+  auto &RhsOkVal = valForOk(RhsStatusLoc, Env);
 
-  auto& Res = Env.makeAtomicBoolValue();
+  auto &Res = Env.makeAtomicBoolValue();
 
   // lhs && rhs => res (a.k.a. !res => !lhs || !rhs)
   Env.assume(A.makeImplies(A.makeAnd(LhsOkVal.formula(), RhsOkVal.formula()),
@@ -346,10 +345,11 @@ static BoolValue* evaluateStatusEquality(RecordStorageLocation& LhsStatusLoc,
   return &Res;
 }
 
-static BoolValue* evaluateStatusOrEquality(
-    RecordStorageLocation& LhsStatusOrLoc,
-    RecordStorageLocation& RhsStatusOrLoc, Environment& Env) {
-  auto& A = Env.arena();
+static BoolValue *
+evaluateStatusOrEquality(RecordStorageLocation &LhsStatusOrLoc,
+                         RecordStorageLocation &RhsStatusOrLoc,
+                         Environment &Env) {
+  auto &A = Env.arena();
   // Logically, a StatusOr<T> object is composed of two values - a Status and a
   // value of type T. Equality of StatusOr objects compares both values.
   // Therefore, merely comparing the `ok` bits of the Status values isn't
@@ -359,9 +359,9 @@ static BoolValue* evaluateStatusOrEquality(
   // codes matters. Since we only track the `ok` bits of the Status values, we
   // can't make any conclusions about equality when we know that two StatusOr
   // objects are engaged or when their Status values contain non-ok error codes.
-  auto& LhsOkVal = valForOk(locForStatus(LhsStatusOrLoc), Env);
-  auto& RhsOkVal = valForOk(locForStatus(RhsStatusOrLoc), Env);
-  auto& res = Env.makeAtomicBoolValue();
+  auto &LhsOkVal = valForOk(locForStatus(LhsStatusOrLoc), Env);
+  auto &RhsOkVal = valForOk(locForStatus(RhsStatusOrLoc), Env);
+  auto &res = Env.makeAtomicBoolValue();
 
   // res => (lhs == rhs)
   Env.assume(A.makeImplies(
@@ -369,17 +369,18 @@ static BoolValue* evaluateStatusOrEquality(
   return &res;
 }
 
-
-static BoolValue* evaluateEquality(const Expr* LhsExpr, const Expr* RhsExpr,
-                                   Environment& Env) {
+static BoolValue *evaluateEquality(const Expr *LhsExpr, const Expr *RhsExpr,
+                                   Environment &Env) {
   // Check the type of both sides in case an operator== is added that admits
   // different types.
   if (isStatusOrType(LhsExpr->getType()) &&
       isStatusOrType(RhsExpr->getType())) {
-    auto* LhsStatusOrLoc = Env.get<RecordStorageLocation>(*LhsExpr);
-    if (LhsStatusOrLoc == nullptr) return nullptr;
-    auto* RhsStatusOrLoc = Env.get<RecordStorageLocation>(*RhsExpr);
-    if (RhsStatusOrLoc == nullptr) return nullptr;
+    auto *LhsStatusOrLoc = Env.get<RecordStorageLocation>(*LhsExpr);
+    if (LhsStatusOrLoc == nullptr)
+      return nullptr;
+    auto *RhsStatusOrLoc = Env.get<RecordStorageLocation>(*RhsExpr);
+    if (RhsStatusOrLoc == nullptr)
+      return nullptr;
 
     return evaluateStatusOrEquality(*LhsStatusOrLoc, *RhsStatusOrLoc, Env);
 
@@ -387,30 +388,32 @@ static BoolValue* evaluateEquality(const Expr* LhsExpr, const Expr* RhsExpr,
     // different types.
   }
   if (isStatusType(LhsExpr->getType()) && isStatusType(RhsExpr->getType())) {
-    auto* LhsStatusLoc = Env.get<RecordStorageLocation>(*LhsExpr);
-    if (LhsStatusLoc == nullptr) return nullptr;
+    auto *LhsStatusLoc = Env.get<RecordStorageLocation>(*LhsExpr);
+    if (LhsStatusLoc == nullptr)
+      return nullptr;
 
-    auto* RhsStatusLoc = Env.get<RecordStorageLocation>(*RhsExpr);
-    if (RhsStatusLoc == nullptr) return nullptr;
+    auto *RhsStatusLoc = Env.get<RecordStorageLocation>(*RhsExpr);
+    if (RhsStatusLoc == nullptr)
+      return nullptr;
 
     return evaluateStatusEquality(*LhsStatusLoc, *RhsStatusLoc, Env);
   }
   return nullptr;
 }
 
-static void transferComparisonOperator(const CXXOperatorCallExpr* Expr,
-                                       LatticeTransferState& State,
+static void transferComparisonOperator(const CXXOperatorCallExpr *Expr,
+                                       LatticeTransferState &State,
                                        bool IsNegative) {
-  auto* LhsAndRhsVal =
+  auto *LhsAndRhsVal =
       evaluateEquality(Expr->getArg(0), Expr->getArg(1), State.Env);
-  if (LhsAndRhsVal == nullptr) return;
+  if (LhsAndRhsVal == nullptr)
+    return;
 
   if (IsNegative)
     State.Env.setValue(*Expr, State.Env.makeNot(*LhsAndRhsVal));
   else
     State.Env.setValue(*Expr, *LhsAndRhsVal);
 }
-
 
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
@@ -427,15 +430,15 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                         transferStatusUpdateCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isComparisonOperatorCall("=="),
-          [](const CXXOperatorCallExpr* Expr, const MatchFinder::MatchResult&,
-             LatticeTransferState& State) {
+          [](const CXXOperatorCallExpr *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
             transferComparisonOperator(Expr, State,
                                        /*IsNegative=*/false);
           })
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isComparisonOperatorCall("!="),
-          [](const CXXOperatorCallExpr* Expr, const MatchFinder::MatchResult&,
-             LatticeTransferState& State) {
+          [](const CXXOperatorCallExpr *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
             transferComparisonOperator(Expr, State,
                                        /*IsNegative=*/true);
           })
