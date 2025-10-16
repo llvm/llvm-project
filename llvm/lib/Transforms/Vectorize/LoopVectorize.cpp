@@ -1243,7 +1243,10 @@ public:
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           BasicBlock *BB) const {
     // If a block wasn't originally predicated but was predicated due to
-    // e.g. tail folding, don't divide the cost.
+    // e.g. tail folding, don't divide the cost. Tail folded loops may still be
+    // predicated in the final vector loop iteration, but for most loops that
+    // don't have low trip counts we can expect their probability to be close to
+    // zero.
     if (!Legal->blockNeedsPredication(BB))
       return 1;
     return CostKind == TTI::TCK_CodeSize ? 1 : 2;

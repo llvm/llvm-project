@@ -352,6 +352,7 @@ struct VPCostContext {
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
   /// \returns how much the cost of a predicated block should be divided by.
+  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   unsigned getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                                    BasicBlock *BB) const;
 
