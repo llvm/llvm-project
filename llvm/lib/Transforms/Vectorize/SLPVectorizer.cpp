@@ -2242,7 +2242,7 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                     Align Alignment, int64_t Diff, size_t Sz) const;
+                     Align Alignment, const int64_t Diff, size_t Sz) const;
 
   /// Return true if an array of scalar loads can be replaced with a strided
   ///  load (with constant stride).
@@ -6889,7 +6889,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                            Align Alignment, int64_t Diff, size_t Sz) const {
+                            Align Alignment, const int64_t Diff, size_t Sz) const {
   if (Diff % (Sz - 1) != 0)
     return false;
 
