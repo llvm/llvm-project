@@ -391,7 +391,7 @@ You can test this locally with the following command:
             return None
 
         # Use git to find files that have had a change in the number of undefs
-        regex = "([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9,_-]|UndefValue::get)"
+        regex = "([^a-zA-Z0-9#_-]undef([^a-zA-Z0-9_-]|$)|UndefValue::get)"
         cmd = ["git", "diff", "-U0", "--pickaxe-regex", "-S", regex]
 
         if args.start_rev and args.end_rev:
