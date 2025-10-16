@@ -341,12 +341,12 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     ExtAType = GetExtendKind(ExtAR);
     ExtBType = GetExtendKind(ExtBR);
 
-    if (!ExtBR && Widen->getOperand(1)->isLiveIn()) {
-      auto *CI = cast<ConstantInt>(Widen->getOperand(1)->getLiveInIRValue());
-      if (canConstantBeExtended(CI, InputTypeA, ExtAType)) {
-        InputTypeB = InputTypeA;
-        ExtBType = ExtAType;
-      }
+    using namespace VPlanPatternMatch;
+    const APInt *C;
+    if (!ExtBR && match(Widen->getOperand(1), m_APInt(C)) &&
+        canConstantBeExtended(C, InputTypeA, ExtAType)) {
+      InputTypeB = InputTypeA;
+      ExtBType = ExtAType;
     }
   };
 
