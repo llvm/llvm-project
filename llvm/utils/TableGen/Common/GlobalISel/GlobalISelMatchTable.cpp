@@ -26,7 +26,7 @@ using namespace gi;
 
 static cl::opt<bool>
     AllowExtendedLLT("gisel-extended-llt",
-                     cl::desc("Generate an extended llt names in match tables"),
+                     cl::desc("Generate extended llt names in match tables"),
                      cl::init(false));
 
 // FIXME: Use createStringError instead.
@@ -418,7 +418,7 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
     if (Ty.isInteger())
       OS << "LLT::integer(" << Ty.getScalarSizeInBits() << ")";
     else if (Ty.isBFloat(16))
-      OS << "LLT::bfloat()";
+      OS << "LLT::bfloat16()";
     else if (Ty.isPPCF128())
       OS << "LLT::ppcf128()";
     else if (Ty.isX86FP80())
@@ -441,7 +441,7 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
     if (ElemTy.isInteger())
       OS << "LLT::integer(" << ElemTy.getScalarSizeInBits() << ")";
     else if (ElemTy.isBFloat(16))
-      OS << "LLT::bfloat()";
+      OS << "LLT::bfloat16()";
     else if (ElemTy.isPPCF128())
       OS << "LLT::ppcf128()";
     else if (ElemTy.isX86FP80())
