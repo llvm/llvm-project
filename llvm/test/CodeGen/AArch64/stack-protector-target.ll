@@ -29,16 +29,18 @@ declare void @_Z7CapturePi(ptr)
 ; FUCHSIA-AARCH64-COMMON: ldr [[D:.*]], [sp,
 ; FUCHSIA-AARCH64-COMMON: cmp [[C]], [[D]]
 
-; WINDOWS-AARCH64: adrp x19, __security_cookie
-; WINDOWS-AARCH64: ldr x8, [x19, :lo12:__security_cookie]
+; WINDOWS-AARCH64: adrp x8, __security_cookie
+; WINDOWS-AARCH64: ldr x8, [x8, :lo12:__security_cookie]
+; WINDOWS-AARCH64: eor x8, x8, sp
 ; WINDOWS-AARCH64: str x8, [sp, #8]
 ; WINDOWS-AARCH64: bl  _Z7CapturePi
-; WINDOWS-AARCH64: ldr x8, [sp, #8]
+; WINDOWS-AARCH64: ldr x0, [sp, #8]
 ; WINDOWS-AARCH64: bl  __security_check_cookie
 
-; WINDOWS-ARM64EC: adrp x19, __security_cookie
-; WINDOWS-ARM64EC: ldr x8, [x19, :lo12:__security_cookie]
+; WINDOWS-ARM64EC: adrp x8, __security_cookie
+; WINDOWS-ARM64EC: ldr x8, [x8, :lo12:__security_cookie]
+; WINDOWS-ARM64EC: eor x8, x8, sp
 ; WINDOWS-ARM64EC: str x8, [sp, #8]
 ; WINDOWS-ARM64EC: bl "#_Z7CapturePi"
-; WINDOWS-ARM64EC: ldr x8, [sp, #8]
+; WINDOWS-ARM64EC: ldr x0, [sp, #8]
 ; WINDOWS-ARM64EC: bl "#__security_check_cookie_arm64ec"
