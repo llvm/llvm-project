@@ -14225,6 +14225,7 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":XeGPUDialect",
+        ":XeGPUUtils",
         ":XeVMDialect",
         "//llvm:Support",
     ],
