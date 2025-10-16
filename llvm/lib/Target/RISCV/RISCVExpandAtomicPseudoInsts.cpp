@@ -521,13 +521,6 @@ static void insertSext(const RISCVInstrInfo *TII, DebugLoc DL,
       .addReg(ShamtReg);
 }
 
-static void insertZext(const RISCVInstrInfo *TII, DebugLoc DL,
-                       MachineBasicBlock *MBB, Register ValReg, Register SrcReg,
-                       int64_t Shamt) {
-  BuildMI(MBB, DL, TII->get(RISCV::SLLI), ValReg).addReg(SrcReg).addImm(Shamt);
-  BuildMI(MBB, DL, TII->get(RISCV::SRLI), ValReg).addReg(ValReg).addImm(Shamt);
-}
-
 static void doAtomicMinMaxOpExpansion(
     const RISCVInstrInfo *TII, MachineInstr &MI, DebugLoc DL,
     MachineBasicBlock *ThisMBB, MachineBasicBlock *LoopHeadMBB,
@@ -538,9 +531,6 @@ static void doAtomicMinMaxOpExpansion(
   Register ScratchReg = MI.getOperand(1).getReg();
   Register AddrReg = MI.getOperand(2).getReg();
   Register IncrReg = MI.getOperand(3).getReg();
-  bool IsUnsigned =
-      BinOp == AtomicRMWInst::UMin || BinOp == AtomicRMWInst::UMax;
-  bool Zext = IsUnsigned && STI->is64Bit() && Width == 32;
   AtomicOrdering Ordering =
       static_cast<AtomicOrdering>(MI.getOperand(4).getImm());
 
@@ -550,12 +540,9 @@ static void doAtomicMinMaxOpExpansion(
   //   ifnochangeneeded scratch, incr, .looptail
   BuildMI(LoopHeadMBB, DL, TII->get(getLRForRMW(Ordering, Width, STI)), DestReg)
       .addReg(AddrReg);
-  if (Zext)
-    insertZext(TII, DL, LoopHeadMBB, ScratchReg, DestReg, 32);
-  else
-    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::ADDI), ScratchReg)
-        .addReg(DestReg)
-        .addImm(0);
+  BuildMI(LoopHeadMBB, DL, TII->get(RISCV::ADDI), ScratchReg)
+      .addReg(DestReg)
+      .addImm(0);
   switch (BinOp) {
   default:
     llvm_unreachable("Unexpected AtomicRMW BinOp");
