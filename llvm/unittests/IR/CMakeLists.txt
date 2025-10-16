@@ -49,6 +49,7 @@ add_llvm_unittest(IRTests
   TypesTest.cpp
   UseTest.cpp
   UserTest.cpp
+  UsedGlobalTest.cpp
   ValueHandleTest.cpp
   ValueMapTest.cpp
   ValueTest.cpp
