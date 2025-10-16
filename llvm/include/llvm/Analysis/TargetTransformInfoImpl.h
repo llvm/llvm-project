@@ -318,8 +318,6 @@ public:
     return false;
   }
 
-  virtual bool isLegalToWidenLoads(LLVMContext &Context) const { return false; }
-
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) const {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
