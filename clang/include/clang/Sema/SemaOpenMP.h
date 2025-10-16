@@ -1022,7 +1022,8 @@ public:
                                SourceLocation EndLoc);
   /// Called on well-formed 'nowait' clause.
   OMPClause *ActOnOpenMPNowaitClause(SourceLocation StartLoc,
-                                     SourceLocation EndLoc);
+                                     SourceLocation EndLoc,
+                                     SourceLocation LParenLoc, Expr *Condition);
   /// Called on well-formed 'untied' clause.
   OMPClause *ActOnOpenMPUntiedClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);

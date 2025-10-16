@@ -5063,8 +5063,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
   case ISD::ADD:
   case ISD::ADDC:
-    // Add can have at most one carry bit.  Thus we know that the output
-    // is, at worst, one more bit than the inputs.
+    // TODO: Move Operand 1 check before Operand 0 check
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1) return 1; // Early out.
 
@@ -5088,6 +5087,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (Tmp2 == 1) return 1; // Early out.
+
+    // Add can have at most one carry bit.  Thus we know that the output
+    // is, at worst, one more bit than the inputs.
     return std::min(Tmp, Tmp2) - 1;
   case ISD::SUB:
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -6403,8 +6405,9 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   if (VT.isScalableVector())
     return SDValue();
 
-  // A CONCAT_VECTOR with all UNDEF/BUILD_VECTOR operands can be
-  // simplified to one big BUILD_VECTOR.
+  // A CONCAT_VECTOR of scalar sources, such as UNDEF, BUILD_VECTOR and
+  // single-element INSERT_VECTOR_ELT operands can be simplified to one big
+  // BUILD_VECTOR.
   // FIXME: Add support for SCALAR_TO_VECTOR as well.
   EVT SVT = VT.getScalarType();
   SmallVector<SDValue, 16> Elts;
@@ -6414,6 +6417,10 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
       Elts.append(OpVT.getVectorNumElements(), DAG.getUNDEF(SVT));
     else if (Op.getOpcode() == ISD::BUILD_VECTOR)
       Elts.append(Op->op_begin(), Op->op_end());
+    else if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+             OpVT.getVectorNumElements() == 1 &&
+             isNullConstant(Op.getOperand(2)))
+      Elts.push_back(Op.getOperand(1));
     else
       return SDValue();
   }
@@ -8783,7 +8790,7 @@ static SDValue getMemcpyLoadsAndStores(
       if (Value.getNode()) {
         Store = DAG.getStore(
             Chain, dl, Value,
-            DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
             DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
         OutChains.push_back(Store);
       }
@@ -8799,7 +8806,7 @@ static SDValue getMemcpyLoadsAndStores(
       assert(NVT.bitsGE(VT));
 
       bool isDereferenceable =
-        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+          SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
       MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
       if (isDereferenceable)
         SrcMMOFlags |= MachineMemOperand::MODereferenceable;
@@ -8808,14 +8815,14 @@ static SDValue getMemcpyLoadsAndStores(
 
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
+          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
           commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
           DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
@@ -8945,14 +8952,14 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     SDValue Value;
 
     bool isDereferenceable =
-      SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
     MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
     if (isDereferenceable)
       SrcMMOFlags |= MachineMemOperand::MODereferenceable;
 
     Value = DAG.getLoad(
         VT, dl, Chain,
-        DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
+        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
         SrcPtrInfo.getWithOffset(SrcOff), *SrcAlign, SrcMMOFlags, NewAAInfo);
     LoadValues.push_back(Value);
     LoadChains.push_back(Value.getValue(1));
@@ -8967,7 +8974,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     Store = DAG.getStore(
         Chain, dl, LoadValues[i],
-        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
         DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VTSize;
@@ -9099,7 +9106,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     assert(Value.getValueType() == VT && "Value with wrong type.");
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
-        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
         DstPtrInfo.getWithOffset(DstOff), Alignment,
         isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
         NewAAInfo);
