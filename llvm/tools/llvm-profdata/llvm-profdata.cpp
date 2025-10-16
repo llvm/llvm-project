@@ -780,6 +780,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
   auto ReaderWarningScope = llvm::make_scope_exit([&] {
+    // If we hit a different error we may still have an error in ReaderWarning.
+    // Consume it now to avoid an assert
     if (ReaderWarning)
       consumeError(std::move(ReaderWarning->first));
   });
