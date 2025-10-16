@@ -1306,6 +1306,10 @@ PyType_Slot PyDenseElementsAttribute::slots[] = {
     e.restore();
     nb::chain_error(PyExc_BufferError, "Error converting attribute to buffer");
     return -1;
+  } catch (std::exception &e) {
+    nb::chain_error(PyExc_BufferError,
+                    "Error converting attribute to buffer: %s", e.what());
+    return -1;
   }
   view->obj = obj;
   view->ndim = 1;
