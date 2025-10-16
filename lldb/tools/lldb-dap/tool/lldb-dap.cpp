@@ -74,6 +74,7 @@ typedef int socklen_t;
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <termios.h>
 #include <unistd.h>
 #endif
 
@@ -120,6 +121,15 @@ public:
                                    InfoTable, true) {}
 };
 } // anonymous namespace
+
+#define ESCAPE "\x1b"
+#define CSI ESCAPE "["
+// Move the cursor to 0,0
+#define ANSI_CURSOR_HOME CSI "H"
+// Clear the screen buffer
+#define ANSI_ERASE_SCREEN CSI "2J"
+// Clear the scroll back buffer
+#define ANSI_ERASE_SCROLLBACK CSI "3J"
 
 static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
@@ -261,6 +271,14 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
       files.push_back(files.back());
     if (llvm::Error err = SetupIORedirection(files))
       return err;
+  } else if ((isatty(STDIN_FILENO) != 0) &&
+             llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
+    // Clear the screen.
+    llvm::outs() << ANSI_CURSOR_HOME ANSI_ERASE_SCREEN ANSI_ERASE_SCROLLBACK;
+    // VSCode will reuse the same terminal for the same debug configuration
+    // between runs. Clear the input buffer prior to starting the new process so
+    // prior input is not carried forward to the new debug session.
+    tcflush(STDIN_FILENO, TCIFLUSH);
   }
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
