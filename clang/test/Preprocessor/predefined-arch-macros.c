@@ -2529,9 +2529,12 @@
 // RUN: %clang -march=wildcatlake -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_NKL_M32
+// RUN: %clang -march=novalake -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_NVL_M32,CHECK_NKL_M32
 // RUN: %clang -march=clearwaterforest -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32,CHECK_CWF_M32,CHECK_NKL_M32
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32,CHECK_NVL_M32,CHECK_UMSR_M32,CHECK_NKL_M32
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
 // CHECK_ARL_M32: #define __AVX2__ 1
@@ -2571,7 +2574,7 @@
 // CHECK_ARL_M32: #define __POPCNT__ 1
 // CHECK_ARL_M32-NOT: #define __PREFETCHI__ 1
 // CHECK_ARLS_M32-NOT: #define __PREFETCHI__ 1
-// CHECK_CWF_M32: #define __PREFETCHI__ 1
+// CHECK_NVL_M32: #define __PREFETCHI__ 1
 // CHECK_ARL_M32: #define __PRFCHW__ 1
 // CHECK_ARL_M32: #define __PTWRITE__ 1
 // CHECK_ARL_M32-NOT: #define __RAOINT__ 1
@@ -2598,7 +2601,7 @@
 // CHECK_ARL_M32: #define __UINTR__ 1
 // CHECK_ARL_M32-NOT: #define __USERMSR__ 1
 // CHECK_ARLS_M32-NOT: #define __USERMSR__ 1
-// CHECK_CWF_M32: #define __USERMSR__ 1
+// CHECK_UMSR_M32: #define __USERMSR__ 1
 // CHECK_ARL_M32: #define __VAES__ 1
 // CHECK_ARL_M32: #define __VPCLMULQDQ__ 1
 // CHECK_ARL_M32: #define __WAITPKG__ 1
@@ -2636,9 +2639,12 @@
 // RUN: %clang -march=wildcatlake -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_NKL_M64
+// RUN: %clang -march=novalake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // RUN: %clang -march=clearwaterforest -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_CWF_M64,CHECK_NKL_M64
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_UMSR_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
@@ -2678,7 +2684,7 @@
 // CHECK_ARL_M64: #define __POPCNT__ 1
 // CHECK_ARL_M64-NOT: #define __PREFETCHI__ 1
 // CHECK_ARLS_M64-NOT: #define __PREFETCHI__ 1
-// CHECK_CWF_M64: #define __PREFETCHI__ 1
+// CHECK_NVL_M64: #define __PREFETCHI__ 1
 // CHECK_ARL_M64: #define __PRFCHW__ 1
 // CHECK_ARL_M64: #define __PTWRITE__ 1
 // CHECK_ARL_M64-NOT: #define __RAOINT__ 1
@@ -2706,7 +2712,7 @@
 // CHECK_ARL_M64: #define __UINTR__ 1
 // CHECK_ARL_M64-NOT: #define __USERMSR__ 1
 // CHECK_ARLS_M64-NOT: #define __USERMSR__ 1
-// CHECK_CWF_M64: #define __USERMSR__ 1
+// CHECK_UMSR_M64: #define __USERMSR__ 1
 // CHECK_ARL_M64: #define __VAES__ 1
 // CHECK_ARL_M64: #define __VPCLMULQDQ__ 1
 // CHECK_ARL_M64: #define __WAITPKG__ 1

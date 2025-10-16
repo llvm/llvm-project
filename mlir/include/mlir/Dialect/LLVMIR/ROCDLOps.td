@@ -412,6 +412,32 @@ def ROCDL_WaitExpcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.expcnt", [], 0, [0], 
   let assemblyFormat = "$count attr-dict";
 }
 
+def ROCDL_WaitAsynccntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.asynccnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until ASYNCCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until TENSORCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
   Arguments<(ins I16Attr:$priority)> {
   let assemblyFormat = "$priority attr-dict";

@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-gpr64 | FileCheck %s -check-prefixes=NOTATTR --match-full-lines
 ; RUN: llc < %s -mtriple=arm64-apple-macosx -mattr=+zcm-gpr64 | FileCheck %s -check-prefixes=ATTR --match-full-lines
 
-define void @zero_cycle_regmov_GPR32(i32 %a, i32 %b, i32 %c, i32 %d) {
+define void @zero_cycle_regmove_GPR32(i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
 ; CHECK-LABEL: t:
 ; NOTCPU-LINUX: mov w0, w2

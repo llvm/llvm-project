@@ -71,7 +71,7 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.collect_console(timeout=10, pattern=stopCommands[-1])
+        output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue after launch and hit the "pause()" call and stop the target.
@@ -81,7 +81,7 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         time.sleep(0.5)
         self.dap_server.request_pause()
         self.dap_server.wait_for_stopped()
-        output = self.collect_console(timeout=10, pattern=stopCommands[-1])
+        output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -90,7 +90,6 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
         output = self.collect_console(
-            timeout=10.0,
             pattern=terminateCommands[0],
         )
         self.verify_commands("exitCommands", output, exitCommands)
@@ -141,7 +140,6 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         # "terminateCommands"
         self.dap_server.request_disconnect(terminateDebuggee=True)
         output = self.collect_console(
-            timeout=1.0,
             pattern=terminateCommands[0],
         )
         self.verify_commands("terminateCommands", output, terminateCommands)

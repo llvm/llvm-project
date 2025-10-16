@@ -53,7 +53,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
+bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
 
@@ -74,7 +74,7 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
             IsWideCanonicalIV(A));
 
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
-         B == Plan.getOrCreateBackedgeTakenCount();
+         B == Plan.getBackedgeTakenCount();
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {

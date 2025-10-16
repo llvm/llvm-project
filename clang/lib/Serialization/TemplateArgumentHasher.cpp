@@ -358,7 +358,7 @@ public:
     AddQualType(T->getReplacementType());
   }
 
-  void VisitTagType(const TagType *T) { AddDecl(T->getOriginalDecl()); }
+  void VisitTagType(const TagType *T) { AddDecl(T->getDecl()); }
 
   void VisitRecordType(const RecordType *T) { VisitTagType(T); }
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }

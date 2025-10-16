@@ -519,8 +519,8 @@ private:
 ///   function references with scalar data pointer result of non-character
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
-void OmpStructureChecker::CheckAtomicType(
-    SymbolRef sym, parser::CharBlock source, std::string_view name) {
+void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
+    parser::CharBlock source, std::string_view name, bool checkTypeOnPointer) {
   const DeclTypeSpec *typeSpec{sym->GetType()};
   if (!typeSpec) {
     return;
@@ -547,6 +547,22 @@ void OmpStructureChecker::CheckAtomicType(
     return;
   }
 
+  // Apply pointer-to-non-intrinsic rule only for intrinsic-assignment paths.
+  if (checkTypeOnPointer) {
+    using Category = DeclTypeSpec::Category;
+    Category cat{typeSpec->category()};
+    if (cat != Category::Numeric && cat != Category::Logical) {
+      std::string details = " has the POINTER attribute";
+      if (const auto *derived{typeSpec->AsDerived()}) {
+        details += " and derived type '"s + derived->name().ToString() + "'";
+      }
+      context_.Say(source,
+          "ATOMIC operation requires an intrinsic scalar variable; '%s'%s"_err_en_US,
+          sym->name(), details);
+      return;
+    }
+  }
+
   // Go over all length parameters, if any, and check if they are
   // explicit.
   if (const DerivedTypeSpec *derived{typeSpec->AsDerived()}) {
@@ -562,7 +578,7 @@ void OmpStructureChecker::CheckAtomicType(
 }
 
 void OmpStructureChecker::CheckAtomicVariable(
-    const SomeExpr &atom, parser::CharBlock source) {
+    const SomeExpr &atom, parser::CharBlock source, bool checkTypeOnPointer) {
   if (atom.Rank() != 0) {
     context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
         atom.AsFortran());
@@ -572,7 +588,7 @@ void OmpStructureChecker::CheckAtomicVariable(
   assert(dsgs.size() == 1 && "Should have a single top-level designator");
   evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
 
-  CheckAtomicType(syms.back(), source, atom.AsFortran());
+  CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
 
   if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
     context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
@@ -789,7 +805,8 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, rsrc);
+    CheckAtomicVariable(
+        atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
     assert(*GetConvertInput(capture.rhs) == atom &&
         "This cannot be a capture assignment");
@@ -808,7 +825,8 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     if (!IsVarOrFunctionRef(atom)) {
       ErrorShouldBeVariable(atom, rsrc);
     } else {
-      CheckAtomicVariable(atom, rsrc);
+      CheckAtomicVariable(
+          atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
       CheckStorageOverlap(atom, {read.lhs}, source);
     }
   } else {
@@ -829,7 +847,8 @@ void OmpStructureChecker::CheckAtomicWriteAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, lsrc);
+    CheckAtomicVariable(
+        atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(write));
     CheckStorageOverlap(atom, {write.rhs}, source);
   }
 }
@@ -854,7 +873,8 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
     return std::nullopt;
   }
 
-  CheckAtomicVariable(atom, lsrc);
+  CheckAtomicVariable(
+      atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(update));
 
   auto [hasErrors, tryReassoc]{CheckAtomicUpdateAssignmentRhs(
       atom, update.rhs, source, /*suppressDiagnostics=*/true)};
@@ -1017,7 +1037,8 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     return;
   }
 
-  CheckAtomicVariable(atom, alsrc);
+  CheckAtomicVariable(
+      atom, alsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(assign));
 
   auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.

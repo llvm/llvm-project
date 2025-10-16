@@ -13,13 +13,13 @@
 ; RUN:	-r=%t.o,main,plx \
 ; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-dump-ccg \
-; RUN:	 -save-temps \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
-; DUMP: Callsite Context Graph:
+; RUN:	-print-before=memprof-context-disambiguation \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR
 
-; RUN: llvm-dis %t.out.0.0.preopt.bc -o - | FileCheck %s --check-prefix=IR
 ; IR: !memprof {{.*}} !callsite
 ; IR: "memprof"="cold"
+
+; DUMP: Callsite Context Graph:
 
 ;; Next check without -supports-hot-cold-new, we should not perform
 ;; context disambiguation, and we should strip memprof metadata and
@@ -28,13 +28,11 @@
 ; RUN:	-r=%t.o,main,plx \
 ; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-dump-ccg \
-; RUN:	 -save-temps \
+; RUN:	-print-before=memprof-context-disambiguation \
 ; RUN:	-o %t.out 2>&1 | FileCheck %s --allow-empty \
-; RUN:  --implicit-check-not "Callsite Context Graph:"
-
-; RUN: llvm-dis %t.out.0.0.preopt.bc -o - | FileCheck %s \
-; RUN: --implicit-check-not "!memprof" --implicit-check-not "!callsite" \
-; RUN: --implicit-check-not "memprof"="cold"
+; RUN:  --implicit-check-not "Callsite Context Graph:" \
+; RUN: 	--implicit-check-not "!memprof" --implicit-check-not "!callsite" \
+; RUN: 	--implicit-check-not "memprof"="cold"
 
 source_filename = "memprof-supports-hot-cold-new.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

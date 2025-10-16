@@ -744,8 +744,8 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
     return false;
 
   if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
-    const CXXRecordDecl *rd =
-        cast<CXXRecordDecl>(recordTy->getOriginalDecl())->getDefinitionOrSelf();
+    const auto *rd =
+        cast<CXXRecordDecl>(recordTy->getDecl())->getDefinitionOrSelf();
     if (!rd->hasDefinition())
       return false;
 
@@ -859,9 +859,7 @@ static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
 
 /// IsIncompleteClassType - Returns whether the given record type is incomplete.
 static bool isIncompleteClassType(const RecordType *recordTy) {
-  return !recordTy->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->isCompleteDefinition();
+  return !recordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
 }
 
 /// Returns whether the given type contains an
@@ -956,9 +954,8 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
     break;
 
   case Type::Record: {
-    const CXXRecordDecl *rd =
-        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())
+                         ->getDefinitionOrSelf();
 
     if (!rd->hasDefinition() || !rd->getNumBases()) {
       return classTypeInfo;
@@ -1030,8 +1027,8 @@ static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
       return cir::GlobalLinkageKind::LinkOnceODRLinkage;
 
     if (const RecordType *record = dyn_cast<RecordType>(ty)) {
-      const CXXRecordDecl *rd =
-          cast<CXXRecordDecl>(record->getOriginalDecl())->getDefinitionOrSelf();
+      const auto *rd =
+          cast<CXXRecordDecl>(record->getDecl())->getDefinitionOrSelf();
       if (rd->hasAttr<WeakAttr>())
         return cir::GlobalLinkageKind::WeakODRLinkage;
 
@@ -1381,9 +1378,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::Record: {
-    const auto *rd =
-        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())
+                         ->getDefinitionOrSelf();
     if (!rd->hasDefinition() || !rd->getNumBases()) {
       // We don't need to emit any fields.
       break;
@@ -1650,8 +1646,7 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // Lowering pass to skip passing the trivial function.
   //
   if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
-    CXXRecordDecl *rec =
-        cast<CXXRecordDecl>(recordTy->getOriginalDecl()->getDefinition());
+    auto *rec = cast<CXXRecordDecl>(recordTy->getDecl()->getDefinition());
     assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
     if (!rec->hasTrivialDestructor()) {
       cgm.errorNYI("emitThrow: non-trivial destructor");

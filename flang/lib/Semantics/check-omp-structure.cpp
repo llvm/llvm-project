@@ -1517,19 +1517,42 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   const auto &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
+  unsigned version{context_.langOptions().OpenMPVersion};
 
-  if (visitedAtomicSource_.empty()) {
-    return;
-  }
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
     if (id == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-      parser::MessageFormattedText txt(
-          "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-      parser::Message message(clause.source, txt);
-      message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
-      context_.Say(std::move(message));
+      if (!visitedAtomicSource_.empty()) {
+        parser::MessageFormattedText txt(
+            "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+        parser::Message message(clause.source, txt);
+        message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
+        context_.Say(std::move(message));
+      }
+    } else {
+      bool hasArgument{common::visit(
+          [&](auto &&s) {
+            using TypeS = llvm::remove_cvref_t<decltype(s)>;
+            if constexpr ( //
+                std::is_same_v<TypeS, parser::OmpClause::DynamicAllocators> ||
+                std::is_same_v<TypeS, parser::OmpClause::ReverseOffload> ||
+                std::is_same_v<TypeS, parser::OmpClause::SelfMaps> ||
+                std::is_same_v<TypeS, parser::OmpClause::UnifiedAddress> ||
+                std::is_same_v<TypeS, parser::OmpClause::UnifiedSharedMemory>) {
+              return s.v.has_value();
+            } else {
+              return false;
+            }
+          },
+          clause.u)};
+      if (version < 60 && hasArgument) {
+        context_.Say(clause.source,
+            "An argument to %s is an %s feature, %s"_warn_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPClauseName(clause.Id())),
+            ThisVersion(60), TryVersion(60));
+      }
     }
   }
 }
@@ -1540,9 +1563,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
 
 void OmpStructureChecker::CheckAlignValue(const parser::OmpClause &clause) {
   if (auto *align{std::get_if<parser::OmpClause::Align>(&clause.u)}) {
-    if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
-      context_.Say(clause.source,
-          "The alignment value should be a constant positive integer"_err_en_US);
+    if (const auto &v{GetIntValue(align->v)}; v && *v <= 0) {
+      context_.Say(clause.source, "The alignment should be positive"_err_en_US);
     }
   }
 }
@@ -2336,7 +2358,7 @@ private:
       }
       if (auto &repl{std::get<parser::OmpClause::Replayable>(clause.u).v}) {
         // Scalar<Logical<Constant<indirection<Expr>>>>
-        const parser::Expr &parserExpr{repl->v.thing.thing.thing.value()};
+        const auto &parserExpr{parser::UnwrapRef<parser::Expr>(repl)};
         if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
           return GetLogicalValue(*expr).value_or(true);
         }
@@ -2350,7 +2372,7 @@ private:
     bool isTransparent{true};
     if (auto &transp{std::get<parser::OmpClause::Transparent>(clause.u).v}) {
       // Scalar<Integer<indirection<Expr>>>
-      const parser::Expr &parserExpr{transp->v.thing.thing.value()};
+      const auto &parserExpr{parser::UnwrapRef<parser::Expr>(transp)};
       if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
         // If the argument is omp_not_impex (defined as 0), then
         // the task is not transparent, otherwise it is.
@@ -2389,8 +2411,8 @@ private:
       }
     }
     // Scalar<Logical<indirection<Expr>>>
-    auto &parserExpr{
-        std::get<parser::ScalarLogicalExpr>(ifc.v.t).thing.thing.value()};
+    const auto &parserExpr{parser::UnwrapRef<parser::Expr>(
+        std::get<parser::ScalarLogicalExpr>(ifc.v.t))};
     if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
       // If the value is known to be false, an undeferred task will be
       // generated.
@@ -3017,8 +3039,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                                                         &objs,
                                                     std::string clause) {
             for (const auto &obj : objs.v) {
-              if (const parser::Name *
-                  objName{parser::Unwrap<parser::Name>(obj)}) {
+              if (const parser::Name *objName{
+                      parser::Unwrap<parser::Name>(obj)}) {
                 if (&objName->symbol->GetUltimate() == eventHandleSym) {
                   context_.Say(GetContext().clauseSource,
                       "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
@@ -3637,7 +3659,8 @@ void OmpStructureChecker::CheckReductionModifier(
   if (modifier.v == ReductionModifier::Value::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
-        llvm::omp::Directive::OMPD_do, llvm::omp::Directive::OMPD_scope,
+        llvm::omp::Directive::OMPD_do, //
+        llvm::omp::Directive::OMPD_scope, //
         llvm::omp::Directive::OMPD_sections,
         // There are more worksharing directives, but they do not apply:
         // "for" is C++ only,
@@ -4081,9 +4104,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
     CheckIteratorModifier(*iter);
   }
+
+  using Directive = llvm::omp::Directive;
+  Directive dir{GetContext().directive};
+  llvm::ArrayRef<Directive> leafs{llvm::omp::getLeafConstructsOrSelf(dir)};
+  parser::OmpMapType::Value mapType{parser::OmpMapType::Value::Storage};
+
   if (auto *type{OmpGetUniqueModifier<parser::OmpMapType>(modifiers)}) {
-    using Directive = llvm::omp::Directive;
     using Value = parser::OmpMapType::Value;
+    mapType = type->v;
 
     static auto isValidForVersion{
         [](parser::OmpMapType::Value t, unsigned version) {
@@ -4120,10 +4149,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       return result;
     }()};
 
-    llvm::omp::Directive dir{GetContext().directive};
-    llvm::ArrayRef<llvm::omp::Directive> leafs{
-        llvm::omp::getLeafConstructsOrSelf(dir)};
-
     if (llvm::is_contained(leafs, Directive::OMPD_target) ||
         llvm::is_contained(leafs, Directive::OMPD_target_data)) {
       if (version >= 60) {
@@ -4138,6 +4163,43 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       CheckAllowedMapTypes(type->v, mapEnteringTypes);
     } else if (llvm::is_contained(leafs, Directive::OMPD_target_exit_data)) {
       CheckAllowedMapTypes(type->v, mapExitingTypes);
+    }
+  }
+
+  if (auto *attach{
+          OmpGetUniqueModifier<parser::OmpAttachModifier>(modifiers)}) {
+    bool mapEnteringConstructOrMapper{
+        llvm::is_contained(leafs, Directive::OMPD_target) ||
+        llvm::is_contained(leafs, Directive::OMPD_target_data) ||
+        llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
+        llvm::is_contained(leafs, Directive::OMPD_declare_mapper)};
+
+    if (!mapEnteringConstructOrMapper || !IsMapEnteringType(mapType)) {
+      const auto &desc{OmpGetDescriptor<parser::OmpAttachModifier>()};
+      context_.Say(OmpGetModifierSource(modifiers, attach),
+          "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
+          desc.name.str());
+    }
+
+    auto hasBasePointer{[&](const SomeExpr &item) {
+      evaluate::SymbolVector symbols{evaluate::GetSymbolVector(item)};
+      return llvm::any_of(
+          symbols, [](SymbolRef s) { return IsPointer(s.get()); });
+    }};
+
+    evaluate::ExpressionAnalyzer ea{context_};
+    const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+    for (auto &object : objects.v) {
+      if (const parser::Designator *d{GetDesignatorFromObj(object)}) {
+        if (auto &&expr{ea.Analyze(*d)}) {
+          if (hasBasePointer(*expr)) {
+            continue;
+          }
+        }
+      }
+      auto source{GetObjectSource(object)};
+      context_.Say(source ? *source : GetContext().clauseSource,
+          "A list-item that appears in a map clause with the ATTACH modifier must have a base-pointer"_err_en_US);
     }
   }
 

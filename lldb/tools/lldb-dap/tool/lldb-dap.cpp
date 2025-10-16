@@ -16,6 +16,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/MemoryMonitor.h"
@@ -24,7 +25,9 @@
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -42,8 +45,10 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <condition_variable>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <fcntl.h>
 #include <map>
 #include <memory>
@@ -143,6 +148,74 @@ static void PrintVersion() {
   llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';
 }
 
+#if not defined(_WIN32)
+struct FDGroup {
+  int GetFlags() const {
+    if (read && write)
+      return O_NOCTTY | O_CREAT | O_RDWR;
+    if (read)
+      return O_NOCTTY | O_RDONLY;
+    return O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
+  }
+
+  std::vector<int> fds;
+  bool read = false;
+  bool write = false;
+};
+
+static llvm::Error RedirectToFile(const FDGroup &fdg, llvm::StringRef file) {
+  if (!fdg.read && !fdg.write)
+    return llvm::Error::success();
+  int target_fd = lldb_private::FileSystem::Instance().Open(
+      file.str().c_str(), fdg.GetFlags(), 0666);
+  if (target_fd == -1)
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
+  for (int fd : fdg.fds) {
+    if (target_fd == fd)
+      continue;
+    if (::dup2(target_fd, fd) == -1)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+  }
+  ::close(target_fd);
+  return llvm::Error::success();
+}
+
+static llvm::Error
+SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
+  llvm::SmallDenseMap<llvm::StringRef, FDGroup> groups;
+  for (size_t i = 0; i < files.size(); i++) {
+    if (files[i].empty())
+      continue;
+    auto group = groups.find(files[i]);
+    if (group == groups.end())
+      group = groups.insert({files[i], {{static_cast<int>(i)}}}).first;
+    else
+      group->second.fds.push_back(i);
+    switch (i) {
+    case 0:
+      group->second.read = true;
+      break;
+    case 1:
+    case 2:
+      group->second.write = true;
+      break;
+    default:
+      group->second.read = true;
+      group->second.write = true;
+      break;
+    }
+  }
+  for (const auto &[file, group] : groups) {
+    if (llvm::Error err = RedirectToFile(group, file))
+      return llvm::createStringError(
+          llvm::formatv("{0}: {1}", file, llvm::toString(std::move(err))));
+  }
+  return llvm::Error::success();
+}
+#endif
+
 // If --launch-target is provided, this instance of lldb-dap becomes a
 // runInTerminal launcher. It will ultimately launch the program specified in
 // the --launch-target argument, which is the original program the user wanted
@@ -165,6 +238,7 @@ static void PrintVersion() {
 static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                              llvm::StringRef comm_file,
                                              lldb::pid_t debugger_pid,
+                                             llvm::StringRef stdio,
                                              char *argv[]) {
 #if defined(_WIN32)
   return llvm::createStringError(
@@ -178,6 +252,16 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   if (debugger_pid != LLDB_INVALID_PROCESS_ID)
     (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
 #endif
+
+  lldb_private::FileSystem::Initialize();
+  if (!stdio.empty()) {
+    llvm::SmallVector<llvm::StringRef, 3> files;
+    stdio.split(files, ':');
+    while (files.size() < 3)
+      files.push_back(files.back());
+    if (llvm::Error err = SetupIORedirection(files))
+      return err;
+  }
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
   if (llvm::Error err = comm_channel.NotifyPid())
@@ -484,9 +568,10 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+      llvm::StringRef stdio = input_args.getLastArgValue(OPT_stdio);
       if (llvm::Error err =
               LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                        argv + target_args_pos)) {
+                                        stdio, argv + target_args_pos)) {
         llvm::errs() << llvm::toString(std::move(err)) << '\n';
         return EXIT_FAILURE;
       }

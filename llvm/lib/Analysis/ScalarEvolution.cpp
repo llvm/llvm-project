@@ -4623,17 +4623,11 @@ const SCEV *ScalarEvolution::getNegativeSCEV(const SCEV *V,
 
 /// If Expr computes ~A, return A else return nullptr
 static const SCEV *MatchNotExpr(const SCEV *Expr) {
-  const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Expr);
-  if (!Add || Add->getNumOperands() != 2 ||
-      !Add->getOperand(0)->isAllOnesValue())
-    return nullptr;
-
-  const SCEVMulExpr *AddRHS = dyn_cast<SCEVMulExpr>(Add->getOperand(1));
-  if (!AddRHS || AddRHS->getNumOperands() != 2 ||
-      !AddRHS->getOperand(0)->isAllOnesValue())
-    return nullptr;
-
-  return AddRHS->getOperand(1);
+  const SCEV *MulOp;
+  if (match(Expr, m_scev_Add(m_scev_AllOnes(),
+                             m_scev_Mul(m_scev_AllOnes(), m_SCEV(MulOp)))))
+    return MulOp;
+  return nullptr;
 }
 
 /// Return a SCEV corresponding to ~V = -1-V
@@ -12220,12 +12214,11 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
     // Try to match a common constant multiply.
     auto MatchConstMul =
         [](const SCEV *S) -> std::optional<std::pair<const SCEV *, APInt>> {
-      auto *M = dyn_cast<SCEVMulExpr>(S);
-      if (!M || M->getNumOperands() != 2 ||
-          !isa<SCEVConstant>(M->getOperand(0)))
-        return std::nullopt;
-      return {
-          {M->getOperand(1), cast<SCEVConstant>(M->getOperand(0))->getAPInt()}};
+      const APInt *C;
+      const SCEV *Op;
+      if (match(S, m_scev_Mul(m_scev_APInt(C), m_SCEV(Op))))
+        return {{Op, *C}};
+      return std::nullopt;
     };
     if (auto MatchedMore = MatchConstMul(More)) {
       if (auto MatchedLess = MatchConstMul(Less)) {

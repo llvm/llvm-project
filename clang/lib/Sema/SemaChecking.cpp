@@ -3580,9 +3580,8 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
   if (const RecordType *UT = Expr->getType()->getAsUnionType();
-      UT && UT->getOriginalDecl()
-                ->getMostRecentDecl()
-                ->hasAttr<TransparentUnionAttr>()) {
+      UT &&
+      UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>()) {
     if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
       if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
         Expr = ILE->getInit(0);
@@ -12879,8 +12878,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (const EnumType *SourceEnum = Source->getAsCanonical<EnumType>())
     if (const EnumType *TargetEnum = Target->getAsCanonical<EnumType>())
-      if (SourceEnum->getOriginalDecl()->hasNameForLinkage() &&
-          TargetEnum->getOriginalDecl()->hasNameForLinkage() &&
+      if (SourceEnum->getDecl()->hasNameForLinkage() &&
+          TargetEnum->getDecl()->hasNameForLinkage() &&
           SourceEnum != TargetEnum) {
         if (SourceMgr.isInSystemMacro(CC))
           return;
@@ -16240,9 +16239,9 @@ getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
     return {};
   }
   uint64_t Dim = Value->getZExtValue();
-  if (!ConstantMatrixType::isDimensionValid(Dim)) {
+  if (Dim == 0 || Dim > S.Context.getLangOpts().MaxMatrixDimension) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
-        << Name << ConstantMatrixType::getMaxElementsPerDimension();
+        << Name << S.Context.getLangOpts().MaxMatrixDimension;
     return {};
   }
   return Dim;
