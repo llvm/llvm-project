@@ -9,6 +9,9 @@
 #ifndef LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_ERRNO_T_H
 #define LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_ERRNO_T_H
 
+// LIBC_HAS_ANNEX_K is a necessary check guard here because errno_t is only
+// defined when Annex K is enabled. We use LIBC_HAS_ANNEX_K internally to
+// indicate whether Annex K is enabled or not.
 #ifdef LIBC_HAS_ANNEX_K
 
 typedef int errno_t;
