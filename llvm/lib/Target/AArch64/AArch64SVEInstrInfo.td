@@ -4625,7 +4625,7 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
 
   // SVE2 Add subtract/subtract pairwise
   defm ADDSUBP_ZZZ   : sve2_int_mul<0b111, "addsubp", null_frag>;
-  defm SUBP_ZPmZ     : sve2_int_arith_pred<0b100001, "subp", null_frag>;
+  defm SUBP_ZPmZZ    : sve2_int_arith_pred<0b100001, "subp", null_frag>;
 
   // SVE2 integer absolute difference and accumulate long
   defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal">;
