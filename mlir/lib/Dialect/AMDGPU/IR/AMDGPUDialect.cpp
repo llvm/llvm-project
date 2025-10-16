@@ -763,7 +763,7 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
           vector::ShapeCastOp::create(rewriter, loc, newSrcType, scaleSrc);
       auto extract = vector::ExtractStridedSliceOp::create(
           rewriter, loc, newScaleSrc, ArrayRef{offset}, ArrayRef{size},
-          ArrayRef{INT64_C(1)});
+          ArrayRef{int64_t(1)});
       rewriter.modifyOpInPlace(op, [&] {
         op->setOperand(opIdx, extract);
         setOpsel(opIdx, opsel);
