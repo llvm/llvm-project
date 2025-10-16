@@ -106,7 +106,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 */
 
 #  include <__cxx03/__config>
-#  include <__cxx03/stddef.h>
+#  include <stddef.h>
 
 #  if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #    error                                                                                                             \
