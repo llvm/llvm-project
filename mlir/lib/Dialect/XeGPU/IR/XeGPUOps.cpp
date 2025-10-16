@@ -441,16 +441,18 @@ LogicalResult PrefetchNdOp::verify() {
     if (!staticSource || staticSource.empty()) {
       auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
       sourceRank = sourceTy.getRank();
-    } else 
+    } else
       sourceRank = staticSource.size();
 
     int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
     int64_t constOffsetSize =
         getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
     auto tDescRank = tdescTy.getRank();
-    bool sourceRankMismatch = ((offsetSize != 0) && (offsetSize != sourceRank)) ||
+    bool sourceRankMismatch =
+        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
         ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch = ((offsetSize != 0) && (offsetSize != tDescRank)) ||
+    bool tdescRankMismatch =
+        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
         ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
     if (sourceRankMismatch && tdescRankMismatch)
       return emitOpError(
@@ -582,16 +584,18 @@ LogicalResult LoadNdOp::verify() {
     if (!staticSource || staticSource.empty()) {
       auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
       sourceRank = sourceTy.getRank();
-    } else 
+    } else
       sourceRank = staticSource.size();
 
     int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
     int64_t constOffsetSize =
         getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
     auto tDescRank = tdescTy.getRank();
-    bool sourceRankMismatch = ((offsetSize != 0) && (offsetSize != sourceRank)) ||
+    bool sourceRankMismatch =
+        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
         ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch = ((offsetSize != 0) && (offsetSize != tDescRank)) ||
+    bool tdescRankMismatch =
+        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
         ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
     if (sourceRankMismatch && tdescRankMismatch)
       return emitOpError(
@@ -692,16 +696,18 @@ LogicalResult StoreNdOp::verify() {
     if (!staticSource || staticSource.empty()) {
       auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
       sourceRank = sourceTy.getRank();
-    } else 
+    } else
       sourceRank = staticSource.size();
 
     int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
     int64_t constOffsetSize =
         getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
     auto tDescRank = dstTy.getRank();
-    bool sourceRankMismatch = ((offsetSize != 0) && (offsetSize != sourceRank)) ||
+    bool sourceRankMismatch =
+        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
         ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch = ((offsetSize != 0) && (offsetSize != tDescRank)) ||
+    bool tdescRankMismatch =
+        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
         ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
     if (sourceRankMismatch && tdescRankMismatch)
       return emitOpError(
