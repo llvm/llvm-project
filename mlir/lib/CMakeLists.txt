@@ -55,19 +55,3 @@ add_mlir_library(MLIRRegisterAllExtensions
   ${conversion_libs}
   ${extension_libs}
   )
-
-if (MSVC)
-  get_source_file_property(CURRENT_FLAGS Bindings/Python/IRCore.cpp COMPILE_FLAGS)
-  set_source_file_property(Bindings/Python/IRCore.cpp
-    PROPERTY COMPILE_FLAGS ${CURRENT_FLAGS} "/W0"
-  )
-
-  get_source_file_property(CURRENT_FLAGS Bindings/Python/IRAttributes.cpp COMPILE_FLAGS)
-  set_source_file_property(Bindings/Python/IRAttributes.cpp
-    PROPERTY COMPILE_FLAGS ${CURRENT_FLAGS} "/W0"
-  )
-
-  get_source_file_property(CURRENT_FLAGS Bindings/Python/IRTypes.cpp COMPILE_FLAGS)
-  set_source_file_property(Bindings/Python/IRTypes.cpp
-    PROPERTY COMPILE_FLAGS ${CURRENT_FLAGS} "/W0"
-  )
