@@ -216,9 +216,9 @@ SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
-           {SAs.Deallocate,
-            rt::SimpleExecutorMemoryManagerDeallocateWrapperName}}))
+           {SAs.Initialize,
+            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
+           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
     return std::move(Err);
 
   return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);

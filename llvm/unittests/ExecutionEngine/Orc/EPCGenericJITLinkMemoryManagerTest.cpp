@@ -39,8 +39,11 @@ public:
     return ExecutorAddr::fromPtr(MB.base());
   }
 
-  Error finalize(tpctypes::FinalizeRequest FR) {
+  Expected<ExecutorAddr> initialize(tpctypes::FinalizeRequest FR) {
+    assert(!FR.Segments.empty());
+    ExecutorAddr Base = FR.Segments[0].Addr;
     for (auto &Seg : FR.Segments) {
+      Base = std::min(Base, Seg.Addr);
       char *Mem = Seg.Addr.toPtr<char *>();
       memcpy(Mem, Seg.Content.data(), Seg.Content.size());
       memset(Mem + Seg.Content.size(), 0, Seg.Size - Seg.Content.size());
@@ -52,10 +55,10 @@ public:
       if ((Seg.RAG.Prot & MemProt::Exec) != MemProt::Exec)
         sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
     }
-    return Error::success();
+    return Base;
   }
 
-  Error deallocate(std::vector<ExecutorAddr> &Bases) {
+  Error release(std::vector<ExecutorAddr> &Bases) {
     Error Err = Error::success();
     for (auto &Base : Bases) {
       auto I = Blocks.find(Base.toPtr<void *>());
@@ -86,18 +89,18 @@ CWrapperFunctionResult testReserve(const char *ArgData, size_t ArgSize) {
           .release();
 }
 
-CWrapperFunctionResult testFinalize(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>::
+CWrapperFunctionResult testInitialize(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<
+             rt::SPSSimpleExecutorMemoryManagerInitializeSignature>::
       handle(ArgData, ArgSize,
-             makeMethodWrapperHandler(&SimpleAllocator::finalize))
+             makeMethodWrapperHandler(&SimpleAllocator::initialize))
           .release();
 }
 
-CWrapperFunctionResult testDeallocate(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>::
+CWrapperFunctionResult testRelease(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReleaseSignature>::
       handle(ArgData, ArgSize,
-             makeMethodWrapperHandler(&SimpleAllocator::deallocate))
+             makeMethodWrapperHandler(&SimpleAllocator::release))
           .release();
 }
 
@@ -108,8 +111,8 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
   SAs.Allocator = ExecutorAddr::fromPtr(&SA);
   SAs.Reserve = ExecutorAddr::fromPtr(&testReserve);
-  SAs.Finalize = ExecutorAddr::fromPtr(&testFinalize);
-  SAs.Deallocate = ExecutorAddr::fromPtr(&testDeallocate);
+  SAs.Initialize = ExecutorAddr::fromPtr(&testInitialize);
+  SAs.Release = ExecutorAddr::fromPtr(&testRelease);
 
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
   StringRef Hello = "hello";

@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -18,166 +19,167 @@ namespace orc {
 namespace rt_bootstrap {
 
 SimpleExecutorMemoryManager::~SimpleExecutorMemoryManager() {
-  assert(Allocations.empty() && "shutdown not called?");
+  assert(Slabs.empty() && "shutdown not called?");
 }
 
-Expected<ExecutorAddr> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
+Expected<ExecutorAddr> SimpleExecutorMemoryManager::reserve(uint64_t Size) {
   std::error_code EC;
   auto MB = sys::Memory::allocateMappedMemory(
       Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
   if (EC)
     return errorCodeToError(EC);
   std::lock_guard<std::mutex> Lock(M);
-  assert(!Allocations.count(MB.base()) && "Duplicate allocation addr");
-  Allocations[MB.base()].Size = Size;
+  assert(!Slabs.count(MB.base()) && "Duplicate allocation addr");
+  Slabs[MB.base()].Size = Size;
   return ExecutorAddr::fromPtr(MB.base());
 }
 
-Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
-  ExecutorAddr Base(~0ULL);
+Expected<ExecutorAddr>
+SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
   std::vector<shared::WrapperFunctionCall> DeallocationActions;
-  size_t SuccessfulFinalizationActions = 0;
 
   if (FR.Segments.empty()) {
-    // NOTE: Finalizing nothing is currently a no-op. Should it be an error?
     if (FR.Actions.empty())
-      return Error::success();
+      return make_error<StringError>("Finalization request is empty",
+                                     inconvertibleErrorCode());
     else
       return make_error<StringError>("Finalization actions attached to empty "
                                      "finalization request",
                                      inconvertibleErrorCode());
   }
 
-  for (auto &Seg : FR.Segments)
-    Base = std::min(Base, Seg.Addr);
+  ExecutorAddrRange RR(FR.Segments.front().Addr, FR.Segments.front().Addr);
 
-  for (auto &ActPair : FR.Actions)
-    if (ActPair.Dealloc)
-      DeallocationActions.push_back(ActPair.Dealloc);
-
-  // Get the Allocation for this finalization.
-  size_t AllocSize = 0;
-  {
-    std::lock_guard<std::mutex> Lock(M);
-    auto I = Allocations.find(Base.toPtr<void *>());
-    if (I == Allocations.end())
-      return make_error<StringError>("Attempt to finalize unrecognized "
-                                     "allocation " +
-                                         formatv("{0:x}", Base.getValue()),
-                                     inconvertibleErrorCode());
-    AllocSize = I->second.Size;
-    I->second.DeallocationActions = std::move(DeallocationActions);
-  }
-  ExecutorAddr AllocEnd = Base + ExecutorAddrDiff(AllocSize);
-
-  // Bail-out function: this will run deallocation actions corresponding to any
-  // completed finalization actions, then deallocate memory.
-  auto BailOut = [&](Error Err) {
-    std::pair<void *, Allocation> AllocToDestroy;
-
-    // Get allocation to destroy.
-    {
-      std::lock_guard<std::mutex> Lock(M);
-      auto I = Allocations.find(Base.toPtr<void *>());
-
-      // Check for missing allocation (effective a double free).
-      if (I == Allocations.end())
-        return joinErrors(
-            std::move(Err),
-            make_error<StringError>("No allocation entry found "
-                                    "for " +
-                                        formatv("{0:x}", Base.getValue()),
-                                    inconvertibleErrorCode()));
-      AllocToDestroy = std::move(*I);
-      Allocations.erase(I);
-    }
-
-    // Run deallocation actions for all completed finalization actions.
-    while (SuccessfulFinalizationActions)
-      Err =
-          joinErrors(std::move(Err), FR.Actions[--SuccessfulFinalizationActions]
-                                         .Dealloc.runWithSPSRetErrorMerged());
-
-    // Deallocate memory.
-    sys::MemoryBlock MB(AllocToDestroy.first, AllocToDestroy.second.Size);
-    if (auto EC = sys::Memory::releaseMappedMemory(MB))
-      Err = joinErrors(std::move(Err), errorCodeToError(EC));
-
-    return Err;
-  };
+  std::vector<sys::MemoryBlock> MBsToReset;
+  auto ResetMBs = make_scope_exit([&]() {
+    for (auto &MB : MBsToReset)
+      sys::Memory::protectMappedMemory(MB, sys::Memory::MF_READ |
+                                               sys::Memory::MF_WRITE);
+    sys::Memory::InvalidateInstructionCache(RR.Start.toPtr<void *>(),
+                                            RR.size());
+  });
 
   // Copy content and apply permissions.
   for (auto &Seg : FR.Segments) {
+    RR.Start = std::min(RR.Start, Seg.Addr);
+    RR.End = std::max(RR.End, Seg.Addr + Seg.Size);
 
     // Check segment ranges.
     if (LLVM_UNLIKELY(Seg.Size < Seg.Content.size()))
-      return BailOut(make_error<StringError>(
+      return make_error<StringError>(
           formatv("Segment {0:x} content size ({1:x} bytes) "
                   "exceeds segment size ({2:x} bytes)",
                   Seg.Addr.getValue(), Seg.Content.size(), Seg.Size),
-          inconvertibleErrorCode()));
+          inconvertibleErrorCode());
     ExecutorAddr SegEnd = Seg.Addr + ExecutorAddrDiff(Seg.Size);
-    if (LLVM_UNLIKELY(Seg.Addr < Base || SegEnd > AllocEnd))
-      return BailOut(make_error<StringError>(
+    if (LLVM_UNLIKELY(Seg.Addr < RR.Start || SegEnd > RR.End))
+      return make_error<StringError>(
           formatv("Segment {0:x} -- {1:x} crosses boundary of "
                   "allocation {2:x} -- {3:x}",
-                  Seg.Addr.getValue(), SegEnd.getValue(), Base.getValue(),
-                  AllocEnd.getValue()),
-          inconvertibleErrorCode()));
+                  Seg.Addr, SegEnd, RR.Start, RR.End),
+          inconvertibleErrorCode());
 
     char *Mem = Seg.Addr.toPtr<char *>();
     if (!Seg.Content.empty())
       memcpy(Mem, Seg.Content.data(), Seg.Content.size());
     memset(Mem + Seg.Content.size(), 0, Seg.Size - Seg.Content.size());
     assert(Seg.Size <= std::numeric_limits<size_t>::max());
+
+    sys::MemoryBlock MB(Mem, Seg.Size);
     if (auto EC = sys::Memory::protectMappedMemory(
-            {Mem, static_cast<size_t>(Seg.Size)},
-            toSysMemoryProtectionFlags(Seg.RAG.Prot)))
-      return BailOut(errorCodeToError(EC));
+            MB, toSysMemoryProtectionFlags(Seg.RAG.Prot)))
+      return errorCodeToError(EC);
+
+    MBsToReset.push_back(MB);
+
     if ((Seg.RAG.Prot & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
   }
 
-  // Run finalization actions.
-  for (auto &ActPair : FR.Actions) {
-    if (auto Err = ActPair.Finalize.runWithSPSRetErrorMerged())
-      return BailOut(std::move(Err));
-    ++SuccessfulFinalizationActions;
-  }
+  auto DeallocActions = runFinalizeActions(FR.Actions);
+  if (!DeallocActions)
+    return DeallocActions.takeError();
 
-  return Error::success();
-}
-
-Error SimpleExecutorMemoryManager::deallocate(
-    const std::vector<ExecutorAddr> &Bases) {
-  std::vector<std::pair<void *, Allocation>> AllocPairs;
-  AllocPairs.reserve(Bases.size());
-
-  // Get allocation to destroy.
-  Error Err = Error::success();
   {
     std::lock_guard<std::mutex> Lock(M);
-    for (auto &Base : Bases) {
-      auto I = Allocations.find(Base.toPtr<void *>());
-
-      // Check for missing allocation (effective a double free).
-      if (I != Allocations.end()) {
-        AllocPairs.push_back(std::move(*I));
-        Allocations.erase(I);
-      } else
-        Err = joinErrors(
-            std::move(Err),
-            make_error<StringError>("No allocation entry found "
-                                    "for " +
-                                        formatv("{0:x}", Base.getValue()),
-                                    inconvertibleErrorCode()));
-    }
+    auto Region = createRegionInfo(RR, "In initialize");
+    if (!Region)
+      return Region.takeError();
+    Region->DeallocActions = std::move(*DeallocActions);
   }
 
-  while (!AllocPairs.empty()) {
-    auto &P = AllocPairs.back();
-    Err = joinErrors(std::move(Err), deallocateImpl(P.first, P.second));
-    AllocPairs.pop_back();
+  // Successful initialization.
+  ResetMBs.release();
+
+  return RR.Start;
+}
+
+Error SimpleExecutorMemoryManager::deinitialize(
+    const std::vector<ExecutorAddr> &InitKeys) {
+  Error Err = Error::success();
+
+  for (auto &KeyAddr : llvm::reverse(InitKeys)) {
+    std::vector<shared::WrapperFunctionCall> DeallocActions;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      auto Slab = getSlabInfo(KeyAddr, "In deinitialize");
+      if (!Slab) {
+        Err = joinErrors(std::move(Err), Slab.takeError());
+        continue;
+      }
+
+      auto RI = getRegionInfo(*Slab, KeyAddr, "In deinitialize");
+      if (!RI) {
+        Err = joinErrors(std::move(Err), RI.takeError());
+        continue;
+      }
+
+      DeallocActions = std::move(RI->DeallocActions);
+    }
+
+    Err = joinErrors(std::move(Err),
+                     runDeallocActions(std::move(DeallocActions)));
+  }
+
+  return Err;
+}
+
+Error SimpleExecutorMemoryManager::release(
+    const std::vector<ExecutorAddr> &Bases) {
+  Error Err = Error::success();
+
+  // TODO: Prohibit new initializations within the slabs being removed?
+  for (auto &Base : llvm::reverse(Bases)) {
+    std::vector<shared::WrapperFunctionCall> DeallocActions;
+    sys::MemoryBlock MB;
+
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+
+      auto SlabI = Slabs.find(Base.toPtr<void *>());
+      if (SlabI == Slabs.end()) {
+        Err = joinErrors(
+            std::move(Err),
+            make_error<StringError>("In release, " + formatv("{0:x}", Base) +
+                                        " is not part of any reserved "
+                                        "address range",
+                                    inconvertibleErrorCode()));
+        continue;
+      }
+
+      auto &Slab = SlabI->second;
+
+      for (auto &[Addr, Region] : Slab.Regions)
+        llvm::copy(Region.DeallocActions, back_inserter(DeallocActions));
+
+      MB = {Base.toPtr<void *>(), Slab.Size};
+
+      Slabs.erase(SlabI);
+    }
+
+    Err = joinErrors(std::move(Err), runDeallocActions(DeallocActions));
+    if (auto EC = sys::Memory::releaseMappedMemory(MB))
+      Err = joinErrors(std::move(Err), errorCodeToError(EC));
   }
 
   return Err;
@@ -185,16 +187,15 @@ Error SimpleExecutorMemoryManager::deallocate(
 
 Error SimpleExecutorMemoryManager::shutdown() {
 
-  AllocationsMap AM;
+  // TODO: Prevent new allocations during shutdown.
+  std::vector<ExecutorAddr> Bases;
   {
-    std::lock_guard<std::mutex> Lock(M);
-    AM = std::move(Allocations);
+    std::scoped_lock<std::mutex> Lock(M);
+    for (auto &[Base, Slab] : Slabs)
+      Bases.push_back(ExecutorAddr::fromPtr(Base));
   }
 
-  Error Err = Error::success();
-  for (auto &KV : AM)
-    Err = joinErrors(std::move(Err), deallocateImpl(KV.first, KV.second));
-  return Err;
+  return release(Bases);
 }
 
 void SimpleExecutorMemoryManager::addBootstrapSymbols(
@@ -202,58 +203,150 @@ void SimpleExecutorMemoryManager::addBootstrapSymbols(
   M[rt::SimpleExecutorMemoryManagerInstanceName] = ExecutorAddr::fromPtr(this);
   M[rt::SimpleExecutorMemoryManagerReserveWrapperName] =
       ExecutorAddr::fromPtr(&reserveWrapper);
-  M[rt::SimpleExecutorMemoryManagerFinalizeWrapperName] =
-      ExecutorAddr::fromPtr(&finalizeWrapper);
-  M[rt::SimpleExecutorMemoryManagerDeallocateWrapperName] =
-      ExecutorAddr::fromPtr(&deallocateWrapper);
+  M[rt::SimpleExecutorMemoryManagerInitializeWrapperName] =
+      ExecutorAddr::fromPtr(&initializeWrapper);
+  M[rt::SimpleExecutorMemoryManagerDeinitializeWrapperName] =
+      ExecutorAddr::fromPtr(&deinitializeWrapper);
+  M[rt::SimpleExecutorMemoryManagerReleaseWrapperName] =
+      ExecutorAddr::fromPtr(&releaseWrapper);
 }
 
-Error SimpleExecutorMemoryManager::deallocateImpl(void *Base, Allocation &A) {
-  Error Err = Error::success();
+Expected<SimpleExecutorMemoryManager::SlabInfo &>
+SimpleExecutorMemoryManager::getSlabInfo(ExecutorAddr A, StringRef Context) {
+  auto MakeBadSlabError = [&]() {
+    return make_error<StringError>(
+        Context + ", address " + formatv("{0:x}", A) +
+            " is not part of any reserved address range",
+        inconvertibleErrorCode());
+  };
 
-  while (!A.DeallocationActions.empty()) {
-    Err = joinErrors(std::move(Err),
-                     A.DeallocationActions.back().runWithSPSRetErrorMerged());
-    A.DeallocationActions.pop_back();
+  auto I = Slabs.upper_bound(A.toPtr<void *>());
+  if (I == Slabs.begin())
+    return MakeBadSlabError();
+  --I;
+  if (!ExecutorAddrRange(ExecutorAddr::fromPtr(I->first), I->second.Size)
+           .contains(A))
+    return MakeBadSlabError();
+
+  return I->second;
+}
+
+Expected<SimpleExecutorMemoryManager::SlabInfo &>
+SimpleExecutorMemoryManager::getSlabInfo(ExecutorAddrRange R,
+                                         StringRef Context) {
+  auto MakeBadSlabError = [&]() {
+    return make_error<StringError>(
+        Context + ", range " + formatv("{0:x}", R) +
+            " is not part of any reserved address range",
+        inconvertibleErrorCode());
+  };
+
+  auto I = Slabs.upper_bound(R.Start.toPtr<void *>());
+  if (I == Slabs.begin())
+    return MakeBadSlabError();
+  --I;
+  if (!ExecutorAddrRange(ExecutorAddr::fromPtr(I->first), I->second.Size)
+           .contains(R))
+    return MakeBadSlabError();
+
+  return I->second;
+}
+
+Expected<SimpleExecutorMemoryManager::RegionInfo &>
+SimpleExecutorMemoryManager::createRegionInfo(ExecutorAddrRange R,
+                                              StringRef Context) {
+
+  auto Slab = getSlabInfo(R, Context);
+  if (!Slab)
+    return Slab.takeError();
+
+  auto MakeBadRegionError = [&](ExecutorAddrRange Other, bool Prev) {
+    return make_error<StringError>(Context + ", region " + formatv("{0:x}", R) +
+                                       " overlaps " +
+                                       (Prev ? "previous" : "following") +
+                                       " region " + formatv("{0:x}", Other),
+                                   inconvertibleErrorCode());
+  };
+
+  auto I = Slab->Regions.upper_bound(R.Start);
+  if (I != Slab->Regions.begin()) {
+    auto J = std::prev(I);
+    ExecutorAddrRange PrevRange(J->first, J->second.Size);
+    if (PrevRange.overlaps(R))
+      return MakeBadRegionError(PrevRange, true);
+  }
+  if (I != Slab->Regions.end()) {
+    ExecutorAddrRange NextRange(I->first, I->second.Size);
+    if (NextRange.overlaps(R))
+      return MakeBadRegionError(NextRange, false);
   }
 
-  sys::MemoryBlock MB(Base, A.Size);
-  if (auto EC = sys::Memory::releaseMappedMemory(MB))
-    Err = joinErrors(std::move(Err), errorCodeToError(EC));
+  auto &RInfo = Slab->Regions[R.Start];
+  RInfo.Size = R.size();
+  return RInfo;
+}
 
-  return Err;
+Expected<SimpleExecutorMemoryManager::RegionInfo &>
+SimpleExecutorMemoryManager::getRegionInfo(SlabInfo &Slab, ExecutorAddr A,
+                                           StringRef Context) {
+  auto I = Slab.Regions.find(A);
+  if (I == Slab.Regions.end())
+    return make_error<StringError>(
+        Context + ", address " + formatv("{0:x}", A) +
+            " does not correspond to the start of any initialized region",
+        inconvertibleErrorCode());
+
+  return I->second;
+}
+
+Expected<SimpleExecutorMemoryManager::RegionInfo &>
+SimpleExecutorMemoryManager::getRegionInfo(ExecutorAddr A, StringRef Context) {
+  auto Slab = getSlabInfo(A, Context);
+  if (!Slab)
+    return Slab.takeError();
+
+  return getRegionInfo(*Slab, A, Context);
 }
 
 llvm::orc::shared::CWrapperFunctionResult
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
+  return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReserveSignature>::
       handle(ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
-                 &SimpleExecutorMemoryManager::allocate))
+                 &SimpleExecutorMemoryManager::reserve))
           .release();
 }
 
 llvm::orc::shared::CWrapperFunctionResult
-SimpleExecutorMemoryManager::finalizeWrapper(const char *ArgData,
-                                             size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>::
-      handle(ArgData, ArgSize,
-             shared::makeMethodWrapperHandler(
-                 &SimpleExecutorMemoryManager::finalize))
-          .release();
-}
-
-llvm::orc::shared::CWrapperFunctionResult
-SimpleExecutorMemoryManager::deallocateWrapper(const char *ArgData,
+SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
                                                size_t ArgSize) {
+  return shared::
+      WrapperFunction<rt::SPSSimpleRemoteMemoryMapInitializeSignature>::handle(
+             ArgData, ArgSize,
+             shared::makeMethodWrapperHandler(
+                 &SimpleExecutorMemoryManager::initialize))
+          .release();
+}
+
+llvm::orc::shared::CWrapperFunctionResult
+SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
+                                                 size_t ArgSize) {
   return shared::WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>::
+             rt::SPSSimpleRemoteMemoryMapDeinitializeSignature>::
       handle(ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
-                 &SimpleExecutorMemoryManager::deallocate))
+                 &SimpleExecutorMemoryManager::deinitialize))
+          .release();
+}
+
+llvm::orc::shared::CWrapperFunctionResult
+SimpleExecutorMemoryManager::releaseWrapper(const char *ArgData,
+                                            size_t ArgSize) {
+  return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReleaseSignature>::
+      handle(ArgData, ArgSize,
+             shared::makeMethodWrapperHandler(
+                 &SimpleExecutorMemoryManager::release))
           .release();
 }
 

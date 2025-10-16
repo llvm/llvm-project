@@ -57,16 +57,17 @@ public:
     std::swap(FR.Actions, G.allocActions());
 
     Parent.EPC.callSPSWrapperAsync<
-        rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>(
-        Parent.SAs.Finalize,
+        rt::SPSSimpleExecutorMemoryManagerInitializeSignature>(
+        Parent.SAs.Initialize,
         [OnFinalize = std::move(OnFinalize), AllocAddr = this->AllocAddr](
-            Error SerializationErr, Error FinalizeErr) mutable {
+            Error SerializationErr,
+            Expected<ExecutorAddr> InitializeKey) mutable {
           // FIXME: Release abandoned alloc.
           if (SerializationErr) {
-            cantFail(std::move(FinalizeErr));
+            cantFail(InitializeKey.takeError());
             OnFinalize(std::move(SerializationErr));
-          } else if (FinalizeErr)
-            OnFinalize(std::move(FinalizeErr));
+          } else if (!InitializeKey)
+            OnFinalize(InitializeKey.takeError());
           else
             OnFinalize(FinalizedAlloc(AllocAddr));
         },
@@ -76,8 +77,8 @@ public:
   void abandon(OnAbandonedFunction OnAbandoned) override {
     // FIXME: Return memory to pool instead.
     Parent.EPC.callSPSWrapperAsync<
-        rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
-        Parent.SAs.Deallocate,
+        rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
+        Parent.SAs.Release,
         [OnAbandoned = std::move(OnAbandoned)](Error SerializationErr,
                                                Error DeallocateErr) mutable {
           if (SerializationErr) {
@@ -123,9 +124,8 @@ void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,
 
 void EPCGenericJITLinkMemoryManager::deallocate(
     std::vector<FinalizedAlloc> Allocs, OnDeallocatedFunction OnDeallocated) {
-  EPC.callSPSWrapperAsync<
-      rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
-      SAs.Deallocate,
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
+      SAs.Release,
       [OnDeallocated = std::move(OnDeallocated)](Error SerErr,
                                                  Error DeallocErr) mutable {
         if (SerErr) {
