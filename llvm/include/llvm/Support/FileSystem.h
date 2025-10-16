@@ -36,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MD5.h"
 #include <cassert>
 #include <cstdint>
@@ -1447,6 +1448,8 @@ public:
   explicit directory_iterator(const Twine &path, std::error_code &ec,
                               bool follow_symlinks = true)
       : FollowSymlinks(follow_symlinks) {
+    sandbox::violationIfEnabled();
+
     State = std::make_shared<detail::DirIterState>();
     SmallString<128> path_storage;
     ec = detail::directory_iterator_construct(
@@ -1456,6 +1459,8 @@ public:
   explicit directory_iterator(const directory_entry &de, std::error_code &ec,
                               bool follow_symlinks = true)
       : FollowSymlinks(follow_symlinks) {
+    sandbox::violationIfEnabled();
+
     State = std::make_shared<detail::DirIterState>();
     ec = detail::directory_iterator_construct(
         *State, de.path(), FollowSymlinks);
@@ -1466,6 +1471,8 @@ public:
 
   // No operator++ because we need error_code.
   directory_iterator &increment(std::error_code &ec) {
+    sandbox::violationIfEnabled();
+
     ec = directory_iterator_increment(*State);
     return *this;
   }
