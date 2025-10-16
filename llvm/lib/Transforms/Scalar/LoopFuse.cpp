@@ -449,15 +449,6 @@ struct FusionCandidateCompare {
 
 using LoopVector = SmallVector<Loop *, 4>;
 
-#ifndef NDEBUG
-static void printLoopVector(const LoopVector &LV) {
-  dbgs() << "****************************\n";
-  for (const Loop *L : LV)
-    printLoop(*L, dbgs());
-  dbgs() << "****************************\n";
-}
-#endif
-
 // Set of Control Flow Equivalent (CFE) Fusion Candidates, sorted in dominance
 // order. Thus, if FC0 comes *before* FC1 in a FusionCandidateSet, then FC0
 // dominates FC1 and FC1 post-dominates FC0.
@@ -471,7 +462,14 @@ static void printLoopVector(const LoopVector &LV) {
 using FusionCandidateSet = std::set<FusionCandidate, FusionCandidateCompare>;
 using FusionCandidateCollection = SmallVector<FusionCandidateSet, 4>;
 
-#if !defined(NDEBUG)
+#ifndef NDEBUG
+static void printLoopVector(const LoopVector &LV) {
+  dbgs() << "****************************\n";
+  for (const Loop *L : LV)
+    printLoop(*L, dbgs());
+  dbgs() << "****************************\n";
+}
+
 static raw_ostream &operator<<(raw_ostream &OS, const FusionCandidate &FC) {
   if (FC.isValid())
     OS << FC.Preheader->getName();
@@ -498,7 +496,7 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
     dbgs() << "****************************\n";
   }
 }
-#endif
+#endif // NDEBUG
 
 namespace {
 
