@@ -1858,7 +1858,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       p << "(" << globalDtorPriority.value() << ")";
   }
 
-  if (auto inlineAttr = getInlineKindAttr()) {
+  if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
     p << ' ';
     p.printAttribute(inlineAttr);
   }
