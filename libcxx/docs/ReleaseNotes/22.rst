@@ -68,6 +68,9 @@ Improvements and New Features
   reduced debug information.
 
 - The performance of ``std::find`` has been improved by up to 2x for integral types
+- The ``std::distance`` and ``std::ranges::distance`` algorithms have been optimized for segmented iterators (e.g.,
+  ``std::join_view`` iterators), reducing the complexity from ``O(n)`` to ``O(n / segment_size)``. Benchmarks show
+  performance improvements of over 1600x in favorable cases with large segment sizes (e.g., 1024).
 
 Deprecations and Removals
 -------------------------
