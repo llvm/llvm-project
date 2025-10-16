@@ -57,6 +57,12 @@ struct Instruction {
     switch (instKind) {
     case InstructionKind::DPAS:
       return "dpas";
+    case InstructionKind::STORE_ND:
+      return "store_nd";
+    case InstructionKind::LOAD_ND:
+      return "load_nd";
+    case InstructionKind::PREFETCH_ND:
+      return "prefetch_nd";
     }
     llvm_unreachable("Unknown InstructionKind");
   }
@@ -152,9 +158,9 @@ struct uArch {
   const std::string &getDescription() const { return description; }
 
   virtual int getSubgroupSize() const = 0;
-  virtual int getPackedFormatBitSizeGatherScatter() const = 0;
-  virtual int getPackedFormatBitSize() const = 0;
-  virtual std::optional<int> getPackedFormatBitSizeDpasB() const = 0;
+  virtual unsigned getPackedFormatBitSizeGatherScatter() const = 0;
+  virtual unsigned getPackedFormatBitSize() const = 0;
+  virtual std::optional<unsigned> getPackedFormatBitSizeDpasB() const = 0;
 
   std::shared_ptr<Instruction> getInstruction(InstructionKind instKind) const {
     assert(instructions.find(instKind) != instructions.end());

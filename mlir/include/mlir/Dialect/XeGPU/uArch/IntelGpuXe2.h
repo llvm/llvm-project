@@ -23,8 +23,6 @@
 #include <map>
 #include <string>
 
-#define DEBUG_TYPE "xegpu-uarch"
-
 using namespace mlir;
 using namespace mlir::xegpu::uArch;
 
@@ -43,9 +41,11 @@ struct Xe2Plus : public uArch {
       : uArch(archName, archDescription, regInfo, cacheInfo, instrs),
         xeCore(xeCore) {}
   int getSubgroupSize() const override { return 16; }
-  int getPackedFormatBitSizeGatherScatter() const override { return 32; }
-  int getPackedFormatBitSize() const override { return 16; }
-  std::optional<int> getPackedFormatBitSizeDpasB() const override { return 32; }
+  unsigned getPackedFormatBitSizeGatherScatter() const override { return 32; }
+  unsigned getPackedFormatBitSize() const override { return 16; }
+  std::optional<unsigned> getPackedFormatBitSizeDpasB() const override {
+    return 32;
+  }
 };
 
 //===----------------------------------------------------------------------===//
