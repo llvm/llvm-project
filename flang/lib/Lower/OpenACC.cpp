@@ -726,6 +726,10 @@ static void genDeclareDataOperandOperations(
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+    // Skip COMMON/global symbols: handled via global ctor/dtor path in declare.
+    if (symbol.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
+        Fortran::semantics::FindCommonBlockContaining(symbol))
+      continue;
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     fir::factory::AddrAndBoundsInfo info =
@@ -4546,6 +4550,11 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       TODO(clauseLocation, "clause on declare directive");
     }
   }
+
+  // If no structured operands were generated (all objects were COMMON),
+  // do not create a declare region.
+  if (dataClauseOperands.empty())
+    return;
 
   mlir::func::FuncOp funcOp = builder.getFunction();
   auto ops = funcOp.getOps<mlir::acc::DeclareEnterOp>();
