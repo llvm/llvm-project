@@ -21,6 +21,7 @@
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
@@ -121,15 +122,6 @@ public:
                                    InfoTable, true) {}
 };
 } // anonymous namespace
-
-#define ESCAPE "\x1b"
-#define CSI ESCAPE "["
-// Move the cursor to 0,0
-#define ANSI_CURSOR_HOME CSI "H"
-// Clear the screen buffer
-#define ANSI_ERASE_SCREEN CSI "2J"
-// Clear the scroll back buffer
-#define ANSI_ERASE_SCROLLBACK CSI "3J"
 
 static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
@@ -274,7 +266,8 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   } else if ((isatty(STDIN_FILENO) != 0) &&
              llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
     // Clear the screen.
-    llvm::outs() << ANSI_CURSOR_HOME ANSI_ERASE_SCREEN ANSI_ERASE_SCROLLBACK;
+    llvm::outs() << ANSI_CSI_RESET_CURSOR ANSI_CSI_ERASE_VIEWPORT
+            ANSI_CSI_ERASE_SCROLLBACK;
     // VSCode will reuse the same terminal for the same debug configuration
     // between runs. Clear the input buffer prior to starting the new process so
     // prior input is not carried forward to the new debug session.
