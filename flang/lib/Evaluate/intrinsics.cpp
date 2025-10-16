@@ -111,6 +111,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     atomicIntKind, // atomic_int_kind from iso_fortran_env
     atomicIntOrLogicalKind, // atomic_int_kind or atomic_logical_kind
     sameAtom, // same type and kind as atom
+    extensibleOrUnlimitedType, // extensible or unlimited polymorphic type
 )
 
 struct TypePattern {
@@ -160,7 +161,8 @@ static constexpr TypePattern AnyChar{CharType, KindCode::any};
 static constexpr TypePattern AnyLogical{LogicalType, KindCode::any};
 static constexpr TypePattern AnyRelatable{RelatableType, KindCode::any};
 static constexpr TypePattern AnyIntrinsic{IntrinsicType, KindCode::any};
-static constexpr TypePattern ExtensibleDerived{DerivedType, KindCode::any};
+static constexpr TypePattern ExtensibleDerived{
+    DerivedType, KindCode::extensibleOrUnlimitedType};
 static constexpr TypePattern AnyData{AnyType, KindCode::any};
 
 // Type is irrelevant, but not BOZ (for PRESENT(), OPTIONAL(), &c.)
@@ -2103,9 +2105,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       }
       return std::nullopt;
     } else if (!d.typePattern.categorySet.test(type->category())) {
+      const char *expected{
+          d.typePattern.kindCode == KindCode::extensibleOrUnlimitedType
+              ? ", expected extensible or unlimited polymorphic type"
+              : ""};
       messages.Say(arg->sourceLocation(),
-          "Actual argument for '%s=' has bad type '%s'"_err_en_US, d.keyword,
-          type->AsFortran());
+          "Actual argument for '%s=' has bad type '%s'%s"_err_en_US, d.keyword,
+          type->AsFortran(), expected);
       return std::nullopt; // argument has invalid type category
     }
     bool argOk{false};
@@ -2241,6 +2247,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::atomicIntOrLogicalKind:
       argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       if (!argOk) {
+        return std::nullopt;
+      }
+      break;
+    case KindCode::extensibleOrUnlimitedType:
+      argOk = type->IsUnlimitedPolymorphic() ||
+          (type->category() == TypeCategory::Derived &&
+              IsExtensibleType(GetDerivedTypeSpec(type)));
+      if (!argOk) {
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' has type '%s', but was expected to be an extensible or unlimited polymorphic type"_err_en_US,
+            d.keyword, type->AsFortran());
         return std::nullopt;
       }
       break;
