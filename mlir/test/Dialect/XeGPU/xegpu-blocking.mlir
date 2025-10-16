@@ -696,14 +696,14 @@ gpu.module @test_kernel {
   // CHECK: [[ins_0:%.+]] = vector.insert_strided_slice [[ld_0]], [[cst]] {offsets = [0, 0, 0], strides = [1]} : vector<16xf32> into vector<1x1x32xf32>
   // CHECK: [[ins_1:%.+]] = vector.insert_strided_slice [[ld_1]], [[ins_0]] {offsets = [0, 0, 16], strides = [1]} : vector<16xf32> into vector<1x1x32xf32>
   gpu.func @load_gather(%src: ui64) -> vector<1x1x32xf32> {
-      %cst = arith.constant dense<[[
+      %cst = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16]>} dense<[[
       [0,   8,  16,  24,  32,  40,  48,  56,
       64,  72,  80,  88,  96, 104, 112, 120,
       128, 136, 144, 152, 160, 168, 176, 184,
       192, 200, 208, 216, 224, 232, 240, 248]
       ]]> : vector<1x1x32xindex>
 
-      %mask = arith.constant dense<true> : vector<1x1x32xi1>
+      %mask = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16]>} dense<true> : vector<1x1x32xi1>
       %ld = xegpu.load %src[%cst], %mask {chunk_size = 1, layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<1x1x32xindex>, vector<1x1x32xi1> -> vector<1x1x32xf32>
 
       gpu.return %ld : vector<1x1x32xf32>
