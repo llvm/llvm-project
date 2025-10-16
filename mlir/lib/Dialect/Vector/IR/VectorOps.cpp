@@ -6742,21 +6742,21 @@ public:
     int64_t rank = srcTy.getRank();
 
     // Build inverse permutation to map destination indices back to source.
-    SmallVector<int64_t, 4> inversePerm(rank, 0);
+    SmallVector<int64_t> inversePerm(rank, 0);
     for (int64_t i = 0; i < rank; ++i)
       inversePerm[permutation[i]] = i;
 
     ArrayRef<int64_t> srcShape = srcTy.getShape();
     ArrayRef<int64_t> dstShape = dstTy.getShape();
-    SmallVector<int64_t, 4> srcIdx(rank, 0);
-    SmallVector<int64_t, 4> dstIdx(rank, 0);
-    SmallVector<int64_t, 4> srcStrides = computeStrides(srcShape);
-    SmallVector<int64_t, 4> dstStrides = computeStrides(dstShape);
+    SmallVector<int64_t> srcIdx(rank, 0);
+    SmallVector<int64_t> dstIdx(rank, 0);
+    SmallVector<int64_t> srcStrides = computeStrides(srcShape);
+    SmallVector<int64_t> dstStrides = computeStrides(dstShape);
 
-    auto elements = fromElementsOp.getElements();
-    SmallVector<Value> newElements;
+    auto elementsOld = fromElementsOp.getElements();
+    SmallVector<Value> elementsNew;
     int64_t dstNumElements = dstTy.getNumElements();
-    newElements.reserve(dstNumElements);
+    elementsNew.reserve(dstNumElements);
 
     // For each element in destination row-major order, pick the corresponding
     // source element.
@@ -6769,11 +6769,11 @@ public:
       // Linearize the source element index.
       int64_t srcLin = linearize(srcIdx, srcStrides);
       // Add the source element to the new elements.
-      newElements.push_back(elements[srcLin]);
+      elementsNew.push_back(elementsOld[srcLin]);
     }
 
     rewriter.replaceOpWithNewOp<FromElementsOp>(transposeOp, dstTy,
-                                                newElements);
+                                                elementsNew);
     return success();
   }
 };
