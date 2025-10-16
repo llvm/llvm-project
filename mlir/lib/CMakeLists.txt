@@ -55,3 +55,15 @@ add_mlir_library(MLIRRegisterAllExtensions
   ${conversion_libs}
   ${extension_libs}
   )
+
+set_source_file_property(Bindings/Python/IRCore.cpp
+  PROPERTY COMPILE_FLAGS "/W0"
+)
+
+set_source_file_property(Bindings/Python/IRAttributes.cpp
+  PROPERTY COMPILE_FLAGS "/W0"
+)
+
+set_source_file_property(Bindings/Python/IRTypes.cpp
+  PROPERTY COMPILE_FLAGS "/W0"
+)
