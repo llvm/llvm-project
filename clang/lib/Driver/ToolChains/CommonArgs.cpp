@@ -2967,9 +2967,10 @@ void tools::addMachineOutlinerArgs(const Driver &D,
       }
     } else {
       // Disable all outlining behaviour.
+      //
       // FIXME: This should probably use the `nooutline` attribute rather than
-      // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline`
-      // objects can be combined correctly during LTO.
+      // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline` objects
+      // can be combined correctly during LTO.
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
