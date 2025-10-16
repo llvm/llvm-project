@@ -3,9 +3,10 @@
 
 ; CHECK: OpCapability Shader
 ; CHECK: OpExtension "SPV_KHR_maximal_reconvergence"
-; CHECK-NOT: OpExtension "SPV_KHR_maximal_reconvergence"
-; CHECK: OpExecutionMode {{.*}} MaximallyReconvergesKHR
 ; CHECK-NOT: OpExecutionMode {{.*}} MaximallyReconvergesKHR
+; CHECK: OpExecutionMode [[main:%[0-9]+]] MaximallyReconvergesKHR
+; CHECK-NOT: OpExecutionMode {{.*}} MaximallyReconvergesKHR
+; CHECK: OpName [[main]] "main"
 define void @main() local_unnamed_addr #0 {
 entry:
   ret void
