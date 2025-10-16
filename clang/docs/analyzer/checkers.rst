@@ -3465,12 +3465,6 @@ Check for an out-of-bound pointer being returned to callers.
    return x; // warn: undefined or garbage returned
  }
 
-
-alpha.security.cert
-^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
 alpha.unix
 ^^^^^^^^^^
 

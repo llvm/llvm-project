@@ -143,8 +143,8 @@ void VarInfo::setNum(Var::Num n) {
 
 /// Helper function for `assertUsageConsistency` to better handle SMLoc
 /// mismatches.
-LLVM_ATTRIBUTE_UNUSED static llvm::SMLoc
-minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
+[[maybe_unused]] static llvm::SMLoc minSMLoc(AsmParser &parser, llvm::SMLoc sm1,
+                                             llvm::SMLoc sm2) {
   const auto loc1 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm1));
   assert(loc1 && "Could not get `FileLineColLoc` for first `SMLoc`");
   const auto loc2 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm2));

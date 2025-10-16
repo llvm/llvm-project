@@ -125,9 +125,9 @@ static bool remainsLegalAfterInline(OpTy op, Region *src, Region *dest,
 //  Use "unused attribute" marker to silence clang-tidy warning stemming from
 //  the inability to see through "llvm::TypeSwitch".
 template <>
-bool LLVM_ATTRIBUTE_UNUSED remainsLegalAfterInline(AffineApplyOp op,
-                                                   Region *src, Region *dest,
-                                                   const IRMapping &mapping) {
+[[maybe_unused]] bool remainsLegalAfterInline(AffineApplyOp op, Region *src,
+                                              Region *dest,
+                                              const IRMapping &mapping) {
   // If it's a valid dimension, we need to check that it remains so.
   if (isValidDim(op.getResult(), src))
     return remainsLegalAfterInline(
@@ -1032,8 +1032,8 @@ static void simplifyMinOrMaxExprWithOperands(AffineMap &map,
 /// Simplify the map while exploiting information on the values in `operands`.
 //  Use "unused attribute" marker to silence warning stemming from the inability
 //  to see through the template expansion.
-static void LLVM_ATTRIBUTE_UNUSED
-simplifyMapWithOperands(AffineMap &map, ArrayRef<Value> operands) {
+[[maybe_unused]] static void simplifyMapWithOperands(AffineMap &map,
+                                                     ArrayRef<Value> operands) {
   assert(map.getNumInputs() == operands.size() && "invalid operands for map");
   SmallVector<AffineExpr> newResults;
   newResults.reserve(map.getNumResults());

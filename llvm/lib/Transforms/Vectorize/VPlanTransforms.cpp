@@ -2124,6 +2124,11 @@ static void licm(VPlan &Plan) {
   // Return true if we do not know how to (mechanically) hoist a given recipe
   // out of a loop region.
   auto CannotHoistRecipe = [](VPRecipeBase &R) {
+    // Assumes don't alias anything or throw; as long as they're guaranteed to
+    // execute, they're safe to hoist.
+    if (match(&R, m_Intrinsic<Intrinsic::assume>()))
+      return false;
+
     // TODO: Relax checks in the future, e.g. we could also hoist reads, if
     // their memory location is not modified in the vector loop.
     if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
