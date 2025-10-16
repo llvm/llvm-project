@@ -3630,7 +3630,8 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   // Go through the list of COMMON block symbols in the module scope and add
   // their USE association to the current scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
-    if (Symbol *localCB{currScope().FindCommonBlockInSurroundingScopes(name)}; !localCB) {
+    if (Symbol *localCB{currScope().FindCommonBlockInSurroundingScopes(name)};
+        !localCB) {
       // Make a symbol, but don't add it to the Scope, since it needs to
       // be added to the USE-associated COMMON blocks
       localCB = &currScope().MakeSymbol(

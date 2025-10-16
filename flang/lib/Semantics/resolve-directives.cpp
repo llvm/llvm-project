@@ -1714,7 +1714,8 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
   if (!name) {
     return nullptr;
   }
-  if (auto *cb{GetContext().scope.FindCommonBlockInSurroundingScopes(name->source)}) {
+  if (auto *cb{GetContext().scope.FindCommonBlockInSurroundingScopes(
+          name->source)}) {
     name->symbol = cb;
     return cb;
   }
