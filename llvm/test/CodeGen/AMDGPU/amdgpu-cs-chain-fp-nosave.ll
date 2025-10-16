@@ -2,8 +2,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s 2>&1 | FileCheck -check-prefix=GFX12 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=GFX942 %s
 
-; These situations are "special" in that they have an alloca not in the entry
-; block, which affects prolog/epilog generation.
+; These situations are "special" in that they either have an alloca that is not
+; in the entry block or that they have a dynamic alloca. Both situations affect
+; prolog/epilog generation.
 
 declare amdgpu_gfx void @foo()
 
