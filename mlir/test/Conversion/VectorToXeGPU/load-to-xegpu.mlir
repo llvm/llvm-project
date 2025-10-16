@@ -79,6 +79,35 @@ func.func @load_out_of_bounds(%source: memref<7x15xf32>,
 
 // -----
 
+func.func @load_2D_layout(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<8x16xf32> {
+  %0 = vector.load %source[%offset, %offset, %offset] {layout_result_0 = #xegpu.layout<sg_layout = [8, 16]>}
+    : memref<8x16x32xf32>, vector<8x16xf32>
+  return %0 : vector<8x16xf32>
+}
+
+// CHECK-LABEL: @load_2D_layout(
+// CHECK:        %[[DESC:.+]] = xegpu.create_nd_tdesc {{[^:]*}} :
+// CHECK-SAME:     memref<8x16x32xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<sg_layout = [8, 16]>>
+
+// -----
+
+func.func @load_2D_cache_hints(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<8x16xf32> {
+  %0 = vector.load %source[%offset, %offset, %offset] {
+      l1_hint = #xegpu.cache_hint<cached>,
+      l2_hint = #xegpu.cache_hint<uncached>,
+      l3_hint = #xegpu.cache_hint<streaming>
+  }: memref<8x16x32xf32>, vector<8x16xf32>
+  return %0 : vector<8x16xf32>
+}
+
+// CHECK-LABEL: @load_2D_cache_hints(
+// CHECK:        xegpu.load_nd {{[^<]*}}
+// CHECK-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<streaming>}>
+
+// -----
+
 func.func @no_load_high_dim_vector(%source: memref<16x32x64xf32>,
     %offset: index) -> vector<8x16x32xf32> {
   %0 = vector.load %source[%offset, %offset, %offset]

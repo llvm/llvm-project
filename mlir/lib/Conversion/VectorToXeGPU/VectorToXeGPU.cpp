@@ -445,12 +445,16 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
   Value mask = vector::ConstantMaskOp::create(
       rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
       vectorShape);
-  auto gatherOp = xegpu::LoadGatherOp::create(
-      rewriter, loc, vectorType, flatMemref, localOffsets, mask,
-      /*chunk_size=*/IntegerAttr{},
-      /*l1_hint=*/xegpu::CachePolicyAttr{},
-      /*l2_hint=*/xegpu::CachePolicyAttr{},
-      /*l3_hint=*/xegpu::CachePolicyAttr{});
+  SmallVector<xegpu::CachePolicyAttr, 3> cacheHints = getOpCacheHints(readOp);
+  auto gatherOp = xegpu::LoadGatherOp::create(rewriter, loc, vectorType,
+                                              flatMemref, localOffsets, mask,
+                                              /*chunk_size=*/IntegerAttr{},
+                                              /*l1_hint=*/cacheHints[0],
+                                              /*l2_hint=*/cacheHints[1],
+                                              /*l3_hint=*/cacheHints[2]);
+  auto resLayout = xegpu::getDistributeLayoutAttr(readOp.getResult());
+  xegpu::setDistributeLayoutAttrs(gatherOp,
+                                  [&](Value val) { return resLayout; });
 
   rewriter.replaceOp(readOp, gatherOp.getResult());
   return success();
@@ -479,12 +483,16 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
   Value mask = vector::ConstantMaskOp::create(
       rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
       vectorShape);
-  xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
-                                localOffsets, mask,
-                                /*chunk_size=*/IntegerAttr{},
-                                /*l1_hint=*/xegpu::CachePolicyAttr{},
-                                /*l2_hint=*/xegpu::CachePolicyAttr{},
-                                /*l3_hint=*/xegpu::CachePolicyAttr{});
+  auto cacheHints = getOpCacheHints(writeOp);
+  auto storeOp = xegpu::StoreScatterOp::create(
+      rewriter, loc, writeOp.getVector(), flatMemref, localOffsets, mask,
+      /*chunk_size=*/IntegerAttr{},
+      /*l1_hint=*/cacheHints[0],
+      /*l2_hint=*/cacheHints[1],
+      /*l3_hint=*/cacheHints[2]);
+  auto valueLayout = xegpu::getDistributeLayoutAttr(writeOp->getOpOperand(0));
+  xegpu::setDistributeLayoutAttrs(storeOp,
+                                  [&](Value val) { return valueLayout; });
   rewriter.eraseOp(writeOp);
   return success();
 }
@@ -534,9 +542,11 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     SmallVector<int64_t> descShape(vecTy.getShape());
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
-    auto descType = xegpu::TensorDescType::get(
-        descShape, elementType, /*array_length=*/1,
-        /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
+    auto resLayout = xegpu::getDistributeLayoutAttr(readOp.getResult());
+    auto descType =
+        xegpu::TensorDescType::get(descShape, elementType, /*array_length=*/1,
+                                   /*boundary_check=*/isOutOfBounds,
+                                   xegpu::MemorySpace::Global, resLayout);
 
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType,
@@ -547,12 +557,12 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
         !isTransposeLoad ? nullptr
                          : DenseI64ArrayAttr::get(rewriter.getContext(),
                                                   ArrayRef<int64_t>{1, 0});
-    // By default, no specific caching policy is assigned.
-    xegpu::CachePolicyAttr hint = nullptr;
+    auto cacheHints = getOpCacheHints(readOp);
     auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
                                           /*packed=*/nullptr, transposeAttr,
-                                          /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                          /*l1_hint=*/cacheHints[0],
+                                          /*l2_hint=*/cacheHints[1],
+                                          /*l3_hint=*/cacheHints[2]);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -590,10 +600,11 @@ struct TransferWriteLowering
     if (!map.isMinorIdentity())
       return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
 
+    auto valLayout = xegpu::getDistributeLayoutAttr(writeOp->getOpOperand(0));
     auto descType = xegpu::TensorDescType::get(
         vecTy.getShape(), vecTy.getElementType(),
         /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
-        xegpu::MemorySpace::Global);
+        xegpu::MemorySpace::Global, valLayout);
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType,
                            dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()),
@@ -601,10 +612,12 @@ struct TransferWriteLowering
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
+    auto cacheHints = getOpCacheHints(writeOp);
     auto storeOp =
         xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
-                                 /*l1_hint=*/hint,
-                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                 /*l1_hint=*/cacheHints[0],
+                                 /*l2_hint=*/cacheHints[1],
+                                 /*l3_hint=*/cacheHints[2]);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -720,18 +733,20 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;
 
+    auto resLayout = xegpu::getDistributeLayoutAttr(loadOp.getResult());
     auto descType = xegpu::TensorDescType::get(
         vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
-        boundaryCheck, xegpu::MemorySpace::Global);
+        boundaryCheck, xegpu::MemorySpace::Global, resLayout);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, loadOp.getBase(), loadOp.getIndices());
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
+    auto cacheHints = getOpCacheHints(loadOp);
     auto loadNdOp = xegpu::LoadNdOp::create(
         rewriter, loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
-        /*l1_hint=*/hint,
-        /*l2_hint=*/hint, /*l3_hint=*/hint);
+        /*l1_hint=*/cacheHints[0],
+        /*l2_hint=*/cacheHints[1], /*l3_hint=*/cacheHints[2]);
     rewriter.replaceOp(loadOp, loadNdOp);
 
     return success();
@@ -753,18 +768,21 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;
 
-    auto descType = xegpu::TensorDescType::get(
-        vecTy.getShape(), vecTy.getElementType(),
-        /*array_length=*/1, boundaryCheck, xegpu::MemorySpace::Global);
+    auto valLayout = xegpu::getDistributeLayoutAttr(storeOp->getOpOperand(0));
+    auto descType =
+        xegpu::TensorDescType::get(vecTy.getShape(), vecTy.getElementType(),
+                                   /*array_length=*/1, boundaryCheck,
+                                   xegpu::MemorySpace::Global, valLayout);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, storeOp.getBase(), storeOp.getIndices());
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto storeNdOp =
-        xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
-                                 /*l1_hint=*/hint,
-                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
+    auto cacheHints = getOpCacheHints(storeOp);
+    auto storeNdOp = xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
+                                              /*l1_hint=*/cacheHints[0],
+                                              /*l2_hint=*/cacheHints[1],
+                                              /*l3_hint=*/cacheHints[2]);
     rewriter.replaceOp(storeOp, storeNdOp);
 
     return success();
