@@ -2111,8 +2111,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_gcc_install_dir_EQ);
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_install_dir_EQ);
       A && A->getValue()[0]) {
     StringRef InstallDir = A->getValue();
     if (!ScanGCCForMultilibs(TargetTriple, Args, InstallDir, false)) {
@@ -2135,8 +2134,7 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // If --gcc-triple is specified use this instead of trying to
   // auto-detect a triple.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_gcc_triple_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_triple_EQ)) {
     StringRef GCCTriple = A->getValue();
     CandidateTripleAliases.clear();
     CandidateTripleAliases.push_back(GCCTriple);

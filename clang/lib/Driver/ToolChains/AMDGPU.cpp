@@ -324,22 +324,19 @@ RocmInstallationDetector::RocmInstallationDetector(
     : D(D) {
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
-  PrintROCmSearchDirs =
-      Args.hasArg(options::OPT_print_rocm_search_dirs);
+  PrintROCmSearchDirs = Args.hasArg(options::OPT_print_rocm_search_dirs);
   RocmDeviceLibPathArg =
       Args.getAllArgValues(options::OPT_rocm_device_lib_path_EQ);
   HIPPathArg = Args.getLastArgValue(options::OPT_hip_path_EQ);
-  HIPStdParPathArg =
-    Args.getLastArgValue(options::OPT_hipstdpar_path_EQ);
+  HIPStdParPathArg = Args.getLastArgValue(options::OPT_hipstdpar_path_EQ);
   HasHIPStdParLibrary =
     !HIPStdParPathArg.empty() && D.getVFS().exists(HIPStdParPathArg +
                                                    "/hipstdpar_lib.hpp");
   HIPRocThrustPathArg =
-    Args.getLastArgValue(options::OPT_hipstdpar_thrust_path_EQ);
+      Args.getLastArgValue(options::OPT_hipstdpar_thrust_path_EQ);
   HasRocThrustLibrary = !HIPRocThrustPathArg.empty() &&
                         D.getVFS().exists(HIPRocThrustPathArg + "/thrust");
-  HIPRocPrimPathArg =
-    Args.getLastArgValue(options::OPT_hipstdpar_prim_path_EQ);
+  HIPRocPrimPathArg = Args.getLastArgValue(options::OPT_hipstdpar_prim_path_EQ);
   HasRocPrimLibrary = !HIPRocPrimPathArg.empty() &&
                       D.getVFS().exists(HIPRocPrimPathArg + "/rocprim");
 

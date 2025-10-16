@@ -432,9 +432,10 @@ bool Options::processLinkerOptions(InputArgList &Args) {
     Arg->claim();
   }
 
-  LinkerOpts.AppExtensionSafe = Args.hasFlag(
-      options::OPT_fapplication_extension, options::OPT_fno_application_extension,
-      /*Default=*/LinkerOpts.AppExtensionSafe);
+  LinkerOpts.AppExtensionSafe =
+      Args.hasFlag(options::OPT_fapplication_extension,
+                   options::OPT_fno_application_extension,
+                   /*Default=*/LinkerOpts.AppExtensionSafe);
 
   if (::getenv("LD_NO_ENCRYPT") != nullptr)
     LinkerOpts.AppExtensionSafe = true;

@@ -2173,8 +2173,7 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
 
   // Default to "generic" unless -march is present or targetting the PS4/PS5.
   std::string TuneCPU;
-  if (!Args.hasArg(options::OPT_march_EQ) &&
-      !getToolChain().getTriple().isPS())
+  if (!Args.hasArg(options::OPT_march_EQ) && !getToolChain().getTriple().isPS())
     TuneCPU = "generic";
 
   // Override based on -mtune.

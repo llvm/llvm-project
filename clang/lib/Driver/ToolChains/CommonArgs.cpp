@@ -69,8 +69,7 @@ using namespace llvm::opt;
 
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
-  if (Args.hasArg(options::OPT_pg) &&
-      !Args.hasArg(options::OPT_mfentry))
+  if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
     return true;
 
   if (Triple.isAndroid())
@@ -249,17 +248,16 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   // without requiring new frame records to be created.
 
   bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
-  bool EnableFP =
-      mustUseNonLeafFramePointerForTarget(Triple) ||
-      Args.hasFlag(options::OPT_fno_omit_frame_pointer,
-                   options::OPT_fomit_frame_pointer, DefaultFP);
+  bool EnableFP = mustUseNonLeafFramePointerForTarget(Triple) ||
+                  Args.hasFlag(options::OPT_fno_omit_frame_pointer,
+                               options::OPT_fomit_frame_pointer, DefaultFP);
 
   bool DefaultLeafFP =
       useLeafFramePointerForTargetByDefault(Triple) ||
       (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
-  bool EnableLeafFP = Args.hasFlag(
-      options::OPT_mno_omit_leaf_frame_pointer,
-      options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
+  bool EnableLeafFP =
+      Args.hasFlag(options::OPT_mno_omit_leaf_frame_pointer,
+                   options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
   bool FPRegReserved = EnableFP || mustMaintainValidFrameChain(Args, Triple);
 
