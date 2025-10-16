@@ -219,7 +219,7 @@ static THREADLOCAL FakeStack* fake_stack_tls;
 static FakeStack* GetTLSFakeStack() { return fake_stack_tls; }
 void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
 #else
-static FakeStack* GetTLSFakeStack() { return 0; }
+static FakeStack* GetTLSFakeStack() { return nullptr; }
 void SetTLSFakeStack(FakeStack* fs) {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
