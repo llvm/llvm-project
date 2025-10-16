@@ -42,7 +42,8 @@ unsigned llvm::parseSDPatternOperatorProperties(const Record *R) {
   if (Properties & (1 << SDNPHasChain) && Properties & (1 << SDNPOptChain))
     PrintFatalError(R->getLoc(),
                     "Properties 'SDNPHasChain' and 'SDNPOptChain' cannot be "
-                    "both specified on node '" + R->getName() + "'!");
+                    "both specified on node '" +
+                        R->getName() + "'!");
 
   return Properties;
 }
