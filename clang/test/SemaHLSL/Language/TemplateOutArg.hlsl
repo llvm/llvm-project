@@ -195,6 +195,44 @@ T buzz(int X, T Y) {
   return X + Y;
 }
 
+// Case 4: Verify that the parameter modifier attributes are instantiated 
+// for both templated and non-templated arguments, and that the non-templated
+// out argument type is not modified by the template instantiation.
+
+// CHECK-LABEL: FunctionTemplateDecl {{.*}} fizz_two
+
+// Check the pattern decl.
+// CHECK: FunctionDecl {{.*}} fizz_two 'void (inout T, out int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} referenced V 'T'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
+// CHECK-NEXT: ParmVarDecl {{.*}} referenced I 'int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+
+// Check the 3 instantiations (int, float, & double).
+
+// CHECK-LABEL: FunctionDecl {{.*}} used fizz_two 'void (inout int, out int)' implicit_instantiation
+// CHECK: ParmVarDecl {{.*}} used V 'int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
+// CHECK: ParmVarDecl {{.*}} used I 'int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+
+// CHECK-LABEL: FunctionDecl {{.*}} used fizz_two 'void (inout float, out int)' implicit_instantiation
+// CHECK: ParmVarDecl {{.*}} used V 'float &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
+// CHECK: ParmVarDecl {{.*}} used I 'int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+
+// CHECK-LABEL: FunctionDecl {{.*}} used fizz_two 'void (inout double, out int)' implicit_instantiation
+// CHECK: ParmVarDecl {{.*}} used V 'double &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
+// CHECK: ParmVarDecl {{.*}} used I 'int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+template <typename T>
+void fizz_two(inout T V, out int I) {
+  V += 2;
+  I = V;
+}
+
 export void caller() {
   int X = 2;
   float Y = 3.3;
@@ -211,4 +249,8 @@ export void caller() {
   X = buzz(X, X);
   Y = buzz(X, Y);
   Z = buzz(X, Z);
+
+  fizz_two(X, X);
+  fizz_two(Y, X);
+  fizz_two(Z, X);
 }
