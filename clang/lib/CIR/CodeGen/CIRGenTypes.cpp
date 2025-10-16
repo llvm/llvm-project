@@ -420,6 +420,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::VariableArray: {
+    const VariableArrayType *a = cast<VariableArrayType>(ty);
+    if (a->getIndexTypeCVRQualifiers() != 0)
+      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+    // VLAs resolve to the innermost element type; this matches
+    // the return of alloca, and there isn't any obviously better choice.
+    resultType = convertTypeForMem(a->getElementType());
+    break;
+  }
+
   case Type::IncompleteArray: {
     const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
     if (arrTy->getIndexTypeCVRQualifiers() != 0)
