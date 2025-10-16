@@ -660,16 +660,17 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; COMMON-NEXT:    store i8 6, ptr [[TMP6]], align 1
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; COMMON:       [[PRED_STORE_CONTINUE12]]:
-; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[EXIT1:.*]]
+; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[EXIT:.*]]
 ; COMMON:       [[PRED_STORE_IF13]]:
 ; COMMON-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 7
 ; COMMON-NEXT:    store i8 7, ptr [[TMP7]], align 1
-; COMMON-NEXT:    br label %[[EXIT1]]
+; COMMON-NEXT:    br label %[[EXIT]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    br label %[[SCALAR_PH:.*]]
+; COMMON:       [[SCALAR_PH]]:
+; COMMON-NEXT:    br label %[[EXIT1:.*]]
 ; COMMON:       [[EXIT1]]:
-; COMMON-NEXT:    br label %[[SCALAR_PH1:.*]]
-; COMMON:       [[SCALAR_PH1]]:
-; COMMON-NEXT:    br [[EXIT:label %.*]]
-; COMMON:       [[SCALAR_PH:.*:]]
+; COMMON-NEXT:    ret void
 ;
 entry:
   br label %loop

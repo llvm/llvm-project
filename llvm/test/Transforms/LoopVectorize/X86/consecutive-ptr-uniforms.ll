@@ -166,7 +166,6 @@ attributes #0 = { "target-cpu"="knl" }
 ; CHECK:     LV: Found uniform instruction:   {{%.*}} = icmp eq i32 {{%.*}}, 0
 ; CHECK-NOT: LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
 ; CHECK:     LV: Found not uniform due to requiring predication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
-; CHECK:     LV: Found scalar instruction:   {{%.*}} = getelementptr inbounds [3 x i32], ptr @a, i32 0, i32 {{%.*}}
 ;
 ;
 @a = internal constant [3 x i32] [i32 7, i32 7, i32 0], align 1
@@ -215,8 +214,9 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:
-; FORCE-NEXT:    br [[RETURN:label %.*]]
-; FORCE:       [[SCALAR_PH:.*:]]
+; FORCE-NEXT:    br label %[[RETURN:.*]]
+; FORCE:       [[RETURN]]:
+; FORCE-NEXT:    ret void
 ;
 entry:
   br label %for.body

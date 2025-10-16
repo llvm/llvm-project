@@ -541,3 +541,22 @@ exit:                                 ; preds = %for.body
 ; CHECK-VS1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VS1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-VS1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VS1: [[PROF3]] = !{!"branch_weights", i32 8, i32 8}
+; CHECK-VS1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VS1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK-VS1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK-VS1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; CHECK-VS1: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK-VS1: [[PROF9]] = !{!"branch_weights", i32 10, i32 30}
+;.
+; CHECK-VS2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-VS2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK-VS2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VS2: [[PROF3]] = !{!"branch_weights", i32 8, i32 8}
+; CHECK-VS2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VS2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK-VS2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK-VS2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; CHECK-VS2: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK-VS2: [[PROF9]] = !{!"branch_weights", i32 10, i32 30}
+;.
