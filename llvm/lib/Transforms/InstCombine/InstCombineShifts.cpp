@@ -632,7 +632,8 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
       return false;
 
     // Both operands must be shiftable, pass through CxtI to preserve shift type
-    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC, CxtI) &&
+    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC,
+                              CxtI) &&
            canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, IC, CxtI);
   }
 
@@ -1678,8 +1679,8 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   // when the shift is exact and the add has nuw.
   const APInt *ShAmtAPInt, *ShlAmt, *AddC;
   if (match(Op1, m_APInt(ShAmtAPInt)) && I.isExact() &&
-      match(Op0, m_c_NUWAdd(m_NUWShl(m_Value(X), m_APInt(ShlAmt)),
-                            m_APInt(AddC))) &&
+      match(Op0,
+            m_c_NUWAdd(m_NUWShl(m_Value(X), m_APInt(ShlAmt)), m_APInt(AddC))) &&
       ShlAmt->uge(*ShAmtAPInt)) {
     unsigned ShAmt = ShAmtAPInt->getZExtValue();
     // Check if C is divisible by (1 << ShAmt)
