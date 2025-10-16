@@ -2644,7 +2644,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // RUN: %clang -march=clearwaterforest -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_UMSRS_M64,CHECK_NKL_M64
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_UMSR_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
