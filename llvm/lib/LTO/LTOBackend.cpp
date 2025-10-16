@@ -726,7 +726,6 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updateMemProfAttributes(Mod, CombinedIndex);
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
