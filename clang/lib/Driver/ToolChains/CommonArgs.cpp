@@ -226,7 +226,8 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   // * Should a frame record be created for non-leaf functions?
   // * Should a frame record be created for leaf functions?
   // * Is the frame pointer register reserved in non-leaf functions?
-  //   i.e. must it always point to either a new, valid frame record or be un-modified?
+  //   i.e. must it always point to either a new, valid frame record or be
+  //   un-modified?
   // * Is the frame pointer register reserved in leaf functions?
   //
   //  Not all combinations of these are valid:
@@ -236,22 +237,23 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   //
   // | Non-leaf | Leaf | Reserved In Non-Leaf  | Reserved In Leaf |
   // |----------|------|-----------------------|------------------|
-  // | N        | N    | N                     | N                | FramePointerKind::None
-  // | N        | N    | N                     | Y                | Invalid
-  // | N        | N    | Y                     | N                | Invalid
-  // | N        | N    | Y                     | Y                | FramePointerKind::Reserved
-  // | N        | Y    | N                     | N                | Invalid
-  // | N        | Y    | N                     | Y                | Invalid
-  // | N        | Y    | Y                     | N                | Invalid
-  // | N        | Y    | Y                     | Y                | Invalid
-  // | Y        | N    | N                     | N                | Invalid
-  // | Y        | N    | N                     | Y                | Invalid
-  // | Y        | N    | Y                     | N                | FramePointerKind::NonLeafNoReserve
-  // | Y        | N    | Y                     | Y                | FramePointerKind::NonLeaf
-  // | Y        | Y    | N                     | N                | Invalid
-  // | Y        | Y    | N                     | Y                | Invalid
-  // | Y        | Y    | Y                     | N                | Invalid
-  // | Y        | Y    | Y                     | Y                | FramePointerKind::All
+  // | N        | N    | N                     | N                |
+  // FramePointerKind::None | N        | N    | N                     | Y |
+  // Invalid | N        | N    | Y                     | N                |
+  // Invalid | N        | N    | Y                     | Y                |
+  // FramePointerKind::Reserved | N        | Y    | N                     | N |
+  // Invalid | N        | Y    | N                     | Y                |
+  // Invalid | N        | Y    | Y                     | N                |
+  // Invalid | N        | Y    | Y                     | Y                |
+  // Invalid | Y        | N    | N                     | N                |
+  // Invalid | Y        | N    | N                     | Y                |
+  // Invalid | Y        | N    | Y                     | N                |
+  // FramePointerKind::NonLeafNoReserve | Y        | N    | Y | Y |
+  // FramePointerKind::NonLeaf | Y        | Y    | N                     | N |
+  // Invalid | Y        | Y    | N                     | Y                |
+  // Invalid | Y        | Y    | Y                     | N                |
+  // Invalid | Y        | Y    | Y                     | Y                |
+  // FramePointerKind::All
   //
   // The FramePointerKind::Reserved case is currently only reachable for Arm,
   // which has the -mframe-chain= option which can (in combination with

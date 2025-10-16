@@ -211,7 +211,8 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::All, "all",
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
-                     "Disable frame pointer elimination for non-leaf frame but reserve the register in leaf functions"),
+                     "Disable frame pointer elimination for non-leaf frame but "
+                     "reserve the register in leaf functions"),
           clEnumValN(FramePointerKind::NonLeafNoReserve, "non-leaf-no-reserve",
                      "Disable frame pointer elimination for non-leaf frame"),
           clEnumValN(FramePointerKind::Reserved, "reserved",
