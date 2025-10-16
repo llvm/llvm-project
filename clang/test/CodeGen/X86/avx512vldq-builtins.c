@@ -987,7 +987,7 @@ __m256 test_mm256_mask_broadcast_f32x2(__m256 __O, __mmask8 __M, __m128 __A) {
   return _mm256_mask_broadcast_f32x2(__O, __M, __A); 
 }
 
-TEST_CONSTEXPR(match_m256(_mm256_mask_broadcast_f32x2(_mm256_setzero_ps(), 0xFF, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
+TEST_CONSTEXPR(match_m256(_mm256_mask_broadcast_f32x2(_mm256_setzero_ps(), 0xAA, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 0,2.f,0,2.f,0,2.f,0,2.f));
 
 __m256 test_mm256_maskz_broadcast_f32x2(__mmask8 __M, __m128 __A) {
   // CHECK-LABEL: test_mm256_maskz_broadcast_f32x2
@@ -996,7 +996,7 @@ __m256 test_mm256_maskz_broadcast_f32x2(__mmask8 __M, __m128 __A) {
   return _mm256_maskz_broadcast_f32x2(__M, __A); 
 }
 
-TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x2(0xFF, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
+TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x2(0xAA, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 0,2.f,0,2.f,0,2.f,0,2.f));
 
 __m256d test_mm256_broadcast_f64x2(double const* __A) {
   // CHECK-LABEL: test_mm256_broadcast_f64x2
@@ -1012,7 +1012,7 @@ __m256d test_mm256_mask_broadcast_f64x2(__m256d __O, __mmask8 __M, double const*
   return _mm256_mask_broadcast_f64x2(__O, __M, _mm_loadu_pd(__A)); 
 }
 
-TEST_CONSTEXPR(match_m256d(_mm256_mask_broadcast_f64x2(_mm256_setzero_pd(), 0xFF, (__m128d)(__v2df){1.0,2.0}), 1.0,2.0,1.0,2.0));
+TEST_CONSTEXPR(match_m256d(_mm256_mask_broadcast_f64x2(_mm256_setzero_pd(), 0xA, (__m128d)(__v2df){1.0,2.0}), 0,2.0,0,2.0));
 
 __m256d test_mm256_maskz_broadcast_f64x2(__mmask8 __M, double const* __A) {
   // CHECK-LABEL: test_mm256_maskz_broadcast_f64x2
@@ -1021,7 +1021,7 @@ __m256d test_mm256_maskz_broadcast_f64x2(__mmask8 __M, double const* __A) {
   return _mm256_maskz_broadcast_f64x2(__M, _mm_loadu_pd(__A)); 
 }
 
-TEST_CONSTEXPR(match_m256d(_mm256_maskz_broadcast_f64x2(0xFF, (__m128d)(__v2df){1.0,2.0}), 1.0,2.0,1.0,2.0));
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_broadcast_f64x2(0xA, (__m128d)(__v2df){1.0,2.0}), 0,2.0,0,2.0));
 
 __m128i test_mm_broadcast_i32x2(__m128i __A) {
   // CHECK-LABEL: test_mm_broadcast_i32x2
@@ -1071,7 +1071,7 @@ __m256i test_mm256_maskz_broadcast_i32x2(__mmask8 __M, __m128i __A) {
   return _mm256_maskz_broadcast_i32x2(__M, __A); 
 }
 
-TEST_CONSTEXPR(match_v8si(_mm256_maskz_broadcast_i32x2(0xFF, (__m128i)(__v4si){0,1,2,3}), 0,1,0,1,0,1,0,1));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_broadcast_i32x2(0xAA, (__m128i)(__v4si){0,1,2,3}), 0,1,0,1,0,1,0,1));
 
 __m256i test_mm256_broadcast_i64x2(__m128i const* __A) {
   // CHECK-LABEL: test_mm256_broadcast_i64x2
