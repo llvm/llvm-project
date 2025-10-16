@@ -183,6 +183,10 @@ static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
 }
 
+static constexpr StringLiteral getVarNameAttrName() {
+  return VarNameAttr::name;
+}
+
 static constexpr StringLiteral getCombinedConstructsAttrName() {
   return CombinedConstructsTypeAttr::name;
 }
