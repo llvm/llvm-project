@@ -79,8 +79,11 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_CXX_FLAGS_DEBUG=" /Z7 /Ob0 /Od /RTC1" \
+      -D CMAKE_CXX_FLAGS="-w" \
+      -D CMAKE_C_FLAGS="-w" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+
+#      -D CMAKE_CXX_FLAGS_DEBUG=" /Z7 /Ob0 /Od /RTC1" \
 
 #      -D COMPILER_SUPPORTS_WARNING_WEAK_VTABLES=OFF \
 #      -D CXX_SUPPORTS_WERROR_GLOBAL_CONSTRUCTOR=OFF \
@@ -176,7 +179,7 @@ start-group "ninja"
 
 
 # Targets are not escaped as they are passed as separate arguments.
-ninja -s -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
 
 if [[ "${runtime_targets}" != "" ]]; then
   start-group "ninja runtimes"
