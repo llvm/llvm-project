@@ -228,6 +228,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
 
   // Wire up the new instruction and update state.
   assert(NewInst && "Expected replacement instruction");
+  NewInst->copyMetadata(Inst);
   NewInst->takeName(&Inst);
   InsertedValues.insert(NewInst);
   Inst.replaceAllUsesWith(NewInst);
