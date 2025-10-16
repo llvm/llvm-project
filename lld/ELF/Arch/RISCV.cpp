@@ -1483,56 +1483,39 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
 
-class RISCVRelocScan : public RelocScan {
-public:
-  StringRef rvVendor;
-
-  RISCVRelocScan(Ctx &ctx, InputSectionBase *sec = nullptr)
-      : RelocScan(ctx, sec) {}
-  template <class ELFT, class RelTy>
-  void scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
-            int64_t addend);
-};
-
-template <class ELFT, class RelTy>
-void RISCVRelocScan::scan(typename Relocs<RelTy>::const_iterator &it,
-                          RelType type, int64_t addend) {
-  const RelTy &rel = *it;
-  uint32_t symIndex = rel.getSymbol(false);
-  Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
-
-  if (type == R_RISCV_VENDOR) {
-    if (!rvVendor.empty())
-      Err(ctx) << getErrorLoc(ctx, sec->content().data() + it->r_offset)
-               << "malformed consecutive R_RISCV_VENDOR relocations";
-    rvVendor = sym.getName();
-    return;
-  } else if (!rvVendor.empty()) {
-    Err(ctx) << getErrorLoc(ctx, sec->content().data() + it->r_offset)
-             << "unknown vendor-specific relocation (" << type.v
-             << ") in vendor namespace \"" << rvVendor << "\" against symbol "
-             << &sym;
-    rvVendor = "";
-    return;
-  }
-
-  RelocScan::scan<ELFT, RelTy>(it, type, addend);
-}
-
 template <class ELFT, class RelTy>
 void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RISCVRelocScan rs(ctx, &sec);
+  RelocScan rs(ctx, &sec);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
+  StringRef rvVendor;
   for (auto it = rels.begin(); it != rels.end(); ++it) {
-    auto type = it->getType(false);
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    const uint8_t *loc = sec.content().data() + it->r_offset;
+
+    if (type == R_RISCV_VENDOR) {
+      if (!rvVendor.empty())
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "malformed consecutive R_RISCV_VENDOR relocations";
+      rvVendor = sym.getName();
+      continue;
+    } else if (!rvVendor.empty()) {
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "unknown vendor-specific relocation (" << type.v
+               << ") in vendor namespace \"" << rvVendor << "\" against symbol "
+               << &sym;
+      rvVendor = "";
+      continue;
+    }
+
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20, ALIGN relocations, R_PPC64_ADDR64 and the
-  // branch-to-branch optimization.
+  // R_RISCV_PCREL_HI20.
   llvm::stable_sort(sec.relocs(),
                     [](const Relocation &lhs, const Relocation &rhs) {
                       return lhs.offset < rhs.offset;
