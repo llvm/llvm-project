@@ -3939,6 +3939,8 @@ class Token(Structure):
         cursor._tu = self._tu
 
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
+        if cursor.is_null():
+            return None
 
         return cursor
 

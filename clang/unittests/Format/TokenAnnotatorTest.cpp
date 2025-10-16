@@ -1490,6 +1490,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
 
+  Tokens = annotate("bool foo{requires { 0; }};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_RequiresExpressionLBrace);
+
   Tokens = annotate("if (requires(int i) { i + 5; }) return;");
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);

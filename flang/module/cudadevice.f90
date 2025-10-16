@@ -2023,6 +2023,26 @@ implicit none
     end subroutine
   end interface
 
+  ! Generic load, count is in bytes
+  interface
+    attributes(device) subroutine tma_bulk_g2s(barrier, src, dst, nbytes)
+      !dir$ ignore_tkr src, dst
+      integer(8), shared :: barrier
+      integer(4), device :: src(*)
+      integer(4), shared :: dst(*)
+      integer(4), value  :: nbytes
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) subroutine tma_bulk_s2g(src, dst, nbytes)
+      !dir$ ignore_tkr src, dst
+      integer(4), shared  :: src(*)
+      integer(4), device  :: dst(*)
+      integer(4), value   :: nbytes
+    end subroutine
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()
