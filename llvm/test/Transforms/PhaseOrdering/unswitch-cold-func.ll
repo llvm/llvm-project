@@ -8,7 +8,7 @@
 
 ;; IR was generated from the following loop nest, profiled when called
 ;; with M=0 and N=0.
-;; void hotFunction(bool cond, int M, int N, int * A, int *B, int *C) {
+;; void function(bool cond, int M, int N, int * A, int *B, int *C) {
 ;;   for (unsigned j = 0; j < M; j++)
 ;;     for (unsigned i=0; i < N; i++) {
 ;;       A[i] = B[i] + C[i];
@@ -16,8 +16,8 @@
 ;;     }
 ;; }
 
-define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, ptr %C) !prof !36 {
-; CHECK-LABEL: define void @_Z11hotFunctionbiiPiS_S_
+define void @_Z11functionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, ptr %C) !prof !36 {
+; CHECK-LABEL: define void @_Z11functionbiiPiS_S_
 ; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {{.*}}{
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i32 [[M]], 0
