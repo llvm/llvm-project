@@ -13836,13 +13836,20 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       VDecl->setInvalidDecl();
   }
 
-  // C++ [module.import/6] external definitions are not permitted in header
-  // units.
+  // C++ [module.import/6]
+  //   ...
+  //   A header unit shall not contain a definition of a non-inline function or
+  //   variable whose name has external linkage.
+  //
+  // We choose to allow weak & selectany definitions, as they are common in
+  // headers, and have semantics similar to inline definitions which are allowed
+  // in header units.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
       !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl) &&
-      !VDecl->getInstantiatedFromStaticDataMember()) {
+      !VDecl->getInstantiatedFromStaticDataMember() &&
+      !(VDecl->hasAttr<SelectAnyAttr>() || VDecl->hasAttr<WeakAttr>())) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -16180,16 +16187,24 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     }
   }
 
-  // C++ [module.import/6] external definitions are not permitted in header
-  // units.  Deleted and Defaulted functions are implicitly inline (but the
+  // C++ [module.import/6]
+  //   ...
+  //   A header unit shall not contain a definition of a non-inline function or
+  //   variable whose name has external linkage.
+  //
+  // Deleted and Defaulted functions are implicitly inline (but the
   // inline state is not set at this point, so check the BodyKind explicitly).
+  // We choose to allow weak & selectany definitions, as they are common in
+  // headers, and have semantics similar to inline definitions which are allowed
+  // in header units.
   // FIXME: Consider an alternate location for the test where the inlined()
   // state is complete.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !FD->isInvalidDecl() && !FD->isInlined() &&
       BodyKind != FnBodyKind::Delete && BodyKind != FnBodyKind::Default &&
       FD->getFormalLinkage() == Linkage::External && !FD->isTemplated() &&
-      !FD->isTemplateInstantiation()) {
+      !FD->isTemplateInstantiation() &&
+      !(FD->hasAttr<SelectAnyAttr>() || FD->hasAttr<WeakAttr>())) {
     assert(FD->isThisDeclarationADefinition());
     Diag(FD->getLocation(), diag::err_extern_def_in_header_unit);
     FD->setInvalidDecl();
