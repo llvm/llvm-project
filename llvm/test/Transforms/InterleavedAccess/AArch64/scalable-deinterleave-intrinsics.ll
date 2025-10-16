@@ -289,6 +289,225 @@ define void @interleave_wide_nxdouble_factor2(ptr %ptr, <vscale x 4 x double> %l
   ret void
 }
 
+define void @deinterleave1_nxi64_factor3(ptr %ptr, <vscale x 4 x i64>* %s1, <vscale x 4 x i64>* %s2, <vscale x 4 x i64>* %s3) #0 {
+; CHECK-LABEL: define void @deinterleave1_nxi64_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], ptr [[S1:%.*]], ptr [[S2:%.*]], ptr [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> splat (i1 true), ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN1]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN1]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP6]], i64 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 3
+; CHECK-NEXT:    [[LDN2:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> splat (i1 true), ptr [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN2]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP9]], i64 2)
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN2]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP11]], i64 2)
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN2]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP13]], i64 2)
+; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } poison, <vscale x 4 x i64> [[TMP10]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP15]], <vscale x 4 x i64> [[TMP12]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP16]], <vscale x 4 x i64> [[TMP14]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP17]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP17]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP17]], 2
+; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP18]], ptr [[S1]], align 32
+; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP19]], ptr [[S2]], align 32
+; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP20]], ptr [[S3]], align 32
+; CHECK-NEXT:    ret void
+;
+  %wide.vec = load <vscale x 12 x i64>, ptr %ptr, align 8
+  %ldN = tail call { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave3.nxv12i64(<vscale x 12 x i64> %wide.vec)
+
+  %3 = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } %ldN, 0
+  %4 = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } %ldN, 1
+  %5 = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } %ldN, 2
+
+  store <vscale x 4 x i64> %3, <vscale x 4 x i64>* %s1
+  store <vscale x 4 x i64> %4, <vscale x 4 x i64>* %s2
+  store <vscale x 4 x i64> %5, <vscale x 4 x i64>* %s3
+  ret void
+}
+
+define void @deinterleave2_nxi64_factor3(ptr %ptr, <vscale x 8 x i64>* %s1, <vscale x 8 x i64>* %s2, <vscale x 8 x i64>* %s3) #0 {
+; CHECK-LABEL: define void @deinterleave2_nxi64_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], ptr [[S1:%.*]], ptr [[S2:%.*]], ptr [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> splat (i1 true), ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN1]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN1]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP6]], i64 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 3
+; CHECK-NEXT:    [[LDN2:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> splat (i1 true), ptr [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN2]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP9]], i64 2)
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN2]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP11]], i64 2)
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN2]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP13]], i64 2)
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 6
+; CHECK-NEXT:    [[LDN3:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> splat (i1 true), ptr [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN3]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP10]], <vscale x 2 x i64> [[TMP16]], i64 4)
+; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN3]], 1
+; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP12]], <vscale x 2 x i64> [[TMP18]], i64 4)
+; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN3]], 2
+; CHECK-NEXT:    [[TMP21:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP14]], <vscale x 2 x i64> [[TMP20]], i64 4)
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 9
+; CHECK-NEXT:    [[LDN4:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> splat (i1 true), ptr [[TMP22]])
+; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN4]], 0
+; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP17]], <vscale x 2 x i64> [[TMP23]], i64 6)
+; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN4]], 1
+; CHECK-NEXT:    [[TMP26:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP19]], <vscale x 2 x i64> [[TMP25]], i64 6)
+; CHECK-NEXT:    [[TMP27:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN4]], 2
+; CHECK-NEXT:    [[TMP28:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP21]], <vscale x 2 x i64> [[TMP27]], i64 6)
+; CHECK-NEXT:    [[TMP29:%.*]] = insertvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } poison, <vscale x 8 x i64> [[TMP24]], 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } [[TMP29]], <vscale x 8 x i64> [[TMP26]], 1
+; CHECK-NEXT:    [[TMP31:%.*]] = insertvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } [[TMP30]], <vscale x 8 x i64> [[TMP28]], 2
+; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } [[TMP31]], 0
+; CHECK-NEXT:    [[TMP33:%.*]] = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } [[TMP31]], 1
+; CHECK-NEXT:    [[TMP34:%.*]] = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } [[TMP31]], 2
+; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP32]], ptr [[S1]], align 64
+; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP33]], ptr [[S2]], align 64
+; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP34]], ptr [[S3]], align 64
+; CHECK-NEXT:    ret void
+;
+  %wide.vec = load <vscale x 24 x i64>, ptr %ptr, align 8
+  %ldN = tail call { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } @llvm.vector.deinterleave3.nxv24i64(<vscale x 24 x i64> %wide.vec)
+
+  %3 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } %ldN, 0
+  %4 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } %ldN, 1
+  %5 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } %ldN, 2
+
+  store <vscale x 8 x i64> %3, <vscale x 8 x i64>* %s1
+  store <vscale x 8 x i64> %4, <vscale x 8 x i64>* %s2
+  store <vscale x 8 x i64> %5, <vscale x 8 x i64>* %s3
+  ret void
+}
+
+define void @deinterleave_neg1_nxi64_factor3(ptr %ptr, <vscale x 1 x i64>* %s1, <vscale x 1 x i64>* %s2, <vscale x 1 x i64>* %s3) #0 {
+; CHECK-LABEL: define void @deinterleave_neg1_nxi64_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], ptr [[S1:%.*]], ptr [[S2:%.*]], ptr [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 3 x i64>, ptr [[PTR]], align 8
+; CHECK-NEXT:    [[LDN:%.*]] = tail call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.vector.deinterleave3.nxv3i64(<vscale x 3 x i64> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[LDN]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[LDN]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[LDN]], 2
+; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP1]], ptr [[S1]], align 8
+; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP2]], ptr [[S2]], align 8
+; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP3]], ptr [[S3]], align 8
+; CHECK-NEXT:    ret void
+;
+  %wide.vec = load <vscale x 3 x i64>, ptr %ptr, align 8
+  %ldN = tail call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.vector.deinterleave3.nxv3i64(<vscale x 3 x i64> %wide.vec)
+
+  %3 = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } %ldN, 0
+  %4 = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } %ldN, 1
+  %5 = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } %ldN, 2
+
+  store <vscale x 1 x i64> %3, <vscale x 1 x i64>* %s1
+  store <vscale x 1 x i64> %4, <vscale x 1 x i64>* %s2
+  store <vscale x 1 x i64> %5, <vscale x 1 x i64>* %s3
+  ret void
+}
+
+define void @deinterleave_neg2_nxi8_factor3(ptr %ptr, <vscale x 8 x i8>* %s1, <vscale x 8 x i8>* %s2, <vscale x 8 x i8>* %s3) #0 {
+; CHECK-LABEL: define void @deinterleave_neg2_nxi8_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], ptr [[S1:%.*]], ptr [[S2:%.*]], ptr [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 24 x i8>, ptr [[PTR]], align 8
+; CHECK-NEXT:    [[LDN:%.*]] = tail call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave3.nxv24i8(<vscale x 24 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[LDN]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[LDN]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[LDN]], 2
+; CHECK-NEXT:    store <vscale x 8 x i8> [[TMP1]], ptr [[S1]], align 8
+; CHECK-NEXT:    store <vscale x 8 x i8> [[TMP2]], ptr [[S2]], align 8
+; CHECK-NEXT:    store <vscale x 8 x i8> [[TMP3]], ptr [[S3]], align 8
+; CHECK-NEXT:    ret void
+;
+  %wide.vec = load <vscale x 24 x i8>, ptr %ptr, align 8
+  %ldN = tail call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave3.nxv12i8(<vscale x 24 x i8> %wide.vec)
+
+  %3 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %ldN, 0
+  %4 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %ldN, 1
+  %5 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %ldN, 2
+
+  store <vscale x 8 x i8> %3, <vscale x 8 x i8>* %s1
+  store <vscale x 8 x i8> %4, <vscale x 8 x i8>* %s2
+  store <vscale x 8 x i8> %5, <vscale x 8 x i8>* %s3
+  ret void
+}
+
+define void @interleave1_nxi64_factor3(ptr %ptr, <vscale x 8 x i64> %s1, <vscale x 8 x i64> %s2, <vscale x 8 x i64> %s3) #0 {
+; CHECK-LABEL: define void @interleave1_nxi64_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 8 x i64> [[S1:%.*]], <vscale x 8 x i64> [[S2:%.*]], <vscale x 8 x i64> [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S1]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S3]], i64 0)
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i1> splat (i1 true), ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 3
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S1]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S2]], i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S3]], i64 2)
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i1> splat (i1 true), ptr [[TMP5]])
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 6
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S1]], i64 4)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S2]], i64 4)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S3]], i64 4)
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[TMP12]], <vscale x 2 x i1> splat (i1 true), ptr [[TMP9]])
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 9
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S1]], i64 6)
+; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S2]], i64 6)
+; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[S3]], i64 6)
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> [[TMP14]], <vscale x 2 x i64> [[TMP15]], <vscale x 2 x i64> [[TMP16]], <vscale x 2 x i1> splat (i1 true), ptr [[TMP13]])
+; CHECK-NEXT:    ret void
+;
+  %interleave = tail call <vscale x 24 x i64> @llvm.vector.interleave3.nxv24i64(<vscale x 8 x i64> %s1, <vscale x 8 x i64> %s2, <vscale x 8 x i64> %s3)
+
+  store <vscale x 24 x i64> %interleave, ptr %ptr, align 4
+  ret void
+}
+
+define void @interleave2_nxi64_factor3(ptr %ptr, <vscale x 4 x i64> %s1, <vscale x 4 x i64> %s2, <vscale x 4 x i64> %s3) #0 {
+; CHECK-LABEL: define void @interleave2_nxi64_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 4 x i64> [[S1:%.*]], <vscale x 4 x i64> [[S2:%.*]], <vscale x 4 x i64> [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv4i64(<vscale x 4 x i64> [[S1]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv4i64(<vscale x 4 x i64> [[S2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv4i64(<vscale x 4 x i64> [[S3]], i64 0)
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> [[TMP2]], <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i1> splat (i1 true), ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[PTR]], i64 3
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv4i64(<vscale x 4 x i64> [[S1]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv4i64(<vscale x 4 x i64> [[S2]], i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv4i64(<vscale x 4 x i64> [[S3]], i64 2)
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i1> splat (i1 true), ptr [[TMP5]])
+; CHECK-NEXT:    ret void
+;
+  %interleave = tail call <vscale x 12 x i64> @llvm.vector.interleave3.nxv12i64(<vscale x 4 x i64> %s1, <vscale x 4 x i64> %s2, <vscale x 4 x i64> %s3)
+
+  store <vscale x 12 x i64> %interleave, ptr %ptr, align 4
+  ret void
+}
+
+define void @interleave_neg_nxi8_factor3(ptr %ptr, <vscale x 8 x i8> %s1, <vscale x 8 x i8> %s2, <vscale x 8 x i8> %s3) #0 {
+; CHECK-LABEL: define void @interleave_neg_nxi8_factor3
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 8 x i8> [[S1:%.*]], <vscale x 8 x i8> [[S2:%.*]], <vscale x 8 x i8> [[S3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = tail call <vscale x 24 x i8> @llvm.vector.interleave3.nxv24i8(<vscale x 8 x i8> [[S1]], <vscale x 8 x i8> [[S2]], <vscale x 8 x i8> [[S3]])
+; CHECK-NEXT:    store <vscale x 24 x i8> [[INTERLEAVE]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %interleave = tail call <vscale x 24 x i8> @llvm.vector.interleave3.nxv24i8(<vscale x 8 x i8> %s1, <vscale x 8 x i8> %s2, <vscale x 8 x i8> %s3)
+
+  store <vscale x 24 x i8> %interleave, ptr %ptr, align 4
+  ret void
+}
+
 declare { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8>)
 declare { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16>)
 declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
@@ -311,5 +530,16 @@ declare <vscale x 4 x ptr> @llvm.vector.interleave2.nxv4p0(<vscale x 2 x ptr>, <
 
 ; Larger interleaves to test 'legalization'
 declare <vscale x 8 x double> @llvm.vector.interleave2.nxv8f64(<vscale x 4 x double>, <vscale x 4 x double>)
+
+; De-Interleaves with Factor=3
+declare { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.vector.deinterleave3.nxv3i64(<vscale x 3 x i64>)
+declare { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave3.nxv12i64(<vscale x 12 x i64>)
+declare { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } @llvm.vector.deinterleave3.nxv24i64(<vscale x 24 x i64>)
+declare { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave3.nxv24i8(<vscale x 24 x i8>)
+
+; Interleaves with Factor=3
+declare <vscale x 24 x i8> @llvm.vector.interleave3.nxv24i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>)
+declare <vscale x 24 x i64> @llvm.vector.interleave3.nxv24i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64>)
+declare <vscale x 12 x i64> @llvm.vector.interleave3.nxv12i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>)
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
