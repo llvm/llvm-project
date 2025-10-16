@@ -2,10 +2,13 @@ set(libc_archive_targets "")
 set(libc_archive_names "")
 set(libc_archive_entrypoint_lists "")
 if(LLVM_LIBC_FULL_BUILD)
-  list(APPEND libc_archive_names c m)
-  list(APPEND libc_archive_targets libc libm)
+  list(APPEND libc_archive_names c m annex_k)
+  list(APPEND libc_archive_targets libc libm libannex_k)
   list(APPEND libc_archive_entrypoint_lists
-       TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS)
+       TARGET_LIBC_ENTRYPOINTS
+       TARGET_LIBM_ENTRYPOINTS
+       TARGET_ANNEX_K_ENTRYPOINTS
+  )
 else()
   list(APPEND libc_archive_names llvmlibc)
   list(APPEND libc_archive_targets libc)

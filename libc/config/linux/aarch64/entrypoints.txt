@@ -1,3 +1,5 @@
+set(TARGET_ANNEX_K_ENTRYPOINTS "")
+
 set(TARGET_LIBC_ENTRYPOINTS
     # ctype.h entrypoints
     libc.src.ctype.isalnum
@@ -1177,4 +1179,5 @@ endif()
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
+  ${TARGET_ANNEX_K_ENTRYPOINTS}
 )
