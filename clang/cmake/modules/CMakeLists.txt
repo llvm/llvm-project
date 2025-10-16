@@ -15,7 +15,12 @@ set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
 string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_builddir "${LLVM_LIBRARY_DIR}")
 set(llvm_cmake_builddir "${llvm_builddir}/cmake/llvm")
-set(clang_cmake_builddir "${llvm_builddir}/cmake/clang")
+if(CLANG_BUILT_STANDALONE)
+  # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+  set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
+else()
+  set(clang_cmake_builddir "${llvm_builddir}/cmake/clang")
+endif()
 
 get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
 export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)

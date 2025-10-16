@@ -718,7 +718,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
     // and followed by a semicolon, GCC will reject (it appears to parse the
     // attributes as part of a statement in that case). That looks like a bug.
     if (!getLangOpts().CPlusPlus || Tok.is(tok::semi))
-      Attrs.takeAllFrom(TempAttrs);
+      Attrs.takeAllAppendingFrom(TempAttrs);
     else {
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
@@ -2407,7 +2407,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs,
       PrecedingLabel);
 
-  Attrs.takeAllFrom(TempAttrs);
+  Attrs.takeAllPrependingFrom(TempAttrs);
 
   // Start of attribute range may already be set for some invalid input.
   // See PR46336.
@@ -2529,9 +2529,9 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 
   StmtResult TryBlock(ParseCompoundStatement(
-      /*isStmtExpr=*/false, Scope::DeclScope | Scope::TryScope |
-                                Scope::CompoundStmtScope |
-                                (FnTry ? Scope::FnTryCatchScope : 0)));
+      /*isStmtExpr=*/false,
+      Scope::DeclScope | Scope::TryScope | Scope::CompoundStmtScope |
+          (FnTry ? Scope::FnTryCatchScope : Scope::NoScope)));
   if (TryBlock.isInvalid())
     return TryBlock;
 
@@ -2593,9 +2593,9 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // C++ 3.3.2p3:
   // The name in a catch exception-declaration is local to the handler and
   // shall not be redeclared in the outermost block of the handler.
-  ParseScope CatchScope(this, Scope::DeclScope | Scope::ControlScope |
-                                  Scope::CatchScope |
-                                  (FnCatch ? Scope::FnTryCatchScope : 0));
+  ParseScope CatchScope(
+      this, Scope::DeclScope | Scope::ControlScope | Scope::CatchScope |
+                (FnCatch ? Scope::FnTryCatchScope : Scope::NoScope));
 
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.

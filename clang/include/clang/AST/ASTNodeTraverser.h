@@ -620,6 +620,11 @@ public:
       Visit(E);
   }
 
+  void VisitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *D) {
+    for (const auto *E : D->varlist())
+      Visit(E);
+  }
+
   void VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
     Visit(D->getCombiner());
     if (const auto *Initializer = D->getInitializer())
@@ -765,7 +770,7 @@ public:
       // it will not be in the parent context:
       if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
         if (TT->isTagOwned())
-          Visit(TT->getOriginalDecl());
+          Visit(TT->getDecl());
     } else {
       Visit(D->getFriendDecl());
     }

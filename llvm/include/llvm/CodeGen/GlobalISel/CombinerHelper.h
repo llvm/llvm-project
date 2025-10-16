@@ -848,6 +848,10 @@ public:
 
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
 
+  bool matchRepeatedFPDivisor(MachineInstr &MI,
+                              SmallVector<MachineInstr *> &MatchInfo) const;
+  void applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
+
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
   /// Transform G_ADD(G_SUB(y, x), x) to y.
   bool matchAddSubSameReg(MachineInstr &MI, Register &Src) const;

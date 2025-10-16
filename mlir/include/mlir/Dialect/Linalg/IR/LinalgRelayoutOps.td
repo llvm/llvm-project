@@ -57,7 +57,11 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// tile factors.
     DenseMap<int64_t, OpFoldResult> getDimAndTileMapping();
 
-    /// Return the tile sizes as OpFoldResult.
+    // TODO: Return the folded result.
+    /// Return the tile sizes as OpFoldResult. Will return the Value
+    /// of the constant Op, not the constant Attribute.
+    /// E.g., for %size = arith.constant 1 : i32 will return %size,
+    /// not 1.
     SmallVector<OpFoldResult> getMixedTiles();
 
     /// Return the tile sizes as `int64_t`. If a tile size is dynamic
@@ -238,6 +242,14 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
                                     ArrayRef<int64_t> outputShape,
                                     ArrayRef<int64_t> outerDimsPerm,
                                     ArrayRef<OpFoldResult> innerTiles);
+
+    // Same as above function but here dynamic dimensions are assumed
+    // to require padding.
+    static bool requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
+                                          ArrayRef<int64_t> innerDimsPos,
+                                          ArrayRef<int64_t> outputShape,
+                                          ArrayRef<int64_t> outerDimsPerm,
+                                          ArrayRef<OpFoldResult> innerTiles);
 
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
