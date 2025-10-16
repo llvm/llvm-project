@@ -788,6 +788,9 @@ public:
   LLVM_ABI void ChangeToBA(const BlockAddress *BA, int64_t Offset,
                            unsigned TargetFlags = 0);
 
+  /// ChangeToCPI - Replace this operand with a new constant pool index operand.
+  LLVM_ABI void ChangeToCPI(unsigned Idx, int Offset, unsigned TargetFlags = 0);
+
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   LLVM_ABI void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
 

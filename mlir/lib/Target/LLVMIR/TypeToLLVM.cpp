@@ -74,9 +74,7 @@ public:
                   LLVM::LLVMPointerType, LLVM::LLVMStructType, VectorType,
                   LLVM::LLVMTargetExtType, PtrLikeTypeInterface>(
                 [this](auto type) { return this->translate(type); })
-            .Default([](Type t) -> llvm::Type * {
-              llvm_unreachable("unknown LLVM dialect type");
-            });
+            .DefaultUnreachable("unknown LLVM dialect type");
 
     // Cache the result of the conversion and return.
     knownTranslations.try_emplace(type, translated);

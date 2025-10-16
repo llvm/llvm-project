@@ -1464,6 +1464,27 @@ define ptr @freeze_ptrmask_nonnull(ptr %p, i64 noundef %m) {
   ret ptr %fr
 }
 
+define i64 @pr161492_1(i1 %cond) {
+; CHECK-LABEL: define i64 @pr161492_1(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:    ret i64 0
+;
+  %fr1 = freeze i64 poison
+  %fr2 = freeze i64 poison
+  %ret = select i1 %cond, i64 %fr1, i64 %fr2
+  ret i64 %ret
+}
+
+define i64 @pr161492_2(i1 %cond) {
+; CHECK-LABEL: define i64 @pr161492_2(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:    ret i64 0
+;
+  %fr = freeze i64 poison
+  %ret = select i1 %cond, i64 %fr, i64 %fr
+  ret i64 %ret
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}

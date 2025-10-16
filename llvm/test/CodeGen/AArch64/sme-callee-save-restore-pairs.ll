@@ -47,12 +47,18 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-NEXT:  // %bb.1:
 ; NOPAIR-NEXT:    smstop sm
 ; NOPAIR-NEXT:  .LBB0_2:
+; NOPAIR-NEXT:    rdvl x8, #1
+; NOPAIR-NEXT:    addsvl x8, x8, #-1
+; NOPAIR-NEXT:    cbz x8, .LBB0_4
+; NOPAIR-NEXT:  // %bb.3:
+; NOPAIR-NEXT:    brk #0x1
+; NOPAIR-NEXT:  .LBB0_4:
 ; NOPAIR-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    bl my_func2
-; NOPAIR-NEXT:    tbz w19, #0, .LBB0_4
-; NOPAIR-NEXT:  // %bb.3:
+; NOPAIR-NEXT:    tbz w19, #0, .LBB0_6
+; NOPAIR-NEXT:  // %bb.5:
 ; NOPAIR-NEXT:    smstart sm
-; NOPAIR-NEXT:  .LBB0_4:
+; NOPAIR-NEXT:  .LBB0_6:
 ; NOPAIR-NEXT:    addvl sp, sp, #1
 ; NOPAIR-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -127,12 +133,18 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; PAIR-NEXT:  // %bb.1:
 ; PAIR-NEXT:    smstop sm
 ; PAIR-NEXT:  .LBB0_2:
+; PAIR-NEXT:    rdvl x8, #1
+; PAIR-NEXT:    addsvl x8, x8, #-1
+; PAIR-NEXT:    cbz x8, .LBB0_4
+; PAIR-NEXT:  // %bb.3:
+; PAIR-NEXT:    brk #0x1
+; PAIR-NEXT:  .LBB0_4:
 ; PAIR-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; PAIR-NEXT:    bl my_func2
-; PAIR-NEXT:    tbz w19, #0, .LBB0_4
-; PAIR-NEXT:  // %bb.3:
+; PAIR-NEXT:    tbz w19, #0, .LBB0_6
+; PAIR-NEXT:  // %bb.5:
 ; PAIR-NEXT:    smstart sm
-; PAIR-NEXT:  .LBB0_4:
+; PAIR-NEXT:  .LBB0_6:
 ; PAIR-NEXT:    addvl sp, sp, #1
 ; PAIR-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload

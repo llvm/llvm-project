@@ -3339,12 +3339,6 @@ llvm.func @distribute() {
 }
 
 // CHECK-LABEL: define void @distribute
-// CHECK:         call void @[[OUTLINED:.*]]({{.*}})
-// CHECK-NEXT:    br label %[[EXIT:.*]]
-// CHECK:       [[EXIT]]:
-// CHECK:         ret void
-
-// CHECK:       define internal void @[[OUTLINED]]({{.*}})
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i64
 // CHECK:         %[[UB:.*]] = alloca i64
@@ -3381,9 +3375,7 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
 
 // CHECK:       define internal void @[[OUTLINED_PARALLEL]]
-// CHECK:         call void @[[OUTLINED_DISTRIBUTE:.*]]({{.*}})
-
-// CHECK:       define internal void @[[OUTLINED_DISTRIBUTE]]
+// CHECK:       distribute.alloca:
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i32
 // CHECK:         %[[UB:.*]] = alloca i32

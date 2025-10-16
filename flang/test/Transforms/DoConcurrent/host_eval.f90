@@ -1,3 +1,5 @@
+! REQUIRES: amdgpu-registered-target
+
 ! Tests `host_eval` clause code-gen and loop nest bounds on host vs. device.
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa   \

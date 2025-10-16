@@ -37,6 +37,8 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
 void SendInvalidatedEvent(
     DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas);
 
+void SendMemoryEvent(DAP &dap, lldb::SBValue variable);
+
 } // namespace lldb_dap
 
 #endif

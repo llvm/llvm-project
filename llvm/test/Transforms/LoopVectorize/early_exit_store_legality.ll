@@ -604,36 +604,57 @@ exit:
 
 ;; ICE was caused by assert for the load used in the uncountable exit condition
 ;; being guaranteed to execute.
-@e = external addrspace(21) global [4 x i8]
-define void @crash_conditional_load_for_uncountable_exit() {
+@ee.global = external global [4 x i8]
+define void @crash_conditional_load_for_uncountable_exit(ptr dereferenceable(40) noalias %store.area) {
 ; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit'
 ; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
 entry:
-  br label %cont
+  br label %for.body
 
-handler.out_of_bounds:
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr i8, ptr @ee.global, i64 %iv
+  br i1 false, label %ee.block, label %invalid.block
+
+ee.block:
+  %ee.val = load i8, ptr %ee.addr, align 1
+  store i16 0, ptr %store.area, align 2
+  %ee.cmp = icmp eq i8 %ee.val, 0
+  br i1 %ee.cmp, label %for.inc, label %invalid.block
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 10
+  br i1 %counted.cond, label %invalid.block, label %for.body
+
+invalid.block:
   unreachable
+}
 
-cont:
-  %h.06 = phi i64 [ 0, %entry ], [ %inc, %a.exit ]
-  %arrayidx = getelementptr i8, ptr addrspace(21) @e, i64 %h.06
-  br i1 false, label %cont1, label %handler.type_mismatch
+define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area, i1 %skip.cond) {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit_argptr'
+; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+entry:
+  br label %for.body
 
-handler.type_mismatch:
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr i8, ptr %load.area, i64 %iv
+  br i1 %skip.cond, label %ee.block, label %invalid.block
+
+ee.block:
+  %ee.val = load i8, ptr %ee.addr, align 1
+  store i16 0, ptr %store.area, align 2
+  %ee.cmp = icmp eq i8 %ee.val, 0
+  br i1 %ee.cmp, label %for.inc, label %invalid.block
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 10
+  br i1 %counted.cond, label %invalid.block, label %for.body
+
+invalid.block:
   unreachable
-
-cont1:
-  %0 = load i8, ptr addrspace(21) %arrayidx, align 1
-  store i16 0, ptr null, align 2
-  %cmp.not.i.i = icmp eq i8 %0, 0
-  br i1 %cmp.not.i.i, label %a.exit, label %if.then.i.i
-
-if.then.i.i:
-  unreachable
-
-a.exit:
-  %inc = add i64 %h.06, 1
-  br i1 true, label %handler.out_of_bounds, label %cont
 }
 
 

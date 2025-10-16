@@ -133,6 +133,8 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
 
   if (Ptr.isZero())
     return true;
+  if (!Ptr.isBlockPointer())
+    return true;
 
   // We can't inspect dead pointers at all. Return true here so we can
   // diagnose them later.

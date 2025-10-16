@@ -66,6 +66,7 @@ private:
   void printTable(ArrayRef<Entry> Table, StringRef Name, StringRef Macro,
                   raw_ostream &OS);
 };
+} // namespace
 
 void X86InstrMappingEmitter::printClassDef(raw_ostream &OS) {
   OS << "struct X86TableEntry {\n"
@@ -106,6 +107,7 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
   printMacroEnd(Macro, OS);
 }
 
+namespace {
 class IsMatch {
   const CodeGenInstruction *OldInst;
 
@@ -146,6 +148,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 static bool isInteresting(const Record *Rec) {
   // _REV instruction should not appear before encoding optimization
@@ -368,7 +371,6 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitND2NonNDTable(Insts, OS);
   emitSSE2AVXTable(Insts, OS);
 }
-} // namespace
 
 static TableGen::Emitter::OptClass<X86InstrMappingEmitter>
     X("gen-x86-instr-mapping", "Generate X86 instruction mapping");
