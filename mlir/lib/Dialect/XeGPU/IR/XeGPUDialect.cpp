@@ -727,6 +727,152 @@ void MemLayoutAttr::print(AsmPrinter &printer) const {
   }
   printer << ">";
 }
+// a helper utility to perform binary operation on OpFoldResult.
+// If both a and b are attributes, it will simply return the result.
+// Otherwise, the corresponding arith op will be generated, and an
+// contant op will be created if one of them is an attribute.
+template <typename ArithOp>
+OpFoldResult genBinOp(OpFoldResult a, OpFoldResult b, Location loc,
+                      OpBuilder &builder) {
+  auto aVal = getValueOrCreateConstantIndexOp(builder, loc, a);
+  auto bVal = getValueOrCreateConstantIndexOp(builder, loc, b);
+  return builder.create<ArithOp>(loc, aVal, bVal).getResult();
+}
+
+// a helper utility to perform division operation on OpFoldResult and int64_t.
+#define div(a, b)                                                              \
+  genBinOp<arith::DivSIOp>(a, builder.getIndexAttr(b), loc, builder)
+
+// a helper utility to perform reminder operation on OpFoldResult and int64_t.
+#define rem(a, b)                                                              \
+  genBinOp<arith::RemSIOp>(a, builder.getIndexAttr(b), loc, builder)
+
+// a helper utility to perform multiply operation on OpFoldResult and int64_t.
+#define mul(a, b)                                                              \
+  genBinOp<arith::MulIOp>(a, builder.getIndexAttr(b), loc, builder)
+
+// a helper utility to perform addition operation on two OpFoldResult.
+#define add(a, b) genBinOp<arith::AddIOp>(a, b, loc, builder)
+
+// block the given offsets according to the block shape
+// say the original offset is [y, x], and the block shape is [By, Bx],
+// then the blocked offset is [y/By, x/Bx, y%By, x%Bx]
+SmallVector<OpFoldResult> getBlockedOffsets(OpBuilder &builder, Location loc,
+                                            ArrayRef<OpFoldResult> offsets,
+                                            ArrayRef<int64_t> blockShape) {
+
+  assert(offsets.size() == blockShape.size() &&
+         "offsets and blockShape must have the same size");
+  SmallVector<OpFoldResult> blockedOffsets;
+  SmallVector<OpFoldResult> divs, rems;
+
+  for (auto [offset, block] : llvm::zip(offsets, blockShape)) {
+    divs.push_back(div(offset, block));
+    rems.push_back(rem(offset, block));
+  }
+  blockedOffsets.append(divs.begin(), divs.end());
+  blockedOffsets.append(rems.begin(), rems.end());
+
+  return blockedOffsets;
+}
+
+// Get strides as vector of integer for MemDesc.
+SmallVector<int64_t> MemDescType::getStrideShape() {
+
+  SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
+
+  ArrayAttr strideAttr = getStrideAttr();
+  SmallVector<int64_t> strides;
+  for (Attribute attr : strideAttr.getValue()) {
+    strides.push_back(cast<IntegerAttr>(attr).getInt());
+  }
+
+  SmallVector<int64_t> innerBlkShape = getBlockShape();
+
+  // get perm from FCD to LCD
+  // perm[i] = the dim with i-th smallest stride
+  SmallVector<int, 4> perm =
+      llvm::to_vector<4>(llvm::seq<int>(0, strides.size()));
+  llvm::sort(perm, [&](int a, int b) { return strides[a] < strides[b]; });
+
+  assert(strides[perm[0]] == 1 && "inner most dim must have stride 1");
+
+  SmallVector<int64_t> innerBlkStride(innerBlkShape.size());
+  innerBlkStride[perm[0]] = 1;
+  for (size_t i = 1; i < perm.size(); ++i)
+    innerBlkStride[perm[i]] =
+        innerBlkStride[perm[i - 1]] * innerBlkShape[perm[i - 1]];
+
+  // compute the original matrix shape using the stride info
+  // and compute the number of blocks in each dimension
+  // The shape of highest dim can't be derived from stride info,
+  // but doesn't impact the stride computation for blocked layout.
+  SmallVector<int64_t> matrixShapeOrig(matrixShape.size());
+  SmallVector<int64_t> BlkShapeOrig(matrixShape.size());
+  for (size_t i = 0; i < perm.size() - 1; ++i) {
+    matrixShapeOrig[perm[i]] = strides[perm[i + 1]] / strides[perm[i]];
+    BlkShapeOrig[perm[i]] = matrixShapeOrig[perm[i]] / innerBlkShape[perm[i]];
+  }
+
+  int64_t innerBlkSize = 1;
+  for (auto s : innerBlkShape)
+    innerBlkSize *= s;
+
+  SmallVector<int64_t> outerBlkStride(matrixShape.size());
+  outerBlkStride[perm[0]] = innerBlkSize;
+  for (size_t i = 0; i < perm.size() - 1; ++i) {
+    outerBlkStride[perm[i + 1]] =
+        outerBlkStride[perm[i]] * BlkShapeOrig[perm[i]];
+  }
+
+  // combine the inner and outer strides
+  SmallVector<int64_t> blockedStrides;
+  blockedStrides.append(outerBlkStride.begin(), outerBlkStride.end());
+  blockedStrides.append(innerBlkStride.begin(), innerBlkStride.end());
+
+  return blockedStrides;
+}
+
+// Calculate the linear offset using the blocked offsets and stride
+Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
+                                    ArrayRef<OpFoldResult> offsets) {
+
+  SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
+  SmallVector<int64_t> blockShape = getBlockShape();
+  SmallVector<int64_t> strides = getStrideShape();
+
+  // blockshape equal to matrixshape means no blocking
+  if (llvm::equal(blockShape, matrixShape)) {
+    // remove the outer dims from strides
+    strides.erase(strides.begin(), strides.begin() + matrixShape.size());
+  } else {
+    assert(offsets.size() == blockShape.size() &&
+           "offsets and blockShape must have the same size");
+    // say the original offset is [y, x], and the block shape is [By, Bx],
+    // then the blocked offset is [y/By, x/Bx, y%By, x%Bx]
+    SmallVector<OpFoldResult> blockedOffsets;
+    SmallVector<OpFoldResult> divs, rems;
+
+    for (auto [offset, block] : llvm::zip(offsets, blockShape)) {
+      divs.push_back(div(offset, block));
+      rems.push_back(rem(offset, block));
+    }
+    blockedOffsets.append(divs.begin(), divs.end());
+    blockedOffsets.append(rems.begin(), rems.end());
+
+    offsets = blockedOffsets;
+  }
+
+  // Start with initial value as matrix descriptor's base offset.
+  Value linearOffset = arith::ConstantIndexOp::create(builder, loc, 0);
+  for (size_t i = 0; i < offsets.size(); ++i) {
+    OpFoldResult mulResult = mul(offsets[i], strides[i]);
+    Value mulVal = getValueOrCreateConstantIndexOp(builder, loc, mulResult);
+    linearOffset = arith::AddIOp::create(builder, loc, mulVal, linearOffset);
+  }
+
+  return linearOffset;
+}
 
 } // namespace xegpu
 } // namespace mlir
