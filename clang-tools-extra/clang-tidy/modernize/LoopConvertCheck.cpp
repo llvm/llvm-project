@@ -92,7 +92,7 @@ static StatementMatcher incrementVarMatcher() {
 }
 
 static StatementMatcher
-arrayConditionMatcher(internal::Matcher<Expr> LimitExpr) {
+arrayConditionMatcher(const internal::Matcher<Expr> &LimitExpr) {
   return binaryOperator(
       anyOf(allOf(hasOperatorName("<"), hasLHS(integerComparisonMatcher()),
                   hasRHS(LimitExpr)),

@@ -65,7 +65,8 @@ void NonTrivialTypesLibcMemoryCallsCheck::storeOptions(
 void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
     MatchFinder *Finder) {
   using namespace ast_matchers::internal;
-  auto IsStructPointer = [](Matcher<CXXRecordDecl> Constraint = anything(),
+  auto IsStructPointer = [](const Matcher<CXXRecordDecl> &Constraint =
+                                anything(),
                             bool Bind = false) {
     return expr(unaryOperator(
         hasOperatorName("&"),
@@ -76,7 +77,7 @@ void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
   auto IsRecordSizeOf =
       expr(sizeOfExpr(hasArgumentOfType(equalsBoundNode("Record"))));
   auto ArgChecker = [&](Matcher<CXXRecordDecl> RecordConstraint,
-                        BindableMatcher<Stmt> SecondArg = expr()) {
+                        const BindableMatcher<Stmt> &SecondArg = expr()) {
     return allOf(argumentCountIs(3),
                  hasArgument(0, IsStructPointer(RecordConstraint, true)),
                  hasArgument(1, SecondArg), hasArgument(2, IsRecordSizeOf));
