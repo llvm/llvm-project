@@ -22,6 +22,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
@@ -277,9 +278,9 @@ struct Config {
   ///
   /// SaveTempsArgs can be specified to select which temps to save.
   /// If SaveTempsArgs is not provided, all temps are saved.
-  Error addSaveTemps(std::string OutputFileName,
-                     bool UseInputModulePath = false,
-                     const DenseSet<StringRef> &SaveTempsArgs = {});
+  LLVM_ABI Error addSaveTemps(std::string OutputFileName,
+                              bool UseInputModulePath = false,
+                              const DenseSet<StringRef> &SaveTempsArgs = {});
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {

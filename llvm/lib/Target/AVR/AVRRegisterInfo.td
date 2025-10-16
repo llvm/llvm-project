@@ -68,33 +68,37 @@ def R31 : AVRReg<31, "r31", [], ["zh"]>, DwarfRegNum<[31]>;
 def SPL : AVRReg<32, "SPL">, DwarfRegNum<[32]>;
 def SPH : AVRReg<33, "SPH">, DwarfRegNum<[33]>;
 
+// 16 bit GPR pairs.
 let SubRegIndices = [sub_lo, sub_hi], CoveredBySubRegs = 1 in {
-  // 16 bit GPR pairs.
-  def SP : AVRReg<32, "SP", [SPL, SPH]>, DwarfRegNum<[32]>;
+  // The value 16 for the encoding is arbitrary. SP register is not encoded
+  // into instructions, they use it implicitly depending on the opcode.
+  def SP : AVRReg<16, "SP", [SPL, SPH]>, DwarfRegNum<[32]>;
 
   // The pointer registers (X,Y,Z) are a special case because they
   // are printed as a `high:low` pair when a DREG is expected,
   // but printed using `X`, `Y`, `Z` when a pointer register is expected.
+  // DREG registers are only used in ADIW, SBIW and MOVW instructions.
   let RegAltNameIndices = [ptr] in {
-    def R31R30 : AVRReg<30, "r31:r30", [R30, R31], ["Z"]>, DwarfRegNum<[30]>;
-    def R29R28 : AVRReg<28, "r29:r28", [R28, R29], ["Y"]>, DwarfRegNum<[28]>;
-    def R27R26 : AVRReg<26, "r27:r26", [R26, R27], ["X"]>, DwarfRegNum<[26]>;
+    def R31R30 : AVRReg<15, "r31:r30", [R30, R31], ["Z"]>, DwarfRegNum<[30]>;
+    def R29R28 : AVRReg<14, "r29:r28", [R28, R29], ["Y"]>, DwarfRegNum<[28]>;
+    def R27R26 : AVRReg<13, "r27:r26", [R26, R27], ["X"]>, DwarfRegNum<[26]>;
   }
-  def R25R24 : AVRReg<24, "r25:r24", [R24, R25]>, DwarfRegNum<[24]>;
-  def R23R22 : AVRReg<22, "r23:r22", [R22, R23]>, DwarfRegNum<[22]>;
-  def R21R20 : AVRReg<20, "r21:r20", [R20, R21]>, DwarfRegNum<[20]>;
-  def R19R18 : AVRReg<18, "r19:r18", [R18, R19]>, DwarfRegNum<[18]>;
-  def R17R16 : AVRReg<16, "r17:r16", [R16, R17]>, DwarfRegNum<[16]>;
-  def R15R14 : AVRReg<14, "r15:r14", [R14, R15]>, DwarfRegNum<[14]>;
-  def R13R12 : AVRReg<12, "r13:r12", [R12, R13]>, DwarfRegNum<[12]>;
-  def R11R10 : AVRReg<10, "r11:r10", [R10, R11]>, DwarfRegNum<[10]>;
-  def R9R8 : AVRReg<8, "r9:r8", [R8, R9]>, DwarfRegNum<[8]>;
-  def R7R6 : AVRReg<6, "r7:r6", [R6, R7]>, DwarfRegNum<[6]>;
-  def R5R4 : AVRReg<4, "r5:r4", [R4, R5]>, DwarfRegNum<[4]>;
-  def R3R2 : AVRReg<2, "r3:r2", [R2, R3]>, DwarfRegNum<[2]>;
+  def R25R24 : AVRReg<12, "r25:r24", [R24, R25]>, DwarfRegNum<[24]>;
+  def R23R22 : AVRReg<11, "r23:r22", [R22, R23]>, DwarfRegNum<[22]>;
+  def R21R20 : AVRReg<10, "r21:r20", [R20, R21]>, DwarfRegNum<[20]>;
+  def R19R18 : AVRReg<9, "r19:r18", [R18, R19]>, DwarfRegNum<[18]>;
+  def R17R16 : AVRReg<8, "r17:r16", [R16, R17]>, DwarfRegNum<[16]>;
+  def R15R14 : AVRReg<7, "r15:r14", [R14, R15]>, DwarfRegNum<[14]>;
+  def R13R12 : AVRReg<6, "r13:r12", [R12, R13]>, DwarfRegNum<[12]>;
+  def R11R10 : AVRReg<5, "r11:r10", [R10, R11]>, DwarfRegNum<[10]>;
+  def R9R8 : AVRReg<4, "r9:r8", [R8, R9]>, DwarfRegNum<[8]>;
+  def R7R6 : AVRReg<3, "r7:r6", [R6, R7]>, DwarfRegNum<[6]>;
+  def R5R4 : AVRReg<2, "r5:r4", [R4, R5]>, DwarfRegNum<[4]>;
+  def R3R2 : AVRReg<1, "r3:r2", [R2, R3]>, DwarfRegNum<[2]>;
   def R1R0 : AVRReg<0, "r1:r0", [R0, R1]>, DwarfRegNum<[0]>;
 
-  // Pseudo registers for unaligned i16
+  // Pseudo registers for unaligned i16. These are only used in pseudo
+  // instructions, so encoding values are arbitrary.
   def R26R25 : AVRReg<25, "r26:r25", [R25, R26]>, DwarfRegNum<[25]>;
   def R24R23 : AVRReg<23, "r24:r23", [R23, R24]>, DwarfRegNum<[23]>;
   def R22R21 : AVRReg<21, "r22:r21", [R21, R22]>, DwarfRegNum<[21]>;

@@ -21,27 +21,27 @@ T Baz();
 
 void Test1() {
   // CHECK-DTOR-LABEL: Test1
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR:[^ ]+]])
   // CHECK-DTOR: call void @_Z3FooIRK1AEvOT_
   // CHECK-DTOR: call void @_ZN1AD1Ev(ptr nonnull {{[^,]*}} %[[VAR]])
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR]])
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR:[^ ]+]])
   // CHECK-DTOR: call void @_Z3FooIRK1AEvOT_
   // CHECK-DTOR: call void @_ZN1AD1Ev(ptr nonnull {{[^,]*}} %[[VAR]])
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
   // CHECK-DTOR: }
 
   // CHECK-NO-DTOR-LABEL: Test1
-  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR:.+]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-NO-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR:[^ ]+]])
   // CHECK-NO-DTOR: call void @_Z3FooIRK1AEvOT_
-  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR]])
-  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR:.+]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-NO-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR:[^ ]+]])
   // CHECK-NO-DTOR: call void @_Z3FooIRK1AEvOT_
-  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
   // CHECK-NO-DTOR: }
   {
     const A &a = A{};
@@ -55,27 +55,27 @@ void Test1() {
 
 void Test2() {
   // CHECK-DTOR-LABEL: Test2
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR1:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR1:.+]])
   // CHECK-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR1:[^ ]+]])
   // CHECK-DTOR: call void @_Z3FooIRK1AEvOT_
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR2:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR2:.+]])
   // CHECK-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR2:[^ ]+]])
   // CHECK-DTOR: call void @_Z3FooIRK1AEvOT_
   // CHECK-DTOR: call void @_ZN1AD1Ev(ptr nonnull {{[^,]*}} %[[VAR2]])
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR2]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR2]])
   // CHECK-DTOR: call void @_ZN1AD1Ev(ptr nonnull {{[^,]*}} %[[VAR1]])
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR1]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR1]])
   // CHECK-DTOR: }
 
   // CHECK-NO-DTOR-LABEL: Test2
-  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR1:.+]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR1:.+]])
   // CHECK-NO-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR1:[^ ]+]])
   // CHECK-NO-DTOR: call void @_Z3FooIRK1AEvOT_
-  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR2:.+]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR2:.+]])
   // CHECK-NO-DTOR: call void @_ZN1AC1Ev(ptr nonnull {{[^,]*}} %[[VAR2:[^ ]+]])
   // CHECK-NO-DTOR: call void @_Z3FooIRK1AEvOT_
-  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR2]])
-  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR1]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR2]])
+  // CHECK-NO-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR1]])
   // CHECK-NO-DTOR: }
   const A &a = A{};
   Foo(a);
@@ -135,16 +135,16 @@ int Test5() {
 
 void Test6() {
   // CHECK-DTOR-LABEL: Test6
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 {{[0-9]+}}, ptr nonnull %[[ADDR:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-DTOR: call i32 @_Z3BazIiET_v()
   // CHECK-DTOR: store
   // CHECK-DTOR: call void @_Z3FooIiEvOT_
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 {{[0-9]+}}, ptr nonnull %[[ADDR]])
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 {{[0-9]+}}, ptr nonnull %[[ADDR:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-DTOR: call i32 @_Z3BazIiET_v()
   // CHECK-DTOR: store
   // CHECK-DTOR: call void @_Z3FooIiEvOT_
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 {{[0-9]+}}, ptr nonnull %[[ADDR]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
   // CHECK-DTOR: }
   Foo(Baz<int>());
   Foo(Baz<int>());
@@ -152,16 +152,16 @@ void Test6() {
 
 void Test7() {
   // CHECK-DTOR-LABEL: Test7
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-DTOR: call void @_Z3BazI1AET_v({{.*}} %[[SLOT:[^ ]+]])
   // CHECK-DTOR: call void @_Z3FooI1AEvOT_({{.*}} %[[SLOT]])
   // CHECK-DTOR: call void @_ZN1AD1Ev(ptr nonnull {{[^,]*}} %[[SLOT]])
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR]])
-  // CHECK-DTOR: call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %[[ADDR:.+]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
+  // CHECK-DTOR: call void @llvm.lifetime.start.p0(ptr nonnull %[[ADDR:.+]])
   // CHECK-DTOR: call void @_Z3BazI1AET_v({{.*}} %[[SLOT:[^ ]+]])
   // CHECK-DTOR: call void @_Z3FooI1AEvOT_({{.*}} %[[SLOT]])
   // CHECK-DTOR: call void @_ZN1AD1Ev(ptr nonnull {{[^,]*}} %[[SLOT]])
-  // CHECK-DTOR: call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %[[ADDR]])
+  // CHECK-DTOR: call void @llvm.lifetime.end.p0(ptr nonnull %[[ADDR]])
   // CHECK-DTOR: }
   Foo(Baz<A>());
   Foo(Baz<A>());

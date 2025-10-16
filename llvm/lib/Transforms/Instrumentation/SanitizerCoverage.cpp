@@ -486,10 +486,8 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   SanCovTraceSwitchFunction =
       M.getOrInsertFunction(SanCovTraceSwitchName, VoidTy, Int64Ty, PtrTy);
 
-  Constant *SanCovLowestStackConstant =
-      M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
-  SanCovLowestStack = dyn_cast<GlobalVariable>(SanCovLowestStackConstant);
-  if (!SanCovLowestStack || SanCovLowestStack->getValueType() != IntptrTy) {
+  SanCovLowestStack = M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
+  if (SanCovLowestStack->getValueType() != IntptrTy) {
     C->emitError(StringRef("'") + SanCovLowestStackName +
                  "' should not be declared by the user");
     return true;
@@ -1086,8 +1084,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto ThenTerm = SplitBlockAndInsertIfThen(
         IRB.CreateIsNull(Load), &*IP, false,
         MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-    IRBuilder<> ThenIRB(ThenTerm);
+    InstrumentationIRBuilder ThenIRB(ThenTerm);
     auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    if (EntryLoc)
+      Store->setDebugLoc(EntryLoc);
     Load->setNoSanitizeMetadata();
     Store->setNoSanitizeMetadata();
   }
@@ -1133,7 +1133,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           EstimatedStackSize >= Options.StackDepthCallbackMin) {
         if (InsertBefore)
           IRB.SetInsertPoint(InsertBefore);
-        IRB.CreateCall(SanCovStackDepthCallback)->setCannotMerge();
+        auto Call = IRB.CreateCall(SanCovStackDepthCallback);
+        if (EntryLoc)
+          Call->setDebugLoc(EntryLoc);
+        Call->setCannotMerge();
       }
     } else {
       // Check stack depth.  If it's the deepest so far, record it.
@@ -1146,8 +1149,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       auto ThenTerm = SplitBlockAndInsertIfThen(
           IsStackLower, &*IP, false,
           MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-      IRBuilder<> ThenIRB(ThenTerm);
+      InstrumentationIRBuilder ThenIRB(ThenTerm);
       auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
+      if (EntryLoc)
+        Store->setDebugLoc(EntryLoc);
       LowestStack->setNoSanitizeMetadata();
       Store->setNoSanitizeMetadata();
     }

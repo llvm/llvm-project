@@ -58,11 +58,8 @@ std::string FormatExtensionFlags(int64_t Flags) {
 
   // The target parser also includes every extension you don't have.
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }
@@ -960,10 +957,6 @@ TEST(TargetParserTest, ARMparseArchVersion) {
 TEST(TargetParserTest, getARMCPUForArch) {
   // Platform specific defaults.
   {
-    llvm::Triple Triple("arm--nacl");
-    EXPECT_EQ("cortex-a8", ARM::getARMCPUForArch(Triple));
-  }
-  {
     llvm::Triple Triple("arm--openbsd");
     EXPECT_EQ("cortex-a8", ARM::getARMCPUForArch(Triple));
   }
@@ -1167,6 +1160,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
+                      AArch64CPUTestParams("gb10", "armv9.2-a"),
                       AArch64CPUTestParams("grace", "armv9-a"),
                       AArch64CPUTestParams("olympus", "armv9.2-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
@@ -1263,7 +1257,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 90;
+static constexpr unsigned NumAArch64CPUArchs = 91;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1443,7 +1437,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
-      AArch64::AEK_SSVE_BITPERM,
+      AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
+      AArch64::AEK_SVESM4,
   };
 
   std::vector<StringRef> Features;
@@ -1481,7 +1476,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
@@ -1654,6 +1651,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve-f16f32mm", "nosve-f16f32mm", "+sve-f16f32mm", "-sve-f16f32mm"},
       {"sve2", "nosve2", "+sve2", "-sve2"},
       {"sve-aes", "nosve-aes", "+sve-aes", "-sve-aes"},
+      {"sve-sm4", "nosve-sm4", "+sve-sm4", "-sve-sm4"},
+      {"sve-sha3", "nosve-sha3", "+sve-sha3", "-sve-sha3"},
       {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
       {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
@@ -1832,6 +1831,22 @@ TEST_P(AArch64ExtensionDependenciesBaseCPUTestFixture,
     // Features default to off, so the negative string is not expected in many
     // cases.
   }
+}
+
+TEST(TargetParserTest, testAArch64ReconstructFromParsedFeatures) {
+  AArch64::ExtensionSet Extensions;
+  std::vector<std::string> FeatureOptions = {
+      "-sve2", "-Baz", "+sve", "+FooBar", "+sve2", "+neon", "-sve",
+  };
+  std::vector<std::string> NonExtensions;
+  Extensions.reconstructFromParsedFeatures(FeatureOptions, NonExtensions);
+
+  std::vector<std::string> NonExtensionsExpected = {"-Baz", "+FooBar"};
+  ASSERT_THAT(NonExtensions, testing::ContainerEq(NonExtensionsExpected));
+  std::vector<StringRef> Features;
+  Extensions.toLLVMFeatureList(Features);
+  std::vector<StringRef> FeaturesExpected = {"+neon", "-sve", "+sve2"};
+  ASSERT_THAT(Features, testing::ContainerEq(FeaturesExpected));
 }
 
 AArch64ExtensionDependenciesBaseArchTestParams
@@ -2145,6 +2160,18 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"sve2", "sve-aes", "nosve2-aes"},
          {"sve2"},
          {"sve2-aes", "sve-aes"}},
+
+        // -sve2-sm4 should disable sve-sm4 (only)
+        {AArch64::ARMV9_6A,
+         {"sve2", "sve-sm4", "nosve2-sm4"},
+         {"sve2"},
+         {"sve2-sm4", "sve-sm4"}},
+
+        // -sve2-sha3 should disable sve-sha3 (only)
+        {AArch64::ARMV9_6A,
+         {"sve2", "sve-sha3", "nosve2-sha3"},
+         {"sve2"},
+         {"sve2-sha3", "sve-sha3"}},
 
         // sme-tmop -> sme
         {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},

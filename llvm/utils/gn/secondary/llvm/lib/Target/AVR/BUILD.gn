@@ -49,6 +49,7 @@ static_library("LLVMAVRCodeGen") {
     "AVRSubtarget.cpp",
     "AVRTargetMachine.cpp",
     "AVRTargetObjectFile.cpp",
+    "AVRTargetTransformInfo.cpp",
   ]
 }
 

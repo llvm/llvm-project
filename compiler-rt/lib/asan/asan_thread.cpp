@@ -163,7 +163,7 @@ void AsanThread::StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom,
   if (fake_stack_save)
     *fake_stack_save = fake_stack_;
   fake_stack_ = nullptr;
-  SetTLSFakeStack(nullptr);
+  ResetTLSFakeStack();
   // if fake_stack_save is null, the fiber will die, delete the fakestack
   if (!fake_stack_save && current_fake_stack)
     current_fake_stack->Destroy(this->tid());
@@ -177,8 +177,8 @@ void AsanThread::FinishSwitchFiber(FakeStack *fake_stack_save, uptr *bottom_old,
   }
 
   if (fake_stack_save) {
-    SetTLSFakeStack(fake_stack_save);
     fake_stack_ = fake_stack_save;
+    ResetTLSFakeStack();
   }
 
   if (bottom_old)
@@ -242,7 +242,7 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
         Max(stack_size_log, static_cast<uptr>(flags()->min_uar_stack_size_log));
     fake_stack_ = FakeStack::Create(stack_size_log);
     DCHECK_EQ(GetCurrentThread(), this);
-    SetTLSFakeStack(fake_stack_);
+    ResetTLSFakeStack();
     return fake_stack_;
   }
   return nullptr;
@@ -282,7 +282,7 @@ void AsanThread::Init(const InitOptions *options) {
 // asan_fuchsia.c definies CreateMainThread and SetThreadStackAndTls.
 #if !SANITIZER_FUCHSIA
 
-void AsanThread::ThreadStart(tid_t os_id) {
+void AsanThread::ThreadStart(ThreadID os_id) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
 
@@ -469,7 +469,7 @@ void EnsureMainThreadIDIsCorrect() {
     context->os_id = GetTid();
 }
 
-__asan::AsanThread *GetAsanThreadByOsIDLocked(tid_t os_id) {
+__asan::AsanThread *GetAsanThreadByOsIDLocked(ThreadID os_id) {
   __asan::AsanThreadContext *context = static_cast<__asan::AsanThreadContext *>(
       __asan::asanThreadRegistry().FindThreadContextByOsIDLocked(os_id));
   if (!context)
@@ -497,7 +497,7 @@ static ThreadRegistry *GetAsanThreadRegistryLocked() {
 
 void EnsureMainThreadIDIsCorrect() { __asan::EnsureMainThreadIDIsCorrect(); }
 
-bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
+bool GetThreadRangesLocked(ThreadID os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
@@ -516,7 +516,7 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
 
-void GetThreadExtraStackRangesLocked(tid_t os_id,
+void GetThreadExtraStackRangesLocked(ThreadID os_id,
                                      InternalMmapVector<Range> *ranges) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
   if (!t)
@@ -546,11 +546,11 @@ void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
   __asan::asanThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
 
-void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+void GetRunningThreadsLocked(InternalMmapVector<ThreadID> *threads) {
   GetAsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
       [](ThreadContextBase *tctx, void *threads) {
         if (tctx->status == ThreadStatusRunning)
-          reinterpret_cast<InternalMmapVector<tid_t> *>(threads)->push_back(
+          reinterpret_cast<InternalMmapVector<ThreadID> *>(threads)->push_back(
               tctx->os_id);
       },
       threads);

@@ -22,7 +22,7 @@ Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
 
 Value::use_iterator Value::use_begin() {
   llvm::Use *LLVMUse = nullptr;
-  if (Val->use_begin() != Val->use_end())
+  if (!Val->uses().empty())
     LLVMUse = &*Val->use_begin();
   User *User = LLVMUse != nullptr ? cast_or_null<sandboxir::User>(Ctx.getValue(
                                         Val->use_begin()->getUser()))

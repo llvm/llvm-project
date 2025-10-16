@@ -1,4 +1,4 @@
-//===--- MakeSmartPtrCheck.h - clang-tidy------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,8 +51,8 @@ private:
   const bool IgnoreDefaultInitialization;
 
   void checkConstruct(SourceManager &SM, ASTContext *Ctx,
-                      const CXXConstructExpr *Construct, const QualType *Type,
-                      const CXXNewExpr *New);
+                      const CXXConstructExpr *Construct, const VarDecl *DVar,
+                      const QualType *Type, const CXXNewExpr *New);
   void checkReset(SourceManager &SM, ASTContext *Ctx,
                   const CXXMemberCallExpr *Reset, const CXXNewExpr *New);
 

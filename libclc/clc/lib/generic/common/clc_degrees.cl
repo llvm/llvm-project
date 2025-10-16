@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 
 #define DEGREES_SINGLE_DEF(TYPE, LITERAL)                                      \

@@ -27,6 +27,7 @@
 #define LLVM_ADT_STATISTIC_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -125,13 +126,13 @@ protected:
     return *this;
   }
 
-  void RegisterStatistic();
+  LLVM_ABI void RegisterStatistic();
 };
 
 class NoopStatistic {
 public:
-  NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
-                const char * /*Desc*/) {}
+  constexpr NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
+                          const char * /*Desc*/) {}
 
   uint64_t getValue() const { return 0; }
 
@@ -163,8 +164,13 @@ using Statistic = NoopStatistic;
 
 // STATISTIC - A macro to make definition of statistics really simple.  This
 // automatically passes the DEBUG_TYPE of the file into the statistic.
+#if LLVM_ENABLE_STATS
 #define STATISTIC(VARNAME, DESC)                                               \
   static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC}
+#else
+#define STATISTIC(VARNAME, DESC)                                               \
+  static llvm::Statistic VARNAME [[maybe_unused]] = {DEBUG_TYPE, #VARNAME, DESC}
+#endif
 
 // ALWAYS_ENABLED_STATISTIC - A macro to define a statistic like STATISTIC but
 // it is enabled even if LLVM_ENABLE_STATS is off.
@@ -172,25 +178,25 @@ using Statistic = NoopStatistic;
   static llvm::TrackingStatistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC}
 
 /// Enable the collection and printing of statistics.
-void EnableStatistics(bool DoPrintOnExit = true);
+LLVM_ABI void EnableStatistics(bool DoPrintOnExit = true);
 
 /// Check if statistics are enabled.
-bool AreStatisticsEnabled();
+LLVM_ABI bool AreStatisticsEnabled();
 
 /// Return a stream to print our output on.
-std::unique_ptr<raw_ostream> CreateInfoOutputFile();
+LLVM_ABI std::unique_ptr<raw_ostream> CreateInfoOutputFile();
 
 /// Print statistics to the file returned by CreateInfoOutputFile().
-void PrintStatistics();
+LLVM_ABI void PrintStatistics();
 
 /// Print statistics to the given output stream.
-void PrintStatistics(raw_ostream &OS);
+LLVM_ABI void PrintStatistics(raw_ostream &OS);
 
 /// Print statistics in JSON format. This does include all global timers (\see
 /// Timer, TimerGroup). Note that the timers are cleared after printing and will
 /// not be printed in human readable form or in a second call of
 /// PrintStatisticsJSON().
-void PrintStatisticsJSON(raw_ostream &OS);
+LLVM_ABI void PrintStatisticsJSON(raw_ostream &OS);
 
 /// Get the statistics. This can be used to look up the value of
 /// statistics without needing to parse JSON.
@@ -199,7 +205,7 @@ void PrintStatisticsJSON(raw_ostream &OS);
 /// during it's execution. It will return the value at the point that it is
 /// read. However, it will prevent new statistics from registering until it
 /// completes.
-std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
+LLVM_ABI std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
 
 /// Reset the statistics. This can be used to zero and de-register the
 /// statistics in order to measure a compilation.
@@ -214,7 +220,7 @@ std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
 /// compilation should ensure that no compilations are in progress at the point
 /// this function is called and that only one compilation executes until calling
 /// GetStatistics().
-void ResetStatistics();
+LLVM_ABI void ResetStatistics();
 
 } // end namespace llvm
 

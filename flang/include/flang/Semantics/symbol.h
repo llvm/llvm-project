@@ -30,6 +30,7 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
+struct OpenMPDeclarativeConstruct;
 }
 
 namespace Fortran::semantics {
@@ -509,6 +510,11 @@ public:
   const std::list<SourceName> &componentNames() const {
     return componentNames_;
   }
+  const std::map<SourceName, const parser::Expr *> &
+  originalKindParameterMap() const {
+    return originalKindParameterMap_;
+  }
+  void add_originalKindParameter(SourceName, const parser::Expr *);
 
   // If this derived type extends another, locate the parent component's symbol.
   const Symbol *GetParentComponent(const Scope &) const;
@@ -537,6 +543,8 @@ private:
   bool sequence_{false};
   bool isDECStructure_{false};
   bool isForwardReferenced_{false};
+  std::map<SourceName, const parser::Expr *> originalKindParameterMap_;
+
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);
 };
@@ -569,17 +577,21 @@ private:
 
 class CommonBlockDetails : public WithBindName {
 public:
+  explicit CommonBlockDetails(SourceName location)
+      : sourceLocation_{location} {}
+  SourceName sourceLocation() const { return sourceLocation_; }
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
   void replace_object(Symbol &object, unsigned index) {
-    CHECK(index < (unsigned)objects_.size());
+    CHECK(index < objects_.size());
     objects_[index] = object;
   }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
+  SourceName sourceLocation_;
   MutableSymbolVector objects_;
   std::size_t alignment_{0}; // required alignment in bytes
 };
@@ -600,6 +612,7 @@ class TypeParamDetails {
 public:
   TypeParamDetails() = default;
   TypeParamDetails(const TypeParamDetails &) = default;
+  TypeParamDetails &operator=(const TypeParamDetails &) = default;
   std::optional<common::TypeParamAttr> attr() const { return attr_; }
   TypeParamDetails &set_attr(common::TypeParamAttr);
   MaybeIntExpr &init() { return init_; }
@@ -727,6 +740,40 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
+// Used for OpenMP DECLARE REDUCTION, it holds the information
+// needed to resolve which declaration (there could be multiple
+// with the same name) to use for a given type.
+class UserReductionDetails {
+public:
+  using TypeVector = std::vector<const DeclTypeSpec *>;
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
+
+  UserReductionDetails() = default;
+
+  void AddType(const DeclTypeSpec &type) { typeList_.push_back(&type); }
+  const TypeVector &GetTypeList() const { return typeList_; }
+
+  bool SupportsType(const DeclTypeSpec &type) const {
+    // We have to compare the actual type, not the pointer, as some
+    // types are not guaranteed to be the same object.
+    for (auto t : typeList_) {
+      if (*t == type) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  TypeVector typeList_;
+  DeclVector declList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -734,7 +781,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
@@ -755,6 +802,7 @@ public:
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
+      InCommonBlock, // referenced in a common block
       EntryDummyArgument,
       CompilerCreated, // A compiler created symbol
       // For compiler created symbols that are constant but cannot legally have
@@ -764,7 +812,7 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC data-movement attribute
@@ -773,10 +821,10 @@ public:
       AccCommonBlock, AccThreadPrivate, AccReduction, AccNone, AccPreDetermined,
       // OpenMP data-sharing attribute
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
+      OmpGroupPrivate,
       // OpenMP data-mapping attribute
-      OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapAlloc, OmpMapRelease,
-      OmpMapDelete, OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr,
-      OmpHasDeviceAddr,
+      OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapStorage, OmpMapDelete,
+      OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
@@ -784,8 +832,9 @@ public:
       OmpAllocate, OmpDeclarativeAllocateDirective,
       OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
-      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpImplicit, OmpDependObject,
-      OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction);
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
+      OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
+      OmpUniform);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -1083,6 +1132,9 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
           [&](const UseDetails &x) { return x.symbol().GetTypeImpl(depth); },
           [&](const HostAssocDetails &x) {
             return x.symbol().GetTypeImpl(depth);
+          },
+          [&](const GenericDetails &x) {
+            return x.specific() ? x.specific()->GetTypeImpl(depth) : nullptr;
           },
           [](const auto &) -> const DeclTypeSpec * { return nullptr; },
       },

@@ -38,7 +38,7 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
   Region &region = op->getRegion(0);
   Block *body = b.createBlock(&region, /*insertPt=*/{}, argTypes, argLocs);
   b.setInsertionPointToStart(body);
-  fun(b, *body, op->getAttrs());
+  fun(b, *body, op->getAttrs(), /*emitError=*/{});
 }
 
 MLIR_CAPI_EXPORTED bool mlirLinalgIsAContractionOp(MlirOperation op) {
@@ -59,7 +59,7 @@ mlirLinalgInferContractionDimensions(MlirOperation op) {
   if (failed(maybeDims))
     return result;
 
-  linalg::ContractionDimensions contractionDims = *maybeDims;
+  const linalg::ContractionDimensions &contractionDims = *maybeDims;
   MLIRContext *ctx = linalgOp.getContext();
 
   auto toAttr = [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
@@ -95,7 +95,7 @@ mlirLinalgInferConvolutionDimensions(MlirOperation op) {
   if (failed(maybeDims))
     return result;
 
-  linalg::ConvolutionDimensions dims = *maybeDims;
+  const linalg::ConvolutionDimensions &dims = *maybeDims;
   MLIRContext *ctx = linalgOp.getContext();
 
   auto toI32Attr =

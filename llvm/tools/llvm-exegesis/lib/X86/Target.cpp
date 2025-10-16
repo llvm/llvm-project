@@ -30,11 +30,12 @@
 #include <memory>
 #include <string>
 #include <vector>
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) &&              \
+    !defined(_M_ARM64EC)
 #include <immintrin.h>
 #include <intrin.h>
 #endif
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
 #include <float.h> // For _clearfp in ~X86SavedState().
 #endif
 
@@ -654,7 +655,7 @@ namespace {
 class X86SavedState : public ExegesisTarget::SavedState {
 public:
   X86SavedState() {
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
     _fxsave64(FPState);
     Eflags = __readeflags();
 #elif defined(__GNUC__) && defined(__x86_64__)
@@ -668,7 +669,7 @@ public:
   ~X86SavedState() {
     // Restoring the X87 state does not flush pending exceptions, make sure
     // these exceptions are flushed now.
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
     _clearfp();
     _fxrstor64(FPState);
     __writeeflags(Eflags);
@@ -682,7 +683,7 @@ public:
   }
 
 private:
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) && !defined(_M_ARM64EC)
   alignas(16) char FPState[512];
   uint64_t Eflags;
 #endif
@@ -824,8 +825,9 @@ private:
       // For now, only do the check if we see an Intel machine because
       // the counter uses some intel-specific magic and it could
       // be confuse and think an AMD machine actually has LBR support.
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
-    defined(_M_X64)
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
     using namespace sys::detail::x86;
 
     if (getVendorSignature() == VendorSignatures::GENUINE_INTEL)

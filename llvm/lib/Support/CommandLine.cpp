@@ -68,11 +68,19 @@ template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
 
-template class opt<unsigned>;
-template class opt<int>;
-template class opt<std::string>;
-template class opt<char>;
-template class opt<bool>;
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in clients, leading to duplicate symbol conflicts.
+template class LLVM_EXPORT_TEMPLATE opt<std::string>;
+#endif
+
+template class LLVM_EXPORT_TEMPLATE opt<bool>;
+template class LLVM_EXPORT_TEMPLATE opt<char>;
+template class LLVM_EXPORT_TEMPLATE opt<int>;
+template class LLVM_EXPORT_TEMPLATE opt<unsigned>;
+
 } // namespace cl
 } // namespace llvm
 
@@ -93,7 +101,17 @@ void parser<unsigned long long>::anchor() {}
 void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
+void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
+
+// These anchor functions instantiate opt<T> and reference its virtual
+// destructor to ensure MSVC exports the corresponding vtable and typeinfo when
+// building a Windows DLL. Without an explicit reference, MSVC may omit the
+// instantiation at link time even if it is marked DLL-export.
+void opt_bool_anchor() { opt<bool> anchor{""}; }
+void opt_char_anchor() { opt<char> anchor{""}; }
+void opt_int_anchor() { opt<int> anchor{""}; }
+void opt_unsigned_anchor() { opt<unsigned> anchor{""}; }
 
 //===----------------------------------------------------------------------===//
 
@@ -171,6 +189,7 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
+                               vfs::FileSystem *VFS = nullptr,
                                bool LongOptionsUseDoubleDash = false);
 
   void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
@@ -1384,8 +1403,9 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return true;
 }
 
-ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T)
-    : Saver(A), Tokenizer(T), FS(vfs::getRealFileSystem().get()) {}
+ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                                   vfs::FileSystem *FS)
+    : Saver(A), Tokenizer(T), FS(FS ? FS : vfs::getRealFileSystem().get()) {}
 
 bool ExpansionContext::findConfigFile(StringRef FileName,
                                       SmallVectorImpl<char> &FilePath) {
@@ -1444,7 +1464,7 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 const char *EnvVar,
+                                 vfs::FileSystem *VFS, const char *EnvVar,
                                  bool LongOptionsUseDoubleDash) {
   initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
@@ -1465,8 +1485,8 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return GlobalParser->ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
-                                               Errs, LongOptionsUseDoubleDash);
+  return GlobalParser->ParseCommandLineOptions(
+      NewArgc, &NewArgv[0], Overview, Errs, VFS, LongOptionsUseDoubleDash);
 }
 
 /// Reset all options at least once, so that we can parse different options.
@@ -1486,17 +1506,17 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   }
 }
 
-bool CommandLineParser::ParseCommandLineOptions(int argc,
-                                                const char *const *argv,
-                                                StringRef Overview,
-                                                raw_ostream *Errs,
-                                                bool LongOptionsUseDoubleDash) {
+bool CommandLineParser::ParseCommandLineOptions(
+    int argc, const char *const *argv, StringRef Overview, raw_ostream *Errs,
+    vfs::FileSystem *VFS, bool LongOptionsUseDoubleDash) {
   assert(hasOptions() && "No options specified!");
 
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
   if (!Errs)
     Errs = &errs();
+  if (!VFS)
+    VFS = vfs::getRealFileSystem().get();
   bool ErrorParsing = false;
 
   // Expand response files.
@@ -1507,7 +1527,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 #else
   auto Tokenize = cl::TokenizeGNUCommandLine;
 #endif
-  ExpansionContext ECtx(A, Tokenize);
+  ExpansionContext ECtx(A, Tokenize, VFS);
   if (Error Err = ECtx.expandResponseFiles(newArgv)) {
     *Errs << toString(std::move(Err)) << '\n';
     return false;
@@ -2242,6 +2262,22 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
   outs() << ")\n";
 }
 
+void parser<std::optional<std::string>>::printOptionDiff(
+    const Option &O, std::optional<StringRef> V,
+    const OptionValue<std::optional<std::string>> &D,
+    size_t GlobalWidth) const {
+  printOptionName(O, GlobalWidth);
+  outs() << "= " << V;
+  size_t VSize = V.has_value() ? V.value().size() : 0;
+  size_t NumSpaces = MaxOptWidth > VSize ? MaxOptWidth - VSize : 0;
+  outs().indent(NumSpaces) << " (default: ";
+  if (D.hasValue() && D.getValue().has_value())
+    outs() << D.getValue();
+  else
+    outs() << "*no value*";
+  outs() << ")\n";
+}
+
 // Print a placeholder for options that don't yet support printOptionDiff().
 void basic_parser_impl::printOptionNoValue(const Option &O,
                                            size_t GlobalWidth) const {
@@ -2313,8 +2349,8 @@ protected:
       StrSubCommandPairVector;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      Opts[i].second->printOptionInfo(MaxArgLen);
+    for (const auto &Opt : Opts)
+      Opt.second->printOptionInfo(MaxArgLen);
   }
 
   void printSubCommands(StrSubCommandPairVector &Subs, size_t MaxSubLen) {
@@ -2384,8 +2420,8 @@ public:
     if (Sub == &SubCommand::getTopLevel() && !Subs.empty()) {
       // Compute the maximum subcommand length...
       size_t MaxSubLen = 0;
-      for (size_t i = 0, e = Subs.size(); i != e; ++i)
-        MaxSubLen = std::max(MaxSubLen, strlen(Subs[i].first));
+      for (const auto &Sub : Subs)
+        MaxSubLen = std::max(MaxSubLen, strlen(Sub.first));
 
       outs() << "\n\n";
       outs() << "SUBCOMMANDS:\n\n";
@@ -2400,8 +2436,8 @@ public:
 
     // Compute the maximum argument length...
     size_t MaxArgLen = 0;
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+    for (const auto &Opt : Opts)
+      MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
     outs() << "OPTIONS:\n";
     printOptions(Opts, MaxArgLen);
@@ -2447,9 +2483,9 @@ protected:
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
     // options within categories will also be alphabetically sorted.
-    for (size_t I = 0, E = Opts.size(); I != E; ++I) {
-      Option *Opt = Opts[I].second;
-      for (auto &Cat : Opt->Categories) {
+    for (const auto &I : Opts) {
+      Option *Opt = I.second;
+      for (OptionCategory *Cat : Opt->Categories) {
         assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
@@ -2654,7 +2690,6 @@ static void initCommonOptions() {
   initSignalsOptions();
   initStatisticOptions();
   initTimerOptions();
-  initTypeSizeOptions();
   initWithColorOptions();
   initDebugOptions();
   initRandomSeedOptions();
@@ -2692,8 +2727,9 @@ void HelpPrinterWrapper::operator=(bool Value) {
     CommonOptions->HLOp.setHiddenFlag(NotHidden);
 
     CategorizedPrinter = true; // Invoke categorized printer
-  } else
+  } else {
     UncategorizedPrinter = true; // Invoke uncategorized printer
+  }
 }
 
 // Print the value of each option.
@@ -2708,11 +2744,11 @@ void CommandLineParser::printOptionValues() {
 
   // Compute the maximum argument length...
   size_t MaxArgLen = 0;
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+  for (const auto &Opt : Opts)
+    MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    Opts[i].second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
+  for (const auto &Opt : Opts)
+    Opt.second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
 }
 
 // Utility function for printing the help message.

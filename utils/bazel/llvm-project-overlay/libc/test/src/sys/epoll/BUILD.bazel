@@ -16,7 +16,6 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:epoll_create",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -27,7 +26,6 @@ libc_test(
         "//libc:close",
         "//libc:epoll_create1",
         "//libc:hdr_sys_epoll_macros",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -41,7 +39,6 @@ libc_test(
         "//libc:hdr_sys_epoll_macros",
         "//libc:pipe",
         "//libc:types_struct_epoll_event",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -56,7 +53,6 @@ libc_test(
         "//libc:hdr_sys_epoll_macros",
         "//libc:pipe",
         "//libc:types_struct_epoll_event",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -71,7 +67,6 @@ libc_test(
         "//libc:hdr_sys_epoll_macros",
         "//libc:pipe",
         "//libc:types_struct_epoll_event",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -87,6 +82,5 @@ libc_test(
         "//libc:pipe",
         "//libc:types_struct_epoll_event",
         "//libc:types_struct_timespec",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )

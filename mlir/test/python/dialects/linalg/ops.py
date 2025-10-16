@@ -49,42 +49,6 @@ def testFill():
     print(module)
 
 
-# CHECK-LABEL: TEST: testNamedStructuredOpCustomForm
-@run
-def testNamedStructuredOpCustomForm():
-    with Context() as ctx, Location.unknown():
-        module = Module.create()
-        f32 = F32Type.get()
-        with InsertionPoint(module.body):
-
-            @func.FuncOp.from_py_func(
-                RankedTensorType.get((4, 8), f32), RankedTensorType.get((4, 8), f32)
-            )
-            def named_form(lhs, rhs):
-                init_result = tensor.EmptyOp([4, 8], f32)
-                # Check for the named form with custom format
-                #      CHECK: linalg.elemwise_unary
-                # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
-                # CHECK-SAME:    fun = #linalg.unary_fn<exp>
-                # CHECK-SAME:    ins(%{{.*}} : tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
-                unary_result = linalg.elemwise_unary(lhs, outs=[init_result.result])
-                #      CHECK: linalg.elemwise_binary
-                # CHECK-SAME:    cast = #linalg.type_fn<cast_unsigned>
-                # CHECK-SAME:    fun = #linalg.binary_fn<mul>
-                # CHECK-SAME:    ins(%{{.*}}, %{{.*}} : tensor<4x8xf32>, tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
-                #      CHECK: return
-                binary_result = linalg.elemwise_binary(
-                    lhs,
-                    rhs,
-                    outs=[init_result.result],
-                    fun=BinaryFn.mul,
-                    cast=TypeFn.cast_unsigned,
-                )
-                return unary_result, binary_result
-
-    print(module)
-
-
 # CHECK-LABEL: TEST: testIdentityRegionOps
 @run
 def testIdentityRegionOps():

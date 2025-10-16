@@ -152,6 +152,37 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   return shouldMangleCXXName(D);
 }
 
+static llvm::StringRef g_lldb_func_call_label_prefix = "$__lldb_func:";
+
+/// Given an LLDB function call label, this function prints the label
+/// into \c Out, together with the structor type of \c GD (if the
+/// decl is a constructor/destructor). LLDB knows how to handle mangled
+/// names with this encoding.
+///
+/// Example input label:
+///   $__lldb_func::123:456:~Foo
+///
+/// Example output:
+///   $__lldb_func:D1:123:456:~Foo
+///
+static void emitLLDBAsmLabel(llvm::StringRef label, GlobalDecl GD,
+                             llvm::raw_ostream &Out) {
+  assert(label.starts_with(g_lldb_func_call_label_prefix));
+
+  Out << g_lldb_func_call_label_prefix;
+
+  if (auto *Ctor = llvm::dyn_cast<clang::CXXConstructorDecl>(GD.getDecl())) {
+    Out << "C";
+    if (Ctor->getInheritedConstructor().getConstructor())
+      Out << "I";
+    Out << GD.getCtorType();
+  } else if (llvm::isa<clang::CXXDestructorDecl>(GD.getDecl())) {
+    Out << "D" << GD.getDtorType();
+  }
+
+  Out << label.substr(g_lldb_func_call_label_prefix.size());
+}
+
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
@@ -161,9 +192,9 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>()) {
     // If we have an asm name, then we use it as the mangling.
 
-    // If the label isn't literal, or if this is an alias for an LLVM intrinsic,
+    // If the label is an alias for an LLVM intrinsic,
     // do not add a "\01" prefix.
-    if (!ALA->getIsLiteralLabel() || ALA->getLabel().starts_with("llvm.")) {
+    if (ALA->getLabel().starts_with("llvm.")) {
       Out << ALA->getLabel();
       return;
     }
@@ -185,7 +216,11 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     if (!UserLabelPrefix.empty())
       Out << '\01'; // LLVM IR Marker for __asm("foo")
 
-    Out << ALA->getLabel();
+    if (ALA->getLabel().starts_with(g_lldb_func_call_label_prefix))
+      emitLLDBAsmLabel(ALA->getLabel(), GD, Out);
+    else
+      Out << ALA->getLabel();
+
     return;
   }
 

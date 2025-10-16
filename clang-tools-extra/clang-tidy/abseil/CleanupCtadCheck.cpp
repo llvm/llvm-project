@@ -1,4 +1,4 @@
-//===--- CleanupCtadCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,20 +8,17 @@
 
 #include "CleanupCtadCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace ::clang::ast_matchers;
 using namespace ::clang::transformer;
 
 namespace clang::tidy::abseil {
 
-RewriteRuleWith<std::string> cleanupCtadCheckImpl() {
+static RewriteRuleWith<std::string> cleanupCtadCheckImpl() {
   auto WarningMessage = cat("prefer absl::Cleanup's class template argument "
                             "deduction pattern in C++17 and higher");
 
