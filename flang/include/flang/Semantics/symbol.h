@@ -73,6 +73,9 @@ public:
     ompAtomicDefaultMemOrder_ = flags;
   }
 
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const WithOmpDeclarative &);
+
 private:
   std::optional<RequiresClauses> ompRequires_;
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
