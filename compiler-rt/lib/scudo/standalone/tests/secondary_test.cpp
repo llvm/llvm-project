@@ -403,6 +403,11 @@ template <class Config> struct CacheInfoType {
                    MemMap.getBase(), MemMap);
     }
   }
+
+  void storeMemMap(scudo::MemMapT &MemMap) {
+    Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
+                 MemMap.getBase(), MemMap);
+  }
 };
 
 TEST(ScudoSecondaryTest, AllocatorCacheEntryOrder) {
@@ -502,4 +507,84 @@ TEST(ScudoSecondaryTest, AllocatorCacheOptions) {
   EXPECT_TRUE(
       Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
   EXPECT_TRUE(Info.Cache->canCache(1UL << 16));
+}
+
+TEST(ScudoSecondaryTest, ReleaseOlderThanAllEntries) {
+  CacheInfoType<TestCacheConfig> Info;
+  using CacheConfig = CacheInfoType<TestCacheConfig>::CacheConfig;
+
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+
+  Info.fillCacheWithSameSizeBlocks(CacheConfig::getDefaultMaxEntriesCount(),
+                                   1024);
+  for (size_t I = 0; I < Info.MemMaps.size(); I++) {
+    // Set the first u32 value to a non-zero value.
+    *reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()) = 10;
+  }
+
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+
+  EXPECT_EQ(Info.MemMaps.size(), CacheConfig::getDefaultMaxEntriesCount());
+  for (size_t I = 0; I < Info.MemMaps.size(); I++) {
+    // All released maps will now be zero.
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
+}
+
+// This test assumes that the timestamp comes from getMonotonicFast.
+TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // Disable the release interval so we can do tests the releaseOlderThan
+  // function.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+
+  // Create all of the maps we are going to use.
+  for (size_t I = 0; I < 6; I++) {
+    Info.MemMaps.emplace_back(Info.allocate(1024));
+    // Set the first u32 value to a non-zero value.
+    *reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()) = 10;
+  }
+
+  // Create three groups of entries at three different intervals.
+  Info.storeMemMap(Info.MemMaps[0]);
+  Info.storeMemMap(Info.MemMaps[1]);
+  scudo::u64 FirstTime = scudo::getMonotonicTimeFast();
+
+  // Need to make sure the next set of entries are stamped with a newer time.
+  while (scudo::getMonotonicTimeFast() <= FirstTime)
+    ;
+
+  Info.storeMemMap(Info.MemMaps[2]);
+  Info.storeMemMap(Info.MemMaps[3]);
+  scudo::u64 SecondTime = scudo::getMonotonicTimeFast();
+
+  // Need to make sure the next set of entries are stamped with a newer time.
+  while (scudo::getMonotonicTimeFast() <= SecondTime)
+    ;
+
+  Info.storeMemMap(Info.MemMaps[4]);
+  Info.storeMemMap(Info.MemMaps[5]);
+  scudo::u64 ThirdTime = scudo::getMonotonicTimeFast();
+
+  Info.Cache->releaseOlderThanTestOnly(FirstTime);
+  for (size_t I = 0; I < 2; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
+  for (size_t I = 2; I < 6; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 10U);
+  }
+
+  Info.Cache->releaseOlderThanTestOnly(SecondTime);
+  for (size_t I = 0; I < 4; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
+  for (size_t I = 4; I < 6; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 10U);
+  }
+
+  Info.Cache->releaseOlderThanTestOnly(ThirdTime);
+  for (size_t I = 0; I < 6; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
 }
