@@ -9,8 +9,9 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i16 @main() {
-; CHECK-LABEL: define i16 @main() {
+define i16 @main(ptr %a) {
+; CHECK-LABEL: define i16 @main(
+; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
 ; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
@@ -24,7 +25,7 @@ define i16 @main() {
 ; CHECK-NEXT:    [[J:%.*]] = phi i16 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
-; CHECK-NEXT:    [[ARRAYIDX_US_US:%.*]] = getelementptr i16, ptr null, i16 [[J]]
+; CHECK-NEXT:    [[ARRAYIDX_US_US:%.*]] = getelementptr i16, ptr [[A]], i16 [[J]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX_US_US]], align 1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 false, i16 0, i16 0
 ; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
@@ -54,7 +55,7 @@ outer.header:
 
 inner.header:
   %j = phi i16 [ 0, %outer.header ], [ %j.next, %inner.latch ]
-  %arrayidx.us.us = getelementptr i16, ptr null, i16 %j
+  %arrayidx.us.us = getelementptr i16, ptr %a, i16 %j
   %0 = load i16, ptr %arrayidx.us.us, align 1
   %cond = select i1 false, i16 0, i16 0
   br label %inner.latch

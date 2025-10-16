@@ -1873,30 +1873,31 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
   InnerLatch->replacePhiUsesWith(InnerLatch, OuterLatch);
 }
 
-// This deals with a corner case when a LCSSA phi node appears in a non-exit
-// block: the outer loop latch block does not need to be exit block of the
-// inner loop. Consider a loop that was in LCSSA form, but then some
-// transformation like loop-unswitch comes along and creates an empty block,
-// where BB5 in this example is the outer loop latch block:
-//
-//   BB4:
-//     br label %BB5
-//   BB5:
-//     %old.cond.lcssa = phi i16 [ %cond, %BB4 ]
-//     br outer.header
-//
-// Interchange then brings it in LCSSA form again resulting in this chain of
-// single-input phi nodes:
-//
-//   BB4:
-//     %new.cond.lcssa = phi i16 [ %cond, %BB3 ]
-//     br label %BB5
-//   BB5:
-//     %old.cond.lcssa = phi i16 [ %new.cond.lcssa, %BB4 ]
-//
-// The problem is that interchange can reoder blocks BB4 and BB5 placing the
-// use before the def if we don't check this.
-//
+/// This deals with a corner case when a LCSSA phi node appears in a non-exit
+/// block: the outer loop latch block does not need to be exit block of the
+/// inner loop. Consider a loop that was in LCSSA form, but then some
+/// transformation like loop-unswitch comes along and creates an empty block,
+/// where BB5 in this example is the outer loop latch block:
+///
+///   BB4:
+///     br label %BB5
+///   BB5:
+///     %old.cond.lcssa = phi i16 [ %cond, %BB4 ]
+///     br outer.header
+///
+/// Interchange then brings it in LCSSA form again resulting in this chain of
+/// single-input phi nodes:
+///
+///   BB4:
+///     %new.cond.lcssa = phi i16 [ %cond, %BB3 ]
+///     br label %BB5
+///   BB5:
+///     %old.cond.lcssa = phi i16 [ %new.cond.lcssa, %BB4 ]
+///
+/// The problem is that interchange can reoder blocks BB4 and BB5 placing the
+/// use before the def if we don't check this. The solution is to simplify
+/// lcssa phi nodes (remove) if they appear in non-exit blocks.
+///
 static void simplifyLCSSAPhis(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *InnerLoopExit = InnerLoop->getExitBlock();
   BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
