@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -fopenacc -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
 ! Test detection of CUDA Fortran data transfer in presence of associuate
 ! statement.
