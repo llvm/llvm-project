@@ -966,7 +966,6 @@ void GCNScheduleDAGMILive::runSchedStages() {
     if (!Stage->initGCNSchedStage())
       continue;
 
-    bool IsAnyRegionScheduled = false;
     for (auto Region : Regions) {
       RegionBegin = Region.first;
       RegionEnd = Region.second;
@@ -990,12 +989,11 @@ void GCNScheduleDAGMILive::runSchedStages() {
                              Stage->getRegionIdx()));
       }
 
-      IsAnyRegionScheduled = true;
       ScheduleDAGMILive::schedule();
       Stage->finalizeGCNRegion();
     }
 
-    Stage->finalizeGCNSchedStage(IsAnyRegionScheduled);
+    Stage->finalizeGCNSchedStage();
   }
 }
 
@@ -1053,6 +1051,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
       createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PreRAReentry));
 
   InitialOccupancy = DAG.MinOccupancy;
+  IsAnyRegionScheduled = false;
   // Aggressivly try to reduce register pressure in the unclustered high RP
   // stage. Temporarily increase occupancy target in the region.
   S.SGPRLimitBias = S.HighRPSGPRBias;
@@ -1136,12 +1135,12 @@ bool PreRARematStage::initGCNSchedStage() {
   return true;
 }
 
-void GCNSchedStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
+void GCNSchedStage::finalizeGCNSchedStage() {
   DAG.finishBlock();
   LLVM_DEBUG(dbgs() << "Ending scheduling stage: " << StageID << "\n");
 }
 
-void UnclusteredHighRPStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
+void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
   S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
@@ -1157,7 +1156,7 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
     }
   }
 
-  GCNSchedStage::finalizeGCNSchedStage(IsAnyRegionScheduled);
+  GCNSchedStage::finalizeGCNSchedStage();
 }
 
 bool GCNSchedStage::initGCNRegion() {
@@ -1234,7 +1233,10 @@ bool UnclusteredHighRPStage::initGCNRegion() {
            InitialOccupancy))
     return false;
 
-  return GCNSchedStage::initGCNRegion();
+  bool IsRegionScheduled = GCNSchedStage::initGCNRegion();
+  if (!IsAnyRegionScheduled && IsRegionScheduled)
+    IsAnyRegionScheduled = true;
+  return IsRegionScheduled;
 }
 
 bool ClusteredLowOccStage::initGCNRegion() {
@@ -1971,7 +1973,7 @@ bool PreRARematStage::isReMaterializable(const MachineInstr &MI) {
   return true;
 }
 
-void PreRARematStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
+void PreRARematStage::finalizeGCNSchedStage() {
   // We consider that reducing spilling is always beneficial so we never
   // rollback rematerializations in such cases. It's also possible that
   // rescheduling lowers occupancy over the one achieved just through remats, in
@@ -2024,7 +2026,7 @@ void PreRARematStage::finalizeGCNSchedStage(bool IsAnyRegionScheduled) {
   for (auto &[I, OriginalRP] : ImpactedRegions)
     DAG.Pressure[I] = OriginalRP;
 
-  GCNSchedStage::finalizeGCNSchedStage(IsAnyRegionScheduled);
+  GCNSchedStage::finalizeGCNSchedStage();
 }
 
 void GCNScheduleDAGMILive::updateRegionBoundaries(

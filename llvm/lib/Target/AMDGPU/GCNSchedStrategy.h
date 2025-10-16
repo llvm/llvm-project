@@ -346,7 +346,7 @@ public:
   virtual bool initGCNSchedStage();
 
   // Finalize state after finishing a scheduling pass on the function.
-  virtual void finalizeGCNSchedStage(bool IsAnyRegionScheduled);
+  virtual void finalizeGCNSchedStage();
 
   // Setup for scheduling a region. Returns false if the current region should
   // be skipped.
@@ -402,11 +402,13 @@ class UnclusteredHighRPStage : public GCNSchedStage {
 private:
   // Save the initial occupancy before starting this stage.
   unsigned InitialOccupancy;
+  // Track whether any region was scheduled by this stage.
+  bool IsAnyRegionScheduled;
 
 public:
   bool initGCNSchedStage() override;
 
-  void finalizeGCNSchedStage(bool IsAnyRegionScheduled) override;
+  void finalizeGCNSchedStage() override;
 
   bool initGCNRegion() override;
 
@@ -494,7 +496,7 @@ private:
   /// If remat alone did not increase occupancy to the target one, rollbacks all
   /// rematerializations and resets live-ins/RP in all regions impacted by the
   /// stage to their pre-stage values.
-  void finalizeGCNSchedStage(bool IsAnyRegionScheduled) override;
+  void finalizeGCNSchedStage() override;
 
 public:
   bool initGCNSchedStage() override;
