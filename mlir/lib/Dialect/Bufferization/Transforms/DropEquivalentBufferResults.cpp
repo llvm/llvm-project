@@ -64,12 +64,13 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
   module.walk([&](func::CallOp callOp) {
     if (func::FuncOp calledFunc =
             dyn_cast_or_null<func::FuncOp>(callOp.resolveCallable())) {
-      callerMap[calledFunc].insert(callOp);
+      if (!calledFunc.isPublic() && !calledFunc.isExternal())
+        callerMap[calledFunc].insert(callOp);
     }
   });
 
   for (auto funcOp : module.getOps<func::FuncOp>()) {
-    if (funcOp.isExternal())
+    if (funcOp.isExternal() || funcOp.isPublic())
       continue;
     func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
     // TODO: Support functions with multiple blocks.

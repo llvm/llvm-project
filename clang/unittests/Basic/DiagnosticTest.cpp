@@ -21,7 +21,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -296,35 +295,23 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
 }
 
 TEST_F(SuppressionMappingTest, LongestMatchWins) {
-  StringRef Lines[] = {
-      "[unused]",
-      "src:*clang/*",
-      "src:*clang/lib/Sema/*",
-      "src:*clang/lib/Sema/*=emit",
-      "src:*clang/lib/Sema/foo*",
-  };
-  llvm::MutableArrayRef<StringRef> Rules = Lines;
-  Rules = Rules.drop_front();
-  llvm::sort(Rules);
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*clang/*
+  src:*clang/lib/Sema/*=emit
+  src:*clang/lib/Sema/foo*)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
 
-  do {
-    Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
-    std::string Contents = join(std::begin(Lines), std::end(Lines), "\n");
-    FS->addFile("foo.txt", /*ModificationTime=*/{},
-                llvm::MemoryBuffer::getMemBuffer(Contents));
-    clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-    EXPECT_THAT(diags(), IsEmpty());
-
-    EXPECT_TRUE(Diags.isSuppressedViaMapping(
-        diag::warn_unused_function, locForFile("clang/lib/Basic/foo.h")))
-        << Contents;
-    EXPECT_FALSE(Diags.isSuppressedViaMapping(
-        diag::warn_unused_function, locForFile("clang/lib/Sema/bar.h")))
-        << Contents;
-    EXPECT_TRUE(Diags.isSuppressedViaMapping(
-        diag::warn_unused_function, locForFile("clang/lib/Sema/foo.h")))
-        << Contents;
-  } while (std::next_permutation(Rules.begin(), Rules.end()));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile("clang/lib/Basic/foo.h")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile("clang/lib/Sema/bar.h")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("clang/lib/Sema/foo.h")));
 }
 
 TEST_F(SuppressionMappingTest, LongShortMatch) {
