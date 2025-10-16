@@ -97,41 +97,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-static void computeMixedShapesStrides(PatternRewriter &rewriter, Location loc,
-                                      SmallVector<OpFoldResult> &mixedShapes,
-                                      SmallVector<OpFoldResult> &mixedStrides,
-                                      SmallVector<int64_t> &strides,
-                                      TypedValue<MemRefType> src) {
-  auto srcTy = src.getType();
-  // In case of any dynamic shapes, source's shape and strides have to be
-  // explicitly provided.
-  SmallVector<Value> sourceDims;
-  unsigned srcRank = srcTy.getRank();
-  for (unsigned i = 0; i < srcRank; ++i)
-    sourceDims.push_back(memref::DimOp::create(rewriter, loc, src, i));
-
-  for (auto [idx, shape] : llvm::enumerate(srcTy.getShape())) {
-    if (shape == ShapedType::kDynamic)
-      mixedShapes.push_back(sourceDims[idx]);
-    else
-      mixedShapes.push_back(rewriter.getI64IntegerAttr(shape));
-  }
-
-  // Compute strides in reverse order.
-  Value accStride = arith::ConstantIndexOp::create(rewriter, loc, 1);
-  // Last stride is guaranteed to be static and unit.
-  mixedStrides.push_back(rewriter.getI64IntegerAttr(1));
-  for (int i = static_cast<int>(strides.size()) - 2; i >= 0; --i) {
-    accStride =
-        arith::MulIOp::create(rewriter, loc, accStride, sourceDims[i + 1]);
-    if (strides[i] == ShapedType::kDynamic)
-      mixedStrides.push_back(accStride);
-    else
-      mixedStrides.push_back(rewriter.getI64IntegerAttr(strides[i]));
-  }
-  std::reverse(mixedStrides.begin(), mixedStrides.end());
-}
-
 static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
                                                 Location loc,
                                                 xegpu::TensorDescType descType,
@@ -143,46 +108,38 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   if (srcTy.hasStaticShape())
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
   else {
+    // In case of any dynamic shapes, source's shape and strides have to be
+    // explicitly provided.
+    SmallVector<Value> sourceDims;
+    unsigned srcRank = srcTy.getRank();
+    for (unsigned i = 0; i < srcRank; ++i)
+      sourceDims.push_back(memref::DimOp::create(rewriter, loc, src, i));
+
     SmallVector<OpFoldResult> mixedShapes;
+    for (auto [idx, shape] : llvm::enumerate(srcTy.getShape())) {
+      if (shape == ShapedType::kDynamic)
+        mixedShapes.push_back(sourceDims[idx]);
+      else
+        mixedShapes.push_back(rewriter.getI64IntegerAttr(shape));
+    }
+
+    // Compute strides in reverse order.
     SmallVector<OpFoldResult> mixedStrides;
-    computeMixedShapesStrides(rewriter, loc, mixedShapes, mixedStrides, strides,
-                              src);
+    Value accStride = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    // Last stride is guaranteed to be static and unit.
+    mixedStrides.push_back(rewriter.getI64IntegerAttr(1));
+    for (int i = static_cast<int>(strides.size()) - 2; i >= 0; --i) {
+      accStride =
+          arith::MulIOp::create(rewriter, loc, accStride, sourceDims[i + 1]);
+      if (strides[i] == ShapedType::kDynamic)
+        mixedStrides.push_back(accStride);
+      else
+        mixedStrides.push_back(rewriter.getI64IntegerAttr(strides[i]));
+    }
+    std::reverse(mixedStrides.begin(), mixedStrides.end());
 
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
                                            mixedShapes, mixedStrides);
-  }
-
-  return ndDesc;
-}
-
-static xegpu::CreateNdDescOp
-createNdDescriptor(PatternRewriter &rewriter, Location loc,
-                   xegpu::TensorDescType descType, TypedValue<MemRefType> src,
-                   Operation::operand_range offsets) {
-  MemRefType srcTy = src.getType();
-  auto [strides, offset] = srcTy.getStridesAndOffset();
-
-  xegpu::CreateNdDescOp ndDesc;
-  if (srcTy.hasStaticShape()) {
-    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
-                                           getAsOpFoldResult(offsets));
-  } else {
-    SmallVector<OpFoldResult> mixedOffsets;
-    for (Value offset : offsets) {
-      std::optional<int64_t> staticVal = getConstantIntValue(offset);
-      if (staticVal)
-        mixedOffsets.push_back(rewriter.getI64IntegerAttr(staticVal.value()));
-      else
-        mixedOffsets.push_back(offset);
-    }
-
-    SmallVector<OpFoldResult> mixedShapes;
-    SmallVector<OpFoldResult> mixedStrides;
-    computeMixedShapesStrides(rewriter, loc, mixedShapes, mixedStrides, strides,
-                              src);
-
-    ndDesc = xegpu::CreateNdDescOp::create(
-        rewriter, loc, descType, src, mixedOffsets, mixedShapes, mixedStrides);
   }
 
   return ndDesc;
@@ -564,29 +521,15 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
                                                   ArrayRef<int64_t>{1, 0});
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::LoadNdOp loadOp;
+    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+        rewriter, loc, descType,
+        dyn_cast<TypedValue<MemRefType>>(readOp.getBase()));
 
-    if (vecTy.getRank() == readOp.getBase().getType().getRank()) {
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-          rewriter, loc, descType,
-          dyn_cast<TypedValue<MemRefType>>(readOp.getBase()));
-
-      loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
-                                       getAsOpFoldResult(readOp.getIndices()),
-                                       /*packed=*/nullptr, transposeAttr,
-                                       /*l1_hint=*/hint,
-                                       /*l2_hint=*/hint, /*l3_hint=*/hint);
-    } else {
-      xegpu::CreateNdDescOp ndDesc =
-          createNdDescriptor(rewriter, loc, descType,
-                             dyn_cast<TypedValue<MemRefType>>(readOp.getBase()),
-                             readOp.getIndices());
-
-      loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
-                                       /*packed=*/nullptr, transposeAttr,
-                                       /*l1_hint=*/hint,
-                                       /*l2_hint=*/hint, /*l3_hint=*/hint);
-    }
+    auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
+                                      getAsOpFoldResult(readOp.getIndices()),
+                                      /*packed=*/nullptr, transposeAttr,
+                                      /*l1_hint=*/hint,
+                                      /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -630,28 +573,15 @@ struct TransferWriteLowering
         xegpu::MemorySpace::Global);
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::StoreNdOp storeOp;
-    if (vecTy.getRank() == writeOp.getBase().getType().getRank()) {
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-          rewriter, loc, descType,
-          dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()));
+    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+        rewriter, loc, descType,
+        dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()));
 
-      storeOp =
-          xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
-                                   getAsOpFoldResult(writeOp.getIndices()),
-                                   /*l1_hint=*/hint,
-                                   /*l2_hint=*/hint, /*l3_hint=*/hint);
-    } else {
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-          rewriter, loc, descType,
-          dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()),
-          writeOp.getIndices());
-
-      storeOp =
-          xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
-                                   /*l1_hint=*/hint,
-                                   /*l2_hint=*/hint, /*l3_hint=*/hint);
-    }
+    auto storeOp =
+        xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
+                                  getAsOpFoldResult(writeOp.getIndices()),
+                                  /*l1_hint=*/hint,
+                                  /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -743,25 +673,13 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
         vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
         boundaryCheck, xegpu::MemorySpace::Global);
 
-    xegpu::LoadNdOp loadNdOp;
-
-    if (vecTy.getRank() == loadOp.getBase().getType().getRank()) {
-      xegpu::CreateNdDescOp ndDesc =
-          createNdDescriptor(rewriter, loc, descType, loadOp.getBase());
-      loadNdOp = xegpu::LoadNdOp::create(
-          rewriter, loc, vecTy, ndDesc, getAsOpFoldResult(loadOp.getIndices()),
-          /*packed=*/nullptr, /*transpose=*/nullptr,
-          /*l1_hint=*/hint,
-          /*l2_hint=*/hint, /*l3_hint=*/hint);
-    } else {
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-          rewriter, loc, descType, loadOp.getBase(), loadOp.getIndices());
-      loadNdOp =
-          xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
-                                  /*packed=*/nullptr, /*transpose=*/nullptr,
-                                  /*l1_hint=*/hint,
-                                  /*l2_hint=*/hint, /*l3_hint=*/hint);
-    }
+    xegpu::CreateNdDescOp ndDesc =
+        createNdDescriptor(rewriter, loc, descType, loadOp.getBase());
+    auto loadNdOp = xegpu::LoadNdOp::create(
+        rewriter, loc, vecTy, ndDesc, getAsOpFoldResult(loadOp.getIndices()),
+        /*packed=*/nullptr, /*transpose=*/nullptr,
+        /*l1_hint=*/hint,
+        /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(loadOp, loadNdOp);
 
     return success();
@@ -789,24 +707,14 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::StoreNdOp storeNdOp;
-    if (vecTy.getRank() == storeOp.getBase().getType().getRank()) {
-      xegpu::CreateNdDescOp ndDesc =
-          createNdDescriptor(rewriter, loc, descType, storeOp.getBase());
+    xegpu::CreateNdDescOp ndDesc =
+        createNdDescriptor(rewriter, loc, descType, storeOp.getBase());
 
-      storeNdOp =
-          xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
-                                   getAsOpFoldResult(storeOp.getIndices()),
-                                   /*l1_hint=*/hint,
-                                   /*l2_hint=*/hint, /*l3_hint=*/hint);
-    } else {
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-          rewriter, loc, descType, storeOp.getBase(), storeOp.getIndices());
-
-      storeNdOp = xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
-                                           /*l1_hint=*/hint,
-                                           /*l2_hint=*/hint, /*l3_hint=*/hint);
-    }
+    auto storeNdOp =
+        xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
+                                  getAsOpFoldResult(storeOp.getIndices()),
+                                  /*l1_hint=*/hint,
+                                  /*l2_hint=*/hint, /*l3_hint=*/hint);
 
     rewriter.replaceOp(storeOp, storeNdOp);
 
