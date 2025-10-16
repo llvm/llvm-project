@@ -282,6 +282,7 @@ using Replayable = tomp::clause::ReplayableT<TypeTy, IdTy, ExprTy>;
 using ReverseOffload = tomp::clause::ReverseOffloadT<TypeTy, IdTy, ExprTy>;
 using Safelen = tomp::clause::SafelenT<TypeTy, IdTy, ExprTy>;
 using Schedule = tomp::clause::ScheduleT<TypeTy, IdTy, ExprTy>;
+using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using SeqCst = tomp::clause::SeqCstT<TypeTy, IdTy, ExprTy>;
 using Severity = tomp::clause::SeverityT<TypeTy, IdTy, ExprTy>;
 using Shared = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
