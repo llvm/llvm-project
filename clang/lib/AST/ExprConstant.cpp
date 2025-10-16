@@ -12179,6 +12179,37 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_vpconflictsi_128:
+  case X86::BI__builtin_ia32_vpconflictsi_256:
+  case X86::BI__builtin_ia32_vpconflictsi_512:
+  case X86::BI__builtin_ia32_vpconflictdi_128:
+  case X86::BI__builtin_ia32_vpconflictdi_256:
+  case X86::BI__builtin_ia32_vpconflictdi_512: {
+    APValue Source;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    const auto *VecT = E->getType()->castAs<VectorType>();
+    bool DestUnsigned =
+        VecT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      const APValue &EltI = Source.getVectorElt(I);
+
+      APInt ConflictMask(EltI.getInt().getBitWidth(), 0);
+      for (unsigned J = 0; J != I; ++J) {
+        const APValue &EltJ = Source.getVectorElt(J);
+        ConflictMask.setBitVal(J, EltI.getInt() == EltJ.getInt());
+      }
+      ResultElements.push_back(APValue(APSInt(ConflictMask, DestUnsigned)));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case X86::BI__builtin_ia32_blendpd:
   case X86::BI__builtin_ia32_blendpd256:
   case X86::BI__builtin_ia32_blendps:
