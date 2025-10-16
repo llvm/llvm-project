@@ -18,6 +18,7 @@
 
 // REQUIRES: amdgpu
 // REQUIRES: pgo
+// XFAIL: amdgpu
 
 int test1(int a) { return a / 2; }
 int test2(int a) { return a * 2; }

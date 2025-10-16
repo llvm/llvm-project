@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; When scalarizing stores we need to preserve the original order.
 ; Make sure that we are extracting in the correct order (0101, and not 0011).
 
-define i32 @foo(ptr nocapture %A) {
+define void @foo(ptr nocapture %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -39,7 +39,7 @@ define i32 @foo(ptr nocapture %A) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -55,7 +55,7 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret void
 }
 
 

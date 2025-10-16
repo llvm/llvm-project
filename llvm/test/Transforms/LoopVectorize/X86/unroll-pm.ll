@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;CHECK-NOUNRL: store <4 x i32>
 ;CHECK-NOUNRL-NOT: store <4 x i32>
 ;CHECK-NOUNRL: ret
-define i32 @bar(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
+define void @bar(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -27,5 +27,5 @@ define i32 @bar(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret void
 }

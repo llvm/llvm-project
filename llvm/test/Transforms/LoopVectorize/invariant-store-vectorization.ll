@@ -337,7 +337,7 @@ for.end:                                          ; preds = %for.body
 ;    }
 ;  }
 
-define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly %var2, i32 %itr) #0 {
+define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly %var2, i32 %itr) #0 {
 ; CHECK-LABEL: @multiple_uniform_stores(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp eq i32 [[ITR:%.*]], 0
@@ -429,7 +429,7 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK:       for.end10.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END10]]
 ; CHECK:       for.end10:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp20 = icmp eq i32 %itr, 0
@@ -469,12 +469,12 @@ for.inc8:                                         ; preds = %for.body3, %for.con
   br i1 %exitcond26, label %for.end10, label %for.cond1.preheader
 
 for.end10:                                        ; preds = %for.inc8, %entry
-  ret i32 undef
+  ret void
 }
 
 ; second uniform store to the same address is conditional.
 ; we do not vectorize this.
-define i32 @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocapture readonly %var2, i32 %itr) #0 {
+define void @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocapture readonly %var2, i32 %itr) #0 {
 ; CHECK-LABEL: @multiple_uniform_stores_conditional(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp eq i32 [[ITR:%.*]], 0
@@ -520,7 +520,7 @@ define i32 @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocaptu
 ; CHECK:       for.end10.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END10]]
 ; CHECK:       for.end10:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp20 = icmp eq i32 %itr, 0
@@ -567,7 +567,7 @@ for.inc8:                                         ; preds = %for.body3, %for.con
   br i1 %exitcond26, label %for.end10, label %for.cond1.preheader
 
 for.end10:                                        ; preds = %for.inc8, %entry
-  ret i32 undef
+  ret void
 }
 
 ; cannot vectorize loop with unsafe dependency between uniform load (%i10) and store
