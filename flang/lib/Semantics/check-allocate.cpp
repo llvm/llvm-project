@@ -151,7 +151,9 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
@@ -598,7 +600,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           std::optional<evaluate::ConstantSubscript> lbound;
           if (const auto &lb{std::get<0>(shapeSpec.t)}) {
             lbound.reset();
-            const auto &lbExpr{lb->thing.thing.value()};
+            const auto &lbExpr{parser::UnwrapRef<parser::Expr>(lb)};
             if (const auto *expr{GetExpr(context, lbExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
@@ -609,7 +611,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             lbound = 1;
           }
           if (lbound) {
-            const auto &ubExpr{std::get<1>(shapeSpec.t).thing.thing.value()};
+            const auto &ubExpr{
+                parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t))};
             if (const auto *expr{GetExpr(context, ubExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};

@@ -2358,7 +2358,7 @@ private:
       }
       if (auto &repl{std::get<parser::OmpClause::Replayable>(clause.u).v}) {
         // Scalar<Logical<Constant<indirection<Expr>>>>
-        const parser::Expr &parserExpr{repl->v.thing.thing.thing.value()};
+        const auto &parserExpr{parser::UnwrapRef<parser::Expr>(repl)};
         if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
           return GetLogicalValue(*expr).value_or(true);
         }
@@ -2372,7 +2372,7 @@ private:
     bool isTransparent{true};
     if (auto &transp{std::get<parser::OmpClause::Transparent>(clause.u).v}) {
       // Scalar<Integer<indirection<Expr>>>
-      const parser::Expr &parserExpr{transp->v.thing.thing.value()};
+      const auto &parserExpr{parser::UnwrapRef<parser::Expr>(transp)};
       if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
         // If the argument is omp_not_impex (defined as 0), then
         // the task is not transparent, otherwise it is.
@@ -2411,8 +2411,8 @@ private:
       }
     }
     // Scalar<Logical<indirection<Expr>>>
-    auto &parserExpr{
-        std::get<parser::ScalarLogicalExpr>(ifc.v.t).thing.thing.value()};
+    const auto &parserExpr{parser::UnwrapRef<parser::Expr>(
+        std::get<parser::ScalarLogicalExpr>(ifc.v.t))};
     if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
       // If the value is known to be false, an undeferred task will be
       // generated.
