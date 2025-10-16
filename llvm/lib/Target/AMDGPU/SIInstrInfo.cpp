@@ -6366,6 +6366,41 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   return isImmOperandLegal(MI, OpIdx, *MO);
 }
 
+bool SIInstrInfo::getDowncastSequence(const MachineInstr &MI,
+                                      SmallVectorImpl<unsigned> &Sequence,
+                                      const GCNSubtarget &ST) const {
+  bool isGFX940Plus = ST.hasGFX940Insts();
+  switch (MI.getOpcode()) {
+  // Use 64 bit encoding to allow use of VOP3 instructions.
+  // VOP3 e64 instructions allow source modifiers
+  // e32 instructions don't allow source modifiers.
+  case AMDGPU::V_PK_ADD_F32: {
+    if (!isGFX940Plus)
+      return false;
+    Sequence.push_back(AMDGPU::V_ADD_F32_e64);
+    Sequence.push_back(AMDGPU::V_ADD_F32_e64);
+    return true;
+  }
+  case AMDGPU::V_PK_MUL_F32: {
+    if (!isGFX940Plus)
+      return false;
+    Sequence.push_back(AMDGPU::V_MUL_F32_e64);
+    Sequence.push_back(AMDGPU::V_MUL_F32_e64);
+    return true;
+  }
+  case AMDGPU::V_PK_FMA_F32: {
+    if (!isGFX940Plus)
+      return false;
+    Sequence.push_back(AMDGPU::V_FMA_F32_e64);
+    Sequence.push_back(AMDGPU::V_FMA_F32_e64);
+    return true;
+  }
+  default:
+    return false;
+  }
+  llvm_unreachable("Fully covered switch");
+}
+
 bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
   bool IsGFX950Only = ST.hasGFX950Insts();
   bool IsGFX940Only = ST.hasGFX940Insts();

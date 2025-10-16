@@ -60,6 +60,17 @@ static cl::opt<bool> UseCostHeur(
              "Experimentally, results are mixed, so this should be set on a "
              "case-by-case basis."));
 
+static cl::opt<bool> UseDowncastOps(
+    "amdgpu-igrouplp-use-downcast-ops", cl::Hidden,
+    cl::desc("Whether to use the downcast alternative OpCodes instead of the "
+             "current OpCode. Under certain conditions, some OpCodes may be "
+             "downcast "
+             "to an alternative sequence after scheduling (e.g. V_PK_MUL_F32 "
+             "-> V_MUL_F32). "
+             "This flag enables SchedGroup classification based on the "
+             "alternative."),
+    cl::init(false));
+
 // Components of the mask that determines which instruction types may be may be
 // classified into a SchedGroup.
 enum class SchedGroupMask {
@@ -133,6 +144,8 @@ private:
   // SGID is used to map instructions to candidate SchedGroups
   unsigned SGID;
 
+  unsigned CurrentSize = 0;
+
   // The different rules each instruction in this SchedGroup must conform to
   SmallVector<std::shared_ptr<InstructionRule>, 4> Rules;
 
@@ -143,8 +156,13 @@ private:
   bool tryAddEdge(SUnit *A, SUnit *B);
 
   // Use SGMask to determine whether we can classify MI as a member of this
-  // SchedGroup object.
+  // SchedGroup object. If UseDowncastOps is specified, and this is a candidate
+  // for downcasting, then use the DownCasted OpCodes.
   bool canAddMI(const MachineInstr &MI) const;
+
+  // Use SGMask to determine whether we can classify an opcode as a member of
+  // this SchedGroup object.
+  bool canAddSingleMI(unsigned Opcode, bool MayLoad, bool MayStore) const;
 
 public:
   // Collection of SUnits that are classified as members of this group.
@@ -176,7 +194,7 @@ public:
   void link(SchedGroup &OtherGroup);
 
   // Returns true if no more instructions may be added to this group.
-  bool isFull() const { return MaxSize && Collection.size() >= *MaxSize; }
+  bool isFull() const { return MaxSize && CurrentSize >= *MaxSize; }
 
   // Append a constraint that SUs must meet in order to fit into this
   // SchedGroup. Since many rules involve the relationship between a SchedGroup
@@ -202,10 +220,55 @@ public:
                       << format_hex((int)SGMask, 10, true) << " adding "
                       << *SU.getInstr());
     Collection.push_back(&SU);
+    MachineInstr &MI = *SU.getInstr();
+    if (!UseDowncastOps || MI.isMetaInstruction()) {
+      ++CurrentSize;
+      return;
+    }
+
+    SmallVector<unsigned, 4> UnpackSequence;
+    if (!TII->getDowncastSequence(MI, UnpackSequence,
+                                  DAG->MF.getSubtarget<GCNSubtarget>())) {
+      ++CurrentSize;
+      return;
+    }
+
+    for (unsigned UnpackOp : UnpackSequence) {
+      if (canAddSingleMI(UnpackOp, MI.mayLoad(), MI.mayStore()))
+        ++CurrentSize;
+    }
   }
 
   // Remove last element in the SchedGroup
-  void pop() { Collection.pop_back(); }
+  void pop() {
+    SUnit *SU = Collection.pop_back_val();
+    MachineInstr &MI = *SU->getInstr();
+    if (!UseDowncastOps || MI.isMetaInstruction()) {
+      assert(CurrentSize >= 1);
+      --CurrentSize;
+      return;
+    }
+
+    SmallVector<unsigned, 4> UnpackSequence;
+    if (!TII->getDowncastSequence(MI, UnpackSequence,
+                                  DAG->MF.getSubtarget<GCNSubtarget>())) {
+      assert(CurrentSize >= 1);
+      --CurrentSize;
+      return;
+    }
+
+    for (unsigned UnpackOp : UnpackSequence) {
+      if (canAddSingleMI(UnpackOp, MI.mayLoad(), MI.mayStore())) {
+        assert(CurrentSize >= 1);
+        --CurrentSize;
+      }
+    }
+  }
+
+  void clear() {
+    Collection.clear();
+    CurrentSize = 0;
+  }
 
   // Identify and add all relevant SUs from the DAG to this SchedGroup.
   void initSchedGroup();
@@ -371,16 +434,16 @@ public:
 };
 
 void PipelineSolver::reset() {
-
   for (auto &SyncPipeline : CurrPipeline) {
     for (auto &SG : SyncPipeline) {
       SmallVector<SUnit *, 32> TempCollection = SG.Collection;
-      SG.Collection.clear();
+      SG.clear();
       auto *SchedBarr = llvm::find_if(TempCollection, [](SUnit *SU) {
         return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER;
       });
-      if (SchedBarr != TempCollection.end())
-        SG.Collection.push_back(*SchedBarr);
+      if (SchedBarr != TempCollection.end()) {
+        SG.add(**SchedBarr);
+      }
     }
   }
 
@@ -2386,64 +2449,99 @@ bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
   return false;
 }
 
-bool SchedGroup::canAddMI(const MachineInstr &MI) const {
+bool SchedGroup::canAddSingleMI(unsigned Opcode, bool MayLoad,
+                                bool MayStore) const {
   bool Result = false;
-  if (MI.isMetaInstruction())
-    Result = false;
 
-  else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
-           (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
-            TII->isTRANS(MI)))
-    Result = !MI.mayLoadOrStore();
+  if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
+      (TII->isVALU(Opcode) || TII->isMFMAorWMMA(Opcode) ||
+       TII->isSALU(Opcode) || TII->isTRANS(Opcode)))
+    Result = !(MayLoad || MayStore);
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI)) {
+           TII->isVALU(Opcode) && !TII->isMFMAorWMMA(Opcode) &&
+           !TII->isTRANS(Opcode)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
-    Result = !MI.mayLoadOrStore();
+    Result = !(MayLoad || MayStore);
   }
 
   else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
-           TII->isSALU(MI))
-    Result = !MI.mayLoadOrStore();
+           TII->isSALU(Opcode))
+    Result = !(MayLoad || MayStore);
 
   else if (((SGMask & SchedGroupMask::MFMA) != SchedGroupMask::NONE) &&
-           TII->isMFMAorWMMA(MI))
+           TII->isMFMAorWMMA(Opcode))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           TII->isVMEM(MI))
+           (TII->isVMEM(Opcode) || TII->isFLAT(Opcode)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() && TII->isVMEM(MI))
+           MayLoad && (TII->isVMEM(Opcode) || TII->isFLAT(Opcode)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() && TII->isVMEM(MI))
+           MayStore && (TII->isVMEM(Opcode) || TII->isFLAT(Opcode)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
-           TII->isDS(MI))
+           TII->isDS(Opcode))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() && TII->isDS(MI))
+           MayLoad && TII->isDS(Opcode))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() && TII->isDS(MI))
+           MayStore && TII->isDS(Opcode))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
-           TII->isTRANS(MI))
+           TII->isTRANS(Opcode))
     Result = true;
 
-  LLVM_DEBUG(
-      dbgs() << "For SchedGroup with mask " << format_hex((int)SGMask, 10, true)
-             << (Result ? " could classify " : " unable to classify ") << MI);
+  return Result;
+}
 
+bool SchedGroup::canAddMI(const MachineInstr &MI) const {
+  bool Result = false;
+
+  auto emitDebug = [this](const MachineInstr &MI, bool Result) {
+    LLVM_DEBUG(dbgs() << "For SchedGroup with mask "
+                      << format_hex((int)SGMask, 10, true)
+                      << (Result ? " could classify " : " unable to classify ")
+                      << MI);
+  };
+
+  if (MI.isMetaInstruction()) {
+    emitDebug(MI, false);
+    return false;
+  }
+
+  if (!UseDowncastOps) {
+    Result = canAddSingleMI(MI.getOpcode(), MI.mayLoad(), MI.mayStore());
+    emitDebug(MI, Result);
+    return Result;
+  }
+
+  SmallVector<unsigned, 4> UnpackSequence;
+  if (!TII->getDowncastSequence(MI, UnpackSequence,
+                                DAG->MF.getSubtarget<GCNSubtarget>())) {
+    Result = canAddSingleMI(MI.getOpcode(), MI.mayLoad(), MI.mayStore());
+    emitDebug(MI, Result);
+    return Result;
+  }
+
+  // We have an unpackable MI, check if the unpack OpCodes are classifiable by
+  // this mask.
+  for (unsigned UnpackOp : UnpackSequence) {
+    Result |= canAddSingleMI(UnpackOp, MI.mayLoad(), MI.mayStore());
+  }
+
+  emitDebug(MI, Result);
   return Result;
 }
 
