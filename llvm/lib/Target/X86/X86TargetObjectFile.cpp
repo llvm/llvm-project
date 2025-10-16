@@ -8,8 +8,11 @@
 
 #include "X86TargetObjectFile.h"
 #include "MCTargetDesc/X86MCAsmInfo.h"
+#include "X86TargetMachine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -70,4 +73,14 @@ const MCExpr *X86_64ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
       MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
+}
+
+MCSection *X86_64ELFTargetObjectFile::LargeSectionForCommon(
+    const GlobalObject *GV, SectionKind Kind, const TargetMachine &TM) const {
+  auto &X86_TM = static_cast<const X86TargetMachine &>(TM);
+  if (GV && Kind.isCommon() && TM.isLargeGlobalValue(GV) && !X86_TM.isJIT()) {
+    unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_X86_64_LARGE;
+    return getContext().getELFSection(".lbss", ELF::SHT_NOBITS, Flags);
+  }
+  return nullptr;
 }
