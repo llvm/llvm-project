@@ -507,6 +507,18 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
                                          bool IsSigned,
                                          llvm::Value *OldVal,
                                          llvm::Value *RHS) {
+  const bool IsFP = OldVal->getType()->isFloatingPointTy();
+
+  if (IsFP) {
+    llvm::Intrinsic::ID IID = (Op == AtomicExpr::AO__atomic_max_fetch ||
+                               Op == AtomicExpr::AO__scoped_atomic_max_fetch)
+                                  ? llvm::Intrinsic::maxnum
+                                  : llvm::Intrinsic::minnum;
+
+    return Builder.CreateBinaryIntrinsic(IID, OldVal, RHS, llvm::FMFSource(),
+                                         "newval");
+  }
+
   llvm::CmpInst::Predicate Pred;
   switch (Op) {
   default:
@@ -880,7 +892,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
   DiagnosticsEngine &Diags = CGM.getDiags();
-  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
+  bool Misaligned = !Ptr.getAlignment().isMultipleOf(TInfo.Width);
   bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   if (Misaligned) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)

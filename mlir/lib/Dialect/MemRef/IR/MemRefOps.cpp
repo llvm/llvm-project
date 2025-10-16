@@ -607,6 +607,29 @@ AssumeAlignmentOp::bubbleDownCasts(OpBuilder &builder) {
 }
 
 //===----------------------------------------------------------------------===//
+// DistinctObjectsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DistinctObjectsOp::verify() {
+  if (getOperandTypes() != getResultTypes())
+    return emitOpError("operand types and result types must match");
+
+  if (getOperandTypes().empty())
+    return emitOpError("expected at least one operand");
+
+  return success();
+}
+
+LogicalResult DistinctObjectsOp::inferReturnTypes(
+    MLIRContext * /*context*/, std::optional<Location> /*location*/,
+    ValueRange operands, DictionaryAttr /*attributes*/,
+    OpaqueProperties /*properties*/, RegionRange /*regions*/,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  llvm::copy(operands.getTypes(), std::back_inserter(inferredReturnTypes));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -3412,6 +3435,65 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
 FailureOr<std::optional<SmallVector<Value>>>
 SubViewOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
+}
+
+void SubViewOp::inferStridedMetadataRanges(
+    ArrayRef<StridedMetadataRange> ranges, GetIntRangeFn getIntRange,
+    SetStridedMetadataRangeFn setMetadata, int32_t indexBitwidth) {
+  auto isUninitialized =
+      +[](IntegerValueRange range) { return range.isUninitialized(); };
+
+  // Bail early if any of the operands metadata is not ready:
+  SmallVector<IntegerValueRange> offsetOperands =
+      getIntValueRanges(getMixedOffsets(), getIntRange, indexBitwidth);
+  if (llvm::any_of(offsetOperands, isUninitialized))
+    return;
+
+  SmallVector<IntegerValueRange> sizeOperands =
+      getIntValueRanges(getMixedSizes(), getIntRange, indexBitwidth);
+  if (llvm::any_of(sizeOperands, isUninitialized))
+    return;
+
+  SmallVector<IntegerValueRange> stridesOperands =
+      getIntValueRanges(getMixedStrides(), getIntRange, indexBitwidth);
+  if (llvm::any_of(stridesOperands, isUninitialized))
+    return;
+
+  StridedMetadataRange sourceRange =
+      ranges[getSourceMutable().getOperandNumber()];
+  if (sourceRange.isUninitialized())
+    return;
+
+  ArrayRef<ConstantIntRanges> srcStrides = sourceRange.getStrides();
+
+  // Get the dropped dims.
+  llvm::SmallBitVector droppedDims = getDroppedDims();
+
+  // Compute the new offset, strides and sizes.
+  ConstantIntRanges offset = sourceRange.getOffsets()[0];
+  SmallVector<ConstantIntRanges> strides, sizes;
+
+  for (size_t i = 0, e = droppedDims.size(); i < e; ++i) {
+    bool dropped = droppedDims.test(i);
+    // Compute the new offset.
+    ConstantIntRanges off =
+        intrange::inferMul({offsetOperands[i].getValue(), srcStrides[i]});
+    offset = intrange::inferAdd({offset, off});
+
+    // Skip dropped dimensions.
+    if (dropped)
+      continue;
+    // Multiply the strides.
+    strides.push_back(
+        intrange::inferMul({stridesOperands[i].getValue(), srcStrides[i]}));
+    // Get the sizes.
+    sizes.push_back(sizeOperands[i].getValue());
+  }
+
+  setMetadata(getResult(),
+              StridedMetadataRange::getRanked(
+                  SmallVector<ConstantIntRanges>({std::move(offset)}),
+                  std::move(sizes), std::move(strides)));
 }
 
 //===----------------------------------------------------------------------===//

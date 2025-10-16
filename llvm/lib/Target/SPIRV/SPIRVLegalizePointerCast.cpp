@@ -46,7 +46,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -188,8 +187,31 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     FixedVectorType *SrcType = cast<FixedVectorType>(Src->getType());
     FixedVectorType *DstType =
         cast<FixedVectorType>(GR->findDeducedElementType(Dst));
-    assert(DstType->getNumElements() >= SrcType->getNumElements());
+    auto dstNumElements = DstType->getNumElements();
+    auto srcNumElements = SrcType->getNumElements();
 
+    // if the element type differs, it is a bitcast.
+    if (DstType->getElementType() != SrcType->getElementType()) {
+      // Support bitcast between vectors of different sizes only if
+      // the total bitwidth is the same.
+      [[maybe_unused]] auto dstBitWidth =
+          DstType->getElementType()->getScalarSizeInBits() * dstNumElements;
+      [[maybe_unused]] auto srcBitWidth =
+          SrcType->getElementType()->getScalarSizeInBits() * srcNumElements;
+      assert(dstBitWidth == srcBitWidth &&
+             "Unsupported bitcast between vectors of different sizes.");
+
+      Src =
+          B.CreateIntrinsic(Intrinsic::spv_bitcast, {DstType, SrcType}, {Src});
+      buildAssignType(B, DstType, Src);
+      SrcType = DstType;
+
+      StoreInst *SI = B.CreateStore(Src, Dst);
+      SI->setAlignment(Alignment);
+      return SI;
+    }
+
+    assert(DstType->getNumElements() >= SrcType->getNumElements());
     LoadInst *LI = B.CreateLoad(DstType, Dst);
     LI->setAlignment(Alignment);
     Value *OldValues = LI;

@@ -67,7 +67,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -155,7 +155,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -246,7 +246,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -330,7 +330,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -421,7 +421,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -509,7 +509,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -600,7 +600,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -684,7 +684,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -775,7 +775,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -863,7 +863,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -954,7 +954,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -1038,7 +1038,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0

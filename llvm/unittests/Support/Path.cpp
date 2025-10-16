@@ -255,14 +255,14 @@ TEST(Support, Path) {
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("/root", Relative);
+    path::make_absolute("/root", Relative);
     Relative[5] = '/'; // Fix up windows paths.
     ASSERT_EQ("/root/foo.cpp", Relative);
   }
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("//root", Relative);
+    path::make_absolute("//root", Relative);
     Relative[6] = '/'; // Fix up windows paths.
     ASSERT_EQ("//root/foo.cpp", Relative);
   }

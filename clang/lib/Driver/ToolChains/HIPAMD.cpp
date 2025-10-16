@@ -168,9 +168,12 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
   assert(!Inputs.empty() && "Must have at least one input.");
 
-  constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+  std::string LinkedBCFilePrefix(
+      Twine(llvm::sys::path::stem(Output.getFilename()), "-linked").str());
+  const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
+  InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  // Linked BC is now in Output
+  constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   // Emit SPIR-V binary.
   llvm::opt::ArgStringList TrArgs{
@@ -180,7 +183,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
       "--spirv-lower-const-expr",
       "--spirv-preserve-auxdata",
       "--spirv-debug-info-version=nonsemantic-shader-200"};
-  SPIRV::constructTranslateCommand(C, *this, JA, Output, Output, TrArgs);
+  SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile, TrArgs);
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is

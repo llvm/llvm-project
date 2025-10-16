@@ -2696,19 +2696,40 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           Size / PatternSize);
   }
 
-  /// Initialize the async info for interoperability purposes.
+  /// Initialize the async info
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     // TODO: Implement this function.
     return Plugin::success();
   }
 
-  /// Initialize the device info for interoperability purposes.
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    DeviceInfo->Context = nullptr;
+  interop_spec_t selectInteropPreference(int32_t InteropType,
+                                         int32_t NumPrefers,
+                                         interop_spec_t *Prefers) override {
+    // TODO: update once targetsync is supported
+    if (InteropType == kmp_interop_type_target)
+      return interop_spec_t{tgt_fr_hsa, {false, 0}, 0};
+    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
+  }
 
-    if (!DeviceInfo->Device)
-      DeviceInfo->Device = reinterpret_cast<void *>(Agent.handle);
+  Expected<omp_interop_val_t *>
+  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
+    auto *Ret = new omp_interop_val_t(
+        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
+    Ret->fr_id = tgt_fr_hsa;
+    Ret->vendor_id = omp_vendor_amd;
 
+    // TODO: implement targetsync support
+
+    Ret->device_info.Platform = nullptr;
+    Ret->device_info.Device = reinterpret_cast<void *>(Agent.handle);
+    Ret->device_info.Context = nullptr;
+
+    return Ret;
+  }
+
+  Error releaseInterop(omp_interop_val_t *Interop) override {
+    if (Interop)
+      delete Interop;
     return Plugin::success();
   }
 
@@ -3656,11 +3677,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  KernelArgsTy &KernelArgs,
                                  KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  if (ArgsSize != LaunchParams.Size &&
-      ArgsSize > LaunchParams.Size + getImplicitArgsSize())
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "invalid kernel arguments size");
-
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
   AMDHostDeviceTy &HostDevice = AMDGPUPlugin.getHostDevice();

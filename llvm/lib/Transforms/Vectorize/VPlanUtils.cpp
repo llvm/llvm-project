@@ -13,6 +13,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -52,7 +53,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
+bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
 
@@ -63,16 +64,17 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
   };
 
   VPValue *A, *B;
-  using namespace VPlanPatternMatch;
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()), m_One(),
-                                     m_Specific(&Plan.getVF()))) ||
+           (match(A,
+                  m_ScalarIVSteps(
+                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
-  return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
-         IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
+  return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
+         B == Plan.getBackedgeTakenCount();
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
@@ -90,7 +92,6 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  using namespace VPlanPatternMatch;
   // Live-ins are uniform.
   if (V->isLiveIn())
     return true;
@@ -103,7 +104,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
+  auto *CanonicalIV =
+      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
   // Canonical IV chain is uniform.
   if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
     return true;
@@ -159,7 +161,6 @@ std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(VPlan &Plan,
                                       SmallVectorImpl<VPRecipeBase *> &Recipes,
                                       SmallVectorImpl<VPRecipeBase *> &GEPs) {
-  using namespace llvm::VPlanPatternMatch;
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison

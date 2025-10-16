@@ -22,21 +22,8 @@ define float @for_load_interleave_only(ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[SRC]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[L:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 16
-; CHECK-NEXT:    [[L]] = load float, ptr [[PTR_IV]], align 4
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[PTR_IV]], align 4
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi float [ [[FOR]], %[[LOOP]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[FOR_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
 entry:
   br label %loop

@@ -57,7 +57,11 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// tile factors.
     DenseMap<int64_t, OpFoldResult> getDimAndTileMapping();
 
-    /// Return the tile sizes as OpFoldResult.
+    // TODO: Return the folded result.
+    /// Return the tile sizes as OpFoldResult. Will return the Value
+    /// of the constant Op, not the constant Attribute.
+    /// E.g., for %size = arith.constant 1 : i32 will return %size,
+    /// not 1.
     SmallVector<OpFoldResult> getMixedTiles();
 
     /// Return the tile sizes as `int64_t`. If a tile size is dynamic

@@ -69,7 +69,8 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %while.body
