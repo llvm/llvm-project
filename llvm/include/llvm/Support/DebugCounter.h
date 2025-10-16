@@ -178,6 +178,7 @@ protected:
     std::string Desc;
     SmallVector<Chunk> Chunks;
   };
+  bool handleCounterIncrement(CounterInfo &Info);
 
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
@@ -187,6 +188,8 @@ protected:
   bool Enabled = false;
 
   bool ShouldPrintCounter = false;
+
+  bool ShouldPrintCounterQueries = false;
 
   bool BreakOnLast = false;
 };

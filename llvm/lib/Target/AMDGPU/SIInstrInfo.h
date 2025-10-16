@@ -417,6 +417,7 @@ public:
                                   const MachineInstr &MIb) const override;
 
   static bool isFoldableCopy(const MachineInstr &MI);
+  static unsigned getFoldableCopySrcIdx(const MachineInstr &MI);
 
   void removeModOperands(MachineInstr &MI) const;
 
@@ -1297,7 +1298,7 @@ public:
       return 4;
     }
 
-    return RI.getRegSizeInBits(*RI.getRegClass(OpInfo.RegClass)) / 8;
+    return RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))) / 8;
   }
 
   /// This form should usually be preferred since it handles operands

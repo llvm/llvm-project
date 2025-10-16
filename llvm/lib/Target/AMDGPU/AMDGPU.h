@@ -562,6 +562,11 @@ public:
 void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
 extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
+struct AMDGPUUniformIntrinsicCombinePass
+    : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,

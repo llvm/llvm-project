@@ -137,6 +137,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   uint64_t StackSizeZPR = 0;
   uint64_t StackSizePPR = 0;
 
+  /// Are SVE objects (vectors and predicates) split into separate regions on
+  /// the stack.
+  bool SplitSVEObjects = false;
+
   /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
@@ -311,6 +315,8 @@ public:
   }
 
   void setStackSizeSVE(uint64_t ZPR, uint64_t PPR) {
+    assert(isAligned(Align(16), ZPR) && isAligned(Align(16), PPR) &&
+           "expected SVE stack sizes to be aligned to 16-bytes");
     StackSizeZPR = ZPR;
     StackSizePPR = PPR;
     HasCalculatedStackSizeSVE = true;
@@ -336,7 +342,6 @@ public:
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
-
   bool hasCalleeSaveStackFreeSpace() const {
     return CalleeSaveStackHasFreeSpace;
   }
@@ -422,6 +427,8 @@ public:
 
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
   void setSVECalleeSavedStackSize(unsigned ZPR, unsigned PPR) {
+    assert(isAligned(Align(16), ZPR) && isAligned(Align(16), PPR) &&
+           "expected SVE callee-save sizes to be aligned to 16-bytes");
     ZPRCalleeSavedStackSize = ZPR;
     PPRCalleeSavedStackSize = PPR;
     HasSVECalleeSavedStackSize = true;
@@ -438,12 +445,18 @@ public:
   }
 
   unsigned getSVECalleeSavedStackSize() const {
+    assert(!hasSplitSVEObjects() &&
+           "ZPRs and PPRs are split. Use get[ZPR|PPR]CalleeSavedStackSize()");
     return getZPRCalleeSavedStackSize() + getPPRCalleeSavedStackSize();
   }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
     return NumLocalDynamicTLSAccesses;
+  }
+
+  bool isStackHazardIncludedInCalleeSaveArea() const {
+    return hasStackHazardSlotIndex() && !hasSplitSVEObjects();
   }
 
   std::optional<bool> hasRedZone() const { return HasRedZone; }
@@ -479,6 +492,15 @@ public:
   void setStackHazardCSRSlotIndex(int Index) {
     assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
     StackHazardCSRSlotIndex = Index;
+  }
+
+  bool hasSplitSVEObjects() const { return SplitSVEObjects; }
+  void setSplitSVEObjects(bool s) { SplitSVEObjects = s; }
+
+  bool hasSVE_AAPCS(const MachineFunction &MF) const {
+    return hasSplitSVEObjects() || isSVECC() ||
+           MF.getFunction().getCallingConv() ==
+               CallingConv::AArch64_SVE_VectorCall;
   }
 
   SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
@@ -623,6 +645,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<uint64_t> StackSizeZPR;
   std::optional<uint64_t> StackSizePPR;
   std::optional<bool> HasStackFrame;
+  std::optional<bool> HasStreamingModeChanges;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -637,6 +660,7 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
     YamlIO.mapOptional("stackSizeZPR", MFI.StackSizeZPR);
     YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
     YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
+    YamlIO.mapOptional("hasStreamingModeChanges", MFI.HasStreamingModeChanges);
   }
 };
 

@@ -28,6 +28,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 /// This is the complement of getICmpCode, which turns an opcode and two
 /// operands into either a constant true or false, or a brand new ICmp
 /// instruction. The sign is passed in to determine which kind of predicate to
@@ -1272,7 +1276,8 @@ Value *InstCombinerImpl::foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd) {
 static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                           bool IsAnd, bool IsLogical,
                                           InstCombiner::BuilderTy &Builder,
-                                          const SimplifyQuery &Q) {
+                                          const SimplifyQuery &Q,
+                                          Instruction &I) {
   // Match an equality compare with a non-poison constant as Cmp0.
   // Also, give up if the compare can be constant-folded to avoid looping.
   CmpPredicate Pred0;
@@ -1306,9 +1311,12 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
       return nullptr;
     SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
   }
-  if (IsLogical)
-    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp)
-                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp);
+  if (IsLogical) {
+    Instruction *MDFrom =
+        ProfcheckDisableMetadataFixes && isa<SelectInst>(I) ? nullptr : &I;
+    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp, "", MDFrom)
+                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp, "", MDFrom);
+  }
   return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
                              SubstituteCmp);
 }
@@ -3396,13 +3404,13 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                                   /*IsLogical*/ false, Builder))
     return V;
 
-  if (Value *V =
-          foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical, Builder, Q))
+  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical,
+                                             Builder, Q, I))
     return V;
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
-  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
-                                             /*IsLogical=*/false, Builder, Q)) {
+  if (Value *V = foldAndOrOfICmpsWithConstEq(
+          RHS, LHS, IsAnd, /*IsLogical=*/false, Builder, Q, I)) {
     // If RHS is still used, we should drop samesign flag.
     if (IsLogical && RHS->hasSameSign() && !RHS->use_empty()) {
       RHS->setSameSign(false);

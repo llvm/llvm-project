@@ -69,8 +69,9 @@ public:
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
-                                          bool isSVE, Register &FrameReg,
-                                          bool PreferFP, bool ForSimm) const;
+                                          TargetStackID::Value StackID,
+                                          Register &FrameReg, bool PreferFP,
+                                          bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -155,7 +156,8 @@ public:
   /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
   StackOffset getZPRStackSize(const MachineFunction &MF) const;
 
-  /// Returns the size of the entire PPR stackframe (calleesaves + spills).
+  /// Returns the size of the entire PPR stackframe (calleesaves + spills +
+  /// hazard padding).
   StackOffset getPPRStackSize(const MachineFunction &MF) const;
 
   /// Returns the size of the entire SVE stackframe (PPRs + ZPRs).
