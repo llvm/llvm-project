@@ -78,6 +78,7 @@ TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",    phases
 TYPE("ada",                      Ada,          INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("assembler",                PP_Asm,       INVALID,         "s",      phases::Assemble, phases::Link)
 TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",      phases::Preprocess, phases::Assemble, phases::Link)
+TYPE("spv",                      SPV,          INVALID,         "spv",  phases::Backend)
 
 // Note: The `phases::Preprocess` phase is added to ".i" (i.e. Fortran
 // pre-processed) files. The reason is that the pre-processor "phase" has to be
