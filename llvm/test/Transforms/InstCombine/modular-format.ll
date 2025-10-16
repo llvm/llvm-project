@@ -89,7 +89,7 @@ declare void @first_arg_idx(i32, ptr, ...) #3
 define void @test_partial_aspects(i32 %arg) {
 ; CHECK-LABEL: @test_partial_aspects(
 ; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_unknown)
+; CHECK-NEXT:    call void @llvm.reloc.none(metadata !"basic_impl_unknown")
 ; CHECK-NEXT:    ret void
 ;
   call void (ptr, ...) @partial_aspects(ptr @.str.int, i32 %arg)

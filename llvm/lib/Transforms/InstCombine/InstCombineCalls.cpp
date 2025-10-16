@@ -4129,11 +4129,11 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   Module *M = CI->getModule();
+  LLVMContext &Ctx = M->getContext();
   Function *Callee = CI->getCalledFunction();
-  FunctionCallee ModularFn =
-      M->getOrInsertFunction(FnName, Callee->getFunctionType(),
-                             Callee->getAttributes().removeFnAttribute(
-                                 M->getContext(), "modular-format"));
+  FunctionCallee ModularFn = M->getOrInsertFunction(
+      FnName, Callee->getFunctionType(),
+      Callee->getAttributes().removeFnAttribute(Ctx, "modular-format"));
   CallInst *New = cast<CallInst>(CI->clone());
   New->setCalledFunction(ModularFn);
   New->removeFnAttr("modular-format");
@@ -4143,11 +4143,10 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
     SmallString<20> Name = ImplName;
     Name += '_';
     Name += Aspect;
-    Constant *Sym =
-        M->getOrInsertGlobal(Name, Type::getInt8Ty(M->getContext()));
     Function *RelocNoneFn =
         Intrinsic::getOrInsertDeclaration(M, Intrinsic::reloc_none);
-    B.CreateCall(RelocNoneFn, {Sym});
+    B.CreateCall(RelocNoneFn,
+                 {MetadataAsValue::get(Ctx, MDString::get(Ctx, Name))});
   };
 
   llvm::sort(NeededAspects);
