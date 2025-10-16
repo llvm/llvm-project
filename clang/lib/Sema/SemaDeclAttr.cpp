@@ -5206,7 +5206,8 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
   bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
-  if (S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
+  if (S.getASTContext().getTargetInfo().getTriple().isNVPTX() &&
+      !DeviceKernelAttr::isOpenCLSpelling(AL)) {
     handleGlobalAttr(S, D, AL);
   } else {
     // OpenCL C++ will throw a more specific error.
