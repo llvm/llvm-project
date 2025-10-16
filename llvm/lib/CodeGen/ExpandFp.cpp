@@ -941,9 +941,10 @@ static void scalarize(Instruction *I,
       llvm_unreachable("Unsupported instruction type");
 
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
-    Instruction *ScalarizedI = cast<Instruction>(NewOp);
-    ScalarizedI->copyIRFlags(I, true);
-    Worklist.push_back(ScalarizedI);
+    if (auto *ScalarizedI = dyn_cast<Instruction>(NewOp)) {
+      ScalarizedI->copyIRFlags(I, true);
+      Worklist.push_back(ScalarizedI);
+    }
   }
 
   I->replaceAllUsesWith(Result);
@@ -1001,45 +1002,44 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS)
     return false;
 
-  for (auto It = inst_begin(&F), End = inst_end(F); It != End;) {
-    Instruction &I = *It++;
+  auto ShouldHandleInst = [&](Instruction &I) {
     Type *Ty = I.getType();
     // TODO: This pass doesn't handle scalable vectors.
     if (Ty->isScalableTy())
-      continue;
+      return false;
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      if (!targetSupportsFrem(TLI, Ty) &&
-          FRemExpander::canExpandType(Ty->getScalarType())) {
-        addToWorklist(I, Worklist);
-      }
-      break;
+      return !targetSupportsFrem(TLI, Ty) &&
+             FRemExpander::canExpandType(Ty->getScalarType());
+
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
       auto *IntTy = cast<IntegerType>(Ty->getScalarType());
-      if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
-        continue;
-
-      addToWorklist(I, Worklist);
-      break;
+      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
     }
+
     case Instruction::UIToFP:
     case Instruction::SIToFP: {
       auto *IntTy =
           cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
-      if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
-        continue;
+      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
+    }
+    }
 
-      addToWorklist(I, Worklist);
-      break;
-    }
-    default:
-      break;
-    }
+    return false;
+  };
+
+  bool Modified = false;
+  for (auto It = inst_begin(&F), End = inst_end(F); It != End;) {
+    Instruction &I = *It++;
+    if (!ShouldHandleInst(I))
+      continue;
+
+    addToWorklist(I, Worklist);
+    Modified = true;
   }
 
-  bool Modified = !Worklist.empty();
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
     if (I->getOpcode() == Instruction::FRem) {
