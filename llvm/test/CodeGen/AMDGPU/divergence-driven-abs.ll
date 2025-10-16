@@ -1,5 +1,7 @@
 ; RUN:  llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN:  llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
+; RUN:  llc -mtriple=amdgcn -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN:  llc -mtriple=amdgcn -mcpu=gfx900 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
 
 ; GCN-LABEL: name: s_abs_i32
 ; GCN: S_ABS_I32
@@ -32,9 +34,9 @@ define amdgpu_kernel void @v_abs_i32(ptr addrspace(1) %out, ptr addrspace(1) %sr
 ; GCN: S_ABS_I32
 ; GCN: S_ABS_I32
 define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) nounwind {
-  %z0 = insertelement <2 x i32> undef, i32 0, i32 0
+  %z0 = insertelement <2 x i32> poison, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
-  %t0 = insertelement <2 x i32> undef, i32 2, i32 0
+  %t0 = insertelement <2 x i32> poison, i32 2, i32 0
   %t1 = insertelement <2 x i32> %t0, i32 2, i32 1
   %neg = sub <2 x i32> %z1, %val
   %cond = icmp sgt <2 x i32> %val, %neg
@@ -50,9 +52,9 @@ define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) no
 ; GCN: V_MAX_I32_e64
 ; GCN: V_MAX_I32_e64
 define amdgpu_kernel void @v_abs_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
-  %z0 = insertelement <2 x i32> undef, i32 0, i32 0
+  %z0 = insertelement <2 x i32> poison, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
-  %t0 = insertelement <2 x i32> undef, i32 2, i32 0
+  %t0 = insertelement <2 x i32> poison, i32 2, i32 0
   %t1 = insertelement <2 x i32> %t0, i32 2, i32 1
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x i32>, ptr addrspace(1) %src, i32 %tid

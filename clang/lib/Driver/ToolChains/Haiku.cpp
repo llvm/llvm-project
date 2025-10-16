@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Haiku.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang::driver;
@@ -86,20 +87,11 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -107,7 +99,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX() && ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
@@ -119,10 +111,14 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     }
+
+    if (NeedsSanitizerDeps)
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
 
     CmdArgs.push_back("-lgcc");
 
@@ -268,6 +264,8 @@ void Haiku::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers/posix"));
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
+                   "/boot/system/develop/headers/gcc/include"));
+  addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers"));
 }
 
@@ -280,3 +278,11 @@ void Haiku::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 Tool *Haiku::buildLinker() const { return new tools::haiku::Linker(*this); }
 
 bool Haiku::HasNativeLLVMSupport() const { return true; }
+
+SanitizerMask Haiku::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+
+  Res |= SanitizerKind::Address;
+
+  return Res;
+}

@@ -38,6 +38,10 @@ enum class errc {
   bad_address = int(std::errc::bad_address),
   bad_file_descriptor = int(std::errc::bad_file_descriptor),
   broken_pipe = int(std::errc::broken_pipe),
+  // There is no delete_pending in std::errc; this error code is negative to
+  // avoid conflicts. This error roughly corresponds with Windows'
+  // STATUS_DELETE_PENDING 0xC0000056.
+  delete_pending = -56,
   device_or_resource_busy = int(std::errc::device_or_resource_busy),
   directory_not_empty = int(std::errc::directory_not_empty),
   executable_format_error = int(std::errc::executable_format_error),

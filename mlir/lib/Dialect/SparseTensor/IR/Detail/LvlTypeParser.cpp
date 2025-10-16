@@ -37,7 +37,7 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   uint64_t properties = 0;
   SmallVector<unsigned> structured;
 
-  if (base.compare("structured") == 0) {
+  if (base == "structured") {
     ParseResult res = parser.parseCommaSeparatedList(
         mlir::OpAsmParser::Delimiter::OptionalSquare,
         [&]() -> ParseResult { return parseStructured(parser, &structured); },
@@ -60,18 +60,18 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   FAILURE_IF_FAILED(res)
 
   // Set the base bit for properties.
-  if (base.compare("dense") == 0) {
+  if (base == "dense") {
     properties |= static_cast<uint64_t>(LevelFormat::Dense);
-  } else if (base.compare("batch") == 0) {
+  } else if (base == "batch") {
     properties |= static_cast<uint64_t>(LevelFormat::Batch);
-  } else if (base.compare("compressed") == 0) {
+  } else if (base == "compressed") {
     properties |= static_cast<uint64_t>(LevelFormat::Compressed);
-  } else if (base.compare("structured") == 0) {
+  } else if (base == "structured") {
     properties |= static_cast<uint64_t>(LevelFormat::NOutOfM);
     properties |= nToBits(structured[0]) | mToBits(structured[1]);
-  } else if (base.compare("loose_compressed") == 0) {
+  } else if (base == "loose_compressed") {
     properties |= static_cast<uint64_t>(LevelFormat::LooseCompressed);
-  } else if (base.compare("singleton") == 0) {
+  } else if (base == "singleton") {
     properties |= static_cast<uint64_t>(LevelFormat::Singleton);
   } else {
     parser.emitError(loc, "unknown level format: ") << base;
@@ -89,11 +89,11 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
   auto loc = parser.getCurrentLocation();
   ERROR_IF(failed(parser.parseOptionalKeyword(&strVal)),
            "expected valid level property (e.g. nonordered, nonunique or high)")
-  if (strVal.equals(toPropString(LevelPropNonDefault::Nonunique))) {
+  if (strVal == toPropString(LevelPropNonDefault::Nonunique)) {
     *properties |= static_cast<uint64_t>(LevelPropNonDefault::Nonunique);
-  } else if (strVal.equals(toPropString(LevelPropNonDefault::Nonordered))) {
+  } else if (strVal == toPropString(LevelPropNonDefault::Nonordered)) {
     *properties |= static_cast<uint64_t>(LevelPropNonDefault::Nonordered);
-  } else if (strVal.equals(toPropString(LevelPropNonDefault::SoA))) {
+  } else if (strVal == toPropString(LevelPropNonDefault::SoA)) {
     *properties |= static_cast<uint64_t>(LevelPropNonDefault::SoA);
   } else {
     parser.emitError(loc, "unknown level property: ") << strVal;

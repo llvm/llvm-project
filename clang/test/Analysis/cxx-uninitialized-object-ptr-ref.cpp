@@ -1,9 +1,9 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
 
@@ -316,7 +316,10 @@ void fCyclicPointerTest2() {
 
 // Void pointer tests are mainly no-crash tests.
 
-void *malloc(int size);
+typedef __typeof(sizeof(int)) size_t;
+
+void *calloc(size_t nmemb, size_t size);
+void free(void *p);
 
 class VoidPointerTest1 {
   void *vptr;
@@ -328,8 +331,9 @@ public:
 };
 
 void fVoidPointerTest1() {
-  void *vptr = malloc(sizeof(int));
+  void *vptr = calloc(1, sizeof(int));
   VoidPointerTest1(vptr, char());
+  free(vptr);
 }
 
 class VoidPointerTest2 {
@@ -342,8 +346,9 @@ public:
 };
 
 void fVoidPointerTest2() {
-  void *vptr = malloc(sizeof(int));
+  void *vptr = calloc(1, sizeof(int));
   VoidPointerTest2(&vptr, char());
+  free(vptr);
 }
 
 class VoidPointerRRefTest1 {
@@ -359,8 +364,9 @@ upon returning to the caller.  This will be a dangling reference}}
 };
 
 void fVoidPointerRRefTest1() {
-  void *vptr = malloc(sizeof(int));
+  void *vptr = calloc(1, sizeof(int));
   VoidPointerRRefTest1(vptr, char());
+  free(vptr);
 }
 
 class VoidPointerRRefTest2 {
@@ -376,8 +382,9 @@ upon returning to the caller.  This will be a dangling reference}}
 };
 
 void fVoidPointerRRefTest2() {
-  void *vptr = malloc(sizeof(int));
+  void *vptr = calloc(1, sizeof(int));
   VoidPointerRRefTest2(&vptr, char());
+  free(vptr);
 }
 
 class VoidPointerLRefTest {
@@ -393,8 +400,9 @@ upon returning to the caller.  This will be a dangling reference}}
 };
 
 void fVoidPointerLRefTest() {
-  void *vptr = malloc(sizeof(int));
+  void *vptr = calloc(1, sizeof(int));
   VoidPointerLRefTest(vptr, char());
+  free(vptr);
 }
 
 struct CyclicVoidPointerTest {
@@ -422,8 +430,8 @@ void fIntDynTypedVoidPointerTest1() {
 
 struct RecordDynTypedVoidPointerTest {
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'static_cast<struct RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
-    int y; // expected-note{{uninitialized field 'static_cast<struct RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    int x; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
   };
 
   void *vptr;
@@ -439,9 +447,9 @@ void fRecordDynTypedVoidPointerTest() {
 
 struct NestedNonVoidDynTypedVoidPointerTest {
   struct RecordType {
-    int x;      // expected-note{{uninitialized field 'static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
-    int y;      // expected-note{{uninitialized field 'static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
-    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
+    int x;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
   };
 
   void *vptr;

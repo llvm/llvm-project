@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify -std=c++11 %s -fexperimental-new-constant-interpreter
 
 static int test0 __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
 static void test1() __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
@@ -55,3 +56,10 @@ constexpr bool weak_method_is_non_null = &WithWeakMember::weak_method != nullptr
 // virtual member function is present.
 constexpr bool virtual_weak_method_is_non_null = &WithWeakMember::virtual_weak_method != nullptr; // expected-error {{must be initialized by a constant expression}}
 // expected-note@-1 {{comparison against pointer to weak member 'WithWeakMember::virtual_weak_method' can only be performed at runtime}}
+
+// Check that no warnings are emitted.
+extern "C" int g0;
+extern int g0 __attribute__((weak_import));
+
+extern "C" int g1 = 0; // expected-note {{previous definition is here}}
+extern int g1 __attribute__((weak_import)); // expected-warning {{attribute declaration must precede definition}}

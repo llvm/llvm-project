@@ -3,14 +3,14 @@
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.split %0 after 42 { dimension = 0 } : !transform.any_op
+    %1 = transform.structured.split %0 after 42 { dimension = 0 } : !transform.any_op
     transform.yield
   }
 }
 
 func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32
 
-// CHECK: #[[$ADD_42_MAP:.+]] = affine_map<(d0) -> (d0 + 42)>
+// CHECK: #[[$ADD_42_MAP:.+]] = affine_map<()[s0] -> (s0 + 42)>
 
 // CHECK-LABEL: @one_d_static
 // CHECK-SAME:  %[[IN:.+]]: tensor<100xf32>, %[[OUT:.+]]: tensor<100xf32>
@@ -30,7 +30,7 @@ func.func @one_d_static(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tenso
   // CHECK:   ins(%[[IN_SLICE_HIGH]]
   // CHECK:   outs(%[[OUT_SLICE_HIGH]]
   // CHECK:   %[[IDX:.+]] = linalg.index 0
-  // CHECK:   affine.apply #[[$ADD_42_MAP]](%[[IDX]])
+  // CHECK:   affine.apply #[[$ADD_42_MAP]]()[%[[IDX]]]
   // CHECK:   func.call @elem
   // CHECK: %[[RES:.+]] = tensor.insert_slice %[[RES_SLICE_HIGH]] into %[[RES_PARTIAL]][42] [58] [1]
   %0 = linalg.generic {
@@ -53,7 +53,7 @@ func.func @one_d_static(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tenso
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.split %0 after 42 { dimension = 0 } : !transform.any_op
+    %1 = transform.structured.split %0 after 42 { dimension = 0 } : !transform.any_op
     transform.yield
   }
 }
@@ -138,8 +138,9 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.split %0 after 4 { dimension = 0 } : !transform.any_op
-    %2:2 = transform.structured.split %1#1 after 16 { dimension = 1 } : !transform.any_op
+    %t = transform.structured.split %0 after 4 { dimension = 0 } : !transform.any_op
+    %1:2 = transform.split_handle %t : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %2 = transform.structured.split %1#1 after 16 { dimension = 1 } : !transform.any_op
     transform.yield
   }
 }
@@ -197,7 +198,7 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     // expected-error @below {{expects either a dynamic or a static split point to be provided}}
-    %0:2 = "transform.structured.split"(%arg1) { dimension = 1, static_split_point = -9223372036854775808 } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %0 = "transform.structured.split"(%arg1) { dimension = 1, static_chunk_sizes = -9223372036854775808 } : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -303,7 +304,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{splitting does not produce the second part for a subset of targets}}
     // expected-note @below {{expected splitting to produce the second part of all or none of the targets}}
-    %1:2 = transform.structured.split %0 after 142 { dimension = 0 } : !transform.any_op
+    %1 = transform.structured.split %0 after 142 { dimension = 0 } : !transform.any_op
     transform.yield
   }
 }

@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // Verify that DWARF version is properly clamped for nvptx, but not for the host.
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc -c %s -gdwarf-5 -gembed-source 2>&1 \
 // RUN: | FileCheck %s --check-prefix=DWARF-CLAMP

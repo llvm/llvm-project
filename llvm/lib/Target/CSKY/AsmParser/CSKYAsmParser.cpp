@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/CSKYInstPrinter.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "MCTargetDesc/CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -21,7 +21,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -67,14 +67,14 @@ class CSKYAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
@@ -154,7 +154,7 @@ struct CSKYOperand : public MCParsedAsmOperand {
   } Kind;
 
   struct RegOp {
-    unsigned RegNum;
+    MCRegister RegNum;
   };
 
   struct ImmOp {
@@ -166,19 +166,19 @@ struct CSKYOperand : public MCParsedAsmOperand {
   };
 
   struct RegSeqOp {
-    unsigned RegNumFrom;
-    unsigned RegNumTo;
+    MCRegister RegNumFrom;
+    MCRegister RegNumTo;
   };
 
   struct RegListOp {
-    unsigned List1From = 0;
-    unsigned List1To = 0;
-    unsigned List2From = 0;
-    unsigned List2To = 0;
-    unsigned List3From = 0;
-    unsigned List3To = 0;
-    unsigned List4From = 0;
-    unsigned List4To = 0;
+    MCRegister List1From;
+    MCRegister List1To;
+    MCRegister List2From;
+    MCRegister List2To;
+    MCRegister List3From;
+    MCRegister List3To;
+    MCRegister List4From;
+    MCRegister List4To;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -400,14 +400,14 @@ public:
   /// Gets location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == Register && "Invalid type access!");
     return Reg.RegNum;
   }
 
-  std::pair<unsigned, unsigned> getRegSeq() const {
+  std::pair<MCRegister, MCRegister> getRegSeq() const {
     assert(Kind == RegisterSeq && "Invalid type access!");
-    return std::pair<unsigned, unsigned>(RegSeq.RegNumFrom, RegSeq.RegNumTo);
+    return {RegSeq.RegNumFrom, RegSeq.RegNumTo};
   }
 
   RegListOp getRegList() const {
@@ -430,7 +430,7 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return CSKYInstPrinter::getRegisterName(Reg);
@@ -440,10 +440,10 @@ public:
 
     switch (Kind) {
     case CPOP:
-      OS << *getConstpoolOp();
+      MAI.printExpr(OS, *getConstpoolOp());
       break;
     case Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
@@ -478,7 +478,7 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<CSKYOperand> createReg(unsigned RegNo, SMLoc S,
+  static std::unique_ptr<CSKYOperand> createReg(MCRegister RegNo, SMLoc S,
                                                 SMLoc E) {
     auto Op = std::make_unique<CSKYOperand>(Register);
     Op->Reg.RegNum = RegNo;
@@ -487,8 +487,8 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<CSKYOperand> createRegSeq(unsigned RegNoFrom,
-                                                   unsigned RegNoTo, SMLoc S) {
+  static std::unique_ptr<CSKYOperand>
+  createRegSeq(MCRegister RegNoFrom, MCRegister RegNoTo, SMLoc S) {
     auto Op = std::make_unique<CSKYOperand>(RegisterSeq);
     Op->RegSeq.RegNumFrom = RegNoFrom;
     Op->RegSeq.RegNumTo = RegNoTo;
@@ -498,7 +498,7 @@ public:
   }
 
   static std::unique_ptr<CSKYOperand>
-  createRegList(SmallVector<unsigned, 4> reglist, SMLoc S) {
+  createRegList(const SmallVector<MCRegister, 4> &reglist, SMLoc S) {
     auto Op = std::make_unique<CSKYOperand>(RegisterList);
     Op->RegList.List1From = 0;
     Op->RegList.List1To = 0;
@@ -656,7 +656,7 @@ bool CSKYAsmParser::generateImmOutOfRangeError(
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
-bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -848,11 +848,11 @@ bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
     }
   } else {
     const MCExpr *AdjustExpr = nullptr;
-    if (const CSKYMCExpr *CSKYExpr =
-            dyn_cast<CSKYMCExpr>(Inst.getOperand(1).getExpr())) {
-      if (CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSGD ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSIE ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSLDM) {
+    if (const auto *CSKYExpr =
+            dyn_cast<MCSpecifierExpr>(Inst.getOperand(1).getExpr())) {
+      if (CSKYExpr->getSpecifier() == CSKY::S_TLSGD ||
+          CSKYExpr->getSpecifier() == CSKY::S_TLSIE ||
+          CSKYExpr->getSpecifier() == CSKY::S_TLSLDM) {
         MCSymbol *Dot = getContext().createNamedTempSymbol();
         Out.emitLabel(Dot);
         AdjustExpr = MCSymbolRefExpr::create(Dot, getContext());
@@ -1172,25 +1172,25 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier");
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKY::Specifier Kind = CSKY::S_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT;
+    Kind = CSKY::S_GOT;
   else if (Identifier.consume_back("@GOTOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTOFF;
+    Kind = CSKY::S_GOTOFF;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT;
+    Kind = CSKY::S_PLT;
   else if (Identifier.consume_back("@GOTPC"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTPC;
+    Kind = CSKY::S_GOTPC;
   else if (Identifier.consume_back("@TLSGD32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSGD;
+    Kind = CSKY::S_TLSGD;
   else if (Identifier.consume_back("@GOTTPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSIE;
+    Kind = CSKY::S_TLSIE;
   else if (Identifier.consume_back("@TPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLE;
+    Kind = CSKY::S_TLSLE;
   else if (Identifier.consume_back("@TLSLDM32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDM;
+    Kind = CSKY::S_TLSLDM;
   else if (Identifier.consume_back("@TLSLDO32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDO;
+    Kind = CSKY::S_TLSLDO;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1198,20 +1198,20 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
 
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
   default:
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
-      Res = CSKYMCExpr::create(Res, Kind, getContext());
+    if (Kind != CSKY::S_None)
+      Res = MCSpecifierExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createImm(Res, S, E));
     return ParseStatus::Success;
@@ -1258,11 +1258,11 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier " + Identifier);
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKY::Specifier Kind = CSKY::S_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT_IMM18_BY4;
+    Kind = CSKY::S_GOT_IMM18_BY4;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT_IMM18_BY4;
+    Kind = CSKY::S_PLT_IMM18_BY4;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1270,14 +1270,14 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;
@@ -1288,8 +1288,8 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
 
     getLexer().Lex(); // Eat ']'.
 
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
-      Res = CSKYMCExpr::create(Res, Kind, getContext());
+    if (Kind != CSKY::S_None)
+      Res = MCSpecifierExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createConstpoolOp(Res, S, E));
     return ParseStatus::Success;
@@ -1345,14 +1345,14 @@ ParseStatus CSKYAsmParser::parseConstpoolSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;
@@ -1445,9 +1445,7 @@ ParseStatus CSKYAsmParser::parseRegSeq(OperandVector &Operands) {
 
 ParseStatus CSKYAsmParser::parseRegList(OperandVector &Operands) {
   SMLoc S = getLoc();
-
-  SmallVector<unsigned, 4> reglist;
-
+  SmallVector<MCRegister, 4> reglist;
   while (true) {
 
     if (!parseRegister(Operands).isSuccess())
@@ -1485,7 +1483,7 @@ ParseStatus CSKYAsmParser::parseRegList(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-bool CSKYAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool CSKYAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   // First operand is token for instruction.
   Operands.push_back(CSKYOperand::createToken(Name, NameLoc));

@@ -106,7 +106,7 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
     // table lookups can cause the DWO files to be accessed before the skeleton
     // compile unit is parsed, so we keep a map to allow us to match up the DWO
     // file to the back to the skeleton compile units.
-    if (unit_sp->GetUnitType() == lldb_private::dwarf::DW_UT_skeleton) {
+    if (unit_sp->GetUnitType() == llvm::dwarf::DW_UT_skeleton) {
       if (std::optional<uint64_t> unit_dwo_id = unit_sp->GetHeaderDWOId())
         m_dwarf5_dwo_id_to_skeleton_unit[*unit_dwo_id] = unit_sp.get();
     }
@@ -222,10 +222,6 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
   return result;
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
-  return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
-}
-
 DWARFUnit *
 DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
                                            dw_offset_t die_offset) {
@@ -234,6 +230,10 @@ DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
   if (result && !result->ContainsDIEOffset(die_offset))
     return nullptr;
   return result;
+}
+
+const std::shared_ptr<SymbolFileDWARFDwo> &DWARFDebugInfo::GetDwpSymbolFile() {
+  return m_dwarf.GetDwpSymbolFile();
 }
 
 DWARFTypeUnit *DWARFDebugInfo::GetTypeUnitForHash(uint64_t hash) {
@@ -253,15 +253,8 @@ bool DWARFDebugInfo::ContainsTypeUnits() {
 //
 // Get the DIE (Debug Information Entry) with the specified offset.
 DWARFDIE
-DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
-  DWARFUnit *cu = GetUnit(die_ref);
-  if (cu)
-    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
+DWARFDebugInfo::GetDIE(DIERef::Section section, dw_offset_t die_offset) {
+  if (DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset))
+    return cu->GetNonSkeletonUnit().GetDIE(die_offset);
   return DWARFDIE(); // Not found
-}
-
-llvm::StringRef DWARFDebugInfo::PeekDIEName(const DIERef &die_ref) {
-  if (DWARFUnit *cu = GetUnit(die_ref))
-    return cu->GetNonSkeletonUnit().PeekDIEName(die_ref.die_offset());
-  return llvm::StringRef();
 }

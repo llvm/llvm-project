@@ -1,4 +1,4 @@
-//===--- DuplicateIncludeCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -79,6 +79,10 @@ void DuplicateIncludeCallbacks::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  // Skip includes behind macros
+  if (FilenameRange.getBegin().isMacroID() ||
+      FilenameRange.getEnd().isMacroID())
+    return;
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.

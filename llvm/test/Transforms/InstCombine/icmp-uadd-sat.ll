@@ -8,8 +8,8 @@
 ; Basic tests with one user
 ; ==============================================================================
 define i1 @icmp_eq_basic(i8 %arg) {
-; CHECK-LABEL: define i1 @icmp_eq_basic
-; CHECK-SAME: (i8 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_eq_basic(
+; CHECK-SAME: i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ARG]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -19,8 +19,8 @@ define i1 @icmp_eq_basic(i8 %arg) {
 }
 
 define i1 @icmp_ne_basic(i16 %arg) {
-; CHECK-LABEL: define i1 @icmp_ne_basic
-; CHECK-SAME: (i16 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_ne_basic(
+; CHECK-SAME: i16 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[ARG]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -30,8 +30,8 @@ define i1 @icmp_ne_basic(i16 %arg) {
 }
 
 define i1 @icmp_ule_basic(i32 %arg) {
-; CHECK-LABEL: define i1 @icmp_ule_basic
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_ule_basic(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ARG]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -41,8 +41,8 @@ define i1 @icmp_ule_basic(i32 %arg) {
 }
 
 define i1 @icmp_ult_basic(i64 %arg) {
-; CHECK-LABEL: define i1 @icmp_ult_basic
-; CHECK-SAME: (i64 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_ult_basic(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ARG]], 15
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -52,8 +52,8 @@ define i1 @icmp_ult_basic(i64 %arg) {
 }
 
 define i1 @icmp_uge_basic(i8 %arg) {
-; CHECK-LABEL: define i1 @icmp_uge_basic
-; CHECK-SAME: (i8 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_uge_basic(
+; CHECK-SAME: i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ARG]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -63,8 +63,8 @@ define i1 @icmp_uge_basic(i8 %arg) {
 }
 
 define i1 @icmp_ugt_basic(i16 %arg) {
-; CHECK-LABEL: define i1 @icmp_ugt_basic
-; CHECK-SAME: (i16 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_ugt_basic(
+; CHECK-SAME: i16 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[ARG]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -74,8 +74,8 @@ define i1 @icmp_ugt_basic(i16 %arg) {
 }
 
 define i1 @icmp_sle_basic(i32 %arg) {
-; CHECK-LABEL: define i1 @icmp_sle_basic
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_sle_basic(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ARG]], 2147483637
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -85,8 +85,8 @@ define i1 @icmp_sle_basic(i32 %arg) {
 }
 
 define i1 @icmp_slt_basic(i64 %arg) {
-; CHECK-LABEL: define i1 @icmp_slt_basic
-; CHECK-SAME: (i64 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_slt_basic(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ARG]], 9223372036854775783
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -96,8 +96,8 @@ define i1 @icmp_slt_basic(i64 %arg) {
 }
 
 define i1 @icmp_sge_basic(i8 %arg) {
-; CHECK-LABEL: define i1 @icmp_sge_basic
-; CHECK-SAME: (i8 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_sge_basic(
+; CHECK-SAME: i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[ARG]], -3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 124
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -108,8 +108,8 @@ define i1 @icmp_sge_basic(i8 %arg) {
 }
 
 define i1 @icmp_sgt_basic(i16 %arg) {
-; CHECK-LABEL: define i1 @icmp_sgt_basic
-; CHECK-SAME: (i16 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_sgt_basic(
+; CHECK-SAME: i16 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ARG]], -4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[TMP1]], 32762
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -123,8 +123,8 @@ define i1 @icmp_sgt_basic(i16 %arg) {
 ; Tests with more than user
 ; ==============================================================================
 define i1 @icmp_eq_multiuse(i8 %arg) {
-; CHECK-LABEL: define i1 @icmp_eq_multiuse
-; CHECK-SAME: (i8 [[ARG:%.*]]) {
+; CHECK-LABEL: define i1 @icmp_eq_multiuse(
+; CHECK-SAME: i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG]], i8 2)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ADD]], 5
 ; CHECK-NEXT:    call void @use.i8(i8 [[ADD]])
@@ -140,9 +140,9 @@ define i1 @icmp_eq_multiuse(i8 %arg) {
 ; Tests with vector types
 ; ==============================================================================
 define <2 x i1> @icmp_eq_vector_equal(<2 x i8> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_equal
-; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], <i8 3, i8 3>
+; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_equal(
+; CHECK-SAME: <2 x i8> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %arg, <2 x i8> <i8 2, i8 2>)
@@ -151,8 +151,8 @@ define <2 x i1> @icmp_eq_vector_equal(<2 x i8> %arg) {
 }
 
 define <2 x i1> @icmp_eq_vector_unequal(<2 x i8> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_unequal
-; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_unequal(
+; CHECK-SAME: <2 x i8> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 1, i8 2>)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ADD]], <i8 5, i8 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
@@ -163,9 +163,9 @@ define <2 x i1> @icmp_eq_vector_unequal(<2 x i8> %arg) {
 }
 
 define <2 x i1> @icmp_ne_vector_equal(<2 x i16> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_ne_vector_equal
-; CHECK-SAME: (<2 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[ARG]], <i16 2, i16 2>
+; CHECK-LABEL: define <2 x i1> @icmp_ne_vector_equal(
+; CHECK-SAME: <2 x i16> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[ARG]], splat (i16 2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> %arg, <2 x i16> <i16 3, i16 3>)
@@ -174,8 +174,8 @@ define <2 x i1> @icmp_ne_vector_equal(<2 x i16> %arg) {
 }
 
 define <2 x i1> @icmp_ne_vector_unequal(<2 x i16> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_ne_vector_unequal
-; CHECK-SAME: (<2 x i16> [[ARG:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @icmp_ne_vector_unequal(
+; CHECK-SAME: <2 x i16> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[ARG]], <2 x i16> <i16 3, i16 33>)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[ADD]], <i16 7, i16 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
@@ -186,9 +186,9 @@ define <2 x i1> @icmp_ne_vector_unequal(<2 x i16> %arg) {
 }
 
 define <2 x i1> @icmp_ule_vector_equal(<2 x i32> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_equal
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ARG]], <i32 2, i32 2>
+; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_equal(
+; CHECK-SAME: <2 x i32> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ARG]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> %arg, <2 x i32> <i32 3, i32 3>)
@@ -197,8 +197,8 @@ define <2 x i1> @icmp_ule_vector_equal(<2 x i32> %arg) {
 }
 
 define <2 x i1> @icmp_ule_vector_unequal(<2 x i32> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_unequal
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_unequal(
+; CHECK-SAME: <2 x i32> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[ARG]], <2 x i32> <i32 3, i32 35>)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ADD]], <i32 5, i32 7>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
@@ -209,9 +209,9 @@ define <2 x i1> @icmp_ule_vector_unequal(<2 x i32> %arg) {
 }
 
 define <2 x i1> @icmp_sgt_vector_equal(<2 x i64> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_equal
-; CHECK-SAME: (<2 x i64> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[ARG]], <i64 9223372036854366185, i64 9223372036854366185>
+; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_equal(
+; CHECK-SAME: <2 x i64> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[ARG]], splat (i64 9223372036854366185)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %arg, <2 x i64> <i64 409623, i64 409623>)
@@ -220,8 +220,8 @@ define <2 x i1> @icmp_sgt_vector_equal(<2 x i64> %arg) {
 }
 
 define <2 x i1> @icmp_sgt_vector_unequal(<2 x i64> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_unequal
-; CHECK-SAME: (<2 x i64> [[ARG:%.*]]) {
+; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_unequal(
+; CHECK-SAME: <2 x i64> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> [[ARG]], <2 x i64> <i64 320498, i64 409623>)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i64> [[ADD]], <i64 1234, i64 3456>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
@@ -235,10 +235,10 @@ define <2 x i1> @icmp_sgt_vector_unequal(<2 x i64> %arg) {
 ; Tests with vector types and multiple uses
 ; ==============================================================================
 define <2 x i1> @icmp_eq_vector_multiuse_equal(<2 x i8> %arg) {
-; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_equal
-; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 2, i8 2>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ADD]], <i8 5, i8 5>
+; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_equal(
+; CHECK-SAME: <2 x i8> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> splat (i8 2))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ADD]], splat (i8 5)
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[ADD]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

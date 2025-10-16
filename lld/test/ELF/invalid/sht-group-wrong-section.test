@@ -1,4 +1,6 @@
 # REQUIRES: x86
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 # RUN: yaml2obj %s -o %t.o
 # RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: error: {{.*}}.o: invalid section index in group: 12345

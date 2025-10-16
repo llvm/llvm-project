@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_COMPILATIONDATABASEPLUGINREGISTRY_H
 #define LLVM_CLANG_TOOLING_COMPILATIONDATABASEPLUGINREGISTRY_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Registry.h"
 
@@ -41,5 +42,10 @@ using CompilationDatabasePluginRegistry =
 
 } // namespace tooling
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI
+    Registry<clang::tooling::CompilationDatabasePlugin>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLING_COMPILATIONDATABASEPLUGINREGISTRY_H

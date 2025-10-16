@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11
-
-// XFAIL: availability-synchronization_library-missing
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <semaphore>
 

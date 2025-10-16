@@ -9,7 +9,6 @@
 
 ; Test that functions (in address space 1) are not considered .progmem data.
 
-; CHECK: .text
 ; SECTIONS: .text.somefunc,"ax",@progbits
 ; CHECK-LABEL: somefunc:
 define void @somefunc() addrspace(1) {

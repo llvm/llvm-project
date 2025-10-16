@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: %s
 
 v_wmma_f32_16x16x16_f16 v[4:7], v[0:1], v[2:3], v[4:7]
 // GFX12: v_wmma_f32_16x16x16_f16 v[4:7], v[0:1], v[2:3], v[4:7] ; encoding: [0x04,0x40,0x40,0xcc,0x00,0x05,0x12,0x1c]

@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: libcpp-has-no-experimental-stop_token
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 
 // [[nodiscard]] stop_token get_token() const noexcept;
 // [[nodiscard]] bool stop_possible() const noexcept;

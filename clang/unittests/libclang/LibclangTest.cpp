@@ -1292,6 +1292,37 @@ void func() {}
   EXPECT_EQ(attrCount, 1);
 }
 
+TEST_F(LibclangParseTest, clang_getSpellingLocation) {
+  std::string fileName = "main.c";
+  WriteFile(fileName, "#define X(value) int x = value;\nX(42)\n");
+
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+
+  int declarationCount = 0;
+  Traverse([&declarationCount](CXCursor cursor,
+                               CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_VarDecl) {
+      declarationCount++;
+
+      CXSourceLocation cxl = clang_getCursorLocation(cursor);
+      unsigned line;
+
+      // We expect clang_getFileLocation to return the expansion location,
+      // whereas clang_getSpellingLocation should resolve the macro expansion
+      // and return the location of the macro definition.
+      clang_getFileLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 2U);
+      clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 1U);
+    }
+
+    return CXChildVisit_Recurse;
+  });
+
+  EXPECT_EQ(declarationCount, 1);
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;
@@ -1378,4 +1409,53 @@ TEST_F(LibclangRewriteTest, RewriteRemove) {
 
   ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
   EXPECT_EQ(getFileContent(Filename), "int () { return 0; }");
+}
+
+TEST_F(LibclangParseTest, FileEqual) {
+  std::string AInc = "a.inc", BInc = "b.inc", Main = "main.cpp";
+  WriteFile(Main, "int a[] = {\n"
+                  "    #include \"a.inc\"\n"
+                  "};\n"
+                  "int b[] = {\n"
+                  "    #include \"b.inc\"\n"
+                  "};");
+  WriteFile(AInc, "1,2,3");
+  WriteFile(BInc, "1,2,3");
+
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXFile AFile = clang_getFile(ClangTU, AInc.c_str()),
+         AFile2 = clang_getFile(ClangTU, AInc.c_str()),
+         BFile = clang_getFile(ClangTU, BInc.c_str()),
+         MainFile = clang_getFile(ClangTU, Main.c_str());
+
+  ASSERT_FALSE(clang_File_isEqual(MainFile, AFile));
+  ASSERT_FALSE(clang_File_isEqual(AFile, BFile));
+  ASSERT_TRUE(clang_File_isEqual(AFile, AFile2));
+}
+
+TEST_F(LibclangParseTest, FileEqualInMemory) {
+  std::string AInc = "a.inc", BInc = "b.inc", Main = "main.cpp";
+  MapUnsavedFile(Main, "int a[] = {\n"
+                       "    #include \"a.inc\"\n"
+                       "};\n"
+                       "int b[] = {\n"
+                       "    #include \"b.inc\"\n"
+                       "};");
+  MapUnsavedFile(AInc, "1,2,3");
+  MapUnsavedFile(BInc, "1,2,3");
+
+  ClangTU = clang_parseTranslationUnit(Index, UnsavedFiles[0].Filename, nullptr,
+                                       0, &UnsavedFiles.front(),
+                                       UnsavedFiles.size(), TUFlags);
+
+  CXFile AFile = clang_getFile(ClangTU, UnsavedFiles[1].Filename),
+         AFile2 = clang_getFile(ClangTU, UnsavedFiles[1].Filename),
+         BFile = clang_getFile(ClangTU, UnsavedFiles[2].Filename),
+         MainFile = clang_getFile(ClangTU, UnsavedFiles[0].Filename);
+
+  ASSERT_FALSE(clang_File_isEqual(MainFile, AFile));
+  ASSERT_FALSE(clang_File_isEqual(AFile, BFile));
+  ASSERT_TRUE(clang_File_isEqual(AFile, AFile2));
 }

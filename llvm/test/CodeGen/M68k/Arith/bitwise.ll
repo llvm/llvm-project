@@ -242,7 +242,7 @@ define i64 @lshr64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    add.l #-32, %d1
 ; CHECK-NEXT:    bmi .LBB18_1
 ; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    bra .LBB18_3
 ; CHECK-NEXT:  .LBB18_1:
 ; CHECK-NEXT:    move.l %d2, %d0
@@ -301,7 +301,7 @@ define i64 @ashr64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    add.l #-32, %d3
 ; CHECK-NEXT:    bmi .LBB19_5
 ; CHECK-NEXT:  ; %bb.4:
-; CHECK-NEXT:    move.l #31, %d2
+; CHECK-NEXT:    moveq #31, %d2
 ; CHECK-NEXT:  .LBB19_5:
 ; CHECK-NEXT:    asr.l %d2, %d0
 ; CHECK-NEXT:    movem.l (0,%sp), %d2-%d3 ; 12-byte Folded Reload
@@ -322,7 +322,7 @@ define i64 @shl64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    add.l #-32, %d0
 ; CHECK-NEXT:    bmi .LBB20_1
 ; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    move.l #0, %d1
+; CHECK-NEXT:    moveq #0, %d1
 ; CHECK-NEXT:    bra .LBB20_3
 ; CHECK-NEXT:  .LBB20_1:
 ; CHECK-NEXT:    move.l %d2, %d1

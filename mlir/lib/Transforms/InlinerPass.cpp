@@ -18,6 +18,7 @@
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Inliner.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_INLINER
@@ -64,7 +65,9 @@ private:
   /// Derived classes may override this method to hook into the point at which
   /// options are initialized, but should generally always invoke this base
   /// class variant.
-  LogicalResult initializeOptions(StringRef options) override;
+  LogicalResult initializeOptions(
+      StringRef options,
+      function_ref<LogicalResult(const Twine &)> errorHandler) override;
 
   /// Inliner configuration parameters created from the pass options.
   InlinerConfig config;
@@ -103,10 +106,7 @@ static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
   Region *callerRegion = resolvedCall.sourceNode->getCallableRegion();
   Region *calleeRegion = resolvedCall.targetNode->getCallableRegion();
 
-  // We should not get external nodes here, but just return true
-  // for now to preserve the original behavior of the inliner pass.
-  if (!callerRegion || !calleeRegion)
-    return true;
+  assert(calleeRegion && callerRegion && "unexpected external node");
 
   auto countOps = [](Region *region) {
     unsigned count = 0;
@@ -121,8 +121,8 @@ static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
     return true;
 
   unsigned ratio = countOps(calleeRegion) * 100 / callerOps;
-  LLVM_DEBUG(llvm::dbgs() << "Callee / caller operation ratio (max: "
-                          << inliningThreshold << "%): " << ratio << "%\n");
+  LDBG() << "Callee / caller operation ratio (max: " << inliningThreshold
+         << "%): " << ratio << "%";
   return ratio <= inliningThreshold;
 }
 
@@ -139,7 +139,7 @@ void InlinerPass::runOnOperation() {
   }
 
   // By default, assume that any inlining is profitable.
-  auto profitabilityCb = [=](const Inliner::ResolvedCall &call) {
+  auto profitabilityCb = [this](const Inliner::ResolvedCall &call) {
     return isProfitableToInline(call, inliningThreshold);
   };
 
@@ -150,11 +150,12 @@ void InlinerPass::runOnOperation() {
   // Run the inlining.
   if (failed(inliner.doInlining()))
     signalPassFailure();
-  return;
 }
 
-LogicalResult InlinerPass::initializeOptions(StringRef options) {
-  if (failed(Pass::initializeOptions(options)))
+LogicalResult InlinerPass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  if (failed(Pass::initializeOptions(options, errorHandler)))
     return failure();
 
   // Initialize the pipeline builder for operations without the dedicated

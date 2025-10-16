@@ -17,19 +17,20 @@ define i64 @sqlite3DropTriggerPtr() nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    callq check@PLT
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rbx, %rcx
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %bb4
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    leaq 1(%rcx), %rbx
+; CHECK-NEXT:    incq %rbx
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  .LBB0_3: # %bb8
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:  # %bb.3: # %bb8split
+; CHECK-NEXT:    decq %rbx
+; CHECK-NEXT:  .LBB0_4: # %bb8
+; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 bb:

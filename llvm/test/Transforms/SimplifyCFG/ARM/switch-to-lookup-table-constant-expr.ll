@@ -7,8 +7,6 @@ target triple = "armv7a--none-eabi"
 ; One of the phi node's values is too complex to be represented by a global
 ; variable, so we can't convert to a lookup table.
 
-; CHECK-NOT: @switch.table
-; CHECK-NOT: load
 
 @g1 = external global i32, align 4
 @g2 = external global i32, align 4
@@ -19,9 +17,9 @@ define ptr @test3(i32 %n) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i32 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -30,7 +28,7 @@ define ptr @test3(i32 %n) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ @g4, [[SW_DEFAULT]] ], [ getelementptr inbounds (i32, ptr inttoptr (i32 mul (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), [[SW_BB2]] ], [ @g2, [[SW_BB1]] ], [ @g1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ @g4, [[SW_DEFAULT]] ], [ getelementptr inbounds (i32, ptr inttoptr (i32 add (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), [[SW_BB2]] ], [ @g2, [[SW_BB1]] ], [ @g1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
@@ -53,6 +51,6 @@ sw.default:
   br label %return
 
 return:
-  %retval.0 = phi ptr [ @g4, %sw.default ], [ getelementptr inbounds (i32, ptr inttoptr (i32 mul (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
+  %retval.0 = phi ptr [ @g4, %sw.default ], [ getelementptr inbounds (i32, ptr inttoptr (i32 add (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
   ret ptr %retval.0
 }

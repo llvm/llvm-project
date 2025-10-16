@@ -59,6 +59,7 @@ static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
   IO.mapRequired("Needed", Section.Needed);
   IO.mapOptional("ImportInfo", Section.ImportInfo);
   IO.mapOptional("ExportInfo", Section.ExportInfo);
+  IO.mapOptional("RuntimePath", Section.RuntimePath);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
@@ -342,7 +343,6 @@ void ScalarEnumerationTraits<WasmYAML::FeaturePolicyPrefix>::enumeration(
     IO &IO, WasmYAML::FeaturePolicyPrefix &Kind) {
 #define ECase(X) IO.enumCase(Kind, #X, wasm::WASM_FEATURE_PREFIX_##X);
   ECase(USED);
-  ECase(REQUIRED);
   ECase(DISALLOWED);
 #undef ECase
 }
@@ -373,6 +373,8 @@ void MappingTraits<WasmYAML::Limits>::mapping(IO &IO,
   IO.mapRequired("Minimum", Limits.Minimum);
   if (!IO.outputting() || Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
     IO.mapOptional("Maximum", Limits.Maximum);
+  if (!IO.outputting() || Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_PAGE_SIZE)
+    IO.mapOptional("PageSize", Limits.PageSize);
 }
 
 void MappingTraits<WasmYAML::ElemSegment>::mapping(
@@ -382,7 +384,7 @@ void MappingTraits<WasmYAML::ElemSegment>::mapping(
       Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
     IO.mapOptional("TableNumber", Segment.TableNumber);
   if (!IO.outputting() ||
-      Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND)
+      Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC)
     IO.mapOptional("ElemKind", Segment.ElemKind);
   // TODO: Omit "offset" for passive segments? It's neither meaningful nor
   // encoded.
@@ -553,6 +555,7 @@ void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
   BCase(HAS_MAX);
   BCase(IS_SHARED);
   BCase(IS_64);
+  BCase(HAS_PAGE_SIZE);
 #undef BCase
 }
 
@@ -606,6 +609,7 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
   ECase(OTHERREF);
 #undef ECase
 }
@@ -640,6 +644,7 @@ void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
 #define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
   ECase(OTHERREF);
 #undef ECase
 }

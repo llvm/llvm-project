@@ -68,6 +68,14 @@ def SYSENTER : I<0x34, RawFrm, (outs), (ins), "sysenter", []>, TB;
 def SYSEXIT   : I<0x35, RawFrm, (outs), (ins), "sysexit{l}", []>, TB;
 def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
                   Requires<[In64BitMode]>;
+
+// FRED Instructions
+let hasSideEffects = 1, Defs = [RSP, EFLAGS] in {
+  def ERETS: I<0x01, MRM_CA, (outs), (ins), "erets",
+              []>, TB, XD, Requires<[In64BitMode]>;
+  def ERETU: I<0x01, MRM_CA, (outs), (ins), "eretu",
+              []>, TB, XS, Requires<[In64BitMode]>;
+} // hasSideEffects = 1, Defs = [RSP, EFLAGS]
 } // SchedRW
 
 def : Pat<(debugtrap),
@@ -212,6 +220,14 @@ def MOV16sm : I<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i16mem:$src),
 
 let SchedRW = [WriteSystem] in {
 def SWAPGS : I<0x01, MRM_F8, (outs), (ins), "swapgs", []>, TB;
+// LKGS instructions
+let hasSideEffects = 1 in {
+  let mayLoad = 1 in
+  def LKGS16m : I<0x00, MRM6m, (outs), (ins i16mem:$src), "lkgs\t$src",
+                  []>, TB, XD, Requires<[In64BitMode]>;
+  def LKGS16r : I<0x00, MRM6r, (outs), (ins GR16:$src), "lkgs\t$src",
+                  []>, TB, XD, Requires<[In64BitMode]>;
+} // hasSideEffects
 
 let Defs = [EFLAGS] in {
 let mayLoad = 1 in
@@ -450,7 +466,10 @@ multiclass Urdwrmsr<Map rrmap, string suffix> {
                                 "urdmsr\t{$imm, $dst|$dst, $imm}",
                                 [(set GR64:$dst, (int_x86_urdmsr i64immSExt32_su:$imm))]>,
                            T_MAP7, VEX, XD, NoCD8;
-}
+    def RDMSRri#suffix  : Ii32<0xf6, MRM0r, (outs GR64:$dst), (ins i64i32imm:$imm),
+                                "rdmsr\t{$imm, $dst|$dst, $imm}", []>,
+                           T_MAP7, VEX, XD, NoCD8;
+  }
   let mayStore = 1 in {
     let OpMap = rrmap in
     def UWRMSRrr#suffix  : I<0xf8, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
@@ -460,6 +479,9 @@ multiclass Urdwrmsr<Map rrmap, string suffix> {
                                 "uwrmsr\t{$src, $imm|$imm, $src}",
                                 [(int_x86_uwrmsr i64immSExt32_su:$imm, GR64:$src)]>,
                            T_MAP7, VEX, XS, NoCD8;
+    def WRMSRNSir#suffix  : Ii32<0xf6, MRM0r, (outs), (ins GR64:$src, i64i32imm:$imm),
+                                "wrmsrns\t{$src, $imm|$imm, $src}",
+                                []>, T_MAP7, VEX, XS, NoCD8;
   }
 }
 
@@ -668,7 +690,7 @@ let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
 let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru",
-                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, TB;
+                  [(set EAX, EDX, (X86rdpkru ECX))]>, TB;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru",
                   [(X86wrpkru EAX, EDX, ECX)]>, TB;

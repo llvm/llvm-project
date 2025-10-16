@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: availability-synchronization_library-missing
-
 // <atomic>
 
 // Tests the basic features and makes sure they work with a hijacking operator&.
@@ -94,9 +92,11 @@ void test() {
   TEST_IGNORE_NODISCARD a.compare_exchange_weak(v, v);
   TEST_IGNORE_NODISCARD a.compare_exchange_strong(v, v, m);
 
+#if TEST_STD_VER >= 20
   a.wait(v);
   a.notify_one();
   a.notify_all();
+#endif
 }
 
 void test() {

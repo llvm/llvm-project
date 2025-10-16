@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MINCORE_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MINCORE_H
 
+#include "src/__support/macros/config.h"
 #include <sys/mman.h> // For size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int mincore(void *addr, size_t len, unsigned char *vec);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MINCORE_H

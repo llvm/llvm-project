@@ -18,4 +18,3 @@ endforeach()
 add_lit_testsuite(check-shadowcallstack "Running the ShadowCallStack tests"
   ${SHADOWCALLSTACK_TESTSUITES}
   DEPENDS ${SANITIZER_COMMON_LIT_TEST_DEPS})
-set_target_properties(check-shadowcallstack PROPERTIES FOLDER "Compiler-RT Misc")

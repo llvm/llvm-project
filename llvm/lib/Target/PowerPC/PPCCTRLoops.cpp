@@ -39,11 +39,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -59,12 +55,10 @@ class PPCCTRLoops : public MachineFunctionPass {
 public:
   static char ID;
 
-  PPCCTRLoops() : MachineFunctionPass(ID) {
-    initializePPCCTRLoopsPass(*PassRegistry::getPassRegistry());
-  }
+  PPCCTRLoops() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -86,7 +80,7 @@ char PPCCTRLoops::ID = 0;
 
 INITIALIZE_PASS_BEGIN(PPCCTRLoops, DEBUG_TYPE, "PowerPC CTR loops generation",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(PPCCTRLoops, DEBUG_TYPE, "PowerPC CTR loops generation",
                     false, false)
 
@@ -95,7 +89,7 @@ FunctionPass *llvm::createPPCCTRLoopsPass() { return new PPCCTRLoops(); }
 bool PPCCTRLoops::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  auto &MLI = getAnalysis<MachineLoopInfo>();
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   TII = static_cast<const PPCInstrInfo *>(MF.getSubtarget().getInstrInfo());
   MRI = &MF.getRegInfo();
 
@@ -123,10 +117,12 @@ bool PPCCTRLoops::isCTRClobber(MachineInstr *MI, bool CheckReads) const {
     // CTR defination inside the callee of a call instruction will not impact
     // the defination of MTCTRloop, so we can use definesRegister() for the
     // check, no need to check the regmask.
-    return MI->definesRegister(PPC::CTR) || MI->definesRegister(PPC::CTR8);
+    return MI->definesRegister(PPC::CTR, /*TRI=*/nullptr) ||
+           MI->definesRegister(PPC::CTR8, /*TRI=*/nullptr);
   }
 
-  if (MI->modifiesRegister(PPC::CTR) || MI->modifiesRegister(PPC::CTR8))
+  if (MI->modifiesRegister(PPC::CTR, /*TRI=*/nullptr) ||
+      MI->modifiesRegister(PPC::CTR8, /*TRI=*/nullptr))
     return true;
 
   if (MI->getDesc().isCall())
@@ -134,7 +130,8 @@ bool PPCCTRLoops::isCTRClobber(MachineInstr *MI, bool CheckReads) const {
 
   // We define the CTR in the loop preheader, so if there is any CTR reader in
   // the loop, we also can not use CTR loop form.
-  if (MI->readsRegister(PPC::CTR) || MI->readsRegister(PPC::CTR8))
+  if (MI->readsRegister(PPC::CTR, /*TRI=*/nullptr) ||
+      MI->readsRegister(PPC::CTR8, /*TRI=*/nullptr))
     return true;
 
   return false;
@@ -254,8 +251,7 @@ void PPCCTRLoops::expandNormalLoops(MachineLoop *ML, MachineInstr *Start,
       MRI->createVirtualRegister(Is64Bit ? &PPC::G8RC_and_G8RC_NOX0RegClass
                                          : &PPC::GPRC_and_GPRC_NOR0RegClass);
 
-  Start->getParent()->getParent()->getProperties().reset(
-      MachineFunctionProperties::Property::NoPHIs);
+  Start->getParent()->getParent()->getProperties().resetNoPHIs();
 
   // Generate "PHI" in the header block.
   auto PHIMIB = BuildMI(*ML->getHeader(), ML->getHeader()->getFirstNonPHI(),

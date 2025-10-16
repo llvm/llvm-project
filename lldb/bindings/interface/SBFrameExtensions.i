@@ -44,6 +44,16 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
                 def __init__(self, regs):
                     self.regs = regs
 
+                def __iter__(self):
+                    return self.get_registers()
+
+                def get_registers(self):
+                    for i in range(0,len(self.regs)):
+                        rs = self.regs[i]
+                        for j in range (0,rs.num_children):
+                            reg = rs.GetChildAtIndex(j)
+                            yield reg
+                          
                 def __getitem__(self, key):
                     if type(key) is str:
                         for i in range(0,len(self.regs)):
@@ -52,7 +62,7 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
                                 reg = rs.GetChildAtIndex(j)
                                 if reg.name == key: return reg
                     else:
-                        return lldb.SBValue()
+                        return SBValue()
 
             return registers_access(self.registers)
 
@@ -77,8 +87,8 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
         args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
         arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
         statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
-        registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
-        regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+        registers = property(GetRegisters, None, doc='''Returns the register sets for this thread as a list().  See SBFrame::GetRegisters() for details.''')
+        regs = property(GetRegisters, None, doc='''Returns the register sets for this thread as a list().  See SBFrame::GetRegisters() for details.''')
         register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
         reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
         parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')

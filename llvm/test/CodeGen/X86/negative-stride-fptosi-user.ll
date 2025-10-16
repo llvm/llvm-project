@@ -19,7 +19,7 @@ define void @foo(i32 %N) nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0

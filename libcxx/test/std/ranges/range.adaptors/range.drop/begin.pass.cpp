@@ -73,12 +73,12 @@ constexpr bool test() {
   std::ranges::drop_view dropView7(MoveOnlyView(), 10);
   assert(dropView7.begin() == globalBuff + 8);
 
-  CountedView view8;
+  IteratorOpCounts opcounts;
+  CountedView view8(&opcounts);
+  ;
   std::ranges::drop_view dropView8(view8, 5);
   assert(base(base(dropView8.begin())) == globalBuff + 5);
-  assert(dropView8.begin().stride_count() == 5);
-  assert(base(base(dropView8.begin())) == globalBuff + 5);
-  assert(dropView8.begin().stride_count() == 5);
+  assert(opcounts.increments == 5);
 
   static_assert(!BeginInvocable<const ForwardView>);
 

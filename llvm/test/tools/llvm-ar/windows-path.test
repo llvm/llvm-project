@@ -1,4 +1,4 @@
-# Test that windows path seperators are handled correctly.
+# Test that windows path separators are handled correctly.
 REQUIRES: system-windows
 
 # Note: many of these tests depend on relative paths, so we have to cd to a

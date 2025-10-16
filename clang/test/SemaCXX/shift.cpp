@@ -22,7 +22,7 @@ void test() {
   c = 1 << -1; // expected-warning {{shift count is negative}}
   c = 1 >> -1; // expected-warning {{shift count is negative}}
   c = 1 << (unsigned)-1; // expected-warning {{shift count >= width of type}}
-                         // expected-warning@-1 {{implicit conversion}}
+                         // expected-warning@-1 {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}}
   c = 1 >> (unsigned)-1; // expected-warning {{shift count >= width of type}}
   c = 1 << c;
   c <<= 0;

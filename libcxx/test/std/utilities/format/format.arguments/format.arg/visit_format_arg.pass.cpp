@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -16,6 +17,7 @@
 #include <algorithm>
 #include <format>
 #include <cassert>
+#include <limits>
 #include <type_traits>
 
 #include "constexpr_char_traits.h"

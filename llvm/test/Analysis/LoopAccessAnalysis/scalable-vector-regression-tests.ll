@@ -24,7 +24,8 @@ loop.end:
   ret void
 }
 
-; CHECK-LABEL: LAA: Found a loop in regression_test_loop_access_scalable_typesize
+; CHECK-LABEL: 'regression_test_loop_access_scalable_typesize'
+; CHECK: LAA: Found an analyzable loop: vector.body
 ; CHECK: LAA: Bad stride - Scalable object:
 define void @regression_test_loop_access_scalable_typesize(ptr %input_ptr) {
 entry:
@@ -42,7 +43,8 @@ end:
   ret void
 }
 
-; CHECK-LABEL: LAA: Found a loop in regression_test_loop_access_scalable_typesize_nonscalable_object
+; CHECK-LABEL: 'regression_test_loop_access_scalable_typesize_nonscalable_object'
+; CHECK: LAA: Found an analyzable loop: vector.body
 ; CHECK: LAA: Bad stride - Scalable object:
 define void @regression_test_loop_access_scalable_typesize_nonscalable_object(ptr %input_ptr) {
 entry:
@@ -56,6 +58,32 @@ vector.body:
   %next = add i64 %ind, 1
   %cond = icmp ult i64 %next, 1024
   br i1 %cond, label %end, label %vector.body
+end:
+  ret void
+}
+
+; CHECK-LABEL: 'regression_test_is_no_wrap_access_scalable_typesize'
+; CHECK: LAA: Found an analyzable loop: loop
+; CHECK: LAA: Bad stride - Scalable object: <vscale x 4 x i32>
+define void @regression_test_is_no_wrap_access_scalable_typesize(ptr %ptr_a, i64 %n, ptr %ptr_b) {
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %2 = shl i64 %iv, 1
+  %3 = add i64 %2, %n
+  %4 = trunc i64 %iv to i32
+  %5 = insertelement <vscale x 4 x i32> zeroinitializer, i32 %4, i64 0
+  %6 = getelementptr i32, ptr %ptr_a, i64 %3
+  store <vscale x 4 x i32> %5, ptr %6, align 4
+  %.reass3 = or i32 %4, 1
+  %7 = insertelement <vscale x 4 x i32> zeroinitializer, i32 %.reass3, i64 0
+  %8 = shufflevector <vscale x 4 x i32> %7, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer
+  %9 = getelementptr i32, ptr %ptr_b, i64 %3
+  store <vscale x 4 x i32> %8, ptr %9, align 4
+  %iv.next = add i64 %iv, 1
+  %.not = icmp eq i64 %iv, 16
+  br i1 %.not, label %end, label %loop
 end:
   ret void
 }

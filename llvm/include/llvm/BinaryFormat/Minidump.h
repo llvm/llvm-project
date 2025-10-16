@@ -70,6 +70,23 @@ struct MemoryDescriptor {
 };
 static_assert(sizeof(MemoryDescriptor) == 16);
 
+struct MemoryDescriptor_64 {
+  support::ulittle64_t StartOfMemoryRange;
+  support::ulittle64_t DataSize;
+};
+static_assert(sizeof(MemoryDescriptor_64) == 16);
+
+struct MemoryListHeader {
+  support::ulittle32_t NumberOfMemoryRanges;
+};
+static_assert(sizeof(MemoryListHeader) == 4);
+
+struct Memory64ListHeader {
+  support::ulittle64_t NumberOfMemoryRanges;
+  support::ulittle64_t BaseRVA;
+};
+static_assert(sizeof(Memory64ListHeader) == 16);
+
 struct MemoryInfoListHeader {
   support::ulittle32_t SizeOfHeader;
   support::ulittle32_t SizeOfEntry;
@@ -229,6 +246,8 @@ static_assert(sizeof(Thread) == 48);
 
 struct Exception {
   static constexpr size_t MaxParameters = 15;
+  static constexpr size_t MaxParameterBytes = MaxParameters * sizeof(uint64_t);
+  static const uint32_t LLDB_FLAG = 0x4C4C4442; // ASCII for 'LLDB'
 
   support::ulittle32_t ExceptionCode;
   support::ulittle32_t ExceptionFlags;

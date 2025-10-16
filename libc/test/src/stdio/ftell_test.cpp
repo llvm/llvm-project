@@ -6,21 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdio_macros.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
+#include "src/stdio/fseeko.h"
 #include "src/stdio/ftell.h"
+#include "src/stdio/ftello.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setvbuf.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 class LlvmLibcFTellTest : public LIBC_NAMESPACE::testing::Test {
 protected:
   void test_with_bufmode(int bufmode) {
-    constexpr char FILENAME[] = "testdata/ftell.test";
+    constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/ftell.test");
     // We will set a special buffer to the file so that we guarantee buffering.
     constexpr size_t BUFFER_SIZE = 1024;
     char buffer[BUFFER_SIZE];
@@ -36,6 +37,13 @@ protected:
     // trasferred it to the underlying stream. But, ftell operation should
     // still return the correct effective offset.
     ASSERT_EQ(size_t(LIBC_NAMESPACE::ftell(file)), WRITE_SIZE);
+
+    off_t offseto = 5;
+    ASSERT_EQ(0, LIBC_NAMESPACE::fseeko(file, offseto, SEEK_SET));
+    ASSERT_EQ(LIBC_NAMESPACE::ftello(file), offseto);
+    ASSERT_EQ(0, LIBC_NAMESPACE::fseeko(file, -offseto, SEEK_END));
+    ASSERT_EQ(size_t(LIBC_NAMESPACE::ftello(file)),
+              size_t(WRITE_SIZE - offseto));
 
     long offset = 5;
     ASSERT_EQ(0, LIBC_NAMESPACE::fseek(file, offset, SEEK_SET));

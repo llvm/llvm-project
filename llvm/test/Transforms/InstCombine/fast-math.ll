@@ -65,7 +65,7 @@ define double @fold3_reassoc_nsz(double %f1) {
 define double @fold3_reassoc(double %f1) {
 ; CHECK-LABEL: @fold3_reassoc(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc double [[F1:%.*]], 5.000000e+00
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc double [[T1]], [[F1]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc double [[F1]], [[T1]]
 ; CHECK-NEXT:    ret double [[T2]]
 ;
   %t1 = fmul reassoc double 5.000000e+00, %f1
@@ -175,7 +175,7 @@ define float @fold6_reassoc_nsz(float %f1) {
 define float @fold6_reassoc(float %f1) {
 ; CHECK-LABEL: @fold6_reassoc(
 ; CHECK-NEXT:    [[T1:%.*]] = fadd reassoc float [[F1:%.*]], [[F1]]
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[T1]], [[F1]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[F1]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[T2]], [[F1]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
@@ -506,7 +506,7 @@ define float @fold16(float %x, float %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y]]
 ; CHECK-NEXT:    [[R_P:%.*]] = select i1 [[CMP]], float [[Y]], float [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[R_P]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[X]], [[R_P]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp = fcmp ogt float %x, %y
@@ -541,12 +541,12 @@ define float @fneg2(float %x) {
   ret float %sub
 }
 
-define <2 x float> @fneg2_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @fneg2_vec_undef(
+define <2 x float> @fneg2_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @fneg2_vec_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[SUB]]
 ;
-  %sub = fsub nsz <2 x float> <float undef, float 0.0>, %x
+  %sub = fsub nsz <2 x float> <float poison, float 0.0>, %x
   ret <2 x float> %sub
 }
 
@@ -562,7 +562,7 @@ define float @fdiv1(float %x) {
 ; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], 0x3FD7303B60000000
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
-  %div = fdiv float %x, 0x3FF3333340000000
+  %div = fdiv fast float %x, 0x3FF3333340000000
   %div1 = fdiv fast float %div, 0x4002666660000000
   ret float %div1
 ; 0x3FF3333340000000 = 1.2f
@@ -587,7 +587,7 @@ define float @fdiv2(float %x) {
 
 define <2 x float> @fdiv2_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv2_vec(
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[DIV1]]
 ;
   %mul = fmul <2 x float> %x, <float 6.0, float 9.0>
@@ -603,7 +603,7 @@ define float @fdiv3(float %x) {
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast float [[TMP1]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
-  %div = fdiv float %x, 0x47EFFFFFE0000000
+  %div = fdiv fast float %x, 0x47EFFFFFE0000000
   %div1 = fdiv fast float %div, 0x4002666660000000
   ret float %div1
 }
@@ -709,13 +709,15 @@ define double @sqrt_intrinsic_three_args5(double %x, double %y) {
   ret double %sqrt
 }
 
-define double @sqrt_intrinsic_three_args6(double %x, double %y) {
+define double @sqrt_intrinsic_three_args6(double %x, ptr %yp) {
 ; CHECK-LABEL: @sqrt_intrinsic_three_args6(
+; CHECK-NEXT:    [[Y:%.*]] = load double, ptr [[YP:%.*]], align 8
 ; CHECK-NEXT:    [[FABS:%.*]] = call fast double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[Y:%.*]])
+; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[Y]])
 ; CHECK-NEXT:    [[SQRT:%.*]] = fmul fast double [[FABS]], [[SQRT1]]
 ; CHECK-NEXT:    ret double [[SQRT]]
 ;
+  %y = load double, ptr %yp ; thwart complexity-based canonicalization
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %y, %mul
   %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
@@ -922,8 +924,8 @@ define float @test55(i1 %which, float %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd float [[A:%.*]], 1.000000e+00
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[A:%.*]] = phi float [ 3.000000e+00, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
-; CHECK-NEXT:    ret float [[A]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 3.000000e+00, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
+; CHECK-NEXT:    ret float [[PHI]]
 ;
 entry:
   br i1 %which, label %final, label %delay
@@ -932,7 +934,7 @@ delay:
   br label %final
 
 final:
-  %A = phi float [ 2.0, %entry ], [ %a, %delay ]
-  %value = fadd float %A, 1.0
+  %phi = phi float [ 2.0, %entry ], [ %a, %delay ]
+  %value = fadd float %phi, 1.0
   ret float %value
 }

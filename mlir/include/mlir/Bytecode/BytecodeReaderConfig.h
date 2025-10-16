@@ -1,4 +1,4 @@
-//===- BytecodeReader.h - MLIR Bytecode Reader ------------------*- C++ -*-===//
+//===- BytecodeReaderConfig.h - MLIR Bytecode Reader Config -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header defines interfaces to read MLIR bytecode files/streams.
+// This header config for reading MLIR bytecode files/streams.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +14,6 @@
 #define MLIR_BYTECODE_BYTECODEREADERCONFIG_H
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

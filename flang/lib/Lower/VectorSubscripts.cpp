@@ -55,10 +55,11 @@ private:
     using Designator = Fortran::evaluate::Designator<T>;
     if constexpr (Fortran::common::HasMember<Designator, ExprVariant>) {
       const auto &designator = std::get<Designator>(expr.u);
-      return std::visit([&](const auto &x) { return gen(x); }, designator.u);
+      return Fortran::common::visit([&](const auto &x) { return gen(x); },
+                                    designator.u);
     } else {
-      return std::visit([&](const auto &x) { return genDesignator(x); },
-                        expr.u);
+      return Fortran::common::visit(
+          [&](const auto &x) { return genDesignator(x); }, expr.u);
     }
   }
 
@@ -66,8 +67,8 @@ private:
   // type of X elements.
 
   mlir::Type gen(const Fortran::evaluate::DataRef &dataRef) {
-    return std::visit([&](const auto &ref) -> mlir::Type { return gen(ref); },
-                      dataRef.u);
+    return Fortran::common::visit(
+        [&](const auto &ref) -> mlir::Type { return gen(ref); }, dataRef.u);
   }
 
   mlir::Type gen(const Fortran::evaluate::SymbolRef &symRef) {
@@ -105,7 +106,7 @@ private:
   }
 
   mlir::Type gen(const Fortran::evaluate::Component &component) {
-    auto recTy = gen(component.base()).cast<fir::RecordType>();
+    auto recTy = mlir::cast<fir::RecordType>(gen(component.base()));
     const Fortran::semantics::Symbol &componentSymbol =
         component.GetLastSymbol();
     // Parent components will not be found here, they are not part
@@ -120,15 +121,16 @@ private:
     if (recTy.getNumLenParams() != 0)
       TODO(loc, "threading length parameters in field index op");
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    componentPath.emplace_back(builder.create<fir::FieldIndexOp>(
-        loc, fldTy, componentName, recTy, /*typeParams*/ std::nullopt));
+    componentPath.emplace_back(
+        fir::FieldIndexOp::create(builder, loc, fldTy, componentName, recTy,
+                                  /*typeParams=*/mlir::ValueRange{}));
     return fir::unwrapSequenceType(recTy.getType(componentName));
   }
 
   mlir::Type gen(const Fortran::evaluate::ArrayRef &arrayRef) {
     auto isTripletOrVector =
         [](const Fortran::evaluate::Subscript &subscript) -> bool {
-      return std::visit(
+      return Fortran::common::visit(
           Fortran::common::visitors{
               [](const Fortran::evaluate::IndirectSubscriptIntegerExpr &expr) {
                 return expr.value().Rank() != 0;
@@ -165,7 +167,7 @@ private:
     mlir::Type idxTy = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
     for (const auto &subscript : llvm::enumerate(arrayRef.subscript())) {
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &expr) {
                 if (expr.value().Rank() == 0) {
@@ -268,16 +270,16 @@ mlir::Value Fortran::lower::VectorSubscriptBox::loopOverElementsBase(
   for (auto [lb, ub, step] : genLoopBounds(builder, loc)) {
     LoopType loop;
     if constexpr (std::is_same_v<LoopType, fir::IterWhileOp>) {
-      loop =
-          builder.create<fir::IterWhileOp>(loc, lb, ub, step, initialCondition);
+      loop = fir::IterWhileOp::create(builder, loc, lb, ub, step,
+                                      initialCondition);
       initialCondition = loop.getIterateVar();
       if (!outerLoop)
         outerLoop = loop;
       else
-        builder.create<fir::ResultOp>(loc, loop.getResult(0));
+        fir::ResultOp::create(builder, loc, loop.getResult(0));
     } else {
-      loop =
-          builder.create<fir::DoLoopOp>(loc, lb, ub, step, /*unordered=*/false);
+      loop = fir::DoLoopOp::create(builder, loc, lb, ub, step,
+                                   /*unordered=*/false);
       if (!outerLoop)
         outerLoop = loop;
     }
@@ -292,7 +294,7 @@ mlir::Value Fortran::lower::VectorSubscriptBox::loopOverElementsBase(
 
   if constexpr (std::is_same_v<LoopType, fir::IterWhileOp>) {
     auto res = elementalGenerator(elem);
-    builder.create<fir::ResultOp>(loc, res);
+    fir::ResultOp::create(builder, loc, res);
     builder.setInsertionPointAfter(outerLoop);
     return outerLoop.getResult(0);
   } else {
@@ -325,27 +327,27 @@ Fortran::lower::VectorSubscriptBox::createSlice(fir::FirOpBuilder &builder,
   mlir::Type idxTy = builder.getIndexType();
   llvm::SmallVector<mlir::Value> triples;
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto undef = builder.create<fir::UndefOp>(loc, idxTy);
+  auto undef = fir::UndefOp::create(builder, loc, idxTy);
   for (const LoweredSubscript &subscript : loweredSubscripts)
-    std::visit(Fortran::common::visitors{
-                   [&](const LoweredTriplet &triplet) {
-                     triples.emplace_back(triplet.lb);
-                     triples.emplace_back(triplet.ub);
-                     triples.emplace_back(triplet.stride);
-                   },
-                   [&](const LoweredVectorSubscript &vector) {
-                     triples.emplace_back(one);
-                     triples.emplace_back(vector.size);
-                     triples.emplace_back(one);
-                   },
-                   [&](const mlir::Value &i) {
-                     triples.emplace_back(i);
-                     triples.emplace_back(undef);
-                     triples.emplace_back(undef);
-                   },
-               },
-               subscript);
-  return builder.create<fir::SliceOp>(loc, triples, componentPath);
+    Fortran::common::visit(Fortran::common::visitors{
+                               [&](const LoweredTriplet &triplet) {
+                                 triples.emplace_back(triplet.lb);
+                                 triples.emplace_back(triplet.ub);
+                                 triples.emplace_back(triplet.stride);
+                               },
+                               [&](const LoweredVectorSubscript &vector) {
+                                 triples.emplace_back(one);
+                                 triples.emplace_back(vector.size);
+                                 triples.emplace_back(one);
+                               },
+                               [&](const mlir::Value &i) {
+                                 triples.emplace_back(i);
+                                 triples.emplace_back(undef);
+                                 triples.emplace_back(undef);
+                               },
+                           },
+                           subscript);
+  return fir::SliceOp::create(builder, loc, triples, componentPath);
 }
 
 llvm::SmallVector<std::tuple<mlir::Value, mlir::Value, mlir::Value>>
@@ -368,13 +370,13 @@ Fortran::lower::VectorSubscriptBox::genLoopBounds(fir::FirOpBuilder &builder,
           builder, loc, loweredBase, dimension, one);
       baseLb = builder.createConvert(loc, idxTy, baseLb);
       lb = baseLb;
-      ub = builder.create<mlir::arith::SubIOp>(loc, idxTy, extent, one);
-      ub = builder.create<mlir::arith::AddIOp>(loc, idxTy, ub, baseLb);
+      ub = mlir::arith::SubIOp::create(builder, loc, idxTy, extent, one);
+      ub = mlir::arith::AddIOp::create(builder, loc, idxTy, ub, baseLb);
       step = one;
     } else {
       const auto &vector = std::get<LoweredVectorSubscript>(subscript);
       lb = zero;
-      ub = builder.create<mlir::arith::SubIOp>(loc, idxTy, vector.size, one);
+      ub = mlir::arith::SubIOp::create(builder, loc, idxTy, vector.size, one);
       step = one;
     }
     bounds.emplace_back(lb, ub, step);
@@ -390,31 +392,31 @@ fir::ExtendedValue Fortran::lower::VectorSubscriptBox::getElementAt(
   llvm::SmallVector<mlir::Value> indexes;
   size_t inductionIdx = inductionVariables.size() - 1;
   for (const LoweredSubscript &subscript : loweredSubscripts)
-    std::visit(Fortran::common::visitors{
-                   [&](const LoweredTriplet &triplet) {
-                     indexes.emplace_back(inductionVariables[inductionIdx--]);
-                   },
-                   [&](const LoweredVectorSubscript &vector) {
-                     mlir::Value vecIndex = inductionVariables[inductionIdx--];
-                     mlir::Value vecBase = fir::getBase(vector.vector);
-                     mlir::Type vecEleTy = fir::unwrapSequenceType(
-                         fir::unwrapPassByRefType(vecBase.getType()));
-                     mlir::Type refTy = builder.getRefType(vecEleTy);
-                     auto vecEltRef = builder.create<fir::CoordinateOp>(
-                         loc, refTy, vecBase, vecIndex);
-                     auto vecElt =
-                         builder.create<fir::LoadOp>(loc, vecEleTy, vecEltRef);
-                     indexes.emplace_back(
-                         builder.createConvert(loc, idxTy, vecElt));
-                   },
-                   [&](const mlir::Value &i) {
-                     indexes.emplace_back(builder.createConvert(loc, idxTy, i));
-                   },
-               },
-               subscript);
+    Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const LoweredTriplet &triplet) {
+              indexes.emplace_back(inductionVariables[inductionIdx--]);
+            },
+            [&](const LoweredVectorSubscript &vector) {
+              mlir::Value vecIndex = inductionVariables[inductionIdx--];
+              mlir::Value vecBase = fir::getBase(vector.vector);
+              mlir::Type vecEleTy = fir::unwrapSequenceType(
+                  fir::unwrapPassByRefType(vecBase.getType()));
+              mlir::Type refTy = builder.getRefType(vecEleTy);
+              auto vecEltRef = fir::CoordinateOp::create(builder, loc, refTy,
+                                                         vecBase, vecIndex);
+              auto vecElt =
+                  fir::LoadOp::create(builder, loc, vecEleTy, vecEltRef);
+              indexes.emplace_back(builder.createConvert(loc, idxTy, vecElt));
+            },
+            [&](const mlir::Value &i) {
+              indexes.emplace_back(builder.createConvert(loc, idxTy, i));
+            },
+        },
+        subscript);
   mlir::Type refTy = builder.getRefType(getElementType());
-  auto elementAddr = builder.create<fir::ArrayCoorOp>(
-      loc, refTy, fir::getBase(loweredBase), shape, slice, indexes,
+  auto elementAddr = fir::ArrayCoorOp::create(
+      builder, loc, refTy, fir::getBase(loweredBase), shape, slice, indexes,
       fir::getTypeParams(loweredBase));
   fir::ExtendedValue element = fir::factory::arraySectionElementToExtendedValue(
       builder, loc, loweredBase, elementAddr, slice);

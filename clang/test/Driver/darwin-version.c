@@ -1,6 +1,6 @@
 // RUN: %clang -target armv6-apple-darwin9 -c %s -### 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX %s
-// CHECK-VERSION-OSX: "armv6k-apple-macosx10.5.0"
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS %s
+// CHECK-VERSION-IOS: "armv6k-apple-ios5.0.0"
 // RUN: %clang -target armv6-apple-darwin9 -miphoneos-version-min=2.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS2 %s
 // CHECK-VERSION-IOS2: "armv6k-apple-ios2.0.0"
@@ -62,31 +62,31 @@
 
 // RUN: %clang -target i686-apple-darwin8 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX4 %s
-// RUN: %clang -target i686-apple-darwin9 -mmacosx-version-min=10.4 -c %s -### 2>&1 | \
+// RUN: %clang -target i686-apple-darwin9 -mmacos-version-min=10.4 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX4 %s
 // CHECK-VERSION-OSX4: "i686-apple-macosx10.4.0"
 // RUN: %clang -target i686-apple-darwin9 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX5 %s
-// RUN: %clang -target i686-apple-darwin9 -mmacosx-version-min=10.5 -c %s -### 2>&1 | \
+// RUN: %clang -target i686-apple-darwin9 -mmacos-version-min=10.5 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX5 %s
 // CHECK-VERSION-OSX5: "i686-apple-macosx10.5.0"
 // RUN: %clang -target i686-apple-darwin10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX6 %s
-// RUN: %clang -target i686-apple-darwin9 -mmacosx-version-min=10.6 -c %s -### 2>&1 | \
+// RUN: %clang -target i686-apple-darwin9 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX6 %s
 // CHECK-VERSION-OSX6: "i686-apple-macosx10.6.0"
 // RUN: %clang -target x86_64-apple-darwin14 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
-// RUN: %clang -target x86_64-apple-darwin -mmacosx-version-min=10.10 -c %s -### 2>&1 | \
+// RUN: %clang -target x86_64-apple-darwin -mmacos-version-min=10.10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // RUN: %clang -target x86_64-apple-darwin -mmacos-version-min=10.10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // CHECK-VERSION-OSX10: "x86_64-apple-macosx10.10.0"
-// RUN: not %clang -target x86_64-apple-darwin -mmacosx-version-min= -c %s -### 2>&1 | \
+// RUN: not %clang -target x86_64-apple-darwin -mmacos-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
 // RUN: not %clang -target x86_64-apple-darwin -mmacos-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
-// CHECK-VERSION-MISSING: invalid version number
+// CHECK-VERSION-MISSING: missing version number
 // RUN: %clang -target armv7k-apple-darwin -mwatchos-version-min=2.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHOS20 %s
 // RUN: %clang -target armv7-apple-darwin -mtvos-version-min=8.3 -c %s -### 2>&1 | \
@@ -330,8 +330,12 @@
 // RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
 // RUN: %clang -target x86_64-apple-darwin -mmacos-version-min=11 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
-
 // CHECK-MACOS11: "x86_64-apple-macosx11.0.0"
+
+// RUN: %clang -target arm64-apple-macosx10.16 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-IMPLICIT-MACOS11 %s
+// CHECK-IMPLICIT-MACOS11: warning: overriding deployment version
+// CHECK-IMPLICIT-MACOS11: "arm64-apple-macosx11.0.0"
 
 // RUN: %clang -target arm64-apple-macos999 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-MACOS999 %s

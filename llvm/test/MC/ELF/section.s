@@ -1,6 +1,12 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S - | FileCheck %s
 // RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - |  FileCheck %s --check-prefix=ASM
 
+/// The second .text has no effect, therefore it is not printed.
+// ASM:       .text
+// ASM-EMPTY:
+.text
+.text
+
 // Test that these names are accepted.
 
 .section	.note.GNU-stack,"",@progbits

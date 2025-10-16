@@ -30,8 +30,6 @@ XtensaSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     CPUName = "generic";
   }
 
-  HasDensity = false;
-
   // Parse features string.
   ParseSubtargetFeatures(CPUName, CPUName, FS);
   return *this;
@@ -41,4 +39,4 @@ XtensaSubtarget::XtensaSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                                  const TargetMachine &TM)
     : XtensaGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      TSInfo(), FrameLowering() {}
+      TSInfo(), FrameLowering(*this) {}

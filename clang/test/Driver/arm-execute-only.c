@@ -19,6 +19,9 @@
 
 // RUN: not %clang -### --target=arm-arm-none-eabi -march=armv8-m.main -mpure-code -mno-movt %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-PURE-CODE-NO-MOVT
+// RUN: echo "-DABC"  > %t.cfg
+// RUN: not %clang -### --target=arm-arm-none-eabi -march=armv8-m.main -mpure-code -mno-movt --config %t.cfg %s 2>&1 \
+// RUN:    | FileCheck %s -check-prefix CHECK-PURE-CODE-NO-MOVT
 // CHECK-PURE-CODE-NO-MOVT: error: option '-mpure-code' cannot be specified with '-mno-movt'
 
 // RUN: not %clang -### --target=arm-arm-none-eabi -march=armv6-m -mexecute-only -fropi %s 2>&1 \

@@ -4,4 +4,4 @@
 //   2. cp <generated_file> x86-fold-tables.inc
 
 // RUN: llvm-tblgen -gen-x86-fold-tables -asmwriternum=1 %p/../../lib/Target/X86/X86.td -I %p/../../lib/Target/X86 -I %p/../../include -o %t
-// RUN: diff %p/x86-fold-tables.inc %t
+// RUN: diff --strip-trailing-cr %p/x86-fold-tables.inc %t

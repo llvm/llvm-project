@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; void f(int N, int * restrict sums, int * restrict escape) {
 ;   int i, j;

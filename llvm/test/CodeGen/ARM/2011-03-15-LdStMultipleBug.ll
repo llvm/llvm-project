@@ -9,7 +9,7 @@
 
 @oStruct = external global %struct.Outer, align 4
 
-define void @main(i8 %val8) nounwind {
+define void @main(i8 %val8) nounwind "frame-pointer"="none" {
 ; CHECK-LABEL: main:
 ; CHECK:       @ %bb.0: @ %for.body.lr.ph
 ; CHECK-NEXT:    movw r0, :lower16:(L_oStruct$non_lazy_ptr-(LPC0_0+4))

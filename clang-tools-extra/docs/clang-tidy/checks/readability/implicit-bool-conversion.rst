@@ -96,8 +96,8 @@ The rules for generating fix-it hints are:
   - ``if (!pointer)`` is changed to ``if (pointer == nullptr)``,
 
 - in case of conversions from bool to other built-in types, an explicit
-  ``static_cast`` is proposed to make it clear that a conversion is taking
-  place:
+  ``static_cast`` (or a C-style cast since C23) is proposed to make it clear
+  that a conversion is taking place:
 
   - ``int integer = boolean;`` is changed to
     ``int integer = static_cast<int>(boolean);``,
@@ -133,3 +133,17 @@ Options
 
    When `true`, the check will allow conditional pointer conversions. Default
    is `false`.
+
+.. option::  UseUpperCaseLiteralSuffix
+
+   When `true`, the replacements will use an uppercase literal suffix in the
+   provided fixes. Default is `false`.
+
+    Example
+
+    .. code-block:: c++
+
+      uint32_t foo;
+      if (foo) {}
+      // ^ propose replacement default: if (foo != 0u) {}
+      // ^ propose replacement with option `UseUpperCaseLiteralSuffix`: if (foo != 0U) {}

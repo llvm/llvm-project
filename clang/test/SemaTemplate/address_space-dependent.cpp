@@ -43,7 +43,7 @@ void neg() {
 
 template <long int I>
 void tooBig() {
-  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388586)}}
+  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388582)}}
 }
 
 template <long int I>
@@ -101,7 +101,7 @@ int main() {
   car<1, 2, 3>(); // expected-note {{in instantiation of function template specialization 'car<1, 2, 3>' requested here}}
   HasASTemplateFields<1> HASTF;
   neg<-1>(); // expected-note {{in instantiation of function template specialization 'neg<-1>' requested here}}
-  correct<0x7FFFE9>();
+  correct<0x7FFFE6>();
   tooBig<8388650>(); // expected-note {{in instantiation of function template specialization 'tooBig<8388650L>' requested here}}
 
   __attribute__((address_space(1))) char *x;
@@ -116,4 +116,17 @@ int main() {
   static_assert(partial_spec_deduce_as<int __attribute__((address_space(3))) *>::value == 3, "address space value has been incorrectly deduced");
 
   return 0;
+}
+
+namespace gh101685 {
+template <int AS>
+using ASPtrTy = void [[clang::address_space(AS)]] *;
+
+template <int AS>
+struct EntryTy {
+  ASPtrTy<AS> Base;
+};
+
+ASPtrTy<1> x;
+EntryTy<2> y;
 }

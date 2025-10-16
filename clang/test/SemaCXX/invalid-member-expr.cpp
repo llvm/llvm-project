@@ -26,7 +26,7 @@ void test2() {
 // PR6327
 namespace test3 {
   template <class A, class B> struct pair {};
-  template <class _E> class initializer_list {};
+  template <class _E> class initializer_list { const _E *a, *b; };
   template <typename _Tp> pair<_Tp, _Tp> minmax(initializer_list<_Tp> __l) {};
 
   void test0() {

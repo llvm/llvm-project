@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/stdio/ungetc.h"
+
+#include "hdr/stdio_macros.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
-#include "src/stdio/ungetc.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 TEST(LlvmLibcUngetcTest, UngetAndReadBack) {
-  constexpr char FILENAME[] = "testdata/ungetc_test.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/ungetc_test.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "abcdef";

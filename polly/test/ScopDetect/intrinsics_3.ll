@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify that we allow the misc intrinsics.
 ;

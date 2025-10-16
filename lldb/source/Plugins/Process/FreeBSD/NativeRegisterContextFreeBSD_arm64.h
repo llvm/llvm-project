@@ -37,7 +37,7 @@ class NativeRegisterContextFreeBSD_arm64
       public NativeRegisterContextDBReg_arm64 {
 public:
   NativeRegisterContextFreeBSD_arm64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread);
+                                     NativeThreadFreeBSD &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 

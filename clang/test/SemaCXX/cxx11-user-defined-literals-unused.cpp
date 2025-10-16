@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s -Wunused
 
 namespace {
-double operator"" _x(long double value) { return double(value); }
-int operator"" _ii(long double value) { return int(value); } // expected-warning {{not needed and will not be emitted}}
+double operator""_x(long double value) { return double(value); }
+int operator""_ii(long double value) { return int(value); } // expected-warning {{not needed and will not be emitted}}
 }
 
 namespace rdar13589856 {

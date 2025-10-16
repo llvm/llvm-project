@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 #define LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 
+#include "llvm/Support/DataTypes.h"
 #include <array>
 #include <cassert>
 #include <type_traits>
@@ -33,7 +34,9 @@ struct DecisionParameters {
 
   DecisionParameters() = delete;
   DecisionParameters(unsigned BitmapIdx, unsigned NumConditions)
-      : BitmapIdx(BitmapIdx), NumConditions(NumConditions) {}
+      : BitmapIdx(BitmapIdx), NumConditions(NumConditions) {
+    assert(NumConditions > 0);
+  }
 };
 
 struct BranchParameters {
@@ -44,7 +47,9 @@ struct BranchParameters {
 
   BranchParameters() = delete;
   BranchParameters(ConditionID ID, const ConditionIDs &Conds)
-      : ID(ID), Conds(Conds) {}
+      : ID(ID), Conds(Conds) {
+    assert(ID >= 0);
+  }
 };
 
 /// The type of MC/DC-specific parameters.

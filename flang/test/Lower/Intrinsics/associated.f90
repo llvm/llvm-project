@@ -151,3 +151,26 @@ subroutine associated_test(scalar, array)
   ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_9]], %[[VAL_10]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
     print *, associated(p, allocatable_ziel)
   end subroutine
+
+subroutine test_optional_argument(a, b)
+  integer, pointer :: a
+  integer, optional, pointer :: b
+  logical :: assoc
+
+  assoc = associated(a, b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_optional_argument(
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "b", fir.optional}) {
+! CHECK: %[[IS_PRESENT_B:.*]] = fir.is_present %[[B]] : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> i1
+! CHECK: %[[BOX_B:.*]] = fir.if %[[IS_PRESENT_B]] -> (!fir.box<!fir.ptr<i32>>) {
+! CHECK:   %[[LOADED_B:.*]] = fir.load %[[B]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:   fir.result %[[LOADED_B]] : !fir.box<!fir.ptr<i32>>
+! CHECK: } else {
+! CHECK:   %[[ABSENT_B:.*]] = fir.absent !fir.box<!fir.ptr<i32>>
+! CHECK:   fir.result %[[ABSENT_B]] : !fir.box<!fir.ptr<i32>>
+! CHECK: }
+! CHECK: %[[LOADED_A:.*]] = fir.load %[[A]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK: %[[BOX_NONE_A:.*]] = fir.convert %[[LOADED_A]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<none>
+! CHECK: %[[BOX_NONE_B:.*]] = fir.convert %[[BOX_B]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<none>
+! CHECK: %{{.*}} fir.call @_FortranAPointerIsAssociatedWith(%[[BOX_NONE_A]], %[[BOX_NONE_B]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>) -> i1

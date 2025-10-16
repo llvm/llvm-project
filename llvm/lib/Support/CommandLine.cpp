@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -54,24 +55,32 @@ using namespace cl;
 //
 namespace llvm {
 namespace cl {
-template class basic_parser<bool>;
-template class basic_parser<boolOrDefault>;
-template class basic_parser<int>;
-template class basic_parser<long>;
-template class basic_parser<long long>;
-template class basic_parser<unsigned>;
-template class basic_parser<unsigned long>;
-template class basic_parser<unsigned long long>;
-template class basic_parser<double>;
-template class basic_parser<float>;
-template class basic_parser<std::string>;
-template class basic_parser<char>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<bool>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<boolOrDefault>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<int>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<double>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
 
-template class opt<unsigned>;
-template class opt<int>;
-template class opt<std::string>;
-template class opt<char>;
-template class opt<bool>;
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in clients, leading to duplicate symbol conflicts.
+template class LLVM_EXPORT_TEMPLATE opt<std::string>;
+#endif
+
+template class LLVM_EXPORT_TEMPLATE opt<bool>;
+template class LLVM_EXPORT_TEMPLATE opt<char>;
+template class LLVM_EXPORT_TEMPLATE opt<int>;
+template class LLVM_EXPORT_TEMPLATE opt<unsigned>;
+
 } // namespace cl
 } // namespace llvm
 
@@ -92,7 +101,17 @@ void parser<unsigned long long>::anchor() {}
 void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
+void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
+
+// These anchor functions instantiate opt<T> and reference its virtual
+// destructor to ensure MSVC exports the corresponding vtable and typeinfo when
+// building a Windows DLL. Without an explicit reference, MSVC may omit the
+// instantiation at link time even if it is marked DLL-export.
+void opt_bool_anchor() { opt<bool> anchor{""}; }
+void opt_char_anchor() { opt<char> anchor{""}; }
+void opt_int_anchor() { opt<int> anchor{""}; }
+void opt_unsigned_anchor() { opt<unsigned> anchor{""}; }
 
 //===----------------------------------------------------------------------===//
 
@@ -170,6 +189,7 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
+                               vfs::FileSystem *VFS = nullptr,
                                bool LongOptionsUseDoubleDash = false);
 
   void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
@@ -404,6 +424,22 @@ private:
 
 static ManagedStatic<CommandLineParser> GlobalParser;
 
+template <typename T, T TrueVal, T FalseVal>
+static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
+  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
+      Arg == "1") {
+    Value = TrueVal;
+    return false;
+  }
+
+  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
+    Value = FalseVal;
+    return false;
+  }
+  return O.error("'" + Arg +
+                 "' is invalid value for boolean argument! Try 0 or 1");
+}
+
 void cl::AddLiteralOption(Option &O, StringRef Name) {
   GlobalParser->addLiteralOption(O, Name);
 }
@@ -455,10 +491,10 @@ void OptionCategory::registerCategory() {
 // initialization because it is referenced from cl::opt constructors, which run
 // dynamically in an arbitrary order.
 LLVM_REQUIRE_CONSTANT_INITIALIZATION
-ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
+static ManagedStatic<SubCommand> TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
+static ManagedStatic<SubCommand> AllSubCommands;
 
 SubCommand &SubCommand::getTopLevel() { return *TopLevelSubCommand; }
 
@@ -534,7 +570,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
     if (S->getName().empty())
       continue;
 
-    if (StringRef(S->getName()) == StringRef(Name))
+    if (S->getName() == Name)
       return S;
 
     if (!NearestMatch && S->getName().edit_distance(Name) < 2)
@@ -710,7 +746,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   // characters in it (so that the next iteration will not be the empty
   // string.
   while (OMI == OptionsMap.end() && Name.size() > 1) {
-    Name = Name.substr(0, Name.size() - 1); // Chop off the last character.
+    Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
     if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
       OMI = OptionsMap.end();
@@ -1367,8 +1403,9 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return true;
 }
 
-ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T)
-    : Saver(A), Tokenizer(T), FS(vfs::getRealFileSystem().get()) {}
+ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                                   vfs::FileSystem *FS)
+    : Saver(A), Tokenizer(T), FS(FS ? FS : vfs::getRealFileSystem().get()) {}
 
 bool ExpansionContext::findConfigFile(StringRef FileName,
                                       SmallVectorImpl<char> &FilePath) {
@@ -1427,7 +1464,7 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 const char *EnvVar,
+                                 vfs::FileSystem *VFS, const char *EnvVar,
                                  bool LongOptionsUseDoubleDash) {
   initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
@@ -1448,8 +1485,8 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return GlobalParser->ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
-                                               Errs, LongOptionsUseDoubleDash);
+  return GlobalParser->ParseCommandLineOptions(
+      NewArgc, &NewArgv[0], Overview, Errs, VFS, LongOptionsUseDoubleDash);
 }
 
 /// Reset all options at least once, so that we can parse different options.
@@ -1469,17 +1506,17 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   }
 }
 
-bool CommandLineParser::ParseCommandLineOptions(int argc,
-                                                const char *const *argv,
-                                                StringRef Overview,
-                                                raw_ostream *Errs,
-                                                bool LongOptionsUseDoubleDash) {
+bool CommandLineParser::ParseCommandLineOptions(
+    int argc, const char *const *argv, StringRef Overview, raw_ostream *Errs,
+    vfs::FileSystem *VFS, bool LongOptionsUseDoubleDash) {
   assert(hasOptions() && "No options specified!");
 
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
   if (!Errs)
     Errs = &errs();
+  if (!VFS)
+    VFS = vfs::getRealFileSystem().get();
   bool ErrorParsing = false;
 
   // Expand response files.
@@ -1490,7 +1527,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 #else
   auto Tokenize = cl::TokenizeGNUCommandLine;
 #endif
-  ExpansionContext ECtx(A, Tokenize);
+  ExpansionContext ECtx(A, Tokenize, VFS);
   if (Error Err = ECtx.expandResponseFiles(newArgv)) {
     *Errs << toString(std::move(Err)) << '\n';
     return false;
@@ -1733,9 +1770,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else if (!ConsumeAfterOpt) {
     // Positional args have already been handled if ConsumeAfter is specified.
     unsigned ValNo = 0, NumVals = static_cast<unsigned>(PositionalVals.size());
-    for (size_t i = 0, e = PositionalOpts.size(); i != e; ++i) {
-      if (RequiresValue(PositionalOpts[i])) {
-        ProvidePositionalOption(PositionalOpts[i], PositionalVals[ValNo].first,
+    for (Option *Opt : PositionalOpts) {
+      if (RequiresValue(Opt)) {
+        ProvidePositionalOption(Opt, PositionalVals[ValNo].first,
                                 PositionalVals[ValNo].second);
         ValNo++;
         --NumPositionalRequired; // We fulfilled our duty...
@@ -1745,16 +1782,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // do not give it values that others need.  'Done' controls whether the
       // option even _WANTS_ any more.
       //
-      bool Done = PositionalOpts[i]->getNumOccurrencesFlag() == cl::Required;
+      bool Done = Opt->getNumOccurrencesFlag() == cl::Required;
       while (NumVals - ValNo > NumPositionalRequired && !Done) {
-        switch (PositionalOpts[i]->getNumOccurrencesFlag()) {
+        switch (Opt->getNumOccurrencesFlag()) {
         case cl::Optional:
           Done = true; // Optional arguments want _at most_ one value
           [[fallthrough]];
         case cl::ZeroOrMore: // Zero or more will take all they can get...
         case cl::OneOrMore:  // One or more will take all they can get...
-          ProvidePositionalOption(PositionalOpts[i],
-                                  PositionalVals[ValNo].first,
+          ProvidePositionalOption(Opt, PositionalVals[ValNo].first,
                                   PositionalVals[ValNo].second);
           ValNo++;
           break;
@@ -1767,11 +1803,10 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else {
     assert(ConsumeAfterOpt && NumPositionalRequired <= PositionalVals.size());
     unsigned ValNo = 0;
-    for (size_t J = 0, E = PositionalOpts.size(); J != E; ++J)
-      if (RequiresValue(PositionalOpts[J])) {
-        ErrorParsing |= ProvidePositionalOption(PositionalOpts[J],
-                                                PositionalVals[ValNo].first,
-                                                PositionalVals[ValNo].second);
+    for (Option *Opt : PositionalOpts)
+      if (RequiresValue(Opt)) {
+        ErrorParsing |= ProvidePositionalOption(
+            Opt, PositionalVals[ValNo].first, PositionalVals[ValNo].second);
         ValNo++;
       }
 
@@ -1956,36 +1991,14 @@ void basic_parser_impl::printOptionName(const Option &O,
 //
 bool parser<bool>::parse(Option &O, StringRef ArgName, StringRef Arg,
                          bool &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
-    Value = true;
-    return false;
-  }
-
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
-    Value = false;
-    return false;
-  }
-  return O.error("'" + Arg +
-                 "' is invalid value for boolean argument! Try 0 or 1");
+  return parseBool<bool, true, false>(O, ArgName, Arg, Value);
 }
 
 // parser<boolOrDefault> implementation
 //
 bool parser<boolOrDefault>::parse(Option &O, StringRef ArgName, StringRef Arg,
                                   boolOrDefault &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
-    Value = BOU_TRUE;
-    return false;
-  }
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
-    Value = BOU_FALSE;
-    return false;
-  }
-
-  return O.error("'" + Arg +
-                 "' is invalid value for boolean argument! Try 0 or 1");
+  return parseBool<boolOrDefault, BOU_TRUE, BOU_FALSE>(O, ArgName, Arg, Value);
 }
 
 // parser<int> implementation
@@ -2249,6 +2262,22 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
   outs() << ")\n";
 }
 
+void parser<std::optional<std::string>>::printOptionDiff(
+    const Option &O, std::optional<StringRef> V,
+    const OptionValue<std::optional<std::string>> &D,
+    size_t GlobalWidth) const {
+  printOptionName(O, GlobalWidth);
+  outs() << "= " << V;
+  size_t VSize = V.has_value() ? V.value().size() : 0;
+  size_t NumSpaces = MaxOptWidth > VSize ? MaxOptWidth - VSize : 0;
+  outs().indent(NumSpaces) << " (default: ";
+  if (D.hasValue() && D.getValue().has_value())
+    outs() << D.getValue();
+  else
+    outs() << "*no value*";
+  outs() << ")\n";
+}
+
 // Print a placeholder for options that don't yet support printOptionDiff().
 void basic_parser_impl::printOptionNoValue(const Option &O,
                                            size_t GlobalWidth) const {
@@ -2320,8 +2349,8 @@ protected:
       StrSubCommandPairVector;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      Opts[i].second->printOptionInfo(MaxArgLen);
+    for (const auto &Opt : Opts)
+      Opt.second->printOptionInfo(MaxArgLen);
   }
 
   void printSubCommands(StrSubCommandPairVector &Subs, size_t MaxSubLen) {
@@ -2391,8 +2420,8 @@ public:
     if (Sub == &SubCommand::getTopLevel() && !Subs.empty()) {
       // Compute the maximum subcommand length...
       size_t MaxSubLen = 0;
-      for (size_t i = 0, e = Subs.size(); i != e; ++i)
-        MaxSubLen = std::max(MaxSubLen, strlen(Subs[i].first));
+      for (const auto &Sub : Subs)
+        MaxSubLen = std::max(MaxSubLen, strlen(Sub.first));
 
       outs() << "\n\n";
       outs() << "SUBCOMMANDS:\n\n";
@@ -2407,8 +2436,8 @@ public:
 
     // Compute the maximum argument length...
     size_t MaxArgLen = 0;
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+    for (const auto &Opt : Opts)
+      MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
     outs() << "OPTIONS:\n";
     printOptions(Opts, MaxArgLen);
@@ -2443,8 +2472,8 @@ protected:
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
-      SortedCategories.push_back(Category);
+    llvm::append_range(SortedCategories,
+                       GlobalParser->RegisteredOptionCategories);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");
@@ -2454,9 +2483,9 @@ protected:
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
     // options within categories will also be alphabetically sorted.
-    for (size_t I = 0, E = Opts.size(); I != E; ++I) {
-      Option *Opt = Opts[I].second;
-      for (auto &Cat : Opt->Categories) {
+    for (const auto &I : Opts) {
+      Option *Opt = I.second;
+      for (OptionCategory *Cat : Opt->Categories) {
         assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
@@ -2661,7 +2690,6 @@ static void initCommonOptions() {
   initSignalsOptions();
   initStatisticOptions();
   initTimerOptions();
-  initTypeSizeOptions();
   initWithColorOptions();
   initDebugOptions();
   initRandomSeedOptions();
@@ -2699,8 +2727,9 @@ void HelpPrinterWrapper::operator=(bool Value) {
     CommonOptions->HLOp.setHiddenFlag(NotHidden);
 
     CategorizedPrinter = true; // Invoke categorized printer
-  } else
+  } else {
     UncategorizedPrinter = true; // Invoke uncategorized printer
+  }
 }
 
 // Print the value of each option.
@@ -2715,11 +2744,11 @@ void CommandLineParser::printOptionValues() {
 
   // Compute the maximum argument length...
   size_t MaxArgLen = 0;
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+  for (const auto &Opt : Opts)
+    MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    Opts[i].second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
+  for (const auto &Opt : Opts)
+    Opt.second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
 }
 
 // Utility function for printing the help message.
@@ -2732,6 +2761,52 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
     CommonOptions->UncategorizedHiddenPrinter.printHelp();
   else
     CommonOptions->CategorizedHiddenPrinter.printHelp();
+}
+
+ArrayRef<StringRef> cl::getCompilerBuildConfig() {
+  static const StringRef Config[] = {
+      // Placeholder to ensure the array always has elements, since it's an
+      // error to have a zero-sized array. Slice this off before returning.
+      "",
+  // Actual compiler build config feature list:
+#if LLVM_IS_DEBUG_BUILD
+      "+unoptimized",
+#endif
+#ifndef NDEBUG
+      "+assertions",
+#endif
+#ifdef EXPENSIVE_CHECKS
+      "+expensive-checks",
+#endif
+#if __has_feature(address_sanitizer)
+      "+asan",
+#endif
+#if __has_feature(dataflow_sanitizer)
+      "+dfsan",
+#endif
+#if __has_feature(hwaddress_sanitizer)
+      "+hwasan",
+#endif
+#if __has_feature(memory_sanitizer)
+      "+msan",
+#endif
+#if __has_feature(thread_sanitizer)
+      "+tsan",
+#endif
+#if __has_feature(undefined_behavior_sanitizer)
+      "+ubsan",
+#endif
+  };
+  return ArrayRef(Config).drop_front(1);
+}
+
+// Utility function for printing the build config.
+void cl::printBuildConfig(raw_ostream &OS) {
+#if LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+  OS << "Build config: ";
+  llvm::interleaveComma(cl::getCompilerBuildConfig(), OS);
+  OS << '\n';
+#endif
 }
 
 /// Utility function for printing version number.

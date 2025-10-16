@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
-// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
-// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
-// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DEXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
-// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DEXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DDLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-DLLIMPORT
+// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDECL -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
+// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDEFN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
+// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
+// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DEXTERN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
+// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DEXTERN_DLLIMPORT -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -triple thumbv7-windows -fdeclspec -DDLLIMPORT -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-DLLIMPORT
 
-// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
-// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
-// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
-// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DEXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
-// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DEXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DDLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-DLLIMPORT
+// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDECL -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
+// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DCF_BUILDING_CF -DDEFN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
+// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
+// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DEXTERN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
+// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DEXTERN_DLLIMPORT -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -Os -triple thumbv7-windows -fdeclspec -DDLLIMPORT -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-DLLIMPORT
 
 #if defined(CF_BUILDING_CF)
 #if defined(DECL)

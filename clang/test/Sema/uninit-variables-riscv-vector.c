@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv64 -fsyntax-only -Wuninitialized -fsyntax-only -target-feature +v %s -verify
+// RUN: %clang_cc1 -triple riscv64 -Wuninitialized -fsyntax-only -target-feature +v %s -verify
 
 #pragma clang riscv intrinsic vector
 

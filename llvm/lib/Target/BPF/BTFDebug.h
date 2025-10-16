@@ -300,7 +300,8 @@ class BTFDebug : public DebugHandlerBase {
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
   StringMap<std::vector<std::string>> FileContent;
-  std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
+  std::map<std::string, std::unique_ptr<BTFKindDataSec>, std::less<>>
+      DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
   std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
   std::map<const DICompositeType *,
@@ -343,14 +344,18 @@ class BTFDebug : public DebugHandlerBase {
 
   /// Get the file content for the subprogram. Certain lines of the file
   /// later may be put into string table and referenced by line info.
-  std::string populateFileContent(const DISubprogram *SP);
+  std::string populateFileContent(const DIFile *File);
 
   /// Construct a line info.
-  void constructLineInfo(const DISubprogram *SP, MCSymbol *Label, uint32_t Line,
+  void constructLineInfo(MCSymbol *Label, const DIFile *File, uint32_t Line,
                          uint32_t Column);
 
   /// Generate types and variables for globals.
   void processGlobals(bool ProcessingMapDef);
+
+  /// Process global variable initializer in pursuit for function
+  /// pointers.
+  void processGlobalInitializer(const Constant *C);
 
   /// Generate types for function prototypes.
   void processFuncPrototypes(const Function *);
@@ -419,8 +424,6 @@ public:
            "DIType not added in the BDIToIdMap");
     return DIToIdMap[Ty];
   }
-
-  void setSymbolSize(const MCSymbol *Symbol, uint64_t Size) override {}
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;

@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -48,6 +49,7 @@ protected:
     StringAttrEntry,
     TypeAttrEntry,
     ConstantRangeAttrEntry,
+    ConstantRangeListAttrEntry,
   };
 
   AttributeImpl(AttrEntryKind KindID) : KindID(KindID) {}
@@ -64,6 +66,9 @@ public:
   bool isConstantRangeAttribute() const {
     return KindID == ConstantRangeAttrEntry;
   }
+  bool isConstantRangeListAttribute() const {
+    return KindID == ConstantRangeListAttrEntry;
+  }
 
   bool hasAttribute(Attribute::AttrKind A) const;
   bool hasAttribute(StringRef Kind) const;
@@ -77,8 +82,13 @@ public:
 
   Type *getValueAsType() const;
 
-  ConstantRange getValueAsConstantRange() const;
+  const ConstantRange &getValueAsConstantRange() const;
 
+  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
+
+  /// Used to sort attributes. KindOnly controls if the sort includes the
+  /// attributes' values or just the kind.
+  int cmp(const AttributeImpl &AI, bool KindOnly) const;
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 
@@ -91,8 +101,10 @@ public:
       Profile(ID, getKindAsString(), getValueAsString());
     else if (isTypeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsType());
-    else
+    else if (isConstantRangeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsConstantRange());
+    else
+      Profile(ID, getKindAsEnum(), getValueAsConstantRangeList());
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
@@ -121,8 +133,18 @@ public:
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
                       const ConstantRange &CR) {
     ID.AddInteger(Kind);
-    ID.AddInteger(CR.getLower());
-    ID.AddInteger(CR.getUpper());
+    CR.getLower().Profile(ID);
+    CR.getUpper().Profile(ID);
+  }
+
+  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
+                      ArrayRef<ConstantRange> Val) {
+    ID.AddInteger(Kind);
+    ID.AddInteger(Val.size());
+    for (auto &CR : Val) {
+      CR.getLower().Profile(ID);
+      CR.getUpper().Profile(ID);
+    }
   }
 };
 
@@ -173,15 +195,12 @@ class StringAttributeImpl final
 
   unsigned KindSize;
   unsigned ValSize;
-  size_t numTrailingObjects(OverloadToken<char>) const {
-    return KindSize + 1 + ValSize + 1;
-  }
 
 public:
   StringAttributeImpl(StringRef Kind, StringRef Val = StringRef())
       : AttributeImpl(StringAttrEntry), KindSize(Kind.size()),
         ValSize(Val.size()) {
-    char *TrailingString = getTrailingObjects<char>();
+    char *TrailingString = getTrailingObjects();
     // Some users rely on zero-termination.
     llvm::copy(Kind, TrailingString);
     TrailingString[KindSize] = '\0';
@@ -190,10 +209,10 @@ public:
   }
 
   StringRef getStringKind() const {
-    return StringRef(getTrailingObjects<char>(), KindSize);
+    return StringRef(getTrailingObjects(), KindSize);
   }
   StringRef getStringValue() const {
-    return StringRef(getTrailingObjects<char>() + KindSize + 1, ValSize);
+    return StringRef(getTrailingObjects() + KindSize + 1, ValSize);
   }
 
   static size_t totalSizeToAlloc(StringRef Kind, StringRef Val) {
@@ -219,12 +238,41 @@ public:
   ConstantRangeAttributeImpl(Attribute::AttrKind Kind, const ConstantRange &CR)
       : EnumAttributeImpl(ConstantRangeAttrEntry, Kind), CR(CR) {}
 
-  ConstantRange getConstantRangeValue() const { return CR; }
+  const ConstantRange &getConstantRangeValue() const { return CR; }
+};
+
+class ConstantRangeListAttributeImpl final
+    : public EnumAttributeImpl,
+      private TrailingObjects<ConstantRangeListAttributeImpl, ConstantRange> {
+  friend TrailingObjects;
+
+  unsigned Size;
+
+public:
+  ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
+                                 ArrayRef<ConstantRange> Val)
+      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
+    assert(Size > 0);
+    llvm::uninitialized_copy(Val, getTrailingObjects());
+  }
+
+  ~ConstantRangeListAttributeImpl() {
+    for (ConstantRange &CR : getTrailingObjects(Size))
+      CR.~ConstantRange();
+  }
+
+  ArrayRef<ConstantRange> getConstantRangeListValue() const {
+    return getTrailingObjects(Size);
+  }
+
+  static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
+    return TrailingObjects::totalSizeToAlloc<ConstantRange>(Val.size());
+  }
 };
 
 class AttributeBitSet {
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint8_t AvailableAttrs[12] = {};
+  uint8_t AvailableAttrs[16] = {};
   static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
                 "Too many attributes");
 
@@ -292,13 +340,14 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp) const;
   Type *getAttributeType(Attribute::AttrKind Kind) const;
 
   using iterator = const Attribute *;
 
-  iterator begin() const { return getTrailingObjects<Attribute>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrs; }
 
   void Profile(FoldingSetNodeID &ID) const {
@@ -328,9 +377,6 @@ private:
   /// Union of enum attributes available at any index.
   AttributeBitSet AvailableSomewhereAttrs;
 
-  // Helper fn for TrailingObjects class.
-  size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
-
 public:
   AttributeListImpl(ArrayRef<AttributeSet> Sets);
 
@@ -352,7 +398,7 @@ public:
 
   using iterator = const AttributeSet *;
 
-  iterator begin() const { return getTrailingObjects<AttributeSet>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrSets; }
 
   void Profile(FoldingSetNodeID &ID) const;

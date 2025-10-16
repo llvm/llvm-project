@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! XFAIL: *
 
 ! OpenMP Version 4.5

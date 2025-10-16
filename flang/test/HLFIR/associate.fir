@@ -63,18 +63,18 @@ func.func private @foo4(!fir.ref<!fir.logical<8>>)
 // CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<!fir.logical<8>>, i1
 
 
-func.func @test_complex(%arg0: !fir.complex<8>) {
-  %0:3 = hlfir.associate %arg0 {uniq_name = "x"} : (!fir.complex<8>) -> (!fir.ref<!fir.complex<8>>, !fir.ref<!fir.complex<8>>, i1)
-  fir.call @foo5(%0#0) : (!fir.ref<!fir.complex<8>>) -> ()
-  hlfir.end_associate %0#1, %0#2 : !fir.ref<!fir.complex<8>>, i1
+func.func @test_complex(%arg0: complex<f64>) {
+  %0:3 = hlfir.associate %arg0 {uniq_name = "x"} : (complex<f64>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>, i1)
+  fir.call @foo5(%0#0) : (!fir.ref<complex<f64>>) -> ()
+  hlfir.end_associate %0#1, %0#2 : !fir.ref<complex<f64>>, i1
   return
 }
-func.func private @foo5(!fir.ref<!fir.complex<8>>)
+func.func private @foo5(!fir.ref<complex<f64>>)
 // CHECK-LABEL:   func.func @test_complex(
-// CHECK-SAME:    %[[VAL_0:.*]]: !fir.complex<8>) {
-// CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {uniq_name = "x"} : (!fir.complex<8>) -> (!fir.ref<!fir.complex<8>>, !fir.ref<!fir.complex<8>>, i1)
-// CHECK:  fir.call @foo5(%[[VAL_1]]#0) : (!fir.ref<!fir.complex<8>>) -> ()
-// CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<!fir.complex<8>>, i1
+// CHECK-SAME:    %[[VAL_0:.*]]: complex<f64>) {
+// CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {uniq_name = "x"} : (complex<f64>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>, i1)
+// CHECK:  fir.call @foo5(%[[VAL_1]]#0) : (!fir.ref<complex<f64>>) -> ()
+// CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<complex<f64>>, i1
 
 
 func.func @test_array(%arg0: !hlfir.expr<!fir.array<10x?xi32>>) {

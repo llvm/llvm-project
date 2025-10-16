@@ -1,5 +1,10 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: darwin
+
+// FIXME: Very flaky on PPC with COMPILER_RT_DEBUG.
+// https://github.com/google/sanitizers/issues/1792
+// UNSUPPORTED: !compiler-rt-optimized && ppc
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,12 +33,12 @@ static void* reset(void *p) {
   struct sigaction act = {};
   for (int i = 0; i < 1000000; i++) {
     act.sa_handler = &handler;
-    if (sigaction(SIGALRM, &act, 0)) {
+    if (sigaction(SIGPROF, &act, 0)) {
       perror("sigaction");
       exit(1);
     }
     act.sa_handler = SIG_IGN;
-    if (sigaction(SIGALRM, &act, 0)) {
+    if (sigaction(SIGPROF, &act, 0)) {
       perror("sigaction");
       exit(1);
     }
@@ -44,7 +49,7 @@ static void* reset(void *p) {
 int main() {
   struct sigaction act = {};
   act.sa_handler = SIG_IGN;
-  if (sigaction(SIGALRM, &act, 0)) {
+  if (sigaction(SIGPROF, &act, 0)) {
     perror("sigaction");
     exit(1);
   }
@@ -53,7 +58,7 @@ int main() {
   t.it_value.tv_sec = 0;
   t.it_value.tv_usec = 10;
   t.it_interval = t.it_value;
-  if (setitimer(ITIMER_REAL, &t, 0)) {
+  if (setitimer(ITIMER_PROF, &t, 0)) {
     perror("setitimer");
     exit(1);
   }

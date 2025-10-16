@@ -13,9 +13,9 @@ define void @partial_vec_invalid_cost() #0 {
 ; CHECK-NEXT:    [[TRUNC_I96_2:%.*]] = trunc i96 [[LSHR_2]] to i32
 ; CHECK-NEXT:    [[TRUNC_I96_3:%.*]] = trunc i96 0 to i32
 ; CHECK-NEXT:    [[TRUNC_I96_4:%.*]] = trunc i96 0 to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP0]], [[TRUNC_I96_2]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[TRUNC_I96_1]], [[TRUNC_I96_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP1]], [[TRUNC_I96_1]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[TRUNC_I96_2]], [[TRUNC_I96_3]]
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[OP_RDX2]], [[TRUNC_I96_4]]
 ; CHECK-NEXT:    [[STORE_THIS:%.*]] = zext i32 [[OP_RDX3]] to i96

@@ -2,12 +2,12 @@
 Test the AddressSanitizer runtime support for report breakpoint and data extraction.
 """
 
-
 import json
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test_event.build_exception import BuildError
 
 
 class AsanTestReportDataCase(TestBase):
@@ -16,8 +16,17 @@ class AsanTestReportDataCase(TestBase):
     @skipUnlessAddressSanitizer
     @skipIf(archs=["i386"], bugnumber="llvm.org/PR36710")
     def test(self):
-        self.build()
+        self.build(make_targets=["compiler_rt-asan"])
         self.asan_tests()
+
+    @skipUnlessDarwin
+    @skipIf(bugnumber="rdar://109913184&143590169")
+    def test_libsanitizers_asan(self):
+        try:
+            self.build(make_targets=["libsanitizers-asan"])
+        except BuildError as e:
+            self.skipTest("failed to build with libsanitizers")
+        self.asan_tests(libsanitizers=True)
 
     def setUp(self):
         # Call super's setUp().
@@ -29,10 +38,13 @@ class AsanTestReportDataCase(TestBase):
         self.line_crash = line_number("main.c", "// BOOM line")
         self.col_crash = 16
 
-    def asan_tests(self):
+    def asan_tests(self, libsanitizers=False):
         target = self.createTestTarget()
 
-        self.registerSanitizerLibrariesWithTarget(target)
+        if libsanitizers:
+            self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
+        else:
+            self.registerSanitizerLibrariesWithTarget(target)
 
         self.runCmd("run")
 
@@ -54,6 +66,11 @@ class AsanTestReportDataCase(TestBase):
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
             lldb.eStopReasonInstrumentation,
         )
+
+        if self.platformIsDarwin():
+            # Make sure we're not stopped in the sanitizer library but instead at the
+            # point of failure in the user-code.
+            self.assertEqual(self.frame().GetFunctionName(), "main")
 
         self.expect(
             "bt",

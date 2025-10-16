@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Config/mlir-config.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -34,6 +33,7 @@ unsigned short PatternBenefit::getBenefit() const {
 
 //===----------------------------------------------------------------------===//
 // OperationName Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
                  MLIRContext *context, ArrayRef<StringRef> generatedNames)
@@ -42,6 +42,7 @@ Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
 
 //===----------------------------------------------------------------------===//
 // MatchAnyOpTypeTag Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
                  MLIRContext *context, ArrayRef<StringRef> generatedNames)
@@ -49,6 +50,7 @@ Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
 
 //===----------------------------------------------------------------------===//
 // MatchInterfaceOpTypeTag Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
                  PatternBenefit benefit, MLIRContext *context,
@@ -58,6 +60,7 @@ Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
 
 //===----------------------------------------------------------------------===//
 // MatchTraitOpTypeTag Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
                  PatternBenefit benefit, MLIRContext *context,
@@ -67,6 +70,7 @@ Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
 
 //===----------------------------------------------------------------------===//
 // General Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(const void *rootValue, RootKind rootKind,
                  ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
@@ -86,15 +90,6 @@ Pattern::Pattern(const void *rootValue, RootKind rootKind,
 // RewritePattern
 //===----------------------------------------------------------------------===//
 
-void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
-  llvm_unreachable("need to implement either matchAndRewrite or one of the "
-                   "rewrite functions!");
-}
-
-LogicalResult RewritePattern::match(Operation *op) const {
-  llvm_unreachable("need to implement either match or matchAndRewrite!");
-}
-
 /// Out-of-line vtable anchor.
 void RewritePattern::anchor() {}
 
@@ -110,16 +105,28 @@ RewriterBase::~RewriterBase() {
   // Out of line to provide a vtable anchor for the class.
 }
 
+void RewriterBase::replaceAllOpUsesWith(Operation *from, ValueRange to) {
+  // Notify the listener that we're about to replace this op.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(from, to);
+
+  replaceAllUsesWith(from->getResults(), to);
+}
+
+void RewriterBase::replaceAllOpUsesWith(Operation *from, Operation *to) {
+  // Notify the listener that we're about to replace this op.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(from, to);
+
+  replaceAllUsesWith(from->getResults(), to->getResults());
+}
+
 /// This method replaces the results of the operation with the specified list of
 /// values. The number of provided values must match the number of results of
 /// the operation. The replaced op is erased.
 void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-
-  // Notify the listener that we're about to replace this op.
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newValues);
 
   // Replace all result uses. Also notifies the listener of modifications.
   replaceAllOpUsesWith(op, newValues);
@@ -136,10 +143,6 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
   assert(op->getNumResults() == newOp->getNumResults() &&
          "ops have different number of results");
 
-  // Notify the listener that we're about to replace this op.
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newOp);
-
   // Replace all result uses. Also notifies the listener of modifications.
   replaceAllOpUsesWith(op, newOp->getResults());
 
@@ -152,6 +155,11 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
 void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
   auto *rewriteListener = dyn_cast_if_present<Listener>(listener);
+
+  // If the current insertion point is before the erased operation, we adjust
+  // the insertion point to be after the operation.
+  if (getInsertionPoint() == op->getIterator())
+    setInsertionPointAfter(op);
 
   // Fast path: If no listener is attached, the op can be dropped in one go.
   if (!rewriteListener) {
@@ -242,6 +250,14 @@ void RewriterBase::finalizeOpModification(Operation *op) {
     rewriteListener->notifyOperationModified(op);
 }
 
+void RewriterBase::replaceAllUsesExcept(
+    Value from, Value to, const SmallPtrSetImpl<Operation *> &preservedUsers) {
+  return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+    Operation *user = use.getOwner();
+    return !preservedUsers.contains(user);
+  });
+}
+
 void RewriterBase::replaceUsesWithIf(Value from, Value to,
                                      function_ref<bool(OpOperand &)> functor,
                                      bool *allUsesReplaced) {
@@ -308,6 +324,11 @@ void RewriterBase::inlineBlockBefore(Block *source, Block *dest,
     while (!source->empty())
       moveOpBefore(&source->front(), dest, before);
   }
+
+  // If the current insertion point is within the source block, adjust the
+  // insertion point to the destination block.
+  if (getInsertionBlock() == source)
+    setInsertionPoint(dest, getInsertionPoint());
 
   // Erase the source block.
   assert(source->empty() && "expected 'source' to be empty");

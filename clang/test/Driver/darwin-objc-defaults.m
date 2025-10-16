@@ -3,7 +3,7 @@
 // i386
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \
-// RUN:   -arch i386 -mmacosx-version-min=10.5 2> %t
+// RUN:   -arch i386 -mmacos-version-min=10.5 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-I386_OSX10_5 < %t %s
 
 // CHECK-CHECK-I386_OSX10_5: "-cc1"
@@ -12,7 +12,7 @@
 // CHECK-CHECK-I386_OSX10_5: darwin-objc-defaults
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \
-// RUN:   -arch i386 -mmacosx-version-min=10.6 2> %t
+// RUN:   -arch i386 -mmacos-version-min=10.6 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-I386_OSX10_6 < %t %s
 
 // CHECK-CHECK-I386_OSX10_6: "-cc1"
@@ -32,14 +32,14 @@
 // x86_64
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \
-// RUN:   -arch x86_64 -mmacosx-version-min=10.4 2> %t
+// RUN:   -arch x86_64 -mmacos-version-min=10.4 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-X86_64_OSX10_4 < %t %s
 
 // CHECK-CHECK-X86_64_OSX10_4: "-cc1"
 // CHECK-CHECK-X86_64_OSX10_4: -fobjc-dispatch-method=non-legacy
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \
-// RUN:   -arch x86_64 -mmacosx-version-min=10.5 2> %t
+// RUN:   -arch x86_64 -mmacos-version-min=10.5 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-X86_64_OSX10_5 < %t %s
 
 
@@ -49,7 +49,7 @@
 // CHECK-CHECK-X86_64_OSX10_5: darwin-objc-defaults
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \
-// RUN:   -arch x86_64 -mmacosx-version-min=10.6 2> %t
+// RUN:   -arch x86_64 -mmacos-version-min=10.6 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-X86_64_OSX10_6 < %t %s
 
 // CHECK-CHECK-X86_64_OSX10_6: "-cc1"
@@ -67,7 +67,7 @@
 // armv7
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \
-// RUN:   -arch armv7 -mmacosx-version-min=10.5 2> %t
+// RUN:   -arch armv7 -mmacos-version-min=10.5 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-ARMV7_OSX10_5 < %t %s
 
 // CHECK-CHECK-ARMV7_OSX10_5: "-cc1"
@@ -76,7 +76,7 @@
 // CHECK-CHECK-ARMV7_OSX10_5: darwin-objc-defaults
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s	\
-// RUN:   -arch armv7 -mmacosx-version-min=10.6 2> %t
+// RUN:   -arch armv7 -mmacos-version-min=10.6 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-ARMV7_OSX10_6 < %t %s
 
 // CHECK-CHECK-ARMV7_OSX10_6: "-cc1"

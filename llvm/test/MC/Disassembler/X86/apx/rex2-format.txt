@@ -21,6 +21,12 @@
 # INTEL: movsxd	r17, r16d
 0xd5,0x58,0x63,0xc8
 
+# ATT-NOT: rep
+# ATT:   popcntl %r16d, %r17d
+# INTEL-NOT: rep
+# INTEL: popcnt r17d, r16d
+0xf3,0xd5,0xd0,0xb8,0xc8
+
 ## MRMSrcRegCC
 
 # ATT:   cmovll	%r16d, %eax

@@ -13,17 +13,17 @@ define internal ptr @spam(ptr %arg) {
 ; CHECK-NEXT:    [[TMP:%.*]] = call ptr @malloc(i64 10368)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[ARG]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne ptr [[TMP7]], null
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[BB17:%.*]], label [[BB13:%.*]]
 ; CHECK:       bb13:
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i32, ptr [[ARG]], i32 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], 1
 ; CHECK-NEXT:    br label [[BB30:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i32, ptr [[ARG]], i32 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[BB30]], label [[BB13]]
 ; CHECK:       bb30:

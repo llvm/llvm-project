@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <concepts>
 
 #include "test_macros.h"
 

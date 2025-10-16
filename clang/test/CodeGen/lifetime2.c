@@ -1,27 +1,27 @@
-// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-llvm-passes %s      | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK,O2
-// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-lifetime-markers %s | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK
-// RUN: %clang_cc1 -S -emit-llvm -o - -O0 %s                           | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK 
+// RUN: %clang_cc1 -emit-llvm -o - -O2 -disable-llvm-passes %s      | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK,O2
+// RUN: %clang_cc1 -emit-llvm -o - -O2 -disable-lifetime-markers %s | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK
+// RUN: %clang_cc1 -emit-llvm -o - -O0 %s                           | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK 
 
 extern int bar(char *A, int n);
 
 // CHECK-LABEL: @foo
 int foo (int n) {
   if (n) {
-// O2: call void @llvm.lifetime.start.p0(i64 100,
+// O2: call void @llvm.lifetime.start.p0(
     char A[100];
     return bar(A, 1);
-// O2: call void @llvm.lifetime.end.p0(i64 100,
+// O2: call void @llvm.lifetime.end.p0(
   } else {
-// O2: call void @llvm.lifetime.start.p0(i64 100,
+// O2: call void @llvm.lifetime.start.p0(
     char A[100];
     return bar(A, 2);
-// O2: call void @llvm.lifetime.end.p0(i64 100,
+// O2: call void @llvm.lifetime.end.p0(
   }
 }
 
 // CHECK-LABEL: @no_goto_bypass
 void no_goto_bypass(void) {
-  // O2: call void @llvm.lifetime.start.p0(i64 1,
+  // O2: call void @llvm.lifetime.start.p0(
   char x;
 l1:
   bar(&x, 1);
@@ -45,16 +45,16 @@ void goto_bypass(void) {
 void no_switch_bypass(int n) {
   switch (n) {
   case 1: {
-    // O2: call void @llvm.lifetime.start.p0(i64 1,
-    // O2: call void @llvm.lifetime.end.p0(i64 1,
+    // O2: call void @llvm.lifetime.start.p0(
+    // O2: call void @llvm.lifetime.end.p0(
     char x;
     bar(&x, 1);
     break;
   }
   case 2:
     n = n;
-    // O2: call void @llvm.lifetime.start.p0(i64 5,
-    // O2: call void @llvm.lifetime.end.p0(i64 5,
+    // O2: call void @llvm.lifetime.start.p0(
+    // O2: call void @llvm.lifetime.end.p0(
     char y[5];
     bar(y, 5);
     break;

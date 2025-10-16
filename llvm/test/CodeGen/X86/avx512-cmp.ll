@@ -190,7 +190,7 @@ define <8 x i32> @legalize_loop(<8 x double> %arg) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vcmpnltpd %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vpshufd {{.*#+}} ymm1 = ymm0[3,2,1,0,7,6,5,4]
 ; KNL-NEXT:    vpsrld $31, %ymm1, %ymm1
 ; KNL-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]

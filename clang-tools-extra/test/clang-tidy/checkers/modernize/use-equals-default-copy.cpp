@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-use-equals-default %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-equals-default.IgnoreMacros: false}}" \
-// RUN:   -- -fno-delayed-template-parsing -fexceptions
+// RUN:   -- -fno-delayed-template-parsing -fexceptions -Wno-error=return-type
 
 // Out of line definition.
 struct OL {
@@ -35,7 +35,7 @@ struct IL {
 // Skip unions.
 union NU {
   NU(const NU &Other) : Field(Other.Field) {}
-  // CHECK-FIXES: NU(const NU &Other) :
+  // CHECK-FIXES: NU(const NU &Other) : Field(Other.Field) {}
   NU &operator=(const NU &Other) {
     Field = Other.Field;
     return *this;
@@ -47,7 +47,7 @@ union NU {
 // Skip structs/classes containing anonymous unions.
 struct SU {
   SU(const SU &Other) : Field(Other.Field) {}
-  // CHECK-FIXES: SU(const SU &Other) :
+  // CHECK-FIXES: SU(const SU &Other) : Field(Other.Field) {}
   SU &operator=(const SU &Other) {
     Field = Other.Field;
     return *this;
@@ -147,7 +147,7 @@ struct BF {
   BF(const BF &Other) : Field1(Other.Field1), Field2(Other.Field2), Field3(Other.Field3),
                         Field4(Other.Field4) {};
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use '= default'
-  // CHECK-FIXES: BF(const BF &Other) {{$}}
+  // CHECK-FIXES: BF(const BF &Other)
   // CHECK-FIXES:                     = default;
   BF &operator=(const BF &);
 
@@ -260,6 +260,8 @@ template <class T>
 struct Template {
   Template() = default;
   Template(const Template &Other) : Field(Other.Field) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: Template(const Template &Other)  = default;
   Template &operator=(const Template &Other);
   void foo(const T &t);
   int Field;
@@ -269,7 +271,11 @@ Template<T> &Template<T>::operator=(const Template<T> &Other) {
   Field = Other.Field;
   return *this;
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:27: warning: use '= default'
+// CHECK-FIXES: Template<T> &Template<T>::operator=(const Template<T> &Other) = default;
+
 Template<int> T1;
+
 
 // Dependent types.
 template <class T>
@@ -284,6 +290,9 @@ DT1<T> &DT1<T>::operator=(const DT1<T> &Other) {
   Field = Other.Field;
   return *this;
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:17: warning: use '= default'
+// CHECK-FIXES: DT1<T> &DT1<T>::operator=(const DT1<T> &Other) = default;
+
 DT1<int> Dt1;
 
 template <class T>
@@ -303,6 +312,9 @@ DT2<T> &DT2<T>::operator=(const DT2<T> &Other) {
 struct T {
   typedef int TT;
 };
+// CHECK-MESSAGES: :[[@LINE-8]]:17: warning: use '= default'
+// CHECK-FIXES: DT2<T> &DT2<T>::operator=(const DT2<T> &Other) = default;
+
 DT2<T> Dt2;
 
 // Default arguments.

@@ -88,10 +88,9 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         if (I != ReplacedValues.end()) {
           Mapped |= 1;
           // Check that remapped values are only used by nodes marked NewNode.
-          for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
-               UI != UE; ++UI)
-            if (UI.getUse().getResNo() == i)
-              assert(UI->getNodeId() == NewNode &&
+          for (SDUse &U : Node.uses())
+            if (U.getResNo() == i)
+              assert(U.getUser()->getNodeId() == NewNode &&
                      "Remapped value has non-trivial use!");
 
           // Check that the final result of applying ReplacedValues is not
@@ -188,9 +187,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 
 #ifndef NDEBUG
   // Checked that NewNodes are only used by other NewNodes.
-  for (unsigned i = 0, e = NewNodes.size(); i != e; ++i) {
-    SDNode *N = NewNodes[i];
-    for (SDNode *U : N->uses())
+  for (SDNode *N : NewNodes) {
+    for (SDNode *U : N->users())
       assert(U->getNodeId() == NewNode && "NewNode used by non-NewNode!");
   }
 #endif
@@ -234,6 +232,10 @@ bool DAGTypeLegalizer::run() {
     SDNode *N = Worklist.pop_back_val();
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
+
+    // Preserve fast math flags
+    SDNodeFlags FastMathFlags = N->getFlags() & SDNodeFlags::FastMathFlags;
+    SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
 
     LLVM_DEBUG(dbgs() << "\nLegalizing node: "; N->dump(&DAG));
     if (IgnoreNodeResults(N)) {
@@ -400,7 +402,7 @@ NodeDone:
     assert(N->getNodeId() == ReadyToProcess && "Node ID recalculated?");
     N->setNodeId(Processed);
 
-    for (SDNode *User : N->uses()) {
+    for (SDNode *User : N->users()) {
       int NodeId = User->getNodeId();
 
       // This node has two options: it can either be a new node or its Node ID
@@ -528,7 +530,7 @@ SDNode *DAGTypeLegalizer::AnalyzeNewNode(SDNode *N) {
       NewOps.push_back(Op);
     } else if (Op != OrigOp) {
       // This is the first operand to change - add all operands so far.
-      NewOps.insert(NewOps.end(), N->op_begin(), N->op_begin() + i);
+      llvm::append_range(NewOps, N->ops().take_front(i));
       NewOps.push_back(Op);
     }
   }
@@ -999,11 +1001,10 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
                               LVT.getSizeInBits() + HVT.getSizeInBits());
 
-  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   Lo = DAG.getNode(ISD::ZERO_EXTEND, dlLo, NVT, Lo);
   Hi = DAG.getNode(ISD::ANY_EXTEND, dlHi, NVT, Hi);
   Hi = DAG.getNode(ISD::SHL, dlHi, NVT, Hi,
-                   DAG.getConstant(LVT.getSizeInBits(), dlHi, ShiftAmtVT));
+                   DAG.getShiftAmountConstant(LVT.getSizeInBits(), NVT, dlHi));
   return DAG.getNode(ISD::OR, dlHi, NVT, Lo, Hi);
 }
 
@@ -1024,14 +1025,9 @@ void DAGTypeLegalizer::SplitInteger(SDValue Op,
   assert(LoVT.getSizeInBits() + HiVT.getSizeInBits() ==
          Op.getValueSizeInBits() && "Invalid integer splitting!");
   Lo = DAG.getNode(ISD::TRUNCATE, dl, LoVT, Op);
-  unsigned ReqShiftAmountInBits =
-      Log2_32_Ceil(Op.getValueType().getSizeInBits());
-  MVT ShiftAmountTy =
-      TLI.getScalarShiftAmountTy(DAG.getDataLayout(), Op.getValueType());
-  if (ReqShiftAmountInBits > ShiftAmountTy.getSizeInBits())
-    ShiftAmountTy = MVT::getIntegerVT(NextPowerOf2(ReqShiftAmountInBits));
-  Hi = DAG.getNode(ISD::SRL, dl, Op.getValueType(), Op,
-                   DAG.getConstant(LoVT.getSizeInBits(), dl, ShiftAmountTy));
+  Hi = DAG.getNode(
+      ISD::SRL, dl, Op.getValueType(), Op,
+      DAG.getShiftAmountConstant(LoVT.getSizeInBits(), Op.getValueType(), dl));
   Hi = DAG.getNode(ISD::TRUNCATE, dl, HiVT, Hi);
 }
 

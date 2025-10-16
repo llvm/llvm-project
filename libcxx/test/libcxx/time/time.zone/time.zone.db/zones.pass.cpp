@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -17,7 +17,7 @@
 // Tests the IANA database zones parsing and operations.
 // This is not part of the public tzdb interface.
 // The test uses private implementation headers.
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../src/include
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src/experimental/include
 
 #include <cassert>
 #include <chrono>

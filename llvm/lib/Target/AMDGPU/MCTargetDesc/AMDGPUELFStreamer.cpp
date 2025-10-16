@@ -26,12 +26,13 @@ public:
                       std::move(Emitter)) {}
 };
 
-}
+} // anonymous namespace
 
-MCELFStreamer *llvm::createAMDGPUELFStreamer(
-    const Triple &T, MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
-    bool RelaxAll) {
+MCELFStreamer *
+llvm::createAMDGPUELFStreamer(const Triple &T, MCContext &Context,
+                              std::unique_ptr<MCAsmBackend> MAB,
+                              std::unique_ptr<MCObjectWriter> OW,
+                              std::unique_ptr<MCCodeEmitter> Emitter) {
   return new AMDGPUELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                std::move(Emitter));
 }

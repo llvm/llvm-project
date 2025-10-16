@@ -22,20 +22,16 @@ if (APPLE)
   darwin_filter_host_archs(FUZZER_SUPPORTED_ARCH FUZZER_TEST_ARCH)
 endif()
 
-if(COMPILER_RT_INCLUDE_TESTS)
-  list(APPEND LIBFUZZER_TEST_DEPS FuzzerUnitTests)
-  list(APPEND LIBFUZZER_TEST_DEPS FuzzedDataProviderUnitTests)
-endif()
+list(APPEND LIBFUZZER_TEST_DEPS FuzzerUnitTests)
+list(APPEND LIBFUZZER_TEST_DEPS FuzzedDataProviderUnitTests)
 
 set(LIBFUZZER_TESTSUITES)
 
-if(COMPILER_RT_INCLUDE_TESTS)
-  # libFuzzer unit tests.
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg.py)
-  list(APPEND LIBFUZZER_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/unit)
-endif()
+# libFuzzer unit tests.
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg.py)
+list(APPEND LIBFUZZER_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/unit)
 
 macro(test_fuzzer stdlib)
   cmake_parse_arguments(TEST "" "" "DEPS" ${ARGN})
@@ -77,10 +73,10 @@ endmacro()
 
 test_fuzzer("default")
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  if(TARGET cxx_shared)
+  if(LIBCXX_ENABLE_SHARED)
     test_fuzzer("libc++" DEPS cxx_shared)
   endif()
-  if(TARGET cxx_static)
+  if(LIBCXX_ENABLE_STATIC)
     test_fuzzer("static-libc++" DEPS cxx_static)
   endif()
 endif()
@@ -89,7 +85,6 @@ if(LIBFUZZER_TESTSUITES)
   add_lit_testsuite(check-fuzzer "Running libFuzzer tests"
     ${LIBFUZZER_TESTSUITES}
     DEPENDS ${LIBFUZZER_TEST_DEPS})
-  set_target_properties(check-fuzzer PROPERTIES FOLDER "Compiler-RT Tests")
 endif()
 
 if (APPLE)

@@ -179,7 +179,7 @@ GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
     Flags |= SymbolFlags::Data;
 
   Name = copyString(Name);
-  auto Result = Globals.insert({Name, nullptr});
+  auto Result = Globals.try_emplace(Name);
   if (Result.second)
     Result.first->second =
         std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV, Inlined);
@@ -194,7 +194,7 @@ ObjCInterfaceRecord *RecordsSlice::addObjCInterface(StringRef Name,
                                                     RecordLinkage Linkage,
                                                     ObjCIFSymbolKind SymType) {
   Name = copyString(Name);
-  auto Result = Classes.insert({Name, nullptr});
+  auto Result = Classes.try_emplace(Name);
   if (Result.second)
     Result.first->second =
         std::make_unique<ObjCInterfaceRecord>(Name, Linkage, SymType);
@@ -228,8 +228,7 @@ ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
   ClassToExtend = copyString(ClassToExtend);
 
   // Add owning record first into record slice.
-  auto Result =
-      Categories.insert({std::make_pair(ClassToExtend, Category), nullptr});
+  auto Result = Categories.try_emplace(std::make_pair(ClassToExtend, Category));
   if (Result.second)
     Result.first->second =
         std::make_unique<ObjCCategoryRecord>(ClassToExtend, Category);
@@ -243,22 +242,24 @@ ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
 
 std::vector<ObjCIVarRecord *> ObjCContainerRecord::getObjCIVars() const {
   std::vector<ObjCIVarRecord *> Records;
-  llvm::for_each(IVars,
-                 [&](auto &Record) { Records.push_back(Record.second.get()); });
+  Records.reserve(IVars.size());
+  for (const auto &Record : IVars)
+    Records.push_back(Record.second.get());
   return Records;
 }
 
 std::vector<ObjCCategoryRecord *>
 ObjCInterfaceRecord::getObjCCategories() const {
   std::vector<ObjCCategoryRecord *> Records;
-  llvm::for_each(Categories,
-                 [&](auto &Record) { Records.push_back(Record.second); });
+  Records.reserve(Categories.size());
+  for (const auto &Record : Categories)
+    Records.push_back(Record.second);
   return Records;
 }
 
 ObjCIVarRecord *ObjCContainerRecord::addObjCIVar(StringRef IVar,
                                                  RecordLinkage Linkage) {
-  auto Result = IVars.insert({IVar, nullptr});
+  auto Result = IVars.try_emplace(IVar);
   if (Result.second)
     Result.first->second = std::make_unique<ObjCIVarRecord>(IVar, Linkage);
   return Result.first->second.get();

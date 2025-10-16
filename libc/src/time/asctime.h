@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_TIME_ASCTIME_H
 #define LLVM_LIBC_SRC_TIME_ASCTIME_H
 
-#include <time.h>
+#include "hdr/types/struct_tm.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *asctime(const struct tm *timeptr);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_ASCTIME_H

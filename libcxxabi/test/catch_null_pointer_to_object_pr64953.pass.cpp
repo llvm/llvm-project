@@ -25,17 +25,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
-// This test requires the fix to
-// https://github.com/llvm/llvm-project/issues/64953, which is in libc++abi.dylib.
-// The fix is not contained in older macOS system dylibs, so the test will fail
-// there.
-// FIXME: In the case that we are testing `natively` with the CI scripts we
-// currently pass the newly-built libraries to the execution, this leads to an
-// XPASS here so that we have to make these UNSUPPORTED for now (they should be
-// XFAILs when tested against current [macOS14] and previous installed libc++abi
-// as described above).
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}{{.*}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{11|12|13|14}}{{.*}}
+
+// This test requires the fix to https://github.com/llvm/llvm-project/issues/64953,
+// which landed in d5f84e6 and is in the libc++abi built library.
+// XFAIL: using-built-library-before-llvm-18
 
 #include <exception>
 #include <stdlib.h>

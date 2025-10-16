@@ -21,11 +21,14 @@ target triple = "wasm32-unknown-unknown"
 
 ; +bulk-memory
 ; BULK-MEM-LABEL: .custom_section.target_features,"",@
-; BULK-MEM-NEXT: .int8 2
+; BULK-MEM-NEXT: .int8 3
 ; BULK-MEM-NEXT: .int8 43
 ; BULK-MEM-NEXT: .int8 7
 ; BULK-MEM-NEXT: .ascii "atomics"
 ; BULK-MEM-NEXT: .int8 43
 ; BULK-MEM-NEXT: .int8 11
 ; BULK-MEM-NEXT: .ascii "bulk-memory"
+; BULK-MEM-NEXT: .int8 43
+; BULK-MEM-NEXT: .int8 15
+; BULK-MEM-NEXT: .ascii "bulk-memory-opt"
 ; BULK-MEM-NEXT: .tbss.foo,"T",@

@@ -103,7 +103,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_team_info_t *team_info = NULL;
   ompt_task_info_t *task_info = NULL;
-  ompt_work_t ompt_work_type = ompt_work_loop;
+  ompt_work_t ompt_work_type = ompt_work_loop_static;
 
   static kmp_int8 warn = 0;
 
@@ -114,7 +114,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     // Determine workshare type
     if (loc != NULL) {
       if ((loc->flags & KMP_IDENT_WORK_LOOP) != 0) {
-        ompt_work_type = ompt_work_loop;
+        ompt_work_type = ompt_work_loop_static;
       } else if ((loc->flags & KMP_IDENT_WORK_SECTIONS) != 0) {
         ompt_work_type = ompt_work_sections;
       } else if ((loc->flags & KMP_IDENT_WORK_DISTRIBUTE) != 0) {
@@ -542,6 +542,12 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   nth = th->th.th_team_nproc;
   team = th->th.th_team;
   KMP_DEBUG_ASSERT(th->th.th_teams_microtask); // we are in the teams construct
+  // skip optional serialized teams to prevent this from using the wrong teams
+  // information when called after __kmp_serialized_parallel
+  // TODO: make __kmp_serialized_parallel eventually call __kmp_fork_in_teams
+  // to address this edge case
+  while (team->t.t_parent && team->t.t_serialized)
+    team = team->t.t_parent;
   nteams = th->th.th_teams_size.nteams;
   team_id = team->t.t_master_tid;
   KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);

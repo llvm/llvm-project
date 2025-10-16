@@ -79,7 +79,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   int64_t ret;
   __asm__ volatile("rdtsc" : "=A"(ret));
   return ret;
-#elif defined(__x86_64__) || defined(__amd64__)
+#elif (defined(__x86_64__) || defined(__amd64__)) && !defined(__arm64ec__)
   uint64_t low, high;
   __asm__ volatile("rdtsc" : "=a"(low), "=d"(high));
   return (high << 32) | low;
@@ -139,7 +139,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   struct timespec ts = {0, 0};
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return static_cast<int64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(__arm64ec__)
   // System timer of ARMv8 runs at a different frequency than the CPU's.
   // The frequency is fixed, typically in the range 1-50MHz.  It can be
   // read at CNTFRQ special register.  We assume the OS has set up
@@ -181,10 +181,11 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
 #elif defined(__s390__)  // Covers both s390 and s390x.
   // Return the CPU clock.
   uint64_t tsc;
-#if defined(BENCHMARK_OS_ZOS) && defined(COMPILER_IBMXL)
-  // z/OS XL compiler HLASM syntax.
+#if defined(BENCHMARK_OS_ZOS)
+  // z/OS HLASM syntax.
   asm(" stck %0" : "=m"(tsc) : : "cc");
 #else
+  // Linux on Z syntax.
   asm("stck %0" : "=Q"(tsc) : : "cc");
 #endif
   return tsc;

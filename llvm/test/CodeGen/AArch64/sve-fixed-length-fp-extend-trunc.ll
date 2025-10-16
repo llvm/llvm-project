@@ -462,11 +462,11 @@ define void @fcvt_v8f64_v8f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fcvt z0.h, p1/m, z0.d
-; VBITS_GE_256-NEXT:    fcvt z1.h, p1/m, z1.d
+; VBITS_GE_256-NEXT:    ptrue p0.d
+; VBITS_GE_256-NEXT:    fcvt z0.h, p0/m, z0.d
+; VBITS_GE_256-NEXT:    fcvt z1.h, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h

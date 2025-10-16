@@ -1,0 +1,311 @@
+# REQUIRES: asserts
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
+
+# The Window Scheduling algorithm will discard the debug IR, just like the SMS
+# algorithm does. Additionally, the MMO information in the IR is also preserved
+# to ensure that no barrier dependencies are generated within the loop body.
+
+# CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+# CHECK-LABEL: name: exp_approx
+# CHECK: bb.5.for.body:
+# CHECK-NOT: DBG_VALUE
+# CHECK: ENDLOOP0
+# CHECK: bb.6:
+
+
+--- |
+  define void @exp_approx(i32 %num_elements, ptr noalias %input_ptr, ptr noalias %output_ptr) #0 !dbg !20 {
+  entry:
+    tail call void @llvm.dbg.value(metadata i32 %num_elements, metadata !33, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata ptr %input_ptr, metadata !34, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata ptr %output_ptr, metadata !35, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata float 1.000000e+00, metadata !36, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata float 5.000000e-01, metadata !37, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata float 0x3FC5555560000000, metadata !38, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata float 0x3FA5555560000000, metadata !39, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata float 0x3F81111120000000, metadata !40, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata float 0x3F56C16C20000000, metadata !41, metadata !DIExpression()), !dbg !69
+    tail call void @llvm.dbg.value(metadata i32 0, metadata !42, metadata !DIExpression()), !dbg !70
+    %is_zero_elements = icmp eq i32 %num_elements, 0, !dbg !71
+    br i1 %is_zero_elements, label %for.cond.cleanup, label %for.body.lr.ph, !dbg !72
+  
+  for.body.lr.ph:
+    %const_1 = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1065353216)
+    %const_half = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1056964608)
+    %const_third = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1042983595)
+    %const_quarter = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1026206379)
+    %const_fifth = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1007192201)
+    %const_sixth = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 985008993)
+    br label %for.body, !dbg !72
+  
+  for.cond.cleanup:
+    ret void, !dbg !73
+  
+  for.body:
+    %lsr.iv1 = phi ptr [ %cgep3, %for.body ], [ %input_ptr, %for.body.lr.ph ]
+    %lsr.iv = phi ptr [ %cgep, %for.body ], [ %output_ptr, %for.body.lr.ph ]
+    %index = phi i32 [ 0, %for.body.lr.ph ], [ %next_index, %for.body ]
+    tail call void @llvm.dbg.value(metadata i32 %index, metadata !42, metadata !DIExpression()), !dbg !70
+    %input_values = load <32 x i32>, ptr %lsr.iv1, align 128, !dbg !74
+    tail call void @llvm.dbg.value(metadata <32 x i32> %input_values, metadata !44, metadata !DIExpression()), !dbg !75
+    %squared_values = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %input_values, <32 x i32> %input_values), !dbg !76
+    tail call void @llvm.dbg.value(metadata <32 x i32> %squared_values, metadata !47, metadata !DIExpression()), !dbg !75
+    %cubed_values = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %squared_values, <32 x i32> %input_values), !dbg !77
+    tail call void @llvm.dbg.value(metadata <32 x i32> %cubed_values, metadata !48, metadata !DIExpression()), !dbg !75
+    %quartic_values = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %cubed_values, <32 x i32> %input_values), !dbg !78
+    tail call void @llvm.dbg.value(metadata <32 x i32> %quartic_values, metadata !49, metadata !DIExpression()), !dbg !75
+    %quintic_values = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %quartic_values, <32 x i32> %input_values), !dbg !79
+    tail call void @llvm.dbg.value(metadata <32 x i32> %quintic_values, metadata !50, metadata !DIExpression()), !dbg !75
+    %sextic_values = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %quintic_values, <32 x i32> %input_values), !dbg !80
+    tail call void @llvm.dbg.value(metadata <32 x i32> %sextic_values, metadata !51, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.dbg.value(metadata <32 x i32> %const_1, metadata !52, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.dbg.value(metadata <32 x i32> %const_half, metadata !53, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.dbg.value(metadata <32 x i32> %const_third, metadata !54, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.dbg.value(metadata <32 x i32> %const_quarter, metadata !55, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.dbg.value(metadata <32 x i32> %const_fifth, metadata !56, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.dbg.value(metadata <32 x i32> %const_sixth, metadata !57, metadata !DIExpression()), !dbg !75
+    %product_half = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %const_half, <32 x i32> %squared_values), !dbg !81
+    tail call void @llvm.dbg.value(metadata <32 x i32> %product_half, metadata !58, metadata !DIExpression()), !dbg !75
+    %product_third = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %const_third, <32 x i32> %cubed_values), !dbg !82
+    tail call void @llvm.dbg.value(metadata <32 x i32> %product_third, metadata !59, metadata !DIExpression()), !dbg !75
+    %product_quarter = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %const_quarter, <32 x i32> %quartic_values), !dbg !83
+    tail call void @llvm.dbg.value(metadata <32 x i32> %product_quarter, metadata !60, metadata !DIExpression()), !dbg !75
+    %product_fifth = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %const_fifth, <32 x i32> %quintic_values), !dbg !84
+    tail call void @llvm.dbg.value(metadata <32 x i32> %product_fifth, metadata !61, metadata !DIExpression()), !dbg !75
+    %product_sixth = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %const_sixth, <32 x i32> %sextic_values), !dbg !85
+    tail call void @llvm.dbg.value(metadata <32 x i32> %product_sixth, metadata !62, metadata !DIExpression()), !dbg !75
+    %sum_1_input = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %const_1, <32 x i32> %input_values), !dbg !86
+    tail call void @llvm.dbg.value(metadata <32 x i32> %sum_1_input, metadata !63, metadata !DIExpression()), !dbg !75
+    %sum_half = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %sum_1_input, <32 x i32> %product_half), !dbg !87
+    tail call void @llvm.dbg.value(metadata <32 x i32> %sum_half, metadata !64, metadata !DIExpression()), !dbg !75
+    %sum_third = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %sum_half, <32 x i32> %product_third), !dbg !88
+    tail call void @llvm.dbg.value(metadata <32 x i32> %sum_third, metadata !65, metadata !DIExpression()), !dbg !75
+    %sum_quarter = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %sum_third, <32 x i32> %product_quarter), !dbg !89
+    tail call void @llvm.dbg.value(metadata <32 x i32> %sum_quarter, metadata !66, metadata !DIExpression()), !dbg !75
+    %sum_fifth = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %sum_quarter, <32 x i32> %product_fifth), !dbg !90
+    tail call void @llvm.dbg.value(metadata <32 x i32> %sum_fifth, metadata !67, metadata !DIExpression()), !dbg !75
+    %final_result = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %sum_fifth, <32 x i32> %product_sixth), !dbg !91
+    tail call void @llvm.dbg.value(metadata <32 x i32> %final_result, metadata !68, metadata !DIExpression()), !dbg !75
+    store <32 x i32> %final_result, ptr %lsr.iv, align 128, !dbg !92
+    %next_index = add nuw i32 %index, 32, !dbg !93
+    tail call void @llvm.dbg.value(metadata i32 %next_index, metadata !42, metadata !DIExpression()), !dbg !70
+    %continue_loop = icmp ult i32 %next_index, %num_elements, !dbg !71
+    %cgep = getelementptr i8, ptr %lsr.iv, i32 128
+    %cgep3 = getelementptr i8, ptr %lsr.iv1, i32 128
+    br i1 %continue_loop, label %for.body, label %for.cond.cleanup, !dbg !72, !llvm.loop !94
+  }
+  
+  declare <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32>, <32 x i32>)
+  declare <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32)
+  declare <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32>, <32 x i32>)
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  attributes #0 = { "target-features"="+hvx-length128b,+hvxv68,+v66,-long-calls" }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!13, !14, !15, !16, !17, !18, !19}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 19.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "exp_approx.cpp", directory: "/tmp")
+  !2 = !{!3, !10}
+  !3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 32)
+  !4 = !DIDerivedType(tag: DW_TAG_typedef, name: "HVX_Vector", file: !1, line: 11, baseType: !5)
+  !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "Vect1024", file: !1, line: 4, baseType: !6, align: 1024)
+  !6 = !DICompositeType(tag: DW_TAG_array_type, baseType: !7, size: 1024, flags: DIFlagVector, elements: !8)
+  !7 = !DIBasicType(name: "long", size: 32, encoding: DW_ATE_signed)
+  !8 = !{!9}
+  !9 = !DISubrange(count: 32)
+  !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 32)
+  !11 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !12)
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !{i32 7, !"Dwarf Version", i32 5}
+  !14 = !{i32 2, !"Debug Info Version", i32 3}
+  !15 = !{i32 1, !"wchar_size", i32 4}
+  !16 = !{i32 8, !"PIC Level", i32 2}
+  !17 = !{i32 7, !"PIE Level", i32 2}
+  !18 = !{i32 7, !"frame-pointer", i32 2}
+  !19 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !20 = distinct !DISubprogram(name: "exp_approx", linkageName: "exp_approx", scope: !1, file: !1, line: 15, type: !21, scopeLine: 15, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !32)
+  !21 = !DISubroutineType(types: !22)
+  !22 = !{null, !23, !26, !30}
+  !23 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", file: !24, line: 13, baseType: !25)
+  !24 = !DIFile(filename: "__stddef_size_t.h", directory: "/tmp")
+  !25 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !26 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !27)
+  !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !28, size: 32)
+  !28 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !29)
+  !29 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+  !30 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !31)
+  !31 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !29, size: 32)
+  !32 = !{!33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !44, !47, !48, !49, !50, !51, !52, !53, !54, !55, !56, !57, !58, !59, !60, !61, !62, !63, !64, !65, !66, !67, !68}
+  !33 = !DILocalVariable(name: "N", arg: 1, scope: !20, file: !1, line: 15, type: !23)
+  !34 = !DILocalVariable(name: "x", arg: 2, scope: !20, file: !1, line: 15, type: !26)
+  !35 = !DILocalVariable(name: "y", arg: 3, scope: !20, file: !1, line: 15, type: !30)
+  !36 = !DILocalVariable(name: "a", scope: !20, file: !1, line: 16, type: !28)
+  !37 = !DILocalVariable(name: "b", scope: !20, file: !1, line: 17, type: !28)
+  !38 = !DILocalVariable(name: "c", scope: !20, file: !1, line: 18, type: !28)
+  !39 = !DILocalVariable(name: "d", scope: !20, file: !1, line: 19, type: !28)
+  !40 = !DILocalVariable(name: "e", scope: !20, file: !1, line: 20, type: !28)
+  !41 = !DILocalVariable(name: "f", scope: !20, file: !1, line: 21, type: !28)
+  !42 = !DILocalVariable(name: "i", scope: !43, file: !1, line: 25, type: !23)
+  !43 = distinct !DILexicalBlock(scope: !20, file: !1, line: 25, column: 3)
+  !44 = !DILocalVariable(name: "v_x1", scope: !45, file: !1, line: 26, type: !4)
+  !45 = distinct !DILexicalBlock(scope: !46, file: !1, line: 25, column: 38)
+  !46 = distinct !DILexicalBlock(scope: !43, file: !1, line: 25, column: 3)
+  !47 = !DILocalVariable(name: "v_x2", scope: !45, file: !1, line: 28, type: !4)
+  !48 = !DILocalVariable(name: "v_x3", scope: !45, file: !1, line: 29, type: !4)
+  !49 = !DILocalVariable(name: "v_x4", scope: !45, file: !1, line: 30, type: !4)
+  !50 = !DILocalVariable(name: "v_x5", scope: !45, file: !1, line: 31, type: !4)
+  !51 = !DILocalVariable(name: "v_x6", scope: !45, file: !1, line: 32, type: !4)
+  !52 = !DILocalVariable(name: "v_a", scope: !45, file: !1, line: 33, type: !4)
+  !53 = !DILocalVariable(name: "v_b", scope: !45, file: !1, line: 34, type: !4)
+  !54 = !DILocalVariable(name: "v_c", scope: !45, file: !1, line: 35, type: !4)
+  !55 = !DILocalVariable(name: "v_d", scope: !45, file: !1, line: 36, type: !4)
+  !56 = !DILocalVariable(name: "v_e", scope: !45, file: !1, line: 37, type: !4)
+  !57 = !DILocalVariable(name: "v_f", scope: !45, file: !1, line: 38, type: !4)
+  !58 = !DILocalVariable(name: "v_1", scope: !45, file: !1, line: 39, type: !4)
+  !59 = !DILocalVariable(name: "v_2", scope: !45, file: !1, line: 40, type: !4)
+  !60 = !DILocalVariable(name: "v_3", scope: !45, file: !1, line: 41, type: !4)
+  !61 = !DILocalVariable(name: "v_4", scope: !45, file: !1, line: 42, type: !4)
+  !62 = !DILocalVariable(name: "v_5", scope: !45, file: !1, line: 43, type: !4)
+  !63 = !DILocalVariable(name: "vr_1", scope: !45, file: !1, line: 44, type: !4)
+  !64 = !DILocalVariable(name: "vr_2", scope: !45, file: !1, line: 45, type: !4)
+  !65 = !DILocalVariable(name: "vr_3", scope: !45, file: !1, line: 46, type: !4)
+  !66 = !DILocalVariable(name: "vr_4", scope: !45, file: !1, line: 47, type: !4)
+  !67 = !DILocalVariable(name: "vr_5", scope: !45, file: !1, line: 48, type: !4)
+  !68 = !DILocalVariable(name: "result", scope: !45, file: !1, line: 49, type: !4)
+  !69 = !DILocation(line: 0, scope: !20)
+  !70 = !DILocation(line: 0, scope: !43)
+  !71 = !DILocation(line: 25, column: 24, scope: !46)
+  !72 = !DILocation(line: 25, column: 3, scope: !43)
+  !73 = !DILocation(line: 53, column: 1, scope: !20)
+  !74 = !DILocation(line: 26, column: 22, scope: !45)
+  !75 = !DILocation(line: 0, scope: !45)
+  !76 = !DILocation(line: 28, column: 23, scope: !45)
+  !77 = !DILocation(line: 29, column: 23, scope: !45)
+  !78 = !DILocation(line: 30, column: 23, scope: !45)
+  !79 = !DILocation(line: 31, column: 23, scope: !45)
+  !80 = !DILocation(line: 32, column: 23, scope: !45)
+  !81 = !DILocation(line: 39, column: 22, scope: !45)
+  !82 = !DILocation(line: 40, column: 22, scope: !45)
+  !83 = !DILocation(line: 41, column: 22, scope: !45)
+  !84 = !DILocation(line: 42, column: 22, scope: !45)
+  !85 = !DILocation(line: 43, column: 22, scope: !45)
+  !86 = !DILocation(line: 44, column: 23, scope: !45)
+  !87 = !DILocation(line: 45, column: 23, scope: !45)
+  !88 = !DILocation(line: 46, column: 23, scope: !45)
+  !89 = !DILocation(line: 47, column: 23, scope: !45)
+  !90 = !DILocation(line: 48, column: 23, scope: !45)
+  !91 = !DILocation(line: 49, column: 25, scope: !45)
+  !92 = !DILocation(line: 51, column: 31, scope: !45)
+  !93 = !DILocation(line: 25, column: 31, scope: !46)
+  !94 = distinct !{!94, !72, !95}
+  !95 = !DILocation(line: 52, column: 3, scope: !43)
+
+...
+---
+name:            exp_approx
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2
+  
+    DBG_VALUE $r0, $noreg, !33, !DIExpression(), debug-location !69
+    DBG_VALUE $r1, $noreg, !34, !DIExpression(), debug-location !69
+    DBG_VALUE $r2, $noreg, !35, !DIExpression(), debug-location !69
+    %0:intregs = COPY $r2
+    DBG_VALUE %0, $noreg, !35, !DIExpression(), debug-location !69
+    %1:intregs = COPY $r1
+    DBG_VALUE %1, $noreg, !34, !DIExpression(), debug-location !69
+    %2:intregs = COPY $r0
+    DBG_VALUE %2, $noreg, !33, !DIExpression(), debug-location !69
+    DBG_VALUE float 1.000000e+00, $noreg, !36, !DIExpression(), debug-location !69
+    DBG_VALUE float 5.000000e-01, $noreg, !37, !DIExpression(), debug-location !69
+    DBG_VALUE float 0x3FC5555560000000, $noreg, !38, !DIExpression(), debug-location !69
+    DBG_VALUE float 0x3FA5555560000000, $noreg, !39, !DIExpression(), debug-location !69
+    DBG_VALUE float 0x3F81111120000000, $noreg, !40, !DIExpression(), debug-location !69
+    DBG_VALUE float 0x3F56C16C20000000, $noreg, !41, !DIExpression(), debug-location !69
+    DBG_VALUE 0, $noreg, !42, !DIExpression(), debug-location !70
+    %3:predregs = C2_cmpeqi %2, 0, debug-location !71
+    J2_jumpt killed %3, %bb.2, implicit-def dead $pc, debug-location !72
+    J2_jump %bb.1, implicit-def dead $pc, debug-location !72
+  
+  bb.1.for.body.lr.ph:
+    successors: %bb.3(0x80000000)
+  
+    %4:intregs = A2_tfrsi 1065353216
+    %5:hvxvr = V6_lvsplatw killed %4
+    %6:intregs = A2_tfrsi 1056964608
+    %7:hvxvr = V6_lvsplatw killed %6
+    %8:intregs = A2_tfrsi 1042983595
+    %9:hvxvr = V6_lvsplatw killed %8
+    %10:intregs = A2_tfrsi 1026206379
+    %11:hvxvr = V6_lvsplatw killed %10
+    %12:intregs = A2_tfrsi 1007192201
+    %13:hvxvr = V6_lvsplatw killed %12
+    %14:intregs = A2_tfrsi 985008993
+    %15:hvxvr = V6_lvsplatw killed %14
+    %16:intregs = A2_addi %2, 31, debug-location !72
+    %17:intregs = S2_lsr_i_r %16, 5, debug-location !72
+    %18:intregs = COPY %17, debug-location !72
+    J2_loop0r %bb.3, %18, implicit-def $lc0, implicit-def $sa0, implicit-def $usr, debug-location !72
+    J2_jump %bb.3, implicit-def dead $pc, debug-location !72
+  
+  bb.2.for.cond.cleanup:
+    PS_jmpret $r31, implicit-def dead $pc, debug-location !73
+  
+  bb.3.for.body (machine-block-address-taken):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+  
+    %19:intregs = PHI %1, %bb.1, %20, %bb.3
+    %21:intregs = PHI %0, %bb.1, %22, %bb.3
+    DBG_VALUE %23:intregs, $noreg, !42, !DIExpression(), debug-location !70
+    %24:hvxvr, %20:intregs = V6_vL32b_pi %19, 128, debug-location !74 :: (load (s1024) from %ir.lsr.iv1)
+    DBG_VALUE %24, $noreg, !44, !DIExpression(), debug-location !75
+    %25:hvxvr = V6_vmpyowh_rnd %24, %24, debug-location !76
+    DBG_VALUE %25, $noreg, !47, !DIExpression(), debug-location !75
+    %26:hvxvr = V6_vmpyowh_rnd %25, %24, debug-location !77
+    DBG_VALUE %26, $noreg, !48, !DIExpression(), debug-location !75
+    %27:hvxvr = V6_vmpyowh_rnd %26, %24, debug-location !78
+    DBG_VALUE %27, $noreg, !49, !DIExpression(), debug-location !75
+    %28:hvxvr = V6_vmpyowh_rnd %27, %24, debug-location !79
+    DBG_VALUE %28, $noreg, !50, !DIExpression(), debug-location !75
+    %29:hvxvr = V6_vmpyowh_rnd %28, %24, debug-location !80
+    DBG_VALUE %29, $noreg, !51, !DIExpression(), debug-location !75
+    DBG_VALUE %5, $noreg, !52, !DIExpression(), debug-location !75
+    DBG_VALUE %7, $noreg, !53, !DIExpression(), debug-location !75
+    DBG_VALUE %9, $noreg, !54, !DIExpression(), debug-location !75
+    DBG_VALUE %11, $noreg, !55, !DIExpression(), debug-location !75
+    DBG_VALUE %13, $noreg, !56, !DIExpression(), debug-location !75
+    DBG_VALUE %15, $noreg, !57, !DIExpression(), debug-location !75
+    %30:hvxvr = V6_vmpyowh_rnd %7, %25, debug-location !81
+    DBG_VALUE %30, $noreg, !58, !DIExpression(), debug-location !75
+    %31:hvxvr = V6_vmpyowh_rnd %9, %26, debug-location !82
+    DBG_VALUE %31, $noreg, !59, !DIExpression(), debug-location !75
+    %32:hvxvr = V6_vmpyowh_rnd %11, %27, debug-location !83
+    DBG_VALUE %32, $noreg, !60, !DIExpression(), debug-location !75
+    %33:hvxvr = V6_vmpyowh_rnd %13, %28, debug-location !84
+    DBG_VALUE %33, $noreg, !61, !DIExpression(), debug-location !75
+    %34:hvxvr = V6_vmpyowh_rnd %15, killed %29, debug-location !85
+    DBG_VALUE %34, $noreg, !62, !DIExpression(), debug-location !75
+    %35:hvxvr = V6_vaddw %5, %24, debug-location !86
+    DBG_VALUE %35, $noreg, !63, !DIExpression(), debug-location !75
+    %36:hvxvr = V6_vaddw killed %35, killed %30, debug-location !87
+    DBG_VALUE %36, $noreg, !64, !DIExpression(), debug-location !75
+    %37:hvxvr = V6_vaddw killed %36, killed %31, debug-location !88
+    DBG_VALUE %37, $noreg, !65, !DIExpression(), debug-location !75
+    %38:hvxvr = V6_vaddw killed %37, killed %32, debug-location !89
+    DBG_VALUE %38, $noreg, !66, !DIExpression(), debug-location !75
+    %39:hvxvr = V6_vaddw killed %38, killed %33, debug-location !90
+    DBG_VALUE %39, $noreg, !67, !DIExpression(), debug-location !75
+    %40:hvxvr = V6_vaddw killed %39, killed %34, debug-location !91
+    DBG_VALUE %40, $noreg, !68, !DIExpression(), debug-location !75
+    %22:intregs = V6_vS32b_pi %21, 128, killed %40, debug-location !92 :: (store (s1024) into %ir.lsr.iv)
+    DBG_VALUE $noreg, $noreg, !42, !DIExpression(), debug-location !70
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0, debug-location !72
+    J2_jump %bb.2, implicit-def dead $pc, debug-location !72
+
+...

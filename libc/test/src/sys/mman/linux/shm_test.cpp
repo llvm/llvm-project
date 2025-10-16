@@ -6,32 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/syscall.h"
+#include "hdr/fcntl_macros.h"
+#include "src/fcntl/fcntl.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/shm_open.h"
 #include "src/sys/mman/shm_unlink.h"
 #include "src/unistd/close.h"
 #include "src/unistd/ftruncate.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
-#include <asm-generic/fcntl.h>
-#include <sys/syscall.h>
+#include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcShmTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 // since shm_open/shm_unlink are wrappers around open/unlink, we only focus on
 // testing basic cases and name conversions.
 
-TEST(LlvmLibcShmTest, Basic) {
+TEST_F(LlvmLibcShmTest, Basic) {
   const char *name = "/test_shm_open";
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::shm_open(name, O_CREAT | O_RDWR, 0666),
               returns(GE(0)).with_errno(EQ(0)));
 
   // check that FD_CLOEXEC is set by default.
-  // TODO: use fcntl when implemented.
-  // https://github.com/llvm/llvm-project/issues/84968
-  long flag = LIBC_NAMESPACE::syscall_impl(SYS_fcntl, fd, F_GETFD);
+  long flag = LIBC_NAMESPACE::fcntl(fd, F_GETFD);
   ASSERT_GE(static_cast<int>(flag), 0);
   EXPECT_NE(static_cast<int>(flag) & FD_CLOEXEC, 0);
 
@@ -58,7 +57,7 @@ TEST(LlvmLibcShmTest, Basic) {
   ASSERT_THAT(LIBC_NAMESPACE::shm_unlink(name), Succeeds());
 }
 
-TEST(LlvmLibcShmTest, NameConversion) {
+TEST_F(LlvmLibcShmTest, NameConversion) {
   const char *name = "////test_shm_open";
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::shm_open(name, O_CREAT | O_RDWR, 0666),

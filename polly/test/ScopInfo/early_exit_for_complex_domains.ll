@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s
 ;
 ; Check we do not crash.
 ;

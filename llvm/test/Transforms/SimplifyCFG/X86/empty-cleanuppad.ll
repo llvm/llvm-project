@@ -60,7 +60,7 @@ define void @f2() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_S2:%.*]], align 1
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[EHCLEANUP:%.*]]
+; CHECK-NEXT:            to label [[TRY_CONT:%.*]] unwind label [[EHCLEANUP:%.*]]
 ; CHECK:       ehcleanup:
 ; CHECK-NEXT:    [[TMP0:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    call void @"\01??1S2@@QEAA@XZ"(ptr [[B]])
@@ -124,7 +124,7 @@ define void @f3() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[STRUCT_S2:%.*]], align 1
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind label [[EHCLEANUP_1:%.*]]
 ; CHECK:       catch:
@@ -191,7 +191,7 @@ define void @f4() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
@@ -246,10 +246,10 @@ define i32 @f6() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[STATE_0:%.*]] = phi i32 [ 2, [[INVOKE_CONT]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind to caller
@@ -310,13 +310,13 @@ define i32 @f7() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[INVOKE_CONT_1:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[INVOKE_CONT_1:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       invoke.cont.1:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[STATE_1:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[INVOKE_CONT_1]] ], [ 2, [[INVOKE_CONT]] ]
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind to caller
@@ -388,10 +388,10 @@ define void @f8() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 2, [[INVOKE_CONT]] ], [ 1, [[ENTRY:%.*]] ], [ [[X]], [[CATCH_CONT:%.*]] ]
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind to caller
@@ -401,7 +401,7 @@ define void @f8() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    catchret from [[TMP0]] to label [[CATCH_CONT]]
 ; CHECK:       catch.cont:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[RETURN]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[RETURN]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
@@ -437,9 +437,9 @@ define i32 @f9() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[S]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S]])
 ; CHECK-NEXT:    invoke void @"\01??1S2@@QEAA@XZ"(ptr [[S]])
-; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CATCH_SWITCH:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
@@ -450,13 +450,13 @@ define i32 @f9() personality ptr @__CxxFrameHandler3 {
 ;
 entry:
   %s = alloca i8, align 1
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %s)
+  call void @llvm.lifetime.start.p0(ptr nonnull %s)
   invoke void @"\01??1S2@@QEAA@XZ"(ptr %s)
   to label %try.cont unwind label %ehcleanup
 
 ehcleanup:
   %cleanup.pad = cleanuppad within none []
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %s)
+  call void @llvm.lifetime.end.p0(ptr nonnull %s)
   cleanupret from %cleanup.pad unwind label %catch.dispatch
 
 catch.dispatch:
@@ -502,14 +502,15 @@ cleanupret2:
 define void @f11() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f11(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    invoke void @g()
-; CHECK-NEXT:    to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
@@ -519,6 +520,7 @@ define void @f11() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %x = alloca i8
   invoke void @g()
   to label %invoke.cont unwind label %ehcleanup
 
@@ -531,9 +533,8 @@ invoke.cont2:                                     ; preds = %invoke.cont
   to label %return unwind label %catch.dispatch
 
 ehcleanup:                                        ; preds = %invoke.cont, %entry
-  %x = phi ptr [ undef, %invoke.cont ], [ undef, %entry ]
   %0 = cleanuppad within none []
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   cleanupret from %0 unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %ehcleanup, %invoke.cont
@@ -555,8 +556,8 @@ declare void @use_x(i32 %x)
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

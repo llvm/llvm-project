@@ -544,14 +544,9 @@ struct CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
 ///
 ///  if (isa<Type>(myVal)) { ... }
 ///  if (isa<Type0, Type1, Type2>(myVal)) { ... }
-template <typename To, typename From>
+template <typename... To, typename From>
 [[nodiscard]] inline bool isa(const From &Val) {
-  return CastInfo<To, const From>::isPossible(Val);
-}
-
-template <typename First, typename Second, typename... Rest, typename From>
-[[nodiscard]] inline bool isa(const From &Val) {
-  return isa<First>(Val) || isa<Second, Rest...>(Val);
+  return (CastInfo<To, const From>::isPossible(Val) || ...);
 }
 
 /// cast<X> - Return the argument parameter cast to the specified type.  This
@@ -755,7 +750,7 @@ template <class X, class Y> auto dyn_cast_if_present(Y *Val) {
 
 // Forwards to dyn_cast_if_present to avoid breaking current users. This is
 // deprecated and will be removed in a future patch, use
-// cast_if_present instead.
+// dyn_cast_if_present instead.
 template <class X, class Y> auto dyn_cast_or_null(const Y &Val) {
   return dyn_cast_if_present<X>(Val);
 }

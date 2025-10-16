@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
 ;
 ; CHECK: Execution Context: [p_0_loaded_from_currpc] -> {  :  }
 ;

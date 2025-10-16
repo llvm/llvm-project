@@ -9,7 +9,7 @@
 void testMallocDoubleFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void testMallocLeak() {
@@ -19,17 +19,17 @@ void testMallocLeak() {
 void testMallocUseAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  int j = *p; // expected-warning{{Use of memory after it is freed}}
+  int j = *p; // expected-warning{{Use of memory after it is released}}
 }
 
 void testMallocBadFree() {
   int i;
-  free(&i); // expected-warning{{Argument to free() is the address of the local variable 'i', which is not memory allocated by malloc()}}
+  free(&i); // expected-warning{{Argument to 'free()' is the address of the local variable 'i', which is not memory allocated by 'malloc()'}}
 }
 
 void testMallocOffsetFree() {
   int *p = (int *)malloc(sizeof(int));
-  free(++p); // expected-warning{{Argument to free() is offset by 4 bytes from the start of memory allocated by malloc()}}
+  free(++p); // expected-warning{{Argument to 'free()' is offset by 4 bytes from the start of memory allocated by 'malloc()'}}
 }
 
 //-----------------------------------------------------------------
@@ -37,7 +37,7 @@ void testMallocOffsetFree() {
 //-----------------------------------------------------------------
 void testMismatchedDeallocator() {
   int *x = (int *)malloc(sizeof(int));
-  delete x; // expected-warning{{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
+  delete x; // expected-warning{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 //----------------------------------------------------------------
@@ -46,7 +46,7 @@ void testMismatchedDeallocator() {
 void testNewDoubleFree() {
   int *p = new int;
   delete p;
-  delete p; // expected-warning{{Attempt to free released memory}}
+  delete p; // expected-warning{{Attempt to release already released memory}}
 }
 
 void testNewLeak() {
@@ -59,7 +59,7 @@ void testNewLeak() {
 void testNewUseAfterFree() {
   int *p = (int *)operator new(0);
   delete p;
-  int j = *p; // expected-warning{{Use of memory after it is freed}}
+  int j = *p; // expected-warning{{Use of memory after it is released}}
 }
 
 void testNewBadFree() {
@@ -69,7 +69,7 @@ void testNewBadFree() {
 
 void testNewOffsetFree() {
   int *p = new int;
-  operator delete(++p); // expected-warning{{Argument to operator delete is offset by 4 bytes from the start of memory allocated by 'new'}}
+  operator delete(++p); // expected-warning{{Argument to 'operator delete' is offset by 4 bytes from the start of memory allocated by 'new'}}
 }
 
 //----------------------------------------------------------------
@@ -88,14 +88,14 @@ void testMismatchedChangePtrThroughCall() {
 void testMismatchedChangePointeeThroughCall() {
   int *p = (int*)malloc(sizeof(int)*4);
   changePointee(p);
-  delete p; // expected-warning{{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
+  delete p; // expected-warning{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void testShouldReportDoubleFreeNotMismatched() {
   int *p = (int*)malloc(sizeof(int)*4);
   globalPtr = p;
   free(p);
-  delete globalPtr; // expected-warning {{Attempt to free released memory}}
+  delete globalPtr; // expected-warning {{Attempt to release already released memory}}
 }
 int *allocIntArray(unsigned c) {
   return new int[c];

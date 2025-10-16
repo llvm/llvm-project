@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
@@ -46,7 +47,7 @@ class CoverageMappingIterator {
   CoverageMappingRecord Record;
   coveragemap_error ReadErr;
 
-  void increment();
+  LLVM_ABI void increment();
 
 public:
   using iterator_category = std::input_iterator_tag;
@@ -112,10 +113,10 @@ protected:
 
   RawCoverageReader(StringRef Data) : Data(Data) {}
 
-  Error readULEB128(uint64_t &Result);
-  Error readIntMax(uint64_t &Result, uint64_t MaxPlus1);
-  Error readSize(uint64_t &Result);
-  Error readString(StringRef &Result);
+  LLVM_ABI Error readULEB128(uint64_t &Result);
+  LLVM_ABI Error readIntMax(uint64_t &Result, uint64_t MaxPlus1);
+  LLVM_ABI Error readSize(uint64_t &Result);
+  LLVM_ABI Error readString(StringRef &Result);
 };
 
 /// Checks if the given coverage mapping data is exported for
@@ -125,7 +126,7 @@ public:
   RawCoverageMappingDummyChecker(StringRef MappingData)
       : RawCoverageReader(MappingData) {}
 
-  Expected<bool> isDummy();
+  LLVM_ABI Expected<bool> isDummy();
 };
 
 /// Reader for the raw coverage mapping data.
@@ -149,7 +150,7 @@ public:
   RawCoverageMappingReader &
   operator=(const RawCoverageMappingReader &) = delete;
 
-  Error read();
+  LLVM_ABI Error read();
 
 private:
   Error decodeCounter(unsigned Value, Counter &C);
@@ -161,7 +162,7 @@ private:
 
 /// Reader for the coverage mapping data that is emitted by the
 /// frontend and stored in an object file.
-class BinaryCoverageReader : public CoverageMappingReader {
+class LLVM_ABI BinaryCoverageReader : public CoverageMappingReader {
 public:
   struct ProfileMappingRecord {
     CovMapVersion Version;
@@ -180,11 +181,12 @@ public:
   };
 
   using FuncRecordsStorage = std::unique_ptr<MemoryBuffer>;
+  using CoverageMapCopyStorage = std::unique_ptr<MemoryBuffer>;
 
 private:
   std::vector<std::string> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
-  InstrProfSymtab ProfileNames;
+  std::unique_ptr<InstrProfSymtab> ProfileNames;
   size_t CurrentRecord = 0;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;
@@ -195,8 +197,16 @@ private:
   // D69471, which can split up function records into multiple sections on ELF.
   FuncRecordsStorage FuncRecords;
 
-  BinaryCoverageReader(FuncRecordsStorage &&FuncRecords)
-      : FuncRecords(std::move(FuncRecords)) {}
+  // Used to tie the lifetimes of an optional copy of the coverage mapping data
+  // to the lifetime of this BinaryCoverageReader instance. Needed to support
+  // Wasm object format, which might require realignment of section contents.
+  CoverageMapCopyStorage CoverageMapCopy;
+
+  BinaryCoverageReader(std::unique_ptr<InstrProfSymtab> Symtab,
+                       FuncRecordsStorage &&FuncRecords,
+                       CoverageMapCopyStorage &&CoverageMapCopy)
+      : ProfileNames(std::move(Symtab)), FuncRecords(std::move(FuncRecords)),
+        CoverageMapCopy(std::move(CoverageMapCopy)) {}
 
 public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
@@ -209,12 +219,11 @@ public:
          SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  createCoverageReaderFromBuffer(StringRef Coverage,
-                                 FuncRecordsStorage &&FuncRecords,
-                                 InstrProfSymtab &&ProfileNames,
-                                 uint8_t BytesInAddress,
-                                 llvm::endianness Endian,
-                                 StringRef CompilationDir = "");
+  createCoverageReaderFromBuffer(
+      StringRef Coverage, FuncRecordsStorage &&FuncRecords,
+      CoverageMapCopyStorage &&CoverageMap,
+      std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
+      llvm::endianness Endian, StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };
@@ -237,7 +246,7 @@ public:
   RawCoverageFilenamesReader &
   operator=(const RawCoverageFilenamesReader &) = delete;
 
-  Error read(CovMapVersion Version);
+  LLVM_ABI Error read(CovMapVersion Version);
 };
 
 } // end namespace coverage

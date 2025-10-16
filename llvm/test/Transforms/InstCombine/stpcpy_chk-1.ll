@@ -15,7 +15,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 define ptr @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i32 0, i32 11)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 11)
 ;
 
   %ret = call ptr @__stpcpy_chk(ptr @a, ptr @.str, i32 60)
@@ -25,7 +25,7 @@ define ptr @test_simplify1() {
 define ptr @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i32 0, i32 11)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 11)
 ;
 
   %ret = call ptr @__stpcpy_chk(ptr @a, ptr @.str, i32 12)
@@ -35,7 +35,7 @@ define ptr @test_simplify2() {
 define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i32 0, i32 11)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 11)
 ;
 
   %ret = call ptr @__stpcpy_chk(ptr @a, ptr @.str, i32 -1)
@@ -45,7 +45,7 @@ define ptr @test_simplify3() {
 define ptr @test_simplify1_tail() {
 ; CHECK-LABEL: @test_simplify1_tail(
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i32 0, i32 11)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 11)
 ;
 
   %ret = tail call ptr @__stpcpy_chk(ptr @a, ptr @.str, i32 60)
@@ -80,7 +80,7 @@ define ptr @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__memcpy_chk(ptr nonnull @a, ptr nonnull @.str, i32 12, i32 [[LEN]])
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i32 0, i32 11)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 11)
 ;
 
   %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)

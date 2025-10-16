@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc <%s | FileCheck %s
+; RUN: llc -mtriple=sparc <%s | FileCheck %s
 
 ; CHECK-LABEL: test_constraint_r
 ; CHECK:       add %i1, %i0, %i0
@@ -143,3 +143,13 @@ entry:
   %1 = call double asm sideeffect "faddd $1, $2, $0", "=f,f,e"(i64 0, i64 0)
   ret void
 }
+
+; CHECK-LABEL: test_symbol:
+; CHECK: ba,a brtarget
+define void @test_symbol() {
+Entry:
+  call void asm sideeffect "ba,a ${0}", "X"(ptr @brtarget)
+  unreachable
+}
+
+declare void @brtarget()

@@ -12,7 +12,7 @@ define void @f() nounwind  {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [21183,21183,21183,21183,21183,21183,21183,21183]
 ; CHECK-NEXT:    paddsw %xmm0, %xmm0
 ; CHECK-NEXT:    paddw %xmm1, %xmm0
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movdqa %xmm0, 0

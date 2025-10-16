@@ -13,16 +13,16 @@
 define void @func_21() {
 ; CHECK-LABEL: @func_21(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE4]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i8> [ <i8 0, i8 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
@@ -58,27 +58,12 @@ define void @func_21() {
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[TMP12]], i32 1
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 6, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[LV:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[LV]] = load i32, ptr [[A_PTR]], align 4
-; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds [5 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[SCALAR_RECUR]], ptr [[B_PTR]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

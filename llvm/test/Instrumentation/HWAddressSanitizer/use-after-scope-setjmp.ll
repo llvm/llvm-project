@@ -12,7 +12,7 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-LABEL: define dso_local noundef i1 @_Z6targetv
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer()
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer.p0()
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
@@ -48,13 +48,12 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP26]], i8 [[TMP22]], i64 256, i1 false)
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @setjmp(ptr noundef @jbuf)
 ; CHECK-NEXT:    switch i32 [[CALL]], label [[WHILE_BODY:%.*]] [
-; CHECK-NEXT:    i32 1, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess(ptr [[TMP16]], ptr @stackbuf, i32 19)
 ; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
 ; CHECK-NEXT:    call void @may_jump()
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -80,13 +79,13 @@ sw.bb1:                                           ; preds = %entry
   br label %return
 
 while.body:                                       ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 4096, ptr nonnull %buf) #10
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf) #10
   store ptr %buf, ptr @stackbuf, align 8
   ; may_jump may call longjmp, going back to the switch (and then the return),
   ; bypassing the lifetime.end. This is why we need to untag on the return,
   ; rather than the lifetime.end.
   call void @may_jump()
-  call void @llvm.lifetime.end.p0(i64 4096, ptr nonnull %buf) #10
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf) #10
   br label %return
 
 return:                                           ; preds = %entry, %while.body, %sw.bb1
@@ -96,5 +95,5 @@ return:                                           ; preds = %entry, %while.body,
 
 declare i32 @setjmp(ptr noundef) returns_twice
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)

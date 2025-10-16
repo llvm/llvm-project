@@ -28,13 +28,13 @@ define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i1> %r
 }
 
-define <3 x i1> @t2_vec_undef(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @t2_vec_undef(
+define <3 x i1> @t2_vec_poison(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @t2_vec_poison(
 ; CHECK-NEXT:    [[MUL:%.*]] = call { <3 x i8>, <3 x i1> } @llvm.umul.with.overflow.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
 ; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { <3 x i8>, <3 x i1> } [[MUL]], 1
 ; CHECK-NEXT:    ret <3 x i1> [[MUL_OV]]
 ;
-  %t0 = udiv <3 x i8> <i8 -1, i8 undef, i8 -1>, %x
+  %t0 = udiv <3 x i8> <i8 -1, i8 poison, i8 -1>, %x
   %r = icmp ult <3 x i8> %t0, %y
   ret <3 x i1> %r
 }

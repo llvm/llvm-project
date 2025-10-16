@@ -14,10 +14,11 @@
 #define MLIR_DIALECT_TOSA_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tosa/Transforms/PassesEnums.h.inc"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class TypeConverter;
 namespace tosa {
 
 #define GEN_PASS_DECL
@@ -25,7 +26,6 @@ namespace tosa {
 
 // Expose Rewrite Functions that decompose TOSA Ops into further TOSA Ops.
 // The rewrites can be selectively added to a conversion pass.
-void populateTosaDecomposeConv2D(MLIRContext *ctx, RewritePatternSet &patterns);
 void populateTosaDecomposeTransposeConv(MLIRContext *ctx,
                                         RewritePatternSet &patterns);
 void populateTosaDecomposeDepthwise(MLIRContext *ctx,
@@ -38,35 +38,9 @@ void populateTosaConstantReduction(MLIRContext *ctx,
                                    RewritePatternSet &patterns,
                                    bool aggressiveReduceConstant);
 
-std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass();
-std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass(
-    const TosaLayerwiseConstantFoldPassOptions &options);
-std::unique_ptr<Pass> createTosaInferShapesPass();
-std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
-std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
-std::unique_ptr<Pass> createTosaOptionalDecompositions();
+void populateTosaTypeConversion(TypeConverter &converter);
 
-struct ValidationOptions {
-  /// Validate if operations match for the given profile.
-  TosaProfileEnum profile = TosaProfileEnum::Undefined;
-  ValidationOptions &setProfile(TosaProfileEnum profile) {
-    this->profile = profile;
-    return *this;
-  }
-  /// Verify if the properties of certain operations align the spec requirement.
-  bool strictOperationSpecAlignment = false;
-  ValidationOptions &enableStrictOperationSpecAlignment(bool enable = true) {
-    strictOperationSpecAlignment = enable;
-    return *this;
-  }
-  /// Validate if operator parameters are within specfication for the given
-  /// level.
-  TosaLevelEnum level = TosaLevelEnum::EightK;
-  ValidationOptions &setLevel(TosaLevelEnum level) {
-    this->level = level;
-    return *this;
-  }
-};
+std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"

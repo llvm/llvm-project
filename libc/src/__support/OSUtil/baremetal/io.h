@@ -9,17 +9,17 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_IO_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_IO_H
 
+#include "include/llvm-libc-types/size_t.h"
+#include "include/llvm-libc-types/ssize_t.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-// This is intended to be provided by the vendor.
-extern "C" void __llvm_libc_log_write(const char *msg, size_t len);
+ssize_t read_from_stdin(char *buf, size_t size);
+void write_to_stderr(cpp::string_view msg);
+void write_to_stdout(cpp::string_view msg);
 
-void write_to_stderr(cpp::string_view msg) {
-  __llvm_libc_log_write(msg.data(), msg.size());
-}
-
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_IO_H

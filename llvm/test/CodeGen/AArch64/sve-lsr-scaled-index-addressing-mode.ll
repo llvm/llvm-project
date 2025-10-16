@@ -14,8 +14,6 @@ define void @ld_st_nxv8i16(ptr %in, ptr %out) {
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br label [[LOOP_PH:%.*]]
 ; IR:       loop.ph:
-; IR-NEXT:    [[P_VEC_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> undef, i16 3, i32 0
-; IR-NEXT:    [[P_VEC_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[P_VEC_SPLATINSERT]], <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
 ; IR-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; IR-NEXT:    [[SCALED_VF:%.*]] = shl i64 [[VSCALE]], 3
 ; IR-NEXT:    br label [[LOOP:%.*]]
@@ -26,7 +24,7 @@ define void @ld_st_nxv8i16(ptr %in, ptr %out) {
 ; IR-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVAR]], 1
 ; IR-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 [[TMP1]]
 ; IR-NEXT:    [[VAL:%.*]] = load <vscale x 8 x i16>, ptr [[UGLYGEP1]], align 16
-; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], [[P_VEC_SPLAT]]
+; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], splat (i16 3)
 ; IR-NEXT:    store <vscale x 8 x i16> [[ADDP_VEC]], ptr [[UGLYGEP]], align 16
 ; IR-NEXT:    [[INDVAR_NEXT]] = add nsw i64 [[INDVAR]], [[SCALED_VF]]
 ; IR-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 1024
@@ -39,14 +37,13 @@ define void @ld_st_nxv8i16(ptr %in, ptr %out) {
 ; ASM-LABEL: ld_st_nxv8i16:
 ; ASM:       // %bb.0: // %entry
 ; ASM-NEXT:    ptrue p0.h
-; ASM-NEXT:    mov z0.h, #3 // =0x3
 ; ASM-NEXT:    mov x8, xzr
 ; ASM-NEXT:    cnth x9
 ; ASM-NEXT:  .LBB0_1: // %loop
 ; ASM-NEXT:    // =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
-; ASM-NEXT:    add z1.h, z1.h, z0.h
-; ASM-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
+; ASM-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; ASM-NEXT:    add z0.h, z0.h, #3
+; ASM-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
 ; ASM-NEXT:    add x8, x8, x9
 ; ASM-NEXT:    cmp x8, #1024
 ; ASM-NEXT:    b.ne .LBB0_1
@@ -56,8 +53,6 @@ entry:
   br label %loop.ph
 
 loop.ph:
-  %p_vec.splatinsert = insertelement <vscale x 8 x i16> undef, i16 3, i32 0
-  %p_vec.splat = shufflevector <vscale x 8 x i16> %p_vec.splatinsert, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
   %vscale = call i64 @llvm.vscale.i64()
   %scaled_vf = shl i64 %vscale, 3
   br label %loop
@@ -67,7 +62,7 @@ loop:                                             ; preds = %loop, %loop.ph
   %ptr.in = getelementptr inbounds i16, ptr %in, i64 %indvar
   %ptr.out = getelementptr inbounds i16, ptr %out, i64 %indvar
   %val = load <vscale x 8 x i16>, ptr %ptr.in, align 16
-  %addp_vec = add <vscale x 8 x i16> %val, %p_vec.splat
+  %addp_vec = add <vscale x 8 x i16> %val, splat (i16 3)
   store <vscale x 8 x i16> %addp_vec, ptr %ptr.out, align 16
   %indvar.next = add nsw i64 %indvar, %scaled_vf
   %exit.cond = icmp eq i64 %indvar.next, 1024
@@ -85,10 +80,6 @@ define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br label [[LOOP_PH:%.*]]
 ; IR:       loop.ph:
-; IR-NEXT:    [[P_VEC_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> undef, i16 3, i32 0
-; IR-NEXT:    [[P_VEC_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[P_VEC_SPLATINSERT]], <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
-; IR-NEXT:    [[PTRUE_VEC_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> undef, i1 true, i32 0
-; IR-NEXT:    [[PTRUE_VEC_SPLAT:%.*]] = shufflevector <vscale x 8 x i1> [[PTRUE_VEC_SPLATINSERT]], <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
 ; IR-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; IR-NEXT:    [[SCALED_VF:%.*]] = shl i64 [[VSCALE]], 3
 ; IR-NEXT:    br label [[LOOP:%.*]]
@@ -98,9 +89,9 @@ define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ; IR-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 [[TMP0]]
 ; IR-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVAR]], 1
 ; IR-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 [[TMP1]]
-; IR-NEXT:    [[VAL:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[UGLYGEP1]], i32 4, <vscale x 8 x i1> [[PTRUE_VEC_SPLAT]], <vscale x 8 x i16> undef)
-; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], [[P_VEC_SPLAT]]
-; IR-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[ADDP_VEC]], ptr [[UGLYGEP]], i32 4, <vscale x 8 x i1> [[PTRUE_VEC_SPLAT]])
+; IR-NEXT:    [[VAL:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[UGLYGEP1]], i32 4, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> poison)
+; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], splat (i16 3)
+; IR-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[ADDP_VEC]], ptr [[UGLYGEP]], i32 4, <vscale x 8 x i1> splat (i1 true))
 ; IR-NEXT:    [[INDVAR_NEXT]] = add nsw i64 [[INDVAR]], [[SCALED_VF]]
 ; IR-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[N:%.*]], [[INDVAR_NEXT]]
 ; IR-NEXT:    br i1 [[EXIT_COND]], label [[LOOP_EXIT:%.*]], label [[LOOP]]
@@ -112,14 +103,13 @@ define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ; ASM-LABEL: masked_ld_st_nxv8i16:
 ; ASM:       // %bb.0: // %entry
 ; ASM-NEXT:    ptrue p0.h
-; ASM-NEXT:    mov z0.h, #3 // =0x3
 ; ASM-NEXT:    mov x8, xzr
 ; ASM-NEXT:    cnth x9
 ; ASM-NEXT:  .LBB1_1: // %loop
 ; ASM-NEXT:    // =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
-; ASM-NEXT:    add z1.h, z1.h, z0.h
-; ASM-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
+; ASM-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; ASM-NEXT:    add z0.h, z0.h, #3
+; ASM-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
 ; ASM-NEXT:    add x8, x8, x9
 ; ASM-NEXT:    cmp x2, x8
 ; ASM-NEXT:    b.ne .LBB1_1
@@ -129,10 +119,6 @@ entry:
   br label %loop.ph
 
 loop.ph:
-  %p_vec.splatinsert = insertelement <vscale x 8 x i16> undef, i16 3, i32 0
-  %p_vec.splat = shufflevector <vscale x 8 x i16> %p_vec.splatinsert, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
-  %ptrue_vec.splatinsert = insertelement <vscale x 8 x i1> undef, i1 true, i32 0
-  %ptrue_vec.splat = shufflevector <vscale x 8 x i1> %ptrue_vec.splatinsert, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
   %vscale = call i64 @llvm.vscale.i64()
   %scaled_vf = shl i64 %vscale, 3
   br label %loop
@@ -141,9 +127,9 @@ loop:                                             ; preds = %loop, %loop.ph
   %indvar = phi i64 [ 0, %loop.ph ], [ %indvar.next, %loop ]
   %ptr.in = getelementptr inbounds i16, ptr %in, i64 %indvar
   %ptr.out = getelementptr inbounds i16, ptr %out, i64 %indvar
-  %val = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %ptr.in, i32 4, <vscale x 8 x i1> %ptrue_vec.splat, <vscale x 8 x i16> undef)
-  %addp_vec = add <vscale x 8 x i16> %val, %p_vec.splat
-  call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %addp_vec, ptr %ptr.out, i32 4, <vscale x 8 x i1> %ptrue_vec.splat)
+  %val = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %ptr.in, i32 4, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> poison)
+  %addp_vec = add <vscale x 8 x i16> %val, splat (i16 3)
+  call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %addp_vec, ptr %ptr.out, i32 4, <vscale x 8 x i1> splat (i1 true))
   %indvar.next = add nsw i64 %indvar, %scaled_vf
   %exit.cond = icmp eq i64 %indvar.next, %n
   br i1 %exit.cond, label %loop.exit, label %loop

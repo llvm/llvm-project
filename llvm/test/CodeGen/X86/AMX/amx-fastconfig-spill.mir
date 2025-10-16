@@ -23,7 +23,8 @@ frameInfo:
 stack:
   - { id: 0, size: 1024, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
-machineFunctionInfo: {}
+machineFunctionInfo:
+  amxProgModel: ManagedRA
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:
@@ -100,7 +101,8 @@ frameInfo:
 stack:
   - { id: 0, size: 1024, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
-machineFunctionInfo: {}
+machineFunctionInfo:
+  amxProgModel: ManagedRA
 body:             |
   ; CHECK-LABEL: name: copy
   ; CHECK: bb.0.entry:

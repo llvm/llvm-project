@@ -13,16 +13,18 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace x86 {
 
-LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE void normalize(int &exponent,
+                           FPBits<long double>::StorageType &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
-      cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
+      static_cast<size_t>(cpp::countl_zero(static_cast<uint64_t>(mantissa))) -
       (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_LEN));
   exponent -= shift;
   mantissa <<= shift;
@@ -134,6 +136,6 @@ LIBC_INLINE long double sqrt(long double x) {
 
 } // namespace x86
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H

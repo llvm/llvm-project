@@ -18,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -76,9 +77,6 @@ inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
          Status != ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
 }
 
-/// A simple pair of identifier info and location.
-using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
-
 /// IdentifierInfo and other related classes are aligned to
 /// 8 bytes so that DeclarationName can use the lower 3 bits
 /// of a pointer to one of these classes.
@@ -101,8 +99,9 @@ enum class InterestingIdentifier {
   NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS,
 
   NotBuiltin,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
   FirstTSBuiltin,
 
   NotInterestingIdentifier = 65534
@@ -196,7 +195,11 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
-  // 22 bits left in a 64-bit word.
+  // True if this identifier would be a keyword in C++ mode.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsKeywordInCpp : 1;
+
+  // 21 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -213,7 +216,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
         RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
         IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
-        IsRestrictExpansion(false), IsFinal(false) {}
+        IsRestrictExpansion(false), IsFinal(false), IsKeywordInCpp(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -445,6 +448,10 @@ public:
   }
   bool isCPlusPlusOperatorKeyword() const { return IsCPPOperatorKeyword; }
 
+  /// Return true if this identifier would be a keyword in C++ mode.
+  bool IsKeywordInCPlusPlus() const { return IsKeywordInCpp; }
+  void setIsKeywordInCPlusPlus(bool Val = true) { IsKeywordInCpp = Val; }
+
   /// Return true if this token is a keyword in the specified language.
   bool isKeyword(const LangOptions &LangOpts) const;
 
@@ -463,6 +470,7 @@ public:
   /// If this returns false, we know that HandleIdentifier will not affect
   /// the token.
   bool isHandleIdentifierCase() const { return NeedsHandleIdentifier; }
+  void setHandleIdentifierCase(bool Val = true) { NeedsHandleIdentifier = Val; }
 
   /// Return true if the identifier in its current state was loaded
   /// from an AST file.
@@ -723,7 +731,7 @@ public:
   /// introduce or modify an identifier. If they called get(), they would
   /// likely end up in a recursion.
   IdentifierInfo &getOwn(StringRef Name) {
-    auto &Entry = *HashTable.insert(std::make_pair(Name, nullptr)).first;
+    auto &Entry = *HashTable.try_emplace(Name).first;
 
     IdentifierInfo *&II = Entry.second;
     if (II)
@@ -738,7 +746,7 @@ public:
     II->Entry = &Entry;
 
     // If this is the 'import' contextual keyword, mark it as such.
-    if (Name.equals("import"))
+    if (Name == "import")
       II->setModulesImport(true);
 
     return *II;
@@ -913,12 +921,13 @@ class alignas(IdentifierInfoAlignment) MultiKeywordSelector
 
 public:
   // Constructor for keyword selectors.
-  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
+  MultiKeywordSelector(unsigned nKeys, const IdentifierInfo **IIV)
       : DeclarationNameExtra(nKeys) {
     assert((nKeys > 1) && "not a multi-keyword selector");
 
     // Fill in the trailing keyword array.
-    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
+    const IdentifierInfo **KeyInfo =
+        reinterpret_cast<const IdentifierInfo **>(this + 1);
     for (unsigned i = 0; i != nKeys; ++i)
       KeyInfo[i] = IIV[i];
   }
@@ -928,7 +937,7 @@ public:
 
   using DeclarationNameExtra::getNumArgs;
 
-  using keyword_iterator = IdentifierInfo *const *;
+  using keyword_iterator = const IdentifierInfo *const *;
 
   keyword_iterator keyword_begin() const {
     return reinterpret_cast<keyword_iterator>(this + 1);
@@ -938,7 +947,7 @@ public:
     return keyword_begin() + getNumArgs();
   }
 
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
+  const IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
     assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
     return keyword_begin()[i];
   }
@@ -991,10 +1000,10 @@ class Selector {
   /// Do not reorder or add any arguments to this template
   /// without thoroughly understanding how tightly coupled these classes are.
   llvm::PointerIntPair<
-      llvm::PointerUnion<IdentifierInfo *, MultiKeywordSelector *>, 2>
+      llvm::PointerUnion<const IdentifierInfo *, MultiKeywordSelector *>, 2>
       InfoPtr;
 
-  Selector(IdentifierInfo *II, unsigned nArgs) {
+  Selector(const IdentifierInfo *II, unsigned nArgs) {
     assert(nArgs < 2 && "nArgs not equal to 0/1");
     InfoPtr.setPointerAndInt(II, nArgs + 1);
   }
@@ -1006,12 +1015,12 @@ class Selector {
     InfoPtr.setPointerAndInt(SI, MultiArg & 0b11);
   }
 
-  IdentifierInfo *getAsIdentifierInfo() const {
-    return InfoPtr.getPointer().dyn_cast<IdentifierInfo *>();
+  const IdentifierInfo *getAsIdentifierInfo() const {
+    return dyn_cast_if_present<const IdentifierInfo *>(InfoPtr.getPointer());
   }
 
   MultiKeywordSelector *getMultiKeywordSelector() const {
-    return InfoPtr.getPointer().get<MultiKeywordSelector *>();
+    return cast<MultiKeywordSelector *>(InfoPtr.getPointer());
   }
 
   unsigned getIdentifierInfoFlag() const {
@@ -1019,7 +1028,7 @@ class Selector {
     // IMPORTANT NOTE: We have to reconstitute this data rather than use the
     // value directly from the PointerIntPair. See the comments in `InfoPtr`
     // for more details.
-    if (InfoPtr.getPointer().is<MultiKeywordSelector *>())
+    if (isa<MultiKeywordSelector *>(InfoPtr.getPointer()))
       new_flags |= MultiArg;
     return new_flags;
   }
@@ -1075,7 +1084,7 @@ public:
   ///
   /// \returns the uniqued identifier for this slot, or NULL if this slot has
   /// no corresponding identifier.
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
+  const IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
 
   /// Retrieve the name at a given position in the selector.
   ///
@@ -1132,13 +1141,13 @@ public:
   ///
   /// \p NumArgs indicates whether this is a no argument selector "foo", a
   /// single argument selector "foo:" or multi-argument "foo:bar:".
-  Selector getSelector(unsigned NumArgs, IdentifierInfo **IIV);
+  Selector getSelector(unsigned NumArgs, const IdentifierInfo **IIV);
 
-  Selector getUnarySelector(IdentifierInfo *ID) {
+  Selector getUnarySelector(const IdentifierInfo *ID) {
     return Selector(ID, 1);
   }
 
-  Selector getNullarySelector(IdentifierInfo *ID) {
+  Selector getNullarySelector(const IdentifierInfo *ID) {
     return Selector(ID, 0);
   }
 
@@ -1163,6 +1172,28 @@ public:
   static std::string getPropertyNameFromSetterSelector(Selector Sel);
 };
 
+/// A simple pair of identifier info and location.
+class IdentifierLoc {
+  SourceLocation Loc;
+  IdentifierInfo *II = nullptr;
+
+public:
+  IdentifierLoc() = default;
+  IdentifierLoc(SourceLocation L, IdentifierInfo *Ident) : Loc(L), II(Ident) {}
+
+  void setLoc(SourceLocation L) { Loc = L; }
+  void setIdentifierInfo(IdentifierInfo *Ident) { II = Ident; }
+  SourceLocation getLoc() const { return Loc; }
+  IdentifierInfo *getIdentifierInfo() const { return II; }
+
+  bool operator==(const IdentifierLoc &X) const {
+    return Loc == X.Loc && II == X.II;
+  }
+
+  bool operator!=(const IdentifierLoc &X) const {
+    return Loc != X.Loc || II != X.II;
+  }
+};
 }  // namespace clang
 
 namespace llvm {

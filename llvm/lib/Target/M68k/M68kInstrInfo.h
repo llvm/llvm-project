@@ -270,25 +270,25 @@ public:
                         int *BytesAdded = nullptr) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   bool getStackSlotRange(const TargetRegisterClass *RC, unsigned SubIdx,
                          unsigned &Size, unsigned &Offset,
                          const MachineFunction &MF) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, Register SrcReg,
-                           bool IsKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -301,6 +301,9 @@ public:
   /// Add appropriate ZExt nodes
   void AddZExt(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                DebugLoc DL, unsigned Reg, MVT From, MVT To) const;
+
+  /// Move immediate to register
+  bool ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const;
 
   /// Move across register classes without extension
   bool ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst, MVT MVTSrc) const;

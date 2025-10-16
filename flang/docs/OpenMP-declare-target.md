@@ -7,7 +7,15 @@
 
 -->
 
-# Introduction to Declare Target
+# OpenMP Declare Target
+
+```{contents}
+---
+local:
+---
+```
+
+## Introduction to Declare Target
 
 In OpenMP `declare target` is a directive that can be applied to a function or
 variable (primarily global) to notate to the compiler that it should be 
@@ -55,7 +63,7 @@ in this case, leave off the `declare target` from the function and it
 would be implicitly marked `declare target any` (for both host and device), 
 as it's been utilised within a target region.
 
-# Declare Target as represented in the OpenMP Dialect
+## Declare Target as represented in the OpenMP Dialect
 
 In the OpenMP Dialect `declare target` is not represented by a specific 
 `operation`. Instead, it's an OpenMP dialect specific `attribute` that can be 
@@ -89,7 +97,7 @@ llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(Op.getOperation());
 declareTargetGlobal.isDeclareTarget();
 ```
 
-# Declare Target Fortran OpenMP Lowering
+## Declare Target Fortran OpenMP Lowering
 
 The initial lowering of `declare target` to MLIR for both use-cases is done
 inside of the usual OpenMP lowering in flang/lib/Lower/OpenMP.cpp. However, 
@@ -145,11 +153,11 @@ to the way `threadprivate` handles these cases, we raise and initialize the
 variable as an internal `GlobalOp` and apply the attribute. This occurs in the
 flang/lib/Lower/OpenMP.cpp function `genDeclareTargetIntGlobal`.
 
-# Declare Target Transformation Passes for Flang
+## Declare Target Transformation Passes for Flang
 
 There are currently two passes within Flang that are related to the processing 
 of `declare target`:
-* `OMPMarkDeclareTarget` - This pass is in charge of marking functions captured
+* `MarkDeclareTarget` - This pass is in charge of marking functions captured
 (called from) in `target` regions or other `declare target` marked functions as
 `declare target`. It does so recursively, i.e. nested calls will also be 
 implicitly marked. It currently will try to mark things as conservatively as 
@@ -157,7 +165,7 @@ possible, e.g. if captured in a `target` region it will apply `nohost`, unless
 it encounters a `host` `declare target` in which case it will apply the `any` 
 device type. Functions are handled similarly, except we utilise the parent's 
 device type where possible.
-* `OMPFunctionFiltering` - This is executed after the `OMPMarkDeclareTarget`
+* `FunctionFiltering` - This is executed after the `MarkDeclareTarget`
 pass, and its job is to conservatively remove host functions from
 the module where possible when compiling for the device. This helps make 
 sure that most incompatible code for the host is not lowered for the 
@@ -173,7 +181,7 @@ While this infrastructure could be generally applicable to more than just Flang,
 it is only utilised in the Flang frontend, so it resides there rather than in 
 the OpenMP dialect codebase. 
 
-# Declare Target OpenMP Dialect To LLVM-IR Lowering
+## Declare Target OpenMP Dialect To LLVM-IR Lowering
 
 The OpenMP dialect lowering of `declare target` is done through the 
 `amendOperation` flow, as it's not an `operation` but rather an 
@@ -228,7 +236,7 @@ place. It may be possible to store this information in the OMPIRBuilder and
 then perform this cleanup process on finalization, but this is open for 
 discussion and implementation still.
 
-# Current Support
+## Current Support
 
 For the moment, `declare target` should work for:
 * Marking functions/subroutines and function/subroutine interfaces for 

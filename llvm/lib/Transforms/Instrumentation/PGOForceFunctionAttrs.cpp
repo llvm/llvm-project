@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -19,7 +20,7 @@ static bool shouldRunOnFunction(Function &F, ProfileSummaryInfo &PSI,
   if (F.isDeclaration())
     return false;
   // Respect existing attributes.
-  if (F.hasOptNone() || F.hasOptSize() || F.hasMinSize())
+  if (F.hasOptNone() || F.hasOptSize())
     return false;
   if (F.hasFnAttribute(Attribute::Cold))
     return true;

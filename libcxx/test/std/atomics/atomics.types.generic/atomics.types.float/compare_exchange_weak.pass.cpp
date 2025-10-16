@@ -67,7 +67,7 @@ void testBasic(MemoryOrder... memory_order) {
     assert(a.load() == T(1.2));
 
     // bug
-    // TODO https://github.com/llvm/llvm-project/issues/47978
+    // TODO https://llvm.org/PR48634
     if constexpr (!std::same_as<T, long double>) {
       assert(expected == T(1.2));
     }
@@ -165,12 +165,12 @@ void test_impl() {
 
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
-      while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst)) {
       }
     };
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
-      while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst)) {
       }
       return val;
     };
@@ -235,7 +235,7 @@ int main(int, char**) {
   test<float>();
   test<double>();
 
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // test<long double>();
 
   return 0;

@@ -11,8 +11,10 @@
 /// Check that pass pipelines for thin, thin-unified, full-unified all match.
 // RUN: diff %t.0.txt %t.1.txt
 // RUN: diff %t.0.txt %t.2.txt
-/// Pass pipeline for full is different.
-// RUN: not diff %t.0.txt %t.3.txt
+/// Pass pipeline for full is different. Unified uses the full Linux pipeline except ThinLTOBitcodeWriterPass vs BitcodeWriterPass.
+// RUN: not diff -u %t.0.txt %t.3.txt | FileCheck %s --check-prefix=DIFF --implicit-check-not="{{^[-+!<>] }}"
+// DIFF:      -Running pass: ThinLTOBitcodeWriterPass
+// DIFF-NEXT: +Running pass: BitcodeWriterPass
 
 int foo() {
   return 2 + 2;

@@ -256,7 +256,7 @@ struct ExampleTypeInterfaceTraits {
   struct ExternalModel : public FallbackModel<ConcreteModel> {
     unsigned exampleInterfaceHook(Type type) const override {
       // Default implementation can be provided here.
-      return type.cast<ConcreteType>().callSomeTypeSpecificMethod();
+      return cast<ConcreteType>(type).callSomeTypeSpecificMethod();
     }
   };
 };
@@ -298,6 +298,30 @@ interface being externally applied. This prevents a situation where neither the
 owner of the dialect containing the object nor the owner of the interface are
 aware of an interface implementation, which can lead to duplicate or
 diverging implementations.
+
+Forgetting to register an external model can lead to bugs which are hard to
+track down. The `declarePromisedInterface` function can be used to declare that
+an external model implementation for an operation must eventually be provided.
+
+```
+  void MyDialect::initialize() {
+    declarePromisedInterface<SomeInterface, SomeOp>();
+     ...
+  }
+```
+
+Now attempting to use the interface, e.g in a cast, without a prior registration
+of the external model will lead to a runtime error that will look similar to
+this:
+
+```
+LLVM ERROR: checking for an interface (`SomeInterface`) that was promised by dialect 'mydialect' but never implemented. This is generally an indication that the dialect extension implementing the interface was never registered.
+```
+
+If you encounter this error for a dialect and an interface provided by MLIR, you
+may look for a method that will be named like
+`register<Dialect><Interface>ExternalModels(DialectRegistry &registry);` ; try
+to find it with `git grep 'register.*SomeInterface.*Model' mlir`.
 
 #### Dialect Fallback for OpInterface
 
@@ -539,7 +563,7 @@ def MyInterface : OpInterface<"MyInterface"> {
         template <typename ConcreteOp>
         struct Model : public Concept {
           Operation *create(OpBuilder &builder, Location loc) const override {
-            return builder.create<ConcreteOp>(loc);
+            return ConcreteOp::create(builder, loc);
           }
         }
       };
@@ -550,7 +574,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     }],
       "Operation *", "create", (ins "OpBuilder &":$builder, "Location":$loc),
       /*methodBody=*/[{
-        return builder.create<ConcreteOp>(loc);
+        return ConcreteOp::create(builder, loc);
     }]>,
 
     InterfaceMethod<[{
@@ -729,14 +753,19 @@ interface section goes as follows:
     -   (`C++ class` -- `ODS class`(if applicable))
 
 ##### CallInterfaces
-
 *   `CallOpInterface` - Used to represent operations like 'call'
     -   `CallInterfaceCallable getCallableForCallee()`
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
+    -   `ArrayAttr getArgAttrsAttr()`
+    -   `ArrayAttr getResAttrsAttr()`
+    -   `void setArgAttrsAttr(ArrayAttr)`
+    -   `void setResAttrsAttr(ArrayAttr)`
+    -   `Attribute removeArgAttrsAttr()`
+    -   `Attribute removeResAttrsAttr()`
 *   `CallableOpInterface` - Used to represent the target callee of call.
     -   `Region * getCallableRegion()`
     -   `ArrayRef<Type> getArgumentTypes()`
-    -   `ArrayRef<Type> getResultsTypes()`
+    -   `ArrayRef<Type> getResultTypes()`
     -   `ArrayAttr getArgAttrsAttr()`
     -   `ArrayAttr getResAttrsAttr()`
     -   `void setArgAttrsAttr(ArrayAttr)`

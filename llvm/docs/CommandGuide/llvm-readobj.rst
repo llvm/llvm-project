@@ -104,6 +104,10 @@ file formats.
  Do not demangle symbol names in the output. This option is only for ELF and
  XCOFF file formats. The option is enabled by default.
 
+.. option:: --offloading
+
+ Display list of HIP offload bundles.
+
 .. option:: --relocations, --relocs, -r
 
  Display the relocation entries in the file.
@@ -254,10 +258,6 @@ The following options are implemented only for the ELF file format.
 .. option:: --program-headers, --segments, -l
 
  Display the program headers.
-
-.. option:: --raw-relr
-
- Do not decode relocations in RELR relocation sections when displaying them.
 
 .. option:: --section-mapping
 

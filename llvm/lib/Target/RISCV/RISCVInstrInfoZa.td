@@ -9,8 +9,8 @@
 // This file describes the RISC-V instructions from the standard atomic 'Za*'
 // extensions:
 //   - Zawrs (v1.0) : Wait-on-Reservation-Set.
-//   - Zacas (v1.0-rc1) : Atomic Compare-and-Swap.
-//   - Zabha (v1.0-rc1) : Byte and Halfword Atomic Memory Operations.
+//   - Zacas (v1.0) : Atomic Compare-and-Swap.
+//   - Zabha (v1.0) : Byte and Halfword Atomic Memory Operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,22 +44,22 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "$rd = $rd_wb" 
 class AMO_cas<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr,
               DAGOperand RC>
     : RVInstRAtomic<funct5, aq, rl, funct3, OPC_AMO,
-                    (outs RC:$rd_wb), (ins RC:$rd, GPRMemZeroOffset:$rs1, RC:$rs2),
+                    (outs RC:$rd_wb), (ins RC:$rd, RC:$rs2, GPRMemZeroOffset:$rs1),
                     opcodestr, "$rd, $rs2, $rs1">;
 
 multiclass AMO_cas_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr,
                          DAGOperand RC> {
-  def ""     : AMO_cas<funct5, 0, 0, funct3, opcodestr, RC>;
-  def _AQ    : AMO_cas<funct5, 1, 0, funct3, opcodestr # ".aq", RC>;
-  def _RL    : AMO_cas<funct5, 0, 1, funct3, opcodestr # ".rl", RC>;
-  def _AQ_RL : AMO_cas<funct5, 1, 1, funct3, opcodestr # ".aqrl", RC>;
+  def ""    : AMO_cas<funct5, 0, 0, funct3, opcodestr, RC>;
+  def _AQ   : AMO_cas<funct5, 1, 0, funct3, opcodestr # ".aq", RC>;
+  def _RL   : AMO_cas<funct5, 0, 1, funct3, opcodestr # ".rl", RC>;
+  def _AQRL : AMO_cas<funct5, 1, 1, funct3, opcodestr # ".aqrl", RC>;
 }
 
 let Predicates = [HasStdExtZacas], IsSignExtendingOpW = 1 in {
 defm AMOCAS_W : AMO_cas_aq_rl<0b00101, 0b010, "amocas.w", GPR>;
 } // Predicates = [HasStdExtZacas]
 
-let Predicates = [HasStdExtZacas, IsRV32], DecoderNamespace = "RV32Zacas"  in {
+let Predicates = [HasStdExtZacas, IsRV32], DecoderNamespace = "RV32Only"  in {
 defm AMOCAS_D_RV32 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPRPairRV32>;
 } // Predicates = [HasStdExtZacas, IsRV32]
 
@@ -70,54 +70,54 @@ defm AMOCAS_Q : AMO_cas_aq_rl<0b00101, 0b100, "amocas.q", GPRPairRV64>;
 
 multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                      list<Predicate> ExtraPreds = []> {
-  let Predicates = !listconcat([HasStdExtZacas, NotHasStdExtZtso], ExtraPreds) in {
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
+  let Predicates = !listconcat([HasStdExtZacas, NoStdExtZtso], ExtraPreds) in {
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (XLenVT GPR:$addr),
                                                      (vt GPR:$cmp),
                                                      (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_acquire") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acquire") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ") GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_release") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst#"_AQ") GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_release") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst#"_RL") GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+              (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$new, GPR:$addr)>;
     def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
-  } // Predicates = !listconcat([HasStdExtZacas, NotHasStdExtZtso], ExtraPreds)
+              (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$new, GPR:$addr)>;
+  } // Predicates = !listconcat([HasStdExtZacas, NoStdExtZtso], ExtraPreds)
   let Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds) in {
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (XLenVT GPR:$addr),
                                                      (vt GPR:$cmp),
                                                      (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_acquire") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acquire") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_release") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_release") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$new, GPR:$addr)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$new, GPR:$addr)>;
   } // Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds)
 }
 
-defm : AMOCASPat<"atomic_cmp_swap_32", "AMOCAS_W">;
-defm : AMOCASPat<"atomic_cmp_swap_64", "AMOCAS_D_RV64", i64, [IsRV64]>;
+defm : AMOCASPat<"atomic_cmp_swap_i32", "AMOCAS_W">;
+defm : AMOCASPat<"atomic_cmp_swap_i64", "AMOCAS_D_RV64", i64, [IsRV64]>;
 
 //===----------------------------------------------------------------------===//
 // Zawrs (Wait-on-Reservation-Set)
@@ -140,7 +140,7 @@ def WRS_STO : WRSInst<0b000000011101, "wrs.sto">, Sched<[]>;
 // Zabha (Byte and Halfword Atomic Memory Operations)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZabha] in {
+let Predicates = [HasStdExtZabha], IsSignExtendingOpW = 1 in {
 defm AMOSWAP_B  : AMO_rr_aq_rl<0b00001, 0b000, "amoswap.b">,
                   Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
 defm AMOADD_B   : AMO_rr_aq_rl<0b00000, 0b000, "amoadd.b">,
@@ -181,34 +181,34 @@ defm AMOMAXU_H  : AMO_rr_aq_rl<0b11100, 0b001, "amomaxu.h">,
 }
 
 // If Zacas extension is also implemented, Zabha further provides AMOCAS.[B|H].
-let Predicates = [HasStdExtZabha, HasStdExtZacas] in {
+let Predicates = [HasStdExtZabha, HasStdExtZacas], IsSignExtendingOpW = 1 in {
 defm AMOCAS_B : AMO_cas_aq_rl<0b00101, 0b000, "amocas.b", GPR>;
 defm AMOCAS_H : AMO_cas_aq_rl<0b00101, 0b001, "amocas.h", GPR>;
 }
 
 /// AMOs
 
-defm : AMOPat<"atomic_swap_8", "AMOSWAP_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_add_8", "AMOADD_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_and_8", "AMOAND_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_or_8", "AMOOR_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_xor_8", "AMOXOR_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_max_8", "AMOMAX_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_min_8", "AMOMIN_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umax_8", "AMOMAXU_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umin_8", "AMOMINU_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_swap_i8", "AMOSWAP_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_add_i8", "AMOADD_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_and_i8", "AMOAND_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_or_i8", "AMOOR_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_xor_i8", "AMOXOR_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_max_i8", "AMOMAX_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_min_i8", "AMOMIN_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umax_i8", "AMOMAXU_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umin_i8", "AMOMINU_B", XLenVT, [HasStdExtZabha]>;
 
-defm : AMOPat<"atomic_swap_16", "AMOSWAP_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_add_16", "AMOADD_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_and_16", "AMOAND_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_or_16", "AMOOR_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_xor_16", "AMOXOR_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_max_16", "AMOMAX_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_min_16", "AMOMIN_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umax_16", "AMOMAXU_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umin_16", "AMOMINU_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_swap_i16", "AMOSWAP_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_add_i16", "AMOADD_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_and_i16", "AMOAND_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_or_i16", "AMOOR_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_xor_i16", "AMOXOR_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_max_i16", "AMOMAX_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_min_i16", "AMOMIN_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umax_i16", "AMOMAXU_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umin_i16", "AMOMINU_H", XLenVT, [HasStdExtZabha]>;
 
 /// AMOCAS
 
-defm : AMOCASPat<"atomic_cmp_swap_8", "AMOCAS_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOCASPat<"atomic_cmp_swap_16", "AMOCAS_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOCASPat<"atomic_cmp_swap_i8", "AMOCAS_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOCASPat<"atomic_cmp_swap_i16", "AMOCAS_H", XLenVT, [HasStdExtZabha]>;

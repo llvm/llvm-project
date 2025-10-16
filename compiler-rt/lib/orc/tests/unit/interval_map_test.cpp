@@ -13,7 +13,7 @@
 #include "interval_map.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 TEST(IntervalMapTest, DefaultConstructed) {
   // Check that a default-constructed IntervalMap behaves as expected.

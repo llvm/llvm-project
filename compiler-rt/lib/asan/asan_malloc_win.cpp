@@ -58,97 +58,69 @@ using namespace __asan;
 // MD: Memory allocation functions are defined in the CRT .dll,
 // so we have to intercept them before they are called for the first time.
 
-#if ASAN_DYNAMIC
-# define ALLOCATION_FUNCTION_ATTRIBUTE
-#else
-# define ALLOCATION_FUNCTION_ATTRIBUTE SANITIZER_INTERFACE_ATTRIBUTE
-#endif
-
 extern "C" {
-ALLOCATION_FUNCTION_ATTRIBUTE
-size_t _msize(void *ptr) {
+__declspec(noinline) size_t _msize(void *ptr) {
   GET_CURRENT_PC_BP_SP;
   (void)sp;
   return asan_malloc_usable_size(ptr, pc, bp);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-size_t _msize_base(void *ptr) {
-  return _msize(ptr);
-}
+__declspec(noinline) size_t _msize_base(void *ptr) { return _msize(ptr); }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void free(void *ptr) {
+__declspec(noinline) void free(void *ptr) {
   GET_STACK_TRACE_FREE;
-  return asan_free(ptr, &stack, FROM_MALLOC);
+  return asan_free(ptr, &stack);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void _free_dbg(void *ptr, int) {
-  free(ptr);
-}
+__declspec(noinline) void _free_dbg(void *ptr, int) { free(ptr); }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void _free_base(void *ptr) {
-  free(ptr);
-}
+__declspec(noinline) void _free_base(void *ptr) { free(ptr); }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *malloc(size_t size) {
+__declspec(noinline) void *malloc(size_t size) {
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_malloc_base(size_t size) {
+__declspec(noinline) void *_malloc_base(size_t size) { return malloc(size); }
+
+__declspec(noinline) void *_malloc_dbg(size_t size, int, const char *, int) {
   return malloc(size);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_malloc_dbg(size_t size, int, const char *, int) {
-  return malloc(size);
-}
-
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *calloc(size_t nmemb, size_t size) {
+__declspec(noinline) void *calloc(size_t nmemb, size_t size) {
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_calloc_base(size_t nmemb, size_t size) {
+__declspec(noinline) void *_calloc_base(size_t nmemb, size_t size) {
   return calloc(nmemb, size);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_calloc_dbg(size_t nmemb, size_t size, int, const char *, int) {
+__declspec(noinline) void *_calloc_dbg(size_t nmemb, size_t size, int,
+                                       const char *, int) {
   return calloc(nmemb, size);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_calloc_impl(size_t nmemb, size_t size, int *errno_tmp) {
+__declspec(noinline) void *_calloc_impl(size_t nmemb, size_t size,
+                                        int *errno_tmp) {
   return calloc(nmemb, size);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *realloc(void *ptr, size_t size) {
+__declspec(noinline) void *realloc(void *ptr, size_t size) {
   GET_STACK_TRACE_MALLOC;
   return asan_realloc(ptr, size, &stack);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_realloc_dbg(void *ptr, size_t size, int) {
+__declspec(noinline) void *_realloc_dbg(void *ptr, size_t size, int) {
   UNREACHABLE("_realloc_dbg should not exist!");
   return 0;
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_realloc_base(void *ptr, size_t size) {
+__declspec(noinline) void *_realloc_base(void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_recalloc(void *p, size_t n, size_t elem_size) {
+__declspec(noinline) void *_recalloc(void *p, size_t n, size_t elem_size) {
   if (!p)
     return calloc(n, elem_size);
   const size_t size = n * elem_size;
@@ -166,21 +138,39 @@ void *_recalloc(void *p, size_t n, size_t elem_size) {
   return new_alloc;
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_recalloc_base(void *p, size_t n, size_t elem_size) {
+__declspec(noinline) void *_recalloc_base(void *p, size_t n, size_t elem_size) {
   return _recalloc(p, n, elem_size);
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_expand(void *memblock, size_t size) {
+__declspec(noinline) void *_expand(void *memblock, size_t size) {
   // _expand is used in realloc-like functions to resize the buffer if possible.
   // We don't want memory to stand still while resizing buffers, so return 0.
   return 0;
 }
 
-ALLOCATION_FUNCTION_ATTRIBUTE
-void *_expand_dbg(void *memblock, size_t size) {
+__declspec(noinline) void *_expand_dbg(void *memblock, size_t size) {
   return _expand(memblock, size);
+}
+
+__declspec(dllexport) size_t __cdecl __asan_msize(void *ptr) {
+  return _msize(ptr);
+}
+__declspec(dllexport) void __cdecl __asan_free(void *const ptr) { free(ptr); }
+__declspec(dllexport) void *__cdecl __asan_malloc(const size_t size) {
+  return malloc(size);
+}
+__declspec(dllexport) void *__cdecl __asan_calloc(const size_t nmemb,
+                                                  const size_t size) {
+  return calloc(nmemb, size);
+}
+__declspec(dllexport) void *__cdecl __asan_realloc(void *const ptr,
+                                                   const size_t size) {
+  return realloc(ptr, size);
+}
+__declspec(dllexport) void *__cdecl __asan_recalloc(void *const ptr,
+                                                    const size_t nmemb,
+                                                    const size_t size) {
+  return _recalloc(ptr, nmemb, size);
 }
 
 // TODO(timurrrr): Might want to add support for _aligned_* allocation
@@ -262,7 +252,7 @@ INTERCEPTOR_WINAPI(BOOL, HeapFree, HANDLE hHeap, DWORD dwFlags, LPVOID lpMem) {
     CHECK((HEAP_FREE_UNSUPPORTED_FLAGS & dwFlags) != 0 && "unsupported flags");
   }
   GET_STACK_TRACE_FREE;
-  asan_free(lpMem, &stack, FROM_MALLOC);
+  asan_free(lpMem, &stack);
   return true;
 }
 
@@ -316,7 +306,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
         if (replacement_alloc) {
           size_t old_size = heapSizeFunc(hHeap, dwFlags, lpMem);
           if (old_size == ((size_t)0) - 1) {
-            asan_free(replacement_alloc, &stack, FROM_MALLOC);
+            asan_free(replacement_alloc, &stack);
             return nullptr;
           }
           REAL(memcpy)(replacement_alloc, lpMem, old_size);
@@ -332,6 +322,22 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
       }
     }
 
+    if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY) {
+      size_t old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
+      if (dwBytes == old_usable_size) {
+        // Nothing to change, return the current pointer.
+        return lpMem;
+      } else if (dwBytes >= old_usable_size) {
+        // Growing with HEAP_REALLOC_IN_PLACE_ONLY is not supported.
+        return nullptr;
+      } else {
+        // Shrinking with HEAP_REALLOC_IN_PLACE_ONLY is not yet supported.
+        // For now return the current pointer and
+        // leave the allocation size as it is.
+        return lpMem;
+      }
+    }
+
     if (ownershipState == ASAN && !only_asan_supported_flags) {
       // Conversion to unsupported flags allocation,
       // transfer this allocation back to the original allocator.
@@ -341,7 +347,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
         old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
         REAL(memcpy)(replacement_alloc, lpMem,
                      Min<size_t>(dwBytes, old_usable_size));
-        asan_free(lpMem, &stack, FROM_MALLOC);
+        asan_free(lpMem, &stack);
       }
       return replacement_alloc;
     }
@@ -439,7 +445,7 @@ INTERCEPTOR_WINAPI(BOOL, RtlFreeHeap, HANDLE HeapHandle, DWORD Flags,
     return REAL(RtlFreeHeap)(HeapHandle, Flags, BaseAddress);
   }
   GET_STACK_TRACE_FREE;
-  asan_free(BaseAddress, &stack, FROM_MALLOC);
+  asan_free(BaseAddress, &stack);
   return true;
 }
 
@@ -487,7 +493,6 @@ static void TryToOverrideFunction(const char *fname, uptr new_func) {
 }
 
 void ReplaceSystemMalloc() {
-#if defined(ASAN_DYNAMIC)
   TryToOverrideFunction("free", (uptr)free);
   TryToOverrideFunction("_free_base", (uptr)free);
   TryToOverrideFunction("malloc", (uptr)malloc);
@@ -543,8 +548,6 @@ void ReplaceSystemMalloc() {
   // allocation API will be directed to ASan's heap. We don't currently
   // intercept all calls to HeapAlloc. If we did, we would have to check on
   // HeapFree whether the pointer came from ASan of from the system.
-
-#endif  // defined(ASAN_DYNAMIC)
 }
 }  // namespace __asan
 

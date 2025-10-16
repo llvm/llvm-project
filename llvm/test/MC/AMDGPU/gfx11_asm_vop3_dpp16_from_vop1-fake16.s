@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
 v_ceil_f16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX11: [0x05,0x00,0xdc,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]

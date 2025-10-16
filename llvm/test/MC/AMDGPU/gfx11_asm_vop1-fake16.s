@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 
 v_floor_f16 v5, v1
 // GFX11: encoding: [0x01,0xb7,0x0a,0x7e]

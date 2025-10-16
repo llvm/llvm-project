@@ -5,7 +5,7 @@ import os
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -74,7 +74,7 @@ config.substitutions.append(("%gmlt ", " ".join(config.debug_info_flags) + " "))
 config.suffixes = [".c", ".cpp", ".m"]
 
 # Check that the host supports UndefinedBehaviorSanitizer tests
-if config.host_os not in [
+if config.target_os not in [
     "Linux",
     "Darwin",
     "FreeBSD",
@@ -90,5 +90,5 @@ config.excludes = ["Inputs"]
 if ubsan_lit_test_mode in ["AddressSanitizer", "MemorySanitizer", "ThreadSanitizer"]:
     if not config.parallelism_group:
         config.parallelism_group = "shadow-memory"
-    if config.host_os == "NetBSD":
+    if config.target_os == "NetBSD":
         config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))

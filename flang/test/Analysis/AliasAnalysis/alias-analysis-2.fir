@@ -8,9 +8,11 @@
 // They cannot physically alias
 // CHECK-DAG: p1.addr#0 <-> p2.addr#0: NoAlias
 
-// p1.addr and p2.addr could both be wrapped inside boxes
-// CHECK-DAG: p1.addr#0 <-> boxp1.addr#0: MayAlias
-// CHECK-DAG: p2.addr#0 <-> boxp1.addr#0: MayAlias
+// p1.addr is the address returned by an alloca.  It does not have a target
+// attribute, and it is not the address retrieved from a pointer.  It cannot
+// alias anything.  Likewise for p2.addr.
+// CHECK-DAG: p1.addr#0 <-> boxp1.addr#0: NoAlias
+// CHECK-DAG: p2.addr#0 <-> boxp1.addr#0: NoAlias
 
 // TODO: To really see aliasing, we should be looking at a load of p1.addr
 // p1.addr is just a local address holding the address to the data 
@@ -27,25 +29,36 @@
 // CHECK-DAG: p2.addr#0 <-> func.region0#2: NoAlias
 
 // All arguments are either pointers or targets
-// A pointer in a box may alias with both
+// The address *in* a local pointer may alias the address of a target
+// argument, but it does not alias the address *of* a pointer argument.
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: boxp1.addr#0 <-> func.region0#2: MayAlias
+// CHECK-DAG: boxp1.addr#0 <-> func.region0#2: NoAlias
 
 // A target dummy may alias with another target
 // CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
 
 // arg2 is a reference to a pointer. Modifying arg2 could
 // modify a target with a pointer component
-// CHECK-DAG: func.region0#0 <-> func.region0#2: MayAlias
-// CHECK-DAG: func.region0#1 <-> func.region0#2: MayAlias
+// CHECK-DAG: arg2.load#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: arg2.load#0 <-> func.region0#1: MayAlias
 
 // However, the address wrapped by arg2, can alias with any target or
 // pointer arguments
 // CHECK-DAG: arg2.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: arg2.addr#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MustAlias
+// CHECK-DAG: arg2.load#0 <-> arg2.addr#0: MustAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
+
+// TODO: Can the address in a pointer alias the address of a pointer, when the
+// pointer has no box. Should this be NoAlias?
+// T3 from <https://github.com/llvm/llvm-project/pull/117785#discussion_r1924348480>.
+// CHECK-DAG: p1.addr#0 <-> p1.tgt#0: MayAlias
+
+// The addresses stored in two different pointers can alias, even if one has no
+// box.  In this program, they happen to be the same address.
+// T4 from <https://github.com/llvm/llvm-project/pull/117785#discussion_r1924348480>.
+// CHECK-DAG: p1.tgt#0 <-> boxp1.addr#0: MayAlias
 
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
 
@@ -63,7 +76,7 @@ func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %a
   fir.store %6 to %4 : !fir.ref<!fir.ptr<f32>>
 
   %0 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p1", uniq_name = "_QFtestEp1"}
-  %7 = fir.load %1 : !fir.ref<!fir.ptr<f32>>
+  %7 = fir.load %1 {test.ptr="p1.tgt"} : !fir.ref<!fir.ptr<f32>>
   %8 = fir.embox %7 : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
   fir.store %8 to %0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 
@@ -80,7 +93,7 @@ func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %a
   %14 = fir.box_addr %13 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   fir.store %14 to %4 : !fir.ref<!fir.ptr<f32>>
 
-  %15 = fir.load %arg2 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %15 = fir.load %arg2 {test.ptr = "arg2.load"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %16 = fir.box_addr %15 {test.ptr = "arg2.addr"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
 }
@@ -99,10 +112,12 @@ func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %a
 // CHECK-DAG: func.region0#1 <-> func.region0#2: MayAlias
 
 // They can also modify targets that have pointer components
-// CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: func.region0#0 <-> func.region0#2: MayAlias
+// CHECK-DAG: arg1.load#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: arg2.load#0 <-> func.region0#0: MayAlias
 
 func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>>, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
+  %0 = fir.load %arg1 {test.ptr = "arg1.load"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %1 = fir.load %arg2 {test.ptr = "arg2.load"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
   return
 }
 
@@ -141,14 +156,14 @@ func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %
 // alias with the wrapped scalar _QFEvar2. We meant box_addr of _QMpointersEp 
 // CHECK-DAG: p#0 <-> box.addr#0: NoAlias
 
-// TODO: Still need to handle more gracefully the difference between !fir.ref<!fir.box<>> and !fir.box<> 
-// CHECK-DAG: box.addr#0 <-> func.region0#0: MayAlias
+// Handling gracefully the difference between !fir.ref<!fir.box<>> and !fir.box<> 
+// CHECK-DAG: box.addr#0 <-> func.region0#0: NoAlias
 
 // var2, although it is a target, cannot alias with p
 // A modification of p would only make them point to a new target but not modify it
 // CHECK-DAG: var2#0 <-> p#0: NoAlias
 // It can alias with p1, if p1 is a pointer component
-// CHECK-DAG: var2#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: arg0.load#0 <-> var2#0: MayAlias
 // It is the same as box.addr
 // CHECK-DAG: var2#0 <-> box.addr#0: MustAlias
 
@@ -173,6 +188,7 @@ fir.global internal @_QFEvar2 target : f32 {
 }
 
 func.func @_QFPtest3(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg1: !fir.ref<f32>) attributes {test.ptr = "func"} {
+  %3 = fir.load %arg0 {test.ptr = "arg0.load"}: !fir.ref<!fir.box<!fir.ptr<f32>>>
   %4 = fir.address_of(@_QFEvar2) {test.ptr = "var2"} : !fir.ref<f32>
   %5 = fir.address_of(@_QMpointersEp) {test.ptr = "p"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %6 = fir.embox %4 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
@@ -214,10 +230,17 @@ func.func @_QFPtest3(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = 
 // CHECK-DAG: var2_hlfir#1 <-> p_hlfir#0: NoAlias
 // CHECK-DAG: var2_hlfir#1 <-> p_hlfir#1: NoAlias
 
-// CHECK-DAG: var2#0 <-> func.region0#0: MayAlias
-// CHECK-DAG: var2_fir#0 <-> func.region0#0: MayAlias
-// CHECK-DAG: var2_hlfir#0 <-> func.region0#0: MayAlias
-// CHECK-DAG: var2_hlfir#1 <-> func.region0#0: MayAlias
+// The data cannot alias with the box references
+// CHECK-DAG: var2#0 <-> func.region0#0: NoAlias
+// CHECK-DAG: var2_fir#0 <-> func.region0#0: NoAlias
+// CHECK-DAG: var2_hlfir#0 <-> func.region0#0: NoAlias
+// CHECK-DAG: var2_hlfir#1 <-> func.region0#0: NoAlias
+
+// But it can alias with the box's own data
+// CHECK-DAG: arg0.load#0 <-> var2#0: MayAlias
+// CHECK-DAG: arg0.load#0 <-> var2_fir#0: MayAlias
+// CHECK-DAG: arg0.load#0 <-> var2_hlfir#0: MayAlias
+// CHECK-DAG: arg0.load#0 <-> var2_hlfir#1: MayAlias
 
 // CHECK-DAG: var2#0 <-> box.addr#0: MustAlias
 // CHECK-DAG: var2#0 <-> box.addr_fir#0: MustAlias
@@ -255,6 +278,7 @@ fir.global internal @_QFEvar2 target : f32 {
 }
 
 func.func @_QFPtest4(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg1: !fir.ref<f32>) attributes {test.ptr = "func"} {
+  %3 = fir.load %arg0 {test.ptr = "arg0.load"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %4 = fir.address_of(@_QFEvar2) {test.ptr = "var2"} : !fir.ref<f32>
   %fir_decl_var2 = fir.declare %4 {uniq_name = "var2_fir", test.ptr = "var2_fir"}: (!fir.ref<f32>) -> !fir.ref<f32>
   %hlfir_decl_var2:2 = hlfir.declare %4 {uniq_name = "var2_hlfir", test.ptr = "var2_hlfir"}: (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)

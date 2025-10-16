@@ -10,8 +10,8 @@ add_llvm_unittest_with_input_files(DebugInfoPDBTests
   NativeSymbolReuseTest.cpp
   StringTableBuilderTest.cpp
   PDBApiTest.cpp
+  PDBVariantTest.cpp
+  PublicsStreamTest.cpp
   )
 
 target_link_libraries(DebugInfoPDBTests PRIVATE LLVMTestingSupport)
-
-set_property(TARGET DebugInfoPDBTests PROPERTY FOLDER "Tests/UnitTests/DebugInfoTests")

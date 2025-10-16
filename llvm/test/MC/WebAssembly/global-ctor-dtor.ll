@@ -80,29 +80,29 @@ declare void @func3()
 ; CHECK-NEXT:         Offset:          0x1D
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           6
-; CHECK-NEXT:         Offset:          0x2C
+; CHECK-NEXT:         Offset:          0x2B
 ; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:         Offset:          0x37
+; CHECK-NEXT:         Offset:          0x36
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:         Offset:          0x3F
+; CHECK-NEXT:         Offset:          0x3E
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:         Offset:          0x45
+; CHECK-NEXT:         Offset:          0x44
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            02404181808080004100418080808000108180808000450D0000000B0B
+; CHECK-NEXT:         Body:            02404181808080004100418080808000108180808000450D00000B0B
 ; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1082808080000B
 ; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            02404182808080004100418080808000108180808000450D0000000B0B
+; CHECK-NEXT:         Body:            02404182808080004100418080808000108180808000450D00000B0B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6

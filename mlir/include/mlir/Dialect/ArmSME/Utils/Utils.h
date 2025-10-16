@@ -16,8 +16,10 @@
 #define MLIR_DIALECT_ARMSME_UTILS_UTILS_H_
 
 #include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.h"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include <optional>
 
 namespace mlir {
@@ -30,6 +32,9 @@ namespace mlir::arm_sme {
 
 constexpr unsigned MinStreamingVectorLengthInBits = 128;
 
+/// Return the size represented by arm_sme::TypeSize in bytes.
+unsigned getSizeInBytes(TypeSize type);
+
 /// Return minimum number of elements for the given element `type` in
 /// a vector of SVL bits.
 unsigned getSMETileSliceMinNumElts(Type type);
@@ -41,6 +46,11 @@ bool isValidSMETileElementType(Type type);
 /// Returns true if `vType` is a valid vector type for an SME tile or false
 /// otherwise.
 bool isValidSMETileVectorType(VectorType vType);
+
+inline bool isValidSMETileVectorType(Type type) {
+  auto vType = dyn_cast<VectorType>(type);
+  return vType && isValidSMETileVectorType(vType);
+}
 
 /// Returns the type of SME tile this vector type corresponds to, or none if the
 /// vector type does not fit within an SME tile.
@@ -62,6 +72,31 @@ bool isMultipleOfSMETileVectorType(VectorType vType);
 
 /// Creates a vector type for the SME tile of `elementType`.
 VectorType getSMETileTypeForElement(Type elementType);
+
+/// Erase trivially dead tile ops from a function.
+void eraseTriviallyDeadTileOps(IRRewriter &rewriter,
+                               FunctionOpInterface function);
+
+/// Returns true if `tileOp` is trivially cloneable. A tile operation is
+/// trivially cloneable if:
+///
+///  1. It has no operands (and only a single tile result)
+///  2. It is 'Pure'
+///
+/// This ensures that the cloned operation will not share any dependencies with
+/// the original operation (which could also need to be considered), and that
+/// inserting the cloned operation at a different point in the program won't
+/// change the semantics of the program (as it has no side effects).
+bool isTriviallyCloneableTileOp(arm_sme::ArmSMETileOpInterface tileOp);
+
+/// Returns true if `tileOp` produces a tile result.
+bool hasTileResult(arm_sme::ArmSMETileOpInterface tileOp);
+
+/// Returns the tile `OpOperand` for this `tileOp` (or null).
+OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp);
+
+/// Returns true `typeA` is >= (in terms of bytes) than `typeB`.
+bool isTileTypeGreaterOrEqual(ArmSMETileType typeA, ArmSMETileType typeB);
 
 } // namespace mlir::arm_sme
 

@@ -66,7 +66,7 @@ define void @test2(ptr %bx, i64 %by) local_unnamed_addr align 2 {
 
 ; SCEV-EXPRS-LABEL: test2
 ; SCEV-EXPRS:     %inc.lcssa.1 = phi i64 [ poison, %for.body7.preheader.1 ]
-; SCEV-EXPRS-NEXT: -->  undef
+; SCEV-EXPRS-NEXT: -->  poison
 entry:
   %cmp = icmp sgt i64 %by, 0
   br label %for.cond.preheader

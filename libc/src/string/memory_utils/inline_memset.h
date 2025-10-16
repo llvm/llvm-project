@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 
-#include "src/__support/macros/config.h"                   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 #include "src/string/memory_utils/utils.h"                 // Ptr, CPtr
 
@@ -18,29 +18,31 @@
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_x86
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "src/string/memory_utils/arm/inline_memset.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_arm_dispatch
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memset.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_aarch64
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_aarch64_dispatch
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/builtin.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_builtin
 #else
-#error "Unsupported architecture"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
+[[gnu::flatten]] LIBC_INLINE void inline_memset(void *dst, uint8_t value,
+                                                size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMSET(reinterpret_cast<Ptr>(dst), value, count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_MEMSET
 

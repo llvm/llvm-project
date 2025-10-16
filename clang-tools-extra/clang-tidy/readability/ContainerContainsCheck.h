@@ -1,4 +1,4 @@
-//===--- ContainerContainsCheck.h - clang-tidy ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,21 +13,23 @@
 
 namespace clang::tidy::readability {
 
-/// Finds usages of `container.count()` and `find() == end()` which should be
-/// replaced by a call to the `container.contains()` method introduced in C++20.
+/// Finds usages of `container.count()` and
+/// `container.find() == container.end()` which should be replaced by a call
+/// to the `container.contains()` method.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
 class ContainerContainsCheck : public ClangTidyCheck {
 public:
   ContainerContainsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
-
-protected:
   bool isLanguageVersionSupported(const LangOptions &LO) const final {
-    return LO.CPlusPlus20;
+    return LO.CPlusPlus;
+  }
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_AsIs;
   }
 };
 

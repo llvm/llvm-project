@@ -22,7 +22,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <optional>
@@ -128,9 +127,12 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   Operation *op = result.getOwner();
 
   // If this is a view, unwrap to the source.
-  if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op))
-    return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
-                                          visited, output);
+  if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
+    if (result == view.getViewDest()) {
+      return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
+                                            visited, output);
+    }
+  }
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return collectUnderlyingAddressValues(branch, /*region=*/nullptr, result,
@@ -256,6 +258,39 @@ getAllocEffectFor(Value value,
   return success();
 }
 
+static Operation *isDistinctObjectsOp(Operation *op) {
+  if (op && op->hasTrait<OpTrait::DistinctObjectsTrait>())
+    return op;
+
+  return nullptr;
+}
+
+static Value getDistinctObjectsOperand(Operation *op, Value value) {
+  unsigned argNumber = cast<OpResult>(value).getResultNumber();
+  return op->getOperand(argNumber);
+}
+
+static std::optional<AliasResult> checkDistinctObjects(Value lhs, Value rhs) {
+  // We should already checked that lhs and rhs are different.
+  assert(lhs != rhs && "lhs and rhs must be different");
+
+  // Result and corresponding operand must alias.
+  auto lhsOp = isDistinctObjectsOp(lhs.getDefiningOp());
+  if (lhsOp && getDistinctObjectsOperand(lhsOp, lhs) == rhs)
+    return AliasResult::MustAlias;
+
+  auto rhsOp = isDistinctObjectsOp(rhs.getDefiningOp());
+  if (rhsOp && getDistinctObjectsOperand(rhsOp, rhs) == lhs)
+    return AliasResult::MustAlias;
+
+  // If two different values come from the same `DistinctObjects` operation,
+  // they don't alias.
+  if (lhsOp && lhsOp == rhsOp)
+    return AliasResult::NoAlias;
+
+  return std::nullopt;
+}
+
 /// Given the two values, return their aliasing behavior.
 AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
   if (lhs == rhs)
@@ -286,6 +321,9 @@ AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
                ? AliasResult::NoAlias
                : AliasResult::MayAlias;
   }
+
+  if (std::optional<AliasResult> result = checkDistinctObjects(lhs, rhs))
+    return *result;
 
   // Otherwise, neither of the values are constant so check to see if either has
   // an allocation effect.

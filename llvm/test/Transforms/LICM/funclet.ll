@@ -14,7 +14,7 @@ define void @test1(ptr %s, i1 %b) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRY_CONT_LOOPEXIT:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    invoke void @may_throw()
-; CHECK-NEXT:    to label [[WHILE_COND]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[WHILE_COND]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[DOTLCSSA1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %catch] unwind to caller
@@ -59,7 +59,7 @@ define void @test2(ptr %s, i1 %b) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRY_CONT:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    invoke void @may_throw()
-; CHECK-NEXT:    to label [[WHILE_COND]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[WHILE_COND]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @pure_computation() [ "funclet"(token [[CP]]) ]
@@ -114,10 +114,10 @@ define void @test3(i1 %a, i1 %b, i1 %c) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[CS]] = catchswitch within none [label %catch.object.Throwable] unwind to caller
 ; CHECK:       forbody:
 ; CHECK-NEXT:    invoke void @may_throw()
-; CHECK-NEXT:    to label [[POSTINVOKE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[POSTINVOKE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    invoke void @may_throw()
-; CHECK-NEXT:    to label [[FORCOND_BACKEDGE]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[FORCOND_BACKEDGE]] unwind label [[CATCH_DISPATCH]]
 ;
 entry:
   %.frame = alloca i8, align 4
@@ -153,6 +153,6 @@ else:                                             ; preds = %postinvoke
 
 declare void @may_throw()
 
-declare i32 @pure_computation() nounwind argmemonly readonly willreturn
+declare i32 @pure_computation() nounwind willreturn memory(none)
 
 declare i32 @__CxxFrameHandler3(...)

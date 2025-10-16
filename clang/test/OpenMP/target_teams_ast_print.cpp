@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -40,10 +40,6 @@ struct S {
 // CHECK:        static int TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
 // CHECK-NEXT: }
-// CHECK:      template<> struct S<long> {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
-// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
@@ -57,6 +53,8 @@ T tmain(T argc, T *argv) {
 #pragma omp target teams default(none), private(argc,b) firstprivate(argv) shared (d) reduction(+:c) reduction(max:e) num_teams(C) thread_limit(d*C) allocate(argv)
   foo();
 #pragma omp target teams allocate(my_allocator:f) reduction(^:e, f) reduction(&& : g) uses_allocators(my_allocator(traits))
+  foo();
+#pragma omp target teams ompx_bare num_teams(C, C, C) thread_limit(d*C, d*C, d*C)
   foo();
   return 0;
 }
@@ -97,6 +95,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target teams allocate(my_allocator: f) reduction(^: e,f) reduction(&&: g) uses_allocators(my_allocator(traits))
 // CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1,1,1) thread_limit(d * 1,d * 1,d * 1)
+// CHECK-NEXT: foo();
 
 enum Enum { };
 
@@ -115,6 +115,10 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1) thread_limit(32)
   a=3;
 // CHECK-NEXT: a = 3;
+#pragma omp target teams ompx_bare num_teams(1, 2, 3) thread_limit(2, 4, 6)
+// CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1,2,3) thread_limit(2,4,6)
+  a=4;
+// CHECK-NEXT: a = 4;
 #pragma omp target teams default(none), private(argc,b) num_teams(f) firstprivate(argv) reduction(| : c, d) reduction(* : e) thread_limit(f+g)
 // CHECK-NEXT: #pragma omp target teams default(none) private(argc,b) num_teams(f) firstprivate(argv) reduction(|: c,d) reduction(*: e) thread_limit(f + g)
   foo();

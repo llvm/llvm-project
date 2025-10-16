@@ -94,14 +94,24 @@ def AMDGPUtc_return_gfx: SDNode<"AMDGPUISD::TC_RETURN_GFX", AMDGPUTCReturnTP,
 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+def AMDGPUtc_return_gfx_ww: SDNode<"AMDGPUISD::TC_RETURN_GFX_WholeWave", AMDGPUTCReturnTP,
+[SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
   SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+// With dynamic VGPRs.
+def AMDGPUtc_return_chain_dvgpr: SDNode<"AMDGPUISD::TC_RETURN_CHAIN_DVGPR",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
-  SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
-    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]
+  SDTypeProfile<0, 1, [SDTCisVT<0, i16>]>,
+    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]
 >;
 
 def AMDGPUconstdata_ptr : SDNode<
@@ -342,6 +352,17 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
+// Marks the entry into a whole wave function.
+def AMDGPUwhole_wave_setup : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_SETUP", SDTypeProfile<1, 0, [SDTCisInt<0>]>,
+  [SDNPHasChain, SDNPSideEffect]>;
+
+// Marks the return from a whole wave function.
+def AMDGPUwhole_wave_return : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_RETURN", SDTNone,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
   SDTCisInt<0>,       // i8 tgt
@@ -376,6 +397,8 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
 def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
+    [SDNPHasChain]>;
+def AMDGPUsimulated_trap : SDNode<"AMDGPUISD::SIMULATED_TRAP", SDTNone,
     [SDNPHasChain]>;
 
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,

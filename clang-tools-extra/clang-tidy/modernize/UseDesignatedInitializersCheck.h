@@ -1,4 +1,4 @@
-//===--- UseDesignatedInitializersCheck.h - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::modernize {
 /// written as designated initializers instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-designated-initializers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-designated-initializers.html
 class UseDesignatedInitializersCheck : public ClangTidyCheck {
 public:
   UseDesignatedInitializersCheck(StringRef Name, ClangTidyContext *Context);
@@ -29,10 +29,19 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus20 || LangOpts.C99 ||
+           (LangOpts.CPlusPlus && !StrictCppStandardCompliance) ||
+           (!LangOpts.CPlusPlus && !LangOpts.ObjC &&
+            !StrictCStandardCompliance);
+  }
+
 private:
   bool IgnoreSingleElementAggregates;
   bool RestrictToPODTypes;
   bool IgnoreMacros;
+  bool StrictCStandardCompliance;
+  bool StrictCppStandardCompliance;
 };
 
 } // namespace clang::tidy::modernize

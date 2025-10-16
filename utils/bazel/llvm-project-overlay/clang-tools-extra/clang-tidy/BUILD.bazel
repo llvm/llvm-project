@@ -33,14 +33,17 @@ config_setting(
 expand_template(
     name = "config",
     out = "clang-tidy-config.h",
-    substitutions = select({
-        ":static_analyzer_enabled": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
-        },
-    }),
+    substitutions =
+        {
+            "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 0",
+        } | select({
+            ":static_analyzer_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
+            },
+        }),
     template = "clang-tidy-config.h.cmake",
     visibility = ["//visibility:private"],
 )
@@ -79,6 +82,7 @@ clang_tidy_library(
         "//clang:rewrite",
         "//clang:sema",
         "//clang:serialization",
+        "//clang:static_analyzer_checkers_gen",
         "//clang:tooling",
         "//clang:tooling_core",
     ] + select({
@@ -149,6 +153,7 @@ clang_tidy_library(
     deps = [
         ":google",
         ":lib",
+        ":utils",
     ],
 )
 
@@ -159,6 +164,7 @@ clang_tidy_library(
         ":readability",
         ":utils",
         "//clang:tooling",
+        "//clang:transformer",
     ],
 )
 
@@ -196,7 +202,10 @@ clang_tidy_library(
 
 clang_tidy_library(
     name = "boost",
-    deps = [":lib"],
+    deps = [
+        ":lib",
+        ":utils",
+    ],
 )
 
 clang_tidy_library(
@@ -253,6 +262,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "zircon",
     deps = [
+        ":fuchsia",
         ":lib",
         ":utils",
     ],
@@ -261,6 +271,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
+        ":bugprone",
         ":lib",
         ":misc",
         ":modernize",
@@ -274,10 +285,10 @@ clang_tidy_library(
 clang_tidy_library(
     name = "bugprone",
     deps = [
-        ":cppcoreguidelines",
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -301,6 +312,7 @@ clang_tidy_library(
         ":google",
         ":lib",
         ":misc",
+        ":modernize",
         ":performance",
         ":readability",
         ":utils",
@@ -364,6 +376,7 @@ cc_library(
         ":utils",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

@@ -7,7 +7,7 @@
 define i32 @ashr_const(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sarl $14, %edi, %eax
+; CHECK-NEXT:    sarl $14, %edi
 ; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = ashr i32 %a0, 14
@@ -85,7 +85,7 @@ define i32 @shl_const_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @ashr_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_const1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sarl %edi, %eax
+; CHECK-NEXT:    sarl %edi
 ; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = ashr i32 %a0, 1
@@ -159,15 +159,15 @@ define i32 @shl_const1_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; ashr by variable - use seperate test
+; ashr by variable - use separate test
 define i32 @ashr_var(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %edi, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    sarl %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %s = ashr i32 %a0, %a1
@@ -176,15 +176,15 @@ define i32 @ashr_var(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; lshr by variable - use seperate test
+; lshr by variable - use separate test
 define i32 @lshr_var(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %edi, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %s = lshr i32 %a0, %a1
@@ -193,15 +193,15 @@ define i32 @lshr_var(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; shl by variable - use seperate test
+; shl by variable - use separate test
 define i32 @shl_var(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %edi, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    shll %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %s = shl i32 %a0, %a1
@@ -210,7 +210,7 @@ define i32 @shl_var(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; ashr by variable and using result - use seperate test
+; ashr by variable and using result - use separate test
 define i32 @ashr_var_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_var_self_select:
 ; CHECK:       # %bb.0:
@@ -226,7 +226,7 @@ define i32 @ashr_var_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; lshr by variable and using result - use seperate test
+; lshr by variable and using result - use separate test
 define i32 @lshr_var_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_var_self_select:
 ; CHECK:       # %bb.0:
@@ -242,7 +242,7 @@ define i32 @lshr_var_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; shl by variable and using result - use seperate test
+; shl by variable and using result - use separate test
 define i32 @shl_var_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_var_self_select:
 ; CHECK:       # %bb.0:
@@ -258,14 +258,14 @@ define i32 @shl_var_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; ashr by non-zero variable - use seperate test
+; ashr by non-zero variable - use separate test
 define i32 @ashr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_var_amt_never_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    orb $1, %sil, %cl
-; CHECK-NEXT:    sarl %cl, %edi, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    sarl %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -275,14 +275,14 @@ define i32 @ashr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; lshr by non-zero variable - use seperate test
+; lshr by non-zero variable - use separate test
 define i32 @lshr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_var_amt_never_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    orb $1, %sil, %cl
-; CHECK-NEXT:    shrl %cl, %edi, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -292,14 +292,14 @@ define i32 @lshr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; shl by non-zero variable - use seperate test
+; shl by non-zero variable - use separate test
 define i32 @shl_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_var_amt_never_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    orb $1, %sil, %cl
-; CHECK-NEXT:    shll %cl, %edi, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    shll %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -309,7 +309,7 @@ define i32 @shl_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; ashr by non-zero variable and using result - use seperate test
+; ashr by non-zero variable and using result - use separate test
 define i32 @ashr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_var_self_select_amt_never_zero:
 ; CHECK:       # %bb.0:
@@ -325,7 +325,7 @@ define i32 @ashr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %
   ret i32 %r
 }
 
-; lshr by non-zero variable and using result - use seperate test
+; lshr by non-zero variable and using result - use separate test
 define i32 @lshr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_var_self_select_amt_never_zero:
 ; CHECK:       # %bb.0:
@@ -341,7 +341,7 @@ define i32 @lshr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %
   ret i32 %r
 }
 
-; shl by non-zero variable and using result - use seperate test
+; shl by non-zero variable and using result - use separate test
 define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_var_self_select_amt_never_zero:
 ; CHECK:       # %bb.0:

@@ -176,11 +176,10 @@ int main(int argc, const char **argv) {
     }
   }
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
-  clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), &*DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticOptions DiagOpts;
+  clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
   auto &FileMgr = Tool.getFiles();
   SourceManager SM(Diagnostics, FileMgr);
   Rewriter Rewrite(SM, LangOptions());
@@ -199,7 +198,7 @@ int main(int argc, const char **argv) {
       for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
         OS << "  {\n";
         OS << "    \"FilePath\": \"" << *I << "\",\n";
-        const auto Entry = FileMgr.getFile(*I);
+        const auto Entry = FileMgr.getOptionalFileRef(*I);
         auto ID = SM.translateFile(*Entry);
         std::string Content;
         llvm::raw_string_ostream ContentStream(Content);

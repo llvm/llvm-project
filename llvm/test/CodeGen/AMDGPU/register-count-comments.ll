@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs -asm-verbose < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs -asm-verbose -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -asm-verbose < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -asm-verbose -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
 ; SI-LABEL: {{^}}foo:
 ; SI: .section	.AMDGPU.csdata
 ; SI: ; Kernel info:
-; SI: ; NumSgprs: {{[0-9]+}}
+; SI: ; TotalNumSgprs: {{[0-9]+}}
 ; SI: ; NumVgprs: {{[0-9]+}}
 define amdgpu_kernel void @foo(ptr addrspace(1) noalias %out, ptr addrspace(1) %abase, ptr addrspace(1) %bbase) nounwind {
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0);

@@ -335,19 +335,6 @@ define { i64, i64 } @test_load_struct() {
   ret { i64, i64 } %v
 }
 
-@m64 = internal constant [2 x i64] zeroinitializer
-@idx = external global i32
-
-; This should not try to create an x86_mmx null value.
-define x86_mmx @load_mmx() {
-; CHECK-LABEL: @load_mmx(
-; CHECK-NEXT:    [[TEMP:%.*]] = load x86_mmx, ptr getelementptr ([2 x i64], ptr @m64, i64 0, i64 ptrtoint (ptr @idx to i64)), align 8
-; CHECK-NEXT:    ret x86_mmx [[TEMP]]
-;
-  %temp = load x86_mmx, ptr getelementptr ([2 x i64], ptr @m64, i64 0, i64 ptrtoint (ptr @idx to i64))
-  ret x86_mmx %temp
-}
-
 @g_offset = external global i64
 
 @g_neg_one_vec = constant <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
@@ -453,4 +440,40 @@ define i128 @load-128bit(){
 ;
   %1 = load i128, ptr @global128, align 4
   ret i128 %1
+}
+
+
+@i40_struct = constant { i40, i8 } { i40 0, i8 1 }
+@i40_array = constant [2 x i40] [i40 0, i40 1]
+
+define i8 @load_i40_struct_padding() {
+; CHECK-LABEL: @load_i40_struct_padding(
+; CHECK-NEXT:    ret i8 0
+;
+  %v = load i8, ptr getelementptr (i8, ptr @i40_struct, i64 6)
+  ret i8 %v
+}
+
+define i16 @load_i40_struct_partial_padding() {
+; CHECK-LABEL: @load_i40_struct_partial_padding(
+; CHECK-NEXT:    ret i16 0
+;
+  %v = load i16, ptr getelementptr (i8, ptr @i40_struct, i64 4)
+  ret i16 %v
+}
+
+define i8 @load_i40_array_padding() {
+; CHECK-LABEL: @load_i40_array_padding(
+; CHECK-NEXT:    ret i8 0
+;
+  %v = load i8, ptr getelementptr (i8, ptr @i40_array, i64 6)
+  ret i8 %v
+}
+
+define i16 @load_i40_array_partial_padding() {
+; CHECK-LABEL: @load_i40_array_partial_padding(
+; CHECK-NEXT:    ret i16 0
+;
+  %v = load i16, ptr getelementptr (i8, ptr @i40_array, i64 4)
+  ret i16 %v
 }

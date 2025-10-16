@@ -9,6 +9,7 @@
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -79,7 +80,7 @@ protected:
 
   /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
   const CFGBlock *blockForStmt(const Stmt &S) {
-    const CFGBlock *Block = ACFG->getStmtToBlock().lookup(&S);
+    const CFGBlock *Block = ACFG->blockForStmt(S);
     assert(Block != nullptr);
     return Block;
   }
@@ -144,6 +145,38 @@ TEST_F(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
   EXPECT_THAT_EXPECTED(Result, llvm::HasValue(UnorderedElementsAre(
                                    "0\n", "int x = 0;\n", "x\n", "++x\n",
                                    " (Lifetime ends)\n")));
+}
+
+TEST_F(DataflowAnalysisTest, CanAnalyzeStmt) {
+  std::string Code = R"cc(
+      struct S { bool b; };
+      void foo() {
+        S AnS = S{true};
+      }
+    )cc";
+  AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
+  const auto &DeclStatement =
+      matchNode<DeclStmt>(declStmt(hasSingleDecl(varDecl(hasName("AnS")))));
+  const auto &Func = matchNode<FunctionDecl>(functionDecl(hasName("foo")));
+
+  ACFG = std::make_unique<AdornedCFG>(llvm::cantFail(AdornedCFG::build(
+      Func, const_cast<DeclStmt &>(DeclStatement), AST->getASTContext())));
+
+  NoopAnalysis Analysis = NoopAnalysis(AST->getASTContext());
+  DACtx = std::make_unique<DataflowAnalysisContext>(
+      std::make_unique<WatchedLiteralsSolver>());
+  Environment Env(*DACtx, const_cast<DeclStmt &>(DeclStatement));
+
+  llvm::Expected<std::vector<std::optional<DataflowAnalysisState<NoopLattice>>>>
+      Results = runDataflowAnalysis(*ACFG, Analysis, Env);
+
+  ASSERT_THAT_ERROR(Results.takeError(), llvm::Succeeded());
+  const Environment &ExitBlockEnv = Results->front()->Env;
+  BoolValue *BoolFieldValue = cast<BoolValue>(
+      getFieldValue(ExitBlockEnv.get<RecordStorageLocation>(
+                        *cast<VarDecl>((*DeclStatement.decl_begin()))),
+                    "b", AST->getASTContext(), ExitBlockEnv));
+  EXPECT_TRUE(Env.proves(BoolFieldValue->formula()));
 }
 
 // Tests for the statement-to-block map.
@@ -338,6 +371,42 @@ TEST_F(DiscardExprStateTest, ConditionalOperator) {
   EXPECT_EQ(CallGState.Env.get<PointerValue>(AddrOfI), nullptr);
 }
 
+TEST_F(DiscardExprStateTest, CallWithParenExprTreatedCorrectly) {
+  // This is a regression test.
+  // In the CFG for `target()` below, the expression that evaluates the function
+  // pointer for `expect` and the actual call are separated into different
+  // baseic blocks (because of the control flow introduced by the `||`
+  // operator).
+  // The value for the `expect` function pointer was erroneously discarded
+  // from the environment between these two blocks because the code that
+  // determines whether the expression values for a block need to be preserved
+  // did not ignore the `ParenExpr` around `(i == 1)` (which is not represented
+  // in the CFG).
+  std::string Code = R"(
+    bool expect(bool, bool);
+    void target(int i) {
+      expect(false || (i == 1), false);
+    }
+  )";
+  auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
+      Code, [](ASTContext &C) { return NoopAnalysis(C); }));
+
+  const auto &FnToPtrDecay = matchNode<ImplicitCastExpr>(
+      implicitCastExpr(hasCastKind(CK_FunctionToPointerDecay)));
+  const auto &CallExpect =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("expect")))));
+
+  // In the block that evaluates the implicit cast of `expect` to a pointer,
+  // this expression is associated with a value.
+  const auto &FnToPtrDecayState = blockStateForStmt(BlockStates, FnToPtrDecay);
+  EXPECT_NE(FnToPtrDecayState.Env.getValue(FnToPtrDecay), nullptr);
+
+  // In the block that calls `expect()`, the implicit cast of `expect` to a
+  // pointer is still associated with a value.
+  const auto &CallExpectState = blockStateForStmt(BlockStates, CallExpect);
+  EXPECT_NE(CallExpectState.Env.getValue(FnToPtrDecay), nullptr);
+}
+
 struct NonConvergingLattice {
   int State;
 
@@ -424,8 +493,7 @@ struct FunctionCallLattice {
     if (Other.CalledFunctions.empty())
       return LatticeJoinEffect::Unchanged;
     const size_t size_before = CalledFunctions.size();
-    CalledFunctions.insert(Other.CalledFunctions.begin(),
-                           Other.CalledFunctions.end());
+    CalledFunctions.insert_range(Other.CalledFunctions);
     return CalledFunctions.size() == size_before ? LatticeJoinEffect::Unchanged
                                                  : LatticeJoinEffect::Changed;
   }
@@ -625,6 +693,80 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
   // FIXME: Called functions at point `p` should contain only "foo".
 }
 
+class AnalyzerNoreturnTest : public Test {
+protected:
+  template <typename Matcher>
+  void runDataflow(llvm::StringRef Code, Matcher Expectations) {
+    tooling::FileContentMappings FilesContents;
+    FilesContents.push_back(
+        std::make_pair<std::string, std::string>("noreturn_test_defs.h", R"(
+      void assertionHandler() __attribute__((analyzer_noreturn));
+
+      void trap() {}
+    )"));
+
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<FunctionCallAnalysis>(
+            AnalysisInputs<FunctionCallAnalysis>(
+                Code, ast_matchers::hasName("target"),
+                [](ASTContext &C, Environment &) {
+                  return FunctionCallAnalysis(C);
+                })
+                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
+                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
+            /*VerifyResults=*/
+            [&Expectations](
+                const llvm::StringMap<
+                    DataflowAnalysisState<FunctionCallLattice>> &Results,
+                const AnalysisOutputs &) {
+              EXPECT_THAT(Results, Expectations);
+            }),
+        llvm::Succeeded());
+  }
+};
+
+TEST_F(AnalyzerNoreturnTest, Breathing) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap"))))));
+}
+
+TEST_F(AnalyzerNoreturnTest, DirectNoReturnCall) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      assertionHandler();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, IsEmpty());
+}
+
+TEST_F(AnalyzerNoreturnTest, CanonicalDeclCallCheck) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+    
+    extern void assertionHandler();
+
+    void target() {
+      assertionHandler();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, IsEmpty());
+}
+
 // Models an analysis that uses flow conditions.
 class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
@@ -805,6 +947,25 @@ public:
     else
       JoinedVal.setProperty("is_null", JoinedEnv.makeTopBoolValue());
   }
+
+  std::optional<WidenResult> widen(QualType Type, Value &Prev,
+                                   const Environment &PrevEnv, Value &Current,
+                                   Environment &CurrentEnv) override {
+    switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
+    case ComparisonResult::Same:
+      return WidenResult{&Current, LatticeJoinEffect::Unchanged};
+    case ComparisonResult::Different: {
+      auto &CurPtr = cast<PointerValue>(Current);
+      auto &WidenedPtr =
+          CurrentEnv.create<PointerValue>(CurPtr.getPointeeLoc());
+      WidenedPtr.setProperty("is_null", CurrentEnv.makeTopBoolValue());
+      return WidenResult{&WidenedPtr, LatticeJoinEffect::Changed};
+    }
+    case ComparisonResult::Unknown:
+      return std::nullopt;
+    }
+    llvm_unreachable("all cases in switch covered");
+  }
 };
 
 class WideningTest : public Test {
@@ -846,7 +1007,6 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2", "p3"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
         const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
@@ -889,8 +1049,6 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(),
-                    UnorderedElementsAre("p1", "p2", "p3", "p4"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
         const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
@@ -929,19 +1087,11 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooLoc =
-            cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
-        EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
+        const auto &FooLoc =
+            getLocForDecl<ScalarStorageLocation>(ASTCtx, Env, "Foo");
+        const auto &BarVal = getValueForDecl<PointerValue>(ASTCtx, Env, "Bar");
+        EXPECT_EQ(&BarVal.getPointeeLoc(), &FooLoc);
       });
 }
 
@@ -963,15 +1113,35 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const auto *FooVal = Env.getValue(*FooDecl);
-        EXPECT_EQ(FooVal->getProperty("is_null"),
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        EXPECT_EQ(FooVal.getProperty("is_null"),
                   &Env.getBoolLiteralValue(false));
+      });
+}
+
+TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
+  std::string Code = R"(
+    void target(bool Cond) {
+      int *Foo;
+      int i = 0;
+      Foo = nullptr;
+      while (Cond) {
+        Foo = &i;
+      }
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        ASSERT_THAT(FooVal.getProperty("is_null"), NotNull());
+        EXPECT_TRUE(areEquivalentValues(*FooVal.getProperty("is_null"),
+                                        Env.makeTopBoolValue()));
       });
 }
 

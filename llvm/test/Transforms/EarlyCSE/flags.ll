@@ -3,7 +3,7 @@
 ; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 
 declare void @use(i1)
-declare void @use.ptr(ptr) memory(read)
+declare void @use.ptr(i32, ptr) memory(read)
 
 define void @test1(float %x, float %y) {
 ; CHECK-LABEL: @test1(
@@ -51,49 +51,49 @@ define void @test_inbounds_program_not_ub_if_first_gep_poison(ptr %ptr, i64 %n) 
 
 define void @load_both_nonnull(ptr %p) {
 ; CHECK-LABEL: @load_both_nonnull(
-; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META0:![0-9]+]]
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p, !nonnull !{}
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
 define void @load_first_nonnull(ptr %p) {
 ; CHECK-LABEL: @load_first_nonnull(
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
 define void @load_first_nonnull_noundef(ptr %p) {
 ; CHECK-LABEL: @load_first_nonnull_noundef(
-; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0, !noundef !0
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META0]], !noundef [[META0]]
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
 define ptr @store_to_load_forward(ptr %p, ptr %p2) {
 ; CHECK-LABEL: @store_to_load_forward(
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META0]]
 ; CHECK-NEXT:    store ptr [[P3]], ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
@@ -101,4 +101,14 @@ define ptr @store_to_load_forward(ptr %p, ptr %p2) {
   store ptr %p3, ptr %p2
   %res = load ptr, ptr %p2
   ret ptr %res
+}
+
+define i32 @load_undef_noundef(ptr %p) {
+; CHECK-LABEL: @load_undef_noundef(
+; CHECK-NEXT:    store i32 undef, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 undef
+;
+  store i32 undef, ptr %p
+  %v = load i32, ptr %p, !noundef !{}
+  ret i32 %v
 }

@@ -10,9 +10,10 @@
 
 // constexpr iterator& operator+=(difference_type n);
 
-#include <ranges>
 #include <cassert>
 #include <concepts>
+#include <memory>
+#include <ranges>
 
 constexpr bool test() {
   std::ranges::repeat_view<int> v(10);

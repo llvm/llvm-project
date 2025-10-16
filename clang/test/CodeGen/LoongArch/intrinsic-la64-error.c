@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple loongarch64 -emit-llvm -S -verify %s -o /dev/null
+// RUN: %clang_cc1 -triple loongarch64 -emit-llvm -verify %s -o /dev/null
 // RUN: not %clang_cc1 -triple loongarch64 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s
 
@@ -22,6 +22,12 @@ void test_feature(unsigned long *v_ul, int *v_i, float a, double b) {
   double d2 = __builtin_loongarch_frsqrte_d(b);
 }
 #endif
+
+void cacop_d(int a) {
+  __builtin_loongarch_cacop_d(-1, a, 0); // expected-error {{argument value -1 is outside the valid range [0, 31]}}
+  __builtin_loongarch_cacop_d(1, a, 4000); // expected-error {{argument value 4000 is outside the valid range [-2048, 2047]}}
+  __builtin_loongarch_cacop_d(-2, a, 5000); // expected-error {{argument value -2 is outside the valid range [0, 31]}}
+}
 
 void csrrd_d(int a) {
   __builtin_loongarch_csrrd_d(16384); // expected-error {{argument value 16384 is outside the valid range [0, 16383]}}

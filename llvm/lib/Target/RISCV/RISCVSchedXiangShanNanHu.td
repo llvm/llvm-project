@@ -306,9 +306,12 @@ def : ReadAdvance<ReadXPERM, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZfa;
-defm : UnsupportedSchedZfh;
+defm : UnsupportedSchedZfhmin;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZabha;
+defm : UnsupportedSchedZvk;
+defm : UnsupportedSchedXsf;
 }

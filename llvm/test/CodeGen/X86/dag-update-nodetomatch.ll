@@ -136,15 +136,13 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movl (%r8), %edx
 ; CHECK-NEXT:    leal 8(,%rbx,8), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    leaq 8(%rsi), %rax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 32(%rsi), %r11
 ; CHECK-NEXT:    leaq 8(,%rbx,8), %rbx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    movq %rsi, %r12
 ; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_15: # %for.cond1.for.inc3_crit_edge
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    movl %edx, (%r8)
@@ -189,7 +187,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    jae .LBB1_7
 ; CHECK-NEXT:  # %bb.6: # %vector.memcheck
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; CHECK-NEXT:    leaq 8(%rsi), %r9
+; CHECK-NEXT:    addq %r9, %rax
 ; CHECK-NEXT:    leaq (%rax,%r10,8), %rax
 ; CHECK-NEXT:    cmpq %r15, %rax
 ; CHECK-NEXT:    ja .LBB1_14
@@ -220,7 +219,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    addq %r13, %r10
 ; CHECK-NEXT:    leaq (%r11,%r10,8), %r10
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_12: # %vector.body
 ; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -237,7 +236,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    cmpq %rdx, %rbp
 ; CHECK-NEXT:    movq %r13, %rdx
 ; CHECK-NEXT:    je .LBB1_15
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_14: # %for.body2
 ; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2

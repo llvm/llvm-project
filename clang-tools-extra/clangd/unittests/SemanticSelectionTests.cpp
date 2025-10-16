@@ -201,6 +201,7 @@ TEST(FoldingRanges, ASTAll) {
       R"cpp(
         #define FOO int foo() {\
           int Variable = 42; \
+          return 0; \
         }
 
         // Do not generate folding range for braces within macro expansion.
@@ -336,18 +337,18 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         ]]};
       )cpp",
       R"cpp(
-        /*[[ Multi 
+        /*[[ Multi
           * line
-          *  comment 
+          *  comment
           ]]*/
       )cpp",
       R"cpp(
         //[[ Comment
         // 1]]
-        
+
         //[[ Comment
         // 2]]
-        
+
         // No folding for single line comment.
 
         /*[[ comment 3
@@ -369,6 +370,45 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
 
         //[[ foo
         /* bar */]]
+      )cpp",
+      R"cpp(
+        //Ignore non-conditional directives
+        #define A 1
+
+        void func() {[[
+          int Variable = 100;
+
+          #ifdef FOO[[
+            Variable = 1;
+            #if 1[[
+                Variable = 4;
+            ]]#endif
+          ]]#else[[
+            Variable = 2;
+            //handle nested directives
+            #if 1[[
+              Variable = 3;
+            ]]#endif
+          ]]#endif
+
+
+          ]]}
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)
+            Variable = 1;
+        #
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)[[
+            Variable = 1;
+        ]]#elif 1[[
+            Variable = 2;
+        ]]#else
+            Variable = 3;
+        #
       )cpp",
   };
   for (const char *Test : Tests) {

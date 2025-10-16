@@ -35,31 +35,34 @@
 !CHECK: }
 
 !CHECK-LABEL: func.func @_QPmultiple_reduction
-!CHECK:  %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_reductionEx"}
-!CHECK:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFmultiple_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:  %[[Y_REF:.*]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFmultiple_reductionEy"}
-!CHECK:  %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFmultiple_reductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:  %[[Z_REF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFmultiple_reductionEz"}
-!CHECK:  %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {uniq_name = "_QFmultiple_reductionEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:  omp.wsloop reduction(
-!CHECK-SAME: @[[ADD_RED_I32_NAME]] %[[X_DECL]]#0 -> %[[PRV_X:.+]] : !fir.ref<i32>,
-!CHECK-SAME: @[[ADD_RED_F32_NAME]] %[[Y_DECL]]#0 -> %[[PRV_Y:.+]] : !fir.ref<f32>,
-!CHECK-SAME: @[[MIN_RED_I32_NAME]] %[[Z_DECL]]#0 -> %[[PRV_Z:.+]] : !fir.ref<i32>) {{.*}}{
-!CHECK:    %[[PRV_X_DECL:.+]]:2 = hlfir.declare %[[PRV_X]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[PRV_Y_DECL:.+]]:2 = hlfir.declare %[[PRV_Y]] {{.*}} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:    %[[PRV_Z_DECL:.+]]:2 = hlfir.declare %[[PRV_Z]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[LPRV_X:.+]] = fir.load %[[PRV_X_DECL]]#0 : !fir.ref<i32>
-!CHECK:    %[[RES_X:.+]] = arith.addi %[[LPRV_X]], %{{.+}} : i32
-!CHECK:    hlfir.assign %[[RES_X]] to %[[PRV_X_DECL]]#0 : i32, !fir.ref<i32>
-!CHECK:    %[[LPRV_Y:.+]] = fir.load %[[PRV_Y_DECL]]#0 : !fir.ref<f32>
-!CHECK:    %[[RES_Y:.+]] = arith.addf %[[LPRV_Y]], %{{.+}} : f32
-!CHECK:    hlfir.assign %[[RES_Y]] to %[[PRV_Y_DECL]]#0 : f32, !fir.ref<f32>
-!CHECK:    %[[LPRV_Z:.+]] = fir.load %[[PRV_Z_DECL]]#0 : !fir.ref<i32>
-!CHECK:    %[[RES_Z:.+]] = arith.select %{{.+}}, %[[LPRV_Z]], %{{.+}} : i32
-!CHECK:    hlfir.assign %[[RES_Z]] to %[[PRV_Z_DECL]]#0 : i32, !fir.ref<i32>
-!CHECK:    omp.yield
-!CHECK:  }
-!CHECK: return
+!CHECK:      %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_reductionEx"}
+!CHECK:      %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFmultiple_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      %[[Y_REF:.*]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFmultiple_reductionEy"}
+!CHECK:      %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFmultiple_reductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:      %[[Z_REF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFmultiple_reductionEz"}
+!CHECK:      %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {uniq_name = "_QFmultiple_reductionEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      omp.wsloop private({{.*}}) reduction(
+!CHECK-SAME: @[[ADD_RED_I32_NAME]] %[[X_DECL]]#0 -> %[[PRV_X:[^,]+]],
+!CHECK-SAME: @[[ADD_RED_F32_NAME]] %[[Y_DECL]]#0 -> %[[PRV_Y:[^,]+]],
+!CHECK-SAME: @[[MIN_RED_I32_NAME]] %[[Z_DECL]]#0 -> %[[PRV_Z:.+]] :
+!CHECK-SAME: !fir.ref<i32>, !fir.ref<f32>, !fir.ref<i32>) {
+!CHECK-NEXT:   omp.loop_nest {{.*}} {
+!CHECK:          %[[PRV_X_DECL:.+]]:2 = hlfir.declare %[[PRV_X]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:          %[[PRV_Y_DECL:.+]]:2 = hlfir.declare %[[PRV_Y]] {{.*}} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:          %[[PRV_Z_DECL:.+]]:2 = hlfir.declare %[[PRV_Z]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:          %[[LPRV_X:.+]] = fir.load %[[PRV_X_DECL]]#0 : !fir.ref<i32>
+!CHECK:          %[[RES_X:.+]] = arith.addi %[[LPRV_X]], %{{.+}} : i32
+!CHECK:          hlfir.assign %[[RES_X]] to %[[PRV_X_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK:          %[[LPRV_Y:.+]] = fir.load %[[PRV_Y_DECL]]#0 : !fir.ref<f32>
+!CHECK:          %[[RES_Y:.+]] = arith.addf %[[LPRV_Y]], %{{.+}} : f32
+!CHECK:          hlfir.assign %[[RES_Y]] to %[[PRV_Y_DECL]]#0 : f32, !fir.ref<f32>
+!CHECK:          %[[LPRV_Z:.+]] = fir.load %[[PRV_Z_DECL]]#0 : !fir.ref<i32>
+!CHECK:          %[[RES_Z:.+]] = arith.select %{{.+}}, %[[LPRV_Z]], %{{.+}} : i32
+!CHECK:          hlfir.assign %[[RES_Z]] to %[[PRV_Z_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK:          omp.yield
+!CHECK:        }
+!CHECK:      }
+!CHECK:      return
 subroutine multiple_reduction(v)
   implicit none
   integer, intent(in) :: v(:)

@@ -268,6 +268,7 @@ const char *archToWindowsSDKArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "x64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -285,6 +286,7 @@ const char *archToLegacyVCArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "amd64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -300,6 +302,7 @@ const char *archToDevDivInternalArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "amd64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -321,6 +324,7 @@ bool appendArchToWindowsSDKLibPath(int SDKMajor, SmallString<128> LibPath,
       sys::path::append(LibPath, "x64");
       break;
     case Triple::arm:
+    case Triple::thumb:
       // It is not necessary to link against Windows SDK 7.x when targeting ARM.
       return false;
     default:
@@ -440,6 +444,13 @@ bool getWindowsSDKDir(vfs::FileSystem &VFS, std::optional<StringRef> WinSdkDir,
     return !WindowsSDKLibVersion.empty();
   }
   if (Major == 10) {
+    if (WinSdkVersion) {
+      // Use the user-provided version as-is.
+      WindowsSDKIncludeVersion = WinSdkVersion->str();
+      WindowsSDKLibVersion = WindowsSDKIncludeVersion;
+      return true;
+    }
+
     if (!getWindows10SDKVersionFromPath(VFS, Path, WindowsSDKIncludeVersion))
       return false;
     WindowsSDKLibVersion = WindowsSDKIncludeVersion;
@@ -470,6 +481,12 @@ bool getUniversalCRTSdkDir(vfs::FileSystem &VFS,
           "SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", "KitsRoot10",
           Path, nullptr))
     return false;
+
+  if (WinSdkVersion) {
+    // Use the user-provided version as-is.
+    UCRTVersion = WinSdkVersion->str();
+    return true;
+  }
 
   return getWindows10SDKVersionFromPath(VFS, Path, UCRTVersion);
 }

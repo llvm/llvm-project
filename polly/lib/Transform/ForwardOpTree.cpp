@@ -40,6 +40,7 @@
 #include <cassert>
 #include <memory>
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-optree"
 
 using namespace llvm;
@@ -171,7 +172,7 @@ struct ForwardingAction {
     Result.Decision =
         IsProfitable ? FD_CanForwardProfitably : FD_CanForwardLeaf;
     Result.Execute = [=]() {
-      LLVM_DEBUG(dbgs() << "    trivially forwarded: " << *Val << "\n");
+      POLLY_DEBUG(dbgs() << "    trivially forwarded: " << *Val << "\n");
       return true;
     };
     return Result;
@@ -368,12 +369,12 @@ public:
       Known = {};
       Translator = {};
       NormalizeMap = {};
-      LLVM_DEBUG(dbgs() << "Known analysis exceeded max_operations\n");
+      POLLY_DEBUG(dbgs() << "Known analysis exceeded max_operations\n");
       return false;
     }
 
     KnownAnalyzed++;
-    LLVM_DEBUG(dbgs() << "All known: " << Known << "\n");
+    POLLY_DEBUG(dbgs() << "All known: " << Known << "\n");
 
     return true;
   }
@@ -490,7 +491,7 @@ public:
       //   do not add another MemoryAccess.
       auto ExecAction = [this, TargetStmt, LI, Access]() -> bool {
         TargetStmt->prependInstruction(LI);
-        LLVM_DEBUG(
+        POLLY_DEBUG(
             dbgs() << "    forwarded known load with preexisting MemoryAccess"
                    << Access << "\n");
         (void)Access;
@@ -528,10 +529,10 @@ public:
     if (SameVal.is_null())
       return ForwardingAction::notApplicable();
 
-    LLVM_DEBUG(dbgs() << "      expected values where " << TargetExpectedVal
-                      << "\n");
-    LLVM_DEBUG(dbgs() << "      candidate elements where " << Candidates
-                      << "\n");
+    POLLY_DEBUG(dbgs() << "      expected values where " << TargetExpectedVal
+                       << "\n");
+    POLLY_DEBUG(dbgs() << "      candidate elements where " << Candidates
+                       << "\n");
 
     // { ValInst[] }
     isl::space ValInstSpace = ExpectedVal.get_space().range();
@@ -568,8 +569,8 @@ public:
 
       // { [TargetDomain[] -> Value[]] -> [DefDomain[] -> Value] }
       LocalTranslator = DefToTarget.reverse().product(ValToVal);
-      LLVM_DEBUG(dbgs() << "      local translator is " << LocalTranslator
-                        << "\n");
+      POLLY_DEBUG(dbgs() << "      local translator is " << LocalTranslator
+                         << "\n");
 
       if (LocalTranslator.is_null())
         return ForwardingAction::notApplicable();
@@ -579,8 +580,8 @@ public:
                        LocalTranslator]() -> bool {
       TargetStmt->prependInstruction(LI);
       MemoryAccess *Access = makeReadArrayAccess(TargetStmt, LI, SameVal);
-      LLVM_DEBUG(dbgs() << "    forwarded known load with new MemoryAccess"
-                        << Access << "\n");
+      POLLY_DEBUG(dbgs() << "    forwarded known load with new MemoryAccess"
+                         << Access << "\n");
       (void)Access;
 
       if (!LocalTranslator.is_null())
@@ -643,8 +644,8 @@ public:
         Access = TargetStmt->ensureValueRead(Inst);
       Access->setNewAccessRelation(SameVal);
 
-      LLVM_DEBUG(dbgs() << "    forwarded known content of " << *Inst
-                        << " which is " << SameVal << "\n");
+      POLLY_DEBUG(dbgs() << "    forwarded known content of " << *Inst
+                         << " which is " << SameVal << "\n");
       TotalReloads++;
       NumReloads++;
       return false;
@@ -712,8 +713,8 @@ public:
       // instruction using them.
       TargetStmt->prependInstruction(UseInst);
 
-      LLVM_DEBUG(dbgs() << "    forwarded speculable instruction: " << *UseInst
-                        << "\n");
+      POLLY_DEBUG(dbgs() << "    forwarded speculable instruction: " << *UseInst
+                         << "\n");
       NumInstructionsCopied++;
       TotalInstructionsCopied++;
       return true;
@@ -765,7 +766,7 @@ public:
       if (TargetUse.getKind() == VirtualUse::Synthesizable)
         return ForwardingAction::triviallyForwardable(false, UseVal);
 
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs() << "    Synthesizable would not be synthesizable anymore: "
                  << *UseVal << "\n");
       return ForwardingAction::cannotForward();
@@ -779,8 +780,8 @@ public:
       auto ExecAction = [this, TargetStmt, UseVal]() {
         TargetStmt->ensureValueRead(UseVal);
 
-        LLVM_DEBUG(dbgs() << "    forwarded read-only value " << *UseVal
-                          << "\n");
+        POLLY_DEBUG(dbgs() << "    forwarded read-only value " << *UseVal
+                           << "\n");
         NumReadOnlyCopied++;
         TotalReadOnlyCopied++;
 
@@ -830,7 +831,8 @@ public:
 
       // When no method is found to forward the operand tree, we effectively
       // cannot handle it.
-      LLVM_DEBUG(dbgs() << "    Cannot forward instruction: " << *Inst << "\n");
+      POLLY_DEBUG(dbgs() << "    Cannot forward instruction: " << *Inst
+                         << "\n");
       return ForwardingAction::cannotForward();
     }
 
@@ -945,7 +947,7 @@ public:
   /// Try to forward an operand tree rooted in @p RA.
   bool tryForwardTree(MemoryAccess *RA) {
     assert(RA->isLatestScalarKind());
-    LLVM_DEBUG(dbgs() << "Trying to forward operand tree " << RA << "...\n");
+    POLLY_DEBUG(dbgs() << "Trying to forward operand tree " << RA << "...\n");
 
     ScopStmt *Stmt = RA->getStatement();
     Loop *InLoop = Stmt->getSurroundingLoop();
@@ -1036,22 +1038,22 @@ static std::unique_ptr<ForwardOpTreeImpl> runForwardOpTree(Scop &S,
     Impl = std::make_unique<ForwardOpTreeImpl>(&S, &LI, MaxOpGuard);
 
     if (AnalyzeKnown) {
-      LLVM_DEBUG(dbgs() << "Prepare forwarders...\n");
+      POLLY_DEBUG(dbgs() << "Prepare forwarders...\n");
       Impl->computeKnownValues();
     }
 
-    LLVM_DEBUG(dbgs() << "Forwarding operand trees...\n");
+    POLLY_DEBUG(dbgs() << "Forwarding operand trees...\n");
     Impl->forwardOperandTrees();
 
     if (MaxOpGuard.hasQuotaExceeded()) {
-      LLVM_DEBUG(dbgs() << "Not all operations completed because of "
-                           "max_operations exceeded\n");
+      POLLY_DEBUG(dbgs() << "Not all operations completed because of "
+                            "max_operations exceeded\n");
       KnownOutOfQuota++;
     }
   }
 
-  LLVM_DEBUG(dbgs() << "\nFinal Scop:\n");
-  LLVM_DEBUG(dbgs() << S);
+  POLLY_DEBUG(dbgs() << "\nFinal Scop:\n");
+  POLLY_DEBUG(dbgs() << S);
 
   // Update statistics
   Scop::ScopStatistics ScopStats = S.getStatistics();

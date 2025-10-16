@@ -12,6 +12,10 @@
 #define HAVE_OPTIONAL 0
 #endif
 
+struct X {
+  int x;
+};
+
 int main() {
   bool has_optional = HAVE_OPTIONAL;
 
@@ -25,6 +29,7 @@ int main() {
 
   optional_int number_not_engaged;
   optional_int number_engaged = 42;
+  std::optional<X> x = X{42};
 
   printf("%d\n", *number_engaged);
 

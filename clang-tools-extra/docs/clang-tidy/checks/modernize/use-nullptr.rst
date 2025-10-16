@@ -4,7 +4,7 @@ modernize-use-nullptr
 =====================
 
 The check converts the usage of null pointer constants (e.g. ``NULL``, ``0``)
-to use the new C++11 ``nullptr`` keyword.
+to use the new C++11 and C23 ``nullptr`` keyword.
 
 Example
 -------

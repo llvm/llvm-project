@@ -24,7 +24,7 @@ define internal i64 @foo(i1 %flag, i64 %m, i64 %n) {
 ; CHECK-NEXT:    [[RES0:%.*]] = call i64 @bar.specialized.6(i64 4)
 ; CHECK-NEXT:    br label %merge
 ; CHECK:       merge:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 ; CHECK:       define internal i64 @foo.specialized.2
 ; CHECK-NEXT:  entry:
@@ -34,7 +34,7 @@ define internal i64 @foo(i1 %flag, i64 %m, i64 %n) {
 ; CHECK-NEXT:    [[RES1:%.*]] = call i64 @bar.specialized.5(i64 3)
 ; CHECK-NEXT:    br label %merge
 ; CHECK:       merge:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   br i1 %flag, label %plus, label %minus
@@ -58,11 +58,11 @@ define internal i64 @binop(i64 %x, i64 %y) {
 ;
 ; CHECK:       define internal i64 @binop.specialized.3
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 ; CHECK:       define internal i64 @binop.specialized.4
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   %z = add i64 %x, %y
@@ -77,7 +77,7 @@ define internal i64 @bar(i64 %n) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label %if.end
 ; CHECK:       if.end:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 ; CHECK:       define internal i64 @bar.specialized.6
 ; CHECK-NEXT:  entry:
@@ -85,7 +85,7 @@ define internal i64 @bar(i64 %n) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label %if.end
 ; CHECK:       if.end:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   %cmp = icmp sgt i64 %n, 3

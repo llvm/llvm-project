@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
@@ -22,9 +23,15 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
   if (dump_mask & eDumpOptionValue) {
     const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_current_value.GetSize();
-    if (dump_mask & eDumpOptionType)
-      strm.Printf(" =%s",
-                  (m_current_value.GetSize() > 0 && !one_line) ? "\n" : "");
+    if (dump_mask & (eDumpOptionType | eDumpOptionDefaultValue)) {
+      strm.Printf(" =");
+      if (dump_mask & eDumpOptionDefaultValue && !m_current_value.IsEmpty()) {
+        DefaultValueFormat label(strm);
+        strm.PutCString("empty");
+      }
+      if (!m_current_value.IsEmpty() && !one_line)
+        strm.PutCString("\n");
+    }
     if (!one_line)
       strm.IndentMore();
     for (uint32_t i = 0; i < size; ++i) {
@@ -39,6 +46,15 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
     if (!one_line)
       strm.IndentLess();
   }
+}
+
+llvm::json::Value
+OptionValueFileSpecList::ToJSON(const ExecutionContext *exe_ctx) const {
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  llvm::json::Array array;
+  for (const auto &file_spec : m_current_value)
+    array.emplace_back(file_spec.ToJSON());
+  return array;
 }
 
 Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
@@ -59,7 +75,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
       uint32_t idx;
       const uint32_t count = m_current_value.GetSize();
       if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid file list index %s, index must be 0 through %u",
             args.GetArgumentAtIndex(0), count);
       } else {
@@ -73,8 +89,9 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
         NotifyValueChanged();
       }
     } else {
-      error.SetErrorString("replace operation takes an array index followed by "
-                           "one or more values");
+      error = Status::FromErrorString(
+          "replace operation takes an array index followed by "
+          "one or more values");
     }
     break;
 
@@ -91,7 +108,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
       }
       NotifyValueChanged();
     } else {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "assign operation takes at least one file path argument");
     }
     break;
@@ -102,7 +119,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
       uint32_t idx;
       const uint32_t count = m_current_value.GetSize();
       if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid insert file list index %s, index must be 0 through %u",
             args.GetArgumentAtIndex(0), count);
       } else {
@@ -115,8 +132,9 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
         NotifyValueChanged();
       }
     } else {
-      error.SetErrorString("insert operation takes an array index followed by "
-                           "one or more values");
+      error = Status::FromErrorString(
+          "insert operation takes an array index followed by "
+          "one or more values");
     }
     break;
 
@@ -144,12 +162,13 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
         }
         NotifyValueChanged();
       } else {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid array index '%s', aborting remove operation",
             args.GetArgumentAtIndex(i));
       }
     } else {
-      error.SetErrorString("remove operation takes one or more array index");
+      error = Status::FromErrorString(
+          "remove operation takes one or more array index");
     }
     break;
 

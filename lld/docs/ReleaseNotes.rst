@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,9 +29,8 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--compress-sections <section-glib>=[none|zlib|zstd]`` is added to compress
-  matched output sections without the ``SHF_ALLOC`` flag.
-  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
+* ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
+  (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
 
 Breaking changes
 ----------------
@@ -41,6 +43,11 @@ MinGW Improvements
 
 MachO Improvements
 ------------------
+
+* ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
+  (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
+* ``--tail-merge-strings`` enables tail merging of cstring literals.
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
 
 WebAssembly Improvements
 ------------------------

@@ -12,8 +12,7 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "hdr/types/size_t.h"
 
 using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
@@ -31,8 +30,8 @@ class StringFile : public File {
   static FileIOResult str_read(LIBC_NAMESPACE::File *f, void *data, size_t len);
   static FileIOResult str_write(LIBC_NAMESPACE::File *f, const void *data,
                                 size_t len);
-  static ErrorOr<long> str_seek(LIBC_NAMESPACE::File *f, long offset,
-                                int whence);
+  static ErrorOr<off_t> str_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                 int whence);
   static int str_close(LIBC_NAMESPACE::File *f) {
     delete reinterpret_cast<StringFile *>(f);
     return 0;
@@ -93,8 +92,8 @@ FileIOResult StringFile::str_write(LIBC_NAMESPACE::File *f, const void *data,
   return i;
 }
 
-ErrorOr<long> StringFile::str_seek(LIBC_NAMESPACE::File *f, long offset,
-                                   int whence) {
+ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                    int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
   if (whence == SEEK_SET)
     sf->pos = offset;
@@ -493,4 +492,23 @@ TEST(LlvmLibcFileTest, WriteNothing) {
   ASSERT_EQ(f_fbf->close(), 0);
   ASSERT_EQ(f_lbf->close(), 0);
   ASSERT_EQ(f_nbf->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, WriteSplit) {
+  constexpr size_t FILE_BUFFER_SIZE = 8;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+
+  static constexpr size_t AVAIL = 12;
+  f->seek(-AVAIL, SEEK_END);
+
+  const char data[] = "hello";
+  ASSERT_EQ(sizeof(data) - 1, f->write(data, sizeof(data) - 1).value);
+
+  const char data2[] = " extra data";
+  static constexpr size_t WR_EXPECTED = AVAIL - (sizeof(data) - 1);
+  ASSERT_EQ(WR_EXPECTED, f->write(data2, sizeof(data2) - 1).value);
+  EXPECT_TRUE(f->error());
+  ASSERT_EQ(f->close(), 0);
 }

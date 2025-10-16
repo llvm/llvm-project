@@ -29,9 +29,13 @@ struct ValueBoundsConstraintSet : protected ::mlir::ValueBoundsConstraintSet {
 struct ScalableValueBoundsConstraintSet
     : public llvm::RTTIExtends<ScalableValueBoundsConstraintSet,
                                detail::ValueBoundsConstraintSet> {
-  ScalableValueBoundsConstraintSet(MLIRContext *context, unsigned vscaleMin,
-                                   unsigned vscaleMax)
-      : RTTIExtends(context), vscaleMin(vscaleMin), vscaleMax(vscaleMax){};
+  ScalableValueBoundsConstraintSet(
+      MLIRContext *context,
+      ValueBoundsConstraintSet::StopConditionFn stopCondition,
+      unsigned vscaleMin, unsigned vscaleMax)
+      : RTTIExtends(context, stopCondition,
+                    /*addConservativeSemiAffineBounds=*/true),
+        vscaleMin(vscaleMin), vscaleMax(vscaleMax) {};
 
   using RTTIExtends::bound;
   using RTTIExtends::StopConditionFn;
@@ -68,7 +72,7 @@ struct ScalableValueBoundsConstraintSet
   computeScalableBound(Value value, std::optional<int64_t> dim,
                        unsigned vscaleMin, unsigned vscaleMax,
                        presburger::BoundType boundType, bool closedUB = true,
-                       StopConditionFn stopCondition = nullptr);
+                       const StopConditionFn &stopCondition = nullptr);
 
   /// Get the value of vscale. Returns `nullptr` vscale as not been encountered.
   Value getVscaleValue() const { return vscale; }

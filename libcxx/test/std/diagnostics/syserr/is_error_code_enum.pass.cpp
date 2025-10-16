@@ -12,8 +12,10 @@
 
 // template <> struct is_error_code_enum<> : public false_type {};
 
-#include <system_error>
+#include <cstddef>
 #include <string>
+#include <system_error>
+
 #include "test_macros.h"
 
 template <bool Expected, class T>
@@ -33,12 +35,8 @@ class A {
 };
 
 // Specialize the template for my class
-namespace std
-{
-  template <>
-  struct is_error_code_enum<A> : public std::true_type {};
-}
-
+template <>
+struct std::is_error_code_enum<A> : public std::true_type {};
 
 int main(int, char**)
 {

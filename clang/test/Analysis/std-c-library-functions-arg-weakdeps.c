@@ -3,7 +3,7 @@
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.Stream \
+// RUN:   -analyzer-checker=unix.Stream \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -20,7 +20,7 @@
 // RUN:   -triple x86_64-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: int isalnum(int)
-// CHECK: Loaded summary for: unsigned long fread(void *restrict, size_t, size_t, FILE *restrict) __attribute__((nonnull(1)))
+// CHECK: Loaded summary for: __size_t fread(void *restrict, size_t, size_t, FILE *restrict) __attribute__((nonnull(1)))
 // CHECK: Loaded summary for: int fileno(FILE *stream)
 
 void initializeSummaryMap(void);
@@ -57,5 +57,5 @@ void test_notnull_arg(FILE *F) {
 
 void test_notnull_stream_arg(void) {
   fileno(0); // \
-  // expected-warning{{Stream pointer might be NULL [alpha.unix.Stream]}}
+  // expected-warning{{Stream pointer might be NULL [unix.Stream]}}
 }

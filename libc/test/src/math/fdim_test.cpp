@@ -8,7 +8,7 @@
 
 #include "FDimTest.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/fdim.h"
 #include "test/UnitTest/FPMatcher.h"

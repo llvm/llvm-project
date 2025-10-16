@@ -44,7 +44,7 @@ enum OutputKind {
   OK_OutputBitcode,
   OK_OutputThinLTOBitcode,
 };
-enum VerifierKind { VK_NoVerifier, VK_VerifyOut, VK_VerifyEachPass };
+enum class VerifierKind { None, InputOutput, EachPass };
 enum PGOKind {
   NoPGO,
   InstrGen,
@@ -75,7 +75,7 @@ bool runPassPipeline(
     bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO = false);
+    bool EnableProfcheck, bool UnifiedLTO = false);
 } // namespace llvm
 
 #endif

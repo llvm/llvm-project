@@ -13,5 +13,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(OrcV2CBindingsRemovableCode
   OrcV2CBindingsRemovableCode.c
   )
-
-export_executable_symbols(OrcV2CBindingsRemovableCode)

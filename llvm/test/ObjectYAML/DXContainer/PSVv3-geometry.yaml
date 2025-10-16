@@ -1,0 +1,109 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            PSV0
+    Size:            144
+    PSVInfo:
+      Version:         3
+      ShaderStage:     2
+      InputPrimitive: 1024
+      OutputTopology: 4096
+      OutputStreamMask: 2056
+      OutputPositionPresent: 1
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      0
+      MaxVertexCount:  4096
+      SigInputVectors: 0
+      SigOutputVectors: [ 8, 16, 32, 64 ]
+      NumThreadsX:     512
+      NumThreadsY:     1024
+      NumThreadsZ:     2048
+      EntryName: GSEntry
+      ResourceStride:       24
+      Resources:
+        - Type:            Sampler
+          Space:           2
+          LowerBound:      3
+          UpperBound:      4
+          Kind:            TextureCube
+          Flags:
+            UsedByAtomic64:  false
+        - Type:            Invalid
+          Space:           32768
+          LowerBound:      8388608
+          UpperBound:      2147483648
+          Kind:            Invalid
+          Flags:
+            UsedByAtomic64:  false
+      SigInputElements: []
+      SigOutputElements: []
+      SigPatchOrPrimElements: []
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      2
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# CHECK: Name:            PSV0
+# CHECK: PSVInfo:
+# CHECK-NEXT: Version:         3
+# CHECK-NEXT: ShaderStage:     2
+# CHECK-NEXT: InputPrimitive: 1024
+# CHECK-NEXT: OutputTopology: 4096
+# CHECK-NEXT: OutputStreamMask: 2056
+# CHECK-NEXT: OutputPositionPresent: 1
+# CHECK-NEXT: MinimumWaveLaneCount: 0
+# CHECK-NEXT: MaximumWaveLaneCount: 4294967295
+# CHECK-NEXT: UsesViewID:      0
+# CHECK-NEXT: MaxVertexCount:  4096
+# CHECK-NEXT: SigInputVectors: 0
+# CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
+# CHECK-NEXT: NumThreadsX:     512
+# CHECK-NEXT: NumThreadsY:     1024
+# CHECK-NEXT: NumThreadsZ:     2048
+# CHECK-NEXT: EntryName: GSEntry
+# CHECK-NEXT: ResourceStride: 24
+# CHECK-NEXT: Resources:
+# CHECK-NEXT: - Type:            Sampler
+# CHECK-NEXT: Space:           2
+# CHECK-NEXT: LowerBound:      3
+# CHECK-NEXT: UpperBound:      4
+# CHECK-NEXT: Kind:            TextureCube
+# CHECK-NEXT: Flags:
+# CHECK-NEXT: UsedByAtomic64:  false
+# CHECK-NEXT: - Type:            Invalid
+# CHECK-NEXT: Space:           32768
+# CHECK-NEXT: LowerBound:      8388608
+# CHECK-NEXT: UpperBound:      2147483648
+# CHECK-NEXT: Kind:            Invalid
+# CHECK-NEXT: Flags:
+# CHECK-NEXT: UsedByAtomic64:  false
+# CHECK-NEXT: SigInputElements: []
+# CHECK-NEXT: SigOutputElements: []
+# CHECK-NEXT: SigPatchOrPrimElements: []
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT: Name

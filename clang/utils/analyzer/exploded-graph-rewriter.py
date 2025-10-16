@@ -86,8 +86,15 @@ class ProgramPoint:
                 if json_pp["location"] is not None
                 else None
             )
+        elif self.kind == "CallEnter":
+            self.callee_decl = json_pp.get("callee_decl", "None")
         elif self.kind == "BlockEntrance":
             self.block_id = json_pp["block_id"]
+        elif self.kind == "PostInitializer":
+            if "field_decl" in json_pp:
+                self.target = json_pp["field_decl"]
+            else:
+                self.target = json_pp["type"]
 
 
 # A single expression acting as a key in a deserialized Environment.
@@ -479,11 +486,19 @@ class ExplodedGraph:
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor:
-    def __init__(self, do_diffs, dark_mode, gray_mode, topo_mode, dump_dot_only):
+    def __init__(
+        self, do_diffs, dark_mode, gray_mode, topo_mode, dump_html_only, dump_dot_only
+    ):
+        assert not (dump_html_only and dump_dot_only), (
+            "Option dump_html_only and dump_dot_only are conflict, "
+            "they cannot be true at the same time."
+        )
+
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
         self._topo_mode = topo_mode
+        self._dump_html_only = dump_html_only
         self._dump_dot_only = dump_dot_only
         self._output = []
 
@@ -609,6 +624,20 @@ class DotDumpVisitor:
                 '<td align="left" width="0">'
                 '<font color="%s">%s</font></td>'
                 '<td align="left">[B%d]</td></tr>' % (color, p.kind, p.block_id)
+            )
+        elif p.kind == "CallEnter":
+            self._dump(
+                '<td width="0"></td>'
+                '<td align="left" width="0">'
+                '<font color="%s">%s</font></td>'
+                '<td align="left">%s</td></tr>' % (color, p.kind, p.callee_decl)
+            )
+        elif p.kind == "PostInitializer":
+            self._dump(
+                '<td width="0"></td>'
+                '<td align="left" width="0">'
+                '<font color="%s">%s</font></td>'
+                '<td align="left">%s</td></tr>' % (color, p.kind, p.target)
             )
         else:
             # TODO: Print more stuff for other kinds of points.
@@ -998,6 +1027,8 @@ class DotDumpVisitor:
                 '<html><body bgcolor="%s">%s</body></html>'
                 % ("#1a1a1a" if self._dark_mode else "white", svg),
             )
+            if self._dump_html_only:
+                return
             if sys.platform == "win32":
                 os.startfile(filename)
             elif sys.platform == "darwin":
@@ -1176,7 +1207,17 @@ def main():
         default=False,
         help="black-and-white mode",
     )
-    parser.add_argument(
+    dump_conflict = parser.add_mutually_exclusive_group()
+    dump_conflict.add_argument(
+        "--dump-html-only",
+        action="store_const",
+        dest="dump_html_only",
+        const=True,
+        default=False,
+        help="dump the rewritten egraph to a temporary HTML file, "
+        "but do not open it immediately as by default",
+    )
+    dump_conflict.add_argument(
         "--dump-dot-only",
         action="store_const",
         dest="dump_dot_only",
@@ -1206,7 +1247,12 @@ def main():
     explorer = BasicExplorer()
 
     visitor = DotDumpVisitor(
-        args.diff, args.dark, args.gray, args.topology, args.dump_dot_only
+        args.diff,
+        args.dark,
+        args.gray,
+        args.topology,
+        args.dump_html_only,
+        args.dump_dot_only,
     )
 
     for trimmer in trimmers:

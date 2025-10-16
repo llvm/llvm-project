@@ -17,9 +17,6 @@
 #include <memory>
 #include <unordered_set>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 
@@ -116,12 +113,17 @@ protected:
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
+  void calculateBodySamplesAndSize(const FunctionSamples &FSamples,
+                                   uint64_t &TotalBodySamples,
+                                   uint64_t &FuncBodySize);
+
+  double calculateDensity(const SampleProfileMap &Profiles);
+
   void calculateAndShowDensity(const SampleProfileMap &Profiles);
 
-  double calculateDensity(const SampleProfileMap &Profiles,
-                          uint64_t HotCntThreshold);
-
   void showDensitySuggestion(double Density);
+
+  void markAllContextPreinlined(SampleProfileMap &ProfileMap);
 
   void collectProfiledFunctions();
 
@@ -179,6 +181,8 @@ private:
   populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void populateBoundarySamplesWithProbesForAllFunctions(
       const BranchSample &BranchCounters);
+  void
+  populateTypeSamplesForAllFunctions(const DataAccessSample &DataAccessSamples);
   void postProcessProfiles();
   void trimColdProfiles(const SampleProfileMap &Profiles,
                         uint64_t ColdCntThreshold);

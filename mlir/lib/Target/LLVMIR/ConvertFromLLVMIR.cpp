@@ -30,6 +30,25 @@ void registerFromLLVMIRTranslation() {
       llvm::cl::desc("Emit expensive warnings during LLVM IR import "
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
+  static llvm::cl::opt<bool> dropDICompositeTypeElements(
+      "drop-di-composite-type-elements",
+      llvm::cl::desc(
+          "Avoid translating the elements of DICompositeTypes during "
+          "the LLVM IR import (discouraged: testing only!)"),
+      llvm::cl::init(false));
+
+  static llvm::cl::opt<bool> preferUnregisteredIntrinsics(
+      "prefer-unregistered-intrinsics",
+      llvm::cl::desc(
+          "Prefer translating all intrinsics into llvm.call_intrinsic instead "
+          "of using dialect supported intrinsics"),
+      llvm::cl::init(false));
+
+  static llvm::cl::opt<bool> importStructsAsLiterals(
+      "import-structs-as-literals",
+      llvm::cl::desc("Controls if structs should be imported as literal "
+                     "structs, i.e., nameless structs."),
+      llvm::cl::init(false));
 
   TranslateToMLIRRegistration registration(
       "import-llvm", "Translate LLVMIR to MLIR",
@@ -44,14 +63,19 @@ void registerFromLLVMIRTranslation() {
           std::string errStr;
           llvm::raw_string_ostream errStream(errStr);
           err.print(/*ProgName=*/"", errStream);
-          emitError(UnknownLoc::get(context)) << errStream.str();
+          emitError(UnknownLoc::get(context)) << errStr;
           return {};
         }
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
 
-        return translateLLVMIRToModule(std::move(llvmModule), context,
-                                       emitExpensiveWarnings);
+        // Debug records are not currently supported in the LLVM IR translator.
+        llvmModule->convertFromNewDbgValues();
+
+        return translateLLVMIRToModule(
+            std::move(llvmModule), context, emitExpensiveWarnings,
+            dropDICompositeTypeElements, /*loadAllDialects=*/true,
+            preferUnregisteredIntrinsics, importStructsAsLiterals);
       },
       [](DialectRegistry &registry) {
         // Register the DLTI dialect used to express the data layout

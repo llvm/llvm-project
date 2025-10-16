@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; CHECK: polly.merge_new_and_old:
 ; CHECK:   %result.ph.merge = phi float [ %result.ph.final_reload, %polly.exiting ], [ %result.ph, %next.region_exiting ]

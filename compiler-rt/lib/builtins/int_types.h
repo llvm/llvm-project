@@ -107,8 +107,8 @@ typedef union {
 
 static __inline ti_int make_ti(di_int h, di_int l) {
   twords r;
-  r.s.high = h;
-  r.s.low = l;
+  r.s.high = (du_int)h;
+  r.s.low = (du_int)l;
   return r.all;
 }
 
@@ -223,7 +223,7 @@ typedef union {
 #define CRT_HAS_TF_MODE
 #endif
 
-#if __STDC_VERSION__ >= 199901L
+#if __STDC_VERSION__ >= 199901L && !defined(_MSC_VER)
 typedef float _Complex Fcomplex;
 typedef double _Complex Dcomplex;
 typedef long double _Complex Lcomplex;

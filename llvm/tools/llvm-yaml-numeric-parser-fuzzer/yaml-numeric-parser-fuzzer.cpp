@@ -18,7 +18,7 @@ inline bool isNumericRegex(llvm::StringRef S) {
   static llvm::Regex Float(
       "^[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?$");
 
-  if (S.equals(".nan") || S.equals(".NaN") || S.equals(".NAN"))
+  if (S == ".nan" || S == ".NaN" || S == ".NAN")
     return true;
 
   if (Infinity.match(S))

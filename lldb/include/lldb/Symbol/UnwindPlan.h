@@ -54,7 +54,7 @@ class UnwindPlan {
 public:
   class Row {
   public:
-    class RegisterLocation {
+    class AbstractRegisterLocation {
     public:
       enum RestoreType {
         unspecified,       // not specified, we may be able to assume this
@@ -68,14 +68,15 @@ public:
         isAFAPlusOffset,   // reg = AFA + offset
         inOtherRegister,   // reg = other reg
         atDWARFExpression, // reg = deref(eval(dwarf_expr))
-        isDWARFExpression  // reg = eval(dwarf_expr)
+        isDWARFExpression, // reg = eval(dwarf_expr)
+        isConstant         // reg = constant
       };
 
-      RegisterLocation() : m_location() {}
+      AbstractRegisterLocation() : m_location() {}
 
-      bool operator==(const RegisterLocation &rhs) const;
+      bool operator==(const AbstractRegisterLocation &rhs) const;
 
-      bool operator!=(const RegisterLocation &rhs) const {
+      bool operator!=(const AbstractRegisterLocation &rhs) const {
         return !(*this == rhs);
       }
 
@@ -104,6 +105,15 @@ public:
       bool IsAtDWARFExpression() const { return m_type == atDWARFExpression; }
 
       bool IsDWARFExpression() const { return m_type == isDWARFExpression; }
+
+      bool IsConstant() const { return m_type == isConstant; }
+
+      void SetIsConstant(uint64_t value) {
+        m_type = isConstant;
+        m_location.constant_value = value;
+      }
+
+      uint64_t GetConstant() const { return m_location.constant_value; }
 
       void SetAtCFAPlusOffset(int32_t offset) {
         m_type = atCFAPlusOffset;
@@ -165,13 +175,13 @@ public:
 
       void SetIsDWARFExpression(const uint8_t *opcodes, uint32_t len);
 
-      const uint8_t *GetDWARFExpressionBytes() {
+      const uint8_t *GetDWARFExpressionBytes() const {
         if (m_type == atDWARFExpression || m_type == isDWARFExpression)
           return m_location.expr.opcodes;
         return nullptr;
       }
 
-      int GetDWARFExpressionLength() {
+      int GetDWARFExpressionLength() const {
         if (m_type == atDWARFExpression || m_type == isDWARFExpression)
           return m_location.expr.length;
         return 0;
@@ -192,6 +202,8 @@ public:
           const uint8_t *opcodes;
           uint16_t length;
         } expr;
+        // For m_type == isConstant
+        uint64_t constant_value;
       } m_location;
     };
 
@@ -203,6 +215,7 @@ public:
         isRegisterDereferenced, // FA = [reg]
         isDWARFExpression,      // FA = eval(dwarf_expr)
         isRaSearch,             // FA = SP + offset + ???
+        isConstant,             // FA = constant
       };
 
       FAValue() : m_value() {}
@@ -247,6 +260,15 @@ public:
         m_value.expr.length = len;
       }
 
+      bool IsConstant() const { return m_type == isConstant; }
+
+      void SetIsConstant(uint64_t constant) {
+        m_type = isConstant;
+        m_value.constant = constant;
+      }
+
+      uint64_t GetConstant() const { return m_value.constant; }
+
       uint32_t GetRegisterNumber() const {
         if (m_type == isRegisterDereferenced || m_type == isRegisterPlusOffset)
           return m_value.reg.reg_num;
@@ -286,13 +308,13 @@ public:
         }
       }
 
-      const uint8_t *GetDWARFExpressionBytes() {
+      const uint8_t *GetDWARFExpressionBytes() const {
         if (m_type == isDWARFExpression)
           return m_value.expr.opcodes;
         return nullptr;
       }
 
-      int GetDWARFExpressionLength() {
+      int GetDWARFExpressionLength() const {
         if (m_type == isDWARFExpression)
           return m_value.expr.length;
         return 0;
@@ -317,6 +339,8 @@ public:
         } expr;
         // For m_type == isRaSearch
         int32_t ra_search_offset;
+        // For m_type = isConstant
+        uint64_t constant;
       } m_value;
     }; // class FAValue
 
@@ -325,21 +349,23 @@ public:
     bool operator==(const Row &rhs) const;
 
     bool GetRegisterInfo(uint32_t reg_num,
-                         RegisterLocation &register_location) const;
+                         AbstractRegisterLocation &register_location) const;
 
     void SetRegisterInfo(uint32_t reg_num,
-                         const RegisterLocation register_location);
+                         const AbstractRegisterLocation register_location);
 
     void RemoveRegisterInfo(uint32_t reg_num);
 
-    lldb::addr_t GetOffset() const { return m_offset; }
+    int64_t GetOffset() const { return m_offset; }
 
-    void SetOffset(lldb::addr_t offset) { m_offset = offset; }
+    void SetOffset(int64_t offset) { m_offset = offset; }
 
-    void SlideOffset(lldb::addr_t offset) { m_offset += offset; }
+    void SlideOffset(int64_t offset) { m_offset += offset; }
 
+    const FAValue &GetCFAValue() const { return m_cfa_value; }
     FAValue &GetCFAValue() { return m_cfa_value; }
 
+    const FAValue &GetAFAValue() const { return m_afa_value; }
     FAValue &GetAFAValue() { return m_afa_value; }
 
     bool SetRegisterLocationToAtCFAPlusOffset(uint32_t reg_num, int32_t offset,
@@ -357,6 +383,16 @@ public:
                                        bool can_replace);
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
+
+    /// This method does not make a copy of the \a opcodes memory, it is
+    /// assumed to have the same lifetime as the Module this UnwindPlan will
+    /// be registered in.
+    bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
+                                                const uint8_t *opcodes,
+                                                uint32_t len, bool can_replace);
+
+    bool SetRegisterLocationToIsConstant(uint32_t reg_num, uint64_t constant,
+                                         bool can_replace);
 
     // When this UnspecifiedRegistersAreUndefined mode is
     // set, any register that is not specified by this Row will
@@ -383,16 +419,14 @@ public:
               lldb::addr_t base_addr) const;
 
   protected:
-    typedef std::map<uint32_t, RegisterLocation> collection;
-    lldb::addr_t m_offset = 0; // Offset into the function for this row
+    typedef std::map<uint32_t, AbstractRegisterLocation> collection;
+    int64_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;
     FAValue m_afa_value;
     collection m_register_locations;
     bool m_unspecified_registers_are_undefined = false;
   }; // class Row
-
-  typedef std::shared_ptr<Row> RowSP;
 
   UnwindPlan(lldb::RegisterKind reg_kind)
       : m_register_kind(reg_kind), m_return_addr_register(LLDB_INVALID_REGNUM),
@@ -401,36 +435,27 @@ public:
         m_plan_is_for_signal_trap(eLazyBoolCalculate) {}
 
   // Performs a deep copy of the plan, including all the rows (expensive).
-  UnwindPlan(const UnwindPlan &rhs)
-      : m_plan_valid_address_range(rhs.m_plan_valid_address_range),
-        m_register_kind(rhs.m_register_kind),
-        m_return_addr_register(rhs.m_return_addr_register),
-        m_source_name(rhs.m_source_name),
-        m_plan_is_sourced_from_compiler(rhs.m_plan_is_sourced_from_compiler),
-        m_plan_is_valid_at_all_instruction_locations(
-            rhs.m_plan_is_valid_at_all_instruction_locations),
-        m_plan_is_for_signal_trap(rhs.m_plan_is_for_signal_trap),
-        m_lsda_address(rhs.m_lsda_address),
-        m_personality_func_addr(rhs.m_personality_func_addr) {
-    m_row_list.reserve(rhs.m_row_list.size());
-    for (const RowSP &row_sp : rhs.m_row_list)
-      m_row_list.emplace_back(new Row(*row_sp));
-  }
+  UnwindPlan(const UnwindPlan &rhs) = default;
+  UnwindPlan &operator=(const UnwindPlan &rhs) = default;
+
+  UnwindPlan(UnwindPlan &&rhs) = default;
+  UnwindPlan &operator=(UnwindPlan &&) = default;
 
   ~UnwindPlan() = default;
 
   void Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const;
 
-  void AppendRow(const RowSP &row_sp);
+  void AppendRow(Row row);
 
-  void InsertRow(const RowSP &row_sp, bool replace_existing = false);
+  void InsertRow(Row row, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
-  // instructions. If offset is -1 it indicates that the function start is
-  // unknown - the final row in the UnwindPlan is returned. In practice, the
-  // UnwindPlan for a function with no known start address will be the
-  // architectural default UnwindPlan which will only have one row.
-  UnwindPlan::RowSP GetRowForFunctionOffset(int offset) const;
+  // instructions. If offset is std::nullopt it indicates that the function
+  // start is unknown - the final row in the UnwindPlan is returned. In
+  // practice, the UnwindPlan for a function with no known start address will be
+  // the architectural default UnwindPlan which will only have one row.
+  const UnwindPlan::Row *
+  GetRowForFunctionOffset(std::optional<int64_t> offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
 
@@ -440,30 +465,28 @@ public:
     m_return_addr_register = regnum;
   }
 
-  uint32_t GetReturnAddressRegister() { return m_return_addr_register; }
+  uint32_t GetReturnAddressRegister() const { return m_return_addr_register; }
 
   uint32_t GetInitialCFARegister() const {
     if (m_row_list.empty())
       return LLDB_INVALID_REGNUM;
-    return m_row_list.front()->GetCFAValue().GetRegisterNumber();
+    return m_row_list.front().GetCFAValue().GetRegisterNumber();
   }
 
   // This UnwindPlan may not be valid at every address of the function span.
   // For instance, a FastUnwindPlan will not be valid at the prologue setup
   // instructions - only in the body of the function.
-  void SetPlanValidAddressRange(const AddressRange &range);
-
-  const AddressRange &GetAddressRange() const {
-    return m_plan_valid_address_range;
+  void SetPlanValidAddressRanges(std::vector<AddressRange> ranges) {
+    m_plan_valid_ranges = std::move(ranges);
   }
 
-  bool PlanValidAtAddress(Address addr);
+  bool PlanValidAtAddress(Address addr) const;
 
   bool IsValidRowIndex(uint32_t idx) const;
 
-  const UnwindPlan::RowSP GetRowAtIndex(uint32_t idx) const;
+  const UnwindPlan::Row *GetRowAtIndex(uint32_t idx) const;
 
-  const UnwindPlan::RowSP GetLastRow() const;
+  const UnwindPlan::Row *GetLastRow() const;
 
   lldb_private::ConstString GetSourceName() const;
 
@@ -503,36 +526,23 @@ public:
     m_plan_is_for_signal_trap = is_for_signal_trap;
   }
 
-  int GetRowCount() const;
+  int GetRowCount() const { return m_row_list.size(); }
 
   void Clear() {
     m_row_list.clear();
-    m_plan_valid_address_range.Clear();
+    m_plan_valid_ranges.clear();
     m_register_kind = lldb::eRegisterKindDWARF;
     m_source_name.Clear();
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
     m_plan_is_valid_at_all_instruction_locations = eLazyBoolCalculate;
     m_plan_is_for_signal_trap = eLazyBoolCalculate;
-    m_lsda_address.Clear();
-    m_personality_func_addr.Clear();
   }
 
   const RegisterInfo *GetRegisterInfo(Thread *thread, uint32_t reg_num) const;
 
-  Address GetLSDAAddress() const { return m_lsda_address; }
-
-  void SetLSDAAddress(Address lsda_addr) { m_lsda_address = lsda_addr; }
-
-  Address GetPersonalityFunctionPtr() const { return m_personality_func_addr; }
-
-  void SetPersonalityFunctionPtr(Address presonality_func_ptr) {
-    m_personality_func_addr = presonality_func_ptr;
-  }
-
 private:
-  typedef std::vector<RowSP> collection;
-  collection m_row_list;
-  AddressRange m_plan_valid_address_range;
+  std::vector<Row> m_row_list;
+  std::vector<AddressRange> m_plan_valid_ranges;
   lldb::RegisterKind m_register_kind; // The RegisterKind these register numbers
                                       // are in terms of - will need to be
   // translated to lldb native reg nums at unwind time
@@ -544,13 +554,6 @@ private:
   lldb_private::LazyBool m_plan_is_sourced_from_compiler;
   lldb_private::LazyBool m_plan_is_valid_at_all_instruction_locations;
   lldb_private::LazyBool m_plan_is_for_signal_trap;
-
-  Address m_lsda_address; // Where the language specific data area exists in the
-                          // module - used
-                          // in exception handling.
-  Address m_personality_func_addr; // The address of a pointer to the
-                                   // personality function - used in
-                                   // exception handling.
 };                                 // class UnwindPlan
 
 } // namespace lldb_private

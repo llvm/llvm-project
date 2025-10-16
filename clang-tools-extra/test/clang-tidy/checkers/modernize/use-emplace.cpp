@@ -8,9 +8,10 @@
 // RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
 
 namespace std {
-template <typename>
+template <typename E>
 class initializer_list {
 public:
+  const E *a, *b;
   initializer_list() noexcept {}
 };
 
@@ -48,7 +49,7 @@ public:
   template <typename... Args>
   void emplace_back(Args &&... args){};
   template <typename... Args>
-  iterator emplace(const_iterator pos, Args &&...args){};
+  iterator emplace(const_iterator pos, Args &&...args);
   ~vector();
 };
 
@@ -68,7 +69,7 @@ public:
   void push_back(T &&) {}
 
   template <typename... Args>
-  iterator emplace(const_iterator pos, Args &&...args){};
+  iterator emplace(const_iterator pos, Args &&...args);
   template <typename... Args>
   void emplace_back(Args &&... args){};
   template <typename... Args>
@@ -92,7 +93,7 @@ public:
   void push_front(T &&) {}
 
   template <typename... Args>
-  iterator emplace(const_iterator pos, Args &&...args){};
+  iterator emplace(const_iterator pos, Args &&...args);
   template <typename... Args>
   void emplace_back(Args &&... args){};
   template <typename... Args>
@@ -115,7 +116,7 @@ public:
   template <typename... Args>
   void emplace_front(Args &&...args){};
   template <typename... Args>
-  iterator emplace_after(const_iterator pos, Args &&...args){};
+  iterator emplace_after(const_iterator pos, Args &&...args);
 };
 
 template <typename T>
@@ -130,7 +131,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename Key, typename T>
@@ -145,7 +146,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename T>
@@ -160,7 +161,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename Key, typename T>
@@ -175,7 +176,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename T>
@@ -190,7 +191,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename Key, typename T>
@@ -205,7 +206,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename T>
@@ -220,7 +221,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename Key, typename T>
@@ -235,7 +236,7 @@ public:
   template <typename... Args>
   void emplace(Args &&...args){};
   template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args){};
+  iterator emplace_hint(const_iterator pos, Args &&...args);
 };
 
 template <typename T>

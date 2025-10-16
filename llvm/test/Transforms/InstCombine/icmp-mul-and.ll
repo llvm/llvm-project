@@ -158,7 +158,7 @@ define i32 @pr40493_neg3(i32 %area) {
 
 define <4 x i1> @pr40493_vec1(<4 x i32> %area) {
 ; CHECK-LABEL: @pr40493_vec1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[AREA:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[AREA:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -171,7 +171,7 @@ define <4 x i1> @pr40493_vec1(<4 x i32> %area) {
 define <4 x i1> @pr40493_vec2(<4 x i32> %area) {
 ; CHECK-LABEL: @pr40493_vec2(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[AREA:%.*]], <i32 12, i32 12, i32 12, i32 undef>
-; CHECK-NEXT:    [[REM:%.*]] = and <4 x i32> [[MUL]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[REM:%.*]] = and <4 x i32> [[MUL]], splat (i32 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[REM]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -183,7 +183,7 @@ define <4 x i1> @pr40493_vec2(<4 x i32> %area) {
 
 define <4 x i1> @pr40493_vec3(<4 x i32> %area) {
 ; CHECK-LABEL: @pr40493_vec3(
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[AREA:%.*]], <i32 12, i32 12, i32 12, i32 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[AREA:%.*]], splat (i32 12)
 ; CHECK-NEXT:    [[REM:%.*]] = and <4 x i32> [[MUL]], <i32 4, i32 4, i32 4, i32 undef>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[REM]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
@@ -267,10 +267,10 @@ define i1 @pr51551_neg1(i32 %x, i32 %y) {
 
 define i1 @pr51551_neg2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_neg2(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y:%.*]] to i1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[CMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
