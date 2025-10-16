@@ -72,10 +72,6 @@ public:
     return isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment, AddrSpace);
   }
 
-  bool isLegalToWidenLoads(LLVMContext &Context) const override {
-    return true;
-  };
-
   // NVPTX has infinite registers of all kinds, but the actual machine doesn't.
   // We conservatively return 1 here which is just enough to enable the
   // vectorizers but disables heuristics based on the number of registers.
