@@ -1510,9 +1510,14 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     if (!layout)
       return AffineMap::getMultiDimMapWithTargets(
           vecRank, {static_cast<unsigned int>(vecRank - 1)}, val.getContext());
+    // Expecting vector and layout rank to match.
+    assert(layout.getRank() == vecRank &&
+           "Expecting vector and layout rank to match");
+    // A dimension is distributed if its layout value is > 1 and the dimension
+    // size is evenly divisible by the layout value.
     SmallVector<unsigned int> distributedDims;
     for (auto [i, v] : llvm::enumerate(layout.getEffectiveLaneLayoutAsInt())) {
-      if (v > 1)
+      if (v > 1 && vecType.getShape()[i] % v == 0)
         distributedDims.push_back(i);
     }
     return AffineMap::getMultiDimMapWithTargets(vecRank, distributedDims,
