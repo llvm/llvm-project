@@ -1,4 +1,4 @@
-# RUN: python %s | FileCheck %s
+# RUN: %PYTHON %s | FileCheck %s
 from unittest import result
 from mlir.ir import (
     Context,
