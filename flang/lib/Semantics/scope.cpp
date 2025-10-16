@@ -144,22 +144,7 @@ void Scope::add_crayPointer(const SourceName &name, Symbol &pointer) {
 }
 
 Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
-  if (auto *cb{FindCB(name)}) {
-    if (cb->has<UseDetails>()) {
-      // COMMON blocks could be re-declared. Example:
-      //    module test
-      //      integer :: a
-      //      common /blk/ a
-      //    end module test
-      //    program main
-      //      use test          ! Initially get /blk/ with UseDetails
-      //      integer :: a1
-      //      common /blk/ a1   ! Update with CommonBlockDetails
-      //    end program main
-      // Reset details with real COMMON block details.
-      cb->set_details(CommonBlockDetails{name.empty() ? location : name},
-          /*force*/ true);
-    }
+  if (auto *cb{FindCommonBlock(name)}) {
     return *cb;
   } else {
     Symbol &symbol{MakeSymbol(
@@ -169,30 +154,22 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
   }
 }
 
-Symbol *Scope::FindCommonBlock(const SourceName &name) const {
-  if (auto *cb{FindCB(name)}) {
-    // Ensure this COMMON block is not USE-associated
-    if (cb->has<UseDetails>()) {
-      cb = nullptr;
-    }
+Symbol *Scope::FindCommonBlockInSurroundingScopes(
+    const SourceName &name) const {
+  if (Symbol * cb{FindCommonBlock(name)}) {
     return cb;
-  }
-  return nullptr;
-}
-
-Symbol *Scope::FindCommonBlockInScopes(const SourceName &name) const {
-  if (auto *cb{FindCB(name)}) {
+  } else if (Symbol * cb{FindCommonBlockUse(name)}) {
     return &cb->GetUltimate();
   } else if (IsSubmodule()) {
     if (const Scope *parent{
             symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr}) {
-      if (auto *cb{parent->FindCommonBlockInScopes(name)}) {
-        return &cb->GetUltimate();
+      if (auto *cb{parent->FindCommonBlockInSurroundingScopes(name)}) {
+        return cb;
       }
     }
   } else if (!IsTopLevel() && parent_) {
-    if (auto *cb{parent_->FindCommonBlockInScopes(name)}) {
-      return &cb->GetUltimate();
+    if (auto *cb{parent_->FindCommonBlockInSurroundingScopes(name)}) {
+      return cb;
     }
   }
   return nullptr;
@@ -207,8 +184,8 @@ Scope *Scope::FindSubmodule(const SourceName &name) const {
   }
 }
 
-bool Scope::AddCommonBlock(const SourceName &name, Symbol &cbSymbol) {
-  return commonBlocks_.emplace(name, cbSymbol).second;
+bool Scope::AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol) {
+  return commonBlockUses_.emplace(name, cbSymbol).second;
 }
 
 bool Scope::AddSubmodule(const SourceName &name, Scope &submodule) {

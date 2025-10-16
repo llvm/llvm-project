@@ -2782,10 +2782,7 @@ void CheckHelper::Check(const Scope &scope) {
       Check(*scope.symbol());
     }
     for (const auto &pair : scope.commonBlocks()) {
-      if (pair.second->has<CommonBlockDetails>()) {
-        // Only process actual COMMON block objects, not their uses
-        CheckCommonBlock(*pair.second);
-      }
+      CheckCommonBlock(*pair.second);
     }
     int mainProgCnt{0};
     for (const Scope &child : scope.children()) {
