@@ -113,12 +113,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case<VPDerivedIVRecipe>([](const auto *R) { return true; })
       .Case<VPReplicateRecipe>([](const auto *R) {
-        // Loads and stores that are uniform across VF lanes are handled by
-        // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
-        // all their operands are invariant.
-        // TODO: Further relax the restrictions.
+        // Be conservative about side-effects, except for the
+        // known-side-effecting assumes and stores, which we know will be
+        // uniform.
         return R->isSingleScalar() &&
-               (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
+               (!R->mayHaveSideEffects() ||
+                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case<VPInstruction>([](const auto *VPI) {
