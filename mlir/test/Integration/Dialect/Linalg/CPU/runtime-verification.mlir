@@ -103,7 +103,7 @@ func.func @main() {
   // CHECK: unexpected negative result on dimension #0 of input/output operand #0
   func.call @reverse_from_3(%d5x) : (tensor<?xf32>) -> (tensor<?xf32>)
 
-  %c0x = arith.constant dense<0.0> : tensor<0xf32>
+  %c0x = arith.constant dense<1.0> : tensor<0xf32>
   %d0x = tensor.cast %c0x : tensor<0xf32> to tensor<?xf32>
   // CHECK-NOT: ERROR: Runtime op verification failed
   func.call @fill_empty_1d(%d0x) : (tensor<?xf32>) -> (tensor<?xf32>)
