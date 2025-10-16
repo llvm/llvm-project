@@ -6,7 +6,7 @@
 namespace vbase {
   struct A {};
   struct B : virtual A { // expected-note {{virtual}}
-    constexpr ~B() {} // expected-error {{constexpr member function not allowed in struct with virtual base class}}
+    constexpr ~B() {} // expected-error {{constexpr destructor not allowed in struct with virtual base class}}
   };
 }
 

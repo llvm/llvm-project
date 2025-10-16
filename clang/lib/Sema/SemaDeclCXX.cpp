@@ -1926,9 +1926,6 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     //  The definition of a constexpr constructor shall satisfy the following
     //  constraints:
     //  - the class shall not have any virtual base classes;
-    //
-    // FIXME: This only applies to constructors and destructors, not arbitrary
-    // member functions.
     const CXXRecordDecl *RD = MD->getParent();
     if (RD->getNumVBases()) {
       if (Kind == CheckConstexprKind::CheckValid)
