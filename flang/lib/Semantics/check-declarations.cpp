@@ -3622,6 +3622,7 @@ void CheckHelper::CheckDioDtvArg(const Symbol &proc, const Symbol &subp,
                 ioKind == common::DefinedIo::ReadUnformatted
             ? Attr::INTENT_INOUT
             : Attr::INTENT_IN);
+    CheckDioDummyIsScalar(subp, *arg);
   }
 }
 
@@ -3687,6 +3688,7 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
           "Dummy argument '%s' of a defined input/output procedure must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());
     }
+    CheckDioDummyIsScalar(subp, *arg);
   }
 }
 
