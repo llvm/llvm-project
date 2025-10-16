@@ -38,6 +38,12 @@ function at-exit {
       $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
   fi
+
+  if [[ "$retcode" != "0" ]]; then
+    python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
+      $(git rev-parse HEAD~1) $GITHUB_RUN_NUMBER \
+      "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log
+  fi
 }
 trap at-exit EXIT
 
