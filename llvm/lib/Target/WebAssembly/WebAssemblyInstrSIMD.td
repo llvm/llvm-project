@@ -1583,11 +1583,9 @@ def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v8i16 V128:$lhs),
 // MLA: v16i8 -> v4i32
 def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$lhs),
                                                          (v16i8 V128:$rhs))),
-          (ADD_I32x4 (ADD_I32x4 (DOT (extend_low_s_I16x8 $lhs),
-                                     (extend_low_s_I16x8 $rhs)),
-                                (DOT (extend_high_s_I16x8 $lhs),
-                                     (extend_high_s_I16x8 $rhs))),
-                      $acc)>;
+          (ADD_I32x4 (ADD_I32x4 (extadd_pairwise_s_I32x4 (EXTMUL_LOW_S_I16x8 $lhs, $rhs)),
+                                (extadd_pairwise_s_I32x4 (EXTMUL_HIGH_S_I16x8 $lhs, $rhs))),
+                     $acc)>;
 def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v16i8 V128:$lhs),
                                                          (v16i8 V128:$rhs))),
           (ADD_I32x4 (ADD_I32x4 (extadd_pairwise_u_I32x4 (EXTMUL_LOW_U_I16x8 $lhs, $rhs)),
