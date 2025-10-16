@@ -10,7 +10,6 @@
 .globl func
 .type func, %function
 func:
-  nop
   b .Lafter_constant
 
 .type constant_island, %object
