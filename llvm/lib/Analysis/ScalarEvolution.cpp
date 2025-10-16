@@ -1988,6 +1988,20 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
       }
     }
   }
+
+  if (auto *SA = dyn_cast<SCEVMulExpr>(Op)) {
+    // sext((A * B * ...)<nsw>) --> (sext(A) * sext(B) * ...)<nsw>
+    if (SA->hasNoSignedWrap()) {
+      // If the multiplication does not sign overflow then we can, by
+      // definition, commute the sign extension with the multiplication
+      // operation.
+      SmallVector<const SCEV *, 4> Ops;
+      for (const auto *Op : SA->operands())
+        Ops.push_back(getSignExtendExpr(Op, Ty, Depth + 1));
+      return getMulExpr(Ops, SCEV::FlagNSW, Depth + 1);
+    }
+  }
+
   // If the input value is a chrec scev, and we can prove that the value
   // did not overflow the old, smaller, value, we can sign extend all of the
   // operands (often constants).  This allows analysis of something like
