@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_modfile.py %s %flang_fc1 -fopenmp -fopenmp-version=61
+!RUN: %python %S/../test_modfile.py %s %flang_fc1 -fopenmp -fopenmp-version=60
 
 module req
 contains
