@@ -1452,7 +1452,10 @@ void DAP::EventThread() {
           const bool remove_module =
               event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
 
-          std::lock_guard<std::mutex> guard(modules_mutex);
+          // NOTE: Both mutexes must be acquired to prevent deadlock when
+          // handling `modules_request`, which also requires both locks.
+          lldb::SBMutex api_mutex = GetAPIMutex();
+          const std::scoped_lock guard(api_mutex, modules_mutex);
           for (uint32_t i = 0; i < num_modules; ++i) {
             lldb::SBModule module =
                 lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
