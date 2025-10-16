@@ -120,60 +120,6 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
 }
 
-static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
-                                     SmallVector<MVT, 4> &Returns,
-                                     SmallVector<MVT, 4> &Params) {
-  auto toWasmValType = [](MVT VT) {
-    if (VT == MVT::i32) {
-      return wasm::ValType::I32;
-    }
-    if (VT == MVT::i64) {
-      return wasm::ValType::I64;
-    }
-    if (VT == MVT::f32) {
-      return wasm::ValType::F32;
-    }
-    if (VT == MVT::f64) {
-      return wasm::ValType::F64;
-    }
-    if (VT == MVT::externref) {
-      return wasm::ValType::EXTERNREF;
-    }
-    if (VT == MVT::funcref) {
-      return wasm::ValType::FUNCREF;
-    }
-    if (VT == MVT::exnref) {
-      return wasm::ValType::EXNREF;
-    }
-    LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT
-                      << "\n");
-    llvm_unreachable("Unhandled type for llvm.wasm.ref.test.func");
-  };
-  auto NParams = Params.size();
-  auto NReturns = Returns.size();
-  auto BitWidth = (NParams + NReturns + 2) * 64;
-  auto Sig = APInt(BitWidth, 0);
-
-  // Annoying special case: if getSignificantBits() <= 64 then InstrEmitter will
-  // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
-  // always emit a CImm. So xor NParams with 0x7ffffff to ensure
-  // getSignificantBits() > 64
-  Sig |= NReturns ^ 0x7ffffff;
-  for (auto &Return : Returns) {
-    auto V = toWasmValType(Return);
-    Sig <<= 64;
-    Sig |= (int64_t)V;
-  }
-  Sig <<= 64;
-  Sig |= NParams;
-  for (auto &Param : Params) {
-    auto V = toWasmValType(Param);
-    Sig <<= 64;
-    Sig |= (int64_t)V;
-  }
-  return Sig;
-}
-
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -288,7 +234,8 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
           Returns.push_back(VT);
         }
       }
-      auto Sig = encodeFunctionSignature(CurDAG, DL, Returns, Params);
+      auto Sig =
+          WebAssembly::encodeFunctionSignature(CurDAG, DL, Returns, Params);
 
       auto SigOp = CurDAG->getTargetConstant(
           Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));
