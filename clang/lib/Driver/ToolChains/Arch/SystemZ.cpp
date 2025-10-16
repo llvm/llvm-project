@@ -25,8 +25,8 @@ systemz::FloatABI systemz::getSystemZFloatABI(const Driver &D,
     D.Diag(diag::err_drv_unsupported_opt)
       << Args.getLastArg(options::OPT_mfloat_abi_EQ)->getAsString(Args);
 
-  if (Arg *A = Args.getLastArg(options::OPT_msoft_float,
-                               options::OPT_mhard_float))
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float))
     if (A->getOption().matches(options::OPT_msoft_float))
       ABI = systemz::FloatABI::Soft;
 

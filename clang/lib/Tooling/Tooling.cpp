@@ -272,12 +272,10 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
     return;
   const auto &Table = getDriverOptTable();
   // --target=X
-  StringRef TargetOPT =
-      Table.getOption(options::OPT_target).getPrefixedName();
+  StringRef TargetOPT = Table.getOption(options::OPT_target).getPrefixedName();
   // -target X
   StringRef TargetOPTLegacy =
-      Table.getOption(options::OPT_target_legacy_spelling)
-          .getPrefixedName();
+      Table.getOption(options::OPT_target_legacy_spelling).getPrefixedName();
   // --driver-mode=X
   StringRef DriverModeOPT =
       Table.getOption(options::OPT_driver_mode).getPrefixedName();

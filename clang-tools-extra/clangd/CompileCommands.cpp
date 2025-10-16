@@ -267,8 +267,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
     IndicesToDrop.push_back(Input->getIndex());
   }
   // Anything after `--` is also treated as input, drop them as well.
-  if (auto *DashDash =
-          ArgList.getLastArgNoClaim(options::OPT__DASH_DASH)) {
+  if (auto *DashDash = ArgList.getLastArgNoClaim(options::OPT__DASH_DASH)) {
     auto DashDashIndex = DashDash->getIndex() + 1; // +1 accounts for Cmd[0]
     // Another +1 so we don't treat the `--` itself as an input.
     for (unsigned I = DashDashIndex + 1; I < Cmd.size(); ++I)
