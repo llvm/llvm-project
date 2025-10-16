@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_OPTIONS_H
-#define LLVM_CLANG_OPTIONS_H
+#ifndef LLVM_CLANG_OPTIONS_OPTIONS_H
+#define LLVM_CLANG_OPTIONS_OPTIONS_H
 
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -52,4 +52,4 @@ enum ID {
 const llvm::opt::OptTable &getDriverOptTable();
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_OPTIONS_OPTIONS_H
