@@ -87,9 +87,9 @@ define void @test_sext_trunc(i32 %A) !dbg !29 {
 define void @test_asc_asc(ptr addrspace(1) %A, ptr %B) !dbg !34 {
 ; CHECK-LABEL: define void @test_asc_asc(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr [[B:%.*]]) !dbg [[DBG34:![0-9]+]] {
-; CHECK-NEXT:      #dbg_value(ptr addrspace(1) [[A]], [[META36:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpConvert(ptr addrspace(4))), [[META38:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(4) poison, [[META36:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(4))), [[META38:![0-9]+]])
 ; CHECK-NEXT:    call void @use_ptr1(ptr addrspace(1) [[A]])
-; CHECK-NEXT:      #dbg_value(ptr [[B]], [[META39:![0-9]+]], !DIExpression(DIOpArg(0, ptr), DIOpConvert(ptr addrspace(3))), [[META38]])
+; CHECK-NEXT:      #dbg_value(ptr addrspace(3) poison, [[META39:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(3))), [[META38]])
 ; CHECK-NEXT:    call void @use_ptr(ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
