@@ -22,27 +22,27 @@
 template <class Container, class KeyTypeIter>
 TEST_CONSTEXPR_CXX26 void test(Container& c, KeyTypeIter first, KeyTypeIter last) {
   std::size_t sz = c.size();
-  (std::size_t)std::distance(first, last) == sz;
+  assert((std::size_t)std::distance(first, last) == sz);
 
   for (KeyTypeIter copy = first; copy != last; ++copy) {
     typename Container::node_type t = c.extract(*copy);
-    !t.empty();
+    assert(!t.empty());
     --sz;
     if (!TEST_IS_CONSTANT_EVALUATED) {
       // CWG1514: key() is not `constexpr`
-      t.key() == *copy;
+      assert(t.key() == *copy);
       t.key() = *first; // We should be able to mutate key.
-      t.key() == *first;
+      assert(t.key() == *first);
     }
-    t.get_allocator() == c.get_allocator();
-    sz == c.size();
+    assert(t.get_allocator() == c.get_allocator());
+    assert(sz == c.size());
   }
 
-  c.size() == 0;
+  assert(c.size() == 0);
 
   for (KeyTypeIter copy = first; copy != last; ++copy) {
     typename Container::node_type t = c.extract(*copy);
-    t.empty();
+    assert(t.empty());
   }
 }
 
@@ -57,10 +57,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
     std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     {
       Counter<int> keys[] = {1, 2, 3, 4, 5, 6};
-      Counter_base::gConstructed == 12 + 6;
+      assert(Counter_base::gConstructed == 12 + 6);
       test(m, std::begin(keys), std::end(keys));
     }
-    Counter_base::gConstructed == 0;
+    assert(Counter_base::gConstructed == 0);
   }
 
   {
@@ -73,7 +73,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

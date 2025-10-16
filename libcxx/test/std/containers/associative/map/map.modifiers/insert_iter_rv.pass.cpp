@@ -29,28 +29,28 @@ TEST_CONSTEXPR_CXX26 bool do_insert_iter_rv_test() {
   typedef typename M::iterator R;
   M m;
   R r = m.insert(m.end(), P(2, 2));
-  r == m.begin();
-  m.size() == 1;
-  r->first == 2;
-  r->second == 2;
+  assert(r == m.begin());
+  assert(m.size() == 1);
+  assert(r->first == 2);
+  assert(r->second == 2);
 
   r = m.insert(m.end(), P(1, 1));
-  r == m.begin();
-  m.size() == 2;
-  r->first == 1;
-  r->second == 1;
+  assert(r == m.begin());
+  assert(m.size() == 2);
+  assert(r->first == 1);
+  assert(r->second == 1);
 
   r = m.insert(m.end(), P(3, 3));
-  r == std::prev(m.end());
-  m.size() == 3;
-  r->first == 3;
-  r->second == 3;
+  assert(r == std::prev(m.end()));
+  assert(m.size() == 3);
+  assert(r->first == 3);
+  assert(r->second == 3);
 
   r = m.insert(m.end(), P(3, 4));
-  r == std::prev(m.end());
-  m.size() == 3;
-  r->first == 3;
-  r->second == 3;
+  assert(r == std::prev(m.end()));
+  assert(m.size() == 3);
+  assert(r->first == 3);
+  assert(r->second == 3);
 
   return true;
 }
@@ -70,34 +70,34 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef M::iterator R;
     M m;
     R r = m.insert(m.end(), {2, MoveOnly(2)});
-    r == m.begin();
-    m.size() == 1;
-    r->first == 2;
-    r->second == 2;
+    assert(r == m.begin());
+    assert(m.size() == 1);
+    assert(r->first == 2);
+    assert(r->second == 2);
 
     r = m.insert(m.end(), {1, MoveOnly(1)});
-    r == m.begin();
-    m.size() == 2;
-    r->first == 1;
-    r->second == 1;
+    assert(r == m.begin());
+    assert(m.size() == 2);
+    assert(r->first == 1);
+    assert(r->second == 1);
 
     r = m.insert(m.end(), {3, MoveOnly(3)});
-    r == std::prev(m.end());
-    m.size() == 3;
-    r->first == 3;
-    r->second == 3;
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(r->first == 3);
+    assert(r->second == 3);
 
     r = m.insert(m.end(), {3, MoveOnly(3)});
-    r == std::prev(m.end());
-    m.size() == 3;
-    r->first == 3;
-    r->second == 3;
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(r->first == 3);
+    assert(r->second == 3);
   }
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

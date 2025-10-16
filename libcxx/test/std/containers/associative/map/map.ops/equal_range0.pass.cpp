@@ -31,27 +31,27 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::pair<typename M::iterator, typename M::iterator> P;
     M example;
     P result = example.equal_range(C2Int{5});
-    result.first == result.second;
+    assert(result.first == result.second);
   }
   {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
     typedef std::pair<typename M::iterator, typename M::iterator> P;
     M example;
     P result = example.equal_range(C2Int{5});
-    result.first == result.second;
+    assert(result.first == result.second);
   }
   {
     using M = std::map<int, double, transparent_less_nonempty>;
     using P = std::pair<typename M::iterator, typename M::iterator>;
     M example;
     P result = example.equal_range(C2Int{5});
-    result.first == result.second;
+    assert(result.first == result.second);
   }
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

@@ -51,8 +51,8 @@ int main(int, char**) {
     std::map<int, int> src{{1, 0}, {3, 0}, {5, 0}};
     std::map<int, int> dst{{2, 0}, {4, 0}, {5, 0}};
     dst.merge(src);
-    map_equal(src, {{5, 0}});
-    map_equal(dst, {{1, 0}, {2, 0}, {3, 0}, {4, 0}, {5, 0}});
+    assert(map_equal(src, {{5, 0}}));
+    assert(map_equal(dst, {{1, 0}, {2, 0}, {3, 0}, {4, 0}, {5, 0}}));
   }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -62,7 +62,7 @@ int main(int, char**) {
     map_type src({{1, 0}, {3, 0}, {5, 0}}, throw_comparator(do_throw));
     map_type dst({{2, 0}, {4, 0}, {5, 0}}, throw_comparator(do_throw));
 
-    Counter_base::gConstructed == 6;
+    assert(Counter_base::gConstructed == 6);
 
     do_throw = true;
     try {
@@ -70,12 +70,12 @@ int main(int, char**) {
     } catch (int) {
       do_throw = false;
     }
-    !do_throw;
-    map_equal(src, map_type({{1, 0}, {3, 0}, {5, 0}}, throw_comparator(do_throw)));
-    map_equal(dst, map_type({{2, 0}, {4, 0}, {5, 0}}, throw_comparator(do_throw)));
+    assert(!do_throw);
+    assert(map_equal(src, map_type({{1, 0}, {3, 0}, {5, 0}}, throw_comparator(do_throw))));
+    assert(map_equal(dst, map_type({{2, 0}, {4, 0}, {5, 0}}, throw_comparator(do_throw))));
   }
 #endif
-  Counter_base::gConstructed == 0;
+  assert(Counter_base::gConstructed == 0);
   struct comparator {
     comparator() = default;
 
@@ -91,37 +91,37 @@ int main(int, char**) {
       second_map_type second{{2, 0}, {3, 0}, {4, 0}};
       third_map_type third{{1, 0}, {3, 0}};
 
-      Counter_base::gConstructed == 8;
+      assert(Counter_base::gConstructed == 8);
 
       first.merge(second);
       first.merge(third);
 
-      map_equal(first, {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
-      map_equal(second, {{2, 0}, {3, 0}});
-      map_equal(third, {{1, 0}, {3, 0}});
+      assert(map_equal(first, {{1, 0}, {2, 0}, {3, 0}, {4, 0}}));
+      assert(map_equal(second, {{2, 0}, {3, 0}}));
+      assert(map_equal(third, {{1, 0}, {3, 0}}));
 
-      Counter_base::gConstructed == 8;
+      assert(Counter_base::gConstructed == 8);
     }
-    Counter_base::gConstructed == 0;
+    assert(Counter_base::gConstructed == 0);
     {
       first_map_type first{{1, 0}, {2, 0}, {3, 0}};
       second_map_type second{{2, 0}, {3, 0}, {4, 0}};
       third_map_type third{{1, 0}, {3, 0}};
 
-      Counter_base::gConstructed == 8;
+      assert(Counter_base::gConstructed == 8);
 
       first.merge(std::move(second));
       first.merge(std::move(third));
 
-      map_equal(first, {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
-      map_equal(second, {{2, 0}, {3, 0}});
-      map_equal(third, {{1, 0}, {3, 0}});
+      assert(map_equal(first, {{1, 0}, {2, 0}, {3, 0}, {4, 0}}));
+      assert(map_equal(second, {{2, 0}, {3, 0}}));
+      assert(map_equal(third, {{1, 0}, {3, 0}}));
 
-      Counter_base::gConstructed == 8;
+      assert(Counter_base::gConstructed == 8);
     }
-    Counter_base::gConstructed == 0;
+    assert(Counter_base::gConstructed == 0);
   }
-  Counter_base::gConstructed == 0;
+  assert(Counter_base::gConstructed == 0);
   {
     std::map<int, int> first;
     {

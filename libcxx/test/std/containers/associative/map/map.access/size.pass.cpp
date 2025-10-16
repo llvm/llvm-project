@@ -22,44 +22,44 @@ TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double> M;
     M m;
-    m.size() == 0;
+    assert(m.size() == 0);
     m.insert(M::value_type(2, 1.5));
-    m.size() == 1;
+    assert(m.size() == 1);
     m.insert(M::value_type(1, 1.5));
-    m.size() == 2;
+    assert(m.size() == 2);
     m.insert(M::value_type(3, 1.5));
-    m.size() == 3;
+    assert(m.size() == 3);
     m.erase(m.begin());
-    m.size() == 2;
+    assert(m.size() == 2);
     m.erase(m.begin());
-    m.size() == 1;
+    assert(m.size() == 1);
     m.erase(m.begin());
-    m.size() == 0;
+    assert(m.size() == 0);
   }
 #if TEST_STD_VER >= 11
   {
     typedef std::map<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
     M m;
-    m.size() == 0;
+    assert(m.size() == 0);
     m.insert(M::value_type(2, 1.5));
-    m.size() == 1;
+    assert(m.size() == 1);
     m.insert(M::value_type(1, 1.5));
-    m.size() == 2;
+    assert(m.size() == 2);
     m.insert(M::value_type(3, 1.5));
-    m.size() == 3;
+    assert(m.size() == 3);
     m.erase(m.begin());
-    m.size() == 2;
+    assert(m.size() == 2);
     m.erase(m.begin());
-    m.size() == 1;
+    assert(m.size() == 1);
     m.erase(m.begin());
-    m.size() == 0;
+    assert(m.size() == 0);
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

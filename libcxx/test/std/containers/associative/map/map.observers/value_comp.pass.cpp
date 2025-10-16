@@ -25,13 +25,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   const map_type& cm = m;
 
-  cm.value_comp()(*p1.first, *p2.first);
-  !cm.value_comp()(*p2.first, *p1.first);
+  assert(cm.value_comp()(*p1.first, *p2.first));
+  assert(!cm.value_comp()(*p2.first, *p1.first));
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

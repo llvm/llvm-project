@@ -25,9 +25,9 @@ TEST_CONSTEXPR_CXX26 bool test(B bad, Pairs... args) {
   for (auto& p : pairs)
     map.insert(p);
   for (auto& p : pairs)
-    map.contains(p.first);
+    assert(map.contains(p.first));
 
-  !map.contains(bad);
+  assert(!map.contains(bad));
 
   return true;
 }
@@ -64,7 +64,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

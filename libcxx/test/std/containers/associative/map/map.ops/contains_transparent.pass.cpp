@@ -33,8 +33,8 @@ template <typename Container>
 TEST_CONSTEXPR_CXX26 bool test() {
   Container s{{{2, 1}, 1}, {{1, 2}, 2}, {{1, 3}, 3}, {{1, 4}, 4}, {{2, 2}, 5}};
 
-  s.contains(1);
-  !s.contains(-1);
+  assert(s.contains(1));
+  assert(!s.contains(-1));
 
   return true;
 }
@@ -50,7 +50,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

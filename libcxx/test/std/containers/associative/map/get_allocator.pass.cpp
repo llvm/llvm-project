@@ -24,18 +24,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::allocator<ValueType> alloc;
     const std::map<int, std::string> m(alloc);
-    m.get_allocator() == alloc;
+    assert(m.get_allocator() == alloc);
   }
   {
     other_allocator<ValueType> alloc(1);
     const std::map<int, std::string, std::less<int>, other_allocator<ValueType> > m(alloc);
-    m.get_allocator() == alloc;
+    assert(m.get_allocator() == alloc);
   }
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

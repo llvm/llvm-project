@@ -24,26 +24,26 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::less<int> C;
     typedef test_allocator<std::pair<const int, double> > A;
     std::map<int, double, C, A> m(A(5));
-    m.empty();
-    m.begin() == m.end();
-    m.get_allocator() == A(5);
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.get_allocator() == A(5));
   }
 #if TEST_STD_VER >= 11
   {
     typedef std::less<int> C;
     typedef min_allocator<std::pair<const int, double> > A;
     std::map<int, double, C, A> m(A{});
-    m.empty();
-    m.begin() == m.end();
-    m.get_allocator() == A();
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.get_allocator() == A());
   }
   {
     typedef std::less<int> C;
     typedef explicit_allocator<std::pair<const int, double> > A;
     std::map<int, double, C, A> m(A{});
-    m.empty();
-    m.begin() == m.end();
-    m.get_allocator() == A();
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.get_allocator() == A());
   }
 #endif
   return true;

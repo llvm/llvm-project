@@ -39,27 +39,27 @@ TEST_CONSTEXPR_CXX26 bool test() {
               V(3, 2),   V(4, 1),   V(4, 1.5), V(4, 2),   V(5, 1),   V(5, 1.5), V(5, 2),   V(6, 1),
               V(6, 1.5), V(6, 2),   V(7, 1),   V(7, 1.5), V(7, 2),   V(8, 1),   V(8, 1.5), V(8, 2)};
     std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size();
-    static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size();
+    assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
     std::map<int, double>::iterator i;
     i                                       = m.begin();
     std::map<int, double>::const_iterator k = i;
-    i == k;
+    assert(i == k);
     for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i) {
-      i->first == j;
-      i->second == 1;
+      assert(i->first == j);
+      assert(i->second == 1);
       i->second = 2.5;
-      i->second == 2.5;
+      assert(i->second == 2.5);
     }
-    i == m.end();
+    assert(i == m.end());
     for (int j = m.size(); j >= 1; --j) {
       --i;
-      i->first == j;
-      i->second == 2.5;
+      assert(i->first == j);
+      assert(i->second == 2.5);
       i->second = 1;
-      i->second == 1;
+      assert(i->second == 1);
     }
-    i == m.begin();
+    assert(i == m.begin());
   }
   {
     typedef std::pair<const int, double> V;
@@ -67,23 +67,23 @@ TEST_CONSTEXPR_CXX26 bool test() {
               V(3, 2),   V(4, 1),   V(4, 1.5), V(4, 2),   V(5, 1),   V(5, 1.5), V(5, 2),   V(6, 1),
               V(6, 1.5), V(6, 2),   V(7, 1),   V(7, 1.5), V(7, 2),   V(8, 1),   V(8, 1.5), V(8, 2)};
     const std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size();
-    static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size();
-    static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size();
-    static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size();
+    assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size());
     std::map<int, double>::const_iterator i;
     i = m.begin();
     for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i) {
-      i->first == j;
-      i->second == 1;
+      assert(i->first == j);
+      assert(i->second == 1);
     }
-    i == m.end();
+    assert(i == m.end());
     for (int j = m.size(); j >= 1; --j) {
       --i;
-      i->first == j;
-      i->second == 1;
+      assert(i->first == j);
+      assert(i->second == 1);
     }
-    i == m.begin();
+    assert(i == m.begin());
   }
 #if TEST_STD_VER >= 11
   {
@@ -92,27 +92,27 @@ TEST_CONSTEXPR_CXX26 bool test() {
               V(3, 2),   V(4, 1),   V(4, 1.5), V(4, 2),   V(5, 1),   V(5, 1.5), V(5, 2),   V(6, 1),
               V(6, 1.5), V(6, 2),   V(7, 1),   V(7, 1.5), V(7, 2),   V(8, 1),   V(8, 1.5), V(8, 2)};
     std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size();
-    static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size();
+    assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
     std::map<int, double, std::less<int>, min_allocator<V>>::iterator i;
     i                                                                         = m.begin();
     std::map<int, double, std::less<int>, min_allocator<V>>::const_iterator k = i;
-    i == k;
+    assert(i == k);
     for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i) {
-      i->first == j;
-      i->second == 1;
+      assert(i->first == j);
+      assert(i->second == 1);
       i->second = 2.5;
-      i->second == 2.5;
+      assert(i->second == 2.5);
     }
-    i == m.end();
+    assert(i == m.end());
     for (int j = m.size(); j >= 1; --j) {
       --i;
-      i->first == j;
-      i->second == 2.5;
+      assert(i->first == j);
+      assert(i->second == 2.5);
       i->second = 1;
-      i->second == 1;
+      assert(i->second == 1);
     }
-    i == m.begin();
+    assert(i == m.begin());
   }
   {
     typedef std::pair<const int, double> V;
@@ -120,23 +120,23 @@ TEST_CONSTEXPR_CXX26 bool test() {
               V(3, 2),   V(4, 1),   V(4, 1.5), V(4, 2),   V(5, 1),   V(5, 1.5), V(5, 2),   V(6, 1),
               V(6, 1.5), V(6, 2),   V(7, 1),   V(7, 1.5), V(7, 2),   V(8, 1),   V(8, 1.5), V(8, 2)};
     const std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size();
-    static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size();
-    static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size();
-    static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size();
+    assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
+    assert(static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size());
     std::map<int, double, std::less<int>, min_allocator<V>>::const_iterator i;
     i = m.begin();
     for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i) {
-      i->first == j;
-      i->second == 1;
+      assert(i->first == j);
+      assert(i->second == 1);
     }
-    i == m.end();
+    assert(i == m.end());
     for (int j = m.size(); j >= 1; --j) {
       --i;
-      i->first == j;
-      i->second == 1;
+      assert(i->first == j);
+      assert(i->second == 1);
     }
-    i == m.begin();
+    assert(i == m.begin());
   }
 #endif
 #if TEST_STD_VER > 11
@@ -145,22 +145,22 @@ TEST_CONSTEXPR_CXX26 bool test() {
     C::iterator ii1{}, ii2{};
     C::iterator ii4 = ii1;
     C::const_iterator cii{};
-    ii1 == ii2;
-    ii1 == ii4;
+    assert(ii1 == ii2);
+    assert(ii1 == ii4);
 
-    !(ii1 != ii2);
+    assert(!(ii1 != ii2));
 
-    (ii1 == cii);
-    (cii == ii1);
-    !(ii1 != cii);
-    !(cii != ii1);
+    assert((ii1 == cii));
+    assert((cii == ii1));
+    assert(!(ii1 != cii));
+    assert(!(cii != ii1));
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

@@ -46,28 +46,28 @@ TEST_CONSTEXPR_CXX26 bool test() {
     m1.insert(value_type(1, "abc"));
     m2.insert(value_type(2, "abc"));
     const map_type &cm1 = m1, cm2 = m2;
-    testComparisons(cm1, cm2, false, true);
+    assert(testComparisons(cm1, cm2, false, true));
   }
   {
     map_type m1, m2;
     m1.insert(value_type(1, "abc"));
     m2.insert(value_type(1, "abc"));
     const map_type &cm1 = m1, cm2 = m2;
-    testComparisons(cm1, cm2, true, false);
+    assert(testComparisons(cm1, cm2, true, false));
   }
   {
     map_type m1, m2;
     m1.insert(value_type(1, "ab"));
     m2.insert(value_type(1, "abc"));
     const map_type &cm1 = m1, cm2 = m2;
-    testComparisons(cm1, cm2, false, true);
+    assert(testComparisons(cm1, cm2, false, true));
   }
   {
     map_type m1, m2;
     m1.insert(value_type(1, "abc"));
     m2.insert(value_type(1, "bcd"));
     const map_type &cm1 = m1, cm2 = m2;
-    testComparisons(cm1, cm2, false, true);
+    assert(testComparisons(cm1, cm2, false, true));
   }
   {
     map_type m1, m2;
@@ -75,14 +75,14 @@ TEST_CONSTEXPR_CXX26 bool test() {
     m2.insert(value_type(1, "abc"));
     m2.insert(value_type(2, "abc"));
     const map_type &cm1 = m1, cm2 = m2;
-    testComparisons(cm1, cm2, false, true);
+    assert(testComparisons(cm1, cm2, false, true));
   }
 
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 
 #if TEST_STD_VER >= 26
   static_assert(test());

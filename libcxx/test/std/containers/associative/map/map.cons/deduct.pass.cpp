@@ -58,7 +58,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long>);
     const PC expected_m[] = {{1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
   }
 
   {
@@ -67,7 +67,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long, std::greater<int>>);
     const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
   }
 
   {
@@ -76,29 +76,29 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long, std::greater<int>, test_allocator<PC>>);
     const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
-    m.get_allocator().get_id() == 42;
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
+    assert(m.get_allocator().get_id() == 42);
   }
 
   {
     std::map<int, long> source;
     std::map m(source);
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
-    m.size() == 0;
+    assert(m.size() == 0);
   }
 
   {
     std::map<int, long> source;
     std::map m{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
-    m.size() == 0;
+    assert(m.size() == 0);
   }
 
   {
     std::map<int, long> source;
     std::map m(source, std::map<int, long>::allocator_type());
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
-    m.size() == 0;
+    assert(m.size() == 0);
   }
 
   {
@@ -106,7 +106,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long>);
     const PC expected_m[] = {{1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
   }
 
   {
@@ -114,7 +114,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long, std::greater<int>>);
     const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
   }
 
   {
@@ -123,8 +123,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long, std::greater<int>, test_allocator<PC>>);
     const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
-    m.get_allocator().get_id() == 43;
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
+    assert(m.get_allocator().get_id() == 43);
   }
 
   {
@@ -133,8 +133,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long, std::less<int>, test_allocator<PC>>);
     const PC expected_m[] = {{1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
-    m.get_allocator().get_id() == 44;
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
+    assert(m.get_allocator().get_id() == 44);
   }
 
   {
@@ -142,8 +142,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     ASSERT_SAME_TYPE(decltype(m), std::map<int, long, std::less<int>, test_allocator<PC>>);
     const PC expected_m[] = {{1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
-    std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m));
-    m.get_allocator().get_id() == 45;
+    assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
+    assert(m.get_allocator().get_id() == 45);
   }
 
   {
@@ -216,7 +216,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

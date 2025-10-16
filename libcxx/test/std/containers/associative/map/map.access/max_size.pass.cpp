@@ -26,7 +26,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef limited_allocator<KV, 10> A;
     typedef std::map<int, int, std::less<int>, A> C;
     C c;
-    c.max_size() <= 10;
+    assert(c.max_size() <= 10);
     LIBCPP_ASSERT(c.max_size() == 10);
   }
   {
@@ -34,21 +34,21 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::map<int, int, std::less<int>, A> C;
     const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
     C c;
-    c.max_size() <= max_dist;
+    assert(c.max_size() <= max_dist);
     LIBCPP_ASSERT(c.max_size() == max_dist);
   }
   {
     typedef std::map<char, int> C;
     const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
     C c;
-    c.max_size() <= max_dist;
-    c.max_size() <= alloc_max_size(c.get_allocator());
+    assert(c.max_size() <= max_dist);
+    assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

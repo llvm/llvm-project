@@ -39,16 +39,16 @@ TEST_CONSTEXPR_CXX26 bool test() {
   const map_type::value_compare vc   = m.value_comp();
   CallCompMember<map_type> call_comp = m.value_comp();
 
-  vc(*p1.first, *p2.first);
-  call_comp(*p1.first, *p2.first);
+  assert(vc(*p1.first, *p2.first));
+  assert(call_comp(*p1.first, *p2.first));
 
-  !vc(*p2.first, *p1.first);
-  !call_comp(*p2.first, *p1.first);
+  assert(!vc(*p2.first, *p1.first));
+  assert(!call_comp(*p2.first, *p1.first));
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

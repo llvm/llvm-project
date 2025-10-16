@@ -22,7 +22,7 @@
 #include "test_container_comparisons.h"
 
 int main(int, char**) {
-  test_ordered_map_container_spaceship<std::map>();
+  assert(test_ordered_map_container_spaceship<std::map>());
   // `std::map` is not constexpr before C++26
 
 #if TEST_STD_VER >= 26

@@ -38,9 +38,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V a2[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A(7));
     M m3(std::move(m1), A(7));
-    m3 == m2;
-    m3.get_allocator() == A(7);
-    m3.key_comp() == C(5);
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A(7));
+    assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
   {
@@ -55,9 +55,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V a2[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A(7));
     M m3(std::move(m1), A(5));
-    m3 == m2;
-    m3.get_allocator() == A(5);
-    m3.key_comp() == C(5);
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A(5));
+    assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
   {
@@ -72,9 +72,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V a2[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A(7));
     M m3(std::move(m1), A(5));
-    m3 == m2;
-    m3.get_allocator() == A(5);
-    m3.key_comp() == C(5);
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A(5));
+    assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
   {
@@ -89,32 +89,32 @@ TEST_CONSTEXPR_CXX26 bool test() {
     {
       V a1[]                = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
       const std::size_t num = sizeof(a1) / sizeof(a1[0]);
-      Counter_base::gConstructed == num;
+      assert(Counter_base::gConstructed == num);
 
       M m1(I(a1), I(a1 + num), C(), A());
-      Counter_base::gConstructed == num + 3;
+      assert(Counter_base::gConstructed == num + 3);
 
       M m2(m1);
-      m2 == m1;
-      Counter_base::gConstructed == num + 6;
+      assert(m2 == m1);
+      assert(Counter_base::gConstructed == num + 6);
 
       M m3(std::move(m1), A());
-      m3 == m2;
+      assert(m3 == m2);
       LIBCPP_ASSERT(m1.empty());
-      Counter_base::gConstructed >= (int)(num + 6);
-      Counter_base::gConstructed <= (int)(num + 6 + m1.size());
+      assert(Counter_base::gConstructed >= (int)(num + 6));
+      assert(Counter_base::gConstructed <= (int)(num + 6 + m1.size()));
 
       {
         M m4(std::move(m2), A(5));
-        Counter_base::gConstructed >= (int)(num + 6);
-        Counter_base::gConstructed <= (int)(num + 6 + m1.size() + m2.size());
-        m4 == m3;
+        assert(Counter_base::gConstructed >= (int)(num + 6));
+        assert(Counter_base::gConstructed <= (int)(num + 6 + m1.size() + m2.size()));
+        assert(m4 == m3);
         LIBCPP_ASSERT(m2.empty());
       }
-      Counter_base::gConstructed >= (int)(num + 3);
-      Counter_base::gConstructed <= (int)(num + 3 + m1.size() + m2.size());
+      assert(Counter_base::gConstructed >= (int)(num + 3));
+      assert(Counter_base::gConstructed <= (int)(num + 3 + m1.size() + m2.size()));
     }
-    Counter_base::gConstructed == 0;
+    assert(Counter_base::gConstructed == 0);
   }
   {
     typedef std::pair<MoveOnly, MoveOnly> V;
@@ -128,9 +128,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V a2[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A());
     M m3(std::move(m1), A());
-    m3 == m2;
-    m3.get_allocator() == A();
-    m3.key_comp() == C(5);
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A());
+    assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
   {
@@ -145,16 +145,16 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V a2[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A{});
     M m3(std::move(m1), A{});
-    m3 == m2;
-    m3.get_allocator() == A{};
-    m3.key_comp() == C(5);
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A{});
+    assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
 // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
 //  static_assert(test());

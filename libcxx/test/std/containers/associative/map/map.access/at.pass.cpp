@@ -33,28 +33,28 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
     std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.size() == 7;
-    m.at(1) == 1.5;
+    assert(m.size() == 7);
+    assert(m.at(1) == 1.5);
     m.at(1) = -1.5;
-    m.at(1) == -1.5;
-    m.at(2) == 2.5;
-    m.at(3) == 3.5;
-    m.at(4) == 4.5;
-    m.at(5) == 5.5;
+    assert(m.at(1) == -1.5);
+    assert(m.at(2) == 2.5);
+    assert(m.at(3) == 3.5);
+    assert(m.at(4) == 4.5);
+    assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
 
     // throwing is not allowed during constant evaluation
     if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
-        false;
+        assert(false);
       } catch (std::out_of_range&) {
       }
 
 #endif
-    m.at(7) == 7.5;
-    m.at(8) == 8.5;
-    m.size() == 7;
+    assert(m.at(7) == 7.5);
+    assert(m.at(8) == 8.5);
+    assert(m.size() == 7);
   }
   {
     typedef std::pair<const int, double> V;
@@ -68,25 +68,25 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
     const std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.size() == 7;
-    m.at(1) == 1.5;
-    m.at(2) == 2.5;
-    m.at(3) == 3.5;
-    m.at(4) == 4.5;
-    m.at(5) == 5.5;
+    assert(m.size() == 7);
+    assert(m.at(1) == 1.5);
+    assert(m.at(2) == 2.5);
+    assert(m.at(3) == 3.5);
+    assert(m.at(4) == 4.5);
+    assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
     // throwing is not allowed during constant evaluation
     if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
-        false;
+        assert(false);
       } catch (std::out_of_range&) {
       }
 #endif
 
-    m.at(7) == 7.5;
-    m.at(8) == 8.5;
-    m.size() == 7;
+    assert(m.at(7) == 7.5);
+    assert(m.at(8) == 8.5);
+    assert(m.size() == 7);
   }
 #if TEST_STD_VER >= 11
   {
@@ -101,27 +101,27 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
     std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.size() == 7;
-    m.at(1) == 1.5;
+    assert(m.size() == 7);
+    assert(m.at(1) == 1.5);
     m.at(1) = -1.5;
-    m.at(1) == -1.5;
-    m.at(2) == 2.5;
-    m.at(3) == 3.5;
-    m.at(4) == 4.5;
-    m.at(5) == 5.5;
+    assert(m.at(1) == -1.5);
+    assert(m.at(2) == 2.5);
+    assert(m.at(3) == 3.5);
+    assert(m.at(4) == 4.5);
+    assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
 
     // throwing is not allowed during constant evaluation
     if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
-        false;
+        assert(false);
       } catch (std::out_of_range&) {
       }
 #  endif
-    m.at(7) == 7.5;
-    m.at(8) == 8.5;
-    m.size() == 7;
+    assert(m.at(7) == 7.5);
+    assert(m.at(8) == 8.5);
+    assert(m.size() == 7);
   }
   {
     typedef std::pair<const int, double> V;
@@ -135,32 +135,32 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
     const std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.size() == 7;
-    m.at(1) == 1.5;
-    m.at(2) == 2.5;
-    m.at(3) == 3.5;
-    m.at(4) == 4.5;
-    m.at(5) == 5.5;
+    assert(m.size() == 7);
+    assert(m.at(1) == 1.5);
+    assert(m.at(2) == 2.5);
+    assert(m.at(3) == 3.5);
+    assert(m.at(4) == 4.5);
+    assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
     // throwing is not allowed during constant evaluation
     if (!TEST_IS_CONSTANT_EVALUATED)
       try {
         TEST_IGNORE_NODISCARD m.at(6);
-        false;
+        assert(false);
       } catch (std::out_of_range&) {
       }
 
 #  endif
-    m.at(7) == 7.5;
-    m.at(8) == 8.5;
-    m.size() == 7;
+    assert(m.at(7) == 7.5);
+    assert(m.at(8) == 8.5);
+    assert(m.size() == 7);
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

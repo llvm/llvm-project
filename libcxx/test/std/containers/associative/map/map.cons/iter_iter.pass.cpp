@@ -34,11 +34,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(3, 2),
     };
     std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.size() == 3;
-    std::distance(m.begin(), m.end()) == 3;
-    *m.begin() == V(1, 1);
-    *std::next(m.begin()) == V(2, 1);
-    *std::next(m.begin(), 2) == V(3, 1);
+    assert(m.size() == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
+    assert(*m.begin() == V(1, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
   }
 #if TEST_STD_VER >= 11
   {
@@ -56,18 +56,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
     };
     std::map<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> m(
         ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.size() == 3;
-    std::distance(m.begin(), m.end()) == 3;
-    *m.begin() == V(1, 1);
-    *std::next(m.begin()) == V(2, 1);
-    *std::next(m.begin(), 2) == V(3, 1);
+    assert(m.size() == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
+    assert(*m.begin() == V(1, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

@@ -38,10 +38,10 @@ bool test() {
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A(7));
     M m3(C(3), A(7));
     m3 = std::move(m1);
-    m3 == m2;
-    m3.get_allocator() == A(7);
-    m3.key_comp() == C(5);
-    m1.empty();
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A(7));
+    assert(m3.key_comp() == C(5));
+    assert(m1.empty());
   }
   {
     typedef std::pair<MoveOnly, MoveOnly> V;
@@ -56,9 +56,9 @@ bool test() {
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A(7));
     M m3(C(3), A(5));
     m3 = std::move(m1);
-    m3 == m2;
-    m3.get_allocator() == A(5);
-    m3.key_comp() == C(5);
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A(5));
+    assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
   {
@@ -74,10 +74,10 @@ bool test() {
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A(7));
     M m3(C(3), A(5));
     m3 = std::move(m1);
-    m3 == m2;
-    m3.get_allocator() == A(7);
-    m3.key_comp() == C(5);
-    m1.empty();
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A(7));
+    assert(m3.key_comp() == C(5));
+    assert(m1.empty());
   }
   {
     typedef std::pair<MoveOnly, MoveOnly> V;
@@ -92,16 +92,16 @@ bool test() {
     M m2(I(a2), I(a2 + sizeof(a2) / sizeof(a2[0])), C(5), A());
     M m3(C(3), A());
     m3 = std::move(m1);
-    m3 == m2;
-    m3.get_allocator() == A();
-    m3.key_comp() == C(5);
-    m1.empty();
+    assert(m3 == m2);
+    assert(m3.get_allocator() == A());
+    assert(m3.key_comp() == C(5));
+    assert(m1.empty());
   }
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
 // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
 //  static_assert(test());

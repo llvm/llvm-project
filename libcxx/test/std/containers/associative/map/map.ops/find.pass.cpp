@@ -30,46 +30,46 @@ TEST_CONSTEXPR_CXX26 bool test() {
       V ar[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
       M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      r == m.begin();
+      assert(r == m.begin());
       r = m.find(6);
-      r == std::next(m.begin());
+      assert(r == std::next(m.begin()));
       r = m.find(7);
-      r == std::next(m.begin(), 2);
+      assert(r == std::next(m.begin(), 2));
       r = m.find(8);
-      r == std::next(m.begin(), 3);
+      assert(r == std::next(m.begin(), 3));
       r = m.find(9);
-      r == std::next(m.begin(), 4);
+      assert(r == std::next(m.begin(), 4));
       r = m.find(10);
-      r == std::next(m.begin(), 5);
+      assert(r == std::next(m.begin(), 5));
       r = m.find(11);
-      r == std::next(m.begin(), 6);
+      assert(r == std::next(m.begin(), 6));
       r = m.find(12);
-      r == std::next(m.begin(), 7);
+      assert(r == std::next(m.begin(), 7));
       r = m.find(4);
-      r == std::next(m.begin(), 8);
+      assert(r == std::next(m.begin(), 8));
     }
     {
       typedef M::const_iterator R;
       V ar[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
       const M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      r == m.begin();
+      assert(r == m.begin());
       r = m.find(6);
-      r == std::next(m.begin());
+      assert(r == std::next(m.begin()));
       r = m.find(7);
-      r == std::next(m.begin(), 2);
+      assert(r == std::next(m.begin(), 2));
       r = m.find(8);
-      r == std::next(m.begin(), 3);
+      assert(r == std::next(m.begin(), 3));
       r = m.find(9);
-      r == std::next(m.begin(), 4);
+      assert(r == std::next(m.begin(), 4));
       r = m.find(10);
-      r == std::next(m.begin(), 5);
+      assert(r == std::next(m.begin(), 5));
       r = m.find(11);
-      r == std::next(m.begin(), 6);
+      assert(r == std::next(m.begin(), 6));
       r = m.find(12);
-      r == std::next(m.begin(), 7);
+      assert(r == std::next(m.begin(), 7));
       r = m.find(4);
-      r == std::next(m.begin(), 8);
+      assert(r == std::next(m.begin(), 8));
     }
   }
   { // Check with std::greater to ensure we're actually using the correct comparator
@@ -77,16 +77,16 @@ TEST_CONSTEXPR_CXX26 bool test() {
     using Map  = std::map<int, int, std::greater<int> >;
     Pair ar[]  = {Pair(5, 5), Pair(6, 6), Pair(7, 7), Pair(8, 8), Pair(9, 9), Pair(10, 10), Pair(11, 11), Pair(12, 12)};
     Map m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    m.find(12) == std::next(m.begin(), 0);
-    m.find(11) == std::next(m.begin(), 1);
-    m.find(10) == std::next(m.begin(), 2);
-    m.find(9) == std::next(m.begin(), 3);
-    m.find(8) == std::next(m.begin(), 4);
-    m.find(7) == std::next(m.begin(), 5);
-    m.find(6) == std::next(m.begin(), 6);
-    m.find(5) == std::next(m.begin(), 7);
-    m.find(4) == std::next(m.begin(), 8);
-    std::next(m.begin(), 8) == m.end();
+    assert(m.find(12) == std::next(m.begin(), 0));
+    assert(m.find(11) == std::next(m.begin(), 1));
+    assert(m.find(10) == std::next(m.begin(), 2));
+    assert(m.find(9) == std::next(m.begin(), 3));
+    assert(m.find(8) == std::next(m.begin(), 4));
+    assert(m.find(7) == std::next(m.begin(), 5));
+    assert(m.find(6) == std::next(m.begin(), 6));
+    assert(m.find(5) == std::next(m.begin(), 7));
+    assert(m.find(4) == std::next(m.begin(), 8));
+    assert(std::next(m.begin(), 8) == m.end());
   }
 #if TEST_STD_VER >= 11
   {
@@ -98,46 +98,46 @@ TEST_CONSTEXPR_CXX26 bool test() {
       (void)ar[0].second;
       M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      r == m.begin();
+      assert(r == m.begin());
       r = m.find(6);
-      r == std::next(m.begin());
+      assert(r == std::next(m.begin()));
       r = m.find(7);
-      r == std::next(m.begin(), 2);
+      assert(r == std::next(m.begin(), 2));
       r = m.find(8);
-      r == std::next(m.begin(), 3);
+      assert(r == std::next(m.begin(), 3));
       r = m.find(9);
-      r == std::next(m.begin(), 4);
+      assert(r == std::next(m.begin(), 4));
       r = m.find(10);
-      r == std::next(m.begin(), 5);
+      assert(r == std::next(m.begin(), 5));
       r = m.find(11);
-      r == std::next(m.begin(), 6);
+      assert(r == std::next(m.begin(), 6));
       r = m.find(12);
-      r == std::next(m.begin(), 7);
+      assert(r == std::next(m.begin(), 7));
       r = m.find(4);
-      r == std::next(m.begin(), 8);
+      assert(r == std::next(m.begin(), 8));
     }
     {
       typedef M::const_iterator R;
       V ar[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
       const M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      r == m.begin();
+      assert(r == m.begin());
       r = m.find(6);
-      r == std::next(m.begin());
+      assert(r == std::next(m.begin()));
       r = m.find(7);
-      r == std::next(m.begin(), 2);
+      assert(r == std::next(m.begin(), 2));
       r = m.find(8);
-      r == std::next(m.begin(), 3);
+      assert(r == std::next(m.begin(), 3));
       r = m.find(9);
-      r == std::next(m.begin(), 4);
+      assert(r == std::next(m.begin(), 4));
       r = m.find(10);
-      r == std::next(m.begin(), 5);
+      assert(r == std::next(m.begin(), 5));
       r = m.find(11);
-      r == std::next(m.begin(), 6);
+      assert(r == std::next(m.begin(), 6));
       r = m.find(12);
-      r == std::next(m.begin(), 7);
+      assert(r == std::next(m.begin(), 7));
       r = m.find(4);
-      r == std::next(m.begin(), 8);
+      assert(r == std::next(m.begin(), 8));
     }
   }
 #endif
@@ -150,42 +150,42 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V ar[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
     M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     R r = m.find(5);
-    r == m.begin();
+    assert(r == m.begin());
     r = m.find(6);
-    r == std::next(m.begin());
+    assert(r == std::next(m.begin()));
     r = m.find(7);
-    r == std::next(m.begin(), 2);
+    assert(r == std::next(m.begin(), 2));
     r = m.find(8);
-    r == std::next(m.begin(), 3);
+    assert(r == std::next(m.begin(), 3));
     r = m.find(9);
-    r == std::next(m.begin(), 4);
+    assert(r == std::next(m.begin(), 4));
     r = m.find(10);
-    r == std::next(m.begin(), 5);
+    assert(r == std::next(m.begin(), 5));
     r = m.find(11);
-    r == std::next(m.begin(), 6);
+    assert(r == std::next(m.begin(), 6));
     r = m.find(12);
-    r == std::next(m.begin(), 7);
+    assert(r == std::next(m.begin(), 7));
     r = m.find(4);
-    r == std::next(m.begin(), 8);
+    assert(r == std::next(m.begin(), 8));
 
     r = m.find(C2Int(5));
-    r == m.begin();
+    assert(r == m.begin());
     r = m.find(C2Int(6));
-    r == std::next(m.begin());
+    assert(r == std::next(m.begin()));
     r = m.find(C2Int(7));
-    r == std::next(m.begin(), 2);
+    assert(r == std::next(m.begin(), 2));
     r = m.find(C2Int(8));
-    r == std::next(m.begin(), 3);
+    assert(r == std::next(m.begin(), 3));
     r = m.find(C2Int(9));
-    r == std::next(m.begin(), 4);
+    assert(r == std::next(m.begin(), 4));
     r = m.find(C2Int(10));
-    r == std::next(m.begin(), 5);
+    assert(r == std::next(m.begin(), 5));
     r = m.find(C2Int(11));
-    r == std::next(m.begin(), 6);
+    assert(r == std::next(m.begin(), 6));
     r = m.find(C2Int(12));
-    r == std::next(m.begin(), 7);
+    assert(r == std::next(m.begin(), 7));
     r = m.find(C2Int(4));
-    r == std::next(m.begin(), 8);
+    assert(r == std::next(m.begin(), 8));
   }
 
   {
@@ -204,30 +204,30 @@ TEST_CONSTEXPR_CXX26 bool test() {
     m[PC::make(12)] = 12;
 
     R r = m.find(5);
-    r == m.begin();
+    assert(r == m.begin());
     r = m.find(6);
-    r == std::next(m.begin());
+    assert(r == std::next(m.begin()));
     r = m.find(7);
-    r == std::next(m.begin(), 2);
+    assert(r == std::next(m.begin(), 2));
     r = m.find(8);
-    r == std::next(m.begin(), 3);
+    assert(r == std::next(m.begin(), 3));
     r = m.find(9);
-    r == std::next(m.begin(), 4);
+    assert(r == std::next(m.begin(), 4));
     r = m.find(10);
-    r == std::next(m.begin(), 5);
+    assert(r == std::next(m.begin(), 5));
     r = m.find(11);
-    r == std::next(m.begin(), 6);
+    assert(r == std::next(m.begin(), 6));
     r = m.find(12);
-    r == std::next(m.begin(), 7);
+    assert(r == std::next(m.begin(), 7));
     r = m.find(4);
-    r == std::next(m.begin(), 8);
+    assert(r == std::next(m.begin(), 8));
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
