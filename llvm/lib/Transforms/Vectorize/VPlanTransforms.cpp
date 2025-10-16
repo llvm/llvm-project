@@ -1971,8 +1971,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // the last element of the value from the previous iteration, directly from
     // the FOR phi.
     for (VPUser *U : RecurSplice->users()) {
-      if (!match(U, m_VPInstruction<VPInstruction::ExtractLane>(
-                        m_LastActiveLane(m_VPValue()), m_Specific(RecurSplice))))
+      if (!match(U,
+                 m_VPInstruction<VPInstruction::ExtractLane>(
+                     m_LastActiveLane(m_VPValue()), m_Specific(RecurSplice))))
         continue;
 
       VPBuilder B(cast<VPInstruction>(U));
