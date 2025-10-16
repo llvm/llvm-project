@@ -3646,9 +3646,10 @@ bool SPIRVInstructionSelector::generateImageReadOrFetch(
 
   bool IsSignedInteger =
       sampledTypeIsSignedInteger(GR.getTypeForSPIRVType(ImageType));
-  // Check if the "sampled" operand of the image type is 2.
+  // Check if the "sampled" operand of the image type is 1.
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpImageFetch
   auto SampledOp = ImageType->getOperand(6);
-  bool IsFetch = (SampledOp.getImm() != 2);
+  bool IsFetch = (SampledOp.getImm() == 1);
 
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
   if (ResultSize == 4) {
