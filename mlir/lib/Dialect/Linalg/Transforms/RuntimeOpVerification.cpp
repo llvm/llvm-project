@@ -56,19 +56,19 @@ struct StructuredOpInterface
       if (!iterationDomainIsNonDegenerate) {
         iterationDomainIsNonDegenerate = dimensionHasNonZeroTripCount;
       } else {
-        // Iteration domain is non-degenerate iff all dimensions have loop trip count
-        // > 0
+        // Iteration domain is non-degenerate iff all dimensions have loop trip
+        // count > 0
         iterationDomainIsNonDegenerate = builder.create<arith::AndIOp>(
             loc, iterationDomainIsNonDegenerate, dimensionHasNonZeroTripCount);
       }
     }
-    
+
     if (!iterationDomainIsNonDegenerate)
       return;
 
-     auto ifOp = builder.create<scf::IfOp>(loc, iterationDomainIsNonDegenerate,
-                                        /*withElseRegion=*/false);
-     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    auto ifOp = builder.create<scf::IfOp>(loc, iterationDomainIsNonDegenerate,
+                                          /*withElseRegion=*/false);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     // Subtract one from the loop ends before composing with the indexing map
     transform(ends, ends.begin(), [&](OpFoldResult end) {
