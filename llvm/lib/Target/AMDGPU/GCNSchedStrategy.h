@@ -44,16 +44,33 @@ raw_ostream &operator<<(raw_ostream &OS, const GCNSchedStageID &StageID);
 /// heuristics to determine excess/critical pressure sets.
 class GCNSchedStrategy : public GenericScheduler {
 protected:
-  SUnit *pickNodeBidirectional(bool &IsTopNode);
+  SUnit *pickNodeBidirectional(bool &IsTopNode, bool &PickedPending);
 
   void pickNodeFromQueue(SchedBoundary &Zone, const CandPolicy &ZonePolicy,
                          const RegPressureTracker &RPTracker,
-                         SchedCandidate &Cand, bool IsBottomUp);
+                         SchedCandidate &Cand, bool &IsPending,
+                         bool IsBottomUp);
 
   void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
                      const RegPressureTracker &RPTracker,
                      const SIRegisterInfo *SRI, unsigned SGPRPressure,
                      unsigned VGPRPressure, bool IsBottomUp);
+
+  /// Evaluates instructions in the pending queue using a subset of scheduling
+  /// heuristics.
+  ///
+  /// Instructions that cannot be issued due to hardware constraints are placed
+  /// in the pending queue rather than the available queue, making them normally
+  /// invisible to scheduling heuristics. However, in certain scenarios (such as
+  /// avoiding register spilling), it may be beneficial to consider scheduling
+  /// these not-yet-ready instructions.
+  bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                           SchedBoundary *Zone) const;
+
+#ifndef NDEBUG
+  void printCandidateDecision(const SchedCandidate &Current,
+                              const SchedCandidate &Preferred);
+#endif
 
   std::vector<unsigned> Pressure;
 
