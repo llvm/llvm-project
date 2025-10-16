@@ -4082,9 +4082,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
     CheckIteratorModifier(*iter);
   }
+
+  using Directive = llvm::omp::Directive;
+  Directive dir{GetContext().directive};
+  llvm::ArrayRef<Directive> leafs{llvm::omp::getLeafConstructsOrSelf(dir)};
+  parser::OmpMapType::Value mapType{parser::OmpMapType::Value::Storage};
+
   if (auto *type{OmpGetUniqueModifier<parser::OmpMapType>(modifiers)}) {
-    using Directive = llvm::omp::Directive;
     using Value = parser::OmpMapType::Value;
+    mapType = type->v;
 
     static auto isValidForVersion{
         [](parser::OmpMapType::Value t, unsigned version) {
@@ -4121,10 +4127,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       return result;
     }()};
 
-    llvm::omp::Directive dir{GetContext().directive};
-    llvm::ArrayRef<llvm::omp::Directive> leafs{
-        llvm::omp::getLeafConstructsOrSelf(dir)};
-
     if (llvm::is_contained(leafs, Directive::OMPD_target) ||
         llvm::is_contained(leafs, Directive::OMPD_target_data)) {
       if (version >= 60) {
@@ -4139,6 +4141,43 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       CheckAllowedMapTypes(type->v, mapEnteringTypes);
     } else if (llvm::is_contained(leafs, Directive::OMPD_target_exit_data)) {
       CheckAllowedMapTypes(type->v, mapExitingTypes);
+    }
+  }
+
+  if (auto *attach{
+          OmpGetUniqueModifier<parser::OmpAttachModifier>(modifiers)}) {
+    bool mapEnteringConstructOrMapper{
+        llvm::is_contained(leafs, Directive::OMPD_target) ||
+        llvm::is_contained(leafs, Directive::OMPD_target_data) ||
+        llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
+        llvm::is_contained(leafs, Directive::OMPD_declare_mapper)};
+
+    if (!mapEnteringConstructOrMapper || !IsMapEnteringType(mapType)) {
+      const auto &desc{OmpGetDescriptor<parser::OmpAttachModifier>()};
+      context_.Say(OmpGetModifierSource(modifiers, attach),
+          "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
+          desc.name.str());
+    }
+
+    auto hasBasePointer{[&](const SomeExpr &item) {
+      evaluate::SymbolVector symbols{evaluate::GetSymbolVector(item)};
+      return llvm::any_of(
+          symbols, [](SymbolRef s) { return IsPointer(s.get()); });
+    }};
+
+    evaluate::ExpressionAnalyzer ea{context_};
+    const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+    for (auto &object : objects.v) {
+      if (const parser::Designator *d{GetDesignatorFromObj(object)}) {
+        if (auto &&expr{ea.Analyze(*d)}) {
+          if (hasBasePointer(*expr)) {
+            continue;
+          }
+        }
+      }
+      auto source{GetObjectSource(object)};
+      context_.Say(source ? *source : GetContext().clauseSource,
+          "A list-item that appears in a map clause with the ATTACH modifier must have a base-pointer"_err_en_US);
     }
   }
 
