@@ -302,13 +302,13 @@ void foo(int x) {
   ASSERT_FALSE(B.getType(Context).isNull());
   const auto *BRecordType = dyn_cast<RecordType>(B.getType(Context));
   ASSERT_NE(BRecordType, nullptr);
-  EXPECT_EQ("TestStruct", BRecordType->getOriginalDecl()->getName());
+  EXPECT_EQ("TestStruct", BRecordType->getDecl()->getName());
 
   SVal C = getByName("c");
   ASSERT_FALSE(C.getType(Context).isNull());
   const auto *CRecordType = dyn_cast<RecordType>(C.getType(Context));
   ASSERT_NE(CRecordType, nullptr);
-  EXPECT_EQ("TestUnion", CRecordType->getOriginalDecl()->getName());
+  EXPECT_EQ("TestUnion", CRecordType->getDecl()->getName());
 
   auto D = getByName("d").getAs<nonloc::CompoundVal>();
   ASSERT_TRUE(D.has_value());
@@ -322,7 +322,7 @@ void foo(int x) {
   ASSERT_FALSE(LDT.isNull());
   const auto *DRecordType = dyn_cast<RecordType>(LDT);
   ASSERT_NE(DRecordType, nullptr);
-  EXPECT_EQ("TestStruct", DRecordType->getOriginalDecl()->getName());
+  EXPECT_EQ("TestStruct", DRecordType->getDecl()->getName());
 }
 
 SVAL_TEST(GetStringType, R"(
@@ -351,7 +351,7 @@ void TestClass::foo() {
   ASSERT_NE(APtrTy, nullptr);
   const auto *ARecordType = dyn_cast<RecordType>(APtrTy->getPointeeType());
   ASSERT_NE(ARecordType, nullptr);
-  EXPECT_EQ("TestClass", ARecordType->getOriginalDecl()->getName());
+  EXPECT_EQ("TestClass", ARecordType->getDecl()->getName());
 }
 
 SVAL_TEST(GetFunctionPtrType, R"(
