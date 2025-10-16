@@ -3639,7 +3639,6 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
       currScope().AddCommonBlockUse(name, *localCB);
     }
   }
-#if 0
   // Go through the list of USE-associated COMMON block symbols in the module
   // scope and add USE associations to their ultimate symbols to the current
   // scope's USE-associated COMMON blocks.
@@ -3650,7 +3649,6 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
         name, symbol->attrs(), UseDetails{name, symbol->GetUltimate()});
     currScope().AddCommonBlockUse(name, *localCB);
   }
-#endif
   useModuleScope_ = nullptr;
 }
 
