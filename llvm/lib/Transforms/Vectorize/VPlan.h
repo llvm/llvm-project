@@ -4267,12 +4267,14 @@ public:
       BackedgeTakenCount = new VPValue();
     return BackedgeTakenCount;
   }
+  VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
 
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns the VF of the vector loop region.
   VPValue &getVF() { return VF; };
+  const VPValue &getVF() const { return VF; };
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }

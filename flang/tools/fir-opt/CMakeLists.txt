@@ -22,6 +22,7 @@ target_link_libraries(fir-opt PRIVATE
   HLFIRDialect
   HLFIRTransforms
   FIROpenACCSupport
+  FIROpenACCTransforms
   FIROpenMPSupport
   FlangOpenMPTransforms
   FIRAnalysis

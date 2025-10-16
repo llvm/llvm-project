@@ -143,6 +143,7 @@ private:
     uint16_t m_entsize;
     bool m_is_small;
     bool m_has_direct_selector;
+    bool m_has_relative_types;
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
@@ -173,14 +174,14 @@ private:
     }
 
     bool Read(DataExtractor &extractor, Process *process, lldb::addr_t addr,
-              lldb::addr_t relative_selector_base_addr, bool is_small,
-              bool has_direct_sel);
+              lldb::addr_t relative_string_base_addr, bool is_small,
+              bool has_direct_sel, bool has_relative_types);
   };
 
   llvm::SmallVector<method_t, 0>
   ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
-              lldb::addr_t relative_selector_base_addr, bool is_small,
-              bool has_direct_sel) const;
+              lldb::addr_t relative_string_base_addr, bool is_small,
+              bool has_direct_sel, bool has_relative_types) const;
 
   struct ivar_list_t {
     uint32_t m_entsize;

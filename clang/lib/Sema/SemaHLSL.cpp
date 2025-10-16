@@ -782,7 +782,7 @@ bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D) {
   if (!RT)
     return false;
 
-  const RecordDecl *RD = RT->getOriginalDecl();
+  const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     if (!isSemanticValid(FD, Field))
       return false;
@@ -1986,7 +1986,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                        const RecordType *RT) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 

@@ -221,8 +221,8 @@ static SourceLocation SourceLocationForUserDeclaredType(QualType QT) {
   SourceLocation Loc;
   const Type *T = QT->getUnqualifiedDesugaredType();
   if (const TagType *TT = dyn_cast<TagType>(T))
-    Loc = TT->getOriginalDecl()->getLocation();
-  else if (const ObjCInterfaceType *ObjCIT = dyn_cast<ObjCInterfaceType>(T))
+    Loc = TT->getDecl()->getLocation();
+  else if (const auto *ObjCIT = dyn_cast<ObjCInterfaceType>(T))
     Loc = ObjCIT->getDecl()->getLocation();
   return Loc;
 }
