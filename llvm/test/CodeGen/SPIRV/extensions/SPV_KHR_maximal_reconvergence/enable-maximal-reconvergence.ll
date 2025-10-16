@@ -3,10 +3,18 @@
 
 ; CHECK: OpCapability Shader
 ; CHECK: OpExtension "SPV_KHR_maximal_reconvergence"
+; CHECK-NOT: OpExtension "SPV_KHR_maximal_reconvergence"
 ; CHECK: OpExecutionMode {{.*}} MaximallyReconvergesKHR
+; CHECK-NOT: OpExecutionMode {{.*}} MaximallyReconvergesKHR
 define void @main() local_unnamed_addr #0 {
 entry:
   ret void
 }
 
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) "enable-maximal-reconvergence"="true" "frame-pointer"="all" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+define void @negative() local_unnamed_addr #1 {
+entry:
+  ret void
+}
+
+attributes #0 = { "enable-maximal-reconvergence"="true" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
+attributes #1 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
