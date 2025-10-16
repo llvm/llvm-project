@@ -140,6 +140,7 @@ Changes to the X86 Backend
 --------------------------
 
 * `-mcpu=wildcatlake` is now supported.
+* `-mcpu=novalake` is now supported.
 
 Changes to the OCaml bindings
 -----------------------------

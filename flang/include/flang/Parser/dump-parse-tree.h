@@ -520,6 +520,8 @@ public:
   NODE(parser, OmpAtClause)
   NODE_ENUM(OmpAtClause, ActionTime)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
+  NODE(parser, OmpAttachModifier)
+  NODE_ENUM(OmpAttachModifier, Value)
   NODE(parser, OmpAutomapModifier)
   NODE_ENUM(OmpAutomapModifier, Value)
   NODE(parser, OmpBaseVariantNames)

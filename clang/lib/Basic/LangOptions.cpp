@@ -132,8 +132,12 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.NamedLoops = Std.isC2y();
 
   Opts.HLSL = Lang == Language::HLSL;
-  if (Opts.HLSL && Opts.IncludeDefaultHeader)
-    Includes.push_back("hlsl.h");
+  if (Opts.HLSL) {
+    if (Opts.IncludeDefaultHeader)
+      Includes.push_back("hlsl.h");
+    // Set maximum matrix dimension to 4 for HLSL
+    Opts.MaxMatrixDimension = 4;
+  }
 
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
