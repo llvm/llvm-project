@@ -1114,9 +1114,8 @@ LLVMMetadataRef LLVMDIBuilderCreateFileWithChecksum(
     const char *Checksum, size_t ChecksumLen, const char *Source,
     size_t SourceLen) {
   StringRef ChkSum = StringRef(Checksum, ChecksumLen);
-  std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
   auto CSK = map_from_llvmChecksumKind(ChecksumKind);
-  CSInfo.emplace(CSK, ChkSum);
+  llvm::DIFile::ChecksumInfo<StringRef> CSInfo(CSK, ChkSum);
   std::optional<StringRef> Src;
   if (SourceLen > 0)
     Src = StringRef(Source, SourceLen);
