@@ -496,6 +496,8 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT);
   }
 
