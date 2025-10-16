@@ -363,9 +363,6 @@ public:
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
   bool useLoadStackGuardNode(const Module &M) const override;
-  bool useStackGuardXorFP() const override;
-  SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                              const SDLoc &DL) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 

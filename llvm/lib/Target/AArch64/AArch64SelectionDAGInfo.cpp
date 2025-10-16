@@ -38,7 +38,7 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     return;
   }
 
-  //  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 
 #ifndef NDEBUG
   // Some additional checks not yet implemented by verifyTargetNode.
