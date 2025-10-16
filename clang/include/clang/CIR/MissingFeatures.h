@@ -39,7 +39,6 @@ struct MissingFeatures {
   static bool opGlobalUsedOrCompilerUsed() { return false; }
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
-  static bool opGlobalDtorList() { return false; }
   static bool setDSOLocal() { return false; }
   static bool setComdat() { return false; }
 
@@ -174,6 +173,10 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+
+  // Global ctor handling
+  static bool globalCtorLexOrder() { return false; }
+  static bool globalCtorAssociatedData() { return false; }
 
   // Misc
   static bool abiArgInfo() { return false; }
@@ -319,6 +322,7 @@ struct MissingFeatures {
   static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
+  static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
   static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
   static bool throwOp() { return false; }

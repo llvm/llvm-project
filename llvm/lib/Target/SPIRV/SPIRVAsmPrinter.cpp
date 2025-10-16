@@ -139,8 +139,8 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
 // anymore.
 void SPIRVAsmPrinter::cleanUp(Module &M) {
   // Verifier disallows uses of intrinsic global variables.
-  for (StringRef GVName : {"llvm.global_ctors", "llvm.global_dtors",
-                           "llvm.used", "llvm.compiler.used"}) {
+  for (StringRef GVName :
+       {"llvm.global_ctors", "llvm.global_dtors", "llvm.used"}) {
     if (GlobalVariable *GV = M.getNamedGlobal(GVName))
       GV->setName("");
   }
