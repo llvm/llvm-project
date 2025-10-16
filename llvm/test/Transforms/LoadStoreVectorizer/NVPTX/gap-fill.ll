@@ -5,7 +5,7 @@
 define void @test(ptr %ptr) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR]], i32 16, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[LD12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[GAPFILL3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
@@ -24,7 +24,7 @@ define void @test(ptr %ptr) {
 define void @test2(ptr %ptr) {
 ; CHECK-LABEL: define void @test2(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR]], i32 16, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[GAPFILL2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[LD23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
@@ -83,7 +83,7 @@ define void @test4(ptr %ptr) {
 define void @test5(ptr %ptr) {
 ; CHECK-LABEL: define void @test5(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR]], i32 16, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
@@ -100,13 +100,13 @@ define void @test5(ptr %ptr) {
 define void @test6(ptr %ptr) {
 ; CHECK-LABEL: define void @test6(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR]], i32 16, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[LD14:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[GAPFILL5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 ; CHECK-NEXT:    [[LD36:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[GEP4]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[GEP4]], i32 16, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD47:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[GAPFILL28:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[LD69:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
@@ -132,13 +132,13 @@ define void @test6(ptr %ptr) {
 define void @test7(ptr %ptr) {
 ; CHECK-LABEL: define void @test7(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR]], i32 16, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD05:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[LD16:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[GAPFILL7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 ; CHECK-NEXT:    [[LD38:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[GEP4]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[GEP4]], i32 16, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD49:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[GAPFILL210:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[GAPFILL411:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
@@ -164,14 +164,14 @@ define void @test7(ptr %ptr) {
 define void @test8(ptr %ptr) {
 ; CHECK-LABEL: define void @test8(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR]], i32 16, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[LD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[LD14:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[GAPFILL5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 ; CHECK-NEXT:    [[LD36:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 12
 ; CHECK-NEXT:    [[GAPFILLGEP1:%.*]] = getelementptr i8, ptr [[GEP3]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[GAPFILLGEP1]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[GAPFILLGEP1]], i32 16, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[GAPFILL27:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[LD58:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[LD69:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
