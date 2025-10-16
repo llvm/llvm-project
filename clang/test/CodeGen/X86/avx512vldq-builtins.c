@@ -1062,6 +1062,8 @@ __m256i test_mm256_mask_broadcast_i32x2(__m256i __O, __mmask8 __M, __m128i __A) 
   return _mm256_mask_broadcast_i32x2(__O, __M, __A); 
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_mask_broadcast_i32x2(_mm256_setzero_si256(), 0xAA, (__m128i)(__v4si){0,1,2,3}), 0,1,0,1,0,1,0,1));
+
 __m256i test_mm256_maskz_broadcast_i32x2(__mmask8 __M, __m128i __A) {
   // CHECK-LABEL: test_mm256_maskz_broadcast_i32x2
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>

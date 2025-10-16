@@ -7214,6 +7214,8 @@ __m128i test_mm_maskz_set1_epi32(__mmask8 __M) {
   return _mm_maskz_set1_epi32(__M, 5); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_maskz_set1_epi32(0xA, 11), 11, 0, 11, 0));
+
 __m256i test_mm256_mask_set1_epi32(__m256i __O, __mmask8 __M) {
   // CHECK-LABEL: test_mm256_mask_set1_epi32
   // CHECK:  insertelement <8 x i32> poison, i32 %{{.*}}, i32 0
@@ -7244,6 +7246,8 @@ __m256i test_mm256_maskz_set1_epi32(__mmask8 __M) {
   return _mm256_maskz_set1_epi32(__M, 5); 
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_set1_epi32(0xAA, 13), 13, 0, 13, 0, 13, 0, 13, 0));
+
 __m128i test_mm_mask_set1_epi64(__m128i __O, __mmask8 __M, long long __A) {
   // CHECK-LABEL: test_mm_mask_set1_epi64
   // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
@@ -7263,6 +7267,8 @@ __m128i test_mm_maskz_set1_epi64(__mmask8 __M, long long __A) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_set1_epi64(__M, __A); 
 }
+
+TEST_CONSTEXPR(match_v2di(_mm_maskz_set1_epi64(0x2, 15), 0, 15));
 
 __m256i test_mm256_mask_set1_epi64(__m256i __O, __mmask8 __M, long long __A) {
   // CHECK-LABEL: test_mm256_mask_set1_epi64
@@ -7287,6 +7293,8 @@ __m256i test_mm256_maskz_set1_epi64(__mmask8 __M, long long __A) {
   // CHECK:  select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_set1_epi64(__M, __A); 
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_set1_epi64(0xA, 17), 0, 17, 0, 17));
 
 __m128d test_mm_fixupimm_pd(__m128d __A, __m128d __B, __m128i __C) {
   // CHECK-LABEL: test_mm_fixupimm_pd
@@ -8059,12 +8067,16 @@ __m128i test_mm_mask_unpackhi_epi32(__m128i __W, __mmask8 __U, __m128i __A, __m1
   return _mm_mask_unpackhi_epi32(__W, __U, __A, __B); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_mask_unpackhi_epi32(_mm_setzero_si128(), 0xA, (__m128i)(__v4si){0,1,2,3}, (__m128i)(__v4si){4,5,6,7}), 0,2,0,3));
+
 __m128i test_mm_maskz_unpackhi_epi32(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_maskz_unpackhi_epi32
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_maskz_unpackhi_epi32(__U, __A, __B); 
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_maskz_unpackhi_epi32(0x5, (__m128i)(__v4si){0,1,2,3}, (__m128i)(__v4si){4,5,6,7}), 0,2,0,7));
 
 __m256i test_mm256_mask_unpackhi_epi32(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_unpackhi_epi32
