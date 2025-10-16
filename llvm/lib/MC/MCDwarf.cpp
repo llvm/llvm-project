@@ -190,7 +190,7 @@ void MCDwarfLineTable::emitOne(
   auto init = [&]() {
     // Force emission of DW_LNS_set_file for every function's contribution to
     // the line table to maximize deduplication.
-    FileNum = MCOS->getGenerateCasFriendlyDebugInfo() ? 0 : 1;
+    FileNum = MCOS->getGenerateCasFriendlyDebugInfo() ? -1 : 1;
     LastLine = 1;
     Column = 0;
     Flags = DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0;
