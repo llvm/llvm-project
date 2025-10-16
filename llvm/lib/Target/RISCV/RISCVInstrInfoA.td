@@ -321,11 +321,9 @@ def PseudoAtomicLoadXor32 : PseudoAMO;
 let Size = 24 in {
 def PseudoAtomicLoadMax32 : PseudoAMO;
 def PseudoAtomicLoadMin32 : PseudoAMO;
-} // Size = 24
-let Size = 28 in {
 def PseudoAtomicLoadUMax32 : PseudoAMO;
 def PseudoAtomicLoadUMin32 : PseudoAMO;
-} // Size = 28
+} // Size = 24
 
 defm : PseudoAMOPat<"atomic_swap_i32", PseudoAtomicSwap32>;
 defm : PseudoAMOPat<"atomic_load_add_i32", PseudoAtomicLoadAdd32>;

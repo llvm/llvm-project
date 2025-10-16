@@ -34893,17 +34893,18 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i32_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB165_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a3, a1, .LBB165_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB165_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a3, a2, .LBB165_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB165_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB165_3: # in Loop: Header=BB165_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB165_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_max_i32_monotonic:
@@ -35017,17 +35018,18 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i32_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB166_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a3, a1, .LBB166_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB166_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a3, a2, .LBB166_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB166_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB166_3: # in Loop: Header=BB166_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB166_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_max_i32_acquire:
@@ -35146,17 +35148,18 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i32_release:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB167_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a3, a1, .LBB167_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB167_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a3, a2, .LBB167_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB167_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB167_3: # in Loop: Header=BB167_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB167_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_max_i32_release:
@@ -35275,17 +35278,18 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i32_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB168_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a3, a1, .LBB168_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB168_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a3, a2, .LBB168_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB168_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB168_3: # in Loop: Header=BB168_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB168_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_max_i32_acq_rel:
@@ -35404,17 +35408,18 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i32_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB169_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aqrl a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a3, a1, .LBB169_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB169_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aqrl a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a3, a2, .LBB169_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB169_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB169_3: # in Loop: Header=BB169_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB169_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_max_i32_seq_cst:
@@ -35528,17 +35533,18 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i32_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB170_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a1, a3, .LBB170_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB170_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a2, a3, .LBB170_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB170_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB170_3: # in Loop: Header=BB170_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB170_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_min_i32_monotonic:
@@ -35652,17 +35658,18 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i32_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB171_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a1, a3, .LBB171_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB171_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a2, a3, .LBB171_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB171_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB171_3: # in Loop: Header=BB171_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB171_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_min_i32_acquire:
@@ -35781,17 +35788,18 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i32_release:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB172_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a1, a3, .LBB172_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB172_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a2, a3, .LBB172_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB172_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB172_3: # in Loop: Header=BB172_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB172_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_min_i32_release:
@@ -35910,17 +35918,18 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i32_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB173_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a1, a3, .LBB173_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB173_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a2, a3, .LBB173_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB173_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB173_3: # in Loop: Header=BB173_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB173_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_min_i32_acq_rel:
@@ -36039,17 +36048,18 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i32_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB174_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aqrl a2, (a0)
-; RV64I-ZALRSC-NEXT:    mv a3, a2
-; RV64I-ZALRSC-NEXT:    bge a1, a3, .LBB174_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB174_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aqrl a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bge a2, a3, .LBB174_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB174_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB174_3: # in Loop: Header=BB174_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB174_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_min_i32_seq_cst:
@@ -36163,18 +36173,18 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i32_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB175_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a3, a1, .LBB175_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB175_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a3, a2, .LBB175_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB175_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB175_3: # in Loop: Header=BB175_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB175_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_umax_i32_monotonic:
@@ -36288,18 +36298,18 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i32_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB176_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a3, a1, .LBB176_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB176_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a3, a2, .LBB176_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB176_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB176_3: # in Loop: Header=BB176_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB176_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umax_i32_acquire:
@@ -36418,18 +36428,18 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i32_release:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB177_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a3, a1, .LBB177_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB177_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a3, a2, .LBB177_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB177_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB177_3: # in Loop: Header=BB177_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB177_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umax_i32_release:
@@ -36548,18 +36558,18 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i32_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB178_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a3, a1, .LBB178_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB178_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a3, a2, .LBB178_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB178_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB178_3: # in Loop: Header=BB178_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB178_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umax_i32_acq_rel:
@@ -36678,18 +36688,18 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i32_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB179_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aqrl a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a3, a1, .LBB179_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB179_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aqrl a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a3, a2, .LBB179_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB179_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB179_3: # in Loop: Header=BB179_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB179_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umax_i32_seq_cst:
@@ -36803,18 +36813,18 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i32_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB180_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a1, a3, .LBB180_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB180_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a2, a3, .LBB180_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB180_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB180_3: # in Loop: Header=BB180_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB180_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_umin_i32_monotonic:
@@ -36928,18 +36938,18 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i32_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB181_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a1, a3, .LBB181_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB181_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a2, a3, .LBB181_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB181_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB181_3: # in Loop: Header=BB181_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB181_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umin_i32_acquire:
@@ -37058,18 +37068,18 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i32_release:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB182_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a1, a3, .LBB182_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB182_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a2, a3, .LBB182_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB182_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB182_3: # in Loop: Header=BB182_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB182_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umin_i32_release:
@@ -37188,18 +37198,18 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i32_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB183_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aq a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a1, a3, .LBB183_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB183_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aq a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a2, a3, .LBB183_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB183_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB183_3: # in Loop: Header=BB183_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB183_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umin_i32_acq_rel:
@@ -37318,18 +37328,18 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i32_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
+; RV64I-ZALRSC-NEXT:    sext.w a2, a1
 ; RV64I-ZALRSC-NEXT:  .LBB184_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w.aqrl a2, (a0)
-; RV64I-ZALRSC-NEXT:    slli a3, a2, 32
-; RV64I-ZALRSC-NEXT:    srli a3, a3, 32
-; RV64I-ZALRSC-NEXT:    bgeu a1, a3, .LBB184_3
-; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB184_1 Depth=1
+; RV64I-ZALRSC-NEXT:    lr.w.aqrl a1, (a0)
 ; RV64I-ZALRSC-NEXT:    mv a3, a1
+; RV64I-ZALRSC-NEXT:    bgeu a2, a3, .LBB184_3
+; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB184_1 Depth=1
+; RV64I-ZALRSC-NEXT:    mv a3, a2
 ; RV64I-ZALRSC-NEXT:  .LBB184_3: # in Loop: Header=BB184_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a3, .LBB184_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    mv a0, a2
+; RV64I-ZALRSC-NEXT:    mv a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
 ;
 ; RV64IA-WMO-LABEL: atomicrmw_umin_i32_seq_cst:
