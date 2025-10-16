@@ -770,7 +770,7 @@ static void instantiateDependentHLSLParamModifierAttr(
   NewParm->addAttr(Attr->clone(S.getASTContext()));
 
   const Type *OldParmTy = cast<ParmVarDecl>(Old)->getType().getTypePtr();
-  if (OldParmTy->isDependentType())
+  if (OldParmTy->isDependentType() && Attr->isAnyOut())
     NewParm->setType(S.HLSL().getInoutParameterType(NewParm->getType()));
 
   assert(!Attr->isAnyOut() || (NewParm->getType().isRestrictQualified() &&
