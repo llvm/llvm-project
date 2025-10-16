@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 -verify -fsyntax-only %s
 
 [[clang::nooutline]] int a; // expected-error {{'clang::nooutline' attribute only applies to functions}}
 

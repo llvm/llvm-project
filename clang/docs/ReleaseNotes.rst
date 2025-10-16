@@ -138,9 +138,6 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
-- Added a new attribute, ``[[clang::nooutline]]`` to suppress outlining from
-  annotated functions. This uses the LLVM `nooutline` attribute.
-
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -164,6 +161,9 @@ Attribute Changes in Clang
   the analysis which determines if a function should get a stack protector.  A function
   will still generate a stack protector if other local variables or command line flags
   require it.
+
+- Added a new attribute, ``[[clang::nooutline]]`` to suppress outlining from
+  annotated functions. This uses the LLVM `nooutline` attribute.
 
 Improvements to Clang's diagnostics
 -----------------------------------
