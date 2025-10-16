@@ -5679,7 +5679,7 @@ static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static std::pair<Expr *, int>
 makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
                        const unsigned Idx) {
-  if (S.DiagnoseUnexpandedParameterPack(E))
+  if (!E || S.DiagnoseUnexpandedParameterPack(E))
     return {};
 
   // Accept template arguments for now as they depend on something else.
@@ -5712,25 +5712,12 @@ CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
                                                  Expr *X, Expr *Y, Expr *Z) {
   CUDAClusterDimsAttr TmpAttr(Context, CI, X, Y, Z);
 
-  int ValX = 1;
-  int ValY = 1;
-  int ValZ = 1;
+  auto [NewX, ValX] = makeClusterDimsArgExpr(*this, X, TmpAttr, /*Idx=*/0);
+  auto [NewY, ValY] = makeClusterDimsArgExpr(*this, Y, TmpAttr, /*Idx=*/1);
+  auto [NewZ, ValZ] = makeClusterDimsArgExpr(*this, Z, TmpAttr, /*Idx=*/2);
 
-  std::tie(X, ValX) = makeClusterDimsArgExpr(*this, X, TmpAttr, /*Idx=*/0);
-  if (!X)
+  if (!NewX || (Y && !NewY) || (Z && !NewZ))
     return nullptr;
-
-  if (Y) {
-    std::tie(Y, ValY) = makeClusterDimsArgExpr(*this, Y, TmpAttr, /*Idx=*/1);
-    if (!Y)
-      return nullptr;
-  }
-
-  if (Z) {
-    std::tie(Z, ValZ) = makeClusterDimsArgExpr(*this, Z, TmpAttr, /*Idx=*/2);
-    if (!Z)
-      return nullptr;
-  }
 
   int FlatDim = ValX * ValY * ValZ;
   const llvm::Triple TT =
@@ -5748,12 +5735,11 @@ CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
   // A maximum of 8 thread blocks in a cluster is supported as a portable
   // cluster size in CUDA. The number is 16 for AMDGPU.
   if (FlatDim > MaxDim) {
-    Diag(CI.getLoc(), diag::err_cuda_cluster_dims_too_large)
-        << MaxDim << FlatDim;
+    Diag(CI.getLoc(), diag::err_cluster_dims_too_large) << MaxDim << FlatDim;
     return nullptr;
   }
 
-  return CUDAClusterDimsAttr::Create(Context, X, Y, Z, CI);
+  return CUDAClusterDimsAttr::Create(Context, NewX, NewY, NewZ, CI);
 }
 
 void Sema::addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
@@ -5772,7 +5758,7 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
-    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported)
+    S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported)
         << "__cluster_dims__";
     return;
   }
@@ -5792,7 +5778,7 @@ static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
-    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported)
+    S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported)
         << "__no_cluster__";
     return;
   }
