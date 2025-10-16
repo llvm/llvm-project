@@ -15946,7 +15946,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
         }
       } else if (Context.getLangOpts().HLSL && resultType->isVectorType() &&
                  !resultType->hasBooleanRepresentation()) {
-        // HLSL unary logical not behaves like C++, which states that the
+        // HLSL unary logical 'not' behaves like C++, which states that the
         // operand is converted to bool and the result is bool, however HLSL
         // extends this property to vectors.
         const VectorType *VTy = resultType->castAs<VectorType>();
