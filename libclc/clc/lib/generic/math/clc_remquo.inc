@@ -8,8 +8,8 @@
 
 _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
                                           __CLC_ADDRESS_SPACE int *quo) {
-  x = __clc_flush_denormal_if_not_supported(x);
-  y = __clc_flush_denormal_if_not_supported(y);
+  x = __clc_soft_flush_denormal(x);
+  y = __clc_soft_flush_denormal(y);
   int ux = __clc_as_int(x);
   int ax = ux & EXSIGNBIT_SP32;
   float xa = __clc_as_float(ax);
