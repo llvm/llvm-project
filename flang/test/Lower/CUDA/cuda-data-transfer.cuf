@@ -544,7 +544,7 @@ end subroutine
 ! CHECK-NOT: cuf.data_transfer
 
 ! Data transfer with conversion with more complex elemental
-! Check that the data transfer is palce
+! Check that the data transfer is placed before the elemental op.
 subroutine sub29()
   real(2), device, allocatable :: a(:)
   real(4), allocatable :: ha(:)
