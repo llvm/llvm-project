@@ -2695,12 +2695,12 @@ class FLAT_Real_vi <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
 
 class FLAT_Real_vi_ex_gfx9 <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
   FLAT_Real_vi <op, ps, has_sccb> {
-  let AssemblerPredicate = isGFX8orGFX9After908;
+  let AssemblerPredicate = isNVNotAllowedInFlat;
 }
 
 class FLAT_Real_gfx9 <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
   FLAT_Real_vi <op, ps, has_sccb> {
-  let AssemblerPredicate = isGFX9NotGFX90A;
+  let AssemblerPredicate = isNVAllowedInFlat;
   let Subtarget = SIEncodingFamily.GFX9;
   let DecoderNamespace = "GFX9";
   let Inst{55} = cpol{CPolBit.NV}; // nv - GFX9 (pre-90A) uses bit 55 as the non-volatile bit.

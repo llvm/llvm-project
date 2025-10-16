@@ -2344,12 +2344,14 @@ def isGFX8GFX9NotGFX90A :
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX90AInsts))>;
 
-def isGFX9NotGFX90A :
+// Pre-90A GFX9s allow the NV bit in FLAT instructions.
+def isNVAllowedInFlat :
   Predicate<"!Subtarget->hasGFX90AInsts() &&"
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
   AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX90AInsts), (not FeatureGFX10Insts))>;
 
-def isGFX8orGFX9After908 :
+// GFX8 or GFX90A+ do not allow the NV bit in FLAT instructions.
+def isNVNotAllowedInFlat :
   Predicate<"(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) ||"
             " ((Subtarget->getGeneration() == AMDGPUSubtarget::GFX9) && Subtarget->hasGFX90AInsts())">,
   AssemblerPredicate <(any_of FeatureVolcanicIslands, FeatureGFX90AInsts)>;
