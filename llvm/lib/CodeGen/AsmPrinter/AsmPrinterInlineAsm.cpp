@@ -34,6 +34,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -98,13 +99,12 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
 
   unsigned BufNum = addInlineAsmDiagBuffer(Str, LocMDNode);
   SourceMgr &SrcMgr = *MMI->getContext().getInlineSourceManager();
-  // FIXME(sandboxing): This is not executed in tests, but might be common.
-  //                    Propagating vfs::FileSystem here is lots of work,
-  //                    consider bypassing the sandbox.
-  if (!MCOptions.IASSearchPaths.empty()) {
-    SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
-    SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
-  }
+  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+  SrcMgr.setVirtualFileSystem([] {
+    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
+    [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+    return vfs::getRealFileSystem();
+  }());
 
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI, BufNum));

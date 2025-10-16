@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -86,10 +85,6 @@ class Twine;
 
 namespace remarks {
 class RemarkStreamer;
-}
-
-namespace vfs {
-class FileSystem;
 }
 
 /// This class is intended to be used as a driving class for all asm writers.
