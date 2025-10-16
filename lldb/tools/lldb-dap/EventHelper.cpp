@@ -15,6 +15,7 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBPlatform.h"
 #include "llvm/Support/Error.h"
 #include <utility>
 
@@ -136,7 +137,9 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   EmplaceSafeString(body, "name", exe_path);
   const auto pid = dap.target.GetProcess().GetProcessID();
   body.try_emplace("systemProcessId", (int64_t)pid);
-  body.try_emplace("isLocalProcess", true);
+  body.try_emplace("isLocalProcess",
+                   dap.target.GetPlatform().GetName() ==
+                       lldb::SBPlatform::GetHostPlatform().GetName());
   const char *startMethod = nullptr;
   switch (launch_method) {
   case Launch:
