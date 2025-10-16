@@ -59,6 +59,11 @@ public:
   /// Initialize a range to hold the single specified value.
   LLVM_ABI explicit ConstantFPRange(const APFloat &Value);
 
+  LLVM_ABI ConstantFPRange(const ConstantFPRange &Other);
+  LLVM_ABI ConstantFPRange(ConstantFPRange &&Other);
+  LLVM_ABI ConstantFPRange &operator=(const ConstantFPRange &Other);
+  LLVM_ABI ConstantFPRange &operator=(ConstantFPRange &&Other);
+
   /// Initialize a range of values explicitly.
   /// Note: If \p LowerVal is greater than \p UpperVal, please use the canonical
   /// form [Inf, -Inf].
