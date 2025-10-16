@@ -414,8 +414,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
-  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
-
   // fp constants
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64})
