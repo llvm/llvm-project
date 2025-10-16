@@ -933,6 +933,10 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::CoroElideSafe:
       case Attribute::NoDivergenceSource:
       case Attribute::NoCreateUndefOrPoison:
+      // CodeExtractor is used by the IROutliner, so we should not be extracting
+      // from a function with nooutline, but if we do, we should not be
+      // propagating this attribute.
+      case Attribute::NoOutline:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
