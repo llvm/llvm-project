@@ -51651,31 +51651,6 @@ static SDValue combineAndXorSubWithBMI(SDNode *And, const SDLoc &DL,
   return AndN;
 }
 
-// fold (not (or A, B)) -> nand(A, not(B)) if BMI
-static SDValue
-combineReassocDemorganWithNANDWithBMI(SDNode *Xor, const SDLoc &DL,
-                                      SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
-  using namespace llvm::SDPatternMatch;
-
-  EVT VT = Xor->getValueType(0);
-  // Make sure this node is a candidate for BMI instructions.
-  if (!Subtarget.hasBMI() || (VT != MVT::i32 && VT != MVT::i64))
-    return SDValue();
-
-  SDValue A;
-  SDValue B;
-  APInt Cst;
-  if (!(sd_match(Xor, m_Xor(m_Or(m_Value(A), m_Value(B)), m_ConstInt(Cst))) &&
-        Cst.isAllOnes()))
-    return SDValue();
-
-  auto Opcode =
-      Subtarget.is64Bit() && VT == MVT::i64 ? X86::ANDN64rr : X86::ANDN32rr;
-  auto AndN = DAG.getMachineNode(Opcode, DL, VT, A, DAG.getNOT(DL, B, VT));
-  return SDValue(AndN, 0);
-}
-
 static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
                                         SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
@@ -55173,9 +55148,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue R = combineBMILogicOp(N, DAG, Subtarget))
-    return R;
-
-  if (SDValue R = combineReassocDemorganWithNANDWithBMI(N, DL, DAG, Subtarget))
     return R;
 
   return combineFneg(N, DAG, DCI, Subtarget);
