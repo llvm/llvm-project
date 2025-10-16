@@ -50,8 +50,13 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
-                                                    Register OrigVReg) {
-  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::repairSSAForNewDef VReg=" << OrigVReg << "\n");
+                                                    Register OrigVReg,
+                                                    Register NewVReg) {
+  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::repairSSAForNewDef VReg=" << OrigVReg);
+  if (NewVReg.isValid()) {
+    LLVM_DEBUG(dbgs() << ", caller-provided NewVReg=" << NewVReg);
+  }
+  LLVM_DEBUG(dbgs() << "\n");
   
   MachineRegisterInfo &MRI = MF.getRegInfo();
   
@@ -84,21 +89,31 @@ Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
     LLVM_DEBUG(dbgs() << "  Full register def, DefMask=" << PrintLaneMask(DefMask) << "\n");
   }
   
-  // Step 3: Create a new virtual register with appropriate register class
-  // If this is a subreg def, we need the class for the subreg, not the full reg
-  const TargetRegisterClass *RC;
-  if (SubRegIdx) {
-    // For subreg defs, get the subreg class
-    const TargetRegisterClass *OrigRC = MRI.getRegClass(OrigVReg);
-    RC = TRI.getSubRegisterClass(OrigRC, SubRegIdx);
-    assert(RC && "Failed to get subregister class for subreg def - would create incorrect MIR");
+  // Step 3: Create or use provided new virtual register
+  Register NewSSAVReg;
+  if (NewVReg.isValid()) {
+    // Caller provided a register - use it
+    NewSSAVReg = NewVReg;
+    const TargetRegisterClass *RC = MRI.getRegClass(NewSSAVReg);
+    LLVM_DEBUG(dbgs() << "  Using caller-provided SSA vreg " << NewSSAVReg 
+                      << " with RC=" << TRI.getRegClassName(RC) << "\n");
   } else {
-    // For full reg defs, use the same class as OrigVReg
-    RC = MRI.getRegClass(OrigVReg);
+    // Create a new virtual register with appropriate register class
+    // If this is a subreg def, we need the class for the subreg, not the full reg
+    const TargetRegisterClass *RC;
+    if (SubRegIdx) {
+      // For subreg defs, get the subreg class
+      const TargetRegisterClass *OrigRC = MRI.getRegClass(OrigVReg);
+      RC = TRI.getSubRegisterClass(OrigRC, SubRegIdx);
+      assert(RC && "Failed to get subregister class for subreg def - would create incorrect MIR");
+    } else {
+      // For full reg defs, use the same class as OrigVReg
+      RC = MRI.getRegClass(OrigVReg);
+    }
+    
+    NewSSAVReg = MRI.createVirtualRegister(RC);
+    LLVM_DEBUG(dbgs() << "  Created new SSA vreg " << NewSSAVReg << " with RC=" << TRI.getRegClassName(RC) << "\n");
   }
-  
-  Register NewSSAVReg = MRI.createVirtualRegister(RC);
-  LLVM_DEBUG(dbgs() << "  Created new SSA vreg " << NewSSAVReg << " with RC=" << TRI.getRegClassName(RC) << "\n");
   
   // Step 4: Replace the operand in NewDefMI to define the new vreg
   // If this was a subreg def, the new vreg is a full register of the subreg class
