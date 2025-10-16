@@ -10600,6 +10600,9 @@ describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
   Register DestReg = DestSrc->Destination->getReg();
   Register SrcReg = DestSrc->Source->getReg();
 
+  if (!DestReg.isValid() || !SrcReg.isValid())
+    return std::nullopt;
+
   auto Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), {});
 
   // If the described register is the destination, just return the source.
