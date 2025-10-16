@@ -40,6 +40,7 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
@@ -312,10 +313,19 @@ static cl::opt<bool>
                                cl::desc("Show FailedToMaterialize errors"),
                                cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<bool> UseSharedMemory(
-    "use-shared-memory",
-    cl::desc("Use shared memory to transfer generated code and data"),
-    cl::init(false), cl::cat(JITLinkCategory));
+enum class MemMgr { Default, Generic, SimpleRemote, Shared };
+
+static cl::opt<MemMgr> UseMemMgr(
+    "use-memmgr", cl::desc("Choose memory manager"), cl::init(MemMgr::Generic),
+    cl::values(clEnumValN(MemMgr::Default, "default",
+                          "Use setup default (InProcess or EPCGeneric)"),
+               clEnumValN(MemMgr::Generic, "generic",
+                          "Generic remote memory manager"),
+               clEnumValN(MemMgr::SimpleRemote, "simple-remote",
+                          "Mapper memory manager with simple-remote backend"),
+               clEnumValN(MemMgr::Shared, "shared",
+                          "Mapper memory manager with shared-memory manager")),
+    cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
     OverrideTriple("triple", cl::desc("Override target triple detection"),
@@ -718,6 +728,27 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
+  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
+  if (auto Err = SREPC.getBootstrapSymbols(
+          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
+           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
+           {SAs.Initialize,
+            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
+           {SAs.Deinitialize,
+            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
+           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
+    return std::move(Err);
+#ifdef _WIN32
+  size_t SlabSize = 1024 * 1024;
+#else
+  size_t SlabSize = 1024 * 1024 * 1024;
+#endif
+  return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
+      SlabSize, SREPC, SAs);
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
@@ -745,6 +776,19 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
       SlabSize, SREPC, SAs);
 }
 
+static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
+  switch (UseMemMgr) {
+  case MemMgr::Default:
+  case MemMgr::Generic:
+    break;
+  case MemMgr::SimpleRemote:
+    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
+    break;
+  case MemMgr::Shared:
+    S.CreateMemoryManager = createSharedMemoryManager;
+    break;
+  }
+}
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -904,8 +948,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(FromExecutor[WriteEnd]);
 
   auto S = SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager = createSharedMemoryManager;
+  setupEPCRemoteMemoryManager(S);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
@@ -994,8 +1037,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
     return SockFD.takeError();
 
   auto S = SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager = createSharedMemoryManager;
+  setupEPCRemoteMemoryManager(S);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
