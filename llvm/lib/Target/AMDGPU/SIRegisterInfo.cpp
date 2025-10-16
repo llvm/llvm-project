@@ -340,8 +340,7 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
                             ST.getAMDGPUDwarfFlavour(),
                             /*PC=*/0,
                             ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
-      ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()),
-      WaveTransformCF(AMDGPUTargetMachine::EnableWaveTransformCF) {
+      ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
          getSubRegIndexLaneMask(AMDGPU::sub31).getAsInteger() == (3ULL << 62) &&
