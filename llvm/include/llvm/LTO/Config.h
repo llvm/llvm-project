@@ -281,7 +281,10 @@ struct Config {
   LLVM_ABI Error addSaveTemps(std::string OutputFileName,
                               bool UseInputModulePath = false,
                               const DenseSet<StringRef> &SaveTempsArgs = {});
-  mutable uint8_t Dtlto = 0;
+  // DTLTO flag is used as one of parameters to calculate cache entries and to
+  // ensure that in-process cache and out-of-process (DTLTO) cache are
+  // distinguished.
+  mutable bool Dtlto = 0;
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {

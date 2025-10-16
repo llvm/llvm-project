@@ -1,13 +1,14 @@
 REQUIRES: x86-registered-target, ld.lld
 
-# This test verifies that a cache populated by a ThinLTO link is not reused by a DTLTO link and vice versa.
+# This test verifies that a cache populated by an in-process ThinLTO codegen is
+# not reused by an out-of-process (DTLTO) codegen and vice versa.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
 # Compile source files into bitcode files.
 RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c foo.c main.c
 
-# Execute the linker and check that ThinLTO cache is populated.
+# Execute the linker and check that in-process ThinLTO cache is populated.
 RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
 RUN:   main.o foo.o -o main.elf \
 RUN:   -Wl,--thinlto-cache-dir=cache.dir \
@@ -16,7 +17,9 @@ RUN:   -Wl,--save-temps
 RUN: ls cache.dir/llvmcache.timestamp
 RUN: ls cache.dir | count 3
 
-# Execute the linker and check that DTLTO adds additional entries to the ThinLTO cache, implying they do not share entries.
+# Execute the linker and check that out-of-process codegen (DTLTO) adds
+# additional entries to the cache, implying that in-process and
+# out-of-process codegens do not share cache entries.
 RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
 RUN:   main.o foo.o -o populate1.elf \
 RUN:   -Wl,--thinlto-distributor=%python \
@@ -32,7 +35,7 @@ RUN: ls cache.dir | count 5
 # Clean up cache directory.
 RUN: rm -rf cache.dir
 
-# Execute the linker and check that DTLTO cache is populated. 
+# Execute the linker and check that out-of-process (DTLTO) cache is populated.
 RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
 RUN:   main.o foo.o -o populate2.elf \
 RUN:   -Wl,--thinlto-distributor=%python \
@@ -46,8 +49,9 @@ RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx 3
 RUN: ls cache.dir/llvmcache.timestamp
 RUN: ls cache.dir | count 3
 
-# Execute the linker and check that DTLTO adds additional entries to the ThinLTO cache, 
-# implying they do not share entries.
+# Execute the linker and check that in-process codegen adds additional entries
+# to the cache, implying that in-process and out-of-process codegens do
+# not share cache entries.
 RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
 RUN:   main.o foo.o -o main.elf \
 RUN:   -Wl,--thinlto-cache-dir=cache.dir \

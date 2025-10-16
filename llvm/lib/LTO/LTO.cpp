@@ -1571,6 +1571,10 @@ public:
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
     AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
+    // If CacheAddStream is null, we have a cache hit and at this point object
+    // file is already passed back to the linker.
+    // If CacheAddStream is not null, we have a cache miss and we need to run
+    // the backend for codegen.
     if (CacheAddStream)
       return RunThinBackend(CacheAddStream);
 
@@ -2259,7 +2263,8 @@ class OutOfProcessThinBackend : public CGThinBackend {
 
   SmallVector<StringRef, 0> CodegenOptions;
   DenseSet<StringRef> CommonInputs;
-  std::atomic<uint64_t> CachedJobs{0};
+  // Number of the object files that have been already cached.
+  std::atomic<size_t> CachedJobs{0};
   // Information specific to individual backend compilation job.
   struct Job {
     unsigned Task;
@@ -2332,7 +2337,7 @@ public:
          Saver.save(ObjFilePath.str()),
          Saver.save(ObjFilePath.str() + ".thinlto.bc"),
          {}, // Filled in by emitFiles below.
-         "",
+         "", /*CacheKey=*/
          nullptr,
          false};
 
@@ -2470,7 +2475,7 @@ public:
         for (const auto &J : Jobs) {
           assert(J.Task != 0);
 
-          if (!Cache.getCacheDirectoryPath().empty() && J.Cached)
+          if (J.Cached)
             continue;
 
           SmallVector<StringRef, 2> Inputs;
@@ -2544,6 +2549,7 @@ public:
         removeFile(JsonFile);
     });
 
+    // Checks if we have any jobs that don't have corresponding cache entries.
     if (CachedJobs.load() < Jobs.size()) {
       SmallVector<StringRef, 3> Args = {DistributorPath};
       llvm::append_range(Args, DistributorArgs);
@@ -2561,9 +2567,8 @@ public:
     }
 
     for (auto &Job : Jobs) {
-      if (Cache.isValid() && !Job.CacheKey.empty())
-        if (Job.Cached)
-          continue;
+      if (!Job.CacheKey.empty() && (Job.Cached))
+        continue;
       // Load the native object from a file into a memory buffer
       // and store its contents in the output buffer.
       auto ObjFileMbOrErr =
