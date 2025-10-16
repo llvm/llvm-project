@@ -610,6 +610,32 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
   case Instruction::LShr:
     return canEvaluateShiftedShift(NumBits, IsLeftShift, I, IC, CxtI);
 
+  case Instruction::Add: {
+    // We can fold Add through right shifts if it has the appropriate nowrap
+    // flag. For lshr: requires nuw (no unsigned wrap) For ashr: requires nsw
+    // (no signed wrap) We don't support left shift through add.
+    if (IsLeftShift)
+      return false;
+
+    auto *BO = cast<BinaryOperator>(I);
+
+    // Determine which flag is required based on the shift type
+    bool HasRequiredFlag;
+    if (isa<LShrOperator>(CxtI))
+      HasRequiredFlag = BO->hasNoUnsignedWrap();
+    else if (isa<AShrOperator>(CxtI))
+      HasRequiredFlag = BO->hasNoSignedWrap();
+    else
+      return false;
+
+    if (!HasRequiredFlag)
+      return false;
+
+    // Both operands must be shiftable, pass through CxtI to preserve shift type
+    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC, CxtI) &&
+           canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, IC, CxtI);
+  }
+
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
     Value *TrueVal = SI->getTrueValue();
@@ -730,6 +756,18 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   case Instruction::LShr:
     return foldShiftedShift(cast<BinaryOperator>(I), NumBits, isLeftShift,
                             IC.Builder);
+
+  case Instruction::Add:
+    // Shift both operands, then perform the add.
+    I->setOperand(
+        0, getShiftedValue(I->getOperand(0), NumBits, isLeftShift, IC, DL));
+    I->setOperand(
+        1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
+    // We must clear the nuw/nsw flags because the original values that didn't
+    // overflow might overflow after we shift them.
+    cast<BinaryOperator>(I)->setHasNoUnsignedWrap(false);
+    cast<BinaryOperator>(I)->setHasNoSignedWrap(false);
+    return I;
 
   case Instruction::Select:
     I->setOperand(
@@ -1635,6 +1673,30 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
     }
   }
+
+  // Fold ((X << A) + C) >>u B  -->  (X << (A - B)) + (C >>u B)
+  // when the shift is exact and the add has nuw.
+  const APInt *ShAmtAPInt, *ShlAmt, *AddC;
+  if (match(Op1, m_APInt(ShAmtAPInt)) && I.isExact() &&
+      match(Op0, m_c_NUWAdd(m_NUWShl(m_Value(X), m_APInt(ShlAmt)),
+                            m_APInt(AddC))) &&
+      ShlAmt->uge(*ShAmtAPInt)) {
+    unsigned ShAmt = ShAmtAPInt->getZExtValue();
+    // Check if C is divisible by (1 << ShAmt)
+    if (AddC->isShiftedMask() || AddC->countTrailingZeros() >= ShAmt ||
+        AddC->lshr(ShAmt).shl(ShAmt) == *AddC) {
+      // X << (A - B)
+      Constant *NewShlAmt = ConstantInt::get(Ty, *ShlAmt - ShAmt);
+      Value *NewShl = Builder.CreateShl(X, NewShlAmt);
+
+      // C >>u B
+      Constant *NewAddC = ConstantInt::get(Ty, AddC->lshr(ShAmt));
+
+      // (X << (A - B)) + (C >>u B)
+      return BinaryOperator::CreateAdd(NewShl, NewAddC);
+    }
+  }
+
   return nullptr;
 }
 
@@ -1804,10 +1866,8 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       return NewAdd;
     }
 
-    // Fold ((X << A) + C) >> B  -->  (X << (A - B)) + (C >> B)
-    // when the shift is exact and the add is nsw.
-    // This transforms patterns like: ((x << 4) + 16) ashr exact 1  -->  (x <<
-    // 3) + 8
+    // Fold ((X << A) + C) >>s B  -->  (X << (A - B)) + (C >>s B)
+    // when the shift is exact and the add has nsw.
     const APInt *ShlAmt, *AddC;
     if (I.isExact() &&
         match(Op0, m_c_NSWAdd(m_NSWShl(m_Value(X), m_APInt(ShlAmt)),
@@ -1820,10 +1880,10 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
         Constant *NewShlAmt = ConstantInt::get(Ty, *ShlAmt - ShAmt);
         Value *NewShl = Builder.CreateShl(X, NewShlAmt);
 
-        // C >> B
+        // C >>s B
         Constant *NewAddC = ConstantInt::get(Ty, AddC->ashr(ShAmt));
 
-        // (X << (A - B)) + (C >> B)
+        // (X << (A - B)) + (C >>s B)
         return BinaryOperator::CreateAdd(NewShl, NewAddC);
       }
     }
