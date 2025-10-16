@@ -11287,20 +11287,16 @@ multiclass sve2_luti6_vector_index<string mnemonic> {
 }
 
 // Look up table
-class sve2_luti6_vector<ZPRRegOp zd_ty, RegisterOperand zn_ty,
-                        bits<5>opc, string mnemonic>
-    : I<(outs zd_ty:$Zd), (ins zn_ty:$Zn, ZPRAny:$Zm),
+class sve2_luti6_vector<string mnemonic>
+    : I<(outs ZPR8:$Zd), (ins ZZ_b:$Zn, ZPRAny:$Zm),
       mnemonic, "\t$Zd, $Zn, $Zm",
       "", []>, Sched<[]> {
   bits<5> Zd;
   bits<5> Zn;
   bits<5> Zm;
-  let Inst{31-24} = 0b01000101;
-  let Inst{23-22} = opc{4-3};
-  let Inst{21}    = 0b1;
+  let Inst{31-21} = 0b01000101001;
   let Inst{20-16} = Zm;
-  let Inst{15-13} = 0b101;
-  let Inst{12-10} = opc{2-0};
+  let Inst{15-10} = 0b101011;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
 }

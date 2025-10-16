@@ -17,15 +17,15 @@ luti6 z10.s, { z0.b, z1.b }, z0
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0.h, p0/m, z7.h
-luti6 z10.b, { z0.b, z1.b }, z0
+luti6 z0.b, { z2.b, z3.b }, z4
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: luti6 z10.b, { z0.b, z1.b }, z0
+// CHECK-NEXT: luti6 z0.b, { z2.b, z3.b }, z4
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 movprfx z0, z7
-luti6 z10.b, { z0.b, z1.b }, z0
+luti6 z0.b, { z2.b, z3.b }, z4
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: luti6 z10.b, { z0.b, z1.b }, z0
+// CHECK-NEXT: luti6 z0.b, { z2.b, z3.b }, z4
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -58,13 +58,13 @@ luti6 z10.h, { z0.h, z1.h }, z0[2]
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0.h, p0/m, z7.h
-luti6 z10.h, { z0.h, z1.h }, z0[0]
+luti6 z0.h, { z2.h, z3.h }, z4[0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: luti6 z10.h, { z0.h, z1.h }, z0[0]
+// CHECK-NEXT: luti6 z0.h, { z2.h, z3.h }, z4[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 movprfx z0, z7
-luti6 z10.h, { z0.h, z1.h }, z0[0]
+luti6 z0.h, { z2.h, z3.h }, z4[0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: luti6 z10.h, { z0.h, z1.h }, z0[0]
+// CHECK-NEXT: luti6 z0.h, { z2.h, z3.h }, z4[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

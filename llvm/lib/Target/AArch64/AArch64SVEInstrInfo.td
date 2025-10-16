@@ -4667,7 +4667,7 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
 // SVE2.3 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p3] in {
-  def LUTI6_Z2ZZ : sve2_luti6_vector<ZPR8, ZZ_b, 0b00011, "luti6">;
+  def LUTI6_Z2ZZ : sve2_luti6_vector<"luti6">;
 }
 
 //===----------------------------------------------------------------------===//
