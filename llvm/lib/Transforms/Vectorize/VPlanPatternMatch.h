@@ -372,6 +372,12 @@ m_ExtractLastElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
+m_ExtractLastLanePerPart(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastLanePerPart>(Op0);
+}
+
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
@@ -392,6 +398,12 @@ template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
 m_AnyOf(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::FirstActiveLane, Op0_t>
+m_FirstActiveLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::FirstActiveLane>(Op0);
 }
 
 template <unsigned Opcode, typename Op0_t>

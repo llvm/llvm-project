@@ -276,7 +276,7 @@ New Compiler Flags
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
-
+- The ``-resource-dir`` option is now displayed in the list of options shown by ``--help``.
 
 Lanai Support
 ^^^^^^^^^^^^^^
@@ -413,6 +413,7 @@ Bug Fixes in This Version
   (#GH159080)
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
+- Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -426,7 +427,8 @@ Bug Fixes to Attribute Support
   (#GH141504) and on types returned from indirect calls (#GH142453).
 - Fixes some late parsed attributes, when applied to function definitions, not being parsed
   in function try blocks, and some situations where parsing of the function body
-  is skipped, such as error recovery and code completion. (#GH153551)
+  is skipped, such as error recovery, code completion, and msvc-compatible delayed
+  template parsing. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
@@ -515,6 +517,7 @@ X86 Support
   driver.
 - Remove `[no-]evex512` feature request from intrinsics and builtins.
 - Change features `avx10.x-[256,512]` to `avx10.x`.
+- `-march=wildcatlake` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
