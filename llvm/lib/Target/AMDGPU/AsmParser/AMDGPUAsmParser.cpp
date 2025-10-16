@@ -1354,6 +1354,7 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
 
 #define GET_ASSEMBLER_HEADER
 #include "AMDGPUGenAsmMatcher.inc"
+#undef GET_ASSEMBLER_HEADER
 
   /// }
 
@@ -1989,6 +1990,12 @@ public:
 
   ParseStatus parseVOPD(OperandVector &Operands);
 };
+
+// TODO: define GET_SUBTARGET_FEATURE_NAME
+#define GET_REGISTER_MATCHER
+#include "AMDGPUGenAsmMatcher.inc"
+#undef GET_REGISTER_MATCHER
+#undef GET_SUBTARGET_FEATURE_NAME
 
 } // end anonymous namespace
 
@@ -5779,10 +5786,14 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
+  FeatureBitset MissingFeatures;
+
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
-    auto R = MatchInstructionImpl(Operands, Inst, EI, MatchingInlineAsm,
-                                  Variant);
+    auto R = MatchInstructionImpl(Operands, Inst, EI, MissingFeatures,
+                                  MatchingInlineAsm, Variant);
+
+    // TODO: Emit diagnostic from MissingFeatures.
     // We order match statuses from least to most specific. We use most specific
     // status as resulting
     // Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature
