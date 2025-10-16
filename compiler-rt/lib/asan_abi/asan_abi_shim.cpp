@@ -365,6 +365,8 @@ void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
                                    void **end) {
   return __asan_abi_addr_is_in_fake_stack(fake_stack, addr, beg, end);
 }
+void __asan_disable_fake_stack(void) { return __asan_abi_disable_fake_stack(); }
+void __asan_enable_fake_stack(void) { return __asan_abi_enable_fake_stack(); }
 
 // Functions concerning poisoning and unpoisoning fake stack alloca
 void __asan_alloca_poison(uptr addr, uptr size) {

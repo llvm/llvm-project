@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// Suggests to replace calls to pipe() with calls to pipe2().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe.html
 class CloexecPipeCheck : public CloexecCheck {
 public:
   CloexecPipeCheck(StringRef Name, ClangTidyContext *Context)

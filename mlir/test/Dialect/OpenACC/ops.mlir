@@ -358,6 +358,41 @@ func.func @acc_loop_multiple_block() {
 
 // -----
 
+acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloca() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  memref.copy %arg0, %arg1 : memref<10xf32> to memref<10xf32>
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  acc.terminator
+}
+
+func.func @testloopfirstprivate(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %firstprivate = acc.firstprivate varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+  acc.loop firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  return
+}
+
+// CHECK-LABEL: func.func @testloopfirstprivate(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: memref<10xf32>)
+// CHECK:         %[[FIRSTPRIVATE:.*]] = acc.firstprivate varPtr(%[[ARG0]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+// CHECK:         acc.loop firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTPRIVATE]] : memref<10xf32>) control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
+// CHECK:           "test.openacc_dummy_op"() : () -> ()
+// CHECK:           acc.yield
+// CHECK:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+
+// -----
+
 acc.private.recipe @privatization_memref_10_f32 : memref<10xf32> init {
 ^bb0(%arg0: memref<10xf32>):
   %0 = memref.alloc() : memref<10xf32>
@@ -535,6 +570,7 @@ acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init 
   acc.yield %0 : memref<10xf32>
 } copy {
 ^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  memref.copy %arg0, %arg1 : memref<10xf32> to memref<10xf32>
   acc.terminator
 } destroy {
 ^bb0(%arg0: memref<10xf32>):

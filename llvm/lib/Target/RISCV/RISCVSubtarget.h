@@ -196,6 +196,9 @@ public:
   bool hasCPOPLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
+  bool hasREV8Like() const {
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+  }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
@@ -224,8 +227,8 @@ public:
   unsigned getXLen() const {
     return is64Bit() ? 64 : 32;
   }
-  bool useLoadStorePairs() const;
-  bool useCCMovInsn() const;
+  bool useMIPSLoadStorePairs() const;
+  bool useMIPSCCMovInsn() const;
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;

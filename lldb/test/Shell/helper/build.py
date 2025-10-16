@@ -9,12 +9,8 @@ import subprocess
 import sys
 
 if sys.platform == "win32":
-    # This module was renamed in Python 3.  Make sure to import it using a
-    # consistent name regardless of python version.
-    try:
-        import winreg
-    except:
-        import _winreg as winreg
+    import winreg
+
 
 if __name__ != "__main__":
     raise RuntimeError("Do not import this script, run it instead")

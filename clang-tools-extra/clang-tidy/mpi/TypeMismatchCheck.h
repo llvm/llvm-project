@@ -22,7 +22,7 @@ namespace clang::tidy::mpi {
 /// null pointer constants are skipped, in the course of verification.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/mpi/type-mismatch.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/mpi/type-mismatch.html
 class TypeMismatchCheck : public ClangTidyCheck {
 public:
   TypeMismatchCheck(StringRef Name, ClangTidyContext *Context)

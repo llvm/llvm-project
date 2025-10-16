@@ -149,7 +149,7 @@ void VAListChecker::checkPreCall(const CallEvent &Call,
   else if (VaEnd.matches(Call))
     checkVAListEndCall(Call, C);
   else {
-    for (auto FuncInfo : VAListAccepters) {
+    for (const auto &FuncInfo : VAListAccepters) {
       if (!FuncInfo.Func.matches(Call))
         continue;
       const MemRegion *VAList =

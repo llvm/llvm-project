@@ -108,7 +108,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
         << MatchedDecl;
     if (*InitializationString != nullptr)
       Diagnostic << FixItHint::CreateInsertion(
-          utils::lexer::findNextTerminator(MatchedDecl->getLocation(),
+          utils::lexer::findNextTerminator(MatchedDecl->getEndLoc(),
                                            *Result.SourceManager,
                                            Result.Context->getLangOpts()),
           *InitializationString);
