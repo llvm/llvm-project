@@ -757,23 +757,27 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
     llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
     bool &needsFree) const {
 
-  // Get the element type from the pointer type
-  mlir::Type eleTy = mlir::cast<Ty>(pointer).getElementType();
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
 
-  // Unlimited polymorphic (class(*)) cannot be handled - size unknown
-  if (fir::isUnlimitedPolymorphicType(eleTy))
+  // Box types are descriptors that contain both metadata and a pointer to data.
+  // The `genAllocate` API is designed for simple allocations and cannot
+  // properly handle the dual nature of boxes. Using `generatePrivateInit`
+  // instead can allocate both the descriptor and its referenced data. For use
+  // cases that require an empty descriptor storage, potentially this could be
+  // implemented here.
+  if (fir::isa_box_type(pointeeTy))
     return {};
 
-  // Character types with dynamic length cannot be handled without a descriptor.
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy))
-    if (charTy.hasDynamicLen())
-      return {};
+  // Unlimited polymorphic (class(*)) cannot be handled - size unknown
+  if (fir::isUnlimitedPolymorphicType(pointeeTy))
+    return {};
 
-  // Return null for dynamic or unknown shape arrays because the size of the
+  // Return null for dynamic size types because the size of the
   // allocation cannot be determined simply from the type.
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
-    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
-      return {};
+  if (fir::hasDynamicSize(pointeeTy))
+    return {};
 
   // Use heap allocation for fir.heap, stack allocation for others (fir.ref,
   // fir.ptr, fir.llvm_ptr). For fir.ptr, which is supposed to represent a
@@ -783,10 +787,10 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
   mlir::Value allocation;
   if (std::is_same_v<Ty, fir::HeapType>) {
     needsFree = true;
-    allocation = fir::AllocMemOp::create(builder, loc, eleTy);
+    allocation = fir::AllocMemOp::create(builder, loc, pointeeTy);
   } else {
     needsFree = false;
-    allocation = fir::AllocaOp::create(builder, loc, eleTy);
+    allocation = fir::AllocaOp::create(builder, loc, pointeeTy);
   }
 
   // Convert to the requested pointer type if needed.
@@ -862,6 +866,17 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
     mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
     mlir::Value allocRes, mlir::Type varType) const {
 
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types contain both a descriptor and data. The `genFree` API
+  // handles simple deallocations and cannot properly manage both parts.
+  // Using `generatePrivateDestroy` instead can free both the descriptor and
+  // its referenced data.
+  if (fir::isa_box_type(pointeeTy))
+    return false;
+
   // If pointer type is HeapType, assume it's a heap allocation
   if (std::is_same_v<Ty, fir::HeapType>) {
     fir::FreeMemOp::create(builder, loc, varToFree);
@@ -925,22 +940,26 @@ bool OpenACCPointerLikeModel<Ty>::genCopy(
   if (source.getType() != destination.getType())
     return false;
 
-  mlir::Type eleTy = mlir::cast<Ty>(pointer).getElementType();
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types contain both a descriptor and referenced data. The genCopy API
+  // handles simple copies and cannot properly manage both parts.
+  if (fir::isa_box_type(pointeeTy))
+    return false;
 
   // Unlimited polymorphic (class(*)) cannot be handled because source and
   // destination types are not known.
-  if (fir::isUnlimitedPolymorphicType(eleTy))
+  if (fir::isUnlimitedPolymorphicType(pointeeTy))
     return false;
 
-  // Dynamic lengths without descriptor do not have size information.
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy))
-    if (charTy.hasDynamicLen())
-      return false;
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
-    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
-      return false;
+  // Return false for dynamic size types because the copy logic
+  // cannot be determined simply from the type.
+  if (fir::hasDynamicSize(pointeeTy))
+    return false;
 
-  if (fir::isa_trivial(eleTy)) {
+  if (fir::isa_trivial(pointeeTy)) {
     auto loadVal = fir::LoadOp::create(builder, loc, source);
     fir::StoreOp::create(builder, loc, loadVal, destination);
   } else {
