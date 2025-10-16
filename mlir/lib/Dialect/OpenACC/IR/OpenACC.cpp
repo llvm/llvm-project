@@ -43,10 +43,9 @@ static bool isScalarLikeType(Type type) {
 /// Helper function to attach the `VarName` attribute to an operation
 /// if a variable name is provided.
 static void attachVarNameAttr(Operation *op, OpBuilder &builder,
-                                   StringRef varName) {
+                              StringRef varName) {
   if (!varName.empty()) {
-    auto varNameAttr =
-        acc::VarNameAttr::get(builder.getContext(), varName);
+    auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
     op->setAttr(acc::getVarNameAttrName(), varNameAttr);
   }
 }
@@ -116,8 +115,9 @@ struct MemRefPointerLikeModel
         // Static dimensions are handled automatically by AllocOp
       }
       needsFree = true; // alloc needs deallocation
-      auto allocOp = memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
-        attachVarNameAttr(allocOp, builder, varName);
+      auto allocOp =
+          memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
+      attachVarNameAttr(allocOp, builder, varName);
       return allocOp.getResult();
     }
 
