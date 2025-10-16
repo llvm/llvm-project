@@ -231,10 +231,10 @@ getAtomicMemoryOrder(semantics::SemanticsContext &semaCtx,
 static std::optional<mlir::omp::ClauseMemoryOrderKind>
 makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
                    int action0, int action1, unsigned version) {
-// When the atomic default memory order specified on a REQUIRES directive is
-// disallowed on a given ATOMIC operation, and it's not ACQ_REL, the order
-// reverts to RELAXED. ACQ_REL decays to either ACQUIRE or RELEASE, depending
-// on the operation.
+  // When the atomic default memory order specified on a REQUIRES directive is
+  // disallowed on a given ATOMIC operation, and it's not ACQ_REL, the order
+  // reverts to RELAXED. ACQ_REL decays to either ACQUIRE or RELEASE, depending
+  // on the operation.
 
   if (!memOrder) {
     return memOrder;
@@ -251,7 +251,7 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
   if (action == Analysis::Read) {
     // "acq_rel" decays to "acquire"
     if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-      return mlir::omp::ClauseMemoryOrderKind::Acquire;;
+      return mlir::omp::ClauseMemoryOrderKind::Acquire;
   } else if (action == Analysis::Write) {
     // "acq_rel" decays to "release"
     if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
