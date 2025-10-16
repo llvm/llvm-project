@@ -605,17 +605,16 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   return Mapping;
 }
 
-namespace llvm {
-void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
-                               bool IsKasan, uint64_t *ShadowBase,
-                               int *MappingScale, bool *OrShadowOffset) {
+void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
+                                     bool IsKasan, uint64_t *ShadowBase,
+                                     int *MappingScale, bool *OrShadowOffset) {
   auto Mapping = getShadowMapping(TargetTriple, LongSize, IsKasan);
   *ShadowBase = Mapping.Offset;
   *MappingScale = Mapping.Scale;
   *OrShadowOffset = Mapping.OrShadowOffset;
 }
 
-void removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
+void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
   // Sanitizer checks read from shadow, which invalidates memory(argmem: *).
   //
   // This is not only true for sanitized functions, because AttrInfer can
@@ -668,8 +667,6 @@ ASanAccessInfo::ASanAccessInfo(bool IsWrite, bool CompileKernel,
       AccessSizeIndex(AccessSizeIndex), IsWrite(IsWrite),
       CompileKernel(CompileKernel) {}
 
-} // namespace llvm
-
 static uint64_t getRedzoneSizeForScale(int MappingScale) {
   // Redzone used for stack and globals is at least 32 bytes.
   // For scales 6 and 7, the redzone has to be 64 and 128 bytes respectively.
@@ -677,11 +674,10 @@ static uint64_t getRedzoneSizeForScale(int MappingScale) {
 }
 
 static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
-  if (TargetTriple.isOSEmscripten()) {
+  if (TargetTriple.isOSEmscripten())
     return kAsanEmscriptenCtorAndDtorPriority;
-  } else {
+  else
     return kAsanCtorAndDtorPriority;
-  }
 }
 
 static Twine genName(StringRef suffix) {

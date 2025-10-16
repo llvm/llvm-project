@@ -2915,6 +2915,130 @@ LogicalResult cir::TypeInfoAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+void cir::TryOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  // The `try` and the `catchers` region branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(mlir::RegionSuccessor());
+    return;
+  }
+
+  regions.push_back(mlir::RegionSuccessor(&getTryRegion()));
+
+  // TODO(CIR): If we know a target function never throws a specific type, we
+  // can remove the catch handler.
+  for (mlir::Region &handlerRegion : this->getHandlerRegions())
+    regions.push_back(mlir::RegionSuccessor(&handlerRegion));
+}
+
+static void
+printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
+                       mlir::MutableArrayRef<mlir::Region> handlerRegions,
+                       mlir::ArrayAttr handlerTypes) {
+  if (!handlerTypes)
+    return;
+
+  for (const auto [typeIdx, typeAttr] : llvm::enumerate(handlerTypes)) {
+    if (typeIdx)
+      printer << " ";
+
+    if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
+      printer << "catch all ";
+    } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+      printer << "unwind ";
+    } else {
+      printer << "catch [type ";
+      printer.printAttribute(typeAttr);
+      printer << "] ";
+    }
+
+    printer.printRegion(handlerRegions[typeIdx],
+                        /*printEntryBLockArgs=*/false,
+                        /*printBlockTerminators=*/true);
+  }
+}
+
+static mlir::ParseResult parseTryHandlerRegions(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &handlerRegions,
+    mlir::ArrayAttr &handlerTypes) {
+
+  auto parseCheckedCatcherRegion = [&]() -> mlir::ParseResult {
+    handlerRegions.emplace_back(new mlir::Region);
+
+    mlir::Region &currRegion = *handlerRegions.back();
+    mlir::SMLoc regionLoc = parser.getCurrentLocation();
+    if (parser.parseRegion(currRegion)) {
+      handlerRegions.clear();
+      return failure();
+    }
+
+    if (!currRegion.empty() && !(currRegion.back().mightHaveTerminator() &&
+                                 currRegion.back().getTerminator()))
+      return parser.emitError(
+          regionLoc, "blocks are expected to be explicitly terminated");
+
+    return success();
+  };
+
+  bool hasCatchAll = false;
+  llvm::SmallVector<mlir::Attribute, 4> catcherAttrs;
+  while (parser.parseOptionalKeyword("catch").succeeded()) {
+    bool hasLSquare = parser.parseOptionalLSquare().succeeded();
+
+    llvm::StringRef attrStr;
+    if (parser.parseOptionalKeyword(&attrStr, {"all", "type"}).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected 'all' or 'type' keyword");
+
+    bool isCatchAll = attrStr == "all";
+    if (isCatchAll) {
+      if (hasCatchAll)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "can't have more than one catch all");
+      hasCatchAll = true;
+    }
+
+    mlir::Attribute exceptionRTTIAttr;
+    if (!isCatchAll && parser.parseAttribute(exceptionRTTIAttr).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected valid RTTI info attribute");
+
+    catcherAttrs.push_back(isCatchAll
+                               ? cir::CatchAllAttr::get(parser.getContext())
+                               : exceptionRTTIAttr);
+
+    if (hasLSquare && isCatchAll)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "catch all dosen't need RTTI info attribute");
+
+    if (hasLSquare && parser.parseRSquare().failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected `]` after RTTI info attribute");
+
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  if (parser.parseOptionalKeyword("unwind").succeeded()) {
+    if (hasCatchAll)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unwind can't be used with catch all");
+
+    catcherAttrs.push_back(cir::UnwindAttr::get(parser.getContext()));
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  handlerTypes = parser.getBuilder().getArrayAttr(catcherAttrs);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

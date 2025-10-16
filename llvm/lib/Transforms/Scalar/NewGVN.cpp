@@ -160,9 +160,6 @@ static cl::opt<bool> EnablePhiOfOps("enable-phi-of-ops", cl::init(true),
 //===----------------------------------------------------------------------===//
 
 // Anchor methods.
-namespace llvm {
-namespace GVNExpression {
-
 Expression::~Expression() = default;
 BasicExpression::~BasicExpression() = default;
 CallExpression::~CallExpression() = default;
@@ -170,9 +167,6 @@ LoadExpression::~LoadExpression() = default;
 StoreExpression::~StoreExpression() = default;
 AggregateValueExpression::~AggregateValueExpression() = default;
 PHIExpression::~PHIExpression() = default;
-
-} // end namespace GVNExpression
-} // end namespace llvm
 
 namespace {
 

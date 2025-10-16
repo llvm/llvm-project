@@ -1342,10 +1342,12 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special case where only managed or unifed symbols are involved. This is
-  // performed on the host.
-  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-      rhsNbSymbols == 1) {
+  // Special cases perforemd on the host:
+  // - Only managed or unifed symbols are involved on RHS and LHS.
+  // - LHS is managed or unified and the RHS is host only.
+  if ((lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
+          rhsNbSymbols == 1) ||
+      (lhsNbManagedSymbols == 1 && rhsNbSymbols == 0)) {
     return false;
   }
   return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;

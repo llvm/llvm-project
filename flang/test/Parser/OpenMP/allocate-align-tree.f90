@@ -26,14 +26,14 @@ end program allocate_align_tree
 !CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPExecutableAllocate
 !CHECK-NEXT: | | | Verbatim
 !CHECK-NEXT: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
-!CHECK-NEXT: | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Expr = '32_4'
+!CHECK-NEXT: | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '32_4'
 !CHECK-NEXT: | | | | LiteralConstant -> IntLiteralConstant = '32'
 !CHECK-NEXT: | | | OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
 !CHECK-NEXT: | | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
 !CHECK-NEXT: | | | OpenMPDeclarativeAllocate
 !CHECK-NEXT: | | | | Verbatim
 !CHECK-NEXT: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'j'
-!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Expr = '16_4'
+!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '16_4'
 !CHECK-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '16'
 !CHECK-NEXT: | | | AllocateStmt
 

@@ -2623,32 +2623,32 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
 
 namespace {
 
-  class ReassociateLegacyPass : public FunctionPass {
-    ReassociatePass Impl;
+class ReassociateLegacyPass : public FunctionPass {
+  ReassociatePass Impl;
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-    ReassociateLegacyPass() : FunctionPass(ID) {
-      initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
-    }
+  ReassociateLegacyPass() : FunctionPass(ID) {
+    initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      if (skipFunction(F))
-        return false;
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
 
-      FunctionAnalysisManager DummyFAM;
-      auto PA = Impl.run(F, DummyFAM);
-      return !PA.areAllPreserved();
-    }
+    FunctionAnalysisManager DummyFAM;
+    auto PA = Impl.run(F, DummyFAM);
+    return !PA.areAllPreserved();
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addPreserved<AAResultsWrapperPass>();
-      AU.addPreserved<BasicAAWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
-  };
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<AAResultsWrapperPass>();
+    AU.addPreserved<BasicAAWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+};
 
 } // end anonymous namespace
 

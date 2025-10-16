@@ -557,6 +557,21 @@ public:
     using RequiresClauses = WithOmpDeclarative::RequiresClauses;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
+    auto getArgument{[&](auto &&maybeClause) {
+      if (maybeClause) {
+        // Scalar<Logical<Constant<common::Indirection<Expr>>>>
+        auto &parserExpr{maybeClause->v.thing.thing.thing.value()};
+        evaluate::ExpressionAnalyzer ea{context_};
+        if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
+          if (auto v{omp::GetLogicalValue(*maybeExpr)}) {
+            return *v;
+          }
+        }
+      }
+      // If the argument is missing, it is assumed to be true.
+      return true;
+    }};
+
     // Gather information from the clauses.
     RequiresClauses reqs;
     const common::OmpMemoryOrderType *memOrder{nullptr};
@@ -573,16 +588,19 @@ public:
                 if constexpr ( //
                     std::is_same_v<TypeS, OmpClause::DynamicAllocators> ||
                     std::is_same_v<TypeS, OmpClause::ReverseOffload> ||
+                    std::is_same_v<TypeS, OmpClause::SelfMaps> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
-                  return RequiresClauses{clause.Id()};
-                } else {
-                  return RequiresClauses{};
+                  if (getArgument(s.v)) {
+                    return RequiresClauses{clause.Id()};
+                  }
                 }
+                return RequiresClauses{};
               },
           },
           clause.u);
     }
+
     // Merge clauses into parents' symbols details.
     AddOmpRequiresToScope(currScope(), &reqs, memOrder);
     return true;

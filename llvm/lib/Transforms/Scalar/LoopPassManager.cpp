@@ -16,8 +16,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
 /// Explicitly specialize the pass manager's run method to handle loop nest
 /// structure updates.
 PreservedAnalyses
@@ -185,7 +183,6 @@ LoopPassManager::runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
   }
   return PA;
 }
-} // namespace llvm
 
 void FunctionToLoopPassAdaptor::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -193,6 +190,7 @@ void FunctionToLoopPassAdaptor::printPipeline(
   Pass->printPipeline(OS, MapClassName2PassName);
   OS << ')';
 }
+
 PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   // Before we even compute any loop analyses, first run a miniature function
