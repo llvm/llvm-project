@@ -17,7 +17,7 @@ namespace clang::tidy::misc {
 /// an anonymous namespace to enforce internal linkage.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-internal-linkage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/use-internal-linkage.html
 class UseInternalLinkageCheck : public ClangTidyCheck {
 public:
   UseInternalLinkageCheck(StringRef Name, ClangTidyContext *Context);

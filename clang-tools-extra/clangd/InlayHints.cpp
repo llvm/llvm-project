@@ -60,7 +60,7 @@ const NamedDecl *getDeclForType(const Type *T) {
   case Type::Enum:
   case Type::Record:
   case Type::InjectedClassName:
-    return cast<TagType>(T)->getOriginalDecl();
+    return cast<TagType>(T)->getDecl();
   case Type::TemplateSpecialization:
     return cast<TemplateSpecializationType>(T)
         ->getTemplateName()

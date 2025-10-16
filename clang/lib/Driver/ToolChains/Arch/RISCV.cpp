@@ -49,11 +49,8 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   return true;
 }
 
-// Get features except standard extension feature
-static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
-                                    const llvm::Triple &Triple,
-                                    StringRef Mcpu,
-                                    std::vector<StringRef> &Features) {
+static bool isValidRISCVCPU(const Driver &D, const Arg *A,
+                            const llvm::Triple &Triple, StringRef Mcpu) {
   bool Is64Bit = Triple.isRISCV64();
   if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
     // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
@@ -63,7 +60,9 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
     else
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Mcpu;
+    return false;
   }
+  return true;
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -84,7 +83,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
 
-    getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
+    if (!isValidRISCVCPU(D, A, Triple, CPU))
+      return;
 
     if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
       CPUFastScalarUnaligned = true;

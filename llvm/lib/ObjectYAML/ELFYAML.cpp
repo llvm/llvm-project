@@ -359,6 +359,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_VE);
   ECase(EM_CSKY);
   ECase(EM_LOONGARCH);
+  ECase(EM_INTELGT);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
@@ -1886,6 +1887,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
   IO.mapOptional("CallsiteEndOffsets", E.CallsiteEndOffsets);
+  IO.mapOptional("Hash", E.Hash);
 }
 
 void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(

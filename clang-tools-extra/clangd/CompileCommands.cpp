@@ -270,7 +270,8 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   if (auto *DashDash =
           ArgList.getLastArgNoClaim(driver::options::OPT__DASH_DASH)) {
     auto DashDashIndex = DashDash->getIndex() + 1; // +1 accounts for Cmd[0]
-    for (unsigned I = DashDashIndex; I < Cmd.size(); ++I)
+    // Another +1 so we don't treat the `--` itself as an input.
+    for (unsigned I = DashDashIndex + 1; I < Cmd.size(); ++I)
       SawInput(Cmd[I]);
     Cmd.resize(DashDashIndex);
   }
@@ -465,7 +466,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
                FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-               METAVAR, VALUES)                                                \
+               METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                          \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION

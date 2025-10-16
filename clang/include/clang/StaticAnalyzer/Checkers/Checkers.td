@@ -195,6 +195,11 @@ def NullDereferenceChecker
       HelpText<"Check for dereferences of null pointers">,
       Documentation<HasDocumentation>;
 
+def NullPointerArithmChecker
+    : Checker<"NullPointerArithm">,
+      HelpText<"Check for undefined arithmetic operations on null pointers">,
+      Documentation<HasDocumentation>;
+
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
            "arguments are references or marked with the 'nonnull' attribute">,
@@ -1726,7 +1731,7 @@ def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
-  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
+  HelpText<"Check for correct use of RetainPtr/OSObjectPtr constructor, adoptNS, adoptCF, and adoptOSObject">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

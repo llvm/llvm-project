@@ -176,7 +176,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-SAME: i32 [[X:%.*]], i64 [[Y:%.*]], ptr [[SRC_1:%.*]], i32 [[Z:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
@@ -241,42 +241,8 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP41]])
 ; PRED-NEXT:    br label %[[EXIT:.*]]
-; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    br label %[[LOOP:.*]]
-; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
-; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[TMP52:%.*]] = add i64 [[Y]], 1
-; PRED-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP52]]
-; PRED-NEXT:    [[TMP53]] = load i32, ptr [[GEP_1]], align 4
-; PRED-NEXT:    [[OR3:%.*]] = or i32 [[SCALAR_RECUR10]], [[X]]
-; PRED-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
-; PRED-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], 1
-; PRED-NEXT:    [[TMP54:%.*]] = shl i32 [[OR3]], 1
-; PRED-NEXT:    [[TMP55:%.*]] = or i32 [[TMP54]], 2
-; PRED-NEXT:    [[SHL19:%.*]] = shl i32 [[X]], 1
-; PRED-NEXT:    [[TMP56:%.*]] = or i32 [[SHR]], [[SHL19]]
-; PRED-NEXT:    [[TMP57:%.*]] = or i32 [[TMP56]], [[TMP55]]
-; PRED-NEXT:    [[TMP58:%.*]] = or i32 [[TMP57]], [[X]]
-; PRED-NEXT:    [[OR20:%.*]] = or i32 [[Z]], [[X]]
-; PRED-NEXT:    [[NOT:%.*]] = and i32 [[OR20]], 1
-; PRED-NEXT:    [[AND:%.*]] = xor i32 [[NOT]], 1
-; PRED-NEXT:    [[IDX_EXT_1:%.*]] = zext i32 [[AND]] to i64
-; PRED-NEXT:    [[GEP_2:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[IDX_EXT_1]]
-; PRED-NEXT:    [[TMP59:%.*]] = load i32, ptr [[GEP_2]], align 4
-; PRED-NEXT:    [[SHR24:%.*]] = lshr i32 [[TMP58]], 1
-; PRED-NEXT:    [[IDX_EXT_2:%.*]] = zext i32 [[SHR24]] to i64
-; PRED-NEXT:    [[GEP_3:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[IDX_EXT_2]]
-; PRED-NEXT:    [[TMP60:%.*]] = load i32, ptr [[GEP_3]], align 4
-; PRED-NEXT:    [[RED_1:%.*]] = or i32 [[TMP59]], [[SUM_RED]]
-; PRED-NEXT:    [[RED_2]] = or i32 [[RED_1]], [[TMP60]]
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV1]], [[Y]]
-; PRED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[EXIT]]:
-; PRED-NEXT:    [[RED_2_LCSSA:%.*]] = phi i32 [ [[RED_2]], %[[LOOP]] ], [ [[TMP44]], %[[MIDDLE_BLOCK]] ]
-; PRED-NEXT:    ret i32 [[RED_2_LCSSA]]
+; PRED-NEXT:    ret i32 [[TMP44]]
 ;
 entry:
   br label %loop
@@ -418,11 +384,8 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VSCALEFORTUNING2:       [[VEC_EPILOG_ITER_CHECK]]:
-; VSCALEFORTUNING2-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; VSCALEFORTUNING2-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; VSCALEFORTUNING2-NEXT:    [[TMP27:%.*]] = shl nuw i64 [[TMP22]], 1
-; VSCALEFORTUNING2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP27]]
-; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
+; VSCALEFORTUNING2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP5]]
+; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
 ; VSCALEFORTUNING2:       [[VEC_EPILOG_PH]]:
 ; VSCALEFORTUNING2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; VSCALEFORTUNING2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP18]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -443,7 +406,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[TMP24]] = or <vscale x 2 x i16> [[TMP23]], [[VEC_PHI9]]
 ; VSCALEFORTUNING2-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[IV]], [[TMP20]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
-; VSCALEFORTUNING2-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VSCALEFORTUNING2-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VSCALEFORTUNING2:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; VSCALEFORTUNING2-NEXT:    [[TMP26:%.*]] = call i16 @llvm.vector.reduce.or.nxv2i16(<vscale x 2 x i16> [[TMP24]])
 ; VSCALEFORTUNING2-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
@@ -461,7 +424,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[RED_NEXT]] = or i16 [[DIV]], [[RED]]
 ; VSCALEFORTUNING2-NEXT:    [[IV_NEXT]] = add i64 [[IV1]], 1
 ; VSCALEFORTUNING2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV1]], [[N]]
-; VSCALEFORTUNING2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; VSCALEFORTUNING2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VSCALEFORTUNING2:       [[EXIT]]:
 ; VSCALEFORTUNING2-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i16 [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP18]], %[[MIDDLE_BLOCK]] ], [ [[TMP26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; VSCALEFORTUNING2-NEXT:    ret i16 [[RED_NEXT_LCSSA]]
@@ -470,7 +433,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-SAME: ptr [[SRC:%.*]], i16 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
@@ -496,25 +459,12 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TMP12]])
 ; PRED-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; PRED-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP15]], true
-; PRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP19:%.*]] = call i16 @llvm.vector.reduce.or.nxv8i16(<vscale x 8 x i16> [[TMP16]])
 ; PRED-NEXT:    br label %[[EXIT:.*]]
-; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    br label %[[LOOP:.*]]
-; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[RED:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
-; PRED-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
-; PRED-NEXT:    [[DIV:%.*]] = udiv i16 [[L]], [[X]]
-; PRED-NEXT:    [[RED_NEXT]] = or i16 [[DIV]], [[RED]]
-; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; PRED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; PRED:       [[EXIT]]:
-; PRED-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i16 [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP19]], %[[MIDDLE_BLOCK]] ]
-; PRED-NEXT:    ret i16 [[RED_NEXT_LCSSA]]
+; PRED-NEXT:    ret i16 [[TMP19]]
 ;
 entry:
   br label %loop
