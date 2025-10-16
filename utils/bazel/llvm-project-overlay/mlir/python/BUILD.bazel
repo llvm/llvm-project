@@ -1593,3 +1593,39 @@ filegroup(
         ":VectorOpsPyGen",
     ],
 )
+
+##---------------------------------------------------------------------------##
+# OpenACC dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "OpenAccPyTdFiles",
+    srcs = [
+        "mlir/dialects/OpenACCOps.td",
+    ],
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:OpenAccOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "OpenAccPyGen",
+    tbl_outs = {"mlir/dialects/_acc_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=acc",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/OpenACCOps.td",
+    deps = [
+        ":OpenAccPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "OpenAccPyFiles",
+    srcs = [
+        "mlir/dialects/openacc.py",
+        ":OpenAccPyGen",
+    ],
+)
