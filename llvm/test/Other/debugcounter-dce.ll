@@ -1,7 +1,15 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=dce -S -debug-counter=dce-transform=1-2  < %s | FileCheck %s
+; RUN: opt -passes=dce -S -debug-counter=dce-transform=1-2  < %s | FileCheck %s --check-prefixes=CHECK,NO-PRINT
+; RUN: opt -passes=dce -S -debug-counter=dce-transform=1-2 -print-debug-counter-queries < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 ;; Test that, with debug counters on, we will skip the first DCE opportunity, perform next 2,
 ;; and ignore all the others left.
+
+; NO-PRINT-NOT: DebugCounter
+; PRINT: DebugCounter dce-transform=0 skip
+; PRINT-NEXT: DebugCounter dce-transform=1 execute
+; PRINT-NEXT: DebugCounter dce-transform=2 execute
+; PRINT-NEXT: DebugCounter dce-transform=3 skip
+; PRINT-NEXT: DebugCounter dce-transform=4 skip
 
 ; CHECK-LABEL: @test
 ; CHECK-NEXT: %add1 = add i32 1, 2

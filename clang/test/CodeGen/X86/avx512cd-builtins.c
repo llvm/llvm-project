@@ -125,6 +125,8 @@ __m512i test_mm512_broadcastmb_epi64(__m512i a, __m512i b) {
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 7
   return _mm512_broadcastmb_epi64(_mm512_cmpeq_epu64_mask ( a, b)); 
 }
+TEST_CONSTEXPR(match_v8di(_mm512_broadcastmb_epi64((__mmask8)(0)), 0,0,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8di(_mm512_broadcastmb_epi64((__mmask8)(0xab)), 0xab,0xab,0xab,0xab, 0xab,0xab,0xab,0xab));
 
 __m512i test_mm512_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK-LABEL: test_mm512_broadcastmw_epi32
@@ -148,3 +150,5 @@ __m512i test_mm512_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}
   return _mm512_broadcastmw_epi32(_mm512_cmpeq_epi32_mask ( a, b)); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_broadcastmw_epi32((__mmask16)(0xff)), 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff));
+TEST_CONSTEXPR(match_v16si(_mm512_broadcastmw_epi32((__mmask16)(0x0FA1L)), 0x0FA1L,0x0FA1L,0x0FA1L,0x0FA1L, 0x0FA1L,0x0FA1L,0x0FA1L,0x0FA1L, 0x0FA1L,0x0FA1L,0x0FA1L,0x0FA1L, 0x0FA1L,0x0FA1L,0x0FA1L,0x0FA1L));

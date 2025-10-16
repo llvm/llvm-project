@@ -15,6 +15,7 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
@@ -54,8 +55,22 @@ static inline auto libcall_impls() {
                   static_cast<RTLIB::LibcallImpl>(RTLIB::NumLibcallImpls));
 }
 
+/// Manage a bitset representing the list of available libcalls for a module.
+class LibcallImplBitset : public Bitset<RTLIB::NumLibcallImpls> {
+public:
+  constexpr LibcallImplBitset() = default;
+  constexpr LibcallImplBitset(
+      const std::array<uint64_t, (RTLIB::NumLibcallImpls + 63) / 64> &Src)
+      : Bitset(Src) {}
+};
+
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
+private:
+  /// Bitset of libcalls a module may emit a call to.
+  LibcallImplBitset AvailableLibcallImpls;
+
+public:
   explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
@@ -127,6 +142,14 @@ struct RuntimeLibcallsInfo {
 
     // Fallback to memmove if memcpy isn't available.
     return getLibcallName(RTLIB::MEMMOVE);
+  }
+
+  bool isAvailable(RTLIB::LibcallImpl Impl) const {
+    return AvailableLibcallImpls.test(Impl);
+  }
+
+  void setAvailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.set(Impl);
   }
 
   /// Return the libcall provided by \p Impl

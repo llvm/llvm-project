@@ -3513,9 +3513,9 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
         body << "(" << operandName << " ? 1 : 0)";
       } else if (operand.isVariadicOfVariadic()) {
         body << llvm::formatv(
-            "static_cast<int32_t>(std::accumulate({0}.begin(), {0}.end(), 0, "
+            "llvm::accumulate({0}, int32_t(0), "
             "[](int32_t curSum, ::mlir::ValueRange range) {{ return curSum + "
-            "static_cast<int32_t>(range.size()); }))",
+            "static_cast<int32_t>(range.size()); })",
             operandName);
       } else {
         body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
@@ -4896,7 +4896,7 @@ static void emitOpClassDefs(const RecordKeeper &records,
                                                       constraintPrefix);
   os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
   staticVerifierEmitter.collectOpConstraints(defs);
-  staticVerifierEmitter.emitOpConstraints(defs);
+  staticVerifierEmitter.emitOpConstraints();
 
   // Emit the classes.
   emitOpClasses(records, defs, os, staticVerifierEmitter,

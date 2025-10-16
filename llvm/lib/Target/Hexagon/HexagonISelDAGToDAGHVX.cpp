@@ -789,7 +789,7 @@ struct ShuffleMask {
   }
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &SM) {
   SM.print(OS);
   return OS;
