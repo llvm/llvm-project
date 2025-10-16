@@ -687,8 +687,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1as [options] file...",
         "Clang Integrated Assembler", /*ShowHidden=*/false,
-        /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(options::CC1AsOption));
+        /*ShowAllAliases=*/false, llvm::opt::Visibility(options::CC1AsOption));
 
     return 0;
   }

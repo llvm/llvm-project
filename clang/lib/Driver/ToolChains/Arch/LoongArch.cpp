@@ -130,8 +130,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                                            const ArgList &Args,
                                            std::vector<StringRef> &Features) {
   // Enable the `lsx` feature on 64-bit LoongArch by default.
-  if (Triple.isLoongArch64() &&
-      (!Args.hasArgNoClaim(options::OPT_march_EQ)))
+  if (Triple.isLoongArch64() && (!Args.hasArgNoClaim(options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
   // -mrelax is default, unless -mno-relax is specified.
