@@ -156,9 +156,9 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
 
 Symbol *Scope::FindCommonBlockInSurroundingScopes(
     const SourceName &name) const {
-  if (Symbol *cb{FindCommonBlock(name)}) {
+  if (Symbol * cb{FindCommonBlock(name)}) {
     return cb;
-  } else if (Symbol *cb{FindCommonBlockUse(name)}) {
+  } else if (Symbol * cb{FindCommonBlockUse(name)}) {
     return &cb->GetUltimate();
   } else if (IsSubmodule()) {
     if (const Scope *parent{
