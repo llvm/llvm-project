@@ -3,7 +3,6 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for freeze_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_uhadd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_urhadd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_shadd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_srhadd
@@ -435,13 +434,23 @@ define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <8 x i16> @freeze_uhadd(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: freeze_uhadd:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.8h, #15
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_uhadd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.8h, #15
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_uhadd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.8h, #15
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    movi v2.8h, #31
+; CHECK-GI-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %m0 = and <8 x i16> %a0, splat (i16 15)
   %m1 = and <8 x i16> %a1, splat (i16 15)
   %avg = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
