@@ -841,6 +841,7 @@ private:
   MlirBlock block;
 };
 
+/// Wrapper around a MlirRewriterBaseListener.
 class PyRewriterBaseListener {
 public:
   PyRewriterBaseListener(MlirRewriterBaseListener listener,
