@@ -10,7 +10,7 @@ define void @load3to4(ptr %p) #0 {
 ; CHECK-LABEL: define void @load3to4(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i32, ptr [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P_0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[P_0]], i32 16, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> poison)
 ; CHECK-NEXT:    [[V01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[V12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[V23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
@@ -32,7 +32,7 @@ define void @load5to8(ptr %p) #0 {
 ; CHECK-LABEL: define void @load5to8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i16, ptr [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P_0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[P_0]], i32 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x i16> poison)
 ; CHECK-NEXT:    [[V05:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[V16:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[V27:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
