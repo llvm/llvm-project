@@ -11,7 +11,7 @@ define <16 x i8> @bitselect_to_laneselect_v16i8(<16 x i8> %a, <16 x i8> %b, <16 
 ; RELAXED-LABEL: bitselect_to_laneselect_v16i8:
 ; RELAXED:         .functype bitselect_to_laneselect_v16i8 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    v128.bitselect $push0=, $0, $1, $2
+; RELAXED-NEXT:    i8x16.relaxed_laneselect $push0=, $0, $1, $2
 ; RELAXED-NEXT:    # fallthrough-return
 ;
 ; SIMD-LABEL: bitselect_to_laneselect_v16i8:
@@ -27,7 +27,7 @@ define <8 x i16> @bitselect_to_laneselect_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x
 ; RELAXED-LABEL: bitselect_to_laneselect_v8i16:
 ; RELAXED:         .functype bitselect_to_laneselect_v8i16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    v128.bitselect $push0=, $0, $1, $2
+; RELAXED-NEXT:    i16x8.relaxed_laneselect $push0=, $0, $1, $2
 ; RELAXED-NEXT:    # fallthrough-return
 ;
 ; SIMD-LABEL: bitselect_to_laneselect_v8i16:
@@ -43,7 +43,7 @@ define <4 x i32> @bitselect_to_laneselect_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x
 ; RELAXED-LABEL: bitselect_to_laneselect_v4i32:
 ; RELAXED:         .functype bitselect_to_laneselect_v4i32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    v128.bitselect $push0=, $0, $1, $2
+; RELAXED-NEXT:    i32x4.relaxed_laneselect $push0=, $0, $1, $2
 ; RELAXED-NEXT:    # fallthrough-return
 ;
 ; SIMD-LABEL: bitselect_to_laneselect_v4i32:
@@ -59,7 +59,7 @@ define <2 x i64> @bitselect_to_laneselect_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x
 ; RELAXED-LABEL: bitselect_to_laneselect_v2i64:
 ; RELAXED:         .functype bitselect_to_laneselect_v2i64 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    v128.bitselect $push0=, $0, $1, $2
+; RELAXED-NEXT:    i64x2.relaxed_laneselect $push0=, $0, $1, $2
 ; RELAXED-NEXT:    # fallthrough-return
 ;
 ; SIMD-LABEL: bitselect_to_laneselect_v2i64:

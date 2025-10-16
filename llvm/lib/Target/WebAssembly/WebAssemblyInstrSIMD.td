@@ -1662,6 +1662,13 @@ multiclass SIMDLANESELECT<Vec vec, bits<32> op> {
                 (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
               vec.prefix#".relaxed_laneselect\t$dst, $a, $b, $c",
               vec.prefix#".relaxed_laneselect", op>;
+
+  let AddedComplexity = 1 in {
+    def : Pat<(vec.vt (int_wasm_bitselect
+                (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c))),
+              (!cast<Instruction>("LANESELECT_"#vec) V128:$a, V128:$b, V128:$c)>,
+              Requires<[HasRelaxedSIMD]>;
+  }
 }
 
 defm "" : SIMDLANESELECT<I8x16, 0x109>;
