@@ -15,5 +15,4 @@ add_llvm_component_library(LLVMBitWriter
   ProfileData
   Support
   TargetParser
-  TransformUtils
   )
