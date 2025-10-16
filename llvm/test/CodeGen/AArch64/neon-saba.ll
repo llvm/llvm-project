@@ -12,9 +12,9 @@ define <4 x i32> @saba_abs_4s(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) #0 {
 ;
 ; CHECK-GI-LABEL: saba_abs_4s:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    abs v1.4s, v1.4s
-; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    saba v0.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    ret
   %sub = sub nsw <4 x i32> %b, %c
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
@@ -30,9 +30,9 @@ define <2 x i32> @saba_abs_2s(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #0 {
 ;
 ; CHECK-GI-LABEL: saba_abs_2s:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v1.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    abs v1.2s, v1.2s
-; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    saba v0.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    ret
   %sub = sub nsw <2 x i32> %b, %c
   %abs = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %sub, i1 true)
@@ -48,9 +48,9 @@ define <8 x i16> @saba_abs_8h(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) #0 {
 ;
 ; CHECK-GI-LABEL: saba_abs_8h:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    abs v1.8h, v1.8h
-; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    saba v0.8h, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    ret
   %sub = sub nsw <8 x i16> %b, %c
   %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %sub, i1 true)
@@ -66,9 +66,9 @@ define <4 x i16> @saba_abs_4h(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) #0 {
 ;
 ; CHECK-GI-LABEL: saba_abs_4h:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v1.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    abs v1.4h, v1.4h
-; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    saba v0.4h, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    ret
   %sub = sub nsw <4 x i16> %b, %c
   %abs = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %sub, i1 true)
@@ -84,9 +84,9 @@ define <16 x i8> @saba_abs_16b(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) #0 {
 ;
 ; CHECK-GI-LABEL: saba_abs_16b:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    abs v1.16b, v1.16b
-; CHECK-GI-NEXT:    add v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    saba v0.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %sub = sub nsw <16 x i8> %b, %c
   %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %sub, i1 true)
@@ -102,9 +102,9 @@ define <8 x i8> @saba_abs_8b(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) #0 {
 ;
 ; CHECK-GI-LABEL: saba_abs_8b:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    abs v1.8b, v1.8b
-; CHECK-GI-NEXT:    add v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    saba v0.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    ret
   %sub = sub nsw <8 x i8> %b, %c
   %abs = call <8 x i8> @llvm.abs.v8i8(<8 x i8> %sub, i1 true)
@@ -172,6 +172,214 @@ define <8 x i8> @saba_sabd_8b(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) #0 {
   %sabd = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %b, <8 x i8> %c)
   %add = add <8 x i8> %sabd, %a
   ret <8 x i8> %add
+}
+
+; SABA from ADD(SABD(X, ZEROS))
+
+define <4 x i32> @saba_sabd_zeros_4s(<4 x i32> %a, <4 x i32> %b) #0 {
+; CHECK-LABEL: saba_sabd_zeros_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    ret
+  %sabd = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %b, <4 x i32> zeroinitializer)
+  %add = add <4 x i32> %sabd, %a
+  ret <4 x i32> %add
+}
+
+define <2 x i32> @saba_sabd_zeros_2s(<2 x i32> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: saba_sabd_zeros_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.2s, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %sabd = call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %b, <2 x i32> zeroinitializer)
+  %add = add <2 x i32> %sabd, %a
+  ret <2 x i32> %add
+}
+
+define <8 x i16> @saba_sabd_zeros_8h(<8 x i16> %a, <8 x i16> %b) #0 {
+; CHECK-LABEL: saba_sabd_zeros_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.8h, v1.8h, v2.8h
+; CHECK-NEXT:    ret
+  %sabd = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %b, <8 x i16> zeroinitializer)
+  %add = add <8 x i16> %sabd, %a
+  ret <8 x i16> %add
+}
+
+define <4 x i16> @saba_sabd_zeros_4h(<4 x i16> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: saba_sabd_zeros_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %sabd = call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %b, <4 x i16> zeroinitializer)
+  %add = add <4 x i16> %sabd, %a
+  ret <4 x i16> %add
+}
+
+define <16 x i8> @saba_sabd_zeros_16b(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: saba_sabd_zeros_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %sabd = call <16 x i8> @llvm.aarch64.neon.sabd.v16i8(<16 x i8> %b, <16 x i8> zeroinitializer)
+  %add = add <16 x i8> %sabd, %a
+  ret <16 x i8> %add
+}
+
+define <8 x i8> @saba_sabd_zeros_8b(<8 x i8> %a, <8 x i8> %b) #0 {
+; CHECK-LABEL: saba_sabd_zeros_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %sabd = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %b, <8 x i8> zeroinitializer)
+  %add = add <8 x i8> %sabd, %a
+  ret <8 x i8> %add
+}
+
+define <4 x i32> @saba_abs_zeros_4s(<4 x i32> %a, <4 x i32> %b) #0 {
+; CHECK-LABEL: saba_abs_zeros_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    ret
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %b, i1 true)
+  %add = add <4 x i32> %a, %abs
+  ret <4 x i32> %add
+}
+
+define <2 x i32> @saba_abs_zeros_2s(<2 x i32> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: saba_abs_zeros_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.2s, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %abs = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %b, i1 true)
+  %add = add <2 x i32> %a, %abs
+  ret <2 x i32> %add
+}
+
+define <8 x i16> @saba_abs_zeros_8h(<8 x i16> %a, <8 x i16> %b) #0 {
+; CHECK-LABEL: saba_abs_zeros_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.8h, v1.8h, v2.8h
+; CHECK-NEXT:    ret
+  %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %b, i1 true)
+  %add = add <8 x i16> %a, %abs
+  ret <8 x i16> %add
+}
+
+define <4 x i16> @saba_abs_zeros_4h(<4 x i16> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: saba_abs_zeros_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %abs = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %b, i1 true)
+  %add = add <4 x i16> %a, %abs
+  ret <4 x i16> %add
+}
+
+define <16 x i8> @saba_abs_zeros_16b(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: saba_abs_zeros_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %b, i1 true)
+  %add = add <16 x i8> %a, %abs
+  ret <16 x i8> %add
+}
+
+define <8 x i8> @saba_abs_zeros_8b(<8 x i8> %a, <8 x i8> %b) #0 {
+; CHECK-LABEL: saba_abs_zeros_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %abs = call <8 x i8> @llvm.abs.v8i8(<8 x i8> %b, i1 true)
+  %add = add <8 x i8> %a, %abs
+  ret <8 x i8> %add
+}
+
+; SABAL from ADD(ZEXT(SABD(X, ZEROS)))
+
+define <2 x i64> @sabal_sabd_zeros_2s(<2 x i64> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: sabal_sabd_zeros_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %sabd = call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %b, <2 x i32> zeroinitializer)
+  %sabd.zext = zext <2 x i32> %sabd to <2 x i64>
+  %add = add <2 x i64> %sabd.zext, %a
+  ret <2 x i64> %add
+}
+
+define <4 x i32> @sabal_sabd_zeros_4h(<4 x i32> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: sabal_sabd_zeros_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %sabd = call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %b, <4 x i16> zeroinitializer)
+  %sabd.zext = zext <4 x i16> %sabd to <4 x i32>
+  %add = add <4 x i32> %sabd.zext, %a
+  ret <4 x i32> %add
+}
+
+define <8 x i16> @sabal_sabd_zeros_8b(<8 x i16> %a, <8 x i8> %b) #0 {
+; CHECK-LABEL: sabal_sabd_zeros_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.8h, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %sabd = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %b, <8 x i8> zeroinitializer)
+  %sabd.zext = zext <8 x i8> %sabd to <8 x i16>
+  %add = add <8 x i16> %sabd.zext, %a
+  ret <8 x i16> %add
+}
+
+define <2 x i64> @sabal_abs_zeros_2s(<2 x i64> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: sabal_abs_zeros_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %abs = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %b, i1 true)
+  %abs.zext = zext <2 x i32> %abs to <2 x i64>
+  %add = add <2 x i64> %a, %abs.zext
+  ret <2 x i64> %add
+}
+
+define <4 x i32> @sabal_abs_zeros_4h(<4 x i32> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: sabal_abs_zeros_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %abs = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %b, i1 true)
+  %abs.zext = zext <4 x i16> %abs to <4 x i32>
+  %add = add <4 x i32> %a, %abs.zext
+  ret <4 x i32> %add
+}
+
+define <8 x i16> @sabal_abs_zeros_8b(<8 x i16> %a, <8 x i8> %b) #0 {
+; CHECK-LABEL: sabal_abs_zeros_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.8h, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %abs = call <8 x i8> @llvm.abs.v8i8(<8 x i8> %b, i1 true)
+  %abs.zext = zext <8 x i8> %abs to <8 x i16>
+  %add = add <8 x i16> %a, %abs.zext
+  ret <8 x i16> %add
 }
 
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)

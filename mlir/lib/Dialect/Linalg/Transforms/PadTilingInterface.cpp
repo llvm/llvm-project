@@ -141,7 +141,7 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
       projectedDims.flip(paddingDim);
       AffineMap projectedMap =
           mlir::projectDims(partialIndexingMap, projectedDims,
-                            /*compressDims=*/true);
+                            /*compressDimsFlag=*/true);
 
       // If we are padding to the next multiple of, compose with ceil(sz) * sz.
       OpFoldResult paddingDimOfr;

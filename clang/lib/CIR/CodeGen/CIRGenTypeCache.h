@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace clang::CIRGen {
@@ -49,6 +50,9 @@ struct CIRGenTypeCache {
   cir::FP80Type FP80Ty;
   cir::FP128Type FP128Ty;
 
+  /// ClangIR char
+  mlir::Type UCharTy;
+
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
     mlir::Type UIntPtrTy;
@@ -61,6 +65,9 @@ struct CIRGenTypeCache {
   cir::PointerType VoidPtrTy;
   cir::PointerType UInt8PtrTy;
 
+  /// void* in alloca address space
+  cir::PointerType AllocaInt8PtrTy;
+
   /// The size and alignment of a pointer into the generic address space.
   union {
     unsigned char PointerAlignInBytes;
@@ -70,12 +77,18 @@ struct CIRGenTypeCache {
   /// The alignment of size_t.
   unsigned char SizeAlignInBytes;
 
+  cir::TargetAddressSpaceAttr cirAllocaAddressSpace;
+
   clang::CharUnits getSizeAlign() const {
     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
   }
 
   clang::CharUnits getPointerAlign() const {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
+  }
+
+  cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
+    return cirAllocaAddressSpace;
   }
 };
 

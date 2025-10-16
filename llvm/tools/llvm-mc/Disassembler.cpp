@@ -165,28 +165,29 @@ static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
   return false;
 }
 
-int Disassembler::disassemble(const Target &T, const std::string &Triple,
-                              MCSubtargetInfo &STI, MCStreamer &Streamer,
-                              MemoryBuffer &Buffer, SourceMgr &SM,
-                              MCContext &Ctx, const MCTargetOptions &MCOptions,
-                              bool HexBytes, unsigned NumBenchmarkRuns) {
-  std::unique_ptr<const MCRegisterInfo> MRI(T.createMCRegInfo(Triple));
+int Disassembler::disassemble(const Target &T, MCSubtargetInfo &STI,
+                              MCStreamer &Streamer, MemoryBuffer &Buffer,
+                              SourceMgr &SM, MCContext &Ctx,
+                              const MCTargetOptions &MCOptions, bool HexBytes,
+                              unsigned NumBenchmarkRuns) {
+  const Triple &TheTriple = STI.getTargetTriple();
+  std::unique_ptr<const MCRegisterInfo> MRI(T.createMCRegInfo(TheTriple));
   if (!MRI) {
-    errs() << "error: no register info for target " << Triple << "\n";
+    errs() << "error: no register info for target " << TheTriple.str() << '\n';
     return -1;
   }
 
   std::unique_ptr<const MCAsmInfo> MAI(
-      T.createMCAsmInfo(*MRI, Triple, MCOptions));
+      T.createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI) {
-    errs() << "error: no assembly info for target " << Triple << "\n";
+    errs() << "error: no assembly info for target " << TheTriple.str() << '\n';
     return -1;
   }
 
   std::unique_ptr<const MCDisassembler> DisAsm(
     T.createMCDisassembler(STI, Ctx));
   if (!DisAsm) {
-    errs() << "error: no disassembler for target " << Triple << "\n";
+    errs() << "error: no disassembler for target " << TheTriple.str() << '\n';
     return -1;
   }
 

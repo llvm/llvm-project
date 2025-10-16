@@ -557,7 +557,6 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
@@ -587,12 +586,9 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (ST.isWave32()) {
+  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-  }
-  if (isGFX1250(ST) && ST.hasCUStores()) {
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
   }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
@@ -1444,9 +1440,10 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
-  MD->setHwStage(CC, ".lds_size",
-                 (unsigned)(CurrentProgramInfo.LdsSize *
-                            getLdsDwGranularity(ST) * sizeof(uint32_t)));
+  MD->updateHwStageMaximum(
+      CC, ".lds_size",
+      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
+                 sizeof(uint32_t)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

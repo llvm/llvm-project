@@ -39,7 +39,7 @@ using namespace llvm;
 
 static const char *BugReportMsg =
     "PLEASE submit a bug report to " BUG_REPORT_URL
-    " and include the crash backtrace.\n";
+    " and include the crash backtrace and instructions to reproduce the bug.\n";
 
 // If backtrace support is not enabled, compile out support for pretty stack
 // traces.  This has the secondary effect of not requiring thread local storage
@@ -141,7 +141,7 @@ extern "C" const char *__crashreporter_info__
 asm(".desc ___crashreporter_info__, 0x10");
 #endif
 
-static void setCrashLogMessage(const char *msg) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] static void setCrashLogMessage(const char *msg);
 static void setCrashLogMessage(const char *msg) {
 #ifdef HAVE_CRASHREPORTERCLIENT_H
   (void)CRSetCrashLogMessage(msg);

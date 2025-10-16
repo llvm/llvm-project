@@ -2250,22 +2250,6 @@ protected:
     unsigned NumArgs;
   };
 
-  class DependentTemplateSpecializationTypeBitfields {
-    friend class DependentTemplateSpecializationType;
-
-    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
-    unsigned : NumTypeWithKeywordBits;
-
-    /// The number of template arguments named in this class template
-    /// specialization, which is expected to be able to hold at least 1024
-    /// according to [implimits]. However, as this limit is somewhat easy to
-    /// hit with template metaprogramming we'd prefer to keep it as large
-    /// as possible. At the moment it has been left as a non-bitfield since
-    /// this type safely fits in 64 bits as an unsigned, so there is no reason
-    /// to introduce the performance impact of a bitfield.
-    unsigned NumArgs;
-  };
-
   class PackExpansionTypeBitfields {
     friend class PackExpansionType;
 
@@ -2346,8 +2330,6 @@ protected:
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
     SubstPackTypeBitfields SubstPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
-    DependentTemplateSpecializationTypeBitfields
-      DependentTemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
     PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
@@ -3513,7 +3495,9 @@ protected:
 
   AdjustedType(TypeClass TC, QualType OriginalTy, QualType AdjustedTy,
                QualType CanonicalPtr)
-      : Type(TC, CanonicalPtr, OriginalTy->getDependence()),
+      : Type(TC, CanonicalPtr,
+             AdjustedTy->getDependence() |
+                 (OriginalTy->getDependence() & ~TypeDependence::Dependent)),
         OriginalTy(OriginalTy), AdjustedTy(AdjustedTy) {}
 
 public:
@@ -6435,10 +6419,10 @@ protected:
           bool IsInjected, const Type *CanonicalType);
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  TagDecl *getOriginalDecl() const { return decl; }
+  TagDecl *getDecl() const { return decl; }
+  [[deprecated("Use getDecl instead")]] TagDecl *getOriginalDecl() const {
+    return decl;
+  }
 
   NestedNameSpecifier getQualifier() const;
 
@@ -6479,7 +6463,7 @@ struct TagTypeFoldingSetPlaceholder : public llvm::FoldingSetNode {
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     const TagType *T = getTagType();
-    Profile(ID, T->getKeyword(), T->getQualifier(), T->getOriginalDecl(),
+    Profile(ID, T->getKeyword(), T->getQualifier(), T->getDecl(),
             T->isTagOwned(), T->isInjected());
   }
 
@@ -6503,11 +6487,11 @@ class RecordType final : public TagType {
   using TagType::TagType;
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  RecordDecl *getOriginalDecl() const {
-    return reinterpret_cast<RecordDecl *>(TagType::getOriginalDecl());
+  RecordDecl *getDecl() const {
+    return reinterpret_cast<RecordDecl *>(TagType::getDecl());
+  }
+  [[deprecated("Use getDecl instead")]] RecordDecl *getOriginalDecl() const {
+    return getDecl();
   }
 
   /// Recursively check all fields in the record for const-ness. If any field
@@ -6523,11 +6507,11 @@ class EnumType final : public TagType {
   using TagType::TagType;
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  EnumDecl *getOriginalDecl() const {
-    return reinterpret_cast<EnumDecl *>(TagType::getOriginalDecl());
+  EnumDecl *getDecl() const {
+    return reinterpret_cast<EnumDecl *>(TagType::getDecl());
+  }
+  [[deprecated("Use getDecl instead")]] EnumDecl *getOriginalDecl() const {
+    return getDecl();
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Enum; }
@@ -6558,11 +6542,11 @@ class InjectedClassNameType final : public TagType {
                         bool IsInjected, const Type *CanonicalType);
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  CXXRecordDecl *getOriginalDecl() const {
-    return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
+  CXXRecordDecl *getDecl() const {
+    return reinterpret_cast<CXXRecordDecl *>(TagType::getDecl());
+  }
+  [[deprecated("Use getDecl instead")]] CXXRecordDecl *getOriginalDecl() const {
+    return getDecl();
   }
 
   static bool classof(const Type *T) {
@@ -6718,15 +6702,21 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t RawBuffer : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
-               bool RawBuffer = false)
-        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsCounter : 1;
 
-    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
+               bool RawBuffer = false, bool IsCounter = false)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer),
+          IsCounter(IsCounter) {}
+
+    Attributes()
+        : Attributes(llvm::dxil::ResourceClass::UAV, false, false, false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
-      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer) ==
-             std::tie(RHS.ResourceClass, RHS.IsROV, RHS.RawBuffer);
+      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer,
+                      LHS.IsCounter) == std::tie(RHS.ResourceClass, RHS.IsROV,
+                                                 RHS.RawBuffer, RHS.IsCounter);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6767,6 +6757,7 @@ public:
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
+    ID.AddBoolean(Attrs.IsCounter);
   }
 
   static bool classof(const Type *T) {
@@ -7091,10 +7082,6 @@ public:
 class SubstTemplateTypeParmPackType : public SubstPackType {
   friend class ASTContext;
 
-  /// A pointer to the set of template arguments that this
-  /// parameter pack is instantiated with.
-  const TemplateArgument *Arguments;
-
   llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
 
   SubstTemplateTypeParmPackType(QualType Canon, Decl *AssociatedDecl,
@@ -7366,9 +7353,9 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
-  static void Profile(llvm::FoldingSetNodeID &ID, TemplateName T,
-                      ArrayRef<TemplateArgument> Args, QualType Underlying,
-                      const ASTContext &Context);
+  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
+                      TemplateName T, ArrayRef<TemplateArgument> Args,
+                      QualType Underlying, const ASTContext &Context);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == TemplateSpecialization;
@@ -7456,46 +7443,6 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentName;
-  }
-};
-
-/// Represents a template specialization type whose template cannot be
-/// resolved, e.g.
-///   A<T>::template B<T>
-class DependentTemplateSpecializationType : public TypeWithKeyword {
-  friend class ASTContext; // ASTContext creates these
-
-  DependentTemplateStorage Name;
-
-  DependentTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                      const DependentTemplateStorage &Name,
-                                      ArrayRef<TemplateArgument> Args,
-                                      QualType Canon);
-
-public:
-  const DependentTemplateStorage &getDependentTemplateName() const {
-    return Name;
-  }
-
-  ArrayRef<TemplateArgument> template_arguments() const {
-    return {reinterpret_cast<const TemplateArgument *>(this + 1),
-            DependentTemplateSpecializationTypeBits.NumArgs};
-  }
-
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
-
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getKeyword(), Name, template_arguments());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      ElaboratedTypeKeyword Keyword,
-                      const DependentTemplateStorage &Name,
-                      ArrayRef<TemplateArgument> Args);
-
-  static bool classof(const Type *T) {
-    return T->getTypeClass() == DependentTemplateSpecialization;
   }
 };
 
@@ -8983,8 +8930,8 @@ inline bool Type::isIntegerType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    return IsEnumDeclComplete(ET->getOriginalDecl()) &&
-           !IsEnumDeclScoped(ET->getOriginalDecl());
+    return IsEnumDeclComplete(ET->getDecl()) &&
+           !IsEnumDeclScoped(ET->getDecl());
   }
   return isBitIntType();
 }
@@ -9042,7 +8989,7 @@ inline bool Type::isScalarType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType))
     // Enums are scalar types, but only if they are defined.  Incomplete enums
     // are not treated as scalar types.
-    return IsEnumDeclComplete(ET->getOriginalDecl());
+    return IsEnumDeclComplete(ET->getDecl());
   return isa<PointerType>(CanonicalType) ||
          isa<BlockPointerType>(CanonicalType) ||
          isa<MemberPointerType>(CanonicalType) ||
@@ -9058,7 +9005,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return IsEnumDeclComplete(ET->getOriginalDecl());
+    return IsEnumDeclComplete(ET->getDecl());
 
   return isBitIntType();
 }
@@ -9150,10 +9097,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
 
 // Helper class template that is used by Type::getAs to ensure that one does
 // not try to look through a qualified type to get to an array type.
-template <typename T>
-using TypeIsArrayType =
-    std::integral_constant<bool, std::is_same<T, ArrayType>::value ||
-                                     std::is_base_of<ArrayType, T>::value>;
+template <typename T> using TypeIsArrayType = std::is_base_of<ArrayType, T>;
 
 // Member-template getAs<specific type>'.
 template <typename T> const T *Type::getAs() const {

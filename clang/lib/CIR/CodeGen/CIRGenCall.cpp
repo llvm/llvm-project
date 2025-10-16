@@ -197,7 +197,10 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
   if (passParams)
     appendParameterTypes(*this, argTypes, fpt);
 
-  assert(!cir::MissingFeatures::implicitConstructorArgs());
+  // The structor signature may include implicit parameters.
+  [[maybe_unused]] CIRGenCXXABI::AddedStructorArgCounts addedArgs =
+      theCXXABI.buildStructorSignature(gd, argTypes);
+  assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
   RequiredArgs required =
       (passParams && md->isVariadic() ? RequiredArgs(argTypes.size())
@@ -324,26 +327,27 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
 
 /// Arrange a call to a C++ method, passing the given arguments.
 ///
+/// extraPrefixArgs is the number of ABI-specific args passed after the `this`
+/// parameter.
 /// passProtoArgs indicates whether `args` has args for the parameters in the
 /// given CXXConstructorDecl.
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
     const CallArgList &args, const CXXConstructorDecl *d, CXXCtorType ctorKind,
-    bool passProtoArgs) {
+    unsigned extraPrefixArgs, unsigned extraSuffixArgs, bool passProtoArgs) {
 
   // FIXME: Kill copy.
   llvm::SmallVector<CanQualType, 16> argTypes;
   for (const auto &arg : args)
     argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
 
-  assert(!cir::MissingFeatures::implicitConstructorArgs());
   // +1 for implicit this, which should always be args[0]
-  unsigned totalPrefixArgs = 1;
+  unsigned totalPrefixArgs = 1 + extraPrefixArgs;
 
   CanQual<FunctionProtoType> fpt = getFormalType(d);
-  RequiredArgs required =
-      passProtoArgs
-          ? RequiredArgs::getFromProtoWithExtraSlots(fpt, totalPrefixArgs)
-          : RequiredArgs::All;
+  RequiredArgs required = passProtoArgs
+                              ? RequiredArgs::getFromProtoWithExtraSlots(
+                                    fpt, totalPrefixArgs + extraSuffixArgs)
+                              : RequiredArgs::All;
 
   GlobalDecl gd(d, ctorKind);
   if (theCXXABI.hasThisReturn(gd))
@@ -518,7 +522,8 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     assert(!cir::MissingFeatures::opCallPaddingArgs());
 
     mlir::Type argType = convertType(canQualArgType);
-    if (!mlir::isa<cir::RecordType>(argType)) {
+    if (!mlir::isa<cir::RecordType>(argType) &&
+        !mlir::isa<cir::ComplexType>(argType)) {
       mlir::Value v;
       if (arg.isAggregate())
         cgm.errorNYI(loc, "emitCall: aggregate call argument");
@@ -536,15 +541,16 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       cirCallArgs[argNo] = v;
     } else {
       Address src = Address::invalid();
-      if (!arg.isAggregate())
-        cgm.errorNYI(loc, "emitCall: non-aggregate call argument");
-      else
+      if (!arg.isAggregate()) {
+        src = createMemTemp(arg.ty, loc, "coerce");
+        arg.copyInto(*this, src, loc);
+      } else {
         src = arg.hasLValue() ? arg.getKnownLValue().getAddress()
                               : arg.getKnownRValue().getAggregateAddress();
+      }
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      auto argRecordTy = cast<cir::RecordType>(argType);
       mlir::Type srcTy = src.getElementType();
       // FIXME(cir): get proper location for each argument.
       mlir::Location argLoc = loc;
@@ -560,7 +566,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       // uint64_t DstSize = CGM.getDataLayout().getTypeAllocSize(STy);
       // if (SrcSize < DstSize) {
       assert(!cir::MissingFeatures::dataLayoutTypeAllocSize());
-      if (srcTy != argRecordTy) {
+      if (srcTy != argType) {
         cgm.errorNYI(loc, "emitCall: source type does not match argument type");
       } else {
         // FIXME(cir): this currently only runs when the types are exactly the
@@ -670,6 +676,18 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     return getUndefRValue(retTy);
   }
   llvm_unreachable("Invalid evaluation kind");
+}
+
+void CallArg::copyInto(CIRGenFunction &cgf, Address addr,
+                       mlir::Location loc) const {
+  LValue dst = cgf.makeAddrLValue(addr, ty);
+  if (!hasLV && rv.isScalar())
+    cgf.cgm.errorNYI(loc, "copyInto scalar value");
+  else if (!hasLV && rv.isComplex())
+    cgf.emitStoreOfComplex(loc, rv.getComplexValue(), dst, /*isInit=*/true);
+  else
+    cgf.cgm.errorNYI(loc, "copyInto hasLV");
+  isUsed = true;
 }
 
 void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,

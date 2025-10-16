@@ -222,6 +222,8 @@ struct Configuration {
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
   bool disableVerify;
+  bool separateCstringLiteralSections;
+  bool tailMergeStrings;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

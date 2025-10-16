@@ -1,4 +1,4 @@
-//===--- UppercaseLiteralSuffixCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,10 +25,11 @@ struct IntegerLiteralCheck {
   static constexpr llvm::StringLiteral Name = llvm::StringLiteral("integer");
   // What should be skipped before looking for the Suffixes? (Nothing here.)
   static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("");
-  // Suffix can only consist of 'u' and 'l' chars, and can be a complex number
-  // ('i', 'j'). In MS compatibility mode, suffixes like i32 are supported.
+  // Suffix can only consist of 'u', 'l', and 'z' chars, can be a bit-precise
+  // integer (wb), and can be a complex number ('i', 'j'). In MS compatibility
+  // mode, suffixes like i32 are supported.
   static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("uUlLiIjJ");
+      llvm::StringLiteral("uUlLzZwWiIjJ");
 };
 
 struct FloatingLiteralCheck {
@@ -42,10 +43,10 @@ struct FloatingLiteralCheck {
   // Since the exponent ('p'/'P') is mandatory for hexadecimal floating-point
   // literals, we first skip everything before the exponent.
   static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("pP");
-  // Suffix can only consist of 'f', 'l', "f16", 'h', 'q' chars,
-  // and can be a complex number ('i', 'j').
+  // Suffix can only consist of 'f', 'l', "f16", "bf16", "df", "dd", "dl",
+  // 'h', 'q' chars, and can be a complex number ('i', 'j').
   static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("fFlLhHqQiIjJ");
+      llvm::StringLiteral("fFlLbBdDhHqQiIjJ");
 };
 
 struct NewSuffix {
@@ -180,7 +181,7 @@ UppercaseLiteralSuffixCheck::UppercaseLiteralSuffixCheck(
     : ClangTidyCheck(Name, Context),
       NewSuffixes(
           utils::options::parseStringList(Options.get("NewSuffixes", ""))),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UppercaseLiteralSuffixCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

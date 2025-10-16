@@ -1,4 +1,4 @@
-//===--- MultipleInheritanceCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
                                                   bool &IsInterface) const {
   assert(Node->getIdentifier());
   StringRef Name = Node->getIdentifier()->getName();
-  llvm::StringMapConstIterator<bool> Pair = InterfaceMap.find(Name);
+  auto Pair = InterfaceMap.find(Name);
   if (Pair == InterfaceMap.end())
     return false;
   IsInterface = Pair->second;

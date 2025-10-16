@@ -4,7 +4,7 @@
 // RUN: %if spirv-tools %{ rm -rf %t %}
 // RUN: %if spirv-tools %{ mkdir %t %}
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
-// RUN: %if spirv-tools %{ ls %t/module*.spv | xargs -I{} spirv-val {} %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
 
 // CHECK:      spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 // CHECK-NEXT:   spirv.func @foo() "Inline" {

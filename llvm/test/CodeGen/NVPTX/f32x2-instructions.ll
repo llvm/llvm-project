@@ -2,13 +2,13 @@
 ; ## Full FP32x2 support enabled by default.
 ; RUN: llc < %s -mcpu=sm_80 -O0 -disable-post-ra -frame-pointer=all            \
 ; RUN: -verify-machineinstrs | FileCheck --check-prefixes=CHECK,CHECK-NOF32X2 %s
-; RUN: %if ptxas-12.7 %{                                                       \
+; RUN: %if ptxas-sm_80 %{                                                       \
 ; RUN:  llc < %s -mcpu=sm_80 -O0 -disable-post-ra -frame-pointer=all           \
 ; RUN:  -verify-machineinstrs | %ptxas-verify -arch=sm_80                      \
 ; RUN: %}
 ; RUN: llc < %s -mcpu=sm_100 -O0 -disable-post-ra -frame-pointer=all           \
 ; RUN: -verify-machineinstrs | FileCheck --check-prefixes=CHECK,CHECK-F32X2 %s
-; RUN: %if ptxas-12.7 %{                                                       \
+; RUN: %if ptxas-sm_100 %{                                                       \
 ; RUN:  llc < %s -mcpu=sm_100 -O0 -disable-post-ra -frame-pointer=all          \
 ; RUN:  -verify-machineinstrs | %ptxas-verify -arch=sm_100                     \
 ; RUN: %}
@@ -1938,16 +1938,29 @@ define <2 x i64> @test_fptoui_2xi64(<2 x float> %a) #0 {
 }
 
 define <2 x float> @test_uitofp_2xi32(<2 x i32> %a) #0 {
-; CHECK-LABEL: test_uitofp_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_uitofp_2xi32_param_0];
-; CHECK-NEXT:    cvt.rn.f32.u32 %r3, %r2;
-; CHECK-NEXT:    cvt.rn.f32.u32 %r4, %r1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_uitofp_2xi32(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_uitofp_2xi32_param_0];
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_uitofp_2xi32(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_param_0];
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
+; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    ret;
   %r = uitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
@@ -1969,16 +1982,29 @@ define <2 x float> @test_uitofp_2xi64(<2 x i64> %a) #0 {
 }
 
 define <2 x float> @test_sitofp_2xi32(<2 x i32> %a) #0 {
-; CHECK-LABEL: test_sitofp_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_sitofp_2xi32_param_0];
-; CHECK-NEXT:    cvt.rn.f32.s32 %r3, %r2;
-; CHECK-NEXT:    cvt.rn.f32.s32 %r4, %r1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_sitofp_2xi32(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_sitofp_2xi32_param_0];
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_sitofp_2xi32(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_sitofp_2xi32_param_0];
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
+; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    ret;
   %r = sitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
@@ -2017,16 +2043,17 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-LABEL: test_uitofp_2xi32_fadd(
 ; CHECK-F32X2:       {
 ; CHECK-F32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_uitofp_2xi32_fadd_param_0];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_fadd_param_1];
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_uitofp_2xi32_fadd_param_1];
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_fadd_param_0];
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
-; CHECK-F32X2-NEXT:    mov.b64 %rd2, {%r4, %r3};
-; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r4, %r3};
+; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd4, %rd2, %rd3;
+; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-F32X2-NEXT:    ret;
   %c = uitofp <2 x i32> %a to <2 x float>
   %r = fadd <2 x float> %b, %c
@@ -2114,14 +2141,23 @@ define <2 x i32> @test_bitcast_2xfloat_to_2xi32(<2 x float> %a) #0 {
 }
 
 define <2 x float> @test_bitcast_2xi32_to_2xfloat(<2 x i32> %a) #0 {
-; CHECK-LABEL: test_bitcast_2xi32_to_2xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_bitcast_2xi32_to_2xfloat_param_0];
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_bitcast_2xi32_to_2xfloat(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_bitcast_2xi32_to_2xfloat_param_0];
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_bitcast_2xi32_to_2xfloat(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_2xi32_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-F32X2-NEXT:    ret;
   %r = bitcast <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
@@ -2851,31 +2887,57 @@ define <2 x float> @test_insertelement(<2 x float> %a, float %x) #0 {
 }
 
 define <2 x float> @test_sitofp_2xi32_to_2xfloat(<2 x i32> %a) #0 {
-; CHECK-LABEL: test_sitofp_2xi32_to_2xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_sitofp_2xi32_to_2xfloat_param_0];
-; CHECK-NEXT:    cvt.rn.f32.s32 %r3, %r2;
-; CHECK-NEXT:    cvt.rn.f32.s32 %r4, %r1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_sitofp_2xi32_to_2xfloat(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_sitofp_2xi32_to_2xfloat_param_0];
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_sitofp_2xi32_to_2xfloat(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_sitofp_2xi32_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
+; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    ret;
   %r = sitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
 
 define <2 x float> @test_uitofp_2xi32_to_2xfloat(<2 x i32> %a) #0 {
-; CHECK-LABEL: test_uitofp_2xi32_to_2xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_uitofp_2xi32_to_2xfloat_param_0];
-; CHECK-NEXT:    cvt.rn.f32.u32 %r3, %r2;
-; CHECK-NEXT:    cvt.rn.f32.u32 %r4, %r1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_uitofp_2xi32_to_2xfloat(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_uitofp_2xi32_to_2xfloat_param_0];
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_uitofp_2xi32_to_2xfloat(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
+; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    ret;
   %r = uitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }

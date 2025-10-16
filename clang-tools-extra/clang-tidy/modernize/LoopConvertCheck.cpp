@@ -1,4 +1,4 @@
-//===--- LoopConvertCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -925,7 +925,7 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
   // do any further updates on this iteration.
   if (areDiagsSelfContained())
     TUInfo = std::make_unique<TUTrackingInfo>();
-  else if (TUInfo->getReplacedVars().count(Loop))
+  else if (TUInfo->getReplacedVars().contains(Loop))
     return false;
 
   // Check that we have exactly one index variable and at most one end variable.

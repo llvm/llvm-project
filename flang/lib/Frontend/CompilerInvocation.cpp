@@ -22,6 +22,7 @@
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
@@ -156,6 +157,15 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
       diags.Report(debugWarning) << arg->getValue();
     }
+    opts.DwarfVersion =
+        getLastArgIntValue(args, clang::driver::options::OPT_dwarf_version_EQ,
+                           /*Default=*/0, diags);
+    if (const llvm::opt::Arg *a =
+            args.getLastArg(clang::driver::options::OPT_split_dwarf_file))
+      opts.SplitDwarfFile = a->getValue();
+    if (const llvm::opt::Arg *a =
+            args.getLastArg(clang::driver::options::OPT_split_dwarf_output))
+      opts.SplitDwarfOutput = a->getValue();
   }
   return true;
 }
@@ -275,6 +285,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_fexperimental_loop_fusion))
+    opts.FuseLoops = 1;
+
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
@@ -324,17 +337,6 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
-
-  // -flto=full/thin option.
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
-    llvm::StringRef s = a->getValue();
-    assert((s == "full" || s == "thin") && "Unknown LTO mode.");
-    if (s == "full")
-      opts.PrepareForFullLTO = true;
-    else
-      opts.PrepareForThinLTO = true;
-  }
 
   if (const llvm::opt::Arg *a = args.getLastArg(
           clang::driver::options::OPT_mcode_object_version_EQ)) {
@@ -1258,7 +1260,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
       res.getLangOpts().OMPHostIRFile = arg->getValue();
       if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
-        diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+        diags.Report(clang::diag::err_omp_host_ir_file_not_found)
             << res.getLangOpts().OMPHostIRFile;
     }
 
@@ -1423,6 +1425,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
+  if (args.hasArg(clang::driver::options::OPT_fno_fast_real_mod))
+    opts.NoFastRealMod = true;
+
   return true;
 }
 
@@ -1482,6 +1487,7 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
   llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+  CodeGenOptions &opts = invoc.getCodeGenOpts();
 
   // TODO: support --dependent-lib on other platforms when MLIR supports
   //       !llvm.dependent.lib
@@ -1494,8 +1500,35 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
     return false;
   }
 
-  invoc.getCodeGenOpts().DependentLibs =
+  opts.DependentLibs =
       args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+
+  // -flto=full/thin option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
+    llvm::StringRef s = a->getValue();
+    assert((s == "full" || s == "thin") && "Unknown LTO mode.");
+    if (s == "full")
+      opts.PrepareForFullLTO = true;
+    else
+      opts.PrepareForThinLTO = true;
+  }
+
+  // -ffat-lto-objects
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_ffat_lto_objects,
+                          clang::driver::options::OPT_fno_fat_lto_objects)) {
+    opts.PrepareForFatLTO =
+        arg->getOption().matches(clang::driver::options::OPT_ffat_lto_objects);
+    if (opts.PrepareForFatLTO) {
+      assert((opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
+             "Unknown LTO mode");
+
+      if (!triple.isOSBinFormatELF())
+        diags.Report(clang::diag::err_drv_unsupported_opt_for_target)
+            << arg->getAsString(args) << triple.getTriple();
+    }
+  }
   return true;
 }
 

@@ -126,8 +126,7 @@ hash_code hash_value(const ComplexValue &Arg) {
 } // end namespace
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
-namespace llvm {
-template <> struct DenseMapInfo<ComplexValue> {
+template <> struct llvm::DenseMapInfo<ComplexValue> {
   static inline ComplexValue getEmptyKey() {
     return {DenseMapInfo<Value *>::getEmptyKey(),
             DenseMapInfo<Value *>::getEmptyKey()};
@@ -144,7 +143,6 @@ template <> struct DenseMapInfo<ComplexValue> {
     return LHS.Real == RHS.Real && LHS.Imag == RHS.Imag;
   }
 };
-} // end namespace llvm
 
 namespace {
 template <typename T, typename IterT>
@@ -1022,8 +1020,7 @@ ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
 
   CompositeNode *ANode = nullptr;
 
-  const Intrinsic::ID PartialReduceInt =
-      Intrinsic::experimental_vector_partial_reduce_add;
+  const Intrinsic::ID PartialReduceInt = Intrinsic::vector_partial_reduce_add;
 
   Value *AReal = nullptr;
   Value *AImag = nullptr;
@@ -1139,8 +1136,7 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
     return nullptr;
 
   auto *IInst = dyn_cast<IntrinsicInst>(*CommonUser);
-  if (!IInst || IInst->getIntrinsicID() !=
-                    Intrinsic::experimental_vector_partial_reduce_add)
+  if (!IInst || IInst->getIntrinsicID() != Intrinsic::vector_partial_reduce_add)
     return nullptr;
 
   if (CompositeNode *CN = identifyDotProduct(IInst))

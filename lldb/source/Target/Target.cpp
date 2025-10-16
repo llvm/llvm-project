@@ -139,6 +139,8 @@ private:
 };
 } // namespace
 
+static std::atomic<lldb::user_id_t> g_target_unique_id{1};
+
 template <typename Installer>
 static Status installExecutable(const Installer &installer) {
   if (!installer.m_local_file || !installer.m_remote_file)
@@ -183,6 +185,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_source_manager_up(), m_stop_hooks(), m_stop_hook_next_id(0),
       m_latest_stop_hook_id(0), m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target),
+      m_target_unique_id(g_target_unique_id++),
       m_frame_recognizer_manager_up(
           std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
@@ -2564,9 +2567,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           m_images.Append(module_sp, notify);
 
         for (ModuleSP &old_module_sp : replaced_modules) {
-          Module *old_module_ptr = old_module_sp.get();
+          auto old_module_wp = old_module_sp->weak_from_this();
           old_module_sp.reset();
-          ModuleList::RemoveSharedModuleIfOrphaned(old_module_ptr);
+          ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
         }
       } else
         module_sp.reset();

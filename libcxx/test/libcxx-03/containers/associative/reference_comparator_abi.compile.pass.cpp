@@ -15,7 +15,7 @@
 // If we decide to make reference comparators ill-formed, this test would become
 // unnecessary.
 //
-// See https://github.com/llvm/llvm-project/issues/118559 for more details.
+// See https://llvm.org/PR118559 for more details.
 
 #include <set>
 #include <map>

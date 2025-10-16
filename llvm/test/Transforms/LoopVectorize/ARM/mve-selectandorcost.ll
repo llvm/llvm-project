@@ -45,7 +45,7 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fdiv fast <4 x float> [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP20]], <4 x float> [[TMP9]], <4 x float> splat (float -0.000000e+00)
+; CHECK-NEXT:    [[TMP10:%.*]] = select ninf <4 x i1> [[TMP20]], <4 x float> [[TMP9]], <4 x float> splat (float -0.000000e+00)
 ; CHECK-NEXT:    [[PREDPHI]] = fadd reassoc arcp contract afn <4 x float> [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
