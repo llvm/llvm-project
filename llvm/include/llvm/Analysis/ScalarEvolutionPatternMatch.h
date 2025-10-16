@@ -95,6 +95,10 @@ inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
   return V;
 }
 
+inline bind_ty<const SCEVMulExpr> m_scev_Mul(const SCEVMulExpr *&V) {
+  return V;
+}
+
 /// Match a specified const SCEV *.
 struct specificscev_ty {
   const SCEV *Expr;
@@ -284,14 +288,10 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
                          << SE.getTypeSizeInBits(TruncTy));
       return Op0.match(LHS) && Op1.match(RHS);
     }
-    const auto *Add = dyn_cast<SCEVAddExpr>(Expr);
-    if (Add == nullptr || Add->getNumOperands() != 2)
-      return false;
 
-    const SCEV *A = Add->getOperand(1);
-    const auto *Mul = dyn_cast<SCEVMulExpr>(Add->getOperand(0));
-
-    if (Mul == nullptr)
+    const SCEV *A;
+    const SCEVMulExpr *Mul;
+    if (!SCEVPatternMatch::match(Expr, m_scev_Add(m_scev_Mul(Mul), m_SCEV(A))))
       return false;
 
     const auto MatchURemWithDivisor = [&](const SCEV *B) {
