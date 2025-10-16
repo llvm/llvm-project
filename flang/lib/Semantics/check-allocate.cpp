@@ -441,7 +441,7 @@ static bool HaveCompatibleLengths(
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{
         evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
@@ -454,7 +454,7 @@ static bool HaveCompatibleLengths(
     auto v1{
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{type2.knownLength()};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
