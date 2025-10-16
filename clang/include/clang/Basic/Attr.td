@@ -2355,6 +2355,13 @@ def NoInline : DeclOrStmtAttr {
   let SimpleHandler = 1;
 }
 
+def NoOutline : DeclOrStmtAttr {
+  let Spellings = [Clang<"nooutline">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [NoOutlineDocs];
+  let SimpleHandler = 1;
+}
+
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;

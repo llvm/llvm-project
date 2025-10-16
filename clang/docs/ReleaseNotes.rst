@@ -269,6 +269,9 @@ Non-comprehensive list of changes in this release
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
 
+- Added a new attribute, ``[[clang::nooutline]]`` to suppress outlining from
+  annotated functions. This uses the LLVM `nooutline` attribute.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
