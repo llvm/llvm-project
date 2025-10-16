@@ -1369,6 +1369,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   if (S.getLangOpts().C23 &&
       getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
+      getTypeSpecType() != TST_unspecified &&
       (StorageClassSpec == SCS_extern || StorageClassSpec == SCS_auto)) {
     S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
         << DeclSpec::getSpecifierName(getStorageClassSpec())
