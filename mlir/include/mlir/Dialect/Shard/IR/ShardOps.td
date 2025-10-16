@@ -711,7 +711,7 @@ def Shard_BroadcastOp : Shard_CollectiveCommunicationOpBase<"broadcast", [
   ]> {
   let summary = "Broadcast over a device grid.";
   let description = [{
-    Copies the input tensor on `root` to the all devices in each group defined by
+    Copies the input tensor on `root` to all devices in each group defined by
     `grid_axes`. The `root` device is defined by its in-group multi-index.
     The contents of input tensors on non-root devices are ignored.
     
