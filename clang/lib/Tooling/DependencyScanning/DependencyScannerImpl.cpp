@@ -456,7 +456,8 @@ initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
   return std::make_pair(ModifiedFS, ModifiedCommandLine);
 }
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
                          StringRef WorkingDirectory, StringRef ModuleName) {
@@ -489,6 +490,9 @@ bool initializeScanCompilerInstance(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
+  // TODO: the commented out code here should be un-commented when
+  // we enable CAS.
+  // ScanInstance.getInvocation().getCASOpts() = Worker.CASOpts;
   ScanInstance.setBuildingModule(false);
 
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
@@ -710,56 +714,18 @@ const std::string CompilerInstanceWithContext::FakeFileBuffer =
     std::string(MAX_NUM_NAMES, ' ');
 
 llvm::Error CompilerInstanceWithContext::initialize() {
-  // Virtual file system setup
-  // - Set the current working directory.
-  Worker.BaseFS->setCurrentWorkingDirectory(CWD);
-  OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(Worker.BaseFS);
-  InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(CWD);
+  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
+      Worker.BaseFS, CommandLine, CWD, "ScanningByName");
 
-  // - Create the fake file as scanning input source file and setup overlay
-  //   FS.
-  SmallString<128> FakeInputPath;
-  llvm::sys::fs::createUniquePath("ScanningCI-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0,
-                      llvm::MemoryBuffer::getMemBuffer(FakeFileBuffer));
-  InMemoryOverlay = InMemoryFS;
-  // TODO: we need to handle CAS/CASFS here.
-  //    if (Worker.CAS && !Worker.DepCASFS)
-  //     InMemoryOverlay = llvm::cas::createCASProvidingFileSystem(
-  //         Worker.CAS, std::move(InMemoryFS));
-  OverlayFS->pushOverlay(InMemoryOverlay);
+  DiagPrinterWithOS =
+      std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
+  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
+      CommandLine, OverlayFS, DiagPrinterWithOS->DiagPrinter);
 
-  // Augument the command line.
-  CommandLine.emplace_back(FakeInputPath);
+  std::tie(Driver, Compilation) = buildCompilation(
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
 
-  // Create the file manager, the diagnostics engine, and the source manager.
-  FileMgr = std::make_unique<FileManager>(FileSystemOptions{}, OverlayFS);
-  DiagnosticOutput.clear();
-  auto DiagOpts = createDiagOptions(CommandLine);
-  DiagPrinter = std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS,
-                                                        *(DiagOpts.release()));
-  std::vector<const char *> CCommandLine(CommandLine.size(), nullptr);
-  llvm::transform(CommandLine, CCommandLine.begin(),
-                  [](const std::string &Str) { return Str.c_str(); });
-  DiagOpts = CreateAndPopulateDiagOpts(CCommandLine);
-  sanitizeDiagOpts(*DiagOpts);
-  Diags = CompilerInstance::createDiagnostics(*OverlayFS, *(DiagOpts.release()),
-                                              DiagPrinter.get(),
-                                              /*ShouldOwnClient=*/false);
-  SrcMgr = std::make_unique<SourceManager>(*Diags, *FileMgr);
-  Diags->setSourceManager(SrcMgr.get());
-
-  // Create the compiler invocation.
-  Driver = std::make_unique<driver::Driver>(
-      CCommandLine[0], llvm::sys::getDefaultTargetTriple(), *Diags,
-      "clang LLVM compiler", OverlayFS);
-  Driver->setTitle("clang_based_tool");
-  Compilation.reset(Driver->BuildCompilation(llvm::ArrayRef(CCommandLine)));
-
-  if (Compilation->containsError()) {
+  if (!Compilation) {
     return llvm::make_error<llvm::StringError>("Failed to build compilation",
                                                llvm::inconvertibleErrorCode());
   }
@@ -776,8 +742,28 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   Invocation = std::make_unique<CompilerInvocation>();
 
   if (!CompilerInvocation::CreateFromArgs(*Invocation, Command.getArguments(),
-                                          *Diags, Command.getExecutable())) {
-    Diags->Report(diag::err_fe_expected_compiler_job)
+                                          *DiagEngineWithCmdAndOpts->DiagEngine,
+                                          Command.getExecutable())) {
+    DiagEngineWithCmdAndOpts->DiagEngine->Report(
+        diag::err_fe_expected_compiler_job)
+        << llvm::join(CommandLine, " ");
+    return llvm::make_error<llvm::StringError>(
+        "Cannot create CompilerInvocation from Args",
+        llvm::inconvertibleErrorCode());
+  }
+
+  // TODO: CMDArgsStrVector is making string copies. We should optimize later
+  // and avoid the copies.
+  std::vector<std::string> CMDArgsStrVector(ArgSize + 1);
+  CMDArgsStrVector.push_back(Command.getExecutable());
+  llvm::transform(CommandArgs, CMDArgsStrVector.begin() + 1,
+                  [](const char *s) { return std::string(s); });
+
+  Invocation = createCompilerInvocation(CMDArgsStrVector,
+                                        *DiagEngineWithCmdAndOpts->DiagEngine);
+  if (!Invocation) {
+    DiagEngineWithCmdAndOpts->DiagEngine->Report(
+        diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
     return llvm::make_error<llvm::StringError>(
         "Cannot create CompilerInvocation from Args",
@@ -798,69 +784,22 @@ llvm::Error CompilerInstanceWithContext::initialize() {
       ModCache.get());
   auto &CI = *CIPtr;
 
-  // TODO: the commented out code here should be un-commented when
-  // we enable CAS.
-  // CI.getInvocation().getCASOpts() = Worker.CASOpts;
-  CI.setBuildingModule(false);
-  CI.createVirtualFileSystem(OverlayFS, Diags->getClient());
-  sanitizeDiagOpts(CI.getDiagnosticOpts());
-  CI.createDiagnostics(DiagPrinter.get(), false);
-  CI.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath = true;
-  CI.getFrontendOpts().GenerateGlobalModuleIndex = false;
-  CI.getFrontendOpts().UseGlobalModuleIndex = false;
-  // CI.getFrontendOpts().ModulesShareFileManager = Worker.DepCASFS ? false :
-  // true;
-  CI.getHeaderSearchOpts().ModuleFormat = "raw";
-  CI.getHeaderSearchOpts().ModulesIncludeVFSUsage =
-      any(Worker.Service.getOptimizeArgs() & ScanningOptimizations::VFS);
-  CI.getHeaderSearchOpts().ModulesStrictContextHash = true;
-  CI.getHeaderSearchOpts().ModulesSerializeOnlyPreprocessor = true;
-  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
-  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
-  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
-  CI.getPreprocessorOpts().ModulesCheckRelocated = false;
-
-  if (CI.getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
-    CI.getHeaderSearchOpts().BuildSessionTimestamp =
-        Worker.Service.getBuildSessionTimestamp();
-
-  CI.createFileManager();
-  auto *FileMgr = CI.getFileManagerPtr().get();
-
-  if (Worker.DepFS) {
-    Worker.DepFS->resetBypassedPathPrefix();
-    if (!CI.getHeaderSearchOpts().ModuleCachePath.empty()) {
-      SmallString<256> ModulesCachePath;
-      normalizeModuleCachePath(
-          *FileMgr, CI.getHeaderSearchOpts().ModuleCachePath, ModulesCachePath);
-      Worker.DepFS->setBypassedPathPrefix(ModulesCachePath);
-    }
-
-    CI.setDependencyDirectivesGetter(
-        std::make_unique<ScanningDependencyDirectivesGetter>(*FileMgr));
+  if (!initializeScanCompilerInstance(
+          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+          Worker.Service, Worker.DepFS)) {
+    return llvm::make_error<llvm::StringError>(
+        "Cannot initialize scanning compiler instance",
+        llvm::inconvertibleErrorCode());
   }
 
-  CI.createSourceManager();
+  llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(CI);
+  auto MaybePrebuiltModulesASTMap =
+      computePrebuiltModulesASTMap(CI, StableDirs);
+  if (!MaybePrebuiltModulesASTMap)
+    return llvm::make_error<llvm::StringError>(
+        "Prebuilt module scanning failed", llvm::inconvertibleErrorCode());
 
-  const StringRef Sysroot = CI.getHeaderSearchOpts().Sysroot;
-  if (!Sysroot.empty() && (llvm::sys::path::root_directory(Sysroot) != Sysroot))
-    StableDirs = {Sysroot, CI.getHeaderSearchOpts().ResourceDir};
-  if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty())
-    if (visitPrebuiltModule(CI.getPreprocessorOpts().ImplicitPCHInclude, CI,
-                            CI.getHeaderSearchOpts().PrebuiltModuleFiles,
-                            PrebuiltModuleVFSMap, CI.getDiagnostics(),
-                            StableDirs))
-      return llvm::make_error<llvm::StringError>(
-          "Prebuilt module scanning failed", llvm::inconvertibleErrorCode());
-
-  OutputOpts = std::make_unique<DependencyOutputOptions>();
-  std::swap(*OutputOpts, CI.getInvocation().getDependencyOutputOpts());
-  // We need at least one -MT equivalent for the generator of make dependency
-  // files to work.
-  if (OutputOpts->Targets.empty())
-    OutputOpts->Targets = {deduceDepTarget(CI.getFrontendOpts().OutputFile,
-                                           CI.getFrontendOpts().Inputs)};
-  OutputOpts->IncludeSystemHeaders = true;
+  OutputOpts = takeDependencyOutputOptionsFrom(CI);
 
   CI.createTarget();
   // CI.initializeDelayedInputFileFromCAS();
@@ -886,9 +825,9 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
       std::make_unique<GetDependenciesByModuleNameAction>(ModuleName);
   auto InputFile = CI.getFrontendOpts().Inputs.begin();
 
-  if (!SrcLocOffset)
+  if (!SrcLocOffset) {
     Action->BeginSourceFile(CI, *InputFile);
-  else {
+  } else {
     CI.getPreprocessor().removePPCallbacks();
   }
 
@@ -943,6 +882,6 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
 }
 
 llvm::Error CompilerInstanceWithContext::finalize() {
-  DiagPrinter->finish();
+  DiagPrinterWithOS->DiagPrinter.finish();
   return llvm::Error::success();
 }

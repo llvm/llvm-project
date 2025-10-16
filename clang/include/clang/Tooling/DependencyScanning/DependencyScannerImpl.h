@@ -120,7 +120,8 @@ initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                           StringRef WorkingDirectory,
                           llvm::MemoryBufferRef TUBuffer);
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
                          StringRef WorkingDirectory, StringRef ModuleName);
@@ -163,16 +164,10 @@ class CompilerInstanceWithContext {
 
   // Context - file systems
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay;
 
-  // Context - Diagnostics engine, file manager and source mamanger.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS;
-  std::unique_ptr<TextDiagnosticPrinter> DiagPrinter;
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
-  std::unique_ptr<FileManager> FileMgr;
-  std::unique_ptr<SourceManager> SrcMgr;
+  // Context - Diagnostics engine.
+  std::unique_ptr<TextDiagnosticsPrinterWithOutput> DiagPrinterWithOS;
+  std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
   std::unique_ptr<clang::driver::Driver> Driver;
@@ -196,8 +191,7 @@ class CompilerInstanceWithContext {
 public:
   CompilerInstanceWithContext(DependencyScanningWorker &Worker, StringRef CWD,
                               const std::vector<std::string> &CMD)
-      : Worker(Worker), CWD(CWD), CommandLine(CMD),
-        DiagnosticsOS(DiagnosticOutput) {};
+      : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
   llvm::Error initialize();
   llvm::Error computeDependencies(StringRef ModuleName,
