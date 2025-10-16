@@ -116,14 +116,19 @@ def IsValidBlockSize: AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == 16 || ::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == 32">,
     "whose value is 16 or 32">;
 
+
+def Vector4Scales :
+  ConfinedType<FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>, [FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>.predicate],
+    "vector of 4 F8E8M0FNU scales",
+    "::mlir::VectorType">,
+  BuildableType<"::mlir::VectorType::get({4}, $_builder.getType<::mlir::Float8E8M0FNUType>());">;
+
 def AMDGPU_ScaledExtPacked816Op
-    : AMDGPU_Op<"scaled_ext_packed816", [Pure, TypesMatchWith<"scale type is fixed",
-                       "source", "scale",
-                       "ScaledExtPacked816Op::getScaleType($_self.getContext())">]>,
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure]>,
       Arguments<(
           ins AnyTypeOf<[VectorOfLengthAndType<[8], [F4E2M1FN,F8E4M3FN,F8E5M2]>,
                          VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>]>:$source,
-          FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>:$scale,
+          Vector4Scales:$scale,
           ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2>]>:$firstScaleByte)>,
@@ -168,12 +173,6 @@ def AMDGPU_ScaledExtPacked816Op
     `firstScaleLane` `(` $firstScaleLane`)`
     `firstScaleByte` `(` $firstScaleByte `)`
     `:` type($source) `to` type($res)
-  }];
-
-  let extraClassDeclaration = [{
-    static Type getScaleType(MLIRContext *ctx) {
-      return VectorType::get(4, Float8E8M0FNUType::get(ctx));
-    }
   }];
 
   let hasVerifier = 1;
