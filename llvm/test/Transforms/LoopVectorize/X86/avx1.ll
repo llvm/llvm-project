@@ -23,7 +23,7 @@ define i32 @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) nounwind uwtable
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret i32 poison
 }
 
 
@@ -47,6 +47,6 @@ define i32 @read_mod_i64(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret i32 poison
 }
 

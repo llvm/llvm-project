@@ -3,6 +3,8 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
+; NOTE: Changing PHI inputs from undef to poison leads to change in
+; behaviour of the test. Left as undef for now.
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br label [[FOR_BODY_LR_PH_I_I_I:%.*]]
@@ -76,14 +78,14 @@ L1:
 define void @test3() {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD41:%.*]] = add i32 undef, undef
+; CHECK-NEXT:    [[ADD41:%.*]] = add i32 poison, poison
 ; CHECK-NEXT:    [[IDXPROM4736:%.*]] = zext i32 [[ADD41]] to i64
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[IDXPROM4738:%.*]] = phi i64 [ [[IDXPROM47:%.*]], [[WHILE_BODY]] ], [ [[IDXPROM4736]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[POS_337:%.*]] = phi i32 [ [[INC46:%.*]], [[WHILE_BODY]] ], [ [[ADD41]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[INC46]] = add i32 [[POS_337]], 1
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr undef, i64 0, i64 [[IDXPROM4738]]
+; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr poison, i64 0, i64 [[IDXPROM4738]]
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX48]], align 1
 ; CHECK-NEXT:    [[AND43:%.*]] = and i32 [[INC46]], 3
 ; CHECK-NEXT:    [[CMP44:%.*]] = icmp eq i32 [[AND43]], 0
@@ -95,7 +97,7 @@ define void @test3() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %add41 = add i32 undef, undef
+  %add41 = add i32 poison, poison
   %idxprom4736 = zext i32 %add41 to i64
   br label %while.body
 
@@ -103,7 +105,7 @@ while.body:
   %idxprom4738 = phi i64 [ %idxprom47, %while.body ], [ %idxprom4736, %entry ]
   %pos.337 = phi i32 [ %inc46, %while.body ], [ %add41, %entry ]
   %inc46 = add i32 %pos.337, 1
-  %arrayidx48 = getelementptr inbounds [1024 x i8], ptr undef, i64 0, i64 %idxprom4738
+  %arrayidx48 = getelementptr inbounds [1024 x i8], ptr poison, i64 0, i64 %idxprom4738
   store i8 0, ptr %arrayidx48, align 1
   %and43 = and i32 %inc46, 3
   %cmp44 = icmp eq i32 %and43, 0

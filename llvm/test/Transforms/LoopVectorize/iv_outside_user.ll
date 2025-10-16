@@ -156,7 +156,7 @@ define ptr @both(i32 %k)  {
 ; CHECK-LABEL: define ptr @both(
 ; CHECK-SAME: i32 [[K:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE:%.*]] = getelementptr inbounds i32, ptr undef, i64 1
+; CHECK-NEXT:    [[BASE:%.*]] = getelementptr inbounds i32, ptr poison, i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[K]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -169,7 +169,7 @@ define ptr @both(i32 %k)  {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr undef, i64 [[TMP4]]
+; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr poison, i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -183,7 +183,7 @@ define ptr @both(i32 %k)  {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END1]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END2]], %[[MIDDLE_BLOCK]] ], [ undef, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END2]], %[[MIDDLE_BLOCK]] ], [ poison, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
@@ -198,13 +198,13 @@ define ptr @both(i32 %k)  {
 ; CHECK-NEXT:    ret ptr [[INC_LAG1_LCSSA]]
 ;
 entry:
-  %base = getelementptr inbounds i32, ptr undef, i64 1
+  %base = getelementptr inbounds i32, ptr poison, i64 1
   br label %for.body
 
 for.body:
   %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %inc.lag1 = phi ptr [ %base, %entry ], [ %tmp, %for.body]
-  %inc.lag2 = phi ptr [ undef, %entry ], [ %inc.lag1, %for.body]
+  %inc.lag2 = phi ptr [ poison, %entry ], [ %inc.lag1, %for.body]
   %tmp = getelementptr inbounds i32, ptr %inc.lag1, i64 1
   %inc = add nsw i32 %inc.phi, 1
   %cmp = icmp eq i32 %inc, %k
@@ -269,8 +269,8 @@ define void @PR30742() {
 ; CHECK:       [[BB1_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[BB1]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP00:%.*]] = load i32, ptr undef, align 16
-; CHECK-NEXT:    [[TMP01:%.*]] = sub i32 [[TMP00]], undef
+; CHECK-NEXT:    [[TMP00:%.*]] = load i32, ptr poison, align 16
+; CHECK-NEXT:    [[TMP01:%.*]] = sub i32 [[TMP00]], poison
 ; CHECK-NEXT:    [[TMP02:%.*]] = icmp slt i32 [[TMP01]], 1
 ; CHECK-NEXT:    [[TMP03:%.*]] = select i1 [[TMP02]], i32 1, i32 [[TMP01]]
 ; CHECK-NEXT:    [[TMP04:%.*]] = add nsw i32 [[TMP03]], -7
@@ -307,7 +307,7 @@ define void @PR30742() {
 ; CHECK-NEXT:    br i1 [[TMP07]], label %[[BB2]], label %[[BB3]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP08:%.*]] = phi i32 [ [[TMP05]], %[[BB2]] ], [ [[IND_ESCAPE]], %[[MIDDLE_BLOCK10]] ]
-; CHECK-NEXT:    [[TMP09:%.*]] = sub i32 [[TMP00]], undef
+; CHECK-NEXT:    [[TMP09:%.*]] = sub i32 [[TMP00]], poison
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[TMP09]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 1, i32 [[TMP09]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], -7
@@ -346,8 +346,8 @@ BB0:
   br label %BB1
 
 BB1:
-  %tmp00 = load i32, ptr undef, align 16
-  %tmp01 = sub i32 %tmp00, undef
+  %tmp00 = load i32, ptr poison, align 16
+  %tmp01 = sub i32 %tmp00, poison
   %tmp02 = icmp slt i32 %tmp01, 1
   %tmp03 = select i1 %tmp02, i32 1, i32 %tmp01
   %tmp04 = add nsw i32 %tmp03, -7
@@ -361,7 +361,7 @@ BB2:
 
 BB3:
   %tmp08 = phi i32 [ %tmp05, %BB2 ]
-  %tmp09 = sub i32 %tmp00, undef
+  %tmp09 = sub i32 %tmp00, poison
   %tmp10 = icmp slt i32 %tmp09, 1
   %tmp11 = select i1 %tmp10, i32 1, i32 %tmp09
   %tmp11.inc = add nsw i32 %tmp11, -7

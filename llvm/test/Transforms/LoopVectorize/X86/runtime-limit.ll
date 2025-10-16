@@ -40,7 +40,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  ret i32 undef
+  ret i32 poison
 }
 
 ; We are vectorizing with 12 runtime checks.
@@ -85,5 +85,5 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  ret i32 undef
+  ret i32 poison
 }

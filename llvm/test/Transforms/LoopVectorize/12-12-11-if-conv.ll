@@ -35,5 +35,5 @@ if.end:                                           ; preds = %for.body, %if.then
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %if.end, %entry
-  ret i32 undef
+  ret i32 poison
 }

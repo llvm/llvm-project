@@ -27,5 +27,5 @@ define i32 @bar(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret i32 poison
 }

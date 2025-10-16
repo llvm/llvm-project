@@ -67,5 +67,5 @@ while.cond.while.end_crit_edge:                   ; preds = %while.cond
   br label %while.end
 
 while.end:                                        ; preds = %while.cond.while.end_crit_edge, %entry
-  ret i32 undef
+  ret i32 poison
 }

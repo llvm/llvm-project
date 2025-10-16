@@ -39,7 +39,7 @@ define i32 @foo(ptr nocapture %A) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   br label %for.body
@@ -55,7 +55,7 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }
 
 

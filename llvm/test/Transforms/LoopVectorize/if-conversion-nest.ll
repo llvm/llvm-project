@@ -73,7 +73,7 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %cmp26 = icmp sgt i32 %n, 0
@@ -106,7 +106,7 @@ if.end14:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }
 
 ; As above but with multiple variables set per block.
@@ -188,7 +188,7 @@ define i32 @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %cmp26 = icmp sgt i32 %n, 0
@@ -224,5 +224,5 @@ if.end14:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }

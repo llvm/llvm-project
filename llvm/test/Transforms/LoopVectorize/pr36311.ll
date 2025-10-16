@@ -26,9 +26,9 @@ for.cond80.loopexit:                              ; preds = %for.body89
 
 for.body89.lr.ph:                                 ; preds = %for.cond80.loopexit, %for.body51
   %i79.0179 = phi i32 [ %add90, %for.cond80.loopexit ], [ 0, %for.body51 ]
-  %next_index.4178 = phi i32 [ %inc94.lcssa, %for.cond80.loopexit ], [ undef, %for.body51 ]
+  %next_index.4178 = phi i32 [ %inc94.lcssa, %for.cond80.loopexit ], [ poison, %for.body51 ]
   %add90 = add nuw i32 %i79.0179, 1
-  %mul91 = mul i32 %add90, undef
+  %mul91 = mul i32 %add90, poison
   br label %for.body89
 
 for.body89:                                       ; preds = %for.body89, %for.body89.lr.ph
@@ -38,10 +38,10 @@ for.body89:                                       ; preds = %for.body89, %for.bo
   %add93 = add i32 %add92, %mul91
   %inc94 = add i32 %next_index.5174, 1
   %conv95 = zext i32 %next_index.5174 to i64
-  %arrayidx.i160 = getelementptr inbounds i32, ptr undef, i64 %conv95
+  %arrayidx.i160 = getelementptr inbounds i32, ptr poison, i64 %conv95
   store i32 %add93, ptr %arrayidx.i160, align 4
 ;, !tbaa !1
-  %cmp87 = icmp ult i32 %add92, undef
+  %cmp87 = icmp ult i32 %add92, poison
   br i1 %cmp87, label %for.body89, label %for.cond80.loopexit
 
 nrvo.skipdtor.loopexit:                           ; preds = %for.cond80.loopexit

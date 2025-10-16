@@ -149,7 +149,7 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.end
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }
 
 ; Don't vectorize true loop carried dependencies that are not a multiple of the
