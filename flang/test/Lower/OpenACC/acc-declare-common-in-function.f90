@@ -8,8 +8,8 @@ program p
   implicit none
   real :: pi
   integer :: i
-  common /RIEMANN_COM/ pi
-!$acc declare copyin(/RIEMANN_COM/)
+  common /COM/ pi
+!$acc declare copyin(/COM/)
   data pi/0.0/
 
 ! CHECK-DAG: acc.global_ctor @{{.*}}_acc_ctor {
@@ -31,8 +31,8 @@ contains
   subroutine s()
     implicit none
     real :: pi
-    common /RIEMANN_COM/ pi
-!$acc declare copyin(/RIEMANN_COM/)
+    common /COM/ pi
+!$acc declare copyin(/COM/)
   end subroutine s
 
 end program p
