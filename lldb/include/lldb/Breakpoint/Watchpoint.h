@@ -86,7 +86,6 @@ public:
   void SetDeclInfo(const std::string &str);
   std::string GetWatchSpec() const;
   void SetWatchSpec(const std::string &str);
-  bool WatchedValueReportable(const ExecutionContext &exe_ctx);
 
   // This function determines whether we should report a watchpoint value
   // change. Specifically, it checks the watchpoint condition (if present),
@@ -102,7 +101,6 @@ public:
   // Snapshot management interface.
   bool IsWatchVariable() const;
   void SetWatchVariable(bool val);
-  bool CaptureWatchedValue(const ExecutionContext &exe_ctx);
 
   /// \struct WatchpointVariableContext
   /// \brief Represents the context of a watchpoint variable.
@@ -205,7 +203,6 @@ public:
 private:
   friend class Target;
   friend class WatchpointList;
-  friend class StopInfoWatchpoint; // This needs to call UndoHitCount()
 
   lldb::ValueObjectSP CalculateWatchedValue() const;
 
@@ -222,8 +219,6 @@ private:
     m_old_value_sp.reset();
     m_new_value_sp.reset();
   }
-
-  void UndoHitCount() { m_hit_counter.Decrement(); }
 
   Target &m_target;
   bool m_enabled;           // Is this watchpoint enabled

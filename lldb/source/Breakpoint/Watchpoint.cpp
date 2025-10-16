@@ -260,66 +260,10 @@ bool Watchpoint::IsWatchVariable() const { return m_is_watch_variable; }
 
 void Watchpoint::SetWatchVariable(bool val) { m_is_watch_variable = val; }
 
-bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
-  ConstString g_watch_name("$__lldb__watch_value");
-  m_old_value_sp = m_new_value_sp;
-  Address watch_address(GetLoadAddress());
-  if (!m_type.IsValid()) {
-    // Don't know how to report new & old values, since we couldn't make a
-    // scalar type for this watchpoint. This works around an assert in
-    // ValueObjectMemory::Create.
-    // FIXME: This should not happen, but if it does in some case we care about,
-    // we can go grab the value raw and print it as unsigned.
-    return false;
-  }
-  m_new_value_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
-      watch_address, m_type);
-  m_new_value_sp = m_new_value_sp->CreateConstantValue(g_watch_name);
-  return (m_new_value_sp && m_new_value_sp->GetError().Success());
-}
-
-bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
-  if (!WatchpointModify() || WatchpointRead())
-    return true;
-  if (!m_type.IsValid())
-    return true;
-
-  ConstString g_watch_name("$__lldb__watch_value");
-  Address watch_address(GetLoadAddress());
-  ValueObjectSP newest_valueobj_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
-      watch_address, m_type);
-  newest_valueobj_sp = newest_valueobj_sp->CreateConstantValue(g_watch_name);
-  Status error;
-
-  DataExtractor new_data;
-  DataExtractor old_data;
-
-  newest_valueobj_sp->GetData(new_data, error);
-  if (error.Fail())
-    return true;
-  m_new_value_sp->GetData(old_data, error);
-  if (error.Fail())
-    return true;
-
-  if (new_data.GetByteSize() != old_data.GetByteSize() ||
-      new_data.GetByteSize() == 0)
-    return true;
-
-  if (memcmp(new_data.GetDataStart(), old_data.GetDataStart(),
-             old_data.GetByteSize()) == 0)
-    return false; // Value has not changed, user requested modify watchpoint
-
-  return true;
-}
-
 // RETURNS - true if we should stop at this breakpoint, false if we
 // should continue.
 
 bool Watchpoint::ShouldStop(StoppointCallbackContext *context) {
-  m_hit_counter.Increment();
-
   return IsEnabled();
 }
 
