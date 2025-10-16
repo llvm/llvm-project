@@ -1539,6 +1539,7 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
         attr.getName() == getLinkageAttrNameString() ||
         attr.getName() == func.getGlobalVisibilityAttrName() ||
         attr.getName() == func.getDsoLocalAttrName() ||
+        attr.getName() == func.getInlineKindAttrName() ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
           attr.getName() == func.getResAttrsAttrName())))
@@ -1622,6 +1623,12 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       mlir::SymbolRefAttr(), attributes);
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
+
+  // Add inline_kind attribute with "cir." prefix so amendOperation handles it
+  if (auto inlineKind = op.getInlineKind()) {
+    fn->setAttr("cir.inline_kind", 
+                cir::InlineAttr::get(getContext(), *inlineKind));
+  }
 
   fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
       getContext(), lowerCIRVisibilityToLLVMVisibility(

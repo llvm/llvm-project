@@ -34,6 +34,18 @@ class CIRDialectLLVMIRTranslationInterface
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
 
+  /// Any named attribute in the CIR dialect, i.e, with name started with
+  /// "cir.", will be handled here.
+  virtual mlir::LogicalResult amendOperation(
+      mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::NamedAttribute attribute,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
+    if (auto func = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op)) {
+      amendFunction(func, instructions, attribute, moduleTranslation);
+    }
+    return mlir::success();
+  }
+
   /// Translates the given operation to LLVM IR using the provided IR builder
   /// and saving the state in `moduleTranslation`.
   mlir::LogicalResult convertOperation(
@@ -46,6 +58,32 @@ public:
               moduleTranslation.convertType(cirOp.getType()));
 
     return mlir::success();
+  }
+
+  // Translate CIR's inline attribute to LLVM's function attributes.
+  void amendFunction(mlir::LLVM::LLVMFuncOp func,
+                     llvm::ArrayRef<llvm::Instruction *> instructions,
+                     mlir::NamedAttribute attribute,
+                     mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+    if (auto inlineAttr = mlir::dyn_cast<cir::InlineAttr>(attribute.getValue())) {
+      if (inlineAttr.isNoInline())
+        llvmFunc->addFnAttr(llvm::Attribute::NoInline);
+      else if (inlineAttr.isAlwaysInline())
+        llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+      else if (inlineAttr.isInlineHint())
+        llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
+      else
+        llvm_unreachable("Unknown inline kind");
+      // Drop ammended CIR attribute from LLVM op.
+      func->removeAttr(attribute.getName());
+    }
+
+    assert(!cir::MissingFeatures::opFuncOptNoneAttr());
+    assert(!cir::MissingFeatures::opFuncNoUnwind());
+    assert(!cir::MissingFeatures::opFuncColdHotAttr());
+    assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+    assert(!cir::MissingFeatures::openCL());
   }
 };
 

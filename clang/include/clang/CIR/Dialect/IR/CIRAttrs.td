@@ -967,5 +967,31 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
     `<` custom<RecordMembers>($data) `>`
   }];
 }
+//===----------------------------------------------------------------------===//
+// InlineAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
+  I32EnumAttrCase<"NoInline", 1, "no">,
+  I32EnumAttrCase<"AlwaysInline", 2, "always">,
+  I32EnumAttrCase<"InlineHint", 3, "hint">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_InlineAttr : CIR_EnumAttr<CIR_InlineKind, "inline"> {
+  let summary = "Inline attribute";
+  let description = [{
+    Inline attributes represents user directives.
+  }];
+
+  let cppClassName = "InlineAttr";
+
+  let extraClassDeclaration = [{
+    bool isNoInline() const { return getValue() == InlineKind::NoInline; };
+    bool isAlwaysInline() const { return getValue() == InlineKind::AlwaysInline; };
+    bool isInlineHint() const { return getValue() == InlineKind::InlineHint; };
+  }];
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
