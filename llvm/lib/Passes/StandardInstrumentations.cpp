@@ -727,8 +727,14 @@ template <typename T>
 template <typename FunctionT>
 bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const FunctionT &F) {
   if (shouldGenerateData(F)) {
-    FuncDataT<T> FD(F.front().getName().str());
     int I = 0;
+    // Basic block with numberic label will be empty here.
+    std::string FDEntryBlockName = F.front().getName().str();
+    // We don't need to increment `I` because it's incremented in later loop
+    if (FDEntryBlockName.empty())
+      FDEntryBlockName = formatv("{0}", I);
+
+    FuncDataT<T> FD(FDEntryBlockName);
     for (const auto &B : F) {
       std::string BBName = B.getName().str();
       if (BBName.empty()) {
@@ -1791,10 +1797,10 @@ public:
   // Create a node in Dot difference graph \p G representing the basic block
   // represented by \p BD with colour \p Colour (where it exists).
   DotCfgDiffNode(DotCfgDiff &G, unsigned N, const BlockDataT<DCData> &BD,
-                 StringRef Colour)
-      : Graph(G), N(N), Data{&BD, nullptr}, Colour(Colour) {}
+                 StringRef Label, StringRef Colour)
+      : Graph(G), N(N), Data{&BD, nullptr}, Label(Label), Colour(Colour) {}
   DotCfgDiffNode(const DotCfgDiffNode &DN)
-      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]},
+      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]}, Label(DN.Label),
         Colour(DN.Colour), EdgesMap(DN.EdgesMap), Children(DN.Children),
         Edges(DN.Edges) {}
 
@@ -1840,6 +1846,7 @@ protected:
   DotCfgDiff &Graph;
   const unsigned N;
   const BlockDataT<DCData> *Data[2];
+  StringRef Label;
   StringRef Colour;
   std::map<const unsigned, std::pair<std::string, StringRef>> EdgesMap;
   std::vector<unsigned> Children;
@@ -1888,7 +1895,7 @@ protected:
 
   void createNode(StringRef Label, const BlockDataT<DCData> &BD, StringRef C) {
     unsigned Pos = Nodes.size();
-    Nodes.emplace_back(*this, Pos, BD, C);
+    Nodes.emplace_back(*this, Pos, BD, Label, C);
     NodePosition.insert({Label, Pos});
   }
 
@@ -1912,7 +1919,8 @@ std::string DotCfgDiffNode::getBodyContent() const {
       // drop initial '\n' if present
       SR[I].consume_front("\n");
       // drop predecessors as they can be big and are redundant
-      SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
+      while (SR[I].starts_with("; preds "))
+        SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
     }
 
     SmallString<80> OldLineFormat = formatv(
@@ -1921,7 +1929,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
         "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", AfterColour);
     SmallString<80> UnchangedLineFormat = formatv(
         "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", CommonColour);
-    std::string Diff = Data[0]->getLabel().str();
+    std::string Diff = Label.str();
     Diff += ":\n<BR align=\"left\"/>" +
             doSystemDiff(makeHTMLReady(SR[0]), makeHTMLReady(SR[1]),
                          OldLineFormat, NewLineFormat, UnchangedLineFormat);
@@ -1950,10 +1958,9 @@ std::string DotCfgDiffNode::getBodyContent() const {
   // Drop leading newline, if present.
   if (BS.front() == '\n')
     BS1 = BS1.drop_front(1);
-  // Get label.
-  StringRef Label = BS1.take_until([](char C) { return C == ':'; });
   // drop predecessors as they can be big and are redundant
-  BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
+  while (BS1.starts_with("; preds "))
+    BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
 
   std::string S = "<FONT COLOR=\"" + Colour.str() + "\">" + Label.str() + ":";
 
@@ -1994,6 +2001,11 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
                         BD.getData().getSuccessorLabel(Sink->getKey()).str();
       EdgesMap.insert({Key, BeforeColour});
     }
+  }
+  if (Before == After) {
+    for (auto &I : Nodes)
+      I.finalize(*this);
+    return;
   }
 
   // Handle each basic block in the after IR
