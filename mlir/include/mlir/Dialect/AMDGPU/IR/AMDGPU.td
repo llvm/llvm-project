@@ -117,7 +117,9 @@ def IsValidBlockSize: AttrConstraint<
     "whose value is 16 or 32">;
 
 def AMDGPU_ScaledExtPacked816Op
-    : AMDGPU_Op<"scaled_ext_packed816", [Pure]>,
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure, TypesMatchWith<"scale type is fixed",
+                       "source", "scale",
+                       "ScaledExtPacked816Op::getScaleType($_self.getContext())">]>,
       Arguments<(
           ins AnyTypeOf<[VectorOfLengthAndType<[8], [F4E2M1FN,F8E4M3FN,F8E5M2]>,
                          VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>]>:$source,
@@ -157,7 +159,21 @@ def AMDGPU_ScaledExtPacked816Op
     one to choose portions of the matrix to convert.
   }];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    attr-dict $source
+    `scale` `(` $scale `)`
+    `blockSize` `(` $blockSize `)`
+    `firstScaleLane` `(` $firstScaleLane`)`
+    `firstScaleByte` `(` $firstScaleByte `)`
+    `:` type($source) `to` type($res)
+  }];
+
+  let extraClassDeclaration = [{
+    static Type getScaleType(MLIRContext *ctx) {
+      return VectorType::get(4, Float8E8M0FNUType::get(ctx));
+    }
+  }];
+
 }
 
 def AMDGPU_ScaledExtPackedOp
