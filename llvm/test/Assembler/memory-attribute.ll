@@ -78,3 +78,28 @@ declare void @fn_argmem_read_inaccessiblemem_write()
 ; CHECK: @fn_argmem_read_inaccessiblemem_write_reordered()
 declare void @fn_argmem_read_inaccessiblemem_write_reordered()
     memory(inaccessiblemem: write, argmem: read)
+
+; CHECK: Function Attrs: memory(target_mem0: write)
+; CHECK: @fn_inaccessiblemem_write_mem_target0()
+declare void @fn_inaccessiblemem_write_mem_target0()
+    memory(target_mem0: write)
+
+; CHECK: Function Attrs: memory(target_mem0: read)
+; CHECK: @fn_inaccessiblemem_read_mem_target0()
+declare void @fn_inaccessiblemem_read_mem_target0()
+    memory(target_mem0: read)
+
+; CHECK: Function Attrs: memory(target_mem1: write)
+; CHECK: @fn_inaccessiblemem_write_target_mem1()
+declare void @fn_inaccessiblemem_write_target_mem1()
+    memory(target_mem1: write)
+
+; CHECK: Function Attrs: memory(target_mem1: read)
+; CHECK: @fn_inaccessiblemem_read_target_mem1()
+declare void @fn_inaccessiblemem_read_target_mem1()
+    memory(target_mem1: read)
+
+; CHECK: Function Attrs: memory(target_mem0: read, target_mem1: write)
+; CHECK: @fn_inaccessiblemem_read_target_mem0_write_mem_target1()
+declare void @fn_inaccessiblemem_read_target_mem0_write_mem_target1()
+    memory(target_mem0: read, target_mem1: write)

@@ -49,6 +49,22 @@ def IntrArgMemOnly : IntrinsicProperty;
 // accessible by the module being compiled. This is a weaker form of IntrNoMem.
 def IntrInaccessibleMemOnly : IntrinsicProperty;
 
+
+
+class IntrinsicMemoryLocation;
+// These are used to represent Generic Memory Location. 
+def TargetMem0 : IntrinsicMemoryLocation;
+def TargetMem1 : IntrinsicMemoryLocation;
+// IntrInaccessible{Read|Write}MemOnly needs to set Location
+class IntrRead<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
+   list<IntrinsicMemoryLocation>  Loc=idx;
+}
+
+class IntrWrite<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
+   list<IntrinsicMemoryLocation> Loc=idx;
+}
+
+
 // IntrInaccessibleMemOrArgMemOnly -- This intrinsic only accesses memory that
 // its pointer-typed arguments point to or memory that is not accessible
 // by the module being compiled. This is a weaker form of IntrArgMemOnly.
