@@ -1852,21 +1852,24 @@ bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
       // TODO: Do we need a specific flag or type here, to distinghuish against
       // other ConstructName things? Leaving this for the full implementation
       // of mapper lowering.
-      auto *misc{symbol->detailsIf<MiscDetails>()};
+      const Symbol &ultimate{symbol->GetUltimate()};
+      auto *misc{const_cast<Symbol &>(ultimate).detailsIf<MiscDetails>()};
       if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
         context().Say(mapper->v.source,
             "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
       else
         mapper->v.symbol = symbol;
     } else {
-      mapper->v.symbol =
-          &MakeSymbol(mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
-      // TODO: When completing the implementation, we probably want to error if
-      // the symbol is not declared, but right now, testing that the TODO for
-      // OmpMapClause happens is obscured by the TODO for declare mapper, so
-      // leaving this out. Remove the above line once the declare mapper is
-      // implemented. context().Say(mapper->v.source, "'%s' not
-      // declared"_err_en_US, mapper->v.source);
+      // Allow the special 'default' mapper identifier without prior
+      // declaration so lowering can recognize and handle it. Emit an
+      // error for any other missing mapper identifier.
+      if (mapper->v.source.ToString() == "default") {
+        mapper->v.symbol = &MakeSymbol(
+            mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
+      } else {
+        context().Say(
+            mapper->v.source, "'%s' not declared"_err_en_US, mapper->v.source);
+      }
     }
   }
   return true;
@@ -3611,10 +3614,18 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
           rename.u);
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
+      // Default USE imports public names, excluding intrinsic-only and most
+      // miscellaneous details. However, allow OpenMP mapper identifiers,
+      // which are currently represented with MiscDetails::ConstructName.
+      bool isMapper{false};
+      if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+        isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
+      }
       if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
           (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
               symbol->has<UseDetails>()) &&
-          !symbol->has<MiscDetails>() && useNames.count(name) == 0) {
+          (!symbol->has<MiscDetails>() || isMapper) &&
+          useNames.count(name) == 0) {
         SourceName location{x.moduleName.source};
         if (auto *localSymbol{FindInScope(name)}) {
           DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);

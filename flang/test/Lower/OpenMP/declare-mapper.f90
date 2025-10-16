@@ -6,7 +6,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-3.f90 -o - | FileCheck %t/omp-declare-mapper-3.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-5.f90 -o - | FileCheck %t/omp-declare-mapper-5.f90
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-7.f90 -o - | FileCheck %t/omp-declare-mapper-7.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -301,3 +302,25 @@ subroutine declare_mapper_nested_parent
     r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
   !$omp end target
 end subroutine declare_mapper_nested_parent
+
+!--- omp-declare-mapper-7.f90
+! Check mappers declared inside modules and used via USE association.
+module m_mod
+  implicit none
+  type :: mty
+    integer :: x
+  end type mty
+  !$omp declare mapper(mymap : mty :: v) map(tofrom: v%x)
+end module m_mod
+
+program use_module_mapper
+  use m_mod
+  implicit none
+  type(mty) :: a
+
+  ! CHECK: omp.declare_mapper @[[MODMAP:[^ ]*mymap]]
+  ! CHECK: %{{.*}} = omp.map.info {{.*}} mapper(@[[MODMAP]]) {{.*}} {name = "a"}
+  !$omp target map(mapper(mymap) : a)
+    a%x = 42
+  !$omp end target
+end program use_module_mapper
