@@ -138,6 +138,9 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
+- Added a new attribute, ``[[clang::nooutline]]`` to suppress outlining from
+  annotated functions. This uses the LLVM `nooutline` attribute.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
