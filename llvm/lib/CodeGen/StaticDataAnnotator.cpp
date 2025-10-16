@@ -78,19 +78,8 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
     if (!llvm::memprof::IsAnnotationOK(GV))
       continue;
 
-    // The implementation below assumes prior passes don't set section prefixes,
-    // and specifically do 'assign' rather than 'update'. So report error if a
-    // section prefix is already set.
-    if (auto maybeSectionPrefix = GV.getSectionPrefix();
-        maybeSectionPrefix && !maybeSectionPrefix->empty())
-      llvm::report_fatal_error("Global variable " + GV.getName() +
-                               " already has a section prefix " +
-                               *maybeSectionPrefix);
-
     StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
-    if (SectionPrefix.empty())
-      continue;
-
+    // setSectionPrefix returns true if the section prefix is updated.
     Changed |= GV.setSectionPrefix(SectionPrefix);
   }
 

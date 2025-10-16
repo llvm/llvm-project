@@ -9,9 +9,11 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/TimeProfiler.h"
 
 namespace clang::lifetimes::internal {
+using llvm::isa_and_present;
 
 static bool isGslPointerType(QualType QT) {
   if (const auto *RD = QT->getAsCXXRecordDecl()) {
@@ -108,7 +110,7 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   // Specifically for conversion operators,
   // like `std::string_view p = std::string{};`
   if (isGslPointerType(MCE->getType()) &&
-      isa<CXXConversionDecl>(MCE->getCalleeDecl())) {
+      isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl())) {
     // The argument is the implicit object itself.
     handleFunctionCall(MCE, MCE->getMethodDecl(),
                        {MCE->getImplicitObjectArgument()},

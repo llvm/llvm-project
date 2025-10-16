@@ -159,6 +159,13 @@ public:
                                       bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
 
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
+
   bool shouldZeroInitPadding() const {
     // In C23 (N3096) $6.7.10:
     // """
