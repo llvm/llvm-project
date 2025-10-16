@@ -473,6 +473,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .completeDefinition();
   });
+  CompleteType(Decl);
+
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWByteAddressBuffer")
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
@@ -480,6 +482,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .completeDefinition();
   });
+  CompleteType(Decl);
+
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
                                 "RasterizerOrderedByteAddressBuffer")
              .finalizeForwardDeclaration();
@@ -488,6 +492,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .completeDefinition();
   });
+  CompleteType(Decl);
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
