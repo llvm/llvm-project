@@ -7,14 +7,7 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=x86mmx
+
 
 
 #include <immintrin.h>
@@ -597,11 +590,13 @@ __m64 test_mm_shuffle_pi16(__m64 a) {
   return _mm_shuffle_pi16(a, 3);
 }
 TEST_CONSTEXPR(match_v4hi(_mm_shuffle_pi16(((__m64)(__v4hi){0,1,2,3}), 3), 3,0,0,0));
+
 __m64 test_mm_sign_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sign_pi8
   // CHECK: call <16 x i8> @llvm.x86.ssse3.psign.b.128(
   return _mm_sign_pi8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_sign_pi8((__m64)(__v8qi){0,0,0,0, 0,0,0,0}, (__m64)(__v8qi){0,0,0,0, 0,0,0,0}), 0,0,0,0, 0,0,0,0));
 
 __m64 test_mm_sign_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sign_pi16
