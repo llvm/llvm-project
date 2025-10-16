@@ -435,6 +435,22 @@ public:
     return true;
   }
 
+  bool Pre(const parser::UseStmt &x) {
+    if (x.moduleName.symbol) {
+      Scope &thisScope{context_.FindScope(x.moduleName.source)};
+      common::visit(
+          [&](auto &&details) {
+            if constexpr (std::is_convertible_v<decltype(details),
+                              const WithOmpDeclarative &>) {
+              AddOmpRequiresToScope(thisScope, details.ompRequires(),
+                  details.ompAtomicDefaultMemOrder());
+            }
+          },
+          x.moduleName.symbol->details());
+    }
+    return true;
+  }
+
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -538,38 +554,37 @@ public:
   void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    using Flags = WithOmpDeclarative::RequiresFlags;
-    using Requires = WithOmpDeclarative::RequiresFlag;
+    using RequiresClauses = WithOmpDeclarative::RequiresClauses;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
     // Gather information from the clauses.
-    Flags flags;
-    std::optional<common::OmpMemoryOrderType> memOrder;
+    RequiresClauses reqs;
+    const common::OmpMemoryOrderType *memOrder{nullptr};
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
-      flags |= common::visit(
+      using OmpClause = parser::OmpClause;
+      reqs |= common::visit(
           common::visitors{
-              [&memOrder](
-                  const parser::OmpClause::AtomicDefaultMemOrder &atomic) {
-                memOrder = atomic.v.v;
-                return Flags{};
+              [&](const OmpClause::AtomicDefaultMemOrder &atomic) {
+                memOrder = &atomic.v.v;
+                return RequiresClauses{};
               },
-              [](const parser::OmpClause::ReverseOffload &) {
-                return Flags{Requires::ReverseOffload};
+              [&](auto &&s) {
+                using TypeS = llvm::remove_cvref_t<decltype(s)>;
+                if constexpr ( //
+                    std::is_same_v<TypeS, OmpClause::DynamicAllocators> ||
+                    std::is_same_v<TypeS, OmpClause::ReverseOffload> ||
+                    std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
+                    std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
+                  return RequiresClauses{clause.Id()};
+                } else {
+                  return RequiresClauses{};
+                }
               },
-              [](const parser::OmpClause::UnifiedAddress &) {
-                return Flags{Requires::UnifiedAddress};
-              },
-              [](const parser::OmpClause::UnifiedSharedMemory &) {
-                return Flags{Requires::UnifiedSharedMemory};
-              },
-              [](const parser::OmpClause::DynamicAllocators &) {
-                return Flags{Requires::DynamicAllocators};
-              },
-              [](const auto &) { return Flags{}; }},
+          },
           clause.u);
     }
     // Merge clauses into parents' symbols details.
-    AddOmpRequiresToScope(currScope(), flags, memOrder);
+    AddOmpRequiresToScope(currScope(), &reqs, memOrder);
     return true;
   }
   void Post(const parser::OpenMPRequiresConstruct &) { PopContext(); }
@@ -1001,8 +1016,9 @@ private:
 
   std::int64_t ordCollapseLevel{0};
 
-  void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
-      std::optional<common::OmpMemoryOrderType>);
+  void AddOmpRequiresToScope(Scope &,
+      const WithOmpDeclarative::RequiresClauses *,
+      const common::OmpMemoryOrderType *);
   void IssueNonConformanceWarning(llvm::omp::Directive D,
       parser::CharBlock source, unsigned EmitFromVersion);
 
@@ -3309,86 +3325,6 @@ void ResolveOmpParts(
   }
 }
 
-void ResolveOmpTopLevelParts(
-    SemanticsContext &context, const parser::Program &program) {
-  if (!context.IsEnabled(common::LanguageFeature::OpenMP)) {
-    return;
-  }
-
-  // Gather REQUIRES clauses from all non-module top-level program unit symbols,
-  // combine them together ensuring compatibility and apply them to all these
-  // program units. Modules are skipped because their REQUIRES clauses should be
-  // propagated via USE statements instead.
-  WithOmpDeclarative::RequiresFlags combinedFlags;
-  std::optional<common::OmpMemoryOrderType> combinedMemOrder;
-
-  // Function to go through non-module top level program units and extract
-  // REQUIRES information to be processed by a function-like argument.
-  auto processProgramUnits{[&](auto processFn) {
-    for (const parser::ProgramUnit &unit : program.v) {
-      if (!std::holds_alternative<common::Indirection<parser::Module>>(
-              unit.u) &&
-          !std::holds_alternative<common::Indirection<parser::Submodule>>(
-              unit.u) &&
-          !std::holds_alternative<
-              common::Indirection<parser::CompilerDirective>>(unit.u)) {
-        Symbol *symbol{common::visit(
-            [&context](auto &x) {
-              Scope *scope = GetScope(context, x.value());
-              return scope ? scope->symbol() : nullptr;
-            },
-            unit.u)};
-        // FIXME There is no symbol defined for MainProgram units in certain
-        // circumstances, so REQUIRES information has no place to be stored in
-        // these cases.
-        if (!symbol) {
-          continue;
-        }
-        common::visit(
-            [&](auto &details) {
-              if constexpr (std::is_convertible_v<decltype(&details),
-                                WithOmpDeclarative *>) {
-                processFn(*symbol, details);
-              }
-            },
-            symbol->details());
-      }
-    }
-  }};
-
-  // Combine global REQUIRES information from all program units except modules
-  // and submodules.
-  processProgramUnits([&](Symbol &symbol, WithOmpDeclarative &details) {
-    if (const WithOmpDeclarative::RequiresFlags *
-        flags{details.ompRequires()}) {
-      combinedFlags |= *flags;
-    }
-    if (const common::OmpMemoryOrderType *
-        memOrder{details.ompAtomicDefaultMemOrder()}) {
-      if (combinedMemOrder && *combinedMemOrder != *memOrder) {
-        context.Say(symbol.scope()->sourceRange(),
-            "Conflicting '%s' REQUIRES clauses found in compilation "
-            "unit"_err_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
-                llvm::omp::Clause::OMPC_atomic_default_mem_order)
-                                           .str()));
-      }
-      combinedMemOrder = *memOrder;
-    }
-  });
-
-  // Update all program units except modules and submodules with the combined
-  // global REQUIRES information.
-  processProgramUnits([&](Symbol &, WithOmpDeclarative &details) {
-    if (combinedFlags.any()) {
-      details.set_ompRequires(combinedFlags);
-    }
-    if (combinedMemOrder) {
-      details.set_ompAtomicDefaultMemOrder(*combinedMemOrder);
-    }
-  });
-}
-
 static bool IsSymbolThreadprivate(const Symbol &symbol) {
   if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
     return details->symbol().test(Symbol::Flag::OmpThreadprivate);
@@ -3547,23 +3483,22 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    WithOmpDeclarative::RequiresFlags flags,
-    std::optional<common::OmpMemoryOrderType> memOrder) {
+    const WithOmpDeclarative::RequiresClauses *reqs,
+    const common::OmpMemoryOrderType *memOrder) {
   const Scope &programUnit{omp::GetProgramUnit(scope)};
+  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
+  RequiresClauses combinedReqs{reqs ? *reqs : RequiresClauses{}};
 
   if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {
     common::visit(
         [&](auto &details) {
-          // Store clauses information into the symbol for the parent and
-          // enclosing modules, programs, functions and subroutines.
           if constexpr (std::is_convertible_v<decltype(&details),
                             WithOmpDeclarative *>) {
-            if (flags.any()) {
-              if (const WithOmpDeclarative::RequiresFlags *otherFlags{
-                      details.ompRequires()}) {
-                flags |= *otherFlags;
+            if (combinedReqs.any()) {
+              if (const RequiresClauses *otherReqs{details.ompRequires()}) {
+                combinedReqs |= *otherReqs;
               }
-              details.set_ompRequires(flags);
+              details.set_ompRequires(combinedReqs);
             }
             if (memOrder) {
               if (details.has_ompAtomicDefaultMemOrder() &&

@@ -49,7 +49,6 @@ bb:
   ret void
 }
 
-; FIXME: This generates "instid1(/* invalid instid value */)".
 define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg4, i1 %arg5, ptr %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10, i1 %arg11) {
 ; GFX11-LABEL: f2:
 ; GFX11:       ; %bb.0: ; %bb

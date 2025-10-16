@@ -474,7 +474,7 @@ public:
 
 /// Check if a constant \p CI can be safely treated as having been extended
 /// from a narrower type with the given extension kind.
-bool canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+bool canConstantBeExtended(const APInt *C, Type *NarrowType,
                            TTI::PartialReductionExtendKind ExtKind);
 } // end namespace llvm
 

@@ -548,6 +548,14 @@ TYPE_PARSER(construct<OmpAllocatorSimpleModifier>(scalarIntExpr))
 TYPE_PARSER(construct<OmpAlwaysModifier>( //
     "ALWAYS" >> pure(OmpAlwaysModifier::Value::Always)))
 
+TYPE_PARSER(construct<OmpAttachModifier::Value>(
+    "ALWAYS" >> pure(OmpAttachModifier::Value::Always) ||
+    "AUTO" >> pure(OmpAttachModifier::Value::Auto) ||
+    "NEVER" >> pure(OmpAttachModifier::Value::Never)))
+
+TYPE_PARSER(construct<OmpAttachModifier>( //
+    "ATTACH" >> parenthesized(Parser<OmpAttachModifier::Value>{})))
+
 TYPE_PARSER(construct<OmpAutomapModifier>(
     "AUTOMAP" >> pure(OmpAutomapModifier::Value::Automap)))
 
@@ -744,6 +752,7 @@ TYPE_PARSER(sourced(
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
     sourced(construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpAttachModifier>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||

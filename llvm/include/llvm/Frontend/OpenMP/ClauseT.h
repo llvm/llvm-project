@@ -802,6 +802,7 @@ template <typename T, typename I, typename E> //
 struct MapT {
   using LocatorList = ObjectListT<I, E>;
   ENUM(MapType, To, From, Tofrom, Storage);
+  ENUM(AttachModifier, Always, Auto, Never);
   ENUM(MapTypeModifier, Always, Close, Delete, Present, Self, OmpxHold);
   ENUM(RefModifier, RefPtee, RefPtr, RefPtrPtee);
   // See note at the definition of the MapperT type.
@@ -810,8 +811,8 @@ struct MapT {
   using MapTypeModifiers = ListT<MapTypeModifier>; // Not a spec name
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(RefModifier),
-             OPT(Mappers), OPT(Iterator), LocatorList>
+  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(AttachModifier),
+             OPT(RefModifier), OPT(Mappers), OPT(Iterator), LocatorList>
       t;
 };
 

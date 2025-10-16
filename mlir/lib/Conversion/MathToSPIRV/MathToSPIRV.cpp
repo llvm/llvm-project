@@ -407,11 +407,11 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     if (auto vectorType = dyn_cast<VectorType>(operandType))
       nanAttr = DenseElementsAttr::get(vectorType, nan);
 
-    Value NanValue =
+    Value nanValue =
         spirv::ConstantOp::create(rewriter, loc, operandType, nanAttr);
     Value lhs =
         spirv::SelectOp::create(rewriter, loc, cmpNegativeWithFractionalExp,
-                                NanValue, adaptor.getLhs());
+                                nanValue, adaptor.getLhs());
     Value abs = spirv::GLFAbsOp::create(rewriter, loc, lhs);
 
     // TODO: The following just forcefully casts y into an integer value in

@@ -17,6 +17,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -24,6 +25,7 @@
 #include <fstream>
 #include <set>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -359,6 +361,40 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   }
 }
 
+static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
+  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
+  using OmpMemoryOrderType = common::OmpMemoryOrderType;
+
+  const auto [reqs, order]{common::visit(
+      [&](auto &&details)
+          -> std::pair<const RequiresClauses *, const OmpMemoryOrderType *> {
+        if constexpr (std::is_convertible_v<decltype(details),
+                          const WithOmpDeclarative &>) {
+          return {details.ompRequires(), details.ompAtomicDefaultMemOrder()};
+        } else {
+          return {nullptr, nullptr};
+        }
+      },
+      symbol.details())};
+
+  if (order) {
+    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
+    os << "!$omp requires "
+       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
+       << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
+  }
+  if (reqs) {
+    os << "!$omp requires";
+    reqs->IterateOverMembers([&](llvm::omp::Clause f) {
+      if (f != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
+        os << ' '
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+      }
+    });
+    os << "\n";
+  }
+}
+
 // Put out the visible symbols from scope.
 void ModFileWriter::PutSymbols(
     const Scope &scope, UnorderedSymbolSet *hermeticModules) {
@@ -396,6 +432,7 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()));
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
