@@ -10197,6 +10197,22 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
+  // fold (not (or A, B)) -> and(not(A), not(B))
+  if (TLI.hasAndNot(SDValue(N, 0))) {
+    // If we have AndNot then it is profitable to apply demorgan to make use
+    // of the machine instruction.
+    SDValue A;
+    SDValue B;
+    APInt Cst;
+    if (sd_match(N, m_Xor(m_Or(m_Value(A), m_Value(B)), m_ConstInt(Cst))) &&
+        Cst.isAllOnes()) {
+      return DAG.getNode(
+          ISD::AND, DL, VT,
+          DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(-1, DL, VT)),
+          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(-1, DL, VT)));
+    }
+  }
+
   return SDValue();
 }
 
