@@ -309,35 +309,42 @@ func.func @constant_mask_transpose_to_transposed_constant_mask() -> (vector<2x3x
 // -----
 
 // CHECK-LABEL: transpose_from_elements_1d
-func.func @transpose_from_elements_1d(%arg0: i32, %arg1: i32) -> vector<2xi32> {
-  %v = vector.from_elements %arg0, %arg1 : vector<2xi32>
+func.func @transpose_from_elements_1d(%el_0: i32, %el_1: i32) -> vector<2xi32> {
+  %v = vector.from_elements %el_0, %el_1 : vector<2xi32>
   %t = vector.transpose %v, [0] : vector<2xi32> to vector<2xi32>
   return %t : vector<2xi32>
-  // CHECK: %[[R:.*]] = vector.from_elements %arg0, %arg1 : vector<2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0:.*]], %[[EL_1:.*]] : vector<2xi32>
   // CHECK-NOT: vector.transpose
 }
 
 // CHECK-LABEL: transpose_from_elements_2d
 func.func @transpose_from_elements_2d(
-  %arg0: i32, %arg1: i32, %arg2: i32,
-  %arg3: i32, %arg4: i32, %arg5: i32
+  %el_0_0: i32, %el_0_1: i32, %el_0_2: i32,
+  %el_1_0: i32, %el_1_1: i32, %el_1_2: i32
 ) -> vector<3x2xi32> {
-  %arg6 = vector.from_elements %arg0, %arg1, %arg2, %arg3, %arg4, %arg5 : vector<2x3xi32>
-  %arg7 = vector.transpose %arg6, [1, 0] : vector<2x3xi32> to vector<3x2xi32>
-  return %arg7 : vector<3x2xi32>
-  // CHECK: %[[R:.*]] = vector.from_elements %arg0, %arg3, %arg1, %arg4, %arg2, %arg5 : vector<3x2xi32>
+  %v = vector.from_elements %el_0_0, %el_0_1, %el_0_2, %el_1_0, %el_1_1, %el_1_2 : vector<2x3xi32>
+  %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to vector<3x2xi32>
+  return %t : vector<3x2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0:.*]], %[[EL_1_0:.*]], %[[EL_0_1:.*]], %[[EL_1_1:.*]], %[[EL_0_2:.*]], %[[EL_1_2:.*]] : vector<3x2xi32>
   // CHECK-NOT: vector.transpose
 }
 
 // CHECK-LABEL: transpose_from_elements_3d
 func.func @transpose_from_elements_3d(
-  %arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, %arg4: i32, %arg5: i32,
-  %arg6: i32, %arg7: i32, %arg8: i32, %arg9: i32, %arg10: i32, %arg11: i32
+  %el_0_0_0: i32, %el_0_0_1: i32, %el_0_1_0: i32, %el_0_1_1: i32, %el_0_2_0: i32, %el_0_2_1: i32,
+  %el_1_0_0: i32, %el_1_0_1: i32, %el_1_1_0: i32, %el_1_1_1: i32, %el_1_2_0: i32, %el_1_2_1: i32
 ) -> vector<2x2x3xi32> {
-  %arg12 = vector.from_elements %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11 : vector<2x3x2xi32>
-  %arg13 = vector.transpose %arg12, [0, 2, 1] : vector<2x3x2xi32> to vector<2x2x3xi32>
-  return %arg13 : vector<2x2x3xi32>
-  // CHECK: %[[R:.*]] = vector.from_elements %arg0, %arg2, %arg4, %arg1, %arg3, %arg5, %arg6, %arg8, %arg10, %arg7, %arg9, %arg11 : vector<2x2x3xi32>
+  %v = vector.from_elements
+    %el_0_0_0, %el_0_0_1,
+    %el_0_1_0, %el_0_1_1,
+    %el_0_2_0, %el_0_2_1,
+    %el_1_0_0, %el_1_0_1,
+    %el_1_1_0, %el_1_1_1,
+    %el_1_2_0, %el_1_2_1
+    : vector<2x3x2xi32>
+  %t = vector.transpose %v, [0, 2, 1] : vector<2x3x2xi32> to vector<2x2x3xi32>
+  return %t : vector<2x2x3xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0_0:.*]], %[[EL_0_1_0:.*]], %[[EL_0_2_0:.*]], %[[EL_0_0_1:.*]], %[[EL_0_1_1:.*]], %[[EL_0_2_1:.*]], %[[EL_1_0_0:.*]], %[[EL_1_1_0:.*]], %[[EL_1_2_0:.*]], %[[EL_1_0_1:.*]], %[[EL_1_1_1:.*]], %[[EL_1_2_1:.*]] : vector<2x2x3xi32>
   // CHECK-NOT: vector.transpose
 }
 
