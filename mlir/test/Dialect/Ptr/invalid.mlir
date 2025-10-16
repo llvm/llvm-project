@@ -78,3 +78,51 @@ func.func @ptr_diff_mismatch(%lhs: tensor<8x!ptr.ptr<#ptr.generic_space>>, %rhs:
   %res = ptr.ptr_diff %lhs, %rhs : tensor<8x!ptr.ptr<#ptr.generic_space>> -> vector<8xi64>
   return %res : vector<8xi64>
 }
+
+// -----
+
+func.func @read_contiguity_does_not_divide(%ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>, %passthrough: vector<4x4xf32>) -> vector<4x4xf32> {
+  // expected-error@+1 {{expected contiguity values to be positive and divide the shape}}
+  %0 = ptr.read %ptr, %mask, %passthrough contiguity = [1, 3] : vector<4x4x!ptr.ptr<#ptr.generic_space>> -> vector<4x4xf32>
+  return %0 : vector<4x4xf32>
+}
+
+// -----
+
+func.func @read_contiguity_is_not_positive(%ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>, %passthrough: vector<4x4xf32>) -> vector<4x4xf32> {
+  // expected-error@+1 {{expected contiguity values to be positive and divide the shape}}
+  %0 = ptr.read %ptr, %mask, %passthrough contiguity = [1, -1] : vector<4x4x!ptr.ptr<#ptr.generic_space>> -> vector<4x4xf32>
+  return %0 : vector<4x4xf32>
+}
+
+// -----
+
+func.func @read_invalid_contiguity_size(%ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>, %passthrough: vector<4x4xf32>) -> vector<4x4xf32> {
+  // expected-error@+1 {{expected contiguity array with 2 elements}}
+  %0 = ptr.read %ptr, %mask, %passthrough contiguity = [1] : vector<4x4x!ptr.ptr<#ptr.generic_space>> -> vector<4x4xf32>
+  return %0 : vector<4x4xf32>
+}
+
+// -----
+
+func.func @write_contiguity_does_not_divide(%value: vector<4x4xf32>, %ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>) {
+  // expected-error@+1 {{expected contiguity values to be positive and divide the shape}}
+  ptr.write %value, %ptr, %mask contiguity = [1, 7] : vector<4x4xf32>, vector<4x4x!ptr.ptr<#ptr.generic_space>>
+  return
+}
+
+// -----
+
+func.func @write_contiguity_is_not_positive(%value: vector<4x4xf32>, %ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>) {
+  // expected-error@+1 {{expected contiguity values to be positive and divide the shape}}
+  ptr.write %value, %ptr, %mask contiguity = [0, 4] : vector<4x4xf32>, vector<4x4x!ptr.ptr<#ptr.generic_space>>
+  return
+}
+
+// -----
+
+func.func @write_invalid_contiguity_size(%value: vector<4x4xf32>, %ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>) {
+  // expected-error@+1 {{expected contiguity array with 2 elements}}
+  ptr.write %value, %ptr, %mask contiguity = [1] : vector<4x4xf32>, vector<4x4x!ptr.ptr<#ptr.generic_space>>
+  return
+}
