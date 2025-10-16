@@ -191,52 +191,55 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 namespace {
 
-/// The type of monotonicity of a SCEV. This property is defined with respect to
-/// the outermost loop that DA is analyzing.
+/// The property of monotonicity of a SCEV. To define the monotonicity, assume
+/// a SCEV defined within N-nested loops. Let i_k denote the iteration number
+/// of the k-th loop. Then we can regard the SCEV as an N-ary function:
 ///
-/// This is designed to classify the behavior of AddRec expressions, and does
-/// not care about other SCEVs. For example, given the two loop-invariant values
-/// `A` and `B`, `A + B` is treated as Invariant even if the addition wraps.
+///   F(i_1, i_2, ..., i_N)
+///
+/// The domain of i_k is the closed range [0, BTC_k], where BTC_k is the
+/// backedge-taken count of the k-th loop.
+///
+/// A function F is said to be "monotonically increasing with respect to the
+/// k-th loop" if x <= y implies the following condition:
+///
+///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) <=
+///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
+///
+/// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, y in their domains.
+///
+/// Likewise F is "monotonically decreasing with respect to the k-th loop"
+/// if x <= y implies
+///
+///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) >=
+///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
+///
+/// A function F with either monotonically increasing or decreasing with
+/// respect to the k-th loop is simply called
+/// "monotonic with respect to k-th loop".
+///
+/// A function F is said to be "multimonotonic" when it is monotonic with
+/// respect to all of the N loops.
+///
+/// Since integer comparison can be either signed or unsigned, we need to
+/// distinguish monotonicity in the signed sense from that in the unsigned
+/// sense. Note that the inequality "x <= y" merely indicates loop progression
+/// and is not affected by the difference between signed and unsigned order.
+///
+/// Currently we only consider monotonicity in a signed sense.
 enum class SCEVMonotonicityType {
-  /// The expression is neither loop-invariant nor monotonic (or we fail to
-  /// prove it).
+  /// We don't know anything about the monotonicity of the SCEV.
   Unknown,
 
-  /// The expression is loop-invariant with respect to the outermost loop.
+  /// The SCEV is loop-invariant with respect to the outermost loop. In other
+  /// words, the function F corresponding to the SCEV is a constant function.
   Invariant,
 
-  /// The expression is a (nested) affine AddRec and is monotonically increasing
-  /// or decreasing in a signed sense with respect to each loop. Monotonicity is
-  /// checked independently for each loop, and the expression is classified as
-  /// MultiSignedMonotonic if all AddRecs are nsw. For example, in the following
-  /// loop:
-  ///
-  ///   for (i = 0; i < 100; i++)
-  ///     for (j = 0; j < 100; j++)
-  ///       A[i + j] = ...;
-  ///
-  /// The SCEV for `i + j` is classified as MultiSignedMonotonic. On the other
-  /// hand, in the following loop:
-  ///
-  ///   for (i = 0; i < 100; i++)
-  ///     for (j = 0; j <= (1ULL << 63); j++)
-  ///       A[i + j] = ...;
-  ///
-  /// The SCEV for `i + j` is NOT classified as MultiMonotonic, because the
-  /// AddRec for `j` wraps in a signed sense. We don't consider the "direction"
-  /// of each AddRec. For example, in the following loop:
-  ///
-  ///  for (int i = 0; i < 100; i++)
-  ///    for (int j = 0; j < 100; j++)
-  ///      A[i - j] = ...;
-  ///
-  /// The SCEV for `i - j` is classified as MultiSignedMonotonic, even though it
-  /// contains both increasing and decreasing AddRecs.
-  ///
-  /// Note that we don't check if the step recurrence can be zero. For
-  /// example,an AddRec `{0,+,%a}<nsw> is classifed as Monotonic if `%a` can be
-  /// zero. That is, the expression can be Invariant.
-  MultiSignedMonotonic,
+  /// The function F corresponding to the SCEV is multimonotonic in a signed
+  /// sense. Note that the multimonotonic function may also be a constant
+  /// function. The order employed in the definition of monotonicity is not
+  /// strict order.
+  MultivariateSignedMonotonic,
 };
 
 struct SCEVMonotonicity {
@@ -881,8 +884,8 @@ void SCEVMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
   case SCEVMonotonicityType::Invariant:
     OS << "Invariant\n";
     break;
-  case SCEVMonotonicityType::MultiSignedMonotonic:
-    OS << "MultiSignedMonotonic\n";
+  case SCEVMonotonicityType::MultivariateSignedMonotonic:
+    OS << "MultivariateSignedMonotonic\n";
     break;
   }
 }
@@ -905,6 +908,8 @@ SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
   return visit(Expr);
 }
 
+/// We only care about an affine AddRec at the moment. For an affine AddRec,
+/// the monotonicity can be inferred from its nowrap property.
 SCEVMonotonicity
 SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
@@ -920,7 +925,7 @@ SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   if (!isLoopInvariant(Step))
     return createUnknown(Expr);
 
-  return SCEVMonotonicity(SCEVMonotonicityType::MultiSignedMonotonic);
+  return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
 }
 
 //===----------------------------------------------------------------------===//

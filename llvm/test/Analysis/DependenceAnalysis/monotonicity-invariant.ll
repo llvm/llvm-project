@@ -69,7 +69,7 @@ define void @invariant_plus_monotonic0(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: {%x,+,1}<nsw><%loop.i.header>
-; CHECK-NEXT:      Monotonicity: MultiSignedMonotonic
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0 S]!
@@ -113,7 +113,7 @@ define void @invariant_plus_monotonic1(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: {%x,+,1}<nsw><%loop.j>
-; CHECK-NEXT:      Monotonicity: MultiSignedMonotonic
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [S 0]!
