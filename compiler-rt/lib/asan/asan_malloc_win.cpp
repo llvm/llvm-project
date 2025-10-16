@@ -485,10 +485,11 @@ INTERCEPTOR_WINAPI(void*, RtlReAllocateHeap, HANDLE HeapHandle, DWORD Flags,
 
 namespace __asan {
 
-static void TryToOverrideFunction(const char *fname, uptr new_func) {
+static void TryToOverrideFunction(const char *fname, uptr new_func,
+                                  uptr *orig_old_func = 0) {
   // Failure here is not fatal. The CRT may not be present, and different CRT
   // versions use different symbols.
-  if (!__interception::OverrideFunction(fname, new_func))
+  if (!__interception::OverrideFunction(fname, new_func, orig_old_func))
     VPrintf(2, "Failed to override function %s\n", fname);
 }
 
@@ -519,16 +520,14 @@ void ReplaceSystemMalloc() {
     ASAN_INTERCEPT_FUNC(HeapAlloc);
 
     // Undocumented functions must be intercepted by name, not by symbol.
-    __interception::OverrideFunction("RtlSizeHeap", (uptr)WRAP(RtlSizeHeap),
-                                     (uptr *)&REAL(RtlSizeHeap));
-    __interception::OverrideFunction("RtlFreeHeap", (uptr)WRAP(RtlFreeHeap),
-                                     (uptr *)&REAL(RtlFreeHeap));
-    __interception::OverrideFunction("RtlReAllocateHeap",
-                                     (uptr)WRAP(RtlReAllocateHeap),
-                                     (uptr *)&REAL(RtlReAllocateHeap));
-    __interception::OverrideFunction("RtlAllocateHeap",
-                                     (uptr)WRAP(RtlAllocateHeap),
-                                     (uptr *)&REAL(RtlAllocateHeap));
+    TryToOverrideFunction("RtlSizeHeap", (uptr)WRAP(RtlSizeHeap),
+                          (uptr *)&REAL(RtlSizeHeap));
+    TryToOverrideFunction("RtlFreeHeap", (uptr)WRAP(RtlFreeHeap),
+                          (uptr *)&REAL(RtlFreeHeap));
+    TryToOverrideFunction("RtlReAllocateHeap", (uptr)WRAP(RtlReAllocateHeap),
+                          (uptr *)&REAL(RtlReAllocateHeap));
+    TryToOverrideFunction("RtlAllocateHeap", (uptr)WRAP(RtlAllocateHeap),
+                          (uptr *)&REAL(RtlAllocateHeap));
   } else {
 #define INTERCEPT_UCRT_FUNCTION(func)                                  \
   if (!INTERCEPT_FUNCTION_DLLIMPORT(                                   \
