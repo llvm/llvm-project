@@ -493,6 +493,16 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
   CompleteType(Decl);
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConstantBuffer")
+             .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::CBuffer, /*IsROV=*/true,
+                    /*RawBuffer=*/false, /*HasCounter=*/false)
+        .completeDefinition();
+  });
+  CompleteType(Decl);
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
