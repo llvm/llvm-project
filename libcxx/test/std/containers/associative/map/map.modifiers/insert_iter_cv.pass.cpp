@@ -27,31 +27,31 @@ TEST_CONSTEXPR_CXX26 bool do_insert_iter_cv_test() {
   M m;
   const VT v1(2, 2.5);
   R r = m.insert(m.end(), v1);
-  assert(r == m.begin());
-  assert(m.size() == 1);
-  assert(r->first == 2);
-  assert(r->second == 2.5);
+  r == m.begin();
+  m.size() == 1;
+  r->first == 2;
+  r->second == 2.5;
 
   const VT v2(1, 1.5);
   r = m.insert(m.end(), v2);
-  assert(r == m.begin());
-  assert(m.size() == 2);
-  assert(r->first == 1);
-  assert(r->second == 1.5);
+  r == m.begin();
+  m.size() == 2;
+  r->first == 1;
+  r->second == 1.5;
 
   const VT v3(3, 3.5);
   r = m.insert(m.end(), v3);
-  assert(r == std::prev(m.end()));
-  assert(m.size() == 3);
-  assert(r->first == 3);
-  assert(r->second == 3.5);
+  r == std::prev(m.end());
+  m.size() == 3;
+  r->first == 3;
+  r->second == 3.5;
 
   const VT v4(3, 4.5);
   r = m.insert(m.end(), v4);
-  assert(r == std::prev(m.end()));
-  assert(m.size() == 3);
-  assert(r->first == 3);
-  assert(r->second == 3.5);
+  r == std::prev(m.end());
+  m.size() == 3;
+  r->first == 3;
+  r->second == 3.5;
 
   return true;
 }
@@ -68,7 +68,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

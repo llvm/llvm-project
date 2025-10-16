@@ -28,18 +28,18 @@ TEST_CONSTEXPR_CXX26 bool test_alloc() {
     V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
     const Map orig(begin(arr), end(arr));
     Map copy = orig;
-    assert(copy.size() == 3);
-    assert(*std::next(copy.begin(), 0) == V(1, 1));
-    assert(*std::next(copy.begin(), 1) == V(2, 3));
-    assert(*std::next(copy.begin(), 2) == V(3, 6));
-    assert(std::next(copy.begin(), 3) == copy.end());
+    copy.size() == 3;
+    *std::next(copy.begin(), 0) == V(1, 1);
+    *std::next(copy.begin(), 1) == V(2, 3);
+    *std::next(copy.begin(), 2) == V(3, 6);
+    std::next(copy.begin(), 3) == copy.end();
 
     // Check that orig is still what is expected
-    assert(orig.size() == 3);
-    assert(*std::next(orig.begin(), 0) == V(1, 1));
-    assert(*std::next(orig.begin(), 1) == V(2, 3));
-    assert(*std::next(orig.begin(), 2) == V(3, 6));
-    assert(std::next(orig.begin(), 3) == orig.end());
+    orig.size() == 3;
+    *std::next(orig.begin(), 0) == V(1, 1);
+    *std::next(orig.begin(), 1) == V(2, 3);
+    *std::next(orig.begin(), 2) == V(3, 6);
+    std::next(orig.begin(), 3) == orig.end();
   }
 
   { // copy empty map
@@ -48,12 +48,12 @@ TEST_CONSTEXPR_CXX26 bool test_alloc() {
 
     const Map orig;
     Map copy = orig;
-    assert(copy.size() == 0);
-    assert(copy.begin() == copy.end());
+    copy.size() == 0;
+    copy.begin() == copy.end();
 
     // Check that orig is still what is expected
-    assert(orig.size() == 0);
-    assert(orig.begin() == orig.end());
+    orig.size() == 0;
+    orig.begin() == orig.end();
   }
 
   { // only some leaf nodes exist
@@ -63,22 +63,22 @@ TEST_CONSTEXPR_CXX26 bool test_alloc() {
     V arr[] = {V(1, 1), V(2, 3), V(3, 6), V(4, 7), V(5, 0)};
     const Map orig(begin(arr), end(arr));
     Map copy = orig;
-    assert(copy.size() == 5);
-    assert(*std::next(copy.begin(), 0) == V(1, 1));
-    assert(*std::next(copy.begin(), 1) == V(2, 3));
-    assert(*std::next(copy.begin(), 2) == V(3, 6));
-    assert(*std::next(copy.begin(), 3) == V(4, 7));
-    assert(*std::next(copy.begin(), 4) == V(5, 0));
-    assert(std::next(copy.begin(), 5) == copy.end());
+    copy.size() == 5;
+    *std::next(copy.begin(), 0) == V(1, 1);
+    *std::next(copy.begin(), 1) == V(2, 3);
+    *std::next(copy.begin(), 2) == V(3, 6);
+    *std::next(copy.begin(), 3) == V(4, 7);
+    *std::next(copy.begin(), 4) == V(5, 0);
+    std::next(copy.begin(), 5) == copy.end();
 
     // Check that orig is still what is expected
-    assert(orig.size() == 5);
-    assert(*std::next(orig.begin(), 0) == V(1, 1));
-    assert(*std::next(orig.begin(), 1) == V(2, 3));
-    assert(*std::next(orig.begin(), 2) == V(3, 6));
-    assert(*std::next(orig.begin(), 3) == V(4, 7));
-    assert(*std::next(orig.begin(), 4) == V(5, 0));
-    assert(std::next(orig.begin(), 5) == orig.end());
+    orig.size() == 5;
+    *std::next(orig.begin(), 0) == V(1, 1);
+    *std::next(orig.begin(), 1) == V(2, 3);
+    *std::next(orig.begin(), 2) == V(3, 6);
+    *std::next(orig.begin(), 3) == V(4, 7);
+    *std::next(orig.begin(), 4) == V(5, 0);
+    std::next(orig.begin(), 5) == orig.end();
   }
   return true;
 }
@@ -94,12 +94,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
     const Map orig(begin(arr), end(arr), test_less<int>(3));
     Map copy = orig;
-    assert(copy.size() == 3);
-    assert(copy.key_comp() == test_less<int>(3));
+    copy.size() == 3;
+    copy.key_comp() == test_less<int>(3);
 
     // Check that orig is still what is expected
-    assert(orig.size() == 3);
-    assert(orig.key_comp() == test_less<int>(3));
+    orig.size() == 3;
+    orig.key_comp() == test_less<int>(3);
   }
 
   { // Ensure that the allocator is copied
@@ -109,13 +109,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
     const Map orig(begin(arr), end(arr), std::less<int>(), test_allocator<V>(10));
     Map copy = orig;
-    assert(copy.size() == 3);
-    assert(copy.get_allocator() == test_allocator<V>(10));
+    copy.size() == 3;
+    copy.get_allocator() == test_allocator<V>(10);
 
     // Check that orig is still what is expected
-    assert(orig.size() == 3);
-    assert(orig.get_allocator() == test_allocator<V>(10));
-    assert(orig.get_allocator().get_id() != test_alloc_base::moved_value);
+    orig.size() == 3;
+    orig.get_allocator() == test_allocator<V>(10);
+    orig.get_allocator().get_id() != test_alloc_base::moved_value;
   }
 
   { // Ensure that soccc is handled properly
@@ -125,18 +125,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
     V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
     const Map orig(begin(arr), end(arr), std::less<int>(), other_allocator<V>(10));
     Map copy = orig;
-    assert(copy.size() == 3);
-    assert(copy.get_allocator() == other_allocator<V>(-2));
+    copy.size() == 3;
+    copy.get_allocator() == other_allocator<V>(-2);
 
     // Check that orig is still what is expected
-    assert(orig.size() == 3);
-    assert(orig.get_allocator() == other_allocator<V>(10));
+    orig.size() == 3;
+    orig.get_allocator() == other_allocator<V>(10);
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

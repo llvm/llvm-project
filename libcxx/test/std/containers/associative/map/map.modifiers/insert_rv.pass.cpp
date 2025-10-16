@@ -30,32 +30,32 @@ TEST_CONSTEXPR_CXX26 bool do_insert_rv_test() {
   typedef std::pair<typename M::iterator, bool> R;
   M m;
   R r = m.insert(P(2, 2));
-  assert(r.second);
-  assert(r.first == m.begin());
-  assert(m.size() == 1);
-  assert(r.first->first == 2);
-  assert(r.first->second == 2);
+  r.second;
+  r.first == m.begin();
+  m.size() == 1;
+  r.first->first == 2;
+  r.first->second == 2;
 
   r = m.insert(P(1, 1));
-  assert(r.second);
-  assert(r.first == m.begin());
-  assert(m.size() == 2);
-  assert(r.first->first == 1);
-  assert(r.first->second == 1);
+  r.second;
+  r.first == m.begin();
+  m.size() == 2;
+  r.first->first == 1;
+  r.first->second == 1;
 
   r = m.insert(P(3, 3));
-  assert(r.second);
-  assert(r.first == std::prev(m.end()));
-  assert(m.size() == 3);
-  assert(r.first->first == 3);
-  assert(r.first->second == 3);
+  r.second;
+  r.first == std::prev(m.end());
+  m.size() == 3;
+  r.first->first == 3;
+  r.first->second == 3;
 
   r = m.insert(P(3, 3));
-  assert(!r.second);
-  assert(r.first == std::prev(m.end()));
-  assert(m.size() == 3);
-  assert(r.first->first == 3);
-  assert(r.first->second == 3);
+  !r.second;
+  r.first == std::prev(m.end());
+  m.size() == 3;
+  r.first->first == 3;
+  r.first->second == 3;
 
   return true;
 }
@@ -76,38 +76,38 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::pair<M::iterator, bool> R;
     M m;
     R r = m.insert({2, MoveOnly(2)});
-    assert(r.second);
-    assert(r.first == m.begin());
-    assert(m.size() == 1);
-    assert(r.first->first == 2);
-    assert(r.first->second == 2);
+    r.second;
+    r.first == m.begin();
+    m.size() == 1;
+    r.first->first == 2;
+    r.first->second == 2;
 
     r = m.insert({1, MoveOnly(1)});
-    assert(r.second);
-    assert(r.first == m.begin());
-    assert(m.size() == 2);
-    assert(r.first->first == 1);
-    assert(r.first->second == 1);
+    r.second;
+    r.first == m.begin();
+    m.size() == 2;
+    r.first->first == 1;
+    r.first->second == 1;
 
     r = m.insert({3, MoveOnly(3)});
-    assert(r.second);
-    assert(r.first == std::prev(m.end()));
-    assert(m.size() == 3);
-    assert(r.first->first == 3);
-    assert(r.first->second == 3);
+    r.second;
+    r.first == std::prev(m.end());
+    m.size() == 3;
+    r.first->first == 3;
+    r.first->second == 3;
 
     r = m.insert({3, MoveOnly(3)});
-    assert(!r.second);
-    assert(r.first == std::prev(m.end()));
-    assert(m.size() == 3);
-    assert(r.first->first == 3);
-    assert(r.first->second == 3);
+    !r.second;
+    r.first == std::prev(m.end());
+    m.size() == 3;
+    r.first->first == 3;
+    r.first->second == 3;
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

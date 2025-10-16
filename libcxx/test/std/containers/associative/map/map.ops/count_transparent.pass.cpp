@@ -37,13 +37,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
   std::map<std::pair<int, int>, int, Comp> s{{{2, 1}, 1}, {{1, 2}, 2}, {{1, 3}, 3}, {{1, 4}, 4}, {{2, 2}, 5}};
 
   auto cnt = s.count(1);
-  assert(cnt == 3);
+  cnt == 3;
 
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

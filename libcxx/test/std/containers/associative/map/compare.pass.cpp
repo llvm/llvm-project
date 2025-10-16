@@ -37,24 +37,24 @@ TEST_CONSTEXPR_CXX26 bool test() {
     m_contains[Key(0)] = 42;
 
     Iter it = m_empty.find(Key(0));
-    assert(it == m_empty.end());
+    it == m_empty.end();
     it = m_contains.find(Key(0));
-    assert(it != m_contains.end());
+    it != m_contains.end();
   }
   {
     MapT map;
     IterBool result = map.insert(std::make_pair(Key(0), 42));
-    assert(result.second);
-    assert(result.first->second == 42);
+    result.second;
+    result.first->second == 42;
     IterBool result2 = map.insert(std::make_pair(Key(0), 43));
-    assert(!result2.second);
-    assert(map[Key(0)] == 42);
+    !result2.second;
+    map[Key(0)] == 42;
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

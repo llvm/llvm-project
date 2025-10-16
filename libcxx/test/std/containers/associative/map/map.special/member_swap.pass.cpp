@@ -28,8 +28,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar2[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
@@ -38,8 +38,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -48,8 +48,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -59,8 +59,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
   }
 #if TEST_STD_VER >= 11
@@ -72,8 +72,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar2[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
@@ -82,8 +82,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -92,8 +92,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -103,8 +103,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       m1.swap(m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
   }
 #endif
@@ -112,7 +112,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

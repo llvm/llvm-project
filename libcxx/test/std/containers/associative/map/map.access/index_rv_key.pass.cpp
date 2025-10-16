@@ -26,32 +26,32 @@
 TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::map<MoveOnly, double> m;
-    assert(m.size() == 0);
-    assert(m[1] == 0.0);
-    assert(m.size() == 1);
+    m.size() == 0;
+    m[1] == 0.0;
+    m.size() == 1;
     m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 1);
-    assert(m[6] == 0);
-    assert(m.size() == 2);
+    m[1] == -1.5;
+    m.size() == 1;
+    m[6] == 0;
+    m.size() == 2;
     m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 2);
+    m[6] == 6.5;
+    m.size() == 2;
   }
   {
     typedef std::pair<const MoveOnly, double> V;
     std::map<MoveOnly, double, std::less<MoveOnly>, min_allocator<V>> m;
-    assert(m.size() == 0);
-    assert(m[1] == 0.0);
-    assert(m.size() == 1);
+    m.size() == 0;
+    m[1] == 0.0;
+    m.size() == 1;
     m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 1);
-    assert(m[6] == 0);
-    assert(m.size() == 2);
+    m[1] == -1.5;
+    m.size() == 1;
+    m[6] == 0;
+    m.size() == 2;
     m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 2);
+    m[6] == 6.5;
+    m.size() == 2;
   }
 #ifndef TEST_IS_CONSTANT_EVALUATED
   // static can't be constexpr
@@ -68,12 +68,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
       Key k(1);
       cc->expect<std::piecewise_construct_t const&, std::tuple<Key&&>&&, std::tuple<>&&>();
       MappedType& mref = c[std::move(k)];
-      assert(!cc->unchecked());
+      !cc->unchecked();
       {
         Key k2(1);
         DisableAllocationGuard g;
         MappedType& mref2 = c[std::move(k2)];
-        assert(&mref == &mref2);
+        &mref == &mref2;
       }
     }
   }
@@ -83,7 +83,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

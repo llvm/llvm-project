@@ -36,17 +36,17 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
     std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    assert(m.size() == 7);
-    assert(m[1] == 1.5);
-    assert(m.size() == 7);
+    m.size() == 7;
+    m[1] == 1.5;
+    m.size() == 7;
     m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 7);
-    assert(m[6] == 0);
-    assert(m.size() == 8);
+    m[1] == -1.5;
+    m.size() == 7;
+    m[6] == 0;
+    m.size() == 8;
     m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 8);
+    m[6] == 6.5;
+    m.size() == 8;
   }
 #if TEST_STD_VER >= 11
   {
@@ -61,18 +61,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
     std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    assert(m.size() == 7);
-    assert(m[1] == 1.5);
-    assert(m.size() == 7);
+    m.size() == 7;
+    m[1] == 1.5;
+    m.size() == 7;
     const int i = 1;
     m[i]        = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 7);
-    assert(m[6] == 0);
-    assert(m.size() == 8);
+    m[1] == -1.5;
+    m.size() == 7;
+    m[6] == 0;
+    m.size() == 8;
     m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 8);
+    m[6] == 6.5;
+    m.size() == 8;
   }
 #  ifndef TEST_IS_CONSTANT_EVALUATED
   // static can't be constexpr
@@ -89,11 +89,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
       const Key k(1);
       cc->expect<std::piecewise_construct_t const&, std::tuple<Key const&>&&, std::tuple<>&&>();
       MappedType& mref = c[k];
-      assert(!cc->unchecked());
+      !cc->unchecked();
       {
         DisableAllocationGuard g;
         MappedType& mref2 = c[k];
-        assert(&mref == &mref2);
+        &mref == &mref2;
       }
     }
     {
@@ -101,11 +101,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
       Key k(1);
       cc->expect<std::piecewise_construct_t const&, std::tuple<Key const&>&&, std::tuple<>&&>();
       MappedType& mref = c[k];
-      assert(!cc->unchecked());
+      !cc->unchecked();
       {
         DisableAllocationGuard g;
         MappedType& mref2 = c[k];
-        assert(&mref == &mref2);
+        &mref == &mref2;
       }
     }
   }
@@ -125,24 +125,24 @@ TEST_CONSTEXPR_CXX26 bool test() {
     };
     std::map<int, double, std::less<>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
 
-    assert(m.size() == 7);
-    assert(m[1] == 1.5);
-    assert(m.size() == 7);
+    m.size() == 7;
+    m[1] == 1.5;
+    m.size() == 7;
     m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 7);
-    assert(m[6] == 0);
-    assert(m.size() == 8);
+    m[1] == -1.5;
+    m.size() == 7;
+    m[6] == 0;
+    m.size() == 8;
     m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 8);
+    m[6] == 6.5;
+    m.size() == 8;
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

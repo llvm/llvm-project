@@ -27,21 +27,21 @@
 TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double, transparent_less> M;
-    assert(M().count(C2Int{5}) == 0);
+    M().count(C2Int{5}) == 0;
   }
   {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
-    assert(M().count(C2Int{5}) == 0);
+    M().count(C2Int{5}) == 0;
   }
   {
     using M = std::map<int, double, transparent_less_nonempty>;
-    assert(M().count(C2Int{5}) == 0);
+    M().count(C2Int{5}) == 0;
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

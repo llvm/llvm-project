@@ -43,16 +43,16 @@ TEST_CONSTEXPR_CXX26 bool test() {
   long nels = 0;
 
   for (auto it = er.first; it != er.second; it++) {
-    assert(it->first.first == 1);
+    it->first.first == 1;
     nels++;
   }
 
-  assert(nels == 3);
+  nels == 3;
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

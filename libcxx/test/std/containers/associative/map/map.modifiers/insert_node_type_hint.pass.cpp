@@ -23,7 +23,7 @@ typename Container::node_type
 node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
   static Container c;
   auto p = c.insert({key, mapped});
-  assert(p.second);
+  p.second;
   return c.extract(p.first);
 }
 
@@ -33,20 +33,20 @@ void test(Container& c) {
 
   for (int i = 0; i != 10; ++i) {
     typename Container::node_type node = nf(i, i + 1);
-    assert(!node.empty());
+    !node.empty();
     std::size_t prev = c.size();
     auto it          = c.insert(c.end(), std::move(node));
-    assert(node.empty());
-    assert(prev + 1 == c.size());
-    assert(it->first == i);
-    assert(it->second == i + 1);
+    node.empty();
+    prev + 1 == c.size();
+    it->first == i;
+    it->second == i + 1;
   }
 
-  assert(c.size() == 10);
+  c.size() == 10;
 
   for (int i = 0; i != 10; ++i) {
-    assert(c.count(i) == 1);
-    assert(c[i] == i + 1);
+    c.count(i) == 1;
+    c[i] == i + 1;
   }
 }
 

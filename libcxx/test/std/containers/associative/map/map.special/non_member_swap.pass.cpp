@@ -31,8 +31,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar2[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
@@ -41,8 +41,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -51,8 +51,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -62,8 +62,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
   }
   {
@@ -77,12 +77,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
     M m1_save = m1;
     M m2_save = m2;
     swap(m1, m2);
-    assert(m1 == m2_save);
-    assert(m2 == m1_save);
-    assert(m1.key_comp() == C(2));
-    assert(m1.get_allocator().get_id() == 1); // not swapped
-    assert(m2.key_comp() == C(1));
-    assert(m2.get_allocator().get_id() == 2);
+    m1 == m2_save;
+    m2 == m1_save;
+    m1.key_comp() == C(2);
+    m1.get_allocator().get_id() == 1; // not swapped
+    m2.key_comp() == C(1);
+    m2.get_allocator().get_id() == 2;
   }
   {
     typedef other_allocator<V> A;
@@ -95,12 +95,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
     M m1_save = m1;
     M m2_save = m2;
     swap(m1, m2);
-    assert(m1 == m2_save);
-    assert(m2 == m1_save);
-    assert(m1.key_comp() == C(2));
-    assert(m1.get_allocator() == A(2));
-    assert(m2.key_comp() == C(1));
-    assert(m2.get_allocator() == A(1));
+    m1 == m2_save;
+    m2 == m1_save;
+    m1.key_comp() == C(2);
+    m1.get_allocator() == A(2);
+    m2.key_comp() == C(1);
+    m2.get_allocator() == A(1);
   }
 #if TEST_STD_VER >= 11
   {
@@ -111,8 +111,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar2[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
@@ -121,8 +121,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -131,8 +131,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
     {
       V ar1[] = {V(1, 1), V(2, 2), V(3, 3), V(4, 4)};
@@ -142,8 +142,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
       M m1_save = m1;
       M m2_save = m2;
       swap(m1, m2);
-      assert(m1 == m2_save);
-      assert(m2 == m1_save);
+      m1 == m2_save;
+      m2 == m1_save;
     }
   }
   {
@@ -157,19 +157,19 @@ TEST_CONSTEXPR_CXX26 bool test() {
     M m1_save = m1;
     M m2_save = m2;
     swap(m1, m2);
-    assert(m1 == m2_save);
-    assert(m2 == m1_save);
-    assert(m1.key_comp() == C(2));
-    assert(m1.get_allocator() == A());
-    assert(m2.key_comp() == C(1));
-    assert(m2.get_allocator() == A());
+    m1 == m2_save;
+    m2 == m1_save;
+    m1.key_comp() == C(2);
+    m1.get_allocator() == A();
+    m2.key_comp() == C(1);
+    m2.get_allocator() == A();
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

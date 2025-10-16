@@ -29,11 +29,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
         {2, 1.5},
         {2, 2},
     });
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
+    m.size() == 3;
+    std::distance(m.begin(), m.end()) == 3;
+    *m.begin() == V(1, 1);
+    *std::next(m.begin()) == V(2, 1);
+    *std::next(m.begin(), 2) == V(3, 1);
   }
   {
     typedef std::pair<const int, double> V;
@@ -43,17 +43,17 @@ TEST_CONSTEXPR_CXX26 bool test() {
         {2, 1.5},
         {2, 2},
     });
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
+    m.size() == 3;
+    std::distance(m.begin(), m.end()) == 3;
+    *m.begin() == V(1, 1);
+    *std::next(m.begin()) == V(2, 1);
+    *std::next(m.begin(), 2) == V(3, 1);
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

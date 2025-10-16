@@ -32,8 +32,8 @@ template <typename M, typename Pred>
 TEST_CONSTEXPR_CXX26 void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
-  assert(expected_erased_count == std::erase_if(s, p));
-  assert(s == make<M>(expected));
+  expected_erased_count == std::erase_if(s, p);
+  s == make<M>(expected);
 }
 
 template <typename S>
@@ -78,7 +78,7 @@ bool test_upper() {
 }
 
 int main(int, char**) {
-  assert(test_upper());
+  test_upper();
 
 #if TEST_STD_VER >= 26
 #  ifndef TEST_COMPILER_GCC

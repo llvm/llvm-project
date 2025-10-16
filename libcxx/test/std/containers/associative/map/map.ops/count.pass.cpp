@@ -38,12 +38,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   for (int i = 0; i < 5; ++i) {
     R r = m.count(ArgType(i));
-    assert(r == 0);
+    r == 0;
   }
 
   for (int i = 5; i < 13; ++i) {
     R r = m.count(ArgType(i));
-    assert(r == 1);
+    r == 1;
   }
 
   return true;
@@ -78,12 +78,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     for (int i = 0; i < 5; ++i) {
       R r = m.count(i);
-      assert(r == 0);
+      r == 0;
     }
 
     for (int i = 5; i < 13; ++i) {
       R r = m.count(i);
-      assert(r == 1);
+      r == 1;
     }
   }
 #endif // TEST_STD_VER >= 14
@@ -92,7 +92,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

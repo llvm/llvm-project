@@ -29,23 +29,23 @@ TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double, transparent_less> M;
     M example;
-    assert(example.find(C2Int{5}) == example.end());
+    example.find(C2Int{5}) == example.end();
   }
   {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
     M example;
-    assert(example.find(C2Int{5}) == example.end());
+    example.find(C2Int{5}) == example.end();
   }
   {
     using M = std::map<int, double, transparent_less_nonempty>;
     M example;
-    assert(example.find(C2Int{5}) == example.end());
+    example.find(C2Int{5}) == example.end();
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

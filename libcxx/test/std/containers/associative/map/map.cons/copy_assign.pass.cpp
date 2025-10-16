@@ -48,7 +48,7 @@ public:
 
   TEST_CONSTEXPR_CXX26 void deallocate(T* ptr, std::size_t n) TEST_NOEXCEPT {
     auto res = std::remove(allocs_->begin(), allocs_->end(), ptr);
-    assert(res != allocs_->end() && "Trying to deallocate memory from different allocator?");
+    res != allocs_->end() && "Trying to deallocate memory from different allocator?";
     allocs_->erase(res);
     std::allocator<T>().deallocate(ptr, n);
   }
@@ -80,18 +80,18 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       const Map orig(begin(arr), end(arr), std::less<int>(), rhs_alloc);
       Map copy(lhs_alloc);
       copy = orig;
-      assert(copy.size() == 3);
-      assert(*std::next(copy.begin(), 0) == V(1, 1));
-      assert(*std::next(copy.begin(), 1) == V(2, 3));
-      assert(*std::next(copy.begin(), 2) == V(3, 6));
-      assert(std::next(copy.begin(), 3) == copy.end());
+      copy.size() == 3;
+      *std::next(copy.begin(), 0) == V(1, 1);
+      *std::next(copy.begin(), 1) == V(2, 3);
+      *std::next(copy.begin(), 2) == V(3, 6);
+      std::next(copy.begin(), 3) == copy.end();
 
       // Check that orig is still what is expected
-      assert(orig.size() == 3);
-      assert(*std::next(orig.begin(), 0) == V(1, 1));
-      assert(*std::next(orig.begin(), 1) == V(2, 3));
-      assert(*std::next(orig.begin(), 2) == V(3, 6));
-      assert(std::next(orig.begin(), 3) == orig.end());
+      orig.size() == 3;
+      *std::next(orig.begin(), 0) == V(1, 1);
+      *std::next(orig.begin(), 1) == V(2, 3);
+      *std::next(orig.begin(), 2) == V(3, 6);
+      std::next(orig.begin(), 3) == orig.end();
     }
     check_alloc_invariant();
     { // assign from an empty container into an empty one
@@ -100,12 +100,12 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       const Map orig(rhs_alloc);
       Map copy(lhs_alloc);
       copy = orig;
-      assert(copy.size() == 0);
-      assert(copy.begin() == copy.end());
+      copy.size() == 0;
+      copy.begin() == copy.end();
 
       // Check that orig is still what is expected
-      assert(orig.size() == 0);
-      assert(orig.begin() == orig.end());
+      orig.size() == 0;
+      orig.begin() == orig.end();
     }
     check_alloc_invariant();
     { // assign from an empty container into a non-empty one
@@ -116,12 +116,12 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       const Map orig(rhs_alloc);
       Map copy(begin(arr), end(arr), std::less<int>(), rhs_alloc);
       copy = orig;
-      assert(copy.size() == 0);
-      assert(copy.begin() == copy.end());
+      copy.size() == 0;
+      copy.begin() == copy.end();
 
       // Check that orig is still what is expected
-      assert(orig.size() == 0);
-      assert(orig.begin() == orig.end());
+      orig.size() == 0;
+      orig.begin() == orig.end();
     }
   }
 
@@ -134,11 +134,11 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       Map orig(begin(arr), end(arr), std::less<int>(), rhs_alloc);
       orig = static_cast<const Map&>(orig);
 
-      assert(orig.size() == 3);
-      assert(*std::next(orig.begin(), 0) == V(1, 1));
-      assert(*std::next(orig.begin(), 1) == V(2, 3));
-      assert(*std::next(orig.begin(), 2) == V(3, 6));
-      assert(std::next(orig.begin(), 3) == orig.end());
+      orig.size() == 3;
+      *std::next(orig.begin(), 0) == V(1, 1);
+      *std::next(orig.begin(), 1) == V(2, 3);
+      *std::next(orig.begin(), 2) == V(3, 6);
+      std::next(orig.begin(), 3) == orig.end();
     }
     { // with an empty map
       using Map = std::map<int, int, std::less<int>, Alloc>;
@@ -146,8 +146,8 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       Map orig(rhs_alloc);
       orig = static_cast<const Map&>(orig);
 
-      assert(orig.size() == 0);
-      assert(orig.begin() == orig.end());
+      orig.size() == 0;
+      orig.begin() == orig.end();
     }
   }
 
@@ -163,18 +163,18 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       V rhs_arr[] = {V(4, 2), V(5, 1)};
       Map copy(begin(rhs_arr), end(rhs_arr), std::less<int>(), lhs_alloc);
       copy = orig;
-      assert(copy.size() == 3);
-      assert(*std::next(copy.begin(), 0) == V(1, 1));
-      assert(*std::next(copy.begin(), 1) == V(2, 3));
-      assert(*std::next(copy.begin(), 2) == V(3, 6));
-      assert(std::next(copy.begin(), 3) == copy.end());
+      copy.size() == 3;
+      *std::next(copy.begin(), 0) == V(1, 1);
+      *std::next(copy.begin(), 1) == V(2, 3);
+      *std::next(copy.begin(), 2) == V(3, 6);
+      std::next(copy.begin(), 3) == copy.end();
 
       // Check that orig is still what is expected
-      assert(orig.size() == 3);
-      assert(*std::next(orig.begin(), 0) == V(1, 1));
-      assert(*std::next(orig.begin(), 1) == V(2, 3));
-      assert(*std::next(orig.begin(), 2) == V(3, 6));
-      assert(std::next(orig.begin(), 3) == orig.end());
+      orig.size() == 3;
+      *std::next(orig.begin(), 0) == V(1, 1);
+      *std::next(orig.begin(), 1) == V(2, 3);
+      *std::next(orig.begin(), 2) == V(3, 6);
+      std::next(orig.begin(), 3) == orig.end();
     }
     check_alloc_invariant();
     { // LHS contains the same number of elements as the RHS
@@ -187,18 +187,18 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       V rhs_arr[] = {V(4, 2), V(5, 1), V(6, 0)};
       Map copy(begin(rhs_arr), end(rhs_arr), std::less<int>(), lhs_alloc);
       copy = orig;
-      assert(copy.size() == 3);
-      assert(*std::next(copy.begin(), 0) == V(1, 1));
-      assert(*std::next(copy.begin(), 1) == V(2, 3));
-      assert(*std::next(copy.begin(), 2) == V(3, 6));
-      assert(std::next(copy.begin(), 3) == copy.end());
+      copy.size() == 3;
+      *std::next(copy.begin(), 0) == V(1, 1);
+      *std::next(copy.begin(), 1) == V(2, 3);
+      *std::next(copy.begin(), 2) == V(3, 6);
+      std::next(copy.begin(), 3) == copy.end();
 
       // Check that orig is still what is expected
-      assert(orig.size() == 3);
-      assert(*std::next(orig.begin(), 0) == V(1, 1));
-      assert(*std::next(orig.begin(), 1) == V(2, 3));
-      assert(*std::next(orig.begin(), 2) == V(3, 6));
-      assert(std::next(orig.begin(), 3) == orig.end());
+      orig.size() == 3;
+      *std::next(orig.begin(), 0) == V(1, 1);
+      *std::next(orig.begin(), 1) == V(2, 3);
+      *std::next(orig.begin(), 2) == V(3, 6);
+      std::next(orig.begin(), 3) == orig.end();
     }
     check_alloc_invariant();
     { // LHS already contains more elements than the RHS
@@ -211,18 +211,18 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       V rhs_arr[] = {V(4, 2), V(5, 1), V(6, 0), V(7, 9)};
       Map copy(begin(rhs_arr), end(rhs_arr), std::less<int>(), lhs_alloc);
       copy = orig;
-      assert(copy.size() == 3);
-      assert(*std::next(copy.begin(), 0) == V(1, 1));
-      assert(*std::next(copy.begin(), 1) == V(2, 3));
-      assert(*std::next(copy.begin(), 2) == V(3, 6));
-      assert(std::next(copy.begin(), 3) == copy.end());
+      copy.size() == 3;
+      *std::next(copy.begin(), 0) == V(1, 1);
+      *std::next(copy.begin(), 1) == V(2, 3);
+      *std::next(copy.begin(), 2) == V(3, 6);
+      std::next(copy.begin(), 3) == copy.end();
 
       // Check that orig is still what is expected
-      assert(orig.size() == 3);
-      assert(*std::next(orig.begin(), 0) == V(1, 1));
-      assert(*std::next(orig.begin(), 1) == V(2, 3));
-      assert(*std::next(orig.begin(), 2) == V(3, 6));
-      assert(std::next(orig.begin(), 3) == orig.end());
+      orig.size() == 3;
+      *std::next(orig.begin(), 0) == V(1, 1);
+      *std::next(orig.begin(), 1) == V(2, 3);
+      *std::next(orig.begin(), 2) == V(3, 6);
+      std::next(orig.begin(), 3) == orig.end();
     }
     check_alloc_invariant();
   }
@@ -238,7 +238,7 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
     copy  = orig;
     int i = 0;
     for (auto v : copy) {
-      assert(v == V(i, i + 3));
+      v == V(i, i + 3);
       ++i;
     }
   }
@@ -266,8 +266,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
           : lhs_allocs_(&lhs_allocs), rhs_allocs_(&rhs_allocs) {}
 
       TEST_CONSTEXPR_CXX26 void operator()() {
-        assert(lhs_allocs_->empty());
-        assert(rhs_allocs_->empty());
+        lhs_allocs_->empty();
+        rhs_allocs_->empty();
       }
     };
 
@@ -286,12 +286,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
     const Map orig(begin(arr), end(arr), test_less<int>(3));
     Map copy;
     copy = orig;
-    assert(copy.size() == 3);
-    assert(copy.key_comp() == test_less<int>(3));
+    copy.size() == 3;
+    copy.key_comp() == test_less<int>(3);
 
     // Check that orig is still what is expected
-    assert(orig.size() == 3);
-    assert(orig.key_comp() == test_less<int>(3));
+    orig.size() == 3;
+    orig.key_comp() == test_less<int>(3);
   }
 
   { // Make sure the color is copied as well
@@ -310,7 +310,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

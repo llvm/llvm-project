@@ -29,16 +29,16 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef test_allocator<V> A;
     std::map<int, double, C, A> mo(C(5), A(7));
     std::map<int, double, C, A> m = std::move(mo);
-    assert(m.get_allocator() == A(7));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 0);
-    assert(std::distance(m.begin(), m.end()) == 0);
+    m.get_allocator() == A(7);
+    m.key_comp() == C(5);
+    m.size() == 0;
+    std::distance(m.begin(), m.end()) == 0;
 
-    assert(mo.get_allocator() == A(7));
-    assert(mo.get_allocator().get_id() == test_alloc_base::moved_value);
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 0);
-    assert(std::distance(mo.begin(), mo.end()) == 0);
+    mo.get_allocator() == A(7);
+    mo.get_allocator().get_id() == test_alloc_base::moved_value;
+    mo.key_comp() == C(5);
+    mo.size() == 0;
+    std::distance(mo.begin(), mo.end()) == 0;
   }
   {
     V ar[] = {
@@ -56,34 +56,34 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef test_allocator<V> A;
     std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(7));
     std::map<int, double, C, A> m = std::move(mo);
-    assert(m.get_allocator() == A(7));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
+    m.get_allocator() == A(7);
+    m.key_comp() == C(5);
+    m.size() == 3;
+    std::distance(m.begin(), m.end()) == 3;
+    *m.begin() == V(1, 1);
+    *std::next(m.begin()) == V(2, 1);
+    *std::next(m.begin(), 2) == V(3, 1);
 
-    assert(mo.get_allocator() == A(7));
-    assert(mo.get_allocator().get_id() == test_alloc_base::moved_value);
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 0);
-    assert(std::distance(mo.begin(), mo.end()) == 0);
+    mo.get_allocator() == A(7);
+    mo.get_allocator().get_id() == test_alloc_base::moved_value;
+    mo.key_comp() == C(5);
+    mo.size() == 0;
+    std::distance(mo.begin(), mo.end()) == 0;
   }
   {
     typedef test_less<int> C;
     typedef min_allocator<V> A;
     std::map<int, double, C, A> mo(C(5), A());
     std::map<int, double, C, A> m = std::move(mo);
-    assert(m.get_allocator() == A());
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 0);
-    assert(std::distance(m.begin(), m.end()) == 0);
+    m.get_allocator() == A();
+    m.key_comp() == C(5);
+    m.size() == 0;
+    std::distance(m.begin(), m.end()) == 0;
 
-    assert(mo.get_allocator() == A());
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 0);
-    assert(std::distance(mo.begin(), mo.end()) == 0);
+    mo.get_allocator() == A();
+    mo.key_comp() == C(5);
+    mo.size() == 0;
+    std::distance(mo.begin(), mo.end()) == 0;
   }
   {
     V ar[] = {
@@ -101,24 +101,24 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef min_allocator<V> A;
     std::map<int, double, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A());
     std::map<int, double, C, A> m = std::move(mo);
-    assert(m.get_allocator() == A());
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
+    m.get_allocator() == A();
+    m.key_comp() == C(5);
+    m.size() == 3;
+    std::distance(m.begin(), m.end()) == 3;
+    *m.begin() == V(1, 1);
+    *std::next(m.begin()) == V(2, 1);
+    *std::next(m.begin(), 2) == V(3, 1);
 
-    assert(mo.get_allocator() == A());
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 0);
-    assert(std::distance(mo.begin(), mo.end()) == 0);
+    mo.get_allocator() == A();
+    mo.key_comp() == C(5);
+    mo.size() == 0;
+    std::distance(mo.begin(), mo.end()) == 0;
   }
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

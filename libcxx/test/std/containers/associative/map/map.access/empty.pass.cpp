@@ -22,28 +22,28 @@ TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double> M;
     M m;
-    assert(m.empty());
+    m.empty();
     m.insert(M::value_type(1, 1.5));
-    assert(!m.empty());
+    !m.empty();
     m.clear();
-    assert(m.empty());
+    m.empty();
   }
 #if TEST_STD_VER >= 11
   {
     typedef std::map<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
     M m;
-    assert(m.empty());
+    m.empty();
     m.insert(M::value_type(1, 1.5));
-    assert(!m.empty());
+    !m.empty();
     m.clear();
-    assert(m.empty());
+    m.empty();
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

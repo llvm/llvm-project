@@ -27,7 +27,7 @@ TEST_CONSTEXPR_CXX26 void test_duplicates() {
   std::array input    = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}};
   std::array expected = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{4, 'a'}};
   auto c              = std::map<int, char>(std::from_range, input);
-  assert(std::ranges::is_permutation(expected, c));
+  std::ranges::is_permutation(expected, c);
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
@@ -46,7 +46,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

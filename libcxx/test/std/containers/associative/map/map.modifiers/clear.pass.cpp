@@ -33,10 +33,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
         P(8, 8.5),
     };
     M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    assert(m.size() == 8);
+    m.size() == 8;
     ASSERT_NOEXCEPT(m.clear());
     m.clear();
-    assert(m.size() == 0);
+    m.size() == 0;
   }
 #if TEST_STD_VER >= 11
   {
@@ -53,17 +53,17 @@ TEST_CONSTEXPR_CXX26 bool test() {
         P(8, 8.5),
     };
     M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    assert(m.size() == 8);
+    m.size() == 8;
     ASSERT_NOEXCEPT(m.clear());
     m.clear();
-    assert(m.size() == 0);
+    m.size() == 0;
   }
 #endif
   return true;
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

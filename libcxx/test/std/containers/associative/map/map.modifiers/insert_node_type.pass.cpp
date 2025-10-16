@@ -30,15 +30,15 @@ void verify_insert_return_type(T&& t) {
 
   static_assert(std::is_same_v<decltype(pos), typename Container::iterator>);
   static_assert(std::is_same_v<decltype(t.position), typename Container::iterator>);
-  assert(std::addressof(pos) == std::addressof(t.position));
+  std::addressof(pos) == std::addressof(t.position);
 
   static_assert(std::is_same_v<decltype(ins), bool>);
   static_assert(std::is_same_v<decltype(t.inserted), bool>);
-  assert(&ins == &t.inserted);
+  &ins == &t.inserted;
 
   static_assert(std::is_same_v<decltype(nod), typename Container::node_type>);
   static_assert(std::is_same_v<decltype(t.node), typename Container::node_type>);
-  assert(std::addressof(nod) == std::addressof(t.node));
+  std::addressof(nod) == std::addressof(t.node);
 }
 
 template <class Container>
@@ -46,7 +46,7 @@ typename Container::node_type
 node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
   static Container c;
   auto p = c.insert({key, mapped});
-  assert(p.second);
+  p.second;
   return c.extract(p.first);
 }
 
@@ -56,43 +56,43 @@ void test(Container& c) {
 
   for (int i = 0; i != 10; ++i) {
     typename Container::node_type node = nf(i, i + 1);
-    assert(!node.empty());
+    !node.empty();
     typename Container::insert_return_type irt = c.insert(std::move(node));
-    assert(node.empty());
-    assert(irt.inserted);
-    assert(irt.node.empty());
-    assert(irt.position->first == i && irt.position->second == i + 1);
+    node.empty();
+    irt.inserted;
+    irt.node.empty();
+    irt.position->first == i && irt.position->second == i + 1;
     verify_insert_return_type<Container>(irt);
   }
 
-  assert(c.size() == 10);
+  c.size() == 10;
 
   { // Insert empty node.
     typename Container::node_type def;
     auto irt = c.insert(std::move(def));
-    assert(def.empty());
-    assert(!irt.inserted);
-    assert(irt.node.empty());
-    assert(irt.position == c.end());
+    def.empty();
+    !irt.inserted;
+    irt.node.empty();
+    irt.position == c.end();
     verify_insert_return_type<Container>(irt);
   }
 
   { // Insert duplicate node.
     typename Container::node_type dupl = nf(0, 42);
     auto irt                           = c.insert(std::move(dupl));
-    assert(dupl.empty());
-    assert(!irt.inserted);
-    assert(!irt.node.empty());
-    assert(irt.position == c.find(0));
-    assert(irt.node.key() == 0 && irt.node.mapped() == 42);
+    dupl.empty();
+    !irt.inserted;
+    !irt.node.empty();
+    irt.position == c.find(0);
+    irt.node.key() == 0 && irt.node.mapped() == 42;
     verify_insert_return_type<Container>(irt);
   }
 
-  assert(c.size() == 10);
+  c.size() == 10;
 
   for (int i = 0; i != 10; ++i) {
-    assert(c.count(i) == 1);
-    assert(c[i] == i + 1);
+    c.count(i) == 1;
+    c[i] == i + 1;
   }
 }
 

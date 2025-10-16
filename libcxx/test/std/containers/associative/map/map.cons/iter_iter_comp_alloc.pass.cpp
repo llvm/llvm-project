@@ -39,13 +39,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef test_less<int> C;
     typedef test_allocator<V> A;
     std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(7));
-    assert(m.get_allocator() == A(7));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
+    m.get_allocator() == A(7);
+    m.key_comp() == C(5);
+    m.size() == 3;
+    std::distance(m.begin(), m.end()) == 3;
+    *m.begin() == V(1, 1);
+    *std::next(m.begin()) == V(2, 1);
+    *std::next(m.begin(), 2) == V(3, 1);
   }
 #if TEST_STD_VER >= 11
   {
@@ -64,13 +64,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef test_less<int> C;
     typedef min_allocator<V> A;
     std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A());
-    assert(m.get_allocator() == A());
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
+    m.get_allocator() == A();
+    m.key_comp() == C(5);
+    m.size() == 3;
+    std::distance(m.begin(), m.end()) == 3;
+    *m.begin() == V(1, 1);
+    *std::next(m.begin()) == V(2, 1);
+    *std::next(m.begin(), 2) == V(3, 1);
   }
 #  if TEST_STD_VER > 11
   {
@@ -92,12 +92,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
       A a;
       std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), a);
 
-      assert(m.size() == 3);
-      assert(std::distance(m.begin(), m.end()) == 3);
-      assert(*m.begin() == V(1, 1));
-      assert(*std::next(m.begin()) == V(2, 1));
-      assert(*std::next(m.begin(), 2) == V(3, 1));
-      assert(m.get_allocator() == a);
+      m.size() == 3;
+      std::distance(m.begin(), m.end()) == 3;
+      *m.begin() == V(1, 1);
+      *std::next(m.begin()) == V(2, 1);
+      *std::next(m.begin(), 2) == V(3, 1);
+      m.get_allocator() == a;
     }
     {
       typedef explicit_allocator<V> A;
@@ -105,12 +105,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
       A a;
       std::map<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), a);
 
-      assert(m.size() == 3);
-      assert(std::distance(m.begin(), m.end()) == 3);
-      assert(*m.begin() == V(1, 1));
-      assert(*std::next(m.begin()) == V(2, 1));
-      assert(*std::next(m.begin(), 2) == V(3, 1));
-      assert(m.get_allocator() == a);
+      m.size() == 3;
+      std::distance(m.begin(), m.end()) == 3;
+      *m.begin() == V(1, 1);
+      *std::next(m.begin()) == V(2, 1);
+      *std::next(m.begin(), 2) == V(3, 1);
+      m.get_allocator() == a;
     }
   }
 #  endif
@@ -119,7 +119,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

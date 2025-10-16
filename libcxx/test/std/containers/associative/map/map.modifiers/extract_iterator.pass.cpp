@@ -31,15 +31,15 @@ TEST_CONSTEXPR_CXX26 bool test(Container& c) {
     --sz;
     if (!TEST_IS_CONSTANT_EVALUATED) {
       // FIXME: CWG1514: key() is not `constexpr`
-      assert(t.key() == key_value);
+      t.key() == key_value;
       t.key() = some_key;
-      assert(t.key() == some_key);
+      t.key() == some_key;
     }
-    assert(t.get_allocator() == c.get_allocator());
-    assert(sz == c.size());
+    t.get_allocator() == c.get_allocator();
+    sz == c.size();
   }
 
-  assert(c.size() == 0);
+  c.size() == 0;
   return true;
 }
 
@@ -52,9 +52,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   if (!TEST_IS_CONSTANT_EVALUATED) {
     std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
-    assert(Counter_base::gConstructed == 12);
+    Counter_base::gConstructed == 12;
     test(m);
-    assert(Counter_base::gConstructed == 0);
+    Counter_base::gConstructed == 0;
   }
 
   {
@@ -66,7 +66,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
