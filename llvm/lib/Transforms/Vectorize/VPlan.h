@@ -3173,6 +3173,9 @@ protected:
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert(isa<VPVectorEndPointerRecipe>(getAddr()) ||
+           !Reverse &&
+               "Reversed acccess without VPVectorEndPointerRecipe address?");
   }
 
 public:
@@ -3234,9 +3237,6 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
                             Reverse, Metadata, DL),
         VPValue(this, &Load) {
-    assert(isa<VPVectorEndPointerRecipe>(Addr) ||
-           !Reverse &&
-               "Reversed load without VPVectorEndPointerRecipe address?");
     setMask(Mask);
   }
 
@@ -3316,9 +3316,6 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
                             Consecutive, Reverse, Metadata, DL) {
-    assert(isa<VPVectorEndPointerRecipe>(Addr) ||
-           !Reverse &&
-               "Reversed store without VPVectorEndPointerRecipe address?");
     setMask(Mask);
   }
 
