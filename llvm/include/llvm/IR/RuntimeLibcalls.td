@@ -45,6 +45,10 @@ def hasStackChkFail : RuntimeLibcallPredicate<
   [{ !TT.isOSOpenBSD() && !TT.isWindowsMSVCEnvironment() &&
      !TT.isWindowsItaniumEnvironment()}]>;
 
+def hasStackChkGuard : RuntimeLibcallPredicate<
+  [{ !TT.isOSOpenBSD() && !TT.isWindowsMSVCEnvironment() &&
+     !TT.isWindowsItaniumEnvironment() && !TT.isSystemZ()}]>;
+
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
 
@@ -2044,7 +2048,7 @@ defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygw
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), hasStackChkFail>;
 defvar has__stack_chk_guard =
-    LibcallImpls<(add __stack_chk_guard), hasStackChkFail>;
+    LibcallImpls<(add __stack_chk_guard), hasStackChkGuard>;
 defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
 defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 
