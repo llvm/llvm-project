@@ -34,13 +34,18 @@ sqrshrn z10.b, { z0.h, z1.h }, #9
 // CHECK-NEXT: sqrshrn z10.b, { z0.h, z1.h }, #9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqrshrn z10.b, { z1.h, z2.h }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: sqrshrn z10.b, { z1.h, z2.h }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-sqrshrn z10.b, { z0.h, z1.h }, #1
+sqrshrn z0.b, { z2.h, z3.h }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: sqrshrn z10.b, { z0.h, z1.h }, #1
+// CHECK-NEXT: sqrshrn z0.b, { z2.h, z3.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -77,13 +82,18 @@ sqrshrun z10.b, { z0.h, z1.h }, #9
 // CHECK-NEXT: sqrshrun z10.b, { z0.h, z1.h }, #9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqrshrun z10.b, { z1.h, z2.h }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: sqrshrun z10.b, { z1.h, z2.h }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-sqrshrun z10.b, { z0.h, z1.h }, #1
+sqrshrun z0.b, { z0.h, z1.h }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: sqrshrun z10.b, { z0.h, z1.h }, #1
+// CHECK-NEXT: sqrshrun z0.b, { z0.h, z1.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -122,14 +132,18 @@ sqshrn z0.h, { z0.s, z1.s }, #17
 // CHECK-NEXT: sqshrn z0.h, { z0.s, z1.s }, #17
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqshrn z10.b, { z1.h, z2.h }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: sqshrn z10.b, { z1.h, z2.h }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-sqshrn z10.b, { z0.h, z1.h }, #1
+sqshrn z0.b, { z0.h, z1.h }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: sqshrn z10.b, { z0.h, z1.h }, #1
+// CHECK-NEXT: sqshrn z0.b, { z0.h, z1.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -168,13 +182,18 @@ sqshrun z10.h, { z0.s, z1.s }, #17
 // CHECK-NEXT: sqshrun z10.h, { z0.s, z1.s }, #17
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqshrun z10.b, { z1.h, z2.h }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: sqshrun z10.b, { z1.h, z2.h }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-sqshrun z10.b, { z0.h, z1.h }, #1
+sqshrun z0.b, { z0.h, z1.h }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: sqshrun z10.b, { z0.h, z1.h }, #1
+// CHECK-NEXT: sqshrun z0.b, { z0.h, z1.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -211,13 +230,18 @@ uqrshrn z10.b, { z0.h, z1.h }, #9
 // CHECK-NEXT: uqrshrn z10.b, { z0.h, z1.h }, #9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+uqrshrn z10.b, { z1.h, z2.h }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: uqrshrn z10.b, { z1.h, z2.h }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-uqrshrn z10.b, { z0.h, z1.h }, #1
+uqrshrn z0.b, { z0.h, z1.h }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: uqrshrn z10.b, { z0.h, z1.h }, #1
+// CHECK-NEXT: uqrshrn z0.b, { z0.h, z1.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -256,11 +280,16 @@ uqshrn z0.h, { z0.s, z1.s }, #17
 // CHECK-NEXT: uqshrn z0.h, { z0.s, z1.s }, #17
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+uqshrn z10.b, { z1.h, z2.h }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: uqshrn z10.b, { z1.h, z2.h }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-uqshrn z10.b, { z0.h, z1.h }, #1
+uqshrn z0.b, { z0.h, z1.h }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: uqshrn z10.b, { z0.h, z1.h }, #1
+// CHECK-NEXT: uqshrn z0.b, { z0.h, z1.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
