@@ -1921,7 +1921,7 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
   if ((!getLangOpts().CPlusPlus26 && isa<CXXConstructorDecl>(NewFD)) ||
       ((getLangOpts().CPlusPlus20 && !getLangOpts().CPlusPlus26) &&
        isa<CXXDestructorDecl>(NewFD))) {
-    const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewFD);
+    const CXXMethodDecl *MD = cast<CXXMethodDecl>(NewFD);
     // C++11 [dcl.constexpr]p4:
     //  The definition of a constexpr constructor shall satisfy the following
     //  constraints:
