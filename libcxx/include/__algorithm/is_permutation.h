@@ -78,7 +78,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
     _Pred&& __pred,
     _Proj1&& __proj1,
     _Proj2&& __proj2) {
-  using _D1 = __iter_diff_t<_Iter1>;
+  using _D1 = __iterator_difference_type<_Iter1>;
 
   for (auto __i = __first1; __i != __last1; ++__i) {
     //  Have we already counted the number of *__i in [f1, l1)?
@@ -126,7 +126,7 @@ template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _Fo
     return true;
 
   //  __first1 != __last1 && *__first1 != *__first2
-  using _D1 = __iter_diff_t<_ForwardIterator1>;
+  using _D1 = __iterator_difference_type<_ForwardIterator1>;
   _D1 __l1  = _IterOps<_AlgPolicy>::distance(__first1, __last1);
   if (__l1 == _D1(1))
     return false;
@@ -173,10 +173,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
   if (__first2 == __last2) // Second range is shorter
     return false;
 
-  using _D1 = __iter_diff_t<_Iter1>;
+  using _D1 = __iterator_difference_type<_Iter1>;
   _D1 __l1  = _IterOps<_AlgPolicy>::distance(__first1, __last1);
 
-  using _D2 = __iter_diff_t<_Iter2>;
+  using _D2 = __iterator_difference_type<_Iter2>;
   _D2 __l2  = _IterOps<_AlgPolicy>::distance(__first2, __last2);
   if (__l1 != __l2)
     return false;

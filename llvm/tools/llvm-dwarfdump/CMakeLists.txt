@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   AllTargetsDescs
   AllTargetsInfos
   MC

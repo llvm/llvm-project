@@ -25,7 +25,7 @@ class LoongArchSubtarget;
 
 class LoongArchInstrInfo : public LoongArchGenInstrInfo {
 public:
-  explicit LoongArchInstrInfo(LoongArchSubtarget &STI);
+  explicit LoongArchInstrInfo(const LoongArchSubtarget &STI);
 
   MCInst getNop() const override;
 

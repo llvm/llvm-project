@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 @data = external dso_local global [0 x i32]		; <ptr> [#uses=5]
 
-; CHECK-TINY:    Target does not support the tiny CodeModel
+; CHECK-TINY: LLVM ERROR: target does not support the tiny CodeModel
 
 define i32 @foo() nounwind readonly {
 entry:

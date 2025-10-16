@@ -926,6 +926,17 @@ SBTarget SBDebugger::GetDummyTarget() {
   return sb_target;
 }
 
+void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_sp) {
+    m_opaque_sp->DispatchClientTelemetry(*entry.m_impl_up);
+  } else {
+    Log *log = GetLog(LLDBLog::API);
+    LLDB_LOGF(log,
+              "Could not send telemetry from SBDebugger - debugger was null.");
+  }
+}
+
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   LLDB_INSTRUMENT_VA(this, target);
 
@@ -970,6 +981,17 @@ uint32_t SBDebugger::GetIndexOfTarget(lldb::SBTarget target) {
     return UINT32_MAX;
 
   return m_opaque_sp->GetTargetList().GetIndexOfTarget(target.GetSP());
+}
+
+SBTarget SBDebugger::FindTargetByGloballyUniqueID(lldb::user_id_t id) {
+  LLDB_INSTRUMENT_VA(this, id);
+  SBTarget sb_target;
+  if (m_opaque_sp) {
+    // No need to lock, the target list is thread safe
+    sb_target.SetSP(
+        m_opaque_sp->GetTargetList().FindTargetByGloballyUniqueID(id));
+  }
+  return sb_target;
 }
 
 SBTarget SBDebugger::FindTargetWithProcessID(lldb::pid_t pid) {

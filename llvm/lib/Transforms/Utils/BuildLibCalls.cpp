@@ -514,10 +514,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_valloc:
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
+    Changed |= setAllocSize(F, 0, std::nullopt);
+    [[fallthrough]];
+  case LibFunc_pvalloc:
     Changed |= setAllocFamily(F, TheLibFunc == LibFunc_vec_malloc ? "vec_malloc"
                                                                   : "malloc");
     Changed |= setAllocKind(F, AllocFnKind::Alloc | AllocFnKind::Uninitialized);
-    Changed |= setAllocSize(F, 0, std::nullopt);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);

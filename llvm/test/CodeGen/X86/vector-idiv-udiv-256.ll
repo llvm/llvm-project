@@ -590,7 +590,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm6, %xmm5, %xmm5
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vpsllw $1, %xmm3, %xmm5
+; AVX1-NEXT:    vpaddw %xmm3, %xmm3, %xmm5
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm7 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
 ; AVX1-NEXT:    vpand %xmm7, %xmm5, %xmm5
 ; AVX1-NEXT:    vpsrlw $2, %xmm3, %xmm3
@@ -609,7 +609,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpsrlw $1, %xmm3, %xmm3
 ; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpsllw $1, %xmm2, %xmm3
+; AVX1-NEXT:    vpaddw %xmm2, %xmm2, %xmm3
 ; AVX1-NEXT:    vpand %xmm7, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrlw $2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpand %xmm2, %xmm8, %xmm2
@@ -633,7 +633,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX2NOBW-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX2NOBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX2NOBW-NEXT:    vpaddb %ymm1, %ymm2, %ymm1
-; AVX2NOBW-NEXT:    vpsllw $1, %ymm1, %ymm2
+; AVX2NOBW-NEXT:    vpaddw %ymm1, %ymm1, %ymm2
 ; AVX2NOBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX2NOBW-NEXT:    vpsrlw $2, %ymm1, %ymm1
 ; AVX2NOBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
@@ -651,7 +651,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpaddb %ymm1, %ymm2, %ymm1
-; AVX512BW-NEXT:    vpsllw $1, %ymm1, %ymm2
+; AVX512BW-NEXT:    vpaddw %ymm1, %ymm1, %ymm2
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpsrlw $2, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1

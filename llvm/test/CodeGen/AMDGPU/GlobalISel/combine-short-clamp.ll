@@ -1,7 +1,7 @@
-; RUN: llc -global-isel -mcpu=tahiti -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX678,GFX6789 %s
-; RUN: llc -global-isel -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX6789 %s
-; RUN: llc -global-isel -mcpu=gfx1010 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
-; RUN: llc -global-isel -mcpu=gfx1100 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
+; RUN: llc -global-isel -mcpu=tahiti -mtriple=amdgcn-amd-amdhsa < %s | FileCheck --check-prefixes=GCN,GFX678,GFX6789 %s
+; RUN: llc -global-isel -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa < %s | FileCheck --check-prefixes=GCN,GFX9,GFX6789 %s
+; RUN: llc -global-isel -mcpu=gfx1010 -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GFX10 %s
+; RUN: llc -global-isel -mcpu=gfx1100 -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GFX10 %s
 
 declare i64 @llvm.smax.i64(i64, i64)
 declare i64 @llvm.smin.i64(i64, i64)
@@ -31,7 +31,7 @@ entry:
 ; GFX6789: v_med3_i32 [[A]], [[B]], [[A]], [[C]]
 ; GFX10: v_cvt_pk_i16_i32{{(_e64)?}} [[A:v[0-9]+]], {{v[0-9]+}}, [[B:v[0-9]+]]
 ; GFX10: v_mov_b32_e32 [[B]], 0x7fff
-; GFX10: v_med3_i32 [[A]], 0xffff8000, [[A]], [[B]] 
+; GFX10: v_med3_i32 [[A]], 0xffff8000, [[A]], [[B]]
 define i16 @v_clamp_i64_i16_reverse(i64 %in) #0 {
 entry:
   %min = call i64 @llvm.smin.i64(i64 %in, i64 32767)

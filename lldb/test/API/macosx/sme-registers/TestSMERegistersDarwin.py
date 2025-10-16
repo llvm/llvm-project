@@ -1,6 +1,7 @@
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+import lldbsuite.test.cpu_feature as cpu_feature
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
@@ -9,10 +10,9 @@ class TestSMERegistersDarwin(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfRemote
     @skipUnlessDarwin
-    @skipUnlessFeature("hw.optional.arm.FEAT_SME")
-    @skipUnlessFeature("hw.optional.arm.FEAT_SME2")
+    @skipUnlessFeature(cpu_feature.AArch64.SME)
+    @skipUnlessFeature(cpu_feature.AArch64.SME2)
     # thread_set_state/thread_get_state only avail in macOS 15.4+
     @skipIf(macos_version=["<", "15.4"])
     def test(self):

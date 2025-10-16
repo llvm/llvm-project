@@ -39,6 +39,8 @@ public:
     DebianBullseye,
     DebianBookworm,
     DebianTrixie,
+    DebianForky,
+    DebianDuke,
     Exherbo,
     RHEL5,
     RHEL6,
@@ -46,11 +48,6 @@ public:
     Fedora,
     Gentoo,
     OpenSUSE,
-    UbuntuHardy,
-    UbuntuIntrepid,
-    UbuntuJaunty,
-    UbuntuKarmic,
-    UbuntuLucid,
     UbuntuMaverick,
     UbuntuNatty,
     UbuntuOneiric,
@@ -82,6 +79,7 @@ public:
     UbuntuOracular,
     UbuntuPlucky,
     UbuntuQuesting,
+    UbuntuResolute,
     UnknownDistro
   };
 
@@ -129,11 +127,11 @@ public:
   bool IsOpenSUSE() const { return DistroVal == OpenSUSE; }
 
   bool IsDebian() const {
-    return DistroVal >= DebianLenny && DistroVal <= DebianTrixie;
+    return DistroVal >= DebianLenny && DistroVal <= DebianDuke;
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuQuesting;
+    return DistroVal >= UbuntuMaverick && DistroVal <= UbuntuResolute;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

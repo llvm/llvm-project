@@ -338,3 +338,11 @@ struct Invalid0 {
 void *g14(struct Invalid0 *ivl) {
   return &(ivl->x);
 }
+
+void to_void_with_expr(void *ptr, int expr);
+
+void g15(void) {
+  struct Arguable arguable;
+  to_void_with_expr(&arguable.x, 3); // no-warning
+  to_void_with_expr(&arguable.x, ({3;})); // no-warning
+}

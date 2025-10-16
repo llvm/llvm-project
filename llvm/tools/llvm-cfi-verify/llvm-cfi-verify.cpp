@@ -78,8 +78,7 @@ static void printBlameContext(const DILineInfo &LineInfo, unsigned Context) {
   File->getBuffer().split(Lines, '\n');
 
   for (unsigned i = std::max<size_t>(1, LineInfo.Line - Context);
-       i <
-       std::min<size_t>(Lines.size() + 1, LineInfo.Line + Context + 1);
+       i < std::min<size_t>(Lines.size() + 1, LineInfo.Line + Context + 1);
        ++i) {
     if (i == LineInfo.Line)
       outs() << ">";
@@ -193,12 +192,16 @@ printIndirectCFInstructions(FileAnalysis &Analysis,
 
     unsigned BlameLine = 0;
     for (auto &K : {"cfi-icall", "cfi-vcall"}) {
-      if (!BlameLine)
-        BlameLine =
+      if (!BlameLine) {
+        auto [FileIdx, Line] =
             SpecialCaseList->inSectionBlame(K, "src", LineInfo.FileName);
-      if (!BlameLine)
-        BlameLine =
+        BlameLine = Line;
+      }
+      if (!BlameLine) {
+        auto [FileIdx, Line] =
             SpecialCaseList->inSectionBlame(K, "fun", LineInfo.FunctionName);
+        BlameLine = Line;
+      }
     }
 
     if (BlameLine) {

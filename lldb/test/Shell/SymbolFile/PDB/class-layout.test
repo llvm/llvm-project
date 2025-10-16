@@ -1,19 +1,30 @@
 REQUIRES: target-windows, msvc
-RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/ClassLayoutTest.cpp.obj %S/Inputs/ClassLayoutTest.cpp
-RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/ClassLayoutTest.cpp.exe %T/ClassLayoutTest.cpp.obj
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=ENUM %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNION %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=STRUCT %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=COMPLEX %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=LIST %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNNAMED-STRUCT %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=BASE %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=FRIEND %s
-RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=CLASS %s
+RUN: mkdir -p %t.dir
+RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%t.dir/ClassLayoutTest.cpp.obj %S/Inputs/ClassLayoutTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%t.dir/ClassLayoutTest.cpp.exe %t.dir/ClassLayoutTest.cpp.obj
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=ENUM %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNION %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=STRUCT %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=COMPLEX %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=LIST %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNNAMED-STRUCT %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=BASE %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=FRIEND %s
+RUN: lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=CLASS %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNION %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=STRUCT %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=COMPLEX %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=LIST %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNNAMED-STRUCT %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=BASE %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=FRIEND %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=CLASS %s
 
 CHECK: Module [[MOD:.*]]
-CHECK: SymbolFile pdb ([[MOD]])
+CHECK: SymbolFile {{(native-)?}}pdb ([[MOD]])
 CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\ClassLayoutTest.cpp'
 
 ENUM:  name = "Enum", size = 4,  decl = ClassLayoutTest.cpp:5

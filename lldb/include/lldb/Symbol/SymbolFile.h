@@ -18,6 +18,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SourceModule.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -144,7 +145,7 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) = 0;
 
-  virtual Symtab *GetSymtab() = 0;
+  virtual Symtab *GetSymtab(bool can_create = true) = 0;
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
@@ -296,7 +297,8 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        SymbolContextList &sc_list);
 
-  virtual void DumpClangAST(Stream &s) {}
+  virtual void DumpClangAST(Stream &s, llvm::StringRef filter,
+                            bool show_colors) {}
   virtual void FindGlobalVariables(ConstString name,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t max_matches,
@@ -327,6 +329,18 @@ public:
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
+
+  /// Resolves the function corresponding to the specified LLDB function
+  /// call \c label.
+  ///
+  /// \param[in,out] label The FunctionCallLabel to be resolved.
+  ///
+  /// \returns An llvm::Error if the specified \c label couldn't be resolved.
+  ///          Returns the resolved function (as a SymbolContext) otherwise.
+  virtual llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(FunctionCallLabel &label) {
+    return llvm::createStringError("Not implemented");
+  }
 
   virtual void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                         lldb::TypeClass type_mask,
@@ -467,10 +481,24 @@ public:
   ///     If true, then only return separate debug info files that encountered
   ///     errors during loading. If false, then return all expected separate
   ///     debug info files, regardless of whether they were successfully loaded.
+  /// \param load_all_debug_info
+  ///     If true, force loading any symbol files if they are not yet loaded.
   virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                    bool errors_only) {
+                                    bool errors_only,
+                                    bool load_all_debug_info = false) {
     return false;
   };
+
+  /// Retrieves statistics about DWO files associated with this symbol file.
+  /// This function returns a DWOStats struct containing:
+  ///   - The number of successfully loaded/parsed DWO files.
+  ///   - The total number of DWO files encountered.
+  ///   - The number of DWO CUs that failed to load due to errors.
+  /// If this symbol file does not support DWO files, all counts will be zero.
+  ///
+  /// \returns
+  ///   A DWOStats struct with loaded, total, and error counts for DWO files.
+  virtual DWOStats GetDwoStats() { return {}; }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
@@ -533,7 +561,7 @@ public:
     return m_abilities;
   }
 
-  Symtab *GetSymtab() override;
+  Symtab *GetSymtab(bool can_create = true) override;
 
   ObjectFile *GetObjectFile() override { return m_objfile_sp.get(); }
   const ObjectFile *GetObjectFile() const override {

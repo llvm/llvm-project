@@ -37,7 +37,7 @@
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN]] = !DIDerivedType(tag: DW_TAG_member, name: "_6",{{.*}}baseType: ![[UNALIGNED_UNKNOWN_BASE:[0-9]+]], size: 9
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN_BASE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[UNKNOWN_TYPE_BASE]], size: 16,{{.*}} elements: ![[UNALIGNED_UNKNOWN_ELEMENTS:[0-9]+]])
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN_ELEMENTS]] = !{![[UNALIGNED_UNKNOWN_SUBRANGE:[0-9]+]]}
-; CHECk-DAG: ![[UNALIGNED_UNKNOWN_SUBRANGE]] = !DISubrange(count: 2, lowerBound: 0)
+; CHECK-DAG: ![[UNALIGNED_UNKNOWN_SUBRANGE]] = !DISubrange(count: 2, lowerBound: 0)
 ; CHECK-DAG: ![[STRUCT]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_7", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[CORO_FRAME_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}, align: 64, flags: DIFlagArtificial, elements: ![[STRUCT_ELEMENTS:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_ELEMENTS]] = !{![[MEM_TYPE:[0-9]+]]}
@@ -205,7 +205,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+    call void @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -334,7 +334,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+    call void @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -350,7 +350,7 @@ declare token @llvm.coro.save(ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare ptr @new(i64)
 declare void @delete(ptr)

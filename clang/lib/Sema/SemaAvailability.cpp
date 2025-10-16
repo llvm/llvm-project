@@ -90,10 +90,9 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
 /// the availability attribute that is selected.
 /// \param ClassReceiver If we're checking the method of a class message
 /// send, the class. Otherwise nullptr.
-static std::pair<AvailabilityResult, const NamedDecl *>
-ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
-                                 std::string *Message,
-                                 ObjCInterfaceDecl *ClassReceiver) {
+std::pair<AvailabilityResult, const NamedDecl *>
+Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+                                       ObjCInterfaceDecl *ClassReceiver) {
   AvailabilityResult Result = D->getAvailability(Message);
 
   // For typedefs, if the typedef declaration appears available look
@@ -103,7 +102,7 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
       break;
     for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
       if (auto *TT = dyn_cast<TagType>(T)) {
-        D = TT->getDecl();
+        D = TT->getDecl()->getDefinitionOrSelf();
       } else if (isa<SubstTemplateTypeParmType>(T)) {
         // A Subst* node represents a use through a template.
         // Any uses of the underlying declaration happened through it's template
@@ -147,12 +146,12 @@ done:
 
   // For +new, infer availability from -init.
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    if (S.ObjC().NSAPIObj && ClassReceiver) {
+    if (ObjC().NSAPIObj && ClassReceiver) {
       ObjCMethodDecl *Init = ClassReceiver->lookupInstanceMethod(
-          S.ObjC().NSAPIObj->getInitSelector());
+          ObjC().NSAPIObj->getInitSelector());
       if (Init && Result == AR_Available && MD->isClassMethod() &&
-          MD->getSelector() == S.ObjC().NSAPIObj->getNewSelector() &&
-          MD->definedInNSObject(S.getASTContext())) {
+          MD->getSelector() == ObjC().NSAPIObj->getNewSelector() &&
+          MD->definedInNSObject(getASTContext())) {
         Result = Init->getAvailability(Message);
         D = Init;
       }
@@ -161,7 +160,6 @@ done:
 
   return {Result, D};
 }
-
 
 /// whether we should emit a diagnostic for \c K and \c DeclVersion in
 /// the context of \c Ctx. For example, we should emit an unavailable diagnostic
@@ -189,7 +187,9 @@ static bool ShouldDiagnoseAvailabilityInContext(
   // For libraries the availability will be checked later in
   // DiagnoseHLSLAvailability class once where the specific environment/shader
   // stage of the caller is known.
-  if (S.getLangOpts().HLSL) {
+  // We only do this for APIs that are not explicitly deprecated. Any API that
+  // is explicitly deprecated we always issue a diagnostic on.
+  if (S.getLangOpts().HLSL && K != AR_Deprecated) {
     if (!S.getLangOpts().HLSLStrictAvailability ||
         (DeclEnv != nullptr &&
          S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
@@ -549,8 +549,19 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     return;
   }
   case AR_Deprecated:
-    diag = !ObjCPropertyAccess ? diag::warn_deprecated
-                               : diag::warn_property_method_deprecated;
+    // Suppress -Wdeprecated-declarations in implicit
+    // functions.
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
+        FD && FD->isImplicit())
+      return;
+
+    if (ObjCPropertyAccess)
+      diag = diag::warn_property_method_deprecated;
+    else if (S.currentEvaluationContext().IsCaseExpr)
+      diag = diag::warn_deprecated_switch_case;
+    else
+      diag = diag::warn_deprecated;
+
     diag_message = diag::warn_deprecated_message;
     diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
     property_note_select = /* deprecated */ 0;
@@ -876,7 +887,7 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
   AvailabilityResult Result;
   const NamedDecl *OffendingDecl;
   std::tie(Result, OffendingDecl) =
-      ShouldDiagnoseAvailabilityOfDecl(SemaRef, D, nullptr, ReceiverClass);
+      SemaRef.ShouldDiagnoseAvailabilityOfDecl(D, nullptr, ReceiverClass);
   if (Result != AR_Available) {
     // All other diagnostic kinds have already been handled in
     // DiagnoseAvailabilityOfDecl.
@@ -1008,7 +1019,7 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getDecl();
+    TagDecl *TD = TT->getDecl()->getDefinitionOrSelf();
     DiagnoseDeclAvailability(TD, Range);
 
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {
@@ -1112,12 +1123,13 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
                                       bool ObjCPropertyAccess,
                                       bool AvoidPartialAvailabilityChecks,
                                       ObjCInterfaceDecl *ClassReceiver) {
+
   std::string Message;
   AvailabilityResult Result;
   const NamedDecl* OffendingDecl;
   // See if this declaration is unavailable, deprecated, or partial.
   std::tie(Result, OffendingDecl) =
-      ShouldDiagnoseAvailabilityOfDecl(*this, D, &Message, ClassReceiver);
+      ShouldDiagnoseAvailabilityOfDecl(D, &Message, ClassReceiver);
   if (Result == AR_Available)
     return;
 
@@ -1145,4 +1157,12 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
 
   EmitAvailabilityWarning(*this, Result, D, OffendingDecl, Message, Locs,
                           UnknownObjCClass, ObjCPDecl, ObjCPropertyAccess);
+}
+
+void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
+                                      ArrayRef<SourceLocation> Locs) {
+  DiagnoseAvailabilityOfDecl(D, Locs, /*UnknownObjCClass=*/nullptr,
+                             /*ObjCPropertyAccess=*/false,
+                             /*AvoidPartialAvailabilityChecks=*/false,
+                             /*ClassReceiver=*/nullptr);
 }

@@ -20,10 +20,12 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -160,9 +162,10 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
-           OffsetMO.isMCSymbol())
-    OS << ", " << *MCO.getExpr();
-  else
+           OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
+    OS << ", ";
+    MAI->printExpr(OS, *MCO.getExpr());
+  } else
     return true;
 
   return false;
@@ -265,12 +268,15 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
 
   assert(TM.getTargetTriple().isOSBinFormatELF());
 
-  unsigned Size = getDataLayout().getPointerSize();
   auto *LAFI = MF->getInfo<LoongArchMachineFunctionInfo>();
   unsigned EntrySize = LAFI->getJumpInfoSize();
+  auto JTI = MF->getJumpTableInfo();
 
-  if (0 == EntrySize)
+  if (!JTI || 0 == EntrySize)
     return;
+
+  unsigned Size = getDataLayout().getPointerSize();
+  auto JT = JTI->getJumpTables();
 
   // Emit an additional section to store the correlation info as pairs of
   // addresses, each pair contains the address of a jump instruction (jr) and
@@ -279,14 +285,15 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
       ".discard.tablejump_annotate", ELF::SHT_PROGBITS, 0));
 
   for (unsigned Idx = 0; Idx < EntrySize; ++Idx) {
+    int JTIIdx = LAFI->getJumpInfoJTIIndex(Idx);
+    if (JT[JTIIdx].MBBs.empty())
+      continue;
     OutStreamer->emitValue(
         MCSymbolRefExpr::create(LAFI->getJumpInfoJrMI(Idx)->getPreInstrSymbol(),
                                 OutContext),
         Size);
     OutStreamer->emitValue(
-        MCSymbolRefExpr::create(
-            GetJTISymbol(LAFI->getJumpInfoJTIMO(Idx)->getIndex()), OutContext),
-        Size);
+        MCSymbolRefExpr::create(GetJTISymbol(JTIIdx), OutContext), Size);
   }
 }
 
@@ -297,8 +304,14 @@ bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+char LoongArchAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
+                "LoongArch Assembly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchAsmPrinter() {
   RegisterAsmPrinter<LoongArchAsmPrinter> X(getTheLoongArch32Target());
   RegisterAsmPrinter<LoongArchAsmPrinter> Y(getTheLoongArch64Target());
 }

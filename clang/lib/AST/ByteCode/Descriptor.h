@@ -24,7 +24,7 @@ class Record;
 class SourceInfo;
 struct InitMap;
 struct Descriptor;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
@@ -33,20 +33,12 @@ using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
 using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
-                             bool IsMutable, bool IsActive, bool InUnion,
-                             const Descriptor *FieldDesc);
+                             bool IsMutable, bool IsVolatile, bool IsActive,
+                             bool InUnion, const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
 using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
-                             const Descriptor *FieldDesc);
-
-/// Invoked when a block with pointers referencing it goes out of scope. Such
-/// blocks are persisted: the move function copies all inline descriptors and
-/// non-trivial fields, as existing pointers might need to reference those
-/// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, std::byte *SrcFieldPtr,
-                             std::byte *DstFieldPtr,
                              const Descriptor *FieldDesc);
 
 enum class GlobalInitState {
@@ -101,9 +93,15 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
+  /// Flag indicating if this field is a const field nested in
+  /// a mutable parent field.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsConstInMutable : 1;
   /// Flag indicating if the field is an element of a composite array.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsVolatile : 1;
 
   Lifetime LifeState;
 
@@ -112,7 +110,8 @@ struct InlineDescriptor {
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false),
-        IsArrayElement(false), LifeState(Lifetime::Started), Desc(D) {}
+        IsArrayElement(false), IsVolatile(false), LifeState(Lifetime::Started),
+        Desc(D) {}
 
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
@@ -157,34 +156,33 @@ public:
   /// The primitive type this descriptor was created for,
   /// or the primitive element type in case this is
   /// a primitive array.
-  const std::optional<PrimType> PrimT = std::nullopt;
+  const OptPrimType PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
   const bool IsMutable = false;
   /// Flag indicating if the block is a temporary.
   const bool IsTemporary = false;
+  const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
-  /// Flag indicating if this is a dummy descriptor.
-  bool IsDummy = false;
   bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
   const BlockDtorFn DtorFn = nullptr;
-  const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
   Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
-             MetadataSize MD, bool IsConst, bool IsTemporary, bool IsMutable);
+             MetadataSize MD, bool IsConst, bool IsTemporary, bool IsMutable,
+             bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
              bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize,
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
@@ -198,13 +196,10 @@ public:
 
   /// Allocates a descriptor for a record.
   Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+             bool IsTemporary, bool IsMutable, bool IsVolatile);
 
   /// Allocates a dummy descriptor.
   Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
-
-  /// Make this descriptor a dummy descriptor.
-  void makeDummy() { IsDummy = true; }
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -273,8 +268,9 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if the descriptor is of a union.
   bool isUnion() const;
-  /// Checks if this is a dummy descriptor.
-  bool isDummy() const { return IsDummy; }
+
+  /// Whether variables of this descriptor need their destructor called or not.
+  bool hasTrivialDtor() const;
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;

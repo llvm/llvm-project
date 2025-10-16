@@ -180,7 +180,7 @@ bb4:
   LoopInfo LI(DT);
 
   DataLayout DL("e-i64:64-f80:128-n8:16:32:64-S128");
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   AAResults AA(TLI);
@@ -255,7 +255,7 @@ declare void @sink_alt() cold
 
   LoopInfo LI(DT);
 
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
 
   AAResults AA(TLI);
@@ -285,22 +285,8 @@ declare void @sink_alt() cold
   EXPECT_TRUE(Ehpad);
 
   BasicBlock *NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, &MSSAU, "");
-
-  MSSA.verifyMemorySSA();
-  EXPECT_TRUE(DT.verify());
-  EXPECT_NE(NewBB, nullptr);
-  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
-  EXPECT_EQ(NewBB, SrcBlock->getTerminator()->getSuccessor(SuccNum));
-  EXPECT_EQ(NewBB->getParent(), F);
-
-  bool BBFlag = false;
-  for (BasicBlock &BB : *F) {
-    if (BB.getName() == NewBB->getName()) {
-      BBFlag = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(BBFlag);
+  // SplitEdge cannot split an eh pad edge.
+  EXPECT_EQ(NewBB, nullptr);
 }
 
 TEST(BasicBlockUtils, splitBasicBlockBefore_ex1) {
@@ -686,7 +672,7 @@ resume:
 destroy:
   ret void
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -703,13 +689,13 @@ resume:
 destroy:
   ret void
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 attributes #0 = { presplitcoroutine }
 )IR");

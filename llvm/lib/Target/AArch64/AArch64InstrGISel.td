@@ -179,36 +179,6 @@ def G_FCMGT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_FCMEQZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$imm, ptype0:$src1);
@@ -263,6 +233,12 @@ def G_SDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_USDOT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
@@ -295,12 +271,6 @@ def : GINodeEquiv<G_FCMEQ, AArch64fcmeq>;
 def : GINodeEquiv<G_FCMGE, AArch64fcmge>;
 def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 
-def : GINodeEquiv<G_FCMEQZ, AArch64fcmeqz>;
-def : GINodeEquiv<G_FCMGEZ, AArch64fcmgez>;
-def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
-def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
-def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
-
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_UMULL, AArch64umull>;
@@ -314,6 +284,7 @@ def : GINodeEquiv<G_UADDLV, AArch64uaddlv>;
 
 def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
+def : GINodeEquiv<G_USDOT, AArch64usdot>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 

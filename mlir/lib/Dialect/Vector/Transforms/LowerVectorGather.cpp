@@ -11,26 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -57,47 +50,30 @@ namespace {
 ///
 /// Supports vector types with a fixed leading dimension.
 struct UnrollGather : OpRewritePattern<vector::GatherOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
-    VectorType resultTy = op.getType();
-    if (resultTy.getRank() < 2)
-      return rewriter.notifyMatchFailure(op, "already 1-D");
-
-    // Unrolling doesn't take vscale into account. Pattern is disabled for
-    // vectors with leading scalable dim(s).
-    if (resultTy.getScalableDims().front())
-      return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
-
-    Location loc = op.getLoc();
-    Value indexVec = op.getIndexVec();
+    Value indexVec = op.getIndices();
     Value maskVec = op.getMask();
     Value passThruVec = op.getPassThru();
 
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultTy, rewriter.getZeroAttr(resultTy));
-
-    VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
-
-    for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
-      int64_t thisIdx[1] = {i};
+    auto unrollGatherFn = [&](PatternRewriter &rewriter, Location loc,
+                              VectorType subTy, int64_t index) {
+      int64_t thisIdx[1] = {index};
 
       Value indexSubVec =
-          rewriter.create<vector::ExtractOp>(loc, indexVec, thisIdx);
+          vector::ExtractOp::create(rewriter, loc, indexVec, thisIdx);
       Value maskSubVec =
-          rewriter.create<vector::ExtractOp>(loc, maskVec, thisIdx);
+          vector::ExtractOp::create(rewriter, loc, maskVec, thisIdx);
       Value passThruSubVec =
-          rewriter.create<vector::ExtractOp>(loc, passThruVec, thisIdx);
-      Value subGather = rewriter.create<vector::GatherOp>(
-          loc, subTy, op.getBase(), op.getIndices(), indexSubVec, maskSubVec,
-          passThruSubVec);
-      result =
-          rewriter.create<vector::InsertOp>(loc, subGather, result, thisIdx);
-    }
+          vector::ExtractOp::create(rewriter, loc, passThruVec, thisIdx);
+      return vector::GatherOp::create(rewriter, loc, subTy, op.getBase(),
+                                      op.getOffsets(), indexSubVec, maskSubVec,
+                                      passThruSubVec, op.getAlignmentAttr());
+    };
 
-    rewriter.replaceOp(op, result);
-    return success();
+    return unrollVectorOp(op, rewriter, unrollGatherFn);
   }
 };
 
@@ -122,7 +98,7 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
 /// ATM this is effectively limited to reading a 1D Vector from a 2D MemRef,
 /// but should be fairly straightforward to extend beyond that.
 struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -159,24 +135,25 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
 
     // 1. Collapse the input memref so that it's "flat".
     SmallVector<ReassociationIndices> reassoc = {{0, 1}};
-    Value collapsed = rewriter.create<memref::CollapseShapeOp>(
-        op.getLoc(), subview.getSource(), reassoc);
+    Value collapsed = memref::CollapseShapeOp::create(
+        rewriter, op.getLoc(), subview.getSource(), reassoc);
 
     // 2. Generate new gather indices that will model the
     // strided access.
     IntegerAttr stride = rewriter.getIndexAttr(srcTrailingDim);
-    VectorType vType = op.getIndexVec().getType();
-    Value mulCst = rewriter.create<arith::ConstantOp>(
-        op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
+    VectorType vType = op.getIndices().getType();
+    Value mulCst = arith::ConstantOp::create(
+        rewriter, op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
 
     Value newIdxs =
-        rewriter.create<arith::MulIOp>(op.getLoc(), op.getIndexVec(), mulCst);
+        arith::MulIOp::create(rewriter, op.getLoc(), op.getIndices(), mulCst);
 
     // 3. Create an updated gather op with the collapsed input memref and the
     // updated indices.
-    Value newGather = rewriter.create<vector::GatherOp>(
-        op.getLoc(), op.getResult().getType(), collapsed, op.getIndices(),
-        newIdxs, op.getMask(), op.getPassThru());
+    Value newGather = vector::GatherOp::create(
+        rewriter, op.getLoc(), op.getResult().getType(), collapsed,
+        op.getOffsets(), newIdxs, op.getMask(), op.getPassThru(),
+        op.getAlignmentAttr());
     rewriter.replaceOp(op, newGather);
 
     return success();
@@ -187,7 +164,7 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
 /// `tensor.extract`s. To avoid out-of-bounds memory accesses, these
 /// loads/extracts are made conditional using `scf.if` ops.
 struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -219,18 +196,20 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
     Value indexVec = rewriter.createOrFold<arith::IndexCastOp>(
         loc, op.getIndexVectorType().clone(rewriter.getIndexType()),
-        op.getIndexVec());
-    auto baseOffsets = llvm::to_vector(op.getIndices());
+        op.getIndices());
+    auto baseOffsets = llvm::to_vector(op.getOffsets());
     Value lastBaseOffset = baseOffsets.back();
 
     Value result = op.getPassThru();
+    BoolAttr nontemporalAttr = nullptr;
+    IntegerAttr alignmentAttr = op.getAlignmentAttr();
 
     // Emit a conditional access for each vector element.
     for (int64_t i = 0, e = resultTy.getNumElements(); i < e; ++i) {
       int64_t thisIdx[1] = {i};
       Value condition =
-          rewriter.create<vector::ExtractOp>(loc, condMask, thisIdx);
-      Value index = rewriter.create<vector::ExtractOp>(loc, indexVec, thisIdx);
+          vector::ExtractOp::create(rewriter, loc, condMask, thisIdx);
+      Value index = vector::ExtractOp::create(rewriter, loc, indexVec, thisIdx);
       baseOffsets.back() =
           rewriter.createOrFold<arith::AddIOp>(loc, lastBaseOffset, index);
 
@@ -240,26 +219,26 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
           // `vector.load` does not support scalar result; emit a vector load
           // and extract the single result instead.
           Value load =
-              b.create<vector::LoadOp>(loc, elemVecTy, base, baseOffsets);
+              vector::LoadOp::create(b, loc, elemVecTy, base, baseOffsets,
+                                     nontemporalAttr, alignmentAttr);
           int64_t zeroIdx[1] = {0};
-          extracted = b.create<vector::ExtractOp>(loc, load, zeroIdx);
+          extracted = vector::ExtractOp::create(b, loc, load, zeroIdx);
         } else {
-          extracted = b.create<tensor::ExtractOp>(loc, base, baseOffsets);
+          extracted = tensor::ExtractOp::create(b, loc, base, baseOffsets);
         }
 
         Value newResult =
-            b.create<vector::InsertOp>(loc, extracted, result, thisIdx);
-        b.create<scf::YieldOp>(loc, newResult);
+            vector::InsertOp::create(b, loc, extracted, result, thisIdx);
+        scf::YieldOp::create(b, loc, newResult);
       };
       auto passThruBuilder = [result](OpBuilder &b, Location loc) {
-        b.create<scf::YieldOp>(loc, result);
+        scf::YieldOp::create(b, loc, result);
       };
 
-      result =
-          rewriter
-              .create<scf::IfOp>(loc, condition, /*thenBuilder=*/loadBuilder,
+      result = scf::IfOp::create(rewriter, loc, condition,
+                                 /*thenBuilder=*/loadBuilder,
                                  /*elseBuilder=*/passThruBuilder)
-              .getResult(0);
+                   .getResult(0);
     }
 
     rewriter.replaceOp(op, result);

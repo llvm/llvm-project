@@ -47,9 +47,9 @@ define <4 x i32> @select_addsub_v4i32(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) 
 define <4 x i32> @select_addsub_v4i32_select_swapped(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_select_swapped:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vrsub.vi v9, v9, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
+; CHECK-NEXT:    vmerge.vvm v9, v10, v9, v0
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %sub = sub <4 x i32> %a, %b
@@ -74,9 +74,9 @@ define <4 x i32> @select_addsub_v4i32_add_swapped(<4 x i1> %cc, <4 x i32> %a, <4
 define <4 x i32> @select_addsub_v4i32_both_swapped(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_both_swapped:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vrsub.vi v9, v9, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
+; CHECK-NEXT:    vmerge.vvm v9, v10, v9, v0
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %sub = sub <4 x i32> %a, %b

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc_convert.h>
-#include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
 #include <clc/internal/clc.h>
 #include <clc/math/clc_fma.h>
@@ -20,4 +19,3 @@
 
 #define __CLC_BODY <clc_hypot.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY

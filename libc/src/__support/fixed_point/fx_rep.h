@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H
 #define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H
 
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/config.h"
-
-#include <stdint.h>
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 

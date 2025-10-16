@@ -8,13 +8,12 @@ declare float @llvm.fma.f32(float %f1, float %f2, float %f3)
 
 define half @f0(half %f1, half %f2, half %acc) {
 ; CHECK-LABEL: f0:
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: lcdfr %f0, %f0
-; CHECK: brasl %r14, __truncsfhf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK-NOT: brasl
+; CHECK: lcdfr %f{{[0-9]+}}, %f4
 ; CHECK: brasl %r14, __extendhfsf2@PLT
 ; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK-SCALAR: maebr %f0, %f9, %f8
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK-SCALAR: maebr %f0, %f8, %f10
 ; CHECK-VECTOR: wfmasb %f0, %f0, %f8, %f10
 ; CHECK: brasl %r14, __truncsfhf2@PLT
 ; CHECK: br %r14

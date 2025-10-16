@@ -549,7 +549,7 @@ define void @sink_splat_rsub_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB10_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a2)
-; CHECK-NEXT:    subw a3, a1, a3
+; CHECK-NEXT:    sub a3, a1, a3
 ; CHECK-NEXT:    sw a3, 0(a2)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    bne a2, a0, .LBB10_6
@@ -5427,18 +5427,18 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @sink_splat_select_op1(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_select_op1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    li a3, 42
+; CHECK-NEXT:    lui a3, 1
+; CHECK-NEXT:    li a2, 42
+; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:  .LBB117_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmseq.vx v0, v8, a3
-; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmseq.vx v0, v9, a2
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    bne a0, a2, .LBB117_1
+; CHECK-NEXT:    bne a0, a3, .LBB117_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -5472,9 +5472,8 @@ define void @sink_splat_select_op2(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB118_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmseq.vx v0, v9, a2
-; CHECK-NEXT:    vmerge.vvm v9, v8, v9, v0
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vmsne.vx v0, v9, a2
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bne a0, a1, .LBB118_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -5886,6 +5885,171 @@ vector.body:                                      ; preds = %vector.body, %entry
   %index.next = add i64 %index, 4
   %3 = icmp eq i64 %index.next, 1024
   br i1 32, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+
+define void @sink_vp_splat(ptr nocapture %out, ptr nocapture %in) {
+; CHECK-LABEL: sink_vp_splat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    li a4, 3
+; CHECK-NEXT:    lui a5, 1
+; CHECK-NEXT:  .LBB129_1: # %vector.body
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB129_2 Depth 2
+; CHECK-NEXT:    vsetvli a6, a3, e32, m4, ta, ma
+; CHECK-NEXT:    slli a7, a2, 2
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    add t0, a1, a7
+; CHECK-NEXT:    li t1, 1024
+; CHECK-NEXT:  .LBB129_2: # %for.body424
+; CHECK-NEXT:    # Parent Loop BB129_1 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vle32.v v12, (t0)
+; CHECK-NEXT:    addi t1, t1, -1
+; CHECK-NEXT:    vmacc.vx v8, a4, v12
+; CHECK-NEXT:    add t0, t0, a5
+; CHECK-NEXT:    bnez t1, .LBB129_2
+; CHECK-NEXT:  # %bb.3: # %vector.latch
+; CHECK-NEXT:    # in Loop: Header=BB129_1 Depth=1
+; CHECK-NEXT:    add a7, a0, a7
+; CHECK-NEXT:    sub a3, a3, a6
+; CHECK-NEXT:    vse32.v v8, (a7)
+; CHECK-NEXT:    add a2, a2, a6
+; CHECK-NEXT:    bnez a3, .LBB129_1
+; CHECK-NEXT:  # %bb.4: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.latch, %entry
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.latch ]
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.latch ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 8, i1 true)
+  %vp.splat1 = tail call <vscale x 8 x i32> @llvm.experimental.vp.splat.nxv8i32(i32 0, <vscale x 8 x i1> splat(i1 true), i32 %evl)
+  %vp.splat2 = tail call <vscale x 8 x i32> @llvm.experimental.vp.splat.nxv8i32(i32 3, <vscale x 8 x i1> splat(i1 true), i32 %evl)
+  %evl.cast = zext i32 %evl to i64
+  br label %for.body424
+
+for.body424:                                      ; preds = %for.body424, %vector.body
+  %scalar.phi = phi i64 [ 0, %vector.body ], [ %indvars.iv.next27, %for.body424 ]
+  %vector.phi = phi <vscale x 8 x i32> [ %vp.splat1, %vector.body ], [ %vp.binary26, %for.body424 ]
+  %arrayidx625 = getelementptr inbounds [1024 x i32], ptr %in, i64 %scalar.phi, i64 %scalar.ind
+  %widen.load = tail call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %arrayidx625, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %vp.binary = tail call <vscale x 8 x i32> @llvm.vp.mul.nxv8i32(<vscale x 8 x i32> %widen.load, <vscale x 8 x i32> %vp.splat2, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %vp.binary26 = tail call <vscale x 8 x i32> @llvm.vp.add.nxv8i32(<vscale x 8 x i32> %vector.phi, <vscale x 8 x i32> %vp.binary, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %indvars.iv.next27 = add nuw nsw i64 %scalar.phi, 1
+  %exitcond.not28 = icmp eq i64 %indvars.iv.next27, 1024
+  br i1 %exitcond.not28, label %vector.latch, label %for.body424
+
+vector.latch:                                     ; preds = %for.body424
+  %arrayidx830 = getelementptr inbounds i32, ptr %out, i64 %scalar.ind
+  tail call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %vp.binary26, ptr %arrayidx830, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl.cast
+  %next.ind = add i64 %scalar.ind, %evl.cast
+  %6 = icmp eq i64 %remaining.trip.count, 0
+  br i1 %6, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.latch
+  ret void
+}
+
+define void @sink_vp_splat_vfwadd_wf(ptr nocapture %in, float %f) {
+; CHECK-LABEL: sink_vp_splat_vfwadd_wf:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    lui a3, 2
+; CHECK-NEXT:  .LBB130_1: # %vector.body
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB130_2 Depth 2
+; CHECK-NEXT:    vsetvli a4, a2, e8, m1, ta, ma
+; CHECK-NEXT:    slli a5, a1, 3
+; CHECK-NEXT:    add a5, a0, a5
+; CHECK-NEXT:    li a6, 1024
+; CHECK-NEXT:  .LBB130_2: # %for.body419
+; CHECK-NEXT:    # Parent Loop BB130_1 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a5)
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vse64.v v8, (a5)
+; CHECK-NEXT:    add a5, a5, a3
+; CHECK-NEXT:    bnez a6, .LBB130_2
+; CHECK-NEXT:  # %bb.3: # %vector.latch
+; CHECK-NEXT:    # in Loop: Header=BB130_1 Depth=1
+; CHECK-NEXT:    sub a2, a2, a4
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    bnez a2, .LBB130_1
+; CHECK-NEXT:  # %bb.4: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %conv = fpext float %f to double
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.latch, %entry
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.latch ]
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.latch ]
+  %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 8, i1 true)
+  %vp.splat = call <vscale x 8 x double> @llvm.experimental.vp.splat.nxv8f64(double %conv, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %evl.cast = zext i32 %evl to i64
+  br label %for.body419
+
+for.body419:                                      ; preds = %for.body419, %vector.body
+  %scalar.phi = phi i64 [ 0, %vector.body ], [ %indvars.iv.next21, %for.body419 ]
+  %arrayidx620 = getelementptr inbounds [1024 x double], ptr %in, i64 %scalar.phi, i64 %scalar.ind
+  %widen.load = call <vscale x 8 x double> @llvm.vp.load.nxv8f64.p0(ptr %arrayidx620, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %vp.binary = call <vscale x 8 x double> @llvm.vp.fadd.nxv8f64(<vscale x 8 x double> %widen.load, <vscale x 8 x double> %vp.splat, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  call void @llvm.vp.store.nxv8f64.p0(<vscale x 8 x double> %vp.binary, ptr %arrayidx620, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %indvars.iv.next21 = add nuw nsw i64 %scalar.phi, 1
+  %exitcond.not22 = icmp eq i64 %indvars.iv.next21, 1024
+  br i1 %exitcond.not22, label %vector.latch, label %for.body419
+
+vector.latch:                                     ; preds = %for.body419
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl.cast
+  %next.ind = add i64 %scalar.ind, %evl.cast
+  %cond = icmp eq i64 %remaining.trip.count, 0
+  br i1 %cond, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.latch
+  ret void
+}
+
+;; This is exactly like sink_add_splat except that the splat has operands
+;; which haven't been converted to undef.
+define void @sink_non_canonical_splat(ptr nocapture %a, i32 signext %x) {
+; CHECK-LABEL: sink_non_canonical_splat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:  .LBB131_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vadd.vx v8, v8, a1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    bne a0, a2, .LBB131_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
+  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %0 = getelementptr inbounds i32, ptr %a, i64 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = add <4 x i32> %wide.load, %broadcast.splat
+  store <4 x i32> %1, ptr %0, align 4
+  %index.next = add nuw i64 %index, 4
+  %2 = icmp eq i64 %index.next, 1024
+  br i1 %2, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void

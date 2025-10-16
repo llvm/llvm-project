@@ -64,7 +64,7 @@ Calls to the following std library algorithms are checked:
 ``std::mismatch``,
 ``std::next_permutation``,
 ``std::none_of``,
-``std::parital_sum``,
+``std::partial_sum``,
 ``std::partial_sort_copy``,
 ``std::partition_copy``,
 ``std::partition_point``,

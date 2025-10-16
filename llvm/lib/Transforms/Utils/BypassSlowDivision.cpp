@@ -457,7 +457,7 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
     Next = Next->getNextNode();
 
     // Ignore dead code to save time and avoid bugs.
-    if (I->hasNUses(0))
+    if (I->use_empty())
       continue;
 
     FastDivInsertionTask Task(I, BypassWidths);

@@ -19,6 +19,11 @@ namespace formatters {
 bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
                                     const TypeSummaryOptions &options);
 
+/// Return the ValueObjectSP of the underlying pointer member whose type
+/// is a desugared 'std::shared_ptr::element_type *'.
+lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
+                                                  ValueObject &container);
+
 } // namespace formatters
 } // namespace lldb_private
 

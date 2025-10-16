@@ -5,8 +5,8 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-COST: Checking a loop in 'fixed_width'
-; CHECK-COST: Cost of 10 for VF 2: WIDEN store vp<{{.+}}>, ir<2>, vp<{{.+}}>
-; CHECK-COST: Cost of 20 for VF 4: WIDEN store vp<{{.+}}>, ir<2>, vp<{{.+}}>
+; CHECK-COST: Cost of 10 for VF 2: WIDEN store vp<{{.+}}>, ir<2>, ir<{{.+}}>
+; CHECK-COST: Cost of 20 for VF 4: WIDEN store vp<{{.+}}>, ir<2>, ir<{{.+}}>
 ; CHECK-COST: Selecting VF: 1.
 
 ; We should decide this loop is not worth vectorising using fixed width vectors

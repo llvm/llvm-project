@@ -18,7 +18,6 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -30,50 +29,30 @@ class LoongArchAsmBackend : public MCAsmBackend {
   bool Is64Bit;
   const MCTargetOptions &TargetOptions;
   DenseMap<MCSection *, const MCSymbolRefExpr *> SecToAlignSym;
+  // Temporary symbol used to check whether a PC-relative fixup is resolved.
+  MCSymbol *PCRelTemp = nullptr;
+
+  bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                      const MCTargetOptions &Options)
-      : MCAsmBackend(llvm::endianness::little, ELF::R_LARCH_RELAX), STI(STI),
-        OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
-  ~LoongArchAsmBackend() override {}
+                      const MCTargetOptions &Options);
 
-  bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
-                               const MCFixup &Fixup, const MCValue &Target,
-                               uint64_t &FixedValue) const override;
+  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                uint64_t &FixedValue, bool IsResolved);
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
-
-  // Return Size with extra Nop Bytes for alignment directive in code section.
-  bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
-                                             unsigned &Size) override;
-
-  // Insert target specific fixup type for alignment directive in code section.
-  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     MCAlignFragment &AF) override;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
-
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {}
-
-  std::pair<bool, bool> relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF,
+  bool relaxAlign(MCFragment &F, unsigned &Size) override;
+  bool relaxDwarfLineAddr(MCFragment &) const override;
+  bool relaxDwarfCFA(MCFragment &) const override;
+  std::pair<bool, bool> relaxLEB128(MCFragment &F,
                                     int64_t &Value) const override;
-
-  bool relaxDwarfLineAddr(const MCAssembler &Asm, MCDwarfLineAddrFragment &DF,
-                          bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(const MCAssembler &Asm, MCDwarfCallFrameFragment &DF,
-                     bool &WasRelaxed) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

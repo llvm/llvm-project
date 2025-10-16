@@ -1,0 +1,42 @@
+# Check that looking up a memory region not present in the Minidump fails
+# even if it's in the /proc/<pid>/maps file.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb -c %t -o "memory read 0x5000" 2>&1 | FileCheck %s
+
+# CHECK-LABEL: (lldb) memory read 0x5000
+# CHECK-NEXT: error: No memory range found for address (0x5000)
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 40
+    Platform ID:     Linux
+    CSD Version:     'Linux 3.13.0-91-generic #138-Ubuntu SMP Fri Jun 24 17:00:34 UTC 2016 x86_64'
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	test-yaml
+      Umask:	0002
+      State:	t (tracing stop)
+      Pid:	8567
+  - Type:            LinuxMaps
+    Text:             |
+      0x1000-0x1100     r-xp 00000000 00:00 0
+      0x2000-0x2200     rw-p 00000000 00:00 0
+      0x4000-0x6000     rw-- 00000000 00:00 0
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x1000
+        Data Size:       0x100
+        Content :        ''
+      - Start of Memory Range: 0x2000
+        Data Size:       0x200
+        Content :        ''
+...

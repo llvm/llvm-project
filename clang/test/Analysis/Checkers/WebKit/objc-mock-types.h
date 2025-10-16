@@ -1,3 +1,36 @@
+#ifndef std_move
+#define std_move
+
+namespace std {
+
+template <typename T> struct remove_reference {
+typedef T type;
+};
+
+template <typename T> struct remove_reference<T&> {
+typedef T type;
+};
+
+template<typename T> typename remove_reference<T>::type&& move(T&& t);
+
+}
+
+#endif
+
+namespace std {
+
+template <bool, typename U = void> struct enable_if {
+};
+
+template <typename T> struct enable_if<true, T> {
+  using type = T;
+};
+
+template <bool value, class T = void>
+using enable_if_t = typename enable_if<value, T>::type;
+
+}
+
 @class NSString;
 @class NSArray;
 @class NSMutableArray;
@@ -22,6 +55,7 @@ typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
 #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+#define NS_REQUIRES_PROPERTY_DEFINITIONS __attribute__((objc_requires_property_definitions))
 
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
@@ -44,6 +78,7 @@ CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef
 CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
 CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
 Boolean CFDictionaryContainsKey(CFDictionaryRef theDict, const void *key);
+Boolean CFEqual(CFTypeRef, CFTypeRef);
 Boolean CFDictionaryContainsValue(CFDictionaryRef theDict, const void *value);
 const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
 void CFDictionaryAddValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
@@ -61,18 +96,33 @@ typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVBufferRef;
 typedef CVBufferRef CVImageBufferRef;
 typedef CVImageBufferRef CVPixelBufferRef;
 typedef signed int CVReturn;
-CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut);
+CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut);
+
+extern "C" NSString *NSStringFromSelector(SEL aSelector);
+extern "C" SEL NSSelectorFromString(NSString *aSelectorName);
+
+extern "C" NSString *NSStringFromClass(Class aClass);
+extern "C" Class NSClassFromString(NSString *aClassName);
+
+extern "C" NSString *NSStringFromProtocol(Protocol *proto);
+extern "C" Protocol * NSProtocolFromString(NSString *namestr);
 
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
-extern Class NSClassFromString(NSString *aClassName);
+
+#if __has_feature(objc_arc)
+id CFBridgingRelease(CFTypeRef X) {
+    return (__bridge_transfer id)X;
+}
+#endif
 
 __attribute__((objc_root_class))
 @interface NSObject
 + (instancetype) alloc;
++ (instancetype) allocWithZone:(NSZone *)zone;
 + (Class) class;
 + (Class) superclass;
 - (instancetype) init;
@@ -130,11 +180,30 @@ __attribute__((objc_root_class))
 
 @interface NSNumber : NSValue
 - (char)charValue;
+- (int)intValue;
 - (id)initWithInt:(int)value;
 + (NSNumber *)numberWithInt:(int)value;
++ (NSNumber *)numberWithBool:(BOOL)value;
+@end
+
+@interface NSResponder : NSObject
+@end
+
+@interface NSApplication : NSResponder
+
+extern NSApplication * NSApp;
+
+@property (class, readonly, strong) NSApplication *sharedApplication;
+
+- (void)finishLaunching;
+- (void)run;
+- (void)stop:(id)sender;
+- (void)terminate:(id)sender;
+
 @end
 
 @interface SomeObj : NSObject
+- (instancetype)_init;
 - (SomeObj *)mutableCopy;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;
@@ -146,6 +215,39 @@ __attribute__((objc_root_class))
 @interface OtherObj : SomeObj
 - (void)doMoreWork:(OtherObj *)other;
 @end
+
+@protocol OS_dispatch_queue
+@end
+
+typedef NSObject<OS_dispatch_queue> *dispatch_queue_t;
+
+@protocol OS_dispatch_queue_attr
+@end
+
+typedef NSObject<OS_dispatch_queue_attr> *dispatch_queue_attr_t;
+
+NS_RETURNS_RETAINED dispatch_queue_t dispatch_queue_create(const char *label, dispatch_queue_attr_t attr);
+const char *dispatch_queue_get_label(dispatch_queue_t queue);
+
+namespace std {
+
+template <typename StorageType>
+void swap(StorageType& a, StorageType& b)
+{
+  StorageType temp = static_cast<StorageType&&>(a);
+  a = static_cast<StorageType&&>(b);
+  b = static_cast<StorageType&&>(temp);
+}
+
+template <typename StorageType, typename ValueType>
+StorageType exchange(StorageType& obj, ValueType& value)
+{
+  StorageType returnValue = static_cast<StorageType&&>(obj);
+  obj = static_cast<StorageType&&>(value);
+  return returnValue;
+}
+
+}
 
 namespace WTF {
 
@@ -167,6 +269,14 @@ template <typename T> struct RemovePointer {
 
 template <typename T> struct RemovePointer<T*> {
   typedef T Type;
+};
+
+template <typename T> struct IsPointer {
+  static constexpr bool value = false;
+};
+
+template <typename T> struct IsPointer<T*> {
+  static constexpr bool value = true;
 };
 
 template <typename T> struct RetainPtr {
@@ -222,12 +332,23 @@ template <typename T> struct RetainPtr {
   PtrType operator->() const { return t; }
   T &operator*() const { return *t; }
   RetainPtr &operator=(PtrType t);
-  PtrType leakRef()
+
+  template <typename U = PtrType>
+  std::enable_if_t<IsPointer<U>::value, U> leakRef() CF_RETURNS_RETAINED
   {
     PtrType s = t;
     t = nullptr;
     return s;
   }
+
+  template <typename U = PtrType>
+  std::enable_if_t<!IsPointer<U>::value, U> leakRef() NS_RETURNS_RETAINED
+  {
+    PtrType s = t;
+    t = nullptr;
+    return s;
+  }
+
   operator PtrType() const { return t; }
   operator bool() const { return t; }
 
@@ -281,6 +402,117 @@ template<typename T> inline RetainPtr<T> retainPtr(T ptr)
 template<typename T> inline RetainPtr<T> retainPtr(T* ptr)
 {
   return ptr;
+}
+
+template<typename> class OSObjectPtr;
+template<typename T> OSObjectPtr<T> adoptOSObject(T);
+
+template<typename T> static inline void retainOSObject(T ptr)
+{
+#if !__has_feature(objc_arc)
+    [ptr retain];
+#endif
+}
+
+template<typename T> static inline void releaseOSObject(T ptr)
+{
+#if !__has_feature(objc_arc)
+    [ptr release];
+#endif
+}
+
+template<typename T> class OSObjectPtr {
+public:
+    OSObjectPtr()
+        : m_ptr(nullptr)
+    {
+    }
+
+    ~OSObjectPtr()
+    {
+        if (m_ptr)
+            releaseOSObject(m_ptr);
+    }
+
+    T get() const { return m_ptr; }
+
+    explicit operator bool() const { return m_ptr; }
+    bool operator!() const { return !m_ptr; }
+
+    OSObjectPtr(const OSObjectPtr& other)
+        : m_ptr(other.m_ptr)
+    {
+        if (m_ptr)
+            retainOSObject(m_ptr);
+    }
+
+    OSObjectPtr(OSObjectPtr&& other)
+        : m_ptr(std::move(other.m_ptr))
+    {
+        other.m_ptr = nullptr;
+    }
+
+    OSObjectPtr(T ptr)
+        : m_ptr(std::move(ptr))
+    {
+        if (m_ptr)
+            retainOSObject(m_ptr);
+    }
+
+    OSObjectPtr& operator=(const OSObjectPtr& other)
+    {
+        OSObjectPtr ptr = other;
+        swap(ptr);
+        return *this;
+    }
+
+    OSObjectPtr& operator=(OSObjectPtr&& other)
+    {
+        OSObjectPtr ptr = std::move(other);
+        swap(ptr);
+        return *this;
+    }
+
+    OSObjectPtr& operator=(decltype(nullptr))
+    {
+        if (m_ptr)
+            releaseOSObject(m_ptr);
+        m_ptr = nullptr;
+        return *this;
+    }
+
+    OSObjectPtr& operator=(T other)
+    {
+        OSObjectPtr ptr = std::move(other);
+        swap(ptr);
+        return *this;
+    }
+
+    void swap(OSObjectPtr& other)
+    {
+        std::swap(m_ptr, other.m_ptr);
+    }
+
+    T leakRef()
+    {
+        return std::exchange(m_ptr, nullptr);
+    }
+
+    friend OSObjectPtr adoptOSObject<T>(T);
+
+private:
+    struct AdoptOSObject { };
+    OSObjectPtr(AdoptOSObject, T ptr)
+        : m_ptr(std::move(ptr))
+    {
+    }
+
+    T m_ptr;
+};
+
+template<typename T> inline OSObjectPtr<T> adoptOSObject(T ptr)
+{
+    return OSObjectPtr<T> { typename OSObjectPtr<T>::AdoptOSObject { }, std::move(ptr) };
 }
 
 inline NSObject *bridge_cast(CFTypeRef object)
@@ -445,6 +677,8 @@ using WTF::RetainPtr;
 using WTF::adoptNS;
 using WTF::adoptCF;
 using WTF::retainPtr;
+using WTF::OSObjectPtr;
+using WTF::adoptOSObject;
 using WTF::downcast;
 using WTF::bridge_cast;
 using WTF::bridge_id_cast;
