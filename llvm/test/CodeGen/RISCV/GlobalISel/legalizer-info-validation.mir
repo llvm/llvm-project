@@ -689,8 +689,8 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_INSERT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_EXTRACT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
