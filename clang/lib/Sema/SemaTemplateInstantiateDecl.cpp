@@ -710,9 +710,9 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
 // This doesn't take any template parameters, but we have a custom action that
 // needs to happen when the kernel itself is instantiated. We need to run the
 // ItaniumMangler to mark the names required to name this kernel.
-static void instantiateDependentDeviceKernelAttr(
+static void instantiateDependentSYCLKernelAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const DeviceKernelAttr &Attr, Decl *New) {
+    const SYCLKernelAttr &Attr, Decl *New) {
   New->addAttr(Attr.clone(S.getASTContext()));
 }
 
@@ -966,8 +966,8 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
-    if (auto *A = dyn_cast<DeviceKernelAttr>(TmplAttr)) {
-      instantiateDependentDeviceKernelAttr(*this, TemplateArgs, *A, New);
+    if (auto *A = dyn_cast<SYCLKernelAttr>(TmplAttr)) {
+      instantiateDependentSYCLKernelAttr(*this, TemplateArgs, *A, New);
       continue;
     }
 
@@ -1522,9 +1522,9 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // If the old typedef was the name for linkage purposes of an anonymous
   // tag decl, re-establish that relationship for the new typedef.
   if (const TagType *oldTagType = D->getUnderlyingType()->getAs<TagType>()) {
-    TagDecl *oldTag = oldTagType->getOriginalDecl();
+    TagDecl *oldTag = oldTagType->getDecl();
     if (oldTag->getTypedefNameForAnonDecl() == D && !Invalid) {
-      TagDecl *newTag = DI->getType()->castAs<TagType>()->getOriginalDecl();
+      TagDecl *newTag = DI->getType()->castAs<TagType>()->getDecl();
       assert(!newTag->hasNameForLinkage());
       newTag->setTypedefNameForAnonDecl(Typedef);
     }
@@ -5727,7 +5727,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setDeclarationNameLoc(NameLocPointsToPattern());
 
   EnterExpressionEvaluationContextForFunction EvalContext(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Function);
 
   Qualifiers ThisTypeQuals;
   CXXRecordDecl *ThisContext = nullptr;
@@ -5791,7 +5791,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       QualType TransformRecordType(TypeLocBuilder &TLB, RecordTypeLoc TL) {
         const RecordType *T = TL.getTypePtr();
         RecordDecl *Record = cast_or_null<RecordDecl>(
-            getDerived().TransformDecl(TL.getNameLoc(), T->getOriginalDecl()));
+            getDerived().TransformDecl(TL.getNameLoc(), T->getDecl()));
         if (Record != OldDecl)
           return Base::TransformRecordType(TLB, TL);
 
