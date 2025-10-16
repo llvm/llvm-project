@@ -46,8 +46,8 @@ __fill(_RandomAccessIterator __first, _RandomAccessIterator __last, const _Tp& _
 template <class _SegmentedIterator,
           class _Tp,
           __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _SegmentedIterator
-__fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+_SegmentedIterator __fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value) {
   using __local_iterator_t = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
   std::__for_each_segment(__first, __last, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
     std::__fill(__lfirst, __llast, __value);
