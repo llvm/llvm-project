@@ -167,6 +167,8 @@ Expected<bool> LockFileManager::tryLock() {
   assert(std::holds_alternative<OwnerUnknown>(Owner) &&
          "lock has already been attempted");
 
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<128> AbsoluteFileName(FileName);
   if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName))
     return createStringError(EC, "failed to obtain absolute path for " +
@@ -264,6 +266,8 @@ LockFileManager::~LockFileManager() {
 
 WaitForUnlockResult
 LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
   assert(LockFileOwner &&
          "waiting for lock to be unlocked without knowing the owner");
@@ -293,5 +297,7 @@ LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
 }
 
 std::error_code LockFileManager::unsafeMaybeUnlock() {
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   return sys::fs::remove(LockFileName);
 }
