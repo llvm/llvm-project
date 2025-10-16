@@ -389,27 +389,22 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
         arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
   }
   Value indices = gatScatOp.getIndices();
-  // Extract indices layout and propagate it to all 'vector' ops created here
-  auto indicesLayout = xegpu::getDistributeLayoutAttr(indices);
   VectorType vecType = cast<VectorType>(indices.getType());
 
-  auto strideVector =
-      vector::BroadcastOp::create(rewriter, loc, vecType, strides.back());
-  xegpu::setDistributeLayoutAttr(strideVector->getOpResult(0), indicesLayout);
+  Value strideVector =
+      vector::BroadcastOp::create(rewriter, loc, vecType, strides.back())
+          .getResult();
+  Value stridedIndices =
+      arith::MulIOp::create(rewriter, loc, strideVector, indices).getResult();
 
-  auto stridedIndices =
-      arith::MulIOp::create(rewriter, loc, strideVector.getResult(), indices);
-  xegpu::setDistributeLayoutAttr(stridedIndices->getOpResult(0), indicesLayout);
-
-  auto baseVector = vector::BroadcastOp::create(
-      rewriter, loc,
-      VectorType::get(vecType.getShape(), rewriter.getIndexType()), baseOffset);
-  xegpu::setDistributeLayoutAttr(baseVector->getOpResult(0), indicesLayout);
-
-  auto result = arith::AddIOp::create(rewriter, loc, baseVector.getResult(),
-                                      stridedIndices.getResult());
-  xegpu::setDistributeLayoutAttr(result->getOpResult(0), indicesLayout);
-  return result.getResult();
+  Value baseVector =
+      vector::BroadcastOp::create(
+          rewriter, loc,
+          VectorType::get(vecType.getShape(), rewriter.getIndexType()),
+          baseOffset)
+          .getResult();
+  return arith::AddIOp::create(rewriter, loc, baseVector, stridedIndices)
+      .getResult();
 }
 
 template <
@@ -659,7 +654,6 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
                                 xeGatherOp.getResult(), gatherOp.getPassThru());
     xegpu::setDistributeLayoutAttr(selectOp.getConditionMutable(), layoutMask);
-    xegpu::setDistributeLayoutAttr(selectOp.getTrueValueMutable(), layoutRes);
     xegpu::setDistributeLayoutAttr(selectOp.getFalseValueMutable(),
                                    layoutPassThru);
     xegpu::setDistributeLayoutAttr(selectOp->getOpResult(0), layoutRes);

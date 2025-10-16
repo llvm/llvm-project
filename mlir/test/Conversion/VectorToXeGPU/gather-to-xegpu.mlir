@@ -268,13 +268,7 @@ gpu.func @load_dynamic_layout_operands(%source: memref<?x?xf32>,
   gpu.return %res : vector<8x16xf32>
 }
 // CHECK-LABEL:  @load_dynamic_layout_operands(
-// CHECK-SAME:   %[[SRC:.+]]: memref<?x?xf32>,
-// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
-// CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>, %[[MASK:.+]]: vector<8x16xi1>, %[[PASS:.+]]: vector<8x16xf32>) -> vector<8x16xf32> {
-// %indices producer doesn't have a layout, so as 'broadcast/add' ops computing linear index.
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} :  index to vector<8x16xindex>
-// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<8x16xindex>
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
 // CHECK-SAME:   {layout_operand_1 = #xegpu.layout<sg_layout = [1]>, layout_operand_2 = #xegpu.layout<sg_layout = [2]>,
 // CHECK-SAME:   layout_result_0 = #xegpu.layout<sg_layout = [0]>}
 // CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
@@ -305,14 +299,7 @@ gpu.func @load_dynamic_layout_mixed(%source: memref<?x?x?xf32>,
   gpu.return %res2 : vector<8x16xf32>
 }
 // CHECK-LABEL:  @load_dynamic_layout_mixed(
-// CHECK-SAME:   %[[SRC:.+]]: memref<?x?x?xf32>,
-// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
-// CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>) -> vector<8x16xf32> {
-// CHECK:        %[[PASS_THRU:.+]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [0]>} dense<0.000000e+00> : vector<8x16xf32>
-// Verify that linear-indices computation uses layout from the 'indices' producer op (%2).
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} :  index to vector<8x16xindex>
-// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
 // CHECK-SAME:   {{{[^}]*}}layout_operand_2 = #xegpu.layout<sg_layout = [7]>
 // CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>}
 // CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
@@ -343,14 +330,7 @@ gpu.func @load_static_layout_mixed(%source: memref<8x16x32xf32>,
   gpu.return %res2 : vector<8x16xf32>
 }
 // CHECK-LABEL:  @load_static_layout_mixed(
-// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
-// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
-// CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>) -> vector<8x16xf32> {
-// CHECK:        %[[PASS_THRU:.+]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [0]>} dense<0.000000e+00> : vector<8x16xf32>
-// Verify that linear-indices computation uses layout from the 'indices' producer op (%2).
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} :  index to vector<8x16xindex>
-// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
 // CHECK-SAME:   {{{[^}]*}}layout_operand_2 = #xegpu.layout<sg_layout = [7]>
 // CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>}
 // CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
@@ -381,15 +361,7 @@ gpu.func @load_dynamic_layout_mixed_override(%source: memref<?x?x?xf32>,
   gpu.return %res2 : vector<8x16xf32>
 }
 // CHECK-LABEL:  @load_dynamic_layout_mixed_override(
-// CHECK-SAME:   %[[SRC:.+]]: memref<?x?x?xf32>,
-// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
-// CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>) -> vector<8x16xf32> {
-// CHECK:        %[[PASS_THRU:.+]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [0]>} dense<0.000000e+00> : vector<8x16xf32>
-// Verify that linear-indices computation uses layout from the 'indices' producer op (%2)
-// and not it's overriden version from the scatter_op (sg_layout = [99])
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} :  index to vector<8x16xindex>
-// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[BASE_I64:.+]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]]
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
 // CHECK-SAME:   {layout_operand_1 = #xegpu.layout<sg_layout = [99]>, layout_operand_2 = #xegpu.layout<sg_layout = [7]>
 // CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>}
 // CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
