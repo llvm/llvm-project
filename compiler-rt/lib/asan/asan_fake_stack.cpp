@@ -221,7 +221,7 @@ static void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
 void ResetTLSFakeStack() { fake_stack_tls = nullptr; }
 #else
 static FakeStack* GetTLSFakeStack() { return nullptr; }
-static void SetTLSFakeStack(FakeStack *fs) {}
+static void SetTLSFakeStack(FakeStack*) {}
 void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
