@@ -590,10 +590,9 @@ _mm_mulhrs_pi16(__m64 __a, __m64 __b)
 ///    Bits [6:4] Reserved.  \n
 ///    Bits [3:0] select the source byte to be copied.
 /// \returns A 128-bit integer vector containing the copied or cleared values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_shuffle_epi8(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_pshufb128((__v16qi)__a, (__v16qi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_shuffle_epi8(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pshufb128((__v16qi)__a, (__v16qi)__b);
 }
 
 /// Copies the 8-bit integers from a 64-bit integer vector to the
@@ -615,13 +614,12 @@ _mm_shuffle_epi8(__m128i __a, __m128i __b)
 ///    destination. \n
 ///    Bits [2:0] select the source byte to be copied.
 /// \returns A 64-bit integer vector containing the copied or cleared values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_shuffle_pi8(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_pshufb128(
-        (__v16qi)__builtin_shufflevector(
-            (__v2si)(__a), __extension__ (__v2si){}, 0, 1, 0, 1),
-        (__v16qi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_shuffle_pi8(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pshufb128(
+      (__v16qi)__builtin_shufflevector((__v2si)(__a), __extension__(__v2si){},
+                                       0, 1, 0, 1),
+      (__v16qi)__zext128(__b)));
 }
 
 /// For each 8-bit integer in the first source operand, perform one of
