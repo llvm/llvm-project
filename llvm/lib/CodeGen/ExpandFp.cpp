@@ -1055,7 +1055,6 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (I.getOperand(0)->getType()->isScalableTy())
         continue;
 
-
       auto *IntTy = cast<IntegerType>(Ty->getScalarType());
 
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
