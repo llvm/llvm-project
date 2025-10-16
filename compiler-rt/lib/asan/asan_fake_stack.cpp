@@ -231,17 +231,25 @@ static FakeStack* GetFakeStack() {
 }
 
 static FakeStack* GetFakeStackFast() {
-  if (FakeStack* fs = GetTLSFakeStack())
+  FakeStack* fs = GetTLSFakeStack();
+  if (LIKELY(fs))
     return fs;
   if (!__asan_option_detect_stack_use_after_return)
     return nullptr;
-  return GetFakeStack();
+  fs = GetFakeStack();
+  if (LIKELY(fs))
+    SetTLSFakeStack(fs);
+  return fs;
 }
 
 static FakeStack* GetFakeStackFastAlways() {
-  if (FakeStack* fs = GetTLSFakeStack())
+  FakeStack* fs = GetTLSFakeStack();
+  if (LIKELY(fs))
     return fs;
-  return GetFakeStack();
+  fs = GetFakeStack();
+  if (LIKELY(fs))
+    SetTLSFakeStack(fs);
+  return fs;
 }
 
 static ALWAYS_INLINE uptr OnMalloc(uptr class_id, uptr size) {
