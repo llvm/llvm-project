@@ -85,84 +85,11 @@ bool InstrumentationRuntimeMainThreadChecker::CheckIfRuntimeIsValid(
 static std::string TranslateObjCNameToSwiftName(std::string className,
                                                 std::string selector,
                                                 StackFrameSP swiftFrame) {
-  if (className.empty() || selector.empty())
-    return "";
-  ModuleSP swiftModule = swiftFrame->GetFrameCodeAddress().GetModule();
-  if (!swiftModule)
-    return "";
-
-  auto type_system_or_err = swiftModule->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-  if (!type_system_or_err) {
-    llvm::consumeError(type_system_or_err.takeError());
-    return "";
-  }
-
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
-  if (!ts)
-    return "";
-  const SymbolContext *sc = nullptr;
-  if (swiftFrame)
-    sc = &swiftFrame->GetSymbolContext(eSymbolContextFunction);
-  if (!sc)
-    return "";
-  auto ctx = ts->GetSwiftASTContext(*sc);
-  if (!ctx)
-    return "";
-  swift::ClangImporter *imp = ctx->GetClangImporter();
-  if (!imp)
-    return "";
-
-  size_t numArguments = llvm::StringRef(selector).count(':');
-  llvm::SmallVector<llvm::StringRef, 4> parts;
-  llvm::StringRef(selector).split(parts, ":", /*MaxSplit*/ -1,
-      /*KeepEmpty*/ false);
-
-  llvm::SmallVector<swift::Identifier, 2> selectorIdentifiers;
-  for (size_t i = 0; i < parts.size(); i++) {
-    selectorIdentifiers.push_back(ctx->GetIdentifier(parts[i]));
-  }
-
-  class MyConsumer : public swift::VisibleDeclConsumer {
-  public:
-    swift::ObjCSelector selectorToLookup;
-    swift::DeclName result;
-
-    MyConsumer(swift::ObjCSelector selector) : selectorToLookup(selector) {}
-
-     void foundDecl(swift::ValueDecl *VD,
-                           swift::DeclVisibilityKind Reason,
-                           swift::DynamicLookupInfo) override{
-      if (result)
-        return; // Take the first result.
-      swift::ClassDecl *cls = llvm::dyn_cast<swift::ClassDecl>(VD);
-      if (!cls)
-        return;
-      auto funcs = cls->lookupDirect(selectorToLookup, true);
-      if (funcs.size() == 0)
-        return;
-
-      // If the decl is actually an accessor, use the property name instead.
-      swift::AbstractFunctionDecl *decl = funcs.front();
-      if (auto accessor = llvm::dyn_cast<swift::AccessorDecl>(decl)) {
-        result = accessor->getStorage()->getName();
-        return;
-      }
-
-      result = decl->getName();
-    }
-  };
-
-  ThreadSafeASTContext ast_ctx = ctx->GetASTContext();
-  MyConsumer consumer(swift::ObjCSelector(**ast_ctx, numArguments,
-                                          selectorIdentifiers));
-  // FIXME(mracek): Switch to a new API that translates the Clang class name
-  // to Swift class name, once this API exists. Now we assume they are the same.
-  imp->lookupValue(ctx->GetIdentifier(className), consumer);
-
-  if (!consumer.result)
-    return "";
-  llvm::SmallString<32> scratchSpace;
-  return className + "." + consumer.result.getString(scratchSpace).str();
+  // FIXME: This used to be implemented in terms of Swift AST
+  // operations. We should reimplement this on top of
+  // TypeSystemSwiftTypeRef::GetSwiftName() which uses the APINotes
+  // and ClangImporter's name translation engine to do the job.
+  return className + "." + selector;
 }
 #endif // LLDB_ENABLE_SWIFT
 
