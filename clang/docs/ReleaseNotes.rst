@@ -518,6 +518,7 @@ X86 Support
 - Remove `[no-]evex512` feature request from intrinsics and builtins.
 - Change features `avx10.x-[256,512]` to `avx10.x`.
 - `-march=wildcatlake` is now supported.
+- `-march=novalake` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

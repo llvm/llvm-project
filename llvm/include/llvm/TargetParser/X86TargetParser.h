@@ -117,6 +117,7 @@ enum CPUKind {
   CK_Lunarlake,
   CK_Pantherlake,
   CK_Wildcatlake,
+  CK_Novalake,
   CK_Sierraforest,
   CK_Grandridge,
   CK_Graniterapids,

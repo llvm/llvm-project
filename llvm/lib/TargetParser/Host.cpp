@@ -1152,6 +1152,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
