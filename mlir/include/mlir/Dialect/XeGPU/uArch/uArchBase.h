@@ -145,7 +145,7 @@ struct uArch {
       : name(name), description(description),
         registerFileInfo(registerFileInfo), cacheInfo(cacheInfo),
         instructions(instructions) {}
-
+  virtual ~uArch() = default;
   // Get methods
   const std::string &getName() const { return name; }
 
