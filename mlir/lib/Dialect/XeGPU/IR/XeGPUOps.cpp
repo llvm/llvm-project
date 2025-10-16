@@ -125,7 +125,7 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 // rank.
 static LogicalResult
 isValidNdOffset(TypedValue<TensorDescType> tDesc,
-                std::optional<llvm::ArrayRef<long int>> constOffsets,
+                std::optional<llvm::ArrayRef<int64_t>> constOffsets,
                 int64_t offsetSize,
                 function_ref<InFlightDiagnostic()> emitError) {
   if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
