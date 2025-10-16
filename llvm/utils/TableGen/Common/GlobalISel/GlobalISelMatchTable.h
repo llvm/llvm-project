@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -840,6 +841,7 @@ public:
     OPM_MBB,
     OPM_RecordNamedOperand,
     OPM_RecordRegType,
+    OPM_MOType,
   };
 
 protected:
@@ -1927,6 +1929,22 @@ public:
   unsigned countRendererFns() const override {
     return InsnMatcher->countRendererFns();
   }
+};
+
+class MachineOperandTypeMatcher : public OperandPredicateMatcher {
+  const MachineOperand::MachineOperandType MOTy;
+
+public:
+  MachineOperandTypeMatcher(unsigned InsnVarID, unsigned OpIdx,
+                            MachineOperand::MachineOperandType MOTy)
+      : OperandPredicateMatcher(OPM_MOType, InsnVarID, OpIdx), MOTy(MOTy) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_MOType;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
 };
 
 //===- Actions ------------------------------------------------------------===//

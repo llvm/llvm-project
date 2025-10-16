@@ -1824,6 +1824,72 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 }
 
+class GlobalLoadIntrinWrapper<SDPatternOperator intrin> : PatFrag<
+  (ops node:$ptr, node:$cpol),
+  (intrin $ptr, $cpol)>;
+
+def wrapped_global_load_b128_intrin : GlobalLoadIntrinWrapper<int_amdgcn_global_load_b128>;
+
+class FlatLoadIntrinSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), srcvalue)),
+  (inst $vaddr, $offset)
+>;
+
+class FlatLoadIntrinSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), srcvalue)),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+multiclass GlobalFLATLoadIntrinPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadIntrinSignedPat <inst, node, vt> {
+    let AddedComplexity = 10;
+    let SubtargetPredicate = inst.SubtargetPredicate;
+    let OtherPredicates = inst.OtherPredicates;
+  }
+  
+  def : FlatLoadIntrinSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+    let SubtargetPredicate = inst.SubtargetPredicate;
+    let OtherPredicates = inst.OtherPredicates;
+  }  
+}
+
+class GlobalStoreIntrinWrapper<SDPatternOperator intrin> : PatFrag<
+  (ops node:$data, node:$ptr, node:$scope),
+  (intrin $ptr, $data, $scope)>;
+
+def wrapped_global_store_b128_intrin : GlobalStoreIntrinWrapper<int_amdgcn_global_store_b128>;
+
+class FlatStoreIntrinSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (node vt:$data, (GlobalOffset i64:$vaddr, i32:$offset), srcvalue),
+  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
+>;
+
+class FlatStoreIntrinSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                            ValueType vt> : GCNPat <
+  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), srcvalue),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
+>;
+
+multiclass GlobalFLATStoreIntrinPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatStoreIntrinSignedPat <inst, node, vt> {
+    let SubtargetPredicate = inst.SubtargetPredicate;
+    let OtherPredicates = inst.OtherPredicates;
+    let AddedComplexity = 10;
+  }
+
+  def : FlatStoreIntrinSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let SubtargetPredicate = inst.SubtargetPredicate;
+    let OtherPredicates = inst.OtherPredicates;
+    let AddedComplexity = 11;
+  }
+}
+
+let SubtargetPredicate = isGFX940Plus in {
+defm : GlobalFLATLoadIntrinPats <GLOBAL_LOAD_DWORDX4, wrapped_global_load_b128_intrin, v4i32>;
+defm : GlobalFLATStoreIntrinPats <GLOBAL_STORE_DWORDX4, wrapped_global_store_b128_intrin, v4i32>;
+}
+
 multiclass GlobalFLATStorePats_D16_t16<string inst, SDPatternOperator node, ValueType vt> {
   def : FlatStoreSignedPat<!cast<FLAT_Pseudo>(inst#"_t16"), node, vt> {
     let AddedComplexity = 10;

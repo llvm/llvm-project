@@ -1513,6 +1513,86 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * 1 - Data cache.
 
                                                    Instruction cache prefetches are unsafe on invalid address.
+
+  llvm.amdgcn.global.load.b128                 This intrinsic is supported on gfx942, gfx950.
+  
+                                                   Signature:
+                                                   
+                                                   .. code-block:: llvm
+                                                      
+                                                      <4 x i32> @llvm.amdgcn.raw.load.store.b128(
+                                                          ptr addrspace(1), ; source
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Reads the value from the source address with cache behavior
+                                                   specified by the scope.
+
+                                                   For gfc942 and gfx950 devices, this emits a
+                                                   ``global_load_dwordx4`` instruction with the appropriate
+                                                   ``SC0`` and ``SC1`` bits set.
+
+                                                   Valid values for scope are
+                                                   
+                                                   ===================== =============================================================
+                                                   scope                 architecture name
+                                                   ===================== =============================================================
+                                                   ``"wavefront"``       wave
+                                                   
+                                                   ``"workgroup"``       group
+                                                   
+                                                   ``"agent"``           device
+                                                   
+                                                   ``""`` (empty string) system
+                                                   ===================== =============================================================
+ 
+                                                   For semantics on gfx942, see Table 47 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference.
+                                                   
+                                                   For semantics on gfx950, see Table 49 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the CDNA4
+                                                   Instruction Set Architecture Reference.
+                                                                                                      
+  llvm.amdgcn.global.store.b128                This intrinsic is supported on gfx942, gfx950.
+  
+                                                   Signature:
+                                                   
+                                                   .. code-block:: llvm
+                                                      
+                                                      void @llvm.amdgcn.global.store.b128(
+                                                          ptr addrspace(1), ; destination
+                                                          <4 x i32>,        ; value
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Writes the value to the destination address with cache
+                                                   behavior specified by the scope.
+
+                                                   For gfc942 and gfx950 devices, this emits a
+                                                   ``global_store_dwordx4`` instruction with the appropriate
+                                                   ``SC0`` and ``SC1`` bits set.
+
+                                                   Valid values for scope are
+                                                   
+                                                   ===================== =============================================================
+                                                   scope                 architecture name
+                                                   ===================== =============================================================
+                                                   ``"wavefront"``       wave
+                                                   
+                                                   ``"workgroup"``       group
+                                                   
+                                                   ``"agent"``           device
+                                                   
+                                                   ``""`` (empty string) system
+                                                   ===================== =============================================================
+ 
+                                                   For semantics on gfx942, see Table 48 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference.
+                                                   
+                                                   For semantics on gfx950, see Table 50 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the CDNA4
+                                                   Instruction Set Architecture Reference.
+                                                                                                      
   ==============================================   ==========================================================
 
 .. TODO::
