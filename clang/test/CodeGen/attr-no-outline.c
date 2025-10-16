@@ -1,6 +1,17 @@
-// RUN: %clang_cc1 -emit-llvm -x c %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks | FileCheck %s --check-prefix=C
-// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks | FileCheck %s --check-prefix=CXX
-// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23 | FileCheck %s --check-prefixes=CXX,CXX23
+// RUN: %clang_cc1 -emit-llvm -x c %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -DTEST_ATTR | FileCheck %s --check-prefix=C
+// RUN: %clang_cc1 -emit-llvm -x c %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -mno-outline | FileCheck %s --check-prefix=C
+
+// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -DTEST_ATTR | FileCheck %s --check-prefix=CXX
+// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -mno-outline | FileCheck %s --check-prefix=CXX
+// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -DTEST_ATTR -std=c++23 | FileCheck %s --check-prefixes=CXX,CXX23
+// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -mno-outline -std=c++23 | FileCheck %s --check-prefixes=CXX,CXX23
+
+
+#ifdef TEST_ATTR
+#define NOOUTLINE [[clang::nooutline]]
+#else
+#define NOOUTLINE
+#endif
 
 // C-LABEL: define dso_local i32 @toplevel_func(
 // C-SAME: ) #[[ATTR0:[0-9]+]] {
