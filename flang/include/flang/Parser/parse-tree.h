@@ -4202,7 +4202,7 @@ struct OmpAffinityClause {
 
 // Ref: 5.2: [174]
 struct OmpAlignClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntExpr);
+  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntConstantExpr);
 };
 
 // Ref: [4.5:72-81], [5.0:110-119], [5.1:134-143], [5.2:169-170]
