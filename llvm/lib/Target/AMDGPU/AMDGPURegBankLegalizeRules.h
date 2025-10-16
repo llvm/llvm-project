@@ -92,8 +92,10 @@ enum UniformityLLTOpPredicateID {
   V4S32,
 
   UniV2S16,
+  UniV2S32,
 
   DivV2S16,
+  DivV2S32,
 
   // B types
   B32,
@@ -178,7 +180,9 @@ enum RegBankLLTMappingApplyID {
   UniInVcc,
   UniInVgprS16,
   UniInVgprS32,
+  UniInVgprS64,
   UniInVgprV2S16,
+  UniInVgprV2S32,
   UniInVgprV4S32,
   UniInVgprB32,
   UniInVgprB64,
