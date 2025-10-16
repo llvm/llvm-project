@@ -448,6 +448,7 @@ ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
 LANGOPT(RegCall4, 1, 0, NotCompatible, "Set __regcall4 as a default calling convention to respect __regcall ABI v.4")
 
 LANGOPT(MatrixTypes, 1, 0, NotCompatible, "Enable or disable the builtin matrix type")
+VALUE_LANGOPT(MaxMatrixDimension, 32, (1 << 20) - 1, NotCompatible, "maximum allowed matrix dimension")
 
 LANGOPT(CXXAssumptions, 1, 1, NotCompatible, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
 

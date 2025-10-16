@@ -3813,6 +3813,18 @@ struct OmpAlwaysModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpAlwaysModifier, Value);
 };
 
+// Ref: [coming in 6.1]
+//
+// attach-modifier ->
+//    ATTACH(attachment-mode)                       // since 6.1
+//
+// attachment-mode ->
+//    ALWAYS | AUTO | NEVER
+struct OmpAttachModifier {
+  ENUM_CLASS(Value, Always, Never, Auto)
+  WRAPPER_CLASS_BOILERPLATE(OmpAttachModifier, Value);
+};
+
 // Ref: [6.0:289-290]
 //
 // automap-modifier ->
@@ -4575,6 +4587,7 @@ struct OmpLoopRangeClause {
 // modifier ->
 //    map-type-modifier [replaced] |                // since 4.5, until 5.2
 //    always-modifier |                             // since 6.0
+//    attach-modifier |                             // since 6.1
 //    close-modifier |                              // since 6.0
 //    delete-modifier |                             // since 6.0
 //    present-modifier |                            // since 6.0
@@ -4589,9 +4602,9 @@ struct OmpLoopRangeClause {
 // and delete-modifier has been split from map-type.
 struct OmpMapClause {
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
-  MODIFIER_BOILERPLATE(OmpAlwaysModifier, OmpCloseModifier, OmpDeleteModifier,
-      OmpMapTypeModifier, OmpPresentModifier, OmpRefModifier, OmpSelfModifier,
-      OmpMapper, OmpIterator, OmpMapType, OmpxHoldModifier);
+  MODIFIER_BOILERPLATE(OmpAlwaysModifier, OmpAttachModifier, OmpCloseModifier,
+      OmpDeleteModifier, OmpMapTypeModifier, OmpPresentModifier, OmpRefModifier,
+      OmpSelfModifier, OmpMapper, OmpIterator, OmpMapType, OmpxHoldModifier);
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 

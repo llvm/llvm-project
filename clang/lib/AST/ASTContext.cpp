@@ -4717,8 +4717,8 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
 
   assert(MatrixType::isValidElementType(ElementTy) &&
          "need a valid element type");
-  assert(ConstantMatrixType::isDimensionValid(NumRows) &&
-         ConstantMatrixType::isDimensionValid(NumColumns) &&
+  assert(NumRows > 0 && NumRows <= LangOpts.MaxMatrixDimension &&
+         NumColumns > 0 && NumColumns <= LangOpts.MaxMatrixDimension &&
          "need valid matrix dimensions");
   void *InsertPos = nullptr;
   if (ConstantMatrixType *MTP = MatrixTypes.FindNodeOrInsertPos(ID, InsertPos))
