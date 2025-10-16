@@ -8,7 +8,8 @@
 volatile uintptr_t saved;
 
 ATTRIBUTE_NOINLINE bool IsOnRealStack(uintptr_t caller_frame) {
-  uintptr_t this_frame = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+  uintptr_t this_frame =
+      reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
   return this_frame <= saved && saved <= caller_frame;
 }
 
