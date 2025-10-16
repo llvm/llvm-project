@@ -59,3 +59,13 @@ namespace TypeidPtrInEvaluationResult {
   consteval const std::type_info *ftype_info() { return &typeid(c); }
   const std::type_info *T1 = ftype_info();
 }
+
+// Regression test for crash in ArrayElemPtrPop with typeid pointers. GH-163127
+namespace TypeidPtrRegression {
+  void dontcrash() {
+    // this should just be an error and not an ICE
+    constexpr auto res = ((void**)&typeid(int))[0]; // both-error {{must be initialized by a constant expression}} \
+                                                                // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  }
+}
+
