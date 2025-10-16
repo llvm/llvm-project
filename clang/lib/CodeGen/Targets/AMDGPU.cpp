@@ -342,9 +342,6 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
-  llvm::StringMap<bool> TargetFetureMap;
-  M.getContext().getFunctionFeatureMap(TargetFetureMap, FD);
-
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
