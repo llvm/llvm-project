@@ -12,14 +12,14 @@
 #ifndef LLVM_CODEGEN_MACHINELANESSAUPDATER_H
 #define LLVM_CODEGEN_MACHINELANESSAUPDATER_H
 
-#include "llvm/MC/LaneBitmask.h"        // LaneBitmask
-#include "llvm/ADT/SmallVector.h"        // SmallVector
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"        // SmallVector
+#include "llvm/CodeGen/LiveInterval.h"    // LiveRange
 #include "llvm/CodeGen/Register.h"       // Register
 #include "llvm/CodeGen/SlotIndexes.h"    // SlotIndex
-#include "llvm/CodeGen/LiveInterval.h"    // LiveRange
 #include "llvm/CodeGen/TargetRegisterInfo.h" // For inline function
+#include "llvm/MC/LaneBitmask.h"        // LaneBitmask
 
 namespace llvm {
 
@@ -35,11 +35,19 @@ class MachinePostDominatorTree; // optional if you choose to use it
 //===----------------------------------------------------------------------===//
 // MachineLaneSSAUpdater: universal SSA repair for Machine IR (lane-aware)
 //
-// Use Case: repairSSAForNewDef()
+// Primary Use Case: repairSSAForNewDef()
 //   - Caller creates a new instruction that defines an existing vreg (violating SSA)
-//   - This function creates a new vreg, replaces the operand, and repairs SSA
+//   - This function creates a new vreg (or uses a caller-provided one), 
+//     replaces the operand, and repairs SSA
 //   - Example: Insert "OrigVReg = ADD ..." and call repairSSAForNewDef()
-//   - This works for all scenarios including spill/reload
+//   - Works for full register and subregister definitions
+//   - Handles all scenarios including spill/reload
+//
+// Advanced Usage: Caller-provided NewVReg
+//   - By default, repairSSAForNewDef() creates a new virtual register automatically
+//   - For special cases (e.g., subregister reloads where the spiller already 
+//     created a register of a specific class), caller can provide NewVReg
+//   - This gives full control over register class selection when needed
 //===----------------------------------------------------------------------===//
 class MachineLaneSSAUpdater {
 public:
@@ -49,20 +57,29 @@ public:
                         const TargetRegisterInfo &TRI)
       : MF(MF), LIS(LIS), MDT(MDT), TRI(TRI) {}
 
-  // Use Case 1 (Common): Repair SSA for a new definition
+  // Repair SSA for a new definition that violates SSA form
   // 
-  // NewDefMI: Instruction with a def operand that currently defines OrigVReg (violating SSA)
-  // OrigVReg: The virtual register being redefined
+  // Parameters:
+  //   NewDefMI: Instruction with a def operand that currently defines OrigVReg (violating SSA)
+  //   OrigVReg: The virtual register being redefined
+  //   NewVReg:  (Optional) Pre-allocated virtual register to use instead of auto-creating one
   //
   // This function will:
   //   1. Find the def operand in NewDefMI that defines OrigVReg
   //   2. Derive the lane mask from the operand's subreg index (if any)
-  //   3. Create a new virtual register with appropriate register class
+  //   3. Use NewVReg if provided, or create a new virtual register with appropriate class
   //   4. Replace the operand in NewDefMI to define the new vreg
   //   5. Perform SSA repair (insert PHIs, rewrite uses)
   //
-  // Returns: The newly created virtual register
-  Register repairSSAForNewDef(MachineInstr &NewDefMI, Register OrigVReg);
+  // When to provide NewVReg:
+  //   - Leave it empty (default) for most cases - automatic class selection works well
+  //   - Provide it when you need precise control over register class selection
+  //   - Common use case: subregister spill/reload where target-specific constraints apply
+  //   - Example: Reloading a 96-bit subregister requires vreg_96 class (not vreg_128)
+  //
+  // Returns: The SSA-repaired virtual register (either NewVReg or auto-created)
+  Register repairSSAForNewDef(MachineInstr &NewDefMI, Register OrigVReg,
+                             Register NewVReg = Register());
 
 private:
   // Common SSA repair logic
