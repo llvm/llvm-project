@@ -6,22 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if __CLC_VECSIZE_OR_1 == 1
+
 #if __CLC_FPSIZE == 64
-#define NAN_MASK 0x7ff8000000000000ul
+#define __CLC_IMPL_FUNCTION __builtin_nan
 #elif __CLC_FPSIZE == 32
-#define NAN_MASK 0x7fc00000
+#define __CLC_IMPL_FUNCTION __builtin_nanf
 #elif __CLC_FPSIZE == 16
-#define NAN_MASK 0x7e00
+#define __CLC_IMPL_FUNCTION __builtin_nanf16
 #endif
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_nan(__CLC_U_GENTYPE code) {
-  const __CLC_U_GENTYPE mask = NAN_MASK;
-  const __CLC_U_GENTYPE res = code | mask;
-  return __CLC_AS_GENTYPE(res);
+  return __CLC_IMPL_FUNCTION("");
 }
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_nan(__CLC_S_GENTYPE code) {
-  return __clc_nan(__CLC_AS_U_GENTYPE(code));
+  return __CLC_IMPL_FUNCTION("");
 }
 
-#undef NAN_MASK
+#undef __CLC_IMPL_FUNCTION
+
+#endif // __CLC_VECSIZE_OR_1 == 1
