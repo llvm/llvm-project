@@ -1818,7 +1818,7 @@ ReoptimizeBlock:
 bool BranchFolder::HoistCommonCode(MachineFunction &MF) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : llvm::make_early_inc_range(MF))
-    MadeChange |= HoistCommonCodeInSuccs(&MBB);
+    MadeChange |= HoistCommonCodeInSuccs(&MBB, MF);
 
   return MadeChange;
 }
@@ -1948,7 +1948,8 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
   return PI;
 }
 
-bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
+bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB,
+                                          MachineFunction &MF) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
   if (TII->analyzeBranch(*MBB, TBB, FBB, Cond, true) || !TBB || Cond.empty())
@@ -1991,6 +1992,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
     if (TII->isPredicated(*TIB))
       // Hard to reason about register liveness with predicated instruction.
+      break;
+
+    if (!TII->isSafeToMove(*TIB, MBB, MF))
+      // Don't hoist the instruction if it isn't safe to move.
       break;
 
     bool IsSafe = true;
