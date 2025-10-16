@@ -189,22 +189,27 @@ public:
   mapType &commonBlocks() { return commonBlocks_; }
   const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(SourceName, SourceName location);
-  bool AddCommonBlock(const SourceName &name, Symbol &cbSymbol);
+  bool AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol);
 
-  /// Find COMMON block in the current scope
-  Symbol *FindCB(const SourceName &name) const {
+  // Find COMMON block that is not USE-associated in the current scope
+  Symbol *FindCommonBlock(const SourceName &name) const  {
     if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
       return &*it->second;
     }
     return nullptr;
   }
 
-  /// Find COMMON block that is not USE-associated in the current scope
-  Symbol *FindCommonBlock(const SourceName &) const;
+  // Find USE-associated COMMON block in the current scope
+  Symbol *FindCommonBlockUse(const SourceName &name) const  {
+    if (const auto it{useCommonBlocks_.find(name)}; it != useCommonBlocks_.end()) {
+      return &*it->second;
+    }
+    return nullptr;
+  }
 
-  /// Find COMMON block in current and surrounding scopes, follow USE
-  /// associations
-  Symbol *FindCommonBlockInScopes(const SourceName &) const;
+  // Find COMMON block in current and surrounding scopes, follow USE
+  // associations
+  Symbol *FindCommonBlockInSurroundingScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>
@@ -298,6 +303,7 @@ private:
   std::list<Scope> children_;
   mapType symbols_;
   mapType commonBlocks_;
+  mapType useCommonBlocks_; // USE-assocated COMMON blocks
   std::list<EquivalenceSet> equivalenceSets_;
   mapType crayPointers_;
   std::map<SourceName, common::Reference<Scope>> submodules_;
