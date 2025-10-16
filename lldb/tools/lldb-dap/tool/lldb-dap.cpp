@@ -268,7 +268,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     // Clear the screen.
     llvm::outs() << ANSI_CSI_RESET_CURSOR ANSI_CSI_ERASE_VIEWPORT
             ANSI_CSI_ERASE_SCROLLBACK;
-    // VSCode will reuse the same terminal for the same debug configuration
+    // VS Code will reuse the same terminal for the same debug configuration
     // between runs. Clear the input buffer prior to starting the new process so
     // prior input is not carried forward to the new debug session.
     tcflush(STDIN_FILENO, TCIFLUSH);
