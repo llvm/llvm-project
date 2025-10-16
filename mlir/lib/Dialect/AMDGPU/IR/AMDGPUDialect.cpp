@@ -339,6 +339,19 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledExtPacked816Op
+//===----------------------------------------------------------------------===//
+LogicalResult ScaledExtPacked816Op::verify() {
+  int blockSize = getBlockSize();
+  assert((blockSize == 16 || blockSize == 32) && "invalid block size");
+  int firstScaleByte = getFirstScaleByte();
+  if (blockSize == 16 && firstScaleByte == 2) {
+    return emitOpError("blockSize of 16 cannot have firstScaleByte be 2.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WMMAOp
 //===----------------------------------------------------------------------===//
 LogicalResult WMMAOp::verify() {

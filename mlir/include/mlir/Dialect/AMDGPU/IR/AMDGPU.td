@@ -176,6 +176,8 @@ def AMDGPU_ScaledExtPacked816Op
     }
   }];
 
+  let hasVerifier = 1;
+
 }
 
 def AMDGPU_ScaledExtPackedOp
