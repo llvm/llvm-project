@@ -335,14 +335,21 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       }
     }
     if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
-      if (VPI->getOpcode() == VPInstruction::ExplicitVectorLength &&
-          !verifyEVLRecipe(*VPI)) {
-        errs() << "EVL VPValue is not used correctly\n";
-        return false;
-      } else if (VPI->getOpcode() == VPInstruction::LastActiveLane &&
-                 !verifyLastActiveLaneRecipe(*VPI)) {
+      switch (VPI->getOpcode()) {
+      case VPInstruction::ExplicitVectorLength:
+        if (!verifyEVLRecipe(*VPI)) {
+          errs() << "EVL VPValue is not used correctly\n";
+          return false;
+        }
+        break;
+case VPInstruction::LastActiveLane:
+                 if (!verifyLastActiveLaneRecipe(*VPI)) {
         errs() << "LastActiveLane VPValue is not used correctly\n";
         return false;
+                 }
+        break;
+      default:
+        break;
       }
     }
   }

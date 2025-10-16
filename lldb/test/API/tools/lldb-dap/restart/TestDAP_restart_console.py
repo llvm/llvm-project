@@ -105,7 +105,7 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         # Restart and check that we still get a stopped event before reaching
         # main.
         self.dap_server.request_restart()
-        stopped_events = self.dap_server.wait_for_stopped(timeout=20)
+        stopped_events = self.dap_server.wait_for_stopped()
         self.verify_stopped_on_entry(stopped_events)
 
         # continue to main
