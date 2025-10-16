@@ -104,25 +104,16 @@ public:
     return find(ExpandableTypes, VT.getSimpleVT()) != ExpandableTypes.end();
   }
 
-  /// Return true if the pass should expand a frem instruction of the
-  /// given \p Ty for the target represented by \p TLI. Expansion
-  /// should happen if the legalization for the scalar type uses a
-  /// non-existing libcall.
   static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
     assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
-
-    TargetLowering::LegalizeAction LA = TLI.getOperationAction(ISD::FREM, VT);
-    if (LA != TargetLowering::LegalizeAction::Expand)
-      return false;
-
-    auto Libcall = getFremLibcallForType(VT);
-    return Libcall.has_value() && !TLI.getLibcallName(*Libcall);
+    return (TLI.getOperationAction(ISD::FREM, VT) ==
+            TargetLowering::LegalizeAction::Expand);
   }
 
   static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
-    // Consider scalar type for simplicity.
-    // It is very unlikely that a vector type can be legalized without a libcall
-    // if the scalar type cannot.
+    // Consider scalar type for simplicity.  It seems unlikely that a
+    // vector type can be legalized without expansion if the scalar
+    // type cannot.
     return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
   }
 
