@@ -10934,7 +10934,7 @@ __m512i test_mm512_maskz_set1_epi32(__mmask16 __M, int __A)
     return _mm512_maskz_set1_epi32(__M, __A);
 }
 
-TEST_CONSTEXPR(match_v16si(_mm512_maskz_set1_epi32(0xAAAA, 19), 19, 0, 19, 0, 19, 0, 19, 0, 19, 0, 19, 0, 19, 0, 19, 0));
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_set1_epi32(0xAAAA, 19), 0,19,0,19,0,19,0,19,0,19,0,19,0,19,0,19));
 
 
 __m512i test_mm512_set_epi8(char e63, char e62, char e61, char e60, char e59,
