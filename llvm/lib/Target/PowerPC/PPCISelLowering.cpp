@@ -19213,7 +19213,8 @@ static SDValue combineADDToSUB(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Handle v2i64, v4i32, v8i16 and v16i8 types
-  if (!VT.isVector() || VT.getSizeInBits() != 128)
+  if (!(VT == MVT::v8i16 || VT == MVT::v16i8 || VT == MVT::v4i32 ||
+        VT == MVT::v2i64))
     return SDValue();
 
   SDValue LHS = N->getOperand(0);
