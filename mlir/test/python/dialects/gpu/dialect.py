@@ -2,7 +2,8 @@
 
 from mlir.ir import *
 import mlir.ir as ir
-import mlir.dialects.gpu as gpu
+from mlir.dialects import gpu, func, arith, math
+from mlir.extras import types as T
 import mlir.dialects.gpu.passes
 from mlir.passmanager import *
 
@@ -157,3 +158,99 @@ def testGPUFuncOp():
     # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
     # CHECK:   gpu.return
     # CHECK: }
+
+# CHECK-LABEL: testGPULaunchFuncOp
+@run
+def testGPULaunchFuncOp():
+    module = Module.create()
+
+    module.operation.attributes["gpu.container_module"] = UnitAttr.get()
+    with InsertionPoint(module.body):
+        gpu_module = gpu.GPUModuleOp("gpu_module")
+        block = gpu_module.bodyRegion.blocks.append()
+
+    with InsertionPoint(block):
+        gpu_func = gpu.GPUFuncOp(
+            FunctionType.get([], []),
+            "kernel",
+            body_builder=lambda func: gpu.return_([]),
+            kernel=True,
+        )
+
+    with InsertionPoint(module.body):
+        host = func.FuncOp(type=FunctionType.get([], []), name="host")
+
+    with InsertionPoint(host.add_entry_block()):
+        c1 = arith.constant(T.index(), 1)
+        grid_sizes = [c1] * 3
+        block_sizes = [c1] * 3
+        sym_ref = SymbolRefAttr.get([gpu_module.sym_name.value, gpu_func.name.value])
+        token_type = Type.parse("!gpu.async.token")
+        token = gpu.wait(async_token=token_type, async_dependencies=[])
+        token = gpu.launch_func(
+            async_token=token_type,
+            async_dependencies=[token],
+            kernel=sym_ref,
+            grid_size_x=grid_sizes[0],
+            grid_size_y=grid_sizes[1],
+            grid_size_z=grid_sizes[2],
+            block_size_x=block_sizes[0],
+            block_size_y=block_sizes[1],
+            block_size_z=block_sizes[2],
+            kernel_operands=[],
+        )
+        gpu.wait(async_token=None, async_dependencies=[token])
+        func.ReturnOp([])
+
+    print(module)
+
+    # CHECK-LABEL:   gpu.module @gpu_module {
+    # CHECK:           gpu.func @kernel() kernel {
+    # CHECK:             gpu.return
+    # CHECK:           }
+    # CHECK:         }
+
+    # CHECK-LABEL:   func.func @host() {
+    # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+    # CHECK:           %[[WAIT_0:.*]] = gpu.wait async
+    # CHECK:           %[[LAUNCH_FUNC_0:.*]] = gpu.launch_func async {{\[}}%[[WAIT_0]]] @gpu_module::@kernel blocks in (%[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]]) threads in (%[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]])
+    # CHECK:           gpu.wait {{\[}}%[[LAUNCH_FUNC_0]]]
+    # CHECK:           return
+    # CHECK:         }
+
+
+# CHECK-LABEL: testGPULaunchOp
+@run
+def testGPULaunchOp():
+    module = Module.create()
+
+    with InsertionPoint(module.body):
+        host = func.FuncOp(type=FunctionType.get([T.f32()], []), name="gpu_printf")
+
+    entry_block = host.add_entry_block()
+    with InsertionPoint(entry_block):
+        c1 = arith.constant(T.index(), 1)
+
+        launch = gpu.launch(None, [], c1, c1, c1, c1, c1, c1)
+        launch_block = launch.regions[0].blocks.append()
+        for _ in range(12):
+            launch_block.add_argument(T.index(), Location.unknown())
+
+    with InsertionPoint(launch_block):
+        gpu.printf("%f", [entry_block.arguments[0]])
+        gpu.terminator()
+
+    with InsertionPoint(entry_block):
+        func.ReturnOp([])
+
+    print(module)
+
+    # CHECK-LABEL:   func.func @gpu_printf(
+    # CHECK-SAME:      %[[ARG0:.*]]: f32) {
+    # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+    # CHECK:           gpu.launch blocks(%[[VAL_0:.*]], %[[VAL_1:.*]], %[[VAL_2:.*]]) in (%[[VAL_3:.*]] = %[[CONSTANT_0]], %[[VAL_4:.*]] = %[[CONSTANT_0]], %[[VAL_5:.*]] = %[[CONSTANT_0]]) threads(%[[VAL_6:.*]], %[[VAL_7:.*]], %[[VAL_8:.*]]) in (%[[VAL_9:.*]] = %[[CONSTANT_0]], %[[VAL_10:.*]] = %[[CONSTANT_0]], %[[VAL_11:.*]] = %[[CONSTANT_0]]) {
+    # CHECK:             gpu.printf "%[[VAL_12:.*]]", %[[ARG0]] : f32
+    # CHECK:             gpu.terminator
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
