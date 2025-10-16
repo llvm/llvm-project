@@ -11302,7 +11302,7 @@ class sve_int_mla_cpa<string asm>
 }
 
 //===----------------------------------------------------------------------===//
-// FCVTZSN
+// FP to Int down-converts
 //===----------------------------------------------------------------------===//
 class sve2_fp_to_int_downcvt<string asm, ZPRRegOp ZdRC, RegisterOperand ZSrcOp, bits<2> size, bit U>
   : I<(outs ZdRC:$Zd), (ins ZSrcOp:$Zn),
@@ -11325,7 +11325,7 @@ multiclass sve2_fp_to_int_downcvt<string asm, bit U> {
 }
 
 //===----------------------------------------------------------------------===//
-// SCVTF
+// Int to FP up-converts
 //===----------------------------------------------------------------------===//
 class sve2_int_to_fp_upcvt<string asm, ZPRRegOp ZdRC, ZPRRegOp ZnRC,
                         bits<2> size, bits<2> U>
