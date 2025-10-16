@@ -4487,6 +4487,109 @@ ExprResult Sema::SubstConstraintExprWithoutSatisfaction(
   return Instantiator.TransformExpr(E);
 }
 
+ExprResult Sema::SubstConceptTemplateArguments(
+    const ConceptSpecializationExpr *CSE, const Expr *ConstraintExpr,
+    const MultiLevelTemplateArgumentList &MLTAL) {
+  TemplateInstantiator Instantiator(*this, MLTAL, SourceLocation(),
+                                    DeclarationName());
+  auto *ArgsAsWritten = CSE->getTemplateArgsAsWritten();
+  TemplateArgumentListInfo SubstArgs(ArgsAsWritten->getLAngleLoc(),
+                                     ArgsAsWritten->getRAngleLoc());
+
+  Sema::InstantiatingTemplate Inst(
+      *this, ArgsAsWritten->arguments().front().getSourceRange().getBegin(),
+      Sema::InstantiatingTemplate::ConstraintNormalization{},
+      CSE->getNamedConcept(),
+      ArgsAsWritten->arguments().front().getSourceRange());
+
+  if (Instantiator.TransformConceptTemplateArguments(
+          ArgsAsWritten->getTemplateArgs(),
+          ArgsAsWritten->getTemplateArgs() +
+              ArgsAsWritten->getNumTemplateArgs(),
+          SubstArgs))
+    return true;
+
+  llvm::SmallVector<TemplateArgument, 4> NewArgList;
+  NewArgList.reserve(SubstArgs.arguments().size());
+  for (const auto &ArgLoc : SubstArgs.arguments())
+    NewArgList.push_back(ArgLoc.getArgument());
+
+  MultiLevelTemplateArgumentList MLTALForConstraint =
+      getTemplateInstantiationArgs(
+          CSE->getNamedConcept(),
+          CSE->getNamedConcept()->getLexicalDeclContext(),
+          /*Final=*/false,
+          /*Innermost=*/NewArgList,
+          /*RelativeToPrimary=*/true,
+          /*Pattern=*/nullptr,
+          /*ForConstraintInstantiation=*/true);
+
+  struct ConstraintExprTransformer : TreeTransform<ConstraintExprTransformer> {
+    using Base = TreeTransform<ConstraintExprTransformer>;
+    MultiLevelTemplateArgumentList &MLTAL;
+
+    ConstraintExprTransformer(Sema &SemaRef,
+                              MultiLevelTemplateArgumentList &MLTAL)
+        : TreeTransform(SemaRef), MLTAL(MLTAL) {}
+
+    ExprResult TransformExpr(Expr *E) {
+      if (!E)
+        return E;
+      switch (E->getStmtClass()) {
+      case Stmt::BinaryOperatorClass:
+      case Stmt::ConceptSpecializationExprClass:
+      case Stmt::ParenExprClass:
+      case Stmt::UnresolvedLookupExprClass:
+        return Base::TransformExpr(E);
+      default:
+        break;
+      }
+      return E;
+    }
+
+    ExprResult TransformBinaryOperator(BinaryOperator *E) {
+      if (!(E->getOpcode() == BinaryOperatorKind::BO_LAnd ||
+            E->getOpcode() == BinaryOperatorKind::BO_LOr))
+        return E;
+
+      ExprResult LHS = TransformExpr(E->getLHS());
+      ExprResult RHS = TransformExpr(E->getRHS());
+
+      if (LHS.get() == E->getLHS() && RHS.get() == E->getRHS())
+        return E;
+
+      return BinaryOperator::Create(SemaRef.Context, LHS.get(), RHS.get(),
+                                    E->getOpcode(), SemaRef.Context.BoolTy,
+                                    VK_PRValue, OK_Ordinary,
+                                    E->getOperatorLoc(), FPOptionsOverride{});
+    }
+
+    bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
+                                   TemplateArgumentLoc &Output,
+                                   bool Uneval = false) {
+      if (Input.getArgument().isConceptOrConceptTemplateParameter())
+        return Base::TransformTemplateArgument(Input, Output, Uneval);
+
+      Output = Input;
+      return false;
+    }
+
+    ExprResult TransformUnresolvedLookupExpr(UnresolvedLookupExpr *E,
+                                             bool IsAddressOfOperand = false) {
+      if (E->isConceptReference()) {
+        ExprResult Res = SemaRef.SubstExpr(E, MLTAL);
+        return Res;
+      }
+      return E;
+    }
+  };
+
+  ConstraintExprTransformer Transformer(*this, MLTALForConstraint);
+  ExprResult Res =
+      Transformer.TransformExpr(const_cast<Expr *>(ConstraintExpr));
+  return Res;
+}
+
 ExprResult Sema::SubstInitializer(Expr *Init,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           bool CXXDirectInit) {
