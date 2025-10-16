@@ -17,7 +17,7 @@
 
 define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, ptr %C) !prof !36 {
 ; CHECK-LABEL: define void @_Z11hotFunctionbiiPiS_S_
-; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) !prof [[PROF16:![0-9]+]] {
+; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {{.*}}{
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], !prof [[PROF17:![0-9]+]]

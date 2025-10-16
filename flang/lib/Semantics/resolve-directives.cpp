@@ -3549,40 +3549,38 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
     WithOmpDeclarative::RequiresFlags flags,
     std::optional<common::OmpMemoryOrderType> memOrder) {
-  Scope *scopeIter = &scope;
-  do {
-    if (Symbol * symbol{scopeIter->symbol()}) {
-      common::visit(
-          [&](auto &details) {
-            // Store clauses information into the symbol for the parent and
-            // enclosing modules, programs, functions and subroutines.
-            if constexpr (std::is_convertible_v<decltype(&details),
-                              WithOmpDeclarative *>) {
-              if (flags.any()) {
-                if (const WithOmpDeclarative::RequiresFlags *
-                    otherFlags{details.ompRequires()}) {
-                  flags |= *otherFlags;
-                }
-                details.set_ompRequires(flags);
+  const Scope &programUnit{omp::GetProgramUnit(scope)};
+
+  if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {
+    common::visit(
+        [&](auto &details) {
+          // Store clauses information into the symbol for the parent and
+          // enclosing modules, programs, functions and subroutines.
+          if constexpr (std::is_convertible_v<decltype(&details),
+                            WithOmpDeclarative *>) {
+            if (flags.any()) {
+              if (const WithOmpDeclarative::RequiresFlags *otherFlags{
+                      details.ompRequires()}) {
+                flags |= *otherFlags;
               }
-              if (memOrder) {
-                if (details.has_ompAtomicDefaultMemOrder() &&
-                    *details.ompAtomicDefaultMemOrder() != *memOrder) {
-                  context_.Say(scopeIter->sourceRange(),
-                      "Conflicting '%s' REQUIRES clauses found in compilation "
-                      "unit"_err_en_US,
-                      parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
-                          llvm::omp::Clause::OMPC_atomic_default_mem_order)
-                                                     .str()));
-                }
-                details.set_ompAtomicDefaultMemOrder(*memOrder);
-              }
+              details.set_ompRequires(flags);
             }
-          },
-          symbol->details());
-    }
-    scopeIter = &scopeIter->parent();
-  } while (!scopeIter->IsGlobal());
+            if (memOrder) {
+              if (details.has_ompAtomicDefaultMemOrder() &&
+                  *details.ompAtomicDefaultMemOrder() != *memOrder) {
+                context_.Say(programUnit.sourceRange(),
+                    "Conflicting '%s' REQUIRES clauses found in compilation "
+                    "unit"_err_en_US,
+                    parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
+                        llvm::omp::Clause::OMPC_atomic_default_mem_order)
+                            .str()));
+              }
+              details.set_ompAtomicDefaultMemOrder(*memOrder);
+            }
+          }
+        },
+        symbol->details());
+  }
 }
 
 void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
