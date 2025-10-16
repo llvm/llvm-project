@@ -485,8 +485,8 @@ INTERCEPTOR_WINAPI(void*, RtlReAllocateHeap, HANDLE HeapHandle, DWORD Flags,
 
 namespace __asan {
 
-static void TryToOverrideFunction(const char *fname, uptr new_func,
-                                  uptr *orig_old_func = 0) {
+static void TryToOverrideFunction(const char* fname, uptr new_func,
+                                  uptr* orig_old_func = 0) {
   // Failure here is not fatal. The CRT may not be present, and different CRT
   // versions use different symbols.
   if (!__interception::OverrideFunction(fname, new_func, orig_old_func))
@@ -521,13 +521,13 @@ void ReplaceSystemMalloc() {
 
     // Undocumented functions must be intercepted by name, not by symbol.
     TryToOverrideFunction("RtlSizeHeap", (uptr)WRAP(RtlSizeHeap),
-                          (uptr *)&REAL(RtlSizeHeap));
+                          (uptr*)&REAL(RtlSizeHeap));
     TryToOverrideFunction("RtlFreeHeap", (uptr)WRAP(RtlFreeHeap),
-                          (uptr *)&REAL(RtlFreeHeap));
+                          (uptr*)&REAL(RtlFreeHeap));
     TryToOverrideFunction("RtlReAllocateHeap", (uptr)WRAP(RtlReAllocateHeap),
-                          (uptr *)&REAL(RtlReAllocateHeap));
+                          (uptr*)&REAL(RtlReAllocateHeap));
     TryToOverrideFunction("RtlAllocateHeap", (uptr)WRAP(RtlAllocateHeap),
-                          (uptr *)&REAL(RtlAllocateHeap));
+                          (uptr*)&REAL(RtlAllocateHeap));
   } else {
 #define INTERCEPT_UCRT_FUNCTION(func)                                  \
   if (!INTERCEPT_FUNCTION_DLLIMPORT(                                   \
