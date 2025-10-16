@@ -40,6 +40,16 @@ static bool isScalarLikeType(Type type) {
   return type.isIntOrIndexOrFloat() || isa<ComplexType>(type);
 }
 
+/// Helper function to attach the `VarName` attribute to an operation
+/// if a variable name is provided.
+static void attachVarNameAttr(Operation *op, OpBuilder &builder,
+                              StringRef varName) {
+  if (!varName.empty()) {
+    auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
+    op->setAttr(acc::getVarNameAttrName(), varNameAttr);
+  }
+}
+
 struct MemRefPointerLikeModel
     : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
                                             MemRefType> {
@@ -83,7 +93,9 @@ struct MemRefPointerLikeModel
     // then we can generate an alloca operation.
     if (memrefTy.hasStaticShape()) {
       needsFree = false; // alloca doesn't need deallocation
-      return memref::AllocaOp::create(builder, loc, memrefTy).getResult();
+      auto allocaOp = memref::AllocaOp::create(builder, loc, memrefTy);
+      attachVarNameAttr(allocaOp, builder, varName);
+      return allocaOp.getResult();
     }
 
     // For dynamic memrefs, extract sizes from the original variable if
@@ -103,8 +115,10 @@ struct MemRefPointerLikeModel
         // Static dimensions are handled automatically by AllocOp
       }
       needsFree = true; // alloc needs deallocation
-      return memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes)
-          .getResult();
+      auto allocOp =
+          memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
+      attachVarNameAttr(allocOp, builder, varName);
+      return allocOp.getResult();
     }
 
     // TODO: Unranked not yet supported.
