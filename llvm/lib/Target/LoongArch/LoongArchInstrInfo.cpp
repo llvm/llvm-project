@@ -760,10 +760,28 @@ bool LoongArchInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
                                              Register Reg,
                                              const MachineInstr &AddrI,
                                              ExtAddrMode &AM) const {
-  unsigned OffsetWidth = 0;
+  enum MemIOffsetType {
+    Imm14Shift2,
+    Imm12,
+    Imm11Shift1,
+    Imm10Shift2,
+    Imm9Shift3,
+    Imm8,
+    Imm8Shift1,
+    Imm8Shift2,
+    Imm8Shift3
+  };
+
+  MemIOffsetType OT;
   switch (MemI.getOpcode()) {
   default:
     return false;
+  case LoongArch::LDPTR_W:
+  case LoongArch::LDPTR_D:
+  case LoongArch::STPTR_W:
+  case LoongArch::STPTR_D:
+    OT = Imm14Shift2;
+    break;
   case LoongArch::LD_B:
   case LoongArch::LD_H:
   case LoongArch::LD_W:
@@ -779,13 +797,41 @@ bool LoongArchInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
   case LoongArch::FLD_D:
   case LoongArch::FST_S:
   case LoongArch::FST_D:
-    OffsetWidth = 12;
+  case LoongArch::VLD:
+  case LoongArch::VST:
+  case LoongArch::XVLD:
+  case LoongArch::XVST:
+  case LoongArch::VLDREPL_B:
+  case LoongArch::XVLDREPL_B:
+    OT = Imm12;
     break;
-  case LoongArch::LDPTR_W:
-  case LoongArch::LDPTR_D:
-  case LoongArch::STPTR_W:
-  case LoongArch::STPTR_D:
-    OffsetWidth = 14;
+  case LoongArch::VLDREPL_H:
+  case LoongArch::XVLDREPL_H:
+    OT = Imm11Shift1;
+    break;
+  case LoongArch::VLDREPL_W:
+  case LoongArch::XVLDREPL_W:
+    OT = Imm10Shift2;
+    break;
+  case LoongArch::VLDREPL_D:
+  case LoongArch::XVLDREPL_D:
+    OT = Imm9Shift3;
+    break;
+  case LoongArch::VSTELM_B:
+  case LoongArch::XVSTELM_B:
+    OT = Imm8;
+    break;
+  case LoongArch::VSTELM_H:
+  case LoongArch::XVSTELM_H:
+    OT = Imm8Shift1;
+    break;
+  case LoongArch::VSTELM_W:
+  case LoongArch::XVSTELM_W:
+    OT = Imm8Shift2;
+    break;
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_D:
+    OT = Imm8Shift3;
     break;
   }
 
@@ -803,8 +849,15 @@ bool LoongArchInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
   if (!STI.is64Bit())
     NewOffset = SignExtend64<32>(NewOffset);
 
-  if (!(OffsetWidth == 12 && isInt<12>(NewOffset)) &&
-      !(OffsetWidth == 14 && isShiftedInt<14, 2>(NewOffset) && STI.hasUAL()))
+  if (!(OT == Imm14Shift2 && isShiftedInt<14, 2>(NewOffset) && STI.hasUAL()) &&
+      !(OT == Imm12 && isInt<12>(NewOffset)) &&
+      !(OT == Imm11Shift1 && isShiftedInt<11, 1>(NewOffset)) &&
+      !(OT == Imm10Shift2 && isShiftedInt<10, 2>(NewOffset)) &&
+      !(OT == Imm9Shift3 && isShiftedInt<9, 3>(NewOffset)) &&
+      !(OT == Imm8 && isInt<8>(NewOffset)) &&
+      !(OT == Imm8Shift1 && isShiftedInt<8, 1>(NewOffset)) &&
+      !(OT == Imm8Shift2 && isShiftedInt<8, 2>(NewOffset)) &&
+      !(OT == Imm8Shift3 && isShiftedInt<8, 3>(NewOffset)))
     return false;
 
   AM.BaseReg = AddrI.getOperand(1).getReg();
