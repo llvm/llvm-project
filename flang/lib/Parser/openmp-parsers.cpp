@@ -1094,7 +1094,7 @@ TYPE_PARSER(construct<OmpBindClause>(
     "TEAMS" >> pure(OmpBindClause::Binding::Teams) ||
     "THREAD" >> pure(OmpBindClause::Binding::Thread)))
 
-TYPE_PARSER(construct<OmpAlignClause>(scalarIntExpr))
+TYPE_PARSER(construct<OmpAlignClause>(scalarIntConstantExpr))
 
 TYPE_PARSER(construct<OmpAtClause>(
     "EXECUTION" >> pure(OmpAtClause::ActionTime::Execution) ||

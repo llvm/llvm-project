@@ -1563,9 +1563,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
 
 void OmpStructureChecker::CheckAlignValue(const parser::OmpClause &clause) {
   if (auto *align{std::get_if<parser::OmpClause::Align>(&clause.u)}) {
-    if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
-      context_.Say(clause.source,
-          "The alignment value should be a constant positive integer"_err_en_US);
+    if (const auto &v{GetIntValue(align->v)}; v && *v <= 0) {
+      context_.Say(clause.source, "The alignment should be positive"_err_en_US);
     }
   }
 }
