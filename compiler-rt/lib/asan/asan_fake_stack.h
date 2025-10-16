@@ -18,8 +18,6 @@
 
 namespace __asan {
 
-class AsanThread;
-
 // Fake stack frame contains local variables of one function.
 struct FakeFrame {
   uptr magic;  // Modified by the instrumented code.
@@ -198,7 +196,7 @@ class FakeStack {
 };
 
 FakeStack *GetTLSFakeStack();
-void SetTLSFakeStack(AsanThread* t, FakeStack* fs);
+void SetTLSFakeStack(FakeStack *fs);
 
 }  // namespace __asan
 

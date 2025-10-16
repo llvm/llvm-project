@@ -76,9 +76,6 @@ void *__asan_abi_load_cxx_array_cookie(void **p);
 void *__asan_abi_get_current_fake_stack();
 void *__asan_abi_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
                                        void **end);
-void *__asan_abi_disable_fake_stack();
-void *__asan_abi_enable_fake_stack();
-
 // Functions concerning poisoning and unpoisoning fake stack alloca
 void __asan_abi_alloca_poison(void *addr, size_t size);
 void __asan_abi_allocas_unpoison(void *top, void *bottom);
