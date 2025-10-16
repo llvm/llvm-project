@@ -2882,8 +2882,6 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
   unsigned ExtractPos = Lane * DstElems;
 
   PrimType ElemT = Src.getFieldDesc()->getPrimType();
-  if (ElemT != Dst.getFieldDesc()->getPrimType())
-    return false;
 
   TYPE_SWITCH(ElemT, {
     for (unsigned I = 0; I != DstElems; ++I) {
@@ -2915,14 +2913,11 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr Op
   unsigned SrcElems = Src.getNumElems();
   unsigned DstElems = Dst.getNumElems();
 
-  PrimType ElemT = Src.getFieldDesc()->getPrimType();
-  if (ElemT != Dst.getFieldDesc()->getPrimType() ||
-      ElemT != Merge.getFieldDesc()->getPrimType())
-    return false;
-
   unsigned NumLanes = SrcElems / DstElems;
   unsigned Lane = static_cast<unsigned>(ImmAPS.getZExtValue() % NumLanes);
   unsigned Base = Lane * DstElems;
+
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
 
   TYPE_SWITCH(ElemT, {
     for (unsigned I = 0; I != DstElems; ++I) {
