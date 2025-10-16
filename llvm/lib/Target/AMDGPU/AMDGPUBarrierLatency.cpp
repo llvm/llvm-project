@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file This file contains a DAG scheduling mutation to add latency to
-///       barrier edges between ATOMIC_FENCE instructions and preceeding
+///       barrier edges between ATOMIC_FENCE instructions and preceding
 ///       memory accesses potentially affected by the fence.
-///       This is beneficial when a fence would cause wait count insertion,
-///       as more instructions will be scheduled before the fence hiding
-///       memory latency.
-///       It also reduces the risk of a fence causing a premature wait
-///       on all active memory operations.
+///       This encourages the scheduling of more instructions before
+///       ATOMIC_FENCE instructions.  ATOMIC_FENCE instructions may
+///       introduce wait counting or indicate an impending S_BARRIER
+///       wait.  Having more instructions in-flight across these
+///       constructs improves latency hiding.
 //
 //===----------------------------------------------------------------------===//
 

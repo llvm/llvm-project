@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -passes=postmisched -o - %s | FileCheck %s
 
 # Ensure WMMA operations stay before the final atomic fence and barrier group.
+# This allows the latency of the WMMA operations to be hidden by barrier wait.
 ---
 name: test
 tracksRegLiveness: true
