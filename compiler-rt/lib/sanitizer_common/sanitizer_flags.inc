@@ -113,6 +113,11 @@ COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
 COMMON_FLAG(bool, allow_user_segv_handler, true,
             "Deprecated. True has no effect, use handle_sigbus=1. If false, "
             "handle_*=1 will be upgraded to handle_*=2.")
+COMMON_FLAG(bool, cloak_sanitizer_signal_handlers, false,
+            "If set, signal/sigaction will pretend that sanitizers did not "
+            "preinstall any signal handlers. If the user subsequently installs "
+            "a signal handler, this will disable cloaking for the respective "
+            "signal.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
 COMMON_FLAG(bool, detect_deadlocks, true,
