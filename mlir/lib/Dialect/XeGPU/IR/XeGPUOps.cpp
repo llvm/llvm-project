@@ -121,6 +121,39 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   return success();
 }
 
+// Verify that number of offsets matches either the source rank or the tdesc
+// rank.
+static LogicalResult
+isValidNdOffset(TypedValue<TensorDescType> tDesc,
+                std::optional<llvm::ArrayRef<long int>> constOffsets,
+                int64_t offsetSize,
+                function_ref<InFlightDiagnostic()> emitError) {
+  if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
+    // If CreateNdDescOp is available, we can further
+    // check the offsets rank against the source rank.
+    auto staticSource = createTDescOp.getConstShapeAttr();
+    int64_t sourceRank;
+    if (!staticSource || staticSource.empty()) {
+      auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
+      sourceRank = sourceTy.getRank();
+    } else
+      sourceRank = staticSource.size();
+
+    int64_t constOffsetSize = constOffsets ? constOffsets->size() : 0;
+    auto tDescRank = tDesc.getType().getRank();
+    bool sourceRankMismatch =
+        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
+        ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
+    bool tdescRankMismatch =
+        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
+        ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
+    if (sourceRankMismatch && tdescRankMismatch)
+      return emitError() << "Offsets rank must match either the source or the "
+                            "TensorDesc rank.";
+  }
+  return success();
+}
+
 static LogicalResult
 isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
                                  VectorType valueTy, int64_t chunkSize,
@@ -476,33 +509,8 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto tDesc = getTensorDesc();
-  if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
-    // If CreateNdDescOp is available, we can further
-    // check the offsets rank against the source rank.
-    auto staticSource = createTDescOp.getConstShapeAttr();
-    int64_t sourceRank;
-    if (!staticSource || staticSource.empty()) {
-      auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
-      sourceRank = sourceTy.getRank();
-    } else
-      sourceRank = staticSource.size();
-
-    int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
-    int64_t constOffsetSize =
-        getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
-    auto tDescRank = tdescTy.getRank();
-    bool sourceRankMismatch =
-        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch =
-        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
-    if (sourceRankMismatch && tdescRankMismatch)
-      return emitOpError(
-          "Offsets rank must match either the source or the TensorDesc rank.");
-  }
-
-  return success();
+  return isValidNdOffset(tDesc, getConstOffsets(), getMixedOffsets().size(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -619,33 +627,8 @@ LogicalResult LoadNdOp::verify() {
                          << tdescTy;
 
   auto tDesc = getTensorDesc();
-  if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
-    // If CreateNdDescOp is available, we can further
-    // check the offsets rank against the source rank.
-    auto staticSource = createTDescOp.getConstShapeAttr();
-    int64_t sourceRank;
-    if (!staticSource || staticSource.empty()) {
-      auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
-      sourceRank = sourceTy.getRank();
-    } else
-      sourceRank = staticSource.size();
-
-    int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
-    int64_t constOffsetSize =
-        getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
-    auto tDescRank = tdescTy.getRank();
-    bool sourceRankMismatch =
-        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch =
-        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
-    if (sourceRankMismatch && tdescRankMismatch)
-      return emitOpError(
-          "Offsets rank must match either the source or the TensorDesc rank.");
-  }
-
-  return success();
+  return isValidNdOffset(tDesc, getConstOffsets(), getMixedOffsets().size(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -731,33 +714,8 @@ LogicalResult StoreNdOp::verify() {
                          << dstTy;
 
   auto tDesc = getTensorDesc();
-  if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
-    // If CreateNdDescOp is available, we can further
-    // check the offsets rank against the source rank.
-    auto staticSource = createTDescOp.getConstShapeAttr();
-    int64_t sourceRank;
-    if (!staticSource || staticSource.empty()) {
-      auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
-      sourceRank = sourceTy.getRank();
-    } else
-      sourceRank = staticSource.size();
-
-    int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
-    int64_t constOffsetSize =
-        getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
-    auto tDescRank = dstTy.getRank();
-    bool sourceRankMismatch =
-        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch =
-        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
-    if (sourceRankMismatch && tdescRankMismatch)
-      return emitOpError(
-          "Offsets rank must match either the source or the TensorDesc rank.");
-  }
-
-  return success();
+  return isValidNdOffset(tDesc, getConstOffsets(), getMixedOffsets().size(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
