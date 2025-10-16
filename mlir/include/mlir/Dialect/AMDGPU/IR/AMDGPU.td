@@ -118,7 +118,7 @@ def IsValidBlockSize: AttrConstraint<
 
 
 def Vector4Scales :
-  ConfinedType<FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>, [FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>.predicate],
+  AllOfType<[FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>],
     "vector of 4 F8E8M0FNU scales",
     "::mlir::VectorType">,
   BuildableType<"::mlir::VectorType::get({4}, $_builder.getType<::mlir::Float8E8M0FNUType>());">;
