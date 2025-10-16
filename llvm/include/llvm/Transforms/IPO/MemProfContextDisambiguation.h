@@ -95,6 +95,16 @@ public:
            function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
                isPrevailing);
 };
+
+/// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
+/// when we don't have an index that has recorded that we are linking with
+/// allocation libraries containing the necessary APIs for downstream
+/// transformations.
+class MemProfRemoveInfo : public PassInfoMixin<MemProfRemoveInfo> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H

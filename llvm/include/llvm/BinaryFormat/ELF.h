@@ -647,6 +647,7 @@ enum {
   EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
   EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
   EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
+  EF_HEXAGON_ISA_V91 = 0x00000091,  // Hexagon V91 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 
   // Tiny core flag, bit[15]
@@ -680,6 +681,7 @@ enum {
   EF_HEXAGON_MACH_V85 = EF_HEXAGON_ISA_V85,      // Hexagon V85
   EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
   EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
+  EF_HEXAGON_MACH_V91 = EF_HEXAGON_ISA_V91,      // Hexagon V91
 
   EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };

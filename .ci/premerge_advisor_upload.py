@@ -23,11 +23,13 @@ def main(commit_sha, workflow_run_number, build_log_files):
     )
     test_failures = generate_test_report_lib.get_failures(junit_objects)
     source = "pull_request" if "GITHUB_ACTIONS" in os.environ else "postcommit"
+    current_platform = f"{platform.system()}-{platform.machine()}".lower()
     failure_info = {
         "source_type": source,
         "base_commit_sha": commit_sha,
         "source_id": workflow_run_number,
         "failures": [],
+        "platform": current_platform,
     }
     if test_failures:
         for name, failure_message in test_failures:

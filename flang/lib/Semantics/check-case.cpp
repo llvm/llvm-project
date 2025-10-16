@@ -72,7 +72,7 @@ private:
   }
 
   std::optional<Value> GetValue(const parser::CaseValue &caseValue) {
-    const parser::Expr &expr{caseValue.thing.thing.value()};
+    const auto &expr{parser::UnwrapRef<parser::Expr>(caseValue)};
     auto *x{expr.typedExpr.get()};
     if (x && x->v) { // C1147
       auto type{x->v->GetType()};

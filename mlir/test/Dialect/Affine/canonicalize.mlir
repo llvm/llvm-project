@@ -2235,6 +2235,136 @@ func.func @affine_leading_zero_no_outer_bound(%arg0: index, %arg1: index) -> ind
 
 // -----
 
+// CHECK-LABEL: func @delin_apply_cancel_exact
+// CHECK-SAME: (%[[ARG0:.+]]: index, %[[ARG1:.+]]: memref<?xindex>)
+// CHECK-COUNT-6: memref.store %[[ARG0]], %[[ARG1]][%[[ARG0]]]
+// CHECK-NOT: memref.store
+// CHECK: return
+func.func @delin_apply_cancel_exact(%arg0:  index, %arg1: memref<?xindex>) {
+  %a:3 = affine.delinearize_index %arg0 into (4, 5) : index, index, index
+  %b:3 = affine.delinearize_index %arg0 into (3, 4, 5) : index, index, index
+  %c:2 = affine.delinearize_index %arg0 into (20) : index, index
+
+  %t1 = affine.apply affine_map<()[s0, s1, s2] -> (s0 + s1 * 5 + s2 * 20)>()[%a#2, %a#1, %a#0]
+  memref.store %t1, %arg1[%t1] : memref<?xindex>
+
+  %t2 = affine.apply affine_map<()[s0, s1, s2] -> (s0 + s2 * 20 + s1 * 5)>()[%a#2, %a#1, %a#0]
+  memref.store %t2, %arg1[%t2] : memref<?xindex>
+
+  %t3 = affine.apply affine_map<()[s0, s1, s2] -> (s1 * 20 + s2 * 5 + s0)>()[%a#2, %a#0, %a#1]
+  memref.store %t3, %arg1[%t3] : memref<?xindex>
+
+  %t4 = affine.apply affine_map<()[s0, s1, s2] -> (s0 + s1 * 5 + s2 * 20)>()[%b#2, %b#1, %b#0]
+  memref.store %t4, %arg1[%t4] : memref<?xindex>
+
+  %t5 = affine.apply affine_map<()[s0, s1] -> (s0 + s1 * 20)>()[%c#1, %c#0]
+  memref.store %t5, %arg1[%t5] : memref<?xindex>
+
+  %t6 = affine.apply affine_map<()[s0, s1] -> (s1 * 20 + s0)>()[%c#1, %c#0]
+  memref.store %t6, %arg1[%t5] : memref<?xindex>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @delin_apply_cancel_exact_dim
+// CHECK: affine.for %[[arg1:.+]] = 0 to 256
+// CHECK: memref.store %[[arg1]]
+// CHECK: return
+func.func @delin_apply_cancel_exact_dim(%arg0: memref<?xindex>) {
+  affine.for %arg1 = 0 to 256 {
+    %a:3 = affine.delinearize_index %arg1 into (2, 2, 64) : index, index, index
+    %i = affine.apply affine_map<(d0, d1, d2) -> (d0 + d1 * 128 + d2 * 64)>(%a#2, %a#0, %a#1)
+    memref.store %i, %arg0[%i] : memref<?xindex>
+  }
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 + 512)>
+// CHECK-LABEL: func @delin_apply_cancel_const_term
+// CHECK-SAME: (%[[ARG0:.+]]: index, %[[ARG1:.+]]: memref<?xindex>)
+// CHECK: affine.apply #[[$MAP]]()[%[[ARG0]]]
+// CHECK: return
+func.func @delin_apply_cancel_const_term(%arg0:  index, %arg1: memref<?xindex>) {
+  %a:3 = affine.delinearize_index %arg0 into (2, 2, 64) : index, index, index
+
+  %t1 = affine.apply affine_map<()[s0, s1, s2] -> (s0 + s1 * 128 + s2 * 64 + 512)>()[%a#2, %a#0, %a#1]
+  memref.store %t1, %arg1[%t1] : memref<?xindex>
+
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 512)>
+// CHECK-LABEL: func @delin_apply_cancel_var_term
+// CHECK-SAME: (%[[ARG0:.+]]: index, %[[ARG1:.+]]: memref<?xindex>, %[[ARG2:.+]]: index)
+// CHECK: affine.apply #[[$MAP]]()[%[[ARG2]], %[[ARG0]]]
+// CHECK: return
+func.func @delin_apply_cancel_var_term(%arg0:  index, %arg1: memref<?xindex>, %arg2: index) {
+  %a:3 = affine.delinearize_index %arg0 into (2, 2, 64) : index, index, index
+
+  %t1 = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 + s1 * 128 + s2 * 64 + s3 + 512)>()[%a#2, %a#0, %a#1, %arg2]
+  memref.store %t1, %arg1[%t1] : memref<?xindex>
+
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2 + s0 ceildiv 4)>
+// CHECK-LABEL: func @delin_apply_cancel_nested_exprs
+// CHECK-SAME: (%[[ARG0:.+]]: index, %[[ARG1:.+]]: memref<?xindex>)
+// CHECK: affine.apply #[[$MAP]]()[%[[ARG0]]]
+// CHECK: return
+func.func @delin_apply_cancel_nested_exprs(%arg0:  index, %arg1: memref<?xindex>) {
+  %a:2 = affine.delinearize_index %arg0 into (20) : index, index
+
+  %t1 = affine.apply affine_map<()[s0, s1] -> ((s0 + s1 * 20) ceildiv 4 + (s1 * 20 + s0) * 2)>()[%a#1, %a#0]
+  memref.store %t1, %arg1[%t1] : memref<?xindex>
+
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @delin_apply_cancel_preserve_rotation
+// CHECK-SAME: (%[[ARG0:.+]]: index, %[[ARG1:.+]]: memref<?xindex>)
+// CHECK: %[[A:.+]]:2 = affine.delinearize_index %[[ARG0]] into (20)
+// CHECK: affine.apply #[[$MAP]]()[%[[A]]#1, %[[ARG0]]]
+// CHECK: return
+func.func @delin_apply_cancel_preserve_rotation(%arg0:  index, %arg1: memref<?xindex>) {
+  %a:2 = affine.delinearize_index %arg0 into (20) : index, index
+
+  %t1 = affine.apply affine_map<()[s0, s1] -> (s0 + s1 * 20 + s0)>()[%a#1, %a#0]
+  memref.store %t1, %arg1[%t1] : memref<?xindex>
+
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 5)>
+// CHECK-LABEL: func @delin_apply_dont_cancel_partial
+// CHECK-SAME: (%[[ARG0:.+]]: index, %[[ARG1:.+]]: memref<?xindex>)
+// CHECK: %[[A:.+]]:3 = affine.delinearize_index %[[ARG0]] into (3, 4, 5)
+// CHECK: affine.apply #[[$MAP]]()[%[[A]]#2, %[[A]]#1]
+// CHECK: return
+func.func @delin_apply_dont_cancel_partial(%arg0:  index, %arg1: memref<?xindex>) {
+  %a:3 = affine.delinearize_index %arg0 into (3, 4, 5) : index, index, index
+
+  %t1 = affine.apply affine_map<()[s0, s1] -> (s0 + s1 * 5)>()[%a#2, %a#1]
+  memref.store %t1, %arg1[%t1] : memref<?xindex>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @cst_value_to_cst_attr_basis_delinearize_index
 // CHECK-SAME:    (%[[ARG0:.*]]: index)
 // CHECK:         %[[RET:.*]]:3 = affine.delinearize_index %[[ARG0]] into (3, 4, 2) : index, index

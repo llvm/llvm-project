@@ -22,7 +22,7 @@
 
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t1.o -x ir %t.o -c -fthinlto-index=%t.o.thinlto.bc -save-temps=obj
 
-; RUN: llvm-dis %t.s.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+; RUN: llvm-dis %t.s.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 ; CHECK-IR: !memprof {{.*}} !callsite
 ; CHECK-IR: "memprof"="cold"
 
@@ -42,7 +42,7 @@
 
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t1.o -x ir %t.o -c -fthinlto-index=%t.o.thinlto.bc -save-temps=obj
 
-; RUN: llvm-dis %t.s.3.import.bc -o - | FileCheck %s \
+; RUN: llvm-dis %t.s.4.opt.bc -o - | FileCheck %s \
 ; RUN: --implicit-check-not "!memprof" --implicit-check-not "!callsite" \
 ; RUN: --implicit-check-not "memprof"="cold"
 

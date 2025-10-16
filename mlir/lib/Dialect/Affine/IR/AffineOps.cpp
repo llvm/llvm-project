@@ -1125,6 +1125,141 @@ static LogicalResult replaceAffineMinBoundingBoxExpression(AffineMinOp minOp,
   return success(*map != initialMap);
 }
 
+/// Recursively traverse `e`. If `e` or one of its sub-expressions has the form
+/// e1 + e2 + ... + eK, where the e_i are a super(multi)set of `exprsToRemove`,
+/// place a map between e and `newVal` + sum({e1, e2, .. eK} - exprsToRemove)
+/// into `replacementsMap`. If no entries were added to `replacementsMap`,
+/// nothing was found.
+static void shortenAddChainsContainingAll(
+    AffineExpr e, const llvm::SmallDenseSet<AffineExpr, 4> &exprsToRemove,
+    AffineExpr newVal, DenseMap<AffineExpr, AffineExpr> &replacementsMap) {
+  auto binOp = dyn_cast<AffineBinaryOpExpr>(e);
+  if (!binOp)
+    return;
+  AffineExpr lhs = binOp.getLHS();
+  AffineExpr rhs = binOp.getRHS();
+  if (binOp.getKind() != AffineExprKind::Add) {
+    shortenAddChainsContainingAll(lhs, exprsToRemove, newVal, replacementsMap);
+    shortenAddChainsContainingAll(rhs, exprsToRemove, newVal, replacementsMap);
+    return;
+  }
+  SmallVector<AffineExpr> toPreserve;
+  llvm::SmallDenseSet<AffineExpr, 4> ourTracker(exprsToRemove);
+  AffineExpr thisTerm = rhs;
+  AffineExpr nextTerm = lhs;
+
+  while (thisTerm) {
+    if (!ourTracker.erase(thisTerm)) {
+      toPreserve.push_back(thisTerm);
+      shortenAddChainsContainingAll(thisTerm, exprsToRemove, newVal,
+                                    replacementsMap);
+    }
+    auto nextBinOp = dyn_cast_if_present<AffineBinaryOpExpr>(nextTerm);
+    if (!nextBinOp || nextBinOp.getKind() != AffineExprKind::Add) {
+      thisTerm = nextTerm;
+      nextTerm = AffineExpr();
+    } else {
+      thisTerm = nextBinOp.getRHS();
+      nextTerm = nextBinOp.getLHS();
+    }
+  }
+  if (!ourTracker.empty())
+    return;
+  // We reverse the terms to be preserved here in order to preserve
+  // associativity between them.
+  AffineExpr newExpr = newVal;
+  for (AffineExpr preserved : llvm::reverse(toPreserve))
+    newExpr = newExpr + preserved;
+  replacementsMap.insert({e, newExpr});
+}
+
+/// If this map contains of the expression `x_1 + x_1 * C_1 + ... x_n * C_N +
+/// ...` (not necessarily in order) where the set of the `x_i` is the set of
+/// outputs of an `affine.delinearize_index` whos inverse is that expression,
+/// replace that expression with the input of that delinearize_index op.
+///
+/// `unitDimInput` is the input that was detected as the potential start to this
+/// replacement chain - if it isn't the rightmost result of the delinearization,
+/// this method fails. (This is intended to ensure we don't have redundant scans
+/// over the same expression).
+///
+/// While this currently only handles delinearizations with a constant basis,
+/// that isn't a fundamental limitation.
+///
+/// This is a utility function for `replaceDimOrSym` below.
+static LogicalResult replaceAffineDelinearizeIndexInverseExpression(
+    AffineDelinearizeIndexOp delinOp, Value resultToReplace, AffineMap *map,
+    SmallVectorImpl<Value> &dims, SmallVectorImpl<Value> &syms) {
+  if (!delinOp.getDynamicBasis().empty())
+    return failure();
+  if (resultToReplace != delinOp.getMultiIndex().back())
+    return failure();
+
+  MLIRContext *ctx = delinOp.getContext();
+  SmallVector<AffineExpr> resToExpr(delinOp.getNumResults(), AffineExpr());
+  for (auto [pos, dim] : llvm::enumerate(dims)) {
+    auto asResult = dyn_cast_if_present<OpResult>(dim);
+    if (!asResult)
+      continue;
+    if (asResult.getOwner() == delinOp.getOperation())
+      resToExpr[asResult.getResultNumber()] = getAffineDimExpr(pos, ctx);
+  }
+  for (auto [pos, sym] : llvm::enumerate(syms)) {
+    auto asResult = dyn_cast_if_present<OpResult>(sym);
+    if (!asResult)
+      continue;
+    if (asResult.getOwner() == delinOp.getOperation())
+      resToExpr[asResult.getResultNumber()] = getAffineSymbolExpr(pos, ctx);
+  }
+  if (llvm::is_contained(resToExpr, AffineExpr()))
+    return failure();
+
+  bool isDimReplacement = llvm::all_of(resToExpr, llvm::IsaPred<AffineDimExpr>);
+  int64_t stride = 1;
+  llvm::SmallDenseSet<AffineExpr, 4> expectedExprs;
+  // This isn't zip_equal since sometimes the delinearize basis is missing a
+  // size for the first result.
+  for (auto [binding, size] : llvm::zip(
+           llvm::reverse(resToExpr), llvm::reverse(delinOp.getStaticBasis()))) {
+    expectedExprs.insert(binding * getAffineConstantExpr(stride, ctx));
+    stride *= size;
+  }
+  if (resToExpr.size() != delinOp.getStaticBasis().size())
+    expectedExprs.insert(resToExpr[0] * stride);
+
+  DenseMap<AffineExpr, AffineExpr> replacements;
+  AffineExpr delinInExpr = isDimReplacement
+                               ? getAffineDimExpr(dims.size(), ctx)
+                               : getAffineSymbolExpr(syms.size(), ctx);
+
+  for (AffineExpr e : map->getResults())
+    shortenAddChainsContainingAll(e, expectedExprs, delinInExpr, replacements);
+  if (replacements.empty())
+    return failure();
+
+  AffineMap origMap = *map;
+  if (isDimReplacement)
+    dims.push_back(delinOp.getLinearIndex());
+  else
+    syms.push_back(delinOp.getLinearIndex());
+  *map = origMap.replace(replacements, dims.size(), syms.size());
+
+  // Blank out dead dimensions and symbols
+  for (AffineExpr e : resToExpr) {
+    if (auto d = dyn_cast<AffineDimExpr>(e)) {
+      unsigned pos = d.getPosition();
+      if (!map->isFunctionOfDim(pos))
+        dims[pos] = nullptr;
+    }
+    if (auto s = dyn_cast<AffineSymbolExpr>(e)) {
+      unsigned pos = s.getPosition();
+      if (!map->isFunctionOfSymbol(pos))
+        syms[pos] = nullptr;
+    }
+  }
+  return success();
+}
+
 /// Replace all occurrences of AffineExpr at position `pos` in `map` by the
 /// defining AffineApplyOp expression and operands.
 /// When `dimOrSymbolPosition < dims.size()`, AffineDimExpr@[pos] is replaced.
@@ -1155,6 +1290,11 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
                                            : getAffineSymbolExpr(pos, ctx);
     return replaceAffineMinBoundingBoxExpression(minOp, dimOrSym, map, dims,
                                                  syms);
+  }
+
+  if (auto delinOp = v.getDefiningOp<affine::AffineDelinearizeIndexOp>()) {
+    return replaceAffineDelinearizeIndexInverseExpression(delinOp, v, map, dims,
+                                                          syms);
   }
 
   auto affineApply = v.getDefiningOp<AffineApplyOp>();

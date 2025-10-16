@@ -1803,6 +1803,12 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
 
+  // If we are invoking this without a summary index noting that we are linking
+  // with a library containing the necessary APIs, remove any MemProf related
+  // attributes and metadata.
+  if (!ImportSummary || !ImportSummary->withSupportsHotColdNew())
+    MPM.addPass(MemProfRemoveInfo());
+
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
@@ -1873,6 +1879,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   ModulePassManager MPM;
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
+
+  // If we are invoking this without a summary index noting that we are linking
+  // with a library containing the necessary APIs, remove any MemProf related
+  // attributes and metadata.
+  if (!ExportSummary || !ExportSummary->withSupportsHotColdNew())
+    MPM.addPass(MemProfRemoveInfo());
 
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.

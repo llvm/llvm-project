@@ -21,3 +21,27 @@ export void call2() {
   float B[1] = {1.0};
   B = (float[1])A;
 }
+
+struct S {
+  int A;
+  float F;
+};
+
+// cast from a struct
+// CHECK-LABEL: call3
+// CHECK: CStyleCastExpr {{.*}} 'int[2]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'S' lvalue Var {{.*}} 'SS' 'S'
+export void call3() {
+  S SS = {1,1.0};
+  int A[2] = (int[2])SS;
+}
+
+// cast from a vector
+// CHECK-LABEL: call4
+// CHECK: CStyleCastExpr {{.*}} 'float[3]' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int3':'vector<int, 3>' <LValueToRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int3':'vector<int, 3>' lvalue Var {{.*}} 'A' 'int3'
+export void call4() {
+  int3 A = {1,2,3};
+  float B[3] = (float[3])A;
+}
