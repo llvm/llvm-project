@@ -36,7 +36,7 @@ typedef __bf16 __bfloat16 __attribute__((deprecated("use __bf16 instead")));
 /// \returns A float data whose sign field and exponent field keep unchanged,
 ///    and fraction field is extended to 23 bits.
 static __inline__ float __DEFAULT_FN_ATTRS _mm_cvtsbh_ss(__bf16 __A) {
-  return __builtin_ia32_cvtsbf162ss_32(__A);
+  return float(__A);
 }
 
 /// Convert Two Packed Single Data to One Packed BF16 Data.
@@ -236,8 +236,7 @@ _mm512_maskz_dpbf16_ps(__mmask16 __U, __m512 __D, __m512bh __A, __m512bh __B) {
 ///    A 256-bit vector of [16 x bfloat].
 /// \returns A 512-bit vector of [16 x float] come from conversion of __A
 static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvtpbh_ps(__m256bh __A) {
-  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
-      (__m512i)_mm512_cvtepi16_epi32((__m256i)__A), 16));
+  return (__m512)__builtin_convertvector(__A, __v16sf);
 }
 
 /// Convert Packed BF16 Data to Packed float Data using zeroing mask.
@@ -252,8 +251,7 @@ static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvtpbh_ps(__m256bh __A) {
 /// \returns A 512-bit vector of [16 x float] come from conversion of __A
 static __inline__ __m512 __DEFAULT_FN_ATTRS512
 _mm512_maskz_cvtpbh_ps(__mmask16 __U, __m256bh __A) {
-  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
-      (__m512i)_mm512_maskz_cvtepi16_epi32((__mmask16)__U, (__m256i)__A), 16));
+  return _mm512_maskz_mov_ps(__U, (__m512)__builtin_convertvector(__A, __v16sf));
 }
 
 /// Convert Packed BF16 Data to Packed float Data using merging mask.
@@ -270,9 +268,7 @@ _mm512_maskz_cvtpbh_ps(__mmask16 __U, __m256bh __A) {
 /// \returns A 512-bit vector of [16 x float] come from conversion of __A
 static __inline__ __m512 __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtpbh_ps(__m512 __S, __mmask16 __U, __m256bh __A) {
-  return _mm512_castsi512_ps((__m512i)_mm512_mask_slli_epi32(
-      (__m512i)__S, (__mmask16)__U,
-      (__m512i)_mm512_cvtepi16_epi32((__m256i)__A), 16));
+  return _mm512_mask_mov_ps(__S, __U, (__m512)__builtin_convertvector(__A, __v16sf));
 }
 
 #undef __DEFAULT_FN_ATTRS
