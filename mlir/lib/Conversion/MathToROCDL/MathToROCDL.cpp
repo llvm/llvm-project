@@ -21,6 +21,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/DebugLog.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
@@ -182,16 +183,15 @@ void ConvertMathToROCDLPass::runOnOperation() {
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
 
-  // Only populate chipset-dependent patterns if chipset is specified
   FailureOr<amdgpu::Chipset> maybeChipset;
   if (!chipset.empty()) {
     maybeChipset = amdgpu::Chipset::parse(chipset);
     if (failed(maybeChipset))
       return signalPassFailure();
   }
-  populateMathToROCDLConversionPatterns(converter, patterns,
-                                        succeeded(maybeChipset) ? *maybeChipset
-                                                                : std::nullopt);
+  populateMathToROCDLConversionPatterns(
+      converter, patterns,
+      succeeded(maybeChipset) ? std::optional(*maybeChipset) : std::nullopt);
 
   ConversionTarget target(getContext());
   target
