@@ -694,9 +694,8 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   VPIRMetadata VPBranchWeights;
   auto *Term =
       VPBuilder(CheckBlockVPBB)
-          .createNaryOp(
-              VPInstruction::BranchOnCond, {CondVPV},
-              Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc());
+          .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
+                        Plan.getVectorLoopRegion()->getCanonicalIVInfo().DL);
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =

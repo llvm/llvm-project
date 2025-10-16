@@ -69,7 +69,8 @@ class UnrollState {
                                 VPBasicBlock::iterator InsertPtForPhi);
 
   VPValue *getConstantVPV(unsigned Part) {
-    Type *CanIVIntTy = TypeInfo.inferScalarType(Plan.getVectorLoopRegion()->getCanonicalIV()->getScalarType());
+    Type *CanIVIntTy =
+        TypeInfo.inferScalarType(Plan.getVectorLoopRegion()->getCanonicalIV());
     return Plan.getOrAddLiveIn(ConstantInt::get(CanIVIntTy, Part));
   }
 
