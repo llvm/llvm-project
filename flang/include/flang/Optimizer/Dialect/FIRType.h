@@ -372,6 +372,9 @@ bool isBoxedRecordType(mlir::Type ty);
 /// Return true iff `ty` is a type that contains descriptor information.
 bool isTypeWithDescriptor(mlir::Type ty);
 
+/// Return true if CLASS(*)
+bool isClassStarType(mlir::Type ty);
+
 /// Return true iff `ty` is a scalar boxed record type.
 /// e.g. !fir.box<!fir.type<derived>>
 ///      !fir.box<!fir.heap<!fir.type<derived>>>
