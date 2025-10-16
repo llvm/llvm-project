@@ -756,6 +756,83 @@ LoongArchInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
+bool LoongArchInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
+                                             Register Reg,
+                                             const MachineInstr &AddrI,
+                                             ExtAddrMode &AM) const {
+  unsigned OffsetWidth = 0;
+  switch (MemI.getOpcode()) {
+  default:
+    return false;
+  case LoongArch::LD_B:
+  case LoongArch::LD_H:
+  case LoongArch::LD_W:
+  case LoongArch::LD_D:
+  case LoongArch::LD_BU:
+  case LoongArch::LD_HU:
+  case LoongArch::LD_WU:
+  case LoongArch::ST_B:
+  case LoongArch::ST_H:
+  case LoongArch::ST_W:
+  case LoongArch::ST_D:
+  case LoongArch::FLD_S:
+  case LoongArch::FLD_D:
+  case LoongArch::FST_S:
+  case LoongArch::FST_D:
+    OffsetWidth = 12;
+    break;
+  case LoongArch::LDPTR_W:
+  case LoongArch::LDPTR_D:
+  case LoongArch::STPTR_W:
+  case LoongArch::STPTR_D:
+    OffsetWidth = 14;
+    break;
+  }
+
+  if (MemI.getOperand(0).getReg() == Reg)
+    return false;
+
+  if ((AddrI.getOpcode() != LoongArch::ADDI_W &&
+       AddrI.getOpcode() != LoongArch::ADDI_D) ||
+      !AddrI.getOperand(1).isReg() || !AddrI.getOperand(2).isImm())
+    return false;
+
+  int64_t OldOffset = MemI.getOperand(2).getImm();
+  int64_t Disp = AddrI.getOperand(2).getImm();
+  int64_t NewOffset = OldOffset + Disp;
+  if (!STI.is64Bit())
+    NewOffset = SignExtend64<32>(NewOffset);
+
+  if (!(OffsetWidth == 12 && isInt<12>(NewOffset)) &&
+      !(OffsetWidth == 14 && isShiftedInt<14, 2>(NewOffset) && STI.hasUAL()))
+    return false;
+
+  AM.BaseReg = AddrI.getOperand(1).getReg();
+  AM.ScaledReg = 0;
+  AM.Scale = 0;
+  AM.Displacement = NewOffset;
+  AM.Form = ExtAddrMode::Formula::Basic;
+  return true;
+}
+
+MachineInstr *
+LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
+                                     const ExtAddrMode &AM) const {
+  const DebugLoc &DL = MemI.getDebugLoc();
+  MachineBasicBlock &MBB = *MemI.getParent();
+
+  assert(AM.ScaledReg == 0 && AM.Scale == 0 &&
+         "Addressing mode not supported for folding");
+
+  return BuildMI(MBB, MemI, DL, get(MemI.getOpcode()))
+      .addReg(MemI.getOperand(0).getReg(),
+              MemI.mayLoad() ? RegState::Define : 0)
+      .addReg(AM.BaseReg)
+      .addImm(AM.Displacement)
+      .setMemRefs(MemI.memoperands())
+      .setMIFlags(MemI.getFlags());
+}
+
 // Returns true if this is the sext.w pattern, addi.w rd, rs, 0.
 bool LoongArch::isSEXT_W(const MachineInstr &MI) {
   return MI.getOpcode() == LoongArch::ADDI_W && MI.getOperand(1).isReg() &&
