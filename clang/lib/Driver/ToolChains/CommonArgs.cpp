@@ -2961,15 +2961,15 @@ void tools::addMachineOutlinerArgs(const Driver &D,
       // Otherwise, emit a warning and ignore the flag.
       if (Triple.isARM() || Triple.isThumb() || Triple.isAArch64() ||
           Triple.isRISCV() || Triple.isX86()) {
-        // FIXME: This should probably use the `nooutline` attribute rather than
-        // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline`
-        // objects can be combined correctly during LTO.
         addArg(Twine("-enable-machine-outliner"));
       } else {
         D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       }
     } else {
       // Disable all outlining behaviour.
+      // FIXME: This should probably use the `nooutline` attribute rather than
+      // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline`
+      // objects can be combined correctly during LTO.
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
