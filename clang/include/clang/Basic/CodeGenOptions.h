@@ -155,9 +155,10 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
+    NonLeafNoReserve, // Keep non-leaf frame pointers, allow the FP to be used as a GPR in leaf functions.
     None,     // Omit all frame pointers.
     Reserved, // Maintain valid frame pointer chain.
-    NonLeaf,  // Keep non-leaf frame pointers.
+    NonLeaf,  // Keep non-leaf frame pointers, don't allow the FP to be used as a GPR in leaf functions.
     All,      // Keep all frame pointers.
   };
 
@@ -167,6 +168,8 @@ public:
       return "none";
     case FramePointerKind::Reserved:
       return "reserved";
+    case FramePointerKind::NonLeafNoReserve:
+      return "non-leaf-no-reserve";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:

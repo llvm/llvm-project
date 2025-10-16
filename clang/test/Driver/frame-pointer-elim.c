@@ -1,7 +1,7 @@
 // KEEP-ALL-NOT:  warning: argument unused
 // KEEP-ALL:      "-mframe-pointer=all"
 // KEEP-NON-LEAF-NOT: warning: argument unused
-// KEEP-NON-LEAF: "-mframe-pointer=non-leaf"
+// KEEP-NON-LEAF: "-mframe-pointer=non-leaf-no-reserve"
 // KEEP-NONE-NOT: warning: argument unused
 // KEEP-NONE:     "-mframe-pointer=none"
 // KEEP-RESERVED-NOT: warning: argument unused
@@ -73,17 +73,17 @@
 // RUN: %clang -### -target armv7s-apple-ios -fomit-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=WARN-OMIT-7S %s
 // WARN-OMIT-7S: warning: optimization flag '-fomit-frame-pointer' is not supported for target 'armv7s'
-// WARN-OMIT-7S: "-mframe-pointer=non-leaf"
+// WARN-OMIT-7S: "-mframe-pointer=non-leaf-no-reserve"
 
 // RUN: %clang -### -target armv7k-apple-watchos -fomit-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=WARN-OMIT-7K %s
 // WARN-OMIT-7K: warning: optimization flag '-fomit-frame-pointer' is not supported for target 'armv7k'
-// WARN-OMIT-7K: "-mframe-pointer=non-leaf"
+// WARN-OMIT-7K: "-mframe-pointer=non-leaf-no-reserve"
 
 // RUN: %clang -### -target armv7s-apple-ios8.0 -momit-leaf-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=WARN-OMIT-LEAF-7S %s
 // WARN-OMIT-LEAF-7S-NOT: warning: optimization flag '-momit-leaf-frame-pointer' is not supported for target 'armv7s'
-// WARN-OMIT-LEAF-7S: "-mframe-pointer=non-leaf"
+// WARN-OMIT-LEAF-7S: "-mframe-pointer=non-leaf-no-reserve"
 
 // On AArch64, PS4, PS5, and VE, default to omitting the frame pointer on leaf
 // functions
