@@ -1073,7 +1073,7 @@ entry:
 ; MM32R6-DAG:    bnezc    $[[T5]],
 
   %add = fadd fast float %at, %angle
-  %cmp = fcmp ogt float %add, 1.000000e+00
+  %cmp = fcmp nnan ogt float %add, 1.000000e+00
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -1131,7 +1131,7 @@ entry:
 ; MM32R6-DAG:    bnezc    $[[T5]],
 
   %add = fadd fast double %at, %angle
-  %cmp = fcmp ogt double %add, 1.000000e+00
+  %cmp = fcmp nnan ogt double %add, 1.000000e+00
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -1143,4 +1143,4 @@ if.end:
   ret double %theta.0
 }
 
-attributes #0 = { nounwind readnone "no-nans-fp-math"="true" }
+attributes #0 = { nounwind readnone }
