@@ -449,21 +449,19 @@ void BuiltinTypeMethodBuilder::createDecl() {
   SmallVector<QualType> ParamTypes;
   SmallVector<FunctionType::ExtParameterInfo> ParamExtInfos(Params.size());
   uint32_t ArgIndex = 0;
-  bool IsTemplate = DeclBuilder.Template != nullptr;
+
+  // Create function prototype.
   bool UseParamExtInfo = false;
   for (Param &MP : Params) {
-    QualType Ty = MP.Ty;
     if (MP.Modifier != HLSLParamModifierAttr::Keyword_in) {
       UseParamExtInfo = true;
-      ParamExtInfos[ArgIndex].withABI(
-          convertParamModifierToParamABI(MP.Modifier));
-      // Only update types on inout and out parameters for non-templated
-      // methods. Templated types will have their inout/out parameters
-      // converted to references during template instantiation.
-      if (!IsTemplate)
-        Ty = getInoutParameterType(AST, Ty);
+      FunctionType::ExtParameterInfo &PI = ParamExtInfos[ArgIndex];
+      ParamExtInfos[ArgIndex] =
+          PI.withABI(convertParamModifierToParamABI(MP.Modifier));
+      if (!MP.Ty->isDependentType())
+        MP.Ty = getInoutParameterType(AST, MP.Ty);
     }
-    ParamTypes.emplace_back(Ty);
+    ParamTypes.emplace_back(MP.Ty);
     ++ArgIndex;
   }
 
@@ -475,7 +473,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
 
   QualType FuncTy = AST.getFunctionType(ReturnTy, ParamTypes, ExtInfo);
 
-  // create method or constructor decl
+  // Create method or constructor declaration.
   auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
   DeclarationNameInfo NameInfo = DeclarationNameInfo(Name, SourceLocation());
   if (IsCtor)
@@ -488,7 +486,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo, SC,
         false, false, ConstexprSpecKind::Unspecified, SourceLocation());
 
-  // create params & set them to the function prototype
+  // Create params & set them to the method/constructor and function prototype.
   SmallVector<ParmVarDecl *> ParmDecls;
   unsigned CurScopeDepth = DeclBuilder.SemaRef.getCurScope()->getDepth();
   auto FnProtoLoc =
@@ -501,7 +499,6 @@ void BuiltinTypeMethodBuilder::createDecl() {
         AST.getTrivialTypeSourceInfo(MP.Ty, SourceLocation()), SC_None,
         nullptr);
     if (MP.Modifier != HLSLParamModifierAttr::Keyword_in) {
-      Parm->setType(getInoutParameterType(AST, Parm->getType()));
       auto *Mod =
           HLSLParamModifierAttr::Create(AST, SourceRange(), MP.Modifier);
       Parm->addAttr(Mod);

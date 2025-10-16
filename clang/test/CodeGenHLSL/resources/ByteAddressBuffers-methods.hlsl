@@ -20,8 +20,8 @@ export uint TestGetDimensions() {
 }
 
 // CHECK: define {{.*}} @TestGetDimensions()()
-// CHECK: call void @hlsl::ByteAddressBuffer::GetDimensions(unsigned int&)(ptr {{.*}} @Buf, ptr{{.*}} %dim1)
-// CHECK: call void @hlsl::RWByteAddressBuffer::GetDimensions(unsigned int&)(ptr{{.*}} @RWBuf, ptr{{.*}} %dim2)
+// CHECK: call void @hlsl::ByteAddressBuffer::GetDimensions(unsigned int&)(ptr {{.*}} @Buf, ptr{{.*}})
+// CHECK: call void @hlsl::RWByteAddressBuffer::GetDimensions(unsigned int&)(ptr{{.*}} @RWBuf, ptr{{.*}})
 // CHECK: add
 // CHECK: ret
 

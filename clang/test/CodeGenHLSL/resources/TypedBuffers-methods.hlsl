@@ -46,8 +46,8 @@ export uint TestGetDimensions() {
 }
 
 // CHECK: @TestGetDimensions()()
-// CHECK: call void @hlsl::Buffer<float>::GetDimensions(unsigned int&)(ptr {{.*}} @Buf, ptr {{.*}} %dim1)
-// CHECK: call void @hlsl::RWBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&)(ptr {{.*}} @RWBuf, ptr {{.*}} %dim2)
+// CHECK: call void @hlsl::Buffer<float>::GetDimensions(unsigned int&)(ptr {{.*}} @Buf, ptr {{.*}})
+// CHECK: call void @hlsl::RWBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&)(ptr {{.*}} @RWBuf, ptr {{.*}})
 // CHECK: add
 // CHECK: ret
 

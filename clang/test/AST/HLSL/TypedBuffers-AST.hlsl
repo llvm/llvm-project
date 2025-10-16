@@ -216,7 +216,7 @@ RESOURCE<float> Buffer;
 
 // GetDimensions method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (unsigned int)'
+// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} dim 'unsigned int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt

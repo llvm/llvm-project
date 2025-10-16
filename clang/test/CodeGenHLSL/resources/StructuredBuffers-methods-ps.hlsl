@@ -72,8 +72,8 @@ export uint TestGetDimensions() {
     return dim1 + dim2 + stride1 + stride2;
 }
 // CHECK: define noundef i32 @TestGetDimensions()()
-// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB1, ptr {{.*}} %dim1, ptr {{.*}} %stride1)
-// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB2, ptr {{.*}} %dim2, ptr {{.*}} %stride2)
+// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB1, ptr {{.*}}, ptr {{.*}})
+// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB2, ptr {{.*}}, ptr {{.*}})
 // CHECK: add
 // CHECK: ret
 

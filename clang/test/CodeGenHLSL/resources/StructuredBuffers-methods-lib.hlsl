@@ -112,9 +112,9 @@ export uint TestGetDimensions() {
     return dim1 + dim2 + dim3 + stride1 + stride2 + stride3;
 }
 // CHECK: define noundef i32 @TestGetDimensions()()
-// CHECK: call void @hlsl::StructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @SB1, ptr {{.*}} %dim1, ptr {{.*}} %stride1)
-// CHECK: call void @hlsl::RWStructuredBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @RWSB2, ptr {{.*}} %dim2, ptr {{.*}} %stride2)
-// CHECK: call void @hlsl::ConsumeStructuredBuffer<double>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @CSB, ptr {{.*}} %dim3, ptr {{.*}} %stride3)
+// CHECK: call void @hlsl::StructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @SB1, ptr {{.*}}, ptr {{.*}})
+// CHECK: call void @hlsl::RWStructuredBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @RWSB2, ptr {{.*}}, ptr {{.*}})
+// CHECK: call void @hlsl::ConsumeStructuredBuffer<double>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @CSB, ptr {{.*}}, ptr {{.*}})
 // CHECK: add
 // CHECK: ret
 
