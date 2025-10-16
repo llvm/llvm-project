@@ -192,7 +192,7 @@ public:
   bool AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol);
   mapType &commonBlockUses() { return commonBlockUses_; }
 
-  // Find COMMON block that is not USE-associated in the current scope
+  // Find COMMON block that is declared in the current scope
   Symbol *FindCommonBlock(const SourceName &name) const {
     if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
       return &*it->second;
