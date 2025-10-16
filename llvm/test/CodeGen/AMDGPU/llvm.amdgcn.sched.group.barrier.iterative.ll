@@ -25,7 +25,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    v_add_u32_e32 v5, s1, v0
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v0, s1
-; GCN-MINREG-NEXT:    v_add_u32_e32 v3, 0x6000, v4
+; GCN-MINREG-NEXT:    v_add_u32_e32 v3, 0xc000, v4
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
@@ -106,14 +106,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    ds_write_b128 v0, a[12:15] offset:24624
 ; GCN-MINREG-NEXT:    ds_write_b128 v0, a[0:3] offset:24576
 ; GCN-MINREG-NEXT:    ds_write_b128 v0, a[4:7] offset:24592
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
+; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v3 offset:32880
+; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v3 offset:32864
+; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v3 offset:32848
+; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v3 offset:32832
+; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v3 offset:32768
+; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v3 offset:32784
+; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v3 offset:32800
+; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:32816
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
@@ -221,7 +221,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:49152
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, 0x6000, v0
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, 0xc000, v0
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
@@ -235,14 +235,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[12:15] offset:24624
 ; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[0:3] offset:24576
 ; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[4:7] offset:24592
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:57456
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:57440
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:57424
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:57408
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:57344
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:57360
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:57376
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:57392
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:32880
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:32864
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:32848
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:32832
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:32768
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:32784
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:32800
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:32816
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
@@ -344,25 +344,25 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:49248
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0x6000, v3
+; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0xc000, v3
 ; GCN-ILP-NEXT:    s_nop 15
 ; GCN-ILP-NEXT:    s_nop 1
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[4:7] offset:24592
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
+; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:32784
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[0:3] offset:24576
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
+; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:32768
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[12:15] offset:24624
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
+; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:32816
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[8:11] offset:24608
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
+; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:32800
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[20:23] offset:24656
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
+; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:32848
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[16:19] offset:24640
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
+; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:32832
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[28:31] offset:24688
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
+; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:32880
 ; GCN-ILP-NEXT:    ds_write_b128 v0, a[24:27] offset:24672
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
+; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:32864
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
@@ -519,7 +519,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:24624
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
-; GCN-MINREG-NEXT:    v_add_u32_e32 v4, 0x6000, v3
+; GCN-MINREG-NEXT:    v_add_u32_e32 v4, 0xc000, v3
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
@@ -555,14 +555,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[8:11] offset:24608
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[4:7] offset:24592
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[0:3] offset:24576
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:57456
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:57440
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:57424
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:57408
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4 offset:57344
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:57360
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:57376
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:57392
+; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:32880
+; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:32864
+; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:32848
+; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:32832
+; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4 offset:32768
+; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:32784
+; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:32800
+; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:32816
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
@@ -671,7 +671,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:49152
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, 0x6000, v0
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, 0xc000, v0
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
@@ -685,14 +685,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[8:11] offset:24608
 ; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[4:7] offset:24592
 ; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[0:3] offset:24576
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:57456
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:57440
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:57424
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:57408
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:57344
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:57360
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:57376
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:57392
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:32880
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:32864
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:32848
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:32832
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:32768
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:32784
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:32800
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:32816
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
@@ -801,25 +801,25 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:49264
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0x6000, v3
+; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0xc000, v3
 ; GCN-ILP-NEXT:    s_nop 15
 ; GCN-ILP-NEXT:    s_nop 1
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3] offset:24576
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
+; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:32768
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:24592
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
+; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:32784
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[8:11] offset:24608
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
+; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:32800
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[12:15] offset:24624
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
+; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:32816
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[16:19] offset:24640
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
+; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:32832
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[20:23] offset:24656
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
+; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:32848
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[24:27] offset:24672
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
+; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:32864
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[28:31] offset:24688
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
+; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:32880
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)

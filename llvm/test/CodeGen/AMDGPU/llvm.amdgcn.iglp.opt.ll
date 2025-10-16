@@ -21,15 +21,15 @@ define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in,
 ; GCN-NEXT:    ; iglp_opt mask(0x00000000)
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_u32_e32 v1, s0, v0
-; GCN-NEXT:    v_add_u32_e32 v2, 0x6000, v1
-; GCN-NEXT:    ds_read_b128 a[28:31], v2 offset:57456
-; GCN-NEXT:    ds_read_b128 a[24:27], v2 offset:57440
-; GCN-NEXT:    ds_read_b128 a[20:23], v2 offset:57424
-; GCN-NEXT:    ds_read_b128 a[16:19], v2 offset:57408
-; GCN-NEXT:    ds_read_b128 a[0:3], v2 offset:57344
-; GCN-NEXT:    ds_read_b128 a[4:7], v2 offset:57360
-; GCN-NEXT:    ds_read_b128 a[8:11], v2 offset:57376
-; GCN-NEXT:    ds_read_b128 a[12:15], v2 offset:57392
+; GCN-NEXT:    v_add_u32_e32 v2, 0xc000, v1
+; GCN-NEXT:    ds_read_b128 a[28:31], v2 offset:32880
+; GCN-NEXT:    ds_read_b128 a[24:27], v2 offset:32864
+; GCN-NEXT:    ds_read_b128 a[20:23], v2 offset:32848
+; GCN-NEXT:    ds_read_b128 a[16:19], v2 offset:32832
+; GCN-NEXT:    ds_read_b128 a[0:3], v2 offset:32768
+; GCN-NEXT:    ds_read_b128 a[4:7], v2 offset:32784
+; GCN-NEXT:    ds_read_b128 a[8:11], v2 offset:32800
+; GCN-NEXT:    ds_read_b128 a[12:15], v2 offset:32816
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-NEXT:    ds_read_b128 a[60:63], v1 offset:49264
 ; GCN-NEXT:    ds_read_b128 a[56:59], v1 offset:49248
@@ -199,17 +199,17 @@ define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(ptr addrspace(3) noalias 
 ; GCN-NEXT:    ds_read_b128 a[72:75], v1 offset:49184
 ; GCN-NEXT:    ds_read_b128 a[68:71], v1 offset:49168
 ; GCN-NEXT:    ds_read_b128 a[64:67], v1 offset:49152
-; GCN-NEXT:    v_add_u32_e32 v1, 0x6000, v1
+; GCN-NEXT:    v_add_u32_e32 v1, 0xc000, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[64:95], v2, v3, a[64:95]
-; GCN-NEXT:    ds_read_b128 a[60:63], v1 offset:57456
-; GCN-NEXT:    ds_read_b128 a[56:59], v1 offset:57440
-; GCN-NEXT:    ds_read_b128 a[52:55], v1 offset:57424
-; GCN-NEXT:    ds_read_b128 a[48:51], v1 offset:57408
-; GCN-NEXT:    ds_read_b128 a[32:35], v1 offset:57344
-; GCN-NEXT:    ds_read_b128 a[36:39], v1 offset:57360
-; GCN-NEXT:    ds_read_b128 a[40:43], v1 offset:57376
-; GCN-NEXT:    ds_read_b128 a[44:47], v1 offset:57392
+; GCN-NEXT:    ds_read_b128 a[60:63], v1 offset:32880
+; GCN-NEXT:    ds_read_b128 a[56:59], v1 offset:32864
+; GCN-NEXT:    ds_read_b128 a[52:55], v1 offset:32848
+; GCN-NEXT:    ds_read_b128 a[48:51], v1 offset:32832
+; GCN-NEXT:    ds_read_b128 a[32:35], v1 offset:32768
+; GCN-NEXT:    ds_read_b128 a[36:39], v1 offset:32784
+; GCN-NEXT:    ds_read_b128 a[40:43], v1 offset:32800
+; GCN-NEXT:    ds_read_b128 a[44:47], v1 offset:32816
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
 ; GCN-NEXT:    ds_write_b128 v0, a[28:31] offset:112

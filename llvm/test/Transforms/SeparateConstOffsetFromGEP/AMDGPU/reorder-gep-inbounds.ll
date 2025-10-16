@@ -6,7 +6,7 @@ define void @inboundsPossiblyNegative(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <2 x i8>, ptr [[IN_PTR]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <2 x i8>, ptr [[TMP0]], i64 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -22,7 +22,7 @@ define void @inboundsNonNegative_nonCanonical(ptr %in.ptr, i32 %in.idx1) {
 ; CHECK-NEXT:    [[IN_IDX1_NNEG1:%.*]] = and i32 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = sext i32 [[IN_IDX1_NNEG1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <2 x i8>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -38,7 +38,7 @@ define void @inboundsNonNegative(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <2 x i8>, ptr [[IN_PTR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[TMP0]], i64 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -54,7 +54,7 @@ define void @inboundsNonchained(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <2 x i8>, ptr [[IN_PTR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <2 x i8>, ptr [[TMP0]], i64 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -70,7 +70,7 @@ define void @inboundsNonNegativeType_i16i8(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IN_PTR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 1024
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 2048
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -150,7 +150,7 @@ define void @vectorType1(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <2 x i8>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr [[TMP0]], i32 3
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 12
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -166,7 +166,7 @@ define void @vectorType2(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x half>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -182,7 +182,7 @@ define void @vectorType3(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x ptr>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -198,7 +198,7 @@ define void @vectorType4(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x ptr addrspace(1)>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x ptr>, ptr [[TMP0]], i32 3
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 96
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -215,7 +215,7 @@ define void @ptrType(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr addrspace(2), ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -231,7 +231,7 @@ define void @ptrType2(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr addrspace(3), ptr [[TMP0]], i32 3
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 12
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -247,7 +247,7 @@ define void @ptrType3(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr addrspace(7), ptr [[TMP0]], i32 3
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 96
 ; CHECK-NEXT:    ret void
 ;
 entry:

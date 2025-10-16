@@ -6,30 +6,30 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_movk_i32 s1, 0xf4
-; CHECK-NEXT:    s_movk_i32 s2, 0xf8
-; CHECK-NEXT:    s_movk_i32 s3, 0xfc
-; CHECK-NEXT:    s_movk_i32 s34, 0x100
+; CHECK-NEXT:    s_movk_i32 s2, 0xf4
+; CHECK-NEXT:    s_movk_i32 s34, 0xf8
+; CHECK-NEXT:    s_movk_i32 s36, 0xfc
+; CHECK-NEXT:    s_movk_i32 s38, 0x100
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
-; CHECK-NEXT:    s_movk_i32 s35, 0x104
-; CHECK-NEXT:    s_movk_i32 s36, 0x108
-; CHECK-NEXT:    s_movk_i32 s37, 0x110
-; CHECK-NEXT:    s_movk_i32 s38, 0x120
+; CHECK-NEXT:    s_movk_i32 s40, 0x104
+; CHECK-NEXT:    s_movk_i32 s42, 0x108
+; CHECK-NEXT:    s_movk_i32 s43, 0x110
+; CHECK-NEXT:    s_movk_i32 s44, 0x120
 ; CHECK-NEXT:    s_add_i32 s0, s32, 0xf0
-; CHECK-NEXT:    s_add_i32 s1, s32, s1
+; CHECK-NEXT:    s_or_b32 s1, s32, 4
 ; CHECK-NEXT:    s_add_i32 s2, s32, s2
-; CHECK-NEXT:    s_add_i32 s3, s32, s3
+; CHECK-NEXT:    s_or_b32 s3, s32, 8
 ; CHECK-NEXT:    s_add_i32 s34, s32, s34
-; CHECK-NEXT:    s_add_i32 s35, s32, s35
+; CHECK-NEXT:    s_or_b32 s35, s32, 12
 ; CHECK-NEXT:    s_add_i32 s36, s32, s36
-; CHECK-NEXT:    s_add_i32 s37, s32, s37
+; CHECK-NEXT:    s_add_i32 s37, s32, 16
 ; CHECK-NEXT:    s_add_i32 s38, s32, s38
-; CHECK-NEXT:    s_or_b32 s39, s32, 4
-; CHECK-NEXT:    s_or_b32 s40, s32, 8
-; CHECK-NEXT:    s_or_b32 s41, s32, 12
-; CHECK-NEXT:    s_add_i32 s42, s32, 16
-; CHECK-NEXT:    s_add_i32 s43, s32, 20
-; CHECK-NEXT:    s_add_i32 s44, s32, 24
+; CHECK-NEXT:    s_add_i32 s39, s32, 20
+; CHECK-NEXT:    s_add_i32 s40, s32, s40
+; CHECK-NEXT:    s_add_i32 s41, s32, 24
+; CHECK-NEXT:    s_add_i32 s42, s32, s42
+; CHECK-NEXT:    s_add_i32 s43, s32, s43
+; CHECK-NEXT:    s_add_i32 s44, s32, s44
 ; CHECK-NEXT:    s_mov_b32 s46, 1
 ; CHECK-NEXT:    s_movk_i32 s45, 0x990
 ; CHECK-NEXT:    s_mov_b32 s48, 0
@@ -38,24 +38,24 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    s_cmp_eq_u32 s46, 0
 ; CHECK-NEXT:    s_mov_b32 s49, s48
 ; CHECK-NEXT:    s_mov_b32 s50, s48
-; CHECK-NEXT:    s_cselect_b32 s51, 0, s1
-; CHECK-NEXT:    s_cselect_b32 s55, 0, s35
+; CHECK-NEXT:    s_cselect_b32 s51, 0, s2
+; CHECK-NEXT:    s_cselect_b32 s55, 0, s40
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s48 :: v_dual_mov_b32 v3, s49
-; CHECK-NEXT:    s_cselect_b32 s52, 0, s2
-; CHECK-NEXT:    s_cselect_b32 s56, 0, s36
-; CHECK-NEXT:    s_cselect_b32 vcc_lo, 0, s43
+; CHECK-NEXT:    s_cselect_b32 s52, 0, s34
+; CHECK-NEXT:    s_cselect_b32 s56, 0, s42
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, 0, s39
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s50
 ; CHECK-NEXT:    s_cselect_b32 s47, s45, 0xf0
-; CHECK-NEXT:    s_cselect_b32 s53, 0, s3
-; CHECK-NEXT:    s_cselect_b32 s54, 0, s34
-; CHECK-NEXT:    s_cselect_b32 s57, 0, s37
-; CHECK-NEXT:    s_cselect_b32 s58, 0, s38
+; CHECK-NEXT:    s_cselect_b32 s53, 0, s36
+; CHECK-NEXT:    s_cselect_b32 s54, 0, s38
+; CHECK-NEXT:    s_cselect_b32 s57, 0, s43
+; CHECK-NEXT:    s_cselect_b32 s58, 0, s44
 ; CHECK-NEXT:    s_cselect_b32 s59, 0, s0
-; CHECK-NEXT:    s_cselect_b32 s60, 0, s39
-; CHECK-NEXT:    s_cselect_b32 s61, 0, s40
-; CHECK-NEXT:    s_cselect_b32 s62, 0, s41
-; CHECK-NEXT:    s_cselect_b32 s63, 0, s42
-; CHECK-NEXT:    s_cselect_b32 vcc_hi, 0, s44
+; CHECK-NEXT:    s_cselect_b32 s60, 0, s1
+; CHECK-NEXT:    s_cselect_b32 s61, 0, s3
+; CHECK-NEXT:    s_cselect_b32 s62, 0, s35
+; CHECK-NEXT:    s_cselect_b32 s63, 0, s37
+; CHECK-NEXT:    s_cselect_b32 vcc_hi, 0, s41
 ; CHECK-NEXT:    s_mov_b32 s46, s48
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s51
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s52

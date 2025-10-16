@@ -11,13 +11,13 @@ define void @sink_addr(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM1]]
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr addrspace(3) [[TMP0]], i64 256
+; CHECK-NEXT:    [[IDX13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 512
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr addrspace(3) [[TMP2]], i64 512
+; CHECK-NEXT:    [[IDX25:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 1024
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP4]], i64 768
+; CHECK-NEXT:    [[IDX37:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 1536
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -105,13 +105,13 @@ define void @reorder_i64half(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM1]]
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr addrspace(3) [[TMP0]], i64 256
+; CHECK-NEXT:    [[IDX13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 2048
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr addrspace(3) [[TMP2]], i64 512
+; CHECK-NEXT:    [[IDX25:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 4096
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr addrspace(3) [[TMP4]], i64 768
+; CHECK-NEXT:    [[IDX37:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 6144
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -136,13 +136,13 @@ define void @reorder_halfi8(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM1]]
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr addrspace(3) [[TMP0]], i64 256
+; CHECK-NEXT:    [[IDX13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 512
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr addrspace(3) [[TMP2]], i64 512
+; CHECK-NEXT:    [[IDX25:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 1024
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP4]], i64 768
+; CHECK-NEXT:    [[IDX37:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 1536
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -233,13 +233,13 @@ define void @struct_type(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM1]]
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_VEC]], ptr addrspace(3) [[TMP0]], i64 256
+; CHECK-NEXT:    [[IDX13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 4096
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_VEC]], ptr addrspace(3) [[TMP2]], i64 512
+; CHECK-NEXT:    [[IDX25:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 8192
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [[STRUCT_VEC]], ptr addrspace(3) [[TMP4]], i64 768
+; CHECK-NEXT:    [[IDX37:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 12288
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -289,7 +289,7 @@ define void @multiple_index_maybe_neg(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-LABEL: define void @multiple_index_maybe_neg(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x <2 x i8>], ptr [[IN_PTR]], i64 0, i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x <2 x i8>], ptr [[TMP1]], i64 0, i64 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret void
 ;
   %const1 = getelementptr inbounds [2 x <2 x i8>], ptr %in.ptr, i64 0, i64 1
@@ -302,7 +302,7 @@ define void @multiple_index_nonneg(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x <2 x i8>], ptr [[IN_PTR]], i64 0, i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x <2 x i8>], ptr [[TMP1]], i64 0, i64 1
+; CHECK-NEXT:    [[IDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret void
 ;
   %in.idx1.nneg = and i64 %in.idx1, 9223372036854775807
