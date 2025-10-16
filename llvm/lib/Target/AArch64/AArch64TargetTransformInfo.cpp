@@ -5661,6 +5661,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
   if (VF.getKnownMinValue() <= Ratio)
     return Invalid;
+  // i32 -> i64 or i16 -> i32 is not natively supported on Neon and SVE.
+  if (Ratio < 4)
+    return Invalid;
 
   VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
   VectorType *AccumVectorType =
