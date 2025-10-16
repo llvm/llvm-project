@@ -80,6 +80,8 @@ public:
   /// name of the analysis that was computed, its TypeID, as well as the
   /// current operation being analyzed.
   virtual void runAfterAnalysis(StringRef name, TypeID id, Operation *op) {}
+
+  static void signalPassFailure(Pass *pass);
 };
 
 /// This class holds a collection of PassInstrumentation objects, and invokes
