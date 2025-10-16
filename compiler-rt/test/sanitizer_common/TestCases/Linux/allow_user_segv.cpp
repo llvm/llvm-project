@@ -66,8 +66,8 @@ int main() {
     fprintf(stderr, "User sigaction installed\n");
 
   // Trying to organically segfault by dereferencing a pointer can be tricky
-  // in builds with assertions. Additionally, some older platforms may SIGBUS
-  // instead.
+  // when the sanitizer runtime is built with assertions. Additionally, some
+  // older platforms may SIGBUS instead.
   raise(SIGSEGV);
 
   return 0;
