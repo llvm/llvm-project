@@ -34,18 +34,6 @@ class CIRDialectLLVMIRTranslationInterface
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
 
-  /// Any named attribute in the CIR dialect, i.e, with name started with
-  /// "cir.", will be handled here.
-  virtual mlir::LogicalResult amendOperation(
-      mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
-      mlir::NamedAttribute attribute,
-      mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
-    if (auto func = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op)) {
-      amendFunction(func, instructions, attribute, moduleTranslation);
-    }
-    return mlir::success();
-  }
-
   /// Translates the given operation to LLVM IR using the provided IR builder
   /// and saving the state in `moduleTranslation`.
   mlir::LogicalResult convertOperation(
@@ -58,39 +46,6 @@ public:
               moduleTranslation.convertType(cirOp.getType()));
 
     return mlir::success();
-  }
-
-  // Translate CIR's inline attribute to LLVM's function attributes.
-  void amendFunction(mlir::LLVM::LLVMFuncOp func,
-                     llvm::ArrayRef<llvm::Instruction *> instructions,
-                     mlir::NamedAttribute attribute,
-                     mlir::LLVM::ModuleTranslation &moduleTranslation) const {
-    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
-
-    if (auto inlineAttr =
-            mlir::dyn_cast<cir::InlineAttr>(attribute.getValue())) {
-      const auto toLLVMAttr =
-          [](const cir::InlineAttr &attr) -> llvm::Attribute::AttrKind {
-        switch (attr.getValue()) {
-        case cir::InlineKind::NoInline:
-          return llvm::Attribute::NoInline;
-        case cir::InlineKind::AlwaysInline:
-          return llvm::Attribute::AlwaysInline;
-        case cir::InlineKind::InlineHint:
-          return llvm::Attribute::InlineHint;
-        }
-        llvm_unreachable("Unknown cir::InlineKind value in inlineAttr");
-      };
-
-      llvmFunc->addFnAttr(toLLVMAttr(inlineAttr));
-      func->removeAttr(attribute.getName());
-    }
-
-    assert(!cir::MissingFeatures::opFuncOptNoneAttr());
-    assert(!cir::MissingFeatures::opFuncNoUnwind());
-    assert(!cir::MissingFeatures::opFuncColdHotAttr());
-    assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
-    assert(!cir::MissingFeatures::openCL());
   }
 };
 

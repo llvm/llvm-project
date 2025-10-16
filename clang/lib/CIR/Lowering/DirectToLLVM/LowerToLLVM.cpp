@@ -1624,10 +1624,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  // Add inline_kind attribute with "cir." prefix so amendOperation handles it
   if (auto inlineKind = op.getInlineKind()) {
-    fn->setAttr("cir.inline_kind",
-                cir::InlineAttr::get(getContext(), *inlineKind));
+    fn.setNoInline(inlineKind == cir::InlineKind::NoInline);
+    fn.setInlineHint(inlineKind == cir::InlineKind::InlineHint);
+    fn.setAlwaysInline(inlineKind == cir::InlineKind::AlwaysInline);
   }
 
   fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
