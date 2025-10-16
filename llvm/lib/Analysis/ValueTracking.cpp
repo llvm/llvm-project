@@ -7680,7 +7680,6 @@ static bool isGuaranteedNotToBeUndefOrPoison(
 
     if (!::canCreateUndefOrPoison(Opr, Kind,
                                   /*ConsiderFlagsAndMetadata=*/true)) {
-      Value *Splat;
       if (const auto *PN = dyn_cast<PHINode>(V)) {
         unsigned Num = PN->getNumIncomingValues();
         bool IsWellDefined = true;
@@ -7696,7 +7695,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         }
         if (IsWellDefined)
           return true;
-      } else if (isa<ShuffleVectorInst>(Opr) && (Splat = getSplatValue(Opr))) {
+      } else if (auto *Splat = isa<ShuffleVectorInst>(Opr) ? getSplatValue(Opr)
+                                                           : nullptr) {
         // For splats we only need to check the value being splatted.
         if (OpCheck(Splat))
           return true;
