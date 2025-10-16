@@ -11,19 +11,10 @@ define dso_local void @foo(ptr noundef %A, ptr noundef %B, ptr noundef %C) #0 {
 ; CHECK-LABEL: define dso_local void @foo(
 ; CHECK-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 8, 0
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 0
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 8, 0
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[MUL1]], 0
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[C]], i32 [[ADD2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[C]], align 4
 ; CHECK-NEXT:    [[RIPPLEBINOP:%.*]] = fadd <32 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[MUL5:%.*]] = mul i32 8, 0
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[MUL5]], 0
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[ADD6]]
-; CHECK-NEXT:    store <32 x float> [[RIPPLEBINOP]], ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    store <32 x float> [[RIPPLEBINOP]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

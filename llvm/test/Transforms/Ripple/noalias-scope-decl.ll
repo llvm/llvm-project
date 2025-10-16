@@ -6,14 +6,18 @@ source_filename = "<stdin>"
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 
 ; The metadata should be preserved by ripple
-; CHECK: tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-LABEL: tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
 
-define dso_local i32 @f() local_unnamed_addr {
+define dso_local i32 @f(ptr noundef %aptr, ptr noundef %aptr2) local_unnamed_addr {
 entry:
   %BS = tail call ptr @llvm.ripple.block.setshape.i32(i32 0, i32 32, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1)
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   %0 = tail call i32 @llvm.ripple.block.index.i32(ptr %BS, i32 0)
   %1 = tail call i32 @llvm.ripple.reduce.add.i32(i64 1, i32 %0)
+  %p = load i32, ptr %aptr, align 1, !alias.scope !0
+  %p2 = load i32, ptr %aptr2, align 1, !noalias !0
+  %add = add i32 %p, %p2
+  store i32 %add, ptr %aptr, align 1
   ret i32 %1
 }
 

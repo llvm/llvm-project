@@ -11,7 +11,7 @@ define dso_local void @matmult(i32 noundef %N, ptr noalias nocapture noundef rea
 ; CHECK-NEXT:    br i1 [[CMP97_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[I_098:%.*]] = phi i32 [ [[INC49:%.*]], [[FOR_COND_CLEANUP28:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP286:%.*]] = icmp ult i32 32, [[N]]
+; CHECK-NEXT:    [[CMP286:%.*]] = icmp ugt i32 [[N]], 32
 ; CHECK-NEXT:    br i1 [[CMP286]], label [[FOR_BODY3_LR_PH:%.*]], label [[FOR_COND26_PREHEADER:%.*]]
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i32 [[I_098]], [[N]]
@@ -29,29 +29,26 @@ define dso_local void @matmult(i32 noundef %N, ptr noalias nocapture noundef rea
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[J_087:%.*]] = phi i32 [ 0, [[FOR_BODY3_LR_PH]] ], [ [[ADD23]], [[FOR_COND_CLEANUP9]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAYIDX4]], i32 [[J_087]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr float, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    store <32 x float> zeroinitializer, ptr [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    store <32 x float> zeroinitializer, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr float, ptr [[B:%.*]], i32 [[J_087]]
 ; CHECK-NEXT:    br label [[FOR_BODY10:%.*]]
 ; CHECK:       for.cond.cleanup9:
-; CHECK-NEXT:    [[ADD23]] = add i32 32, [[J_087]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 32, [[ADD23]]
+; CHECK-NEXT:    [[ADD23]] = add i32 [[J_087]], 32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[J_087]], 64
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_COND26_PREHEADER]]
 ; CHECK:       for.body10:
 ; CHECK-NEXT:    [[K_085:%.*]] = phi i32 [ 0, [[FOR_BODY3]] ], [ [[INC:%.*]], [[FOR_BODY10]] ]
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds float, ptr [[ARRAYIDX12]], i32 [[K_085]]
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw float, ptr [[ARRAYIDX12]], i32 [[K_085]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[DOTRIPPLE_BCAST_SPLATINSERT:%.*]] = insertelement <32 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTRIPPLE_BCAST_SPLAT:%.*]] = shufflevector <32 x float> [[DOTRIPPLE_BCAST_SPLATINSERT]], <32 x float> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i32 [[K_085]], [[N]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[INVARIANT_GEP]], i32 [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr float, ptr [[GEP]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load <32 x float>, ptr [[ARRAYIDX17]], align 4
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr float, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load <32 x float>, ptr [[ARRAYIDX21]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <32 x float>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load <32 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[DOTRIPPLE_VECTORIZED:%.*]] = call <32 x float> @llvm.fmuladd.v32f32(<32 x float> [[DOTRIPPLE_BCAST_SPLAT]], <32 x float> [[TMP5]], <32 x float> [[TMP6]])
-; CHECK-NEXT:    store <32 x float> [[DOTRIPPLE_VECTORIZED]], ptr [[ARRAYIDX21]], align 4
+; CHECK-NEXT:    store <32 x float> [[DOTRIPPLE_VECTORIZED]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K_085]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP9]], label [[FOR_BODY10]]

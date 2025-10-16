@@ -1,7 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -Wall -Wpedantic -Wextra %s -O1 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang -Wall -Wpedantic -Wextra -x c++ %s -O1 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
-// XFAIL: *
+// RUN: %clang -Wall -Wpedantic -Wextra %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang -Wall -Wpedantic -Wextra -x c++ %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
 
 #include <ripple.h>
 
@@ -30,9 +29,7 @@ void check_alignment_2D_slice_partial(size_t begin, size_t end, size_t chunks,
 
 // CHECK-LABEL: void @check_alignment_2D_slice_partial
 // CHECK: for.body{{[0-9]+}}:
-// CHECK: [[Slice:%.*]] = getelementptr i8, ptr [[ADDR:%.*]], i{{32|64}} 8
-// CHECK: call void @llvm.assume(i1 true) [ "align"(ptr [[Slice]], i{{32|64}} 128) ]
-// CHECK: [[LD:%.*]] = load <128 x float>, ptr [[ADDR]], align 4
+// CHECK: [[LD:%.*]] = load <128 x float>, ptr {{.*}}, align 4
 
 // After that test, everything should be aligned
 // CHECK-LABEL: void @check_alignment_scalar

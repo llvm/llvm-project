@@ -14,30 +14,21 @@ define dso_local void @foo(ptr noundef %A, ptr noundef %B, ptr noundef %C) #0 {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 1024
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[I_0]], 1024
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 8, 0
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I_0]], [[MUL]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], 0
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i32 [[ADD1]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i32 [[I_0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <32 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 8, 0
-; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[I_0]], [[MUL2]]
-; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], 0
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[C]], i32 [[ADD4]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i32 [[I_0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <32 x float>, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[RIPPLEBINOP:%.*]] = fadd <32 x float> [[TMP4]], [[TMP9]]
-; CHECK-NEXT:    [[MUL7:%.*]] = mul i32 8, 0
-; CHECK-NEXT:    [[ADD8:%.*]] = add i32 [[I_0]], [[MUL7]]
-; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[ADD8]], 0
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[ADD9]]
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i32 [[I_0]]
 ; CHECK-NEXT:    store <32 x float> [[RIPPLEBINOP]], ptr [[ARRAYIDX10]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[ADD11]] = add nsw i32 [[I_0]], 32
+; CHECK-NEXT:    [[ADD11]] = add nuw nsw i32 [[I_0]], 32
 ; CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

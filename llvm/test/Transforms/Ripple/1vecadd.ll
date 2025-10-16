@@ -11,13 +11,10 @@ define dso_local void @foo(ptr noundef %A, ptr noundef %B, ptr noundef %C) #0 {
 ; CHECK-LABEL: define dso_local void @foo(
 ; CHECK-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[C]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[RIPPLEBINOP:%.*]] = fadd <32 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 0
-; CHECK-NEXT:    store <32 x float> [[RIPPLEBINOP]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[C]], align 4
+; CHECK-NEXT:    [[ADD_RIPPLE_VECTORIZED:%.*]] = fadd <32 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <32 x float> [[ADD_RIPPLE_VECTORIZED]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

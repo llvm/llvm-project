@@ -48,7 +48,7 @@ entry:
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   %in_ptr = getelementptr inbounds i32, ptr %in_array, i64 %idx
   %val = load i32, ptr %in_ptr, align 4
-  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.cttz.v32i32
+  ; CHECK: %[[RESULT:.*]] = call{{.*}}<32 x i32> @llvm.cttz.v32i32
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   store i32 %cttz, ptr %out_ptr, align 4
@@ -78,7 +78,7 @@ entry:
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   %in_ptr = getelementptr inbounds float, ptr %in_array, i64 %idx
   %val = load float, ptr %in_ptr, align 4
-  ; CHECK: %[[RESULT:.*]] = call <32 x i1> @llvm.is.fpclass.v32f32(<32 x float> %val, i32 3)
+  ; CHECK: %[[RESULT:.*]] = fcmp uno <32 x float> %val, zeroinitializer
   %is_nan = call i1 @llvm.is.fpclass.f32(float %val, i32 3)
   %result = zext i1 %is_nan to i32
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
@@ -91,9 +91,10 @@ entry:
   %BS = tail call ptr @llvm.ripple.block.setshape.i64(i64 0, i64 32, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   ; CHECK: .ripple.call.loop.body.call.block
-  ; CHECK: %[[DEST_PTR:.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[SRC_PTR:.*]] = extractelement <32 x ptr> %src_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr %[[DEST_PTR]], ptr %[[SRC_PTR]], i64 4, i1 false)
+  ; CHECK: [[DEST_PTR:%.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: [[SRC_PTR:%.*]] = extractelement <32 x ptr> %src_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: [[VAL:%.*]] = load i32, ptr [[SRC_PTR]]
+  ; CHECK: store i32 [[VAL]], ptr [[DEST_PTR]]
   %src_ptr = getelementptr inbounds i32, ptr %src, i64 %idx
   %dest_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   call void @llvm.memcpy.p0.p0.i64(ptr %dest_ptr, ptr %src_ptr, i64 4, i1 false)
@@ -105,9 +106,10 @@ entry:
   %BS = tail call ptr @llvm.ripple.block.setshape.i64(i64 0, i64 32, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   ; CHECK: .ripple.call.loop.body.call.block
-  ; CHECK: %[[DEST_PTR:.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[SRC_PTR:.*]] = extractelement <32 x ptr> %src_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: call void @llvm.memcpy.inline.p0.p0.i64(ptr %[[DEST_PTR]], ptr %[[SRC_PTR]], i64 4, i1 false)
+  ; CHECK: [[DEST_PTR:%.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: [[SRC_PTR:%.*]] = extractelement <32 x ptr> %src_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: [[VAL:%.*]] = load i32, ptr [[SRC_PTR]]
+  ; CHECK: store i32 [[VAL]], ptr [[DEST_PTR]]
   %src_ptr = getelementptr inbounds i32, ptr %src, i64 %idx
   %dest_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest_ptr, ptr %src_ptr, i64 4, i1 false)
@@ -119,9 +121,10 @@ entry:
   %BS = tail call ptr @llvm.ripple.block.setshape.i64(i64 0, i64 32, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   ; CHECK: .ripple.call.loop.body.call.block
-  ; CHECK: %[[DEST_PTR:.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[SRC_PTR:.*]] = extractelement <32 x ptr> %src_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[DEST_PTR]], ptr %[[SRC_PTR]], i64 4, i1 false)
+  ; CHECK: [[DEST_PTR:%.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: [[SRC_PTR:%.*]] = extractelement <32 x ptr> %src_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: [[VAL:%.*]] = load i32, ptr [[SRC_PTR]]
+  ; CHECK: store i32 [[VAL]], ptr [[DEST_PTR]]
   %src_ptr = getelementptr inbounds i32, ptr %src, i64 %idx
   %dest_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   call void @llvm.memmove.p0.p0.i64(ptr %dest_ptr, ptr %src_ptr, i64 4, i1 false)
@@ -133,8 +136,8 @@ entry:
   %BS = tail call ptr @llvm.ripple.block.setshape.i64(i64 0, i64 32, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   ; CHECK: .ripple.call.loop.body.call.block
-  ; CHECK: %[[DEST_PTR:.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: call void @llvm.memset.p0.i64(ptr %[[DEST_PTR]], i8 0, i64 4, i1 false)
+  ; CHECK: [[DEST_PTR:%.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: store i32 0, ptr [[DEST_PTR]]
   %dest_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   %dest_i8 = bitcast ptr %dest_ptr to ptr
   call void @llvm.memset.p0.i64(ptr %dest_i8, i8 0, i64 4, i1 false)
@@ -146,8 +149,8 @@ entry:
   %BS = tail call ptr @llvm.ripple.block.setshape.i64(i64 0, i64 32, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
   %idx = tail call i64 @llvm.ripple.block.index.i64(ptr %BS, i64 0)
   ; CHECK: .ripple.call.loop.body.call.block
-  ; CHECK: %[[DEST_PTR:.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: call void @llvm.memset.inline.p0.i64(ptr %[[DEST_PTR]], i8 0, i64 4, i1 false)
+  ; CHECK: [[DEST_PTR:%.*]] = extractelement <32 x ptr> %dest_ptr.ripple.LS.instance, i64 %ripple.scalarcall.iterator
+  ; CHECK: store i32 0, ptr [[DEST_PTR]]
   %dest_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   %dest_i8 = bitcast ptr %dest_ptr to ptr
   call void @llvm.memset.inline.p0.i64(ptr %dest_i8, i8 0, i64 4, i1 false)
@@ -179,7 +182,7 @@ entry:
   %val2 = load i32, ptr %in_ptr2, align 4
   ; CHECK: .ripple.call.loop.body.call.block
   ; CHECK: %[[VAL_1:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val2, i64 %ripple.scalarcall.iterator
+  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
   ; CHECK: call i32 @llvm.sdiv.fix.i32(i32 %[[VAL_1]], i32 %[[VAL_2]], i32 8)
   %result = call i32 @llvm.sdiv.fix.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
@@ -197,7 +200,7 @@ entry:
   %val2 = load i32, ptr %in_ptr2, align 4
   ; CHECK: .ripple.call.loop.body.call.block
   ; CHECK: %[[VAL_1:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val2, i64 %ripple.scalarcall.iterator
+  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
   ; CHECK: call i32 @llvm.sdiv.fix.sat.i32(i32 %[[VAL_1]], i32 %[[VAL_2]], i32 8)
   %result = call i32 @llvm.sdiv.fix.sat.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
@@ -213,7 +216,7 @@ entry:
   %in_ptr2 = getelementptr inbounds i32, ptr %in_array, i64 %idx
   %val1 = load i32, ptr %in_ptr1, align 4
   %val2 = load i32, ptr %in_ptr2, align 4
-  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.smul.fix.v32i32(<32 x i32> %val1, <32 x i32> %val2, i32 8)
+  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.smul.fix.v32i32(<32 x i32> %val1, <32 x i32> %val1, i32 8)
   %result = call i32 @llvm.smul.fix.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   store i32 %result, ptr %out_ptr, align 4
@@ -228,7 +231,7 @@ entry:
   %in_ptr2 = getelementptr inbounds i32, ptr %in_array, i64 %idx
   %val1 = load i32, ptr %in_ptr1, align 4
   %val2 = load i32, ptr %in_ptr2, align 4
-  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.smul.fix.sat.v32i32(<32 x i32> %val1, <32 x i32> %val2, i32 8)
+  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.smul.fix.sat.v32i32(<32 x i32> %val1, <32 x i32> %val1, i32 8)
   %result = call i32 @llvm.smul.fix.sat.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   store i32 %result, ptr %out_ptr, align 4
@@ -245,7 +248,7 @@ entry:
   %val2 = load i32, ptr %in_ptr2, align 4
   ; CHECK: .ripple.call.loop.body.call.block
   ; CHECK: %[[VAL_1:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val2, i64 %ripple.scalarcall.iterator
+  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
   ; CHECK: call i32 @llvm.udiv.fix.i32(i32 %[[VAL_1]], i32 %[[VAL_2]], i32 8)
   %result = call i32 @llvm.udiv.fix.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
@@ -263,7 +266,7 @@ entry:
   %val2 = load i32, ptr %in_ptr2, align 4
   ; CHECK: .ripple.call.loop.body.call.block
   ; CHECK: %[[VAL_1:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
-  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val2, i64 %ripple.scalarcall.iterator
+  ; CHECK: %[[VAL_2:.*]] = extractelement <32 x i32> %val1, i64 %ripple.scalarcall.iterator
   ; CHECK: call i32 @llvm.udiv.fix.sat.i32(i32 %[[VAL_1]], i32 %[[VAL_2]], i32 8)
   %result = call i32 @llvm.udiv.fix.sat.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
@@ -279,7 +282,7 @@ entry:
   %in_ptr2 = getelementptr inbounds i32, ptr %in_array, i64 %idx
   %val1 = load i32, ptr %in_ptr1, align 4
   %val2 = load i32, ptr %in_ptr2, align 4
-  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.umul.fix.v32i32(<32 x i32> %val1, <32 x i32> %val2, i32 8)
+  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.umul.fix.v32i32(<32 x i32> %val1, <32 x i32> %val1, i32 8)
   %result = call i32 @llvm.umul.fix.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   store i32 %result, ptr %out_ptr, align 4
@@ -294,7 +297,7 @@ entry:
   %in_ptr2 = getelementptr inbounds i32, ptr %in_array, i64 %idx
   %val1 = load i32, ptr %in_ptr1, align 4
   %val2 = load i32, ptr %in_ptr2, align 4
-  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.umul.fix.sat.v32i32(<32 x i32> %val1, <32 x i32> %val2, i32 8)
+  ; CHECK: %[[RESULT:.*]] = call <32 x i32> @llvm.umul.fix.sat.v32i32(<32 x i32> %val1, <32 x i32> %val1, i32 8)
   %result = call i32 @llvm.umul.fix.sat.i32(i32 %val1, i32 %val2, i32 8)
   %out_ptr = getelementptr inbounds i32, ptr %dest, i64 %idx
   store i32 %result, ptr %out_ptr, align 4

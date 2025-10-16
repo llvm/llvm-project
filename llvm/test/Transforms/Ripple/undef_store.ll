@@ -15,7 +15,9 @@ entry:
   %2 = load ptr, ptr %aptr.addr, align 8, !tbaa !2
   %3 = load i64, ptr %v0, align 8, !tbaa !6
   %arrayidx = getelementptr inbounds float, ptr %2, i64 %3
-; CHECK:   store <8 x float> undef, ptr
+; CHECK-LABEL:  void @foo(ptr
+; CHECK-NEXT: entry:
+; CHECK-NEXT: ret void
   store float %1, ptr %arrayidx, align 4, !tbaa !8
   call void @llvm.lifetime.end.p0(i64 4, ptr %x) #4
   call void @llvm.lifetime.end.p0(i64 8, ptr %v0) #4
