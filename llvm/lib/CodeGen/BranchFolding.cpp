@@ -1818,7 +1818,7 @@ ReoptimizeBlock:
 bool BranchFolder::HoistCommonCode(MachineFunction &MF) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : llvm::make_early_inc_range(MF))
-    MadeChange |= HoistCommonCodeInSuccs(&MBB, MF);
+    MadeChange |= HoistCommonCodeInSuccs(&MBB);
 
   return MadeChange;
 }
@@ -1948,8 +1948,7 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
   return PI;
 }
 
-bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB,
-                                          MachineFunction &MF) {
+bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
   if (TII->analyzeBranch(*MBB, TBB, FBB, Cond, true) || !TBB || Cond.empty())
@@ -1980,6 +1979,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB,
   MachineBasicBlock::iterator FIB = FBB->begin();
   MachineBasicBlock::iterator TIE = TBB->end();
   MachineBasicBlock::iterator FIE = FBB->end();
+  MachineFunction &MF = *MBB->getParent();
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
     TIB = skipDebugInstructionsForward(TIB, TIE, false);

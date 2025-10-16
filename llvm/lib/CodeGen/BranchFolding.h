@@ -196,7 +196,7 @@ class TargetRegisterInfo;
 
     /// If the successors of MBB has common instruction sequence at the start of
     /// the function, move the instructions before MBB terminator if it's legal.
-    bool HoistCommonCodeInSuccs(MachineBasicBlock *MBB, MachineFunction &MF);
+    bool HoistCommonCodeInSuccs(MachineBasicBlock *MBB);
   };
 
 } // end namespace llvm
