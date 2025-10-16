@@ -13,4 +13,16 @@
 # RUN: dsymutil -f  -oso-prepend-path=%p/../../dsymutil/ %t3 -o %t3.dSYM
 # RUN: llvm-objdump --source --prefix=%p/../../dsymutil  %t3 | FileCheck --check-prefix=SOURCE %s
 
+## Test that --source works with --macho flag
+
+## --macho w/ explicit .dSYM
+# RUN: llvm-objdump < %p/../../dsymutil/Inputs/basic.macho.x86_64 - --source --macho --dsym=%t1.dSYM --prefix=%p/../../dsymutil | \
+# RUN:   FileCheck --check-prefix=SOURCE %s
+
+## --macho w/ auto-detected .dSYM (dir)
+# RUN: llvm-objdump --source --macho --prefix=%p/../../dsymutil %t2 | FileCheck --check-prefix=SOURCE %s
+
+## --macho w/ auto-detected .dSYM (file)
+# RUN: llvm-objdump --source --macho --prefix=%p/../../dsymutil %t3 | FileCheck --check-prefix=SOURCE %s
+
 # SOURCE: ; int bar(int arg) {
