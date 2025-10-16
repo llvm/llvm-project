@@ -2092,8 +2092,6 @@ bool CHR::run() {
   return Changed;
 }
 
-namespace llvm {
-
 ControlHeightReductionPass::ControlHeightReductionPass() {
   parseCHRFilterFiles();
 }
@@ -2116,5 +2114,3 @@ PreservedAnalyses ControlHeightReductionPass::run(
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
-
-} // namespace llvm
