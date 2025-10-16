@@ -1167,7 +1167,8 @@ TYPE_PARSER( //
     "DOACROSS" >>
         construct<OmpClause>(parenthesized(Parser<OmpDoacrossClause>{})) ||
     "DYNAMIC_ALLOCATORS" >>
-        construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
+        construct<OmpClause>(construct<OmpClause::DynamicAllocators>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "DYN_GROUPPRIVATE" >>
         construct<OmpClause>(construct<OmpClause::DynGroupprivate>(
             parenthesized(Parser<OmpDynGroupprivateClause>{}))) ||
@@ -1279,12 +1280,15 @@ TYPE_PARSER( //
     "REPLAYABLE" >> construct<OmpClause>(construct<OmpClause::Replayable>(
                         maybe(parenthesized(Parser<OmpReplayableClause>{})))) ||
     "REVERSE_OFFLOAD" >>
-        construct<OmpClause>(construct<OmpClause::ReverseOffload>()) ||
+        construct<OmpClause>(construct<OmpClause::ReverseOffload>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "SAFELEN" >> construct<OmpClause>(construct<OmpClause::Safelen>(
                      parenthesized(scalarIntConstantExpr))) ||
     "SCHEDULE" >> construct<OmpClause>(construct<OmpClause::Schedule>(
                       parenthesized(Parser<OmpScheduleClause>{}))) ||
     "SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>()) ||
+    "SELF_MAPS" >> construct<OmpClause>(construct<OmpClause::SelfMaps>(
+                       maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "SEVERITY" >> construct<OmpClause>(construct<OmpClause::Severity>(
                       parenthesized(Parser<OmpSeverityClause>{}))) ||
     "SHARED" >> construct<OmpClause>(construct<OmpClause::Shared>(
@@ -1312,9 +1316,11 @@ TYPE_PARSER( //
         construct<OmpClause>(construct<OmpClause::UseDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
     "UNIFIED_ADDRESS" >>
-        construct<OmpClause>(construct<OmpClause::UnifiedAddress>()) ||
+        construct<OmpClause>(construct<OmpClause::UnifiedAddress>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "UNIFIED_SHARED_MEMORY" >>
-        construct<OmpClause>(construct<OmpClause::UnifiedSharedMemory>()) ||
+        construct<OmpClause>(construct<OmpClause::UnifiedSharedMemory>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "UNIFORM" >> construct<OmpClause>(construct<OmpClause::Uniform>(
                      parenthesized(nonemptyList(name)))) ||
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
