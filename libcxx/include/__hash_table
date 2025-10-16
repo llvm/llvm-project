@@ -808,7 +808,7 @@ public:
           }
           {
             __node_holder __h = __construct_node_hash(__hash, std::forward<_Args>(__args2)...);
-            if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
+            if (size() + 1 > __bc * max_load_factor()) {
               __rehash_unique(std::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
                                                   size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
               __bc    = bucket_count();
