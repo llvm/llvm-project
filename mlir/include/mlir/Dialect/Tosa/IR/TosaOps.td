@@ -349,6 +349,40 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: matmul_t_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled"> {
+  let summary = "Performs two dimensional matrix multiplications using block scaled tensors.";
+
+  let description = [{
+    Performs two dimensional matrix multiplications using block scaled tensors. The block
+    dimension is always the the last dimension of the tensor, so the result is effectively
+    a matrix multiply of A by the transposed B matrix. If the N dimension of input B is of
+    size 1, the B matrix will be broadcast.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensor3D:$a_data,
+    Tosa_MXFPScaleTensor3D:$a_scale,
+    Tosa_MXFPDataTensor3D:$b_data,
+    Tosa_MXFPScaleTensor3D:$b_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$output_data
+  );
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_MXFP]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: max_pool2d
 //===----------------------------------------------------------------------===//
 def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
@@ -2436,6 +2470,69 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_from_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastFromBlockScaledOp: Tosa_InferShapedTypeOp<"cast_from_block_scaled"> {
+  let summary = "Apply scales from a scale tensor to the values in a value tensor";
+
+  let description = [{
+    Apply the scales from a scale tensor to the values in a value tensor, casting
+    the result to the output type. The block dimension must be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensorAtLeast1D:$input_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$input_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_TensorAtLeast1D: $output_data
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>,
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_to_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled"> {
+  let summary = "Calculate scale tensor values per block, output to separate scale and data tensors.";
+
+  let description = [{
+    Calculate a scale value per block of input values and use that to calculate
+    scaled data values from an input tensor. The output tensors are cast to the
+    specified scale and value types. The block dimension will be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D:$input_data,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_MXFPDataTensorAtLeast1D:$output_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$output_scale
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
