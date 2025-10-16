@@ -2604,6 +2604,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
     StringLiteral("memory"),
@@ -2643,6 +2644,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setNoInline(true);
   if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
     funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::InlineHint))
+    funcOp.setInlineHint(true);
   if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
     funcOp.setOptimizeNone(true);
   if (func->hasFnAttribute(llvm::Attribute::Convergent))

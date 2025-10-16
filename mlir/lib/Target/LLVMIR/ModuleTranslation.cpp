@@ -1652,6 +1652,8 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
   if (func.getAlwaysInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (func.getInlineHintAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
   if (func.getConvergentAttr())

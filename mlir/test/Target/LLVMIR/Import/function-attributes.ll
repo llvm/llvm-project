@@ -393,6 +393,12 @@ declare void @alwaysinline_attribute() alwaysinline
 
 // -----
 
+; CHECK-LABEL: @inlinehint_attribute
+; CHECK-SAME: attributes {inline_hint}
+declare void @inlinehint_attribute() inlinehint
+
+// -----
+
 ; CHECK-LABEL: @optnone_attribute
 ; CHECK-SAME: attributes {no_inline, optimize_none}
 declare void @optnone_attribute() noinline optnone
