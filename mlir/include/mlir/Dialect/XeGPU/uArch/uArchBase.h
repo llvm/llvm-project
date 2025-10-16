@@ -32,8 +32,11 @@ namespace uArch {
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
-  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
-        // multiply-add operation
+  DPAS,       // Dot Product Accumulate Systolic (DPAS) is a matrix
+              // multiply-add operation
+  STORE_ND,   // Subgroup-level 2D block write instruction
+  LOAD_ND,    // Subgroup-level 2D block load instruction
+  PREFETCH_ND // Subgroup-level 2D block prefetch instruction
   // @TODO: Add more instructions as needed
 };
 
@@ -147,6 +150,16 @@ struct uArch {
   const std::string &getName() const { return name; }
 
   const std::string &getDescription() const { return description; }
+
+  virtual int getSubgroupSize() const = 0;
+  virtual int getPackedFormatBitSizeGatherScatter() const = 0;
+  virtual int getPackedFormatBitSize() const = 0;
+  virtual std::optional<int> getPackedFormatBitSizeDpasB() const = 0;
+
+  std::shared_ptr<Instruction> getInstruction(InstructionKind instKind) const {
+    assert(instructions.find(instKind) != instructions.end());
+    return instructions.at(instKind);
+  }
 
   const std::map<RegisterFileType, RegisterFileInfo> &
   getRegisterFileInfo() const {
