@@ -1593,7 +1593,7 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
-bool GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
   return isAccessiblePtrImpl(Ptr, Size);
 }
 
@@ -2153,7 +2153,17 @@ int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
 
 int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
                                            size_t Size) {
-  return getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure while checking accessibility of pointer %p for device %d: %s", Ptr, DeviceId, ErrStr.c_str());
+    return false;
+  };
+
+  auto AccessibleOrErr = getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
+  if (Error Err = AccessibleOrErr.takeError())
+    return HandleError(std::move(Err));
+  
+  return *AccessibleOrErr;
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,

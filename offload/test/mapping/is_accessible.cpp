@@ -7,7 +7,7 @@
 // RUN: | %fcheck-generic -check-prefix=NO_USM
 
 // REQUIRES: unified_shared_memory
-// REQUIRES: amdgpu
+// XFAIL: nvptx
 
 // CHECK: SUCCESS
 // NO_USM: Not accessible

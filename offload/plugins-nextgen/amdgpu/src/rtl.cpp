@@ -3027,7 +3027,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled);
   }
 
-  bool isAccessiblePtrImpl(const void *Ptr, size_t Size) override {
+  Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override {
     hsa_amd_pointer_info_t Info;
     Info.size = sizeof(hsa_amd_pointer_info_t);
 
@@ -3036,8 +3036,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     hsa_status_t Status =
         hsa_amd_pointer_info(Ptr, &Info, malloc, &Count, &Agents);
 
-    if (Status != HSA_STATUS_SUCCESS)
-      return false;
+    if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
+      return std::move(Err);
 
     // Checks if the pointer is known by HSA and accessible by the device
     for (uint32_t i = 0; i < Count; i++)

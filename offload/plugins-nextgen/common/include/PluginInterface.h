@@ -1071,10 +1071,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Returns true if the plugin can guarantee that the associated
   /// storage is accessible
-  bool isAccessiblePtr(const void *Ptr, size_t Size);
-  virtual bool isAccessiblePtrImpl(const void *Ptr, size_t Size) {
-    return false;
-  }
+  Expected<bool> isAccessiblePtr(const void *Ptr, size_t Size);
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
@@ -1175,6 +1172,10 @@ private:
 
   /// Per device setting of MemoryManager's Threshold
   virtual size_t getMemoryManagerSizeThreshold() { return 0; }
+
+  virtual Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) {
+    return false;
+  }
 
   /// Environment variables defined by the OpenMP standard.
   Int32Envar OMP_TeamLimit;
