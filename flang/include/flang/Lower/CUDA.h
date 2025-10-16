@@ -62,7 +62,7 @@ cuf::DataAttributeAttr
 translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
                                 const Fortran::semantics::Symbol &sym);
 
-/// Check is the rhs has an implicit conversion. Return the elemental op if
+/// Check if the rhs has an implicit conversion. Return the elemental op if
 /// there is a conversion. Return null otherwise.
 hlfir::ElementalOp isTransferWithConversion(mlir::Value rhs);
 
