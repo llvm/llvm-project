@@ -23,6 +23,11 @@ bool_flag(
     build_setting_default = True,
 )
 
+bool_flag(
+    name = "enable_custom_checks",
+    build_setting_default = True,
+)
+
 config_setting(
     name = "static_analyzer_enabled",
     flag_values = {
@@ -30,13 +35,25 @@ config_setting(
     },
 )
 
+config_setting(
+    name = "custom_checks_enabled",
+    flag_values = {
+        ":enable_custom_checks": "true",
+    },
+)
+
 expand_template(
     name = "config",
     out = "clang-tidy-config.h",
     substitutions =
-        {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 0",
-        } | select({
+        select({
+            ":custom_checks_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 0",
+            },
+        }) | select({
             ":static_analyzer_enabled": {
                 "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
             },
@@ -209,6 +226,15 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
+    name = "custom",
+    deps = [
+        ":lib",
+        "//clang:ast_matchers_dynamic",
+        "//clang-tools-extra/clang-query:lib",
+    ],
+)
+
+clang_tidy_library(
     name = "concurrency",
     deps = [":lib"],
 )
@@ -364,6 +390,9 @@ CHECKS = [
     ":zircon",
 ] + select({
     ":static_analyzer_enabled": [":mpi"],
+    "//conditions:default": [],
+}) + select({
+    ":custom_checks_enabled": [":custom"],
     "//conditions:default": [],
 })
 
