@@ -1,4 +1,4 @@
-//===--- ProTypeVarargCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// of va_arg.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-vararg.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-vararg.html
 class ProTypeVarargCheck : public ClangTidyCheck {
 public:
   ProTypeVarargCheck(StringRef Name, ClangTidyContext *Context)

@@ -352,6 +352,13 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestCustomStorageCtor : Test_Type<"TestCustomStorageCtor"> {
+    let mnemonic = "custom_storage_ctor_type";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
+}
+
 def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
   let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
   let mnemonic = "optional_type_string";
@@ -428,6 +435,15 @@ def TestTensorType : Test_Type<"TestTensor",
       return test::TestTensorType::get(
         getContext(), shape.value_or(getShape()), elementType);
     }
+
+    // TensorLikeTypeInterface:
+    ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
+    getBufferType(const ::mlir::bufferization::BufferizationOptions& options,
+                  ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
+
+    ::mlir::LogicalResult verifyCompatibleBufferType(
+        ::mlir::bufferization::BufferLikeType bufferType,
+        ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
   }];
 }
 

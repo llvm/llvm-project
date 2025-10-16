@@ -16,6 +16,9 @@ bar:
 ; CHECK: brlo bar            ; encoding: [0bAAAAA000,0b111100AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 30 f0      brlo .+12
-; INST-NEXT: 70 f0      brlo .+28
-; INST-NEXT: 00 f0      brlo .+0
+; INST-NEXT: f8 f3      brlo .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0xe
+; INST-NEXT: f8 f3      brlo .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x20
+; INST-NEXT: f8 f3      brlo .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6

@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -192,11 +193,11 @@ class GCOVFile {
 public:
   GCOVFile() = default;
 
-  bool readGCNO(GCOVBuffer &Buffer);
-  bool readGCDA(GCOVBuffer &Buffer);
+  LLVM_ABI bool readGCNO(GCOVBuffer &Buffer);
+  LLVM_ABI bool readGCDA(GCOVBuffer &Buffer);
   GCOV::GCOVVersion getVersion() const { return version; }
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
   std::vector<std::string> filenames;
   StringMap<unsigned> filenameToIdx;
@@ -223,7 +224,7 @@ private:
 struct GCOVArc {
   GCOVArc(GCOVBlock &src, GCOVBlock &dst, uint32_t flags)
       : src(src), dst(dst), flags(flags) {}
-  bool onTree() const;
+  LLVM_ABI bool onTree() const;
 
   GCOVBlock &src;
   GCOVBlock &dst;
@@ -240,18 +241,18 @@ public:
 
   GCOVFunction(GCOVFile &file) : file(file) {}
 
-  StringRef getName(bool demangle) const;
-  StringRef getFilename() const;
-  uint64_t getEntryCount() const;
-  GCOVBlock &getExitBlock() const;
+  LLVM_ABI StringRef getName(bool demangle) const;
+  LLVM_ABI StringRef getFilename() const;
+  LLVM_ABI uint64_t getEntryCount() const;
+  LLVM_ABI GCOVBlock &getExitBlock() const;
 
   iterator_range<BlockIterator> blocksRange() const {
     return make_range(blocks.begin(), blocks.end());
   }
 
-  void propagateCounts(const GCOVBlock &v, GCOVArc *pred);
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void propagateCounts(const GCOVBlock &v, GCOVArc *pred);
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
   GCOVFile &file;
   uint32_t ident = 0;
@@ -270,6 +271,14 @@ public:
   DenseSet<const GCOVBlock *> visited;
 };
 
+/// Represent file of lines same with block_location_info in gcc.
+struct GCOVBlockLocation {
+  GCOVBlockLocation(unsigned idx) : srcIdx(idx) {}
+
+  unsigned srcIdx;
+  SmallVector<uint32_t, 4> lines;
+};
+
 /// GCOVBlock - Collects block information.
 class GCOVBlock {
 public:
@@ -280,8 +289,13 @@ public:
 
   GCOVBlock(uint32_t N) : number(N) {}
 
-  void addLine(uint32_t N) { lines.push_back(N); }
-  uint32_t getLastLine() const { return lines.back(); }
+  void addLine(uint32_t N) {
+    locations.back().lines.push_back(N);
+    lastLine = N;
+  }
+  void addFile(unsigned fileIdx) { locations.emplace_back(fileIdx); }
+
+  uint32_t getLastLine() const { return lastLine; }
   uint64_t getCount() const { return count; }
 
   void addSrcEdge(GCOVArc *Edge) { pred.push_back(Edge); }
@@ -296,27 +310,28 @@ public:
     return make_range(succ.begin(), succ.end());
   }
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
-  static uint64_t
+  LLVM_ABI static uint64_t
   augmentOneCycle(GCOVBlock *src,
                   std::vector<std::pair<GCOVBlock *, size_t>> &stack);
-  static uint64_t getCyclesCount(const BlockVector &blocks);
-  static uint64_t getLineCount(const BlockVector &Blocks);
+  LLVM_ABI static uint64_t getCyclesCount(const BlockVector &blocks);
+  LLVM_ABI static uint64_t getLineCount(const BlockVector &Blocks);
 
 public:
   uint32_t number;
   uint64_t count = 0;
   SmallVector<GCOVArc *, 2> pred;
   SmallVector<GCOVArc *, 2> succ;
-  SmallVector<uint32_t, 4> lines;
+  SmallVector<GCOVBlockLocation> locations;
+  uint32_t lastLine = 0;
   bool traversable = false;
   GCOVArc *incoming = nullptr;
 };
 
-void gcovOneInput(const GCOV::Options &options, StringRef filename,
-                  StringRef gcno, StringRef gcda, GCOVFile &file);
+LLVM_ABI void gcovOneInput(const GCOV::Options &options, StringRef filename,
+                           StringRef gcno, StringRef gcda, GCOVFile &file);
 
 } // end namespace llvm
 

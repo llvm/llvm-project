@@ -1,0 +1,16 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of SYCL RT version macro.
+///
+//===----------------------------------------------------------------------===//
+#define _LIBSYCL_MAJOR_VERSION ${LIBSYCL_MAJOR_VERSION}
+#define _LIBSYCL_MINOR_VERSION ${LIBSYCL_MINOR_VERSION}
+#define _LIBSYCL_PATCH_VERSION ${LIBSYCL_PATCH_VERSION}
+#define _LIBSYCL_ABI_NAMESPACE ${LIBSYCL_ABI_NAMESPACE}

@@ -31,7 +31,7 @@ static inline RT_API_ATTRS Cookie NoopUnit(const Terminator &terminator,
 }
 
 static inline RT_API_ATTRS ExternalFileUnit *GetOrCreateUnit(int unitNumber,
-    Direction direction, Fortran::common::optional<bool> isUnformatted,
+    Direction direction, common::optional<bool> isUnformatted,
     const Terminator &terminator, Cookie &errorCookie) {
   IoErrorHandler handler{terminator};
   handler.HasIoStat();

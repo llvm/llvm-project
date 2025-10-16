@@ -22,7 +22,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
 from lldbsuite.test import lldbutil, lldbplatformutil
 
-
+# On Linux systems with Yama ptrace_scope = 1 there is a race condition when the
+# debugee enables tracing. See https://github.com/llvm/llvm-project/issues/161510.
+@skipIfLinux
 class LldbGdbServerTestCase(
     gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser
 ):
@@ -727,7 +729,7 @@ class LldbGdbServerTestCase(
         self.breakpoint_set_and_remove_work(want_hardware=False)
 
     @skipUnlessPlatform(oslist=["linux"])
-    @skipIf(archs=no_match(["arm", "aarch64"]))
+    @skipIf(archs=no_match(["arm$", "aarch64"]))
     def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code

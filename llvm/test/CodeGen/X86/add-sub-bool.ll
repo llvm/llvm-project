@@ -104,18 +104,21 @@ define i24 @test_i24_add_add_idx(i24 %x, i24 %y, i24 %z) nounwind {
 define i128 @test_i128_add_add_idx(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-LABEL: test_i128_add_add_idx:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    btl $5, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 48(%ebp), %ecx
+; X86-NEXT:    movl 52(%ebp), %edx
+; X86-NEXT:    movl 40(%ebp), %esi
+; X86-NEXT:    movl 44(%ebp), %edi
+; X86-NEXT:    addl 24(%ebp), %esi
+; X86-NEXT:    adcl 28(%ebp), %edi
+; X86-NEXT:    adcl 32(%ebp), %ecx
+; X86-NEXT:    adcl 36(%ebp), %edx
+; X86-NEXT:    btl $5, 64(%ebp)
 ; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    adcl $0, %ecx
@@ -124,8 +127,10 @@ define i128 @test_i128_add_add_idx(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %ecx, 8(%eax)
 ; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: test_i128_add_add_idx:

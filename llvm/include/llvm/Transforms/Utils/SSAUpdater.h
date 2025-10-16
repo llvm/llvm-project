@@ -29,7 +29,6 @@ template <typename T> class SSAUpdaterTraits;
 class Type;
 class Use;
 class Value;
-class DbgValueInst;
 
 /// Helper class for SSA formation on a set of values defined in
 /// multiple blocks.
@@ -123,8 +122,6 @@ public:
   /// value set to the new SSA value if available, and undef if not.
   void UpdateDebugValues(Instruction *I);
   void UpdateDebugValues(Instruction *I,
-                         SmallVectorImpl<DbgValueInst *> &DbgValues);
-  void UpdateDebugValues(Instruction *I,
                          SmallVectorImpl<DbgVariableRecord *> &DbgValues);
 
   /// Rewrite a use like \c RewriteUse but handling in-block definitions.
@@ -136,7 +133,6 @@ public:
 
 private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
-  void UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue);
   void UpdateDebugValue(Instruction *I, DbgVariableRecord *DbgValue);
 };
 

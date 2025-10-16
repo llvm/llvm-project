@@ -66,7 +66,7 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
   // inexact.  Similarly for <<.
   BinaryOperator *I = dyn_cast<BinaryOperator>(V);
   if (I && I->isLogicalShift() &&
-      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, 0, &CxtI)) {
+      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CxtI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
@@ -290,7 +290,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       auto *Op1C = cast<Constant>(Op1);
       return replaceInstUsesWith(
           I, Builder.CreateMul(NegOp0, ConstantExpr::getNeg(Op1C), "",
-                               /* HasNUW */ false,
+                               /*HasNUW=*/false,
                                HasNSW && Op1C->isNotMinSignedValue()));
     }
 
@@ -987,9 +987,8 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   // X * -0.0 --> copysign(0.0, -X)
   const APFloat *FPC;
   if (match(Op1, m_APFloatAllowPoison(FPC)) && FPC->isZero() &&
-      ((I.hasNoInfs() &&
-        isKnownNeverNaN(Op0, /*Depth=*/0, SQ.getWithInstruction(&I))) ||
-       isKnownNeverNaN(&I, /*Depth=*/0, SQ.getWithInstruction(&I)))) {
+      ((I.hasNoInfs() && isKnownNeverNaN(Op0, SQ.getWithInstruction(&I))) ||
+       isKnownNeverNaN(&I, SQ.getWithInstruction(&I)))) {
     if (FPC->isNegative())
       Op0 = Builder.CreateFNegFMF(Op0, &I);
     CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
@@ -1071,6 +1070,18 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     if (!Result->hasNoNaNs())
       Result->setHasNoInfs(false);
     return Result;
+  }
+
+  // tan(X) * cos(X) -> sin(X)
+  if (I.hasAllowContract() &&
+      match(&I,
+            m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
+                     m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
+    auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
+      Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
+    }
+    return replaceInstUsesWith(I, Sin);
   }
 
   return nullptr;
@@ -1244,8 +1255,8 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
       // or divisor has nsw and operator is sdiv.
       Value *Dividend = Builder.CreateShl(
           One, Y, "shl.dividend",
-          /*HasNUW*/ true,
-          /*HasNSW*/
+          /*HasNUW=*/true,
+          /*HasNSW=*/
           IsSigned ? (Shl0->hasNoUnsignedWrap() || Shl1->hasNoUnsignedWrap())
                    : Shl0->hasNoSignedWrap());
       return Builder.CreateLShr(Dividend, Z, "", I.isExact());
@@ -1631,10 +1642,11 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   }
 
   Constant *C;
+  auto &DL = IC.getDataLayout();
   if (isa<Instruction>(N) && match(N, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(D, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 
@@ -1645,7 +1657,7 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   if (isa<Instruction>(D) && match(D, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(N, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 
@@ -1720,7 +1732,7 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
       return Log2;
 
     // Op0 udiv Op1 -> Op0 lshr cttz(Op1), if Op1 is a power of 2.
-    if (isKnownToBeAPowerOfTwo(Denom, /*OrZero=*/true, /*Depth=*/0, &I))
+    if (isKnownToBeAPowerOfTwo(Denom, /*OrZero=*/true, &I))
       // This will increase instruction count but it's okay
       // since bitwise operations are substantially faster than
       // division.
@@ -1830,7 +1842,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
                               ConstantInt::getAllOnesValue(Ty));
   }
 
-  KnownBits KnownDividend = computeKnownBits(Op0, 0, &I);
+  KnownBits KnownDividend = computeKnownBits(Op0, &I);
   if (!I.isExact() &&
       (match(Op1, m_Power2(Op1C)) || match(Op1, m_NegatedPower2(Op1C))) &&
       KnownDividend.countMinTrailingZeros() >= Op1C->countr_zero()) {
@@ -1855,7 +1867,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
       return BinaryOperator::CreateNeg(Shr);
     }
 
-    if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
+    if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, &I)) {
       // X sdiv (1 << Y) -> X udiv (1 << Y) ( -> X u>> Y)
       // Safe because the only negative value (1 << Y) can take on is
       // INT_MIN, and X sdiv INT_MIN == X udiv INT_MIN == 0 if X doesn't have
@@ -2409,7 +2421,7 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   // X urem Y -> X and Y-1, where Y is a power of 2,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
-  if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
+  if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, &I)) {
     // This may increase instruction count, we don't enforce that Y is a
     // constant.
     Constant *N1 = Constant::getAllOnesValue(Ty);
@@ -2492,8 +2504,7 @@ Instruction *InstCombinerImpl::visitSRem(BinaryOperator &I) {
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a urem.
   APInt Mask(APInt::getSignMask(I.getType()->getScalarSizeInBits()));
-  if (MaskedValueIsZero(Op1, Mask, 0, &I) &&
-      MaskedValueIsZero(Op0, Mask, 0, &I)) {
+  if (MaskedValueIsZero(Op1, Mask, &I) && MaskedValueIsZero(Op0, Mask, &I)) {
     // X srem Y -> X urem Y, iff X and Y don't have sign bit set
     return BinaryOperator::CreateURem(Op0, Op1, I.getName());
   }

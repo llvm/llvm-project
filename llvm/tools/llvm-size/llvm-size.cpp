@@ -78,6 +78,8 @@ static OutputFormatTy OutputFormat;
 static bool DarwinLongFormat;
 static RadixTy Radix = RadixTy::decimal;
 static bool TotalSizes;
+static bool HasMachOFiles = false;
+static bool ExcludePageZero = false;
 
 static std::vector<std::string> InputFilenames;
 
@@ -91,6 +93,10 @@ static uint64_t TotalObjectText = 0;
 static uint64_t TotalObjectData = 0;
 static uint64_t TotalObjectBss = 0;
 static uint64_t TotalObjectTotal = 0;
+
+// Darwin-specific totals
+static uint64_t TotalObjectObjc = 0;
+static uint64_t TotalObjectOthers = 0;
 
 static void error(const Twine &Message, StringRef File = "") {
   HadError = true;
@@ -283,6 +289,7 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
   uint64_t total_data = 0;
   uint64_t total_objc = 0;
   uint64_t total_others = 0;
+  HasMachOFiles = true;
   for (const auto &Load : MachO->load_commands()) {
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 Seg = MachO->getSegment64LoadCommand(Load);
@@ -307,7 +314,7 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
           total_data += Seg.vmsize;
         else if (SegmentName == "__OBJC")
           total_objc += Seg.vmsize;
-        else
+        else if (!ExcludePageZero || SegmentName != "__PAGEZERO")
           total_others += Seg.vmsize;
       }
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
@@ -333,12 +340,20 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
           total_data += Seg.vmsize;
         else if (SegmentName == "__OBJC")
           total_objc += Seg.vmsize;
-        else
+        else if (!ExcludePageZero || SegmentName != "__PAGEZERO")
           total_others += Seg.vmsize;
       }
     }
   }
   uint64_t total = total_text + total_data + total_objc + total_others;
+
+  if (TotalSizes) {
+    TotalObjectText += total_text;
+    TotalObjectData += total_data;
+    TotalObjectObjc += total_objc;
+    TotalObjectOthers += total_others;
+    TotalObjectTotal += total;
+  }
 
   if (!BerkeleyHeaderPrinted) {
     outs() << "__TEXT\t__DATA\t__OBJC\tothers\tdec\thex\n";
@@ -852,16 +867,25 @@ static void printBerkeleyTotals() {
   std::string fmtbuf;
   raw_string_ostream fmt(fmtbuf);
   const char *radix_fmt = getRadixFmt();
-  fmt << "%#7" << radix_fmt << "\t"
-      << "%#7" << radix_fmt << "\t"
-      << "%#7" << radix_fmt << "\t";
-  outs() << format(fmtbuf.c_str(), TotalObjectText, TotalObjectData,
-                   TotalObjectBss);
-  fmtbuf.clear();
-  fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
-      << "%7" PRIx64 "\t";
-  outs() << format(fmtbuf.c_str(), TotalObjectTotal, TotalObjectTotal)
-         << "(TOTALS)\n";
+
+  if (HasMachOFiles) {
+    // Darwin format totals: __TEXT __DATA __OBJC others dec hex
+    outs() << TotalObjectText << "\t" << TotalObjectData << "\t"
+           << TotalObjectObjc << "\t" << TotalObjectOthers << "\t"
+           << TotalObjectTotal << "\t" << format("%" PRIx64, TotalObjectTotal)
+           << "\t(TOTALS)\n";
+  } else {
+    fmt << "%#7" << radix_fmt << "\t"
+        << "%#7" << radix_fmt << "\t"
+        << "%#7" << radix_fmt << "\t";
+    outs() << format(fmtbuf.c_str(), TotalObjectText, TotalObjectData,
+                     TotalObjectBss);
+    fmtbuf.clear();
+    fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
+        << "%7" PRIx64 "\t";
+    outs() << format(fmtbuf.c_str(), TotalObjectTotal, TotalObjectTotal)
+           << "(TOTALS)\n";
+  }
 }
 
 int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
@@ -891,6 +915,7 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
 
   ELFCommons = Args.hasArg(OPT_common);
   DarwinLongFormat = Args.hasArg(OPT_l);
+  ExcludePageZero = Args.hasArg(OPT_exclude_pagezero);
   TotalSizes = Args.hasArg(OPT_totals);
   StringRef V = Args.getLastArgValue(OPT_format_EQ, "berkeley");
   if (V == "berkeley")

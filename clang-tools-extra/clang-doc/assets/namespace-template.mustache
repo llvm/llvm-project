@@ -23,23 +23,84 @@
     </head>
     <body>
         <nav class="navbar">
-            Navbar
+            <div class="navbar__container">
+                {{#ProjectName}}
+                <div class="navbar__logo">
+                    {{ProjectName}}
+                </div>
+                {{/ProjectName}}
+                <div class="navbar__menu">
+                    <ul class="navbar__links">
+                        <li class="navbar__item">
+                            <a href="/" class="navbar__link">Namespace</a>
+                        </li>
+                        <li class="navbar__item">
+                            <a href="/" class="navbar__link">Class</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </nav>
         <main>
             <div class="container">
                 <div class="sidebar">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
-                        sed do eiusmod tempor incididunt ut labore et dolore magna 
-                        aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco 
-                        laboris nisi ut aliquip ex ea commodo consequat. 
-                        Duis aute irure dolor in reprehenderit in voluptate velit esse 
-                        cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat 
-                        cupidatat non proident, sunt in culpa qui officia deserunt mollit 
-                        anim id est laborum
+                    <h2>{{RecordType}} {{Name}}</h2>
+                    <ul>
+                        {{#HasEnums}}
+                        <li class="sidebar-section">
+                            <a class="sidebar-item" href="#Enums">Enums</a>
+                        </li>
+                        <ul>
+                            {{#Enums}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Enums}}
+                        </ul>
+                        {{/HasEnums}}
+                        {{#HasRecords}}
+                        <li class="sidebar-section">
+                            <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                        </li>
+                        <ul>
+                            {{#Records}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Records}}
+                        </ul>
+                        {{/HasRecrods}}
+                    </ul>
                 </div>
                 <div class="resizer" id="resizer"></div>
                 <div class="content">
-                    Content
+                    {{#HasEnums}}
+                    <section id="Enums" class="section-container">
+                        <h2>Enumerations</h2>
+                        <div>
+                            {{#Enums}}
+                            {{>EnumPartial}}
+                            {{/Enums}}
+                        </div>
+                    </section>
+                    {{/HasEnums}}
+
+                    {{#HasRecords}}
+                    <section id="Classes" class="section-container">
+                        <h2>Inner Classes</h2>
+                        <ul class="class-container">
+                        {{#Records}}
+                            <li id="{{USR}}" style="max-height: 40px;">
+                                <a href="{{DocumentationFileName}}.html">
+                                    <pre>
+                                        <code class="language-cpp code-clang-doc">class {{Name}}</code>
+                                    </pre>
+                                </a>
+                            </li>
+                        {{/Records}}
+                        </ul>
+                    {{/HasRecords}}
+                    </section>
                 </div>
             </div>
         </main>

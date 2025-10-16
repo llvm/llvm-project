@@ -243,19 +243,12 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Vector of regions recorder for later rescheduling
   SmallVector<RegionBoundaries, 32> Regions;
 
-  // Records if a region is not yet scheduled, or schedule has been reverted,
-  // or we generally desire to reschedule it.
-  BitVector RescheduleRegions;
-
   // Record regions with high register pressure.
   BitVector RegionsWithHighRP;
 
   // Record regions with excess register pressure over the physical register
   // limit. Register pressure in these regions usually will result in spilling.
   BitVector RegionsWithExcessRP;
-
-  // Regions that has the same occupancy as the latest MinOccupancy
-  BitVector RegionsWithMinOcc;
 
   // Regions that have IGLP instructions (SCHED_GROUP_BARRIER or IGLP_OPT).
   BitVector RegionsWithIGLPInstrs;
@@ -440,12 +433,10 @@ public:
 
 /// Attempts to reduce function spilling or, if there is no spilling, to
 /// increase function occupancy by one with respect to ArchVGPR usage by sinking
-/// trivially rematerializable instructions to their use. When the stage
+/// rematerializable instructions to their use. When the stage
 /// estimates reducing spilling or increasing occupancy is possible, as few
 /// instructions as possible are rematerialized to reduce potential negative
 /// effects on function latency.
-///
-/// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
 private:
   /// Useful information about a rematerializable instruction.
@@ -476,15 +467,15 @@ private:
   /// In case we need to rollback rematerializations, save lane masks for all
   /// rematerialized registers in all regions in which they are live-ins.
   DenseMap<std::pair<unsigned, Register>, LaneBitmask> RegMasks;
-  /// Target occupancy the stage estimates is reachable through
-  /// rematerialization. Greater than or equal to the pre-stage min occupancy.
-  unsigned TargetOcc;
+  /// After successful stage initialization, indicates which regions should be
+  /// rescheduled.
+  BitVector RescheduleRegions;
+  /// The target occupancy the stage is trying to achieve. Empty when the
+  /// objective is spilling reduction.
+  std::optional<unsigned> TargetOcc;
   /// Achieved occupancy *only* through rematerializations (pre-rescheduling).
   /// Smaller than or equal to the target occupancy.
   unsigned AchievedOcc;
-  /// Whether the stage is attempting to increase occupancy in the abscence of
-  /// spilling.
-  bool IncreaseOccupancy;
 
   /// Returns whether remat can reduce spilling or increase function occupancy
   /// by 1 through rematerialization. If it can do one, collects instructions in
@@ -492,9 +483,8 @@ private:
   /// PreRARematStage::TargetOccupancy.
   bool canIncreaseOccupancyOrReduceSpill();
 
-  /// Whether the MI is trivially rematerializable and does not have any virtual
-  /// register use.
-  bool isTriviallyReMaterializable(const MachineInstr &MI);
+  /// Whether the MI is rematerializable
+  bool isReMaterializable(const MachineInstr &MI);
 
   /// Rematerializes all instructions in PreRARematStage::Rematerializations
   /// and stores the achieved occupancy after remat in
@@ -506,12 +496,6 @@ private:
   /// stage to their pre-stage values.
   void finalizeGCNSchedStage() override;
 
-  /// \p Returns true if all the uses in \p InstToRemat defined at \p
-  /// OriginalIdx are live at \p RematIdx. This only checks liveness of virtual
-  /// reg uses.
-  bool allUsesAvailableAt(const MachineInstr *InstToRemat,
-                          SlotIndex OriginalIdx, SlotIndex RematIdx) const;
-
 public:
   bool initGCNSchedStage() override;
 
@@ -520,7 +504,7 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   PreRARematStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
-      : GCNSchedStage(StageID, DAG) {}
+      : GCNSchedStage(StageID, DAG), RescheduleRegions(DAG.Regions.size()) {}
 };
 
 class ILPInitialScheduleStage : public GCNSchedStage {

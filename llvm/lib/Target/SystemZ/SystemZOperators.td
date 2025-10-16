@@ -1067,6 +1067,31 @@ def vsplat_imm_eq_1 : PatFrag<(ops), (build_vector), [{
 }]>;
 def z_vzext1 : PatFrag<(ops node:$x), (and node:$x, vsplat_imm_eq_1)>;
 
+// Vector constants for saturating truncation, containing the minimum and
+// maximum value for the integer type that is half of the element width.
+def ssat_trunc_min_vec: PatFrag<(ops), (build_vector), [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  unsigned SizeInBits = EltTy.getSizeInBits();
+  APInt min = APInt::getSignedMinValue(SizeInBits / 2).sext(SizeInBits);
+  return ISD::isConstantSplatVector(N, Imm) && APInt::isSameValue(Imm, min);
+}]>;
+def ssat_trunc_max_vec: PatFrag<(ops), (build_vector), [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  unsigned SizeInBits = EltTy.getSizeInBits();
+  APInt max = APInt::getSignedMaxValue(SizeInBits / 2).sext(SizeInBits);
+  return ISD::isConstantSplatVector(N, Imm) && APInt::isSameValue(Imm, max);
+}]>;
+
+def usat_trunc_max_vec: PatFrag<(ops), (build_vector), [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  unsigned SizeInBits = EltTy.getSizeInBits();
+  APInt max = APInt::getMaxValue(SizeInBits / 2).zext(SizeInBits);
+  return ISD::isConstantSplatVector(N, Imm) && APInt::isSameValue(Imm, max);
+}]>;
+
 // Signed "integer greater than zero" on vectors.
 def z_vicmph_zero : PatFrag<(ops node:$x), (z_vicmph node:$x, immAllZerosV)>;
 

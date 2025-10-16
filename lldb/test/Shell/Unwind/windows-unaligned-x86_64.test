@@ -5,7 +5,8 @@
 # REQUIRES: target-x86_64, native, system-windows
 
 # RUN: %build %p/Inputs/windows-unaligned-x86_64.cpp %p/Inputs/windows-unaligned-x86_64-asm.s -o %t
-# RUN: %lldb %t -s %s -o exit | FileCheck %s
+# RUN: env LLDB_USE_NATIVE_PDB_READER=0 %lldb %t -s %s -o exit | FileCheck %s
+# RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb %t -s %s -o exit | FileCheck %s
 
 # Future TODO: If %build could compile the source file in C mode, the symbol
 # name handling would be easier across msvc and mingw build configurations.

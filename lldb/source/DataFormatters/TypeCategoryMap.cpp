@@ -19,7 +19,7 @@ TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
     : m_map_mutex(), listener(lst), m_map(), m_active_categories() {
   ConstString default_cs("default");
   lldb::TypeCategoryImplSP default_sp =
-      lldb::TypeCategoryImplSP(new TypeCategoryImpl(listener, default_cs));
+      std::make_shared<TypeCategoryImpl>(listener, default_cs);
   Add(default_cs, default_sp);
   Enable(default_cs, First);
 }
@@ -112,9 +112,10 @@ void TypeCategoryMap::EnableAllCategories() {
       continue;
     auto pos = iter->second->GetLastEnabledPosition();
     if (pos >= sorted_categories.size()) {
-      auto iter = std::find_if(
-          sorted_categories.begin(), sorted_categories.end(),
-          [](const TypeCategoryImplSP &sp) -> bool { return sp.get() == nullptr; });
+      auto iter = llvm::find_if(sorted_categories,
+                                [](const TypeCategoryImplSP &sp) -> bool {
+                                  return sp.get() == nullptr;
+                                });
       pos = std::distance(sorted_categories.begin(), iter);
     }
     sorted_categories.at(pos) = iter->second;
@@ -184,13 +185,12 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
   if (log) {
     for (auto match : match_data.GetMatchesVector()) {
       LLDB_LOGF(
-          log,
-          "[%s] candidate match = %s %s %s %s",
-          __FUNCTION__,
-          match.GetTypeName().GetCString(),
+          log, "[%s] candidate match = %s %s %s %s ptr-stripped-depth=%u",
+          __FUNCTION__, match.GetTypeName().GetCString(),
           match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
           match.DidStripReference() ? "strip-reference" : "no-strip-reference",
-          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef");
+          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",
+          match.GetPtrStrippedDepth());
     }
   }
 

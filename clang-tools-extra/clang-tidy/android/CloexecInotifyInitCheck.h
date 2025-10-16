@@ -1,4 +1,4 @@
-//===--- CloexecInotifyInitCheck.h - clang-tidy------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// inotify_init() is better to be replaced by inotify_init1().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-inotify-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-inotify-init.html
 class CloexecInotifyInitCheck : public CloexecCheck {
 public:
   CloexecInotifyInitCheck(StringRef Name, ClangTidyContext *Context)

@@ -40,7 +40,7 @@ cl::opt<bool> ImprovedFSDiscriminator(
     "improved-fs-discriminator", cl::Hidden, cl::init(false),
     cl::desc("New FS discriminators encoding (incompatible with the original "
              "encoding)"));
-}
+} // namespace llvm
 
 char MIRAddFSDiscriminators::ID = 0;
 

@@ -19,7 +19,7 @@ clang::NamedDecl *NameSearchContext::AddVarDecl(const CompilerType &type) {
   if (!type.IsValid())
     return nullptr;
 
-  auto lldb_ast = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto lldb_ast = type.GetTypeSystem<TypeSystemClang>();
   if (!lldb_ast)
     return nullptr;
 
@@ -45,7 +45,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   if (m_function_types.count(type))
     return nullptr;
 
-  auto lldb_ast = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto lldb_ast = type.GetTypeSystem<TypeSystemClang>();
   if (!lldb_ast)
     return nullptr;
 
@@ -153,7 +153,7 @@ NameSearchContext::AddTypeDecl(const CompilerType &clang_type) {
 
       return (NamedDecl *)typedef_name_decl;
     } else if (const TagType *tag_type = qual_type->getAs<TagType>()) {
-      TagDecl *tag_decl = tag_type->getDecl();
+      TagDecl *tag_decl = tag_type->getDecl()->getDefinitionOrSelf();
 
       m_decls.push_back(tag_decl);
 

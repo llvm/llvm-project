@@ -1,3 +1,4 @@
+settings set target.max-children-depth 10
 expr a
 expr b.c
 expr b.u.c
