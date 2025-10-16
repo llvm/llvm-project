@@ -521,15 +521,15 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
                                                   ArrayRef<int64_t>{1, 0});
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-        rewriter, loc, descType,
-        dyn_cast<TypedValue<MemRefType>>(readOp.getBase()));
+    xegpu::CreateNdDescOp ndDesc =
+        createNdDescriptor(rewriter, loc, descType,
+                           dyn_cast<TypedValue<MemRefType>>(readOp.getBase()));
 
-    auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
-                                      getAsOpFoldResult(readOp.getIndices()),
-                                      /*packed=*/nullptr, transposeAttr,
-                                      /*l1_hint=*/hint,
-                                      /*l2_hint=*/hint, /*l3_hint=*/hint);
+    auto loadOp = xegpu::LoadNdOp::create(
+        rewriter, loc, vecTy, ndDesc, getAsOpFoldResult(readOp.getIndices()),
+        /*packed=*/nullptr, transposeAttr,
+        /*l1_hint=*/hint,
+        /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -573,15 +573,15 @@ struct TransferWriteLowering
         xegpu::MemorySpace::Global);
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-        rewriter, loc, descType,
-        dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()));
+    xegpu::CreateNdDescOp ndDesc =
+        createNdDescriptor(rewriter, loc, descType,
+                           dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()));
 
     auto storeOp =
         xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
-                                  getAsOpFoldResult(writeOp.getIndices()),
-                                  /*l1_hint=*/hint,
-                                  /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                 getAsOpFoldResult(writeOp.getIndices()),
+                                 /*l1_hint=*/hint,
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -710,11 +710,10 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType, storeOp.getBase());
 
-    auto storeNdOp =
-        xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
-                                  getAsOpFoldResult(storeOp.getIndices()),
-                                  /*l1_hint=*/hint,
-                                  /*l2_hint=*/hint, /*l3_hint=*/hint);
+    auto storeNdOp = xegpu::StoreNdOp::create(
+        rewriter, loc, vector, ndDesc, getAsOpFoldResult(storeOp.getIndices()),
+        /*l1_hint=*/hint,
+        /*l2_hint=*/hint, /*l3_hint=*/hint);
 
     rewriter.replaceOp(storeOp, storeNdOp);
 
