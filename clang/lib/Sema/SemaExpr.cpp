@@ -1536,12 +1536,8 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
     // are ill-formed.
     if (getLangOpts().CPlusPlus26)
       DiagID = diag::warn_conv_mixed_enum_types_cxx26;
-    else if (!L->castAsCanonical<EnumType>()
-                  ->getOriginalDecl()
-                  ->hasNameForLinkage() ||
-             !R->castAsCanonical<EnumType>()
-                  ->getOriginalDecl()
-                  ->hasNameForLinkage()) {
+    else if (!L->castAsCanonical<EnumType>()->getDecl()->hasNameForLinkage() ||
+             !R->castAsCanonical<EnumType>()->getDecl()->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
@@ -7112,7 +7108,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     for (unsigned i = 0, e = Args.size(); i != e; i++) {
       if (const auto *RT =
               dyn_cast<RecordType>(Args[i]->getType().getCanonicalType())) {
-        if (RT->getOriginalDecl()->isOrContainsUnion())
+        if (RT->getDecl()->isOrContainsUnion())
           Diag(Args[i]->getBeginLoc(), diag::warn_cmse_nonsecure_union)
               << 0 << i;
       }
@@ -9765,7 +9761,7 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
   if (!UT)
     return AssignConvertType::Incompatible;
 
-  RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return AssignConvertType::Incompatible;
 
@@ -10861,7 +10857,7 @@ static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
   auto DiagnosticHelper = [&S](const Expr *expr, const QualType type) {
     SourceLocation BeginLoc = expr->getBeginLoc();
     QualType IntType = type->castAs<EnumType>()
-                           ->getOriginalDecl()
+                           ->getDecl()
                            ->getDefinitionOrSelf()
                            ->getIntegerType();
     std::string InsertionString = "static_cast<" + IntType.getAsString() + ">(";
@@ -11550,7 +11546,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
 static bool isScopedEnumerationType(QualType T) {
   if (const EnumType *ET = T->getAsCanonical<EnumType>())
-    return ET->getOriginalDecl()->isScoped();
+    return ET->getDecl()->isScoped();
   return false;
 }
 
@@ -13873,7 +13869,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
   while (RecordTypeList.size() > NextToCheckIndex) {
     bool IsNested = NextToCheckIndex > 0;
     for (const FieldDecl *Field : RecordTypeList[NextToCheckIndex]
-                                      ->getOriginalDecl()
+                                      ->getDecl()
                                       ->getDefinitionOrSelf()
                                       ->fields()) {
       // First, check every field for constness.

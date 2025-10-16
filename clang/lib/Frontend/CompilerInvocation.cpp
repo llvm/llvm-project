@@ -4083,13 +4083,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           auto Diag = Diags.Report(diag::note_drv_use_standard);
           Diag << Std.getName() << Std.getDescription();
           unsigned NumAliases = 0;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) ++NumAliases;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
 #include "clang/Basic/LangStandards.def"
           Diag << NumAliases;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) Diag << alias;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)

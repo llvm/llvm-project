@@ -2011,7 +2011,7 @@ static bool isConstantEmittableObjectType(QualType type) {
   // Otherwise, all object types satisfy this except C++ classes with
   // mutable subobjects or non-trivial copy/destroy behavior.
   if (const auto *RT = dyn_cast<RecordType>(type))
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->hasMutableFields() || !RD->isTrivial())
         return false;
@@ -4564,7 +4564,7 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
     const auto *PointeeT = PtrT->getPointeeType()
                              ->getUnqualifiedDesugaredType();
     if (const auto *RecT = dyn_cast<RecordType>(PointeeT))
-      return RecT->getOriginalDecl()
+      return RecT->getDecl()
           ->getMostRecentDecl()
           ->hasAttr<BPFPreserveAccessIndexAttr>();
     return false;
@@ -7023,7 +7023,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
         WorkList.emplace_back(LVal, CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const RecordDecl *Record = RT->getDecl()->getDefinitionOrSelf();
       assert(!Record->isUnion() && "Union types not supported in flat cast.");
 
       const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);

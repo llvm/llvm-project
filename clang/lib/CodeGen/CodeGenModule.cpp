@@ -2352,7 +2352,7 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   const RecordType *UT = Ty->getAsUnionType();
   if (!UT)
     return Ty;
-  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return Ty;
   for (const auto *it : UD->fields()) {
@@ -4237,7 +4237,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 static bool HasNonDllImportDtor(QualType T) {
   if (const auto *RT =
           T->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
-    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
         return true;
