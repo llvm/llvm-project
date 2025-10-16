@@ -84,10 +84,16 @@ struct T3 {
 struct U {
   constexpr U SelfReturn() const;
   constexpr int SelfParam(U) const;
+  constexpr ~U();  // beforecxx20-error {{destructor cannot be declared constexpr}}
 };
 
-struct V : virtual U { // expected-note {{here}}
-  constexpr int F() const { return 0; } // expected-error {{constexpr member function not allowed in struct with virtual base class}}
+struct V : virtual U { // expected-note {{here}} //aftercxx20-note {{here}}
+  constexpr V() {}  // expected-error {{constexpr constructor not allowed in struct with virtual base class}}
+  constexpr ~V() {} // aftercxx20-error {{constexpr destructor not allowed in struct with virtual base class}}
+                    // beforecxx20-error@-1 {{destructor cannot be declared constexpr}}
+                    // beforecxx14-error@-2 {{constexpr function's return type 'void' is not a literal type}}
+		    // ^ FIXME this is just a bad diagnostic
+  constexpr int f() const { return 0; }
 };
 
 //  or a compound-statememt that contains only [CXX11]
