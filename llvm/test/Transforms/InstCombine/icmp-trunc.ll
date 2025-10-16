@@ -800,3 +800,18 @@ define i1 @trunc_icmp(i8 %a0) {
   call void @use2(i4 %tr)
   ret i1 %c
 }
+
+define i1 @do_not_mask_trunc_eq_i32_i8(i32 %x) {
+; DL64-LABEL: @do_not_mask_trunc_eq_i32_i8(
+; DL64-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 42
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @do_not_mask_trunc_eq_i32_i8(
+; DL8-NEXT:    [[T:%.*]] = trunc nuw i32 [[X:%.*]] to i8
+; DL8-NEXT:    [[R:%.*]] = icmp eq i8 [[T]], 42
+; DL8-NEXT:    ret i1 [[R]]
+;
+  %t = trunc nuw i32 %x to i8
+  %r = icmp eq i8 %t, 42
+  ret i1 %r
+}
