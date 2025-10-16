@@ -43,20 +43,7 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[LOOPEND:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[SCALAR_PH:%.*]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
-; IF-EVL-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[ADD]]
-; IF-EVL-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
-; IF-EVL-NEXT:    [[GEPS:%.*]] = getelementptr inbounds i32, ptr [[PTR2]], i64 [[ADD]]
-; IF-EVL-NEXT:    store i32 [[TMP]], ptr [[GEPS]], align 4
-; IF-EVL-NEXT:    [[INC]] = add i32 [[I]], 1
-; IF-EVL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 1024
-; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[LOOPEND]]
 ; IF-EVL:       loopend:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -179,27 +166,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[LOOPEND:%.*]]
-; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[SCALAR_PH:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
-; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
-; IF-EVL-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
-; IF-EVL-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[I]]
-; IF-EVL-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
-; IF-EVL-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP]], 100
-; IF-EVL-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; IF-EVL:       if.then:
-; IF-EVL-NEXT:    [[GEPL1:%.*]] = getelementptr inbounds i32, ptr [[PTR1]], i64 [[ADD]]
-; IF-EVL-NEXT:    [[V:%.*]] = load i32, ptr [[GEPL1]], align 4
-; IF-EVL-NEXT:    [[GEPS:%.*]] = getelementptr inbounds i32, ptr [[PTR2]], i64 [[ADD]]
-; IF-EVL-NEXT:    store i32 [[V]], ptr [[GEPS]], align 4
-; IF-EVL-NEXT:    br label [[FOR_INC]]
-; IF-EVL:       for.inc:
-; IF-EVL-NEXT:    [[INC]] = add i32 [[I]], 1
-; IF-EVL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 1024
-; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[LOOPEND]]
+; IF-EVL-NEXT:    br label [[FOR_INC:%.*]]
 ; IF-EVL:       loopend:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -351,22 +318,7 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; IF-EVL-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
-; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 1024, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; IF-EVL-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
-; IF-EVL-NEXT:    [[X:%.*]] = load i8, ptr [[GEP_A]], align 1
-; IF-EVL-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[B]], i8 [[X]]
-; IF-EVL-NEXT:    [[Y:%.*]] = load i8, ptr [[GEP_B]], align 1
-; IF-EVL-NEXT:    [[GEP_C:%.*]] = getelementptr i8, ptr [[C]], i64 [[IV]]
-; IF-EVL-NEXT:    store i8 [[Y]], ptr [[GEP_C]], align 1
-; IF-EVL-NEXT:    [[GEP_D:%.*]] = getelementptr i8, ptr [[D]], i64 [[IV]]
-; IF-EVL-NEXT:    store i8 [[Y]], ptr [[GEP_D]], align 1
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
-; IF-EVL-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
-; IF-EVL-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[LOOP]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;

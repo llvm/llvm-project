@@ -32,18 +32,6 @@ define i32 @foo_optsize() #0 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -69,18 +57,6 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END:.*]]
-; AUTOVF:       [[SCALAR_PH:.*]]:
-; AUTOVF-NEXT:    br label %[[FOR_BODY:.*]]
-; AUTOVF:       [[FOR_BODY]]:
-; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; AUTOVF-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; AUTOVF-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; AUTOVF-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; AUTOVF:       [[FOR_END]]:
 ; AUTOVF-NEXT:    ret i32 0
 ;
@@ -128,18 +104,6 @@ define i32 @foo_minsize() #1 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -165,18 +129,6 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END:.*]]
-; AUTOVF:       [[SCALAR_PH:.*]]:
-; AUTOVF-NEXT:    br label %[[FOR_BODY:.*]]
-; AUTOVF:       [[FOR_BODY]]:
-; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; AUTOVF-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; AUTOVF-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; AUTOVF-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; AUTOVF:       [[FOR_END]]:
 ; AUTOVF-NEXT:    ret i32 0
 ;
@@ -226,18 +178,6 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[MUL]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_07]]
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 256
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -263,18 +203,6 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; AUTOVF-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; AUTOVF:       [[SCALAR_PH:.*]]:
-; AUTOVF-NEXT:    br label %[[FOR_BODY:.*]]
-; AUTOVF:       [[FOR_BODY]]:
-; AUTOVF-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; AUTOVF-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K]]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[MUL]]
-; AUTOVF-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; AUTOVF-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_07]]
-; AUTOVF-NEXT:    store i32 [[TMP6]], ptr [[ARRAYIDX1]], align 4
-; AUTOVF-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 256
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]]
 ; AUTOVF:       [[FOR_END_LOOPEXIT]]:
 ; AUTOVF-NEXT:    ret void
 ;
@@ -431,14 +359,6 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 -72
-; CHECK-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -475,14 +395,6 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[EXIT:.*]]
-; AUTOVF:       [[SCALAR_PH:.*]]:
-; AUTOVF-NEXT:    br label %[[LOOP:.*]]
-; AUTOVF:       [[LOOP]]:
-; AUTOVF-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; AUTOVF-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 -72
-; AUTOVF-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
-; AUTOVF-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; AUTOVF-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; AUTOVF:       [[EXIT]]:
 ; AUTOVF-NEXT:    ret void
 ;

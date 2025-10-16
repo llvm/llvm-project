@@ -378,8 +378,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto *Type = dyn_cast<ArrayType>(SizeofArgTy)) {
       // check if the array element size is larger than one. If true,
       // the size of the array is higher than the number of elements
-      CharUnits SSize = Ctx.getTypeSizeInChars(Type->getElementType());
-      if (!SSize.isOne()) {
+      if (!getSizeOfType(Ctx, Type->getElementType().getTypePtr()).isOne()) {
         diag(SzOfExpr->getBeginLoc(),
              "suspicious usage of 'sizeof' in the loop")
             << SzOfExpr->getSourceRange();

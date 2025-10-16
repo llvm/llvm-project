@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// styles: none, first only, or all initialized explicitly.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/enum-initial-value.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/enum-initial-value.html
 class EnumInitialValueCheck : public ClangTidyCheck {
 public:
   EnumInitialValueCheck(StringRef Name, ClangTidyContext *Context);

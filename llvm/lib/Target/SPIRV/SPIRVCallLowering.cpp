@@ -641,9 +641,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    GR->getPointerSize()));
       }
     }
-    if (auto Res =
-            SPIRV::lowerBuiltin(DemangledName, ST->getPreferredInstructionSet(),
-                                MIRBuilder, ResVReg, OrigRetTy, ArgVRegs, GR))
+    if (auto Res = SPIRV::lowerBuiltin(
+            DemangledName, ST->getPreferredInstructionSet(), MIRBuilder,
+            ResVReg, OrigRetTy, ArgVRegs, GR, *Info.CB))
       return *Res;
   }
 

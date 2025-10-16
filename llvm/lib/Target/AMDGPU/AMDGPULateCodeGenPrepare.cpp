@@ -150,7 +150,10 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+      // Same-BB filter must look at the *user*; and allow non-lookthrough
+      // users when the def is a PHI (loop-header pattern).
+      if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
+          !isa<PHINode>(II))
         continue;
 
       if (isOpLegal(CII))
