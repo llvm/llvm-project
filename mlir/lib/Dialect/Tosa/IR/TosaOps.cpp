@@ -1992,8 +1992,7 @@ LogicalResult MatmulTBlockScaledOp::verify() {
            << D << " vs N=" << N;
 
   // Verify C is a multiple of block size
-  const unsigned int blockSize =
-      BlockSizeAttr::getBlockSizeValue(getBlockSize());
+  const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
   if (ShapedType::isStatic(C) && C % blockSize != 0)
     return emitOpError("expect C to be a multiple of block size, got C=")
            << C << ", block_size=" << blockSize;

@@ -464,17 +464,14 @@ def Tosa_RoundingModeAttr
     : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
                     [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;
 
-def Tosa_BLOCK_SIZE_32 : I32EnumAttrCase<"BLOCK_SIZE_32", 1>;
+def Tosa_BLOCK_SIZE_32 : I32EnumAttrCase<"BLOCK_SIZE_32", 32>;
 
 def Tosa_BlockSizeAttr
     : Tosa_I32EnumAttr<"BlockSize", "Block size for the block_scaled formats", "block_size",
                     [Tosa_BLOCK_SIZE_32]> {
   let extraClassDeclaration = [{
-    static unsigned int getBlockSizeValue(BlockSize blockSize) {
-      switch (blockSize) {
-        case BlockSize::BLOCK_SIZE_32:
-          return 32;
-      }
+    static uint32_t getBlockSizeValue(BlockSize blockSize) {
+      return static_cast<uint32_t>(blockSize);
     }
   }];
 }
