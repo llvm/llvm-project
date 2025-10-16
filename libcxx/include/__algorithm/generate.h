@@ -19,13 +19,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace __generate {
+template <class _Generator>
+struct __generate_assigner {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __generate_assigner(_Generator& __gen) : __gen_(__gen) {}
 
-template <typename _Generator>
-struct __fn {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __fn(_Generator& __gen) : __gen_(__gen) {}
-
-  template <typename _Tp>
+  template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()(_Tp&& __element) const {
     std::forward<_Tp>(__element) = __gen_();
   }
@@ -33,12 +31,10 @@ struct __fn {
   _Generator& __gen_;
 };
 
-} // namespace __generate
-
 template <class _ForwardIterator, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
-  std::for_each(__first, __last, __generate::__fn<_Generator>(__gen));
+  std::for_each(__first, __last, __generate_assigner<_Generator>(__gen));
 }
 
 _LIBCPP_END_NAMESPACE_STD
