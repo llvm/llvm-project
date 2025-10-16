@@ -19,20 +19,16 @@ define void @zpr_and_ppr_local(<vscale x 16 x i1> %pred, <vscale x 16 x i8> %vec
 ; CHECK-LABEL: zpr_and_ppr_local:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    sub sp, sp, #2048
+; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 2064 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    add x8, sp, #2048
 ; CHECK-NEXT:    str p0, [x8, #15, mul vl]
 ; CHECK-NEXT:    add x8, sp, #1024
 ; CHECK-NEXT:    str z0, [x8]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1024
+; CHECK-NEXT:    add sp, sp, #2048
+; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ppr_local = alloca <vscale x 16 x i1>
@@ -62,20 +58,16 @@ define void @zpr_and_ppr_local_fp(<vscale x 16 x i1> %pred, <vscale x 16 x i8> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    sub sp, sp, #2048
+; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub x8, x29, #1024
 ; CHECK-NEXT:    str p0, [x29, #-1, mul vl]
 ; CHECK-NEXT:    str z0, [x8, #-2, mul vl]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1024
+; CHECK-NEXT:    add sp, sp, #2048
+; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ppr_local = alloca <vscale x 16 x i1>
@@ -103,17 +95,15 @@ define void @fpr_and_ppr_local(<vscale x 16 x i1> %pred, double %double) "aarch6
 ; CHECK-LABEL: fpr_and_ppr_local:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    sub sp, sp, #1024
+; CHECK-NEXT:    sub sp, sp, #2064
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    sub sp, sp, #1040
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    add x8, sp, #2064
 ; CHECK-NEXT:    str p0, [x8, #7, mul vl]
 ; CHECK-NEXT:    str d0, [sp, #1032]
-; CHECK-NEXT:    add sp, sp, #1024
+; CHECK-NEXT:    add sp, sp, #2064
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1040
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ppr_local = alloca <vscale x 16 x i1>
@@ -144,17 +134,15 @@ define void @fpr_and_ppr_local_fp(<vscale x 16 x i1> %pred, double %double) "aar
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    sub sp, sp, #1024
+; CHECK-NEXT:    sub sp, sp, #2064
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    sub sp, sp, #1040
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str p0, [x29, #-1, mul vl]
 ; CHECK-NEXT:    str d0, [sp, #1032]
-; CHECK-NEXT:    add sp, sp, #1024
+; CHECK-NEXT:    add sp, sp, #2064
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1040
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ppr_local = alloca <vscale x 16 x i1>
@@ -793,11 +781,8 @@ define void @zpr_and_ppr_local_stack_probing(<vscale x 16 x i1> %pred, <vscale x
 ; CHECK-LABEL: zpr_and_ppr_local_stack_probing:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str xzr, [sp]
-; CHECK-NEXT:    sub sp, sp, #1824
-; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    sub sp, sp, #2848
+; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xb0, 0x16, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 2864 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
@@ -806,10 +791,8 @@ define void @zpr_and_ppr_local_stack_probing(<vscale x 16 x i1> %pred, <vscale x
 ; CHECK-NEXT:    add x8, sp, #1824
 ; CHECK-NEXT:    str z0, [x8]
 ; CHECK-NEXT:    str x0, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    add sp, sp, #1824
+; CHECK-NEXT:    add sp, sp, #2848
+; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   "probe-stack"="inline-asm" "stack-probe-size"="4096" "frame-pointer"="none" "aarch64_pstate_sm_compatible"
