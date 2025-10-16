@@ -237,11 +237,12 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
       return MemDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
     }
 
-    ArrayAttr getStrideAttr() {
+    ArrayAttr getStrides() {
       auto layout = getMemLayout();
       if (layout && layout.hasAttr("stride")) {
-        return layout.getStrideAttr();
+        return layout.getStrides();
       }
+
       // derive and return default strides
       SmallVector<int64_t> defaultStrides;
       llvm::append_range(defaultStrides, getShape().drop_front());
@@ -249,63 +250,6 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
       Builder builder(getContext());
       return builder.getI64ArrayAttr(defaultStrides);
     }
-
-    ArrayAttr getBlockAttr() {
-      auto layout = getMemLayout();
-      if (layout && layout.hasAttr("block")) {
-        return layout.getBlockAttr();
-      }
-      Builder builder(getContext());
-      return builder.getI64ArrayAttr({});
-    }
-
-    /// Heuristic to determine if the MemDesc uses column-major layout,
-    /// based on the rank and the value of the first stride dimension.
-    bool isColMajor() {
-      auto dim0 = dyn_cast<IntegerAttr>(getStrideAttr()[0]);
-      return getRank() == 2 && dim0.getInt() == 1;
-    }
-
-    // Get the Blocking shape for a MemDescType, Which is represented
-    // as an attribute in MemDescType. By default it is the shape
-    // of the mdescTy
-    SmallVector<int64_t> getBlockShape() {
-      SmallVector<int64_t> size(getShape());
-      ArrayAttr blockAttr = getBlockAttr();
-      if (!blockAttr.empty()) {
-        size.clear();
-        for (auto attr : blockAttr.getValue()) {
-          size.push_back(cast<IntegerAttr>(attr).getInt());
-        }
-      }
-      return size;
-    }
-
-    // Get strides as vector of integer. 
-    // If it contains block attribute, the strides are blocked strides.
-    //
-    // The blocking is applied to the base matrix shape derived from the
-    // memory descriptor's stride information. If the matrix described by
-    // the memory descriptor is not contiguous, it is assumed that the base
-    // matrix is contiguous and follows the same memory layout.
-    //
-    // It first computes the original matrix shape using the stride info,
-    // then computes the number of blocks in each dimension of original shape,
-    // then compute the outer block shape and stride,
-    // then combines the inner and outer block shape and stride
-    // e.g. for `mem_desc<32x256xf16, @block=[16, 8], @strides=[1, 32]>`
-    // its memory layout tuple is ([2,32,16,8],[128,256,1,16])
-    // for  `mem_desc<256x32xf16, @block=[8, 16]>` with default @stride[32, 1]
-    // its memory layout tuple is ([32,2,8,16],[256,128,16,1])
-    SmallVector<int64_t> getStrideShape();
-    
-    /// Generates instructions to compute the linearize offset 
-    //  if the memory descriptor is blocked, it returns linearize offset based on the blocked layout
-    //  the strides of memory descriptor is always considered regardless of blocked or not
-    Value getLinearOffsets(OpBuilder &builder,
-               Location loc, ArrayRef<OpFoldResult> offsets);
-
-
   }];
 
   let hasCustomAssemblyFormat = true;
