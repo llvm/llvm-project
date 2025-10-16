@@ -1954,9 +1954,10 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   const auto &control{std::get<parser::AcImpliedDoControl>(impliedDo.t)};
   const auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
   exprAnalyzer_.Analyze(bounds.name);
-  parser::CharBlock name{bounds.name.thing.thing.source};
+  const auto &parsedName{parser::UnwrapRef<parser::Name>(bounds.name)};
+  parser::CharBlock name{parsedName.source};
   int kind{ImpliedDoIntType::kind};
-  if (const Symbol * symbol{bounds.name.thing.thing.symbol}) {
+  if (const Symbol *symbol{parsedName.symbol}) {
     if (auto dynamicType{DynamicType::From(symbol)}) {
       if (dynamicType->category() == TypeCategory::Integer) {
         kind = dynamicType->kind();
@@ -1981,7 +1982,7 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
       auto cUpper{ToInt64(upper)};
       auto cStride{ToInt64(stride)};
       if (!(messageDisplayedSet_ & 0x10) && cStride && *cStride == 0) {
-        exprAnalyzer_.SayAt(bounds.step.value().thing.thing.value().source,
+        exprAnalyzer_.SayAt(parser::UnwrapRef<parser::Expr>(bounds.step).source,
             "The stride of an implied DO loop must not be zero"_err_en_US);
         messageDisplayedSet_ |= 0x10;
       }
@@ -2526,7 +2527,7 @@ static const Symbol *GetBindingResolution(
 auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
     const parser::ProcComponentRef &pcr, ActualArguments &&arguments,
     bool isSubroutine) -> std::optional<CalleeAndArguments> {
-  const parser::StructureComponent &sc{pcr.v.thing};
+  const auto &sc{parser::UnwrapRef<parser::StructureComponent>(pcr)};
   if (MaybeExpr base{Analyze(sc.base)}) {
     if (const Symbol *sym{sc.component.symbol}) {
       if (context_.HasError(sym)) {
@@ -3997,7 +3998,9 @@ static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
   auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
   const auto *name{std::get_if<parser::Name>(&proc.u)};
   if (!name) {
-    name = &std::get<parser::ProcComponentRef>(proc.u).v.thing.component;
+    name = &parser::UnwrapRef<parser::StructureComponent>(
+        std::get<parser::ProcComponentRef>(proc.u))
+                .component;
   }
   if (!name->symbol) {
     return false;
@@ -4047,14 +4050,16 @@ static void FixMisparsedFunctionReference(
       }
     }
     auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-    if (Symbol *origSymbol{
-            common::visit(common::visitors{
-                              [&](parser::Name &name) { return name.symbol; },
-                              [&](parser::ProcComponentRef &pcr) {
-                                return pcr.v.thing.component.symbol;
-                              },
-                          },
-                proc.u)}) {
+    if (Symbol *
+        origSymbol{common::visit(
+            common::visitors{
+                [&](parser::Name &name) { return name.symbol; },
+                [&](parser::ProcComponentRef &pcr) {
+                  return parser::UnwrapRef<parser::StructureComponent>(pcr)
+                      .component.symbol;
+                },
+            },
+            proc.u)}) {
       Symbol &symbol{origSymbol->GetUltimate()};
       if (symbol.has<semantics::ObjectEntityDetails>() ||
           symbol.has<semantics::AssocEntityDetails>()) {
@@ -5268,9 +5273,9 @@ void ExprChecker::Post(const parser::DataStmtObject &obj) {
 bool ExprChecker::Pre(const parser::DataImpliedDo &ido) {
   parser::Walk(std::get<parser::DataImpliedDo::Bounds>(ido.t), *this);
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
-  auto name{bounds.name.thing.thing};
+  const auto &name{parser::UnwrapRef<parser::Name>(bounds.name)};
   int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
-  if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
+  if (const auto dynamicType{evaluate::DynamicType::From(DEREF(name.symbol))}) {
     if (dynamicType->category() == TypeCategory::Integer) {
       kind = dynamicType->kind();
     }
