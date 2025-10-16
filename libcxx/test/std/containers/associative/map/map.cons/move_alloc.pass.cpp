@@ -154,7 +154,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 #if TEST_STD_VER >= 26
 // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
 //  static_assert(test());
