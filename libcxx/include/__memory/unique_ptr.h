@@ -755,12 +755,12 @@ operator<=>(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
 #if _LIBCPP_STD_VER >= 14
 
 template <class _Tp, class... _Args, enable_if_t<!is_array<_Tp>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique(_Args&&... __args) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique(_Args&&... __args) {
   return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
 }
 
 template <class _Tp, enable_if_t<__is_unbounded_array_v<_Tp>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique(size_t __n) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique(size_t __n) {
   typedef __remove_extent_t<_Tp> _Up;
   return unique_ptr<_Tp>(__private_constructor_tag(), new _Up[__n](), __n);
 }
@@ -773,12 +773,12 @@ void make_unique(_Args&&...) = delete;
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, enable_if_t<!is_array_v<_Tp>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique_for_overwrite() {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique_for_overwrite() {
   return unique_ptr<_Tp>(new _Tp);
 }
 
 template <class _Tp, enable_if_t<is_unbounded_array_v<_Tp>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique_for_overwrite(size_t __n) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique_for_overwrite(size_t __n) {
   return unique_ptr<_Tp>(__private_constructor_tag(), new __remove_extent_t<_Tp>[__n], __n);
 }
 
