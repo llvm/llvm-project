@@ -58,6 +58,8 @@ namespace clang::dataflow {
 /// for `std::optional`, we assume the (Matcher, TransferFunction) case
 /// with custom handling is ordered early so that these generic cases
 /// do not trigger.
+ast_matchers::StatementMatcher isPointerLikeConstructor();
+ast_matchers::StatementMatcher isSmartPointerLikeConstructor();
 ast_matchers::StatementMatcher isPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isPointerLikeOperatorArrow();
@@ -80,6 +82,8 @@ isSmartPointerLikeGetMethodCall(clang::StringRef MethodName = "get");
 const FunctionDecl *
 getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE);
 
+const FunctionDecl *
+getCanonicalSmartPointerLikeOperatorCalleeForType(const CXXRecordDecl *RD);
 /// A transfer function for `operator*` (and `value`) calls that can be
 /// cached. Runs the `InitializeLoc` callback to initialize any new
 /// StorageLocations.
@@ -91,7 +95,18 @@ template <typename LatticeT>
 void transferSmartPointerLikeCachedDeref(
     const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc);
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc);
+template <typename LatticeT>
+void transferSmartPointerLikeCachedDeref(
+    const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
+    TransferState<LatticeT> &State,
+    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+  transferSmartPointerLikeCachedDeref<LatticeT>(
+      DerefExpr, SmartPointerLoc, State,
+      [InitializeLoc](QualType T, StorageLocation &Loc) {
+        InitializeLoc(Loc);
+      });
+}
 
 /// A transfer function for `operator->` (and `get`) calls that can be cached.
 /// Runs the `InitializeLoc` callback to initialize any new StorageLocations.
@@ -103,13 +118,24 @@ template <typename LatticeT>
 void transferSmartPointerLikeCachedGet(
     const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc);
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc);
+template <typename LatticeT>
+void transferSmartPointerLikeCachedGet(
+    const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
+    TransferState<LatticeT> &State,
+    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+  transferSmartPointerLikeCachedGet<LatticeT>(
+      GetExpr, SmartPointerLoc, State,
+      [InitializeLoc](QualType T, StorageLocation &Loc) {
+        InitializeLoc(Loc);
+      });
+}
 
 template <typename LatticeT>
 void transferSmartPointerLikeCachedDeref(
     const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc) {
   if (State.Env.getStorageLocation(*DerefExpr) != nullptr)
     return;
   if (SmartPointerLoc == nullptr)
@@ -142,10 +168,22 @@ void transferSmartPointerLikeCachedDeref(
 }
 
 template <typename LatticeT>
+void transferSmartPointerLikeConstructor(
+    const CXXConstructExpr *ConstructOperator,
+    RecordStorageLocation *SmartPointerLoc, TransferState<LatticeT> &State,
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc) {
+  const FunctionDecl *CanonicalCallee =
+      getCanonicalSmartPointerLikeOperatorCalleeForType(
+          ConstructOperator->getType()->getAsCXXRecordDecl());
+  State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+      *SmartPointerLoc, CanonicalCallee, State.Env, InitializeLoc);
+}
+
+template <typename LatticeT>
 void transferSmartPointerLikeCachedGet(
     const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc) {
   if (SmartPointerLoc == nullptr)
     return;
 
