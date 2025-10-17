@@ -321,9 +321,19 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
         __kmp_track_dependence(gtid, dep, node, task);
     }
 #endif
-    if (dep->dn.task) {
+    if (dep->dn.task
+#if OMPX_TASKGRAPH
+        && __kmp_tdg_is_recording(tdg_status) &&
+        !KMP_TASK_TO_TASKDATA(dep->dn.task)->td_flags.onced
+#endif
+    ) {
       KMP_ACQUIRE_DEPNODE(gtid, dep);
-      if (dep->dn.task) {
+      if (dep->dn.task
+#if OMPX_TASKGRAPH
+          && __kmp_tdg_is_recording(tdg_status) &&
+          !KMP_TASK_TO_TASKDATA(dep->dn.task)->td_flags.onced
+#endif
+      ) {
         if (!dep->dn.successors || dep->dn.successors->node != node) {
 #if OMPX_TASKGRAPH
           if (!(__kmp_tdg_is_recording(tdg_status)) && task)
