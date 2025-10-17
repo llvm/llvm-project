@@ -73,7 +73,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionPHISC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
-  case VPWidenFFLoadSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -108,7 +107,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
-  case VPWidenFFLoadSC:
     return true;
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
@@ -605,6 +603,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     return Builder.CreateNot(A, Name);
+  }
+  case Instruction::ExtractValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Value *Op = State.get(getOperand(0));
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    return Builder.CreateExtractValue(Op, CI->getZExtValue());
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
@@ -1173,6 +1177,7 @@ bool VPInstruction::isVectorToScalar() const {
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::PHI:
+  case Instruction::ExtractValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::VScale:
@@ -1706,7 +1711,16 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
+  if (ResultTy->isStructTy()) {
+    auto *StructTy = cast<StructType>(ResultTy);
+    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID, I,
+                                                           State.TTI))
+        TysForDecl.push_back(
+            toVectorizedTy(StructTy->getStructElementType(I), State.VF));
+    }
+  } else if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
+                                                    State.TTI))
     TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -1770,8 +1784,19 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
     Arguments.push_back(V);
   }
 
-  Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
-  Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
+  Type *RetTy = Ctx.Types.inferScalarType(&R);
+  if (RetTy->isStructTy()) {
+    auto *StructTy = cast<StructType>(RetTy);
+    SmallVector<Type *> Tys;
+    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+      Type *ElementTy = StructTy->getStructElementType(I);
+      if (!isVectorIntrinsicWithStructReturnScalarAtField(ID, I))
+        ElementTy = toVectorizedTy(ElementTy, VF);
+      Tys.push_back(ElementTy);
+    }
+    RetTy = StructType::create(Tys);
+  } else if (VF.isVector())
+    RetTy = toVectorizedTy(RetTy, VF);
   SmallVector<Type *> ParamTys;
   for (const VPValue *Op : Operands) {
     ParamTys.push_back(VF.isVector()
@@ -3411,47 +3436,6 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = load ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPWidenFFLoadRecipe::execute(VPTransformState &State) {
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-
-  Value *VL = State.get(getVF(), VPLane(0));
-  Type *I32Ty = Builder.getInt32Ty();
-  VL = Builder.CreateZExtOrTrunc(VL, I32Ty);
-  Value *Addr = State.get(getAddr(), true);
-  Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask())
-    Mask = State.get(VPMask);
-  else
-    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  CallInst *NewLI =
-      Builder.CreateIntrinsic(Intrinsic::vp_load_ff, {DataTy, Addr->getType()},
-                              {Addr, Mask, VL}, nullptr, "vp.op.load.ff");
-  NewLI->addParamAttr(
-      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-  applyMetadata(*NewLI);
-  Value *V = cast<Instruction>(Builder.CreateExtractValue(NewLI, 0));
-  Value *NewVL = Builder.CreateExtractValue(NewLI, 1);
-  State.set(getVPValue(0), V);
-  State.set(getVPValue(1), NewVL, /*NeedsScalar=*/true);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenFFLoadRecipe::print(raw_ostream &O, const Twine &Indent,
-                                VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN ";
-  printAsOperand(O, SlotTracker);
-  O << ", ";
-  getVPValue(1)->printAsOperand(O, SlotTracker);
-  O << " = vp.load.ff ";
   printOperands(O, SlotTracker);
 }
 #endif
