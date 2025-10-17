@@ -87,6 +87,11 @@ constexpr void for_all_iterators_and_allocators(Func f) {
     f.template operator()<Iter, sentinel_wrapper<Iter>, min_allocator<T>>();
     f.template operator()<Iter, sentinel_wrapper<Iter>, safe_allocator<T>>();
 
+    f.template operator()<Iter, sized_sentinel<Iter>, std::allocator<T>>();
+    f.template operator()<Iter, sized_sentinel<Iter>, test_allocator<T>>();
+    f.template operator()<Iter, sized_sentinel<Iter>, min_allocator<T>>();
+    f.template operator()<Iter, sized_sentinel<Iter>, safe_allocator<T>>();
+
     if constexpr (std::sentinel_for<Iter, Iter>) {
       f.template operator()<Iter, Iter, std::allocator<T>>();
       f.template operator()<Iter, Iter, test_allocator<T>>();

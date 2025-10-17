@@ -66,6 +66,7 @@ Improvements and New Features
   in chunks into a buffer.
 - Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
   reduced debug information.
+- The performance of ``deque::append_range`` has been improved by up to 3.4x
 
 - The performance of ``std::find`` has been improved by up to 2x for integral types
 - The ``std::distance`` and ``std::ranges::distance`` algorithms have been optimized for segmented iterators (e.g.,
