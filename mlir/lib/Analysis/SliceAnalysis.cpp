@@ -161,18 +161,25 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       SmallPtrSet<Region *, 4> descendents;
       region.walk(
           [&](Region *childRegion) { descendents.insert(childRegion); });
-      region.walk([&](Operation *op) {
-        for (OpOperand &operand : op->getOpOperands()) {
-          if (!descendents.contains(operand.get().getParentRegion()))
-            if (!processValue(operand.get()).succeeded()) {
-              return WalkResult::interrupt();
-            }
-        }
-        return WalkResult::advance();
-      });
+      if (region
+              .walk([&](Operation *op) {
+                for (OpOperand &operand : op->getOpOperands()) {
+                  if (!descendents.contains(operand.get().getParentRegion()))
+                    if (!processValue(operand.get()).succeeded()) {
+                      return WalkResult::interrupt();
+                    }
+                }
+                return WalkResult::advance();
+              })
+              .wasInterrupted())
+        succeeded = false;
     });
   }
-  llvm::for_each(op->getOperands(), processValue);
+  llvm::for_each(op->getOperands(), [&](Value value) {
+    if (!processValue(value).succeeded()) {
+      succeeded = false;
+    }
+  });
 
   backwardSlice->insert(op);
   return success(succeeded);
