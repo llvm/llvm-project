@@ -2,7 +2,7 @@
 # RUN: %clang_host -Xclang -fbounds-safety -g -O0 %S/Inputs/boundsSafetyTrap.c -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 run
-# CHECK: thread #{{.*}}stop reason = Bounds check failed: Dereferencing above bounds
+# CHECK: thread #{{.*}}stop reason = Bounds check failed: indexing above upper bound in 'array[index]'
 frame info
 # CHECK: frame #{{.*}}`bad_read(index=10) at boundsSafetyTrap.c
 frame recognizer info 0
