@@ -69,14 +69,14 @@ public:
     return Visit(T->getElementType().getTypePtr());
   }
   bool VisitEnumType(const EnumType *T) {
-    if (isCompleteAndHasNoZeroValue(T->getOriginalDecl())) {
+    if (isCompleteAndHasNoZeroValue(T->getDecl())) {
       FoundEnum = T;
       return true;
     }
     return false;
   }
   bool VisitRecordType(const RecordType *T) {
-    const RecordDecl *RD = T->getOriginalDecl()->getDefinition();
+    const RecordDecl *RD = T->getDecl()->getDefinition();
     if (!RD || RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
@@ -139,7 +139,7 @@ void InvalidEnumDefaultInitializationCheck::check(
     if (!Finder.Visit(InitList->getArrayFiller()->getType().getTypePtr()))
       return;
     InitExpr = InitList;
-    Enum = Finder.FoundEnum->getOriginalDecl();
+    Enum = Finder.FoundEnum->getDecl();
   }
 
   if (!InitExpr || !Enum)

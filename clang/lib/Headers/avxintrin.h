@@ -694,9 +694,8 @@ _mm256_xor_ps(__m256 __a, __m256 __b)
 ///    elements of a vector of [4 x double].
 /// \returns A 256-bit vector of [4 x double] containing the horizontal sums of
 ///    both operands.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_hadd_pd(__m256d __a, __m256d __b)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_hadd_pd(__m256d __a, __m256d __b) {
   return (__m256d)__builtin_ia32_haddpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -717,9 +716,8 @@ _mm256_hadd_pd(__m256d __a, __m256d __b)
 ///    index 2, 3, 6, 7 of a vector of [8 x float].
 /// \returns A 256-bit vector of [8 x float] containing the horizontal sums of
 ///    both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_hadd_ps(__m256 __a, __m256 __b)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_hadd_ps(__m256 __a,
+                                                                   __m256 __b) {
   return (__m256)__builtin_ia32_haddps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -740,9 +738,8 @@ _mm256_hadd_ps(__m256 __a, __m256 __b)
 ///    odd-indexed elements of a vector of [4 x double].
 /// \returns A 256-bit vector of [4 x double] containing the horizontal
 ///    differences of both operands.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_hsub_pd(__m256d __a, __m256d __b)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_hsub_pd(__m256d __a, __m256d __b) {
   return (__m256d)__builtin_ia32_hsubpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -763,9 +760,8 @@ _mm256_hsub_pd(__m256d __a, __m256d __b)
 ///    elements with index 2, 3, 6, 7 of a vector of [8 x float].
 /// \returns A 256-bit vector of [8 x float] containing the horizontal
 ///    differences of both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_hsub_ps(__m256 __a, __m256 __b)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_hsub_ps(__m256 __a,
+                                                                   __m256 __b) {
   return (__m256)__builtin_ia32_hsubps256((__v8sf)__a, (__v8sf)__b);
 }
 

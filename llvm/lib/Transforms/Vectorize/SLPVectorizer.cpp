@@ -10679,7 +10679,7 @@ class InstructionsCompatibilityAnalysis {
     };
     // Exclude operands instructions immediately to improve compile time, it
     // will be unable to schedule anyway.
-    SmallDenseMap<unsigned, SmallDenseSet<Value *, 8>> Operands;
+    SmallDenseSet<Value *, 8> Operands;
     SmallMapVector<unsigned, SmallVector<Instruction *>, 4> Candidates;
     bool AnyUndef = false;
     for (Value *V : VL) {
@@ -10693,12 +10693,12 @@ class InstructionsCompatibilityAnalysis {
       if (Candidates.empty()) {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Parent = I->getParent();
-        Operands[I->getOpcode()].insert(I->op_begin(), I->op_end());
+        Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
       if (Parent == I->getParent()) {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
-        Operands[I->getOpcode()].insert(I->op_begin(), I->op_end());
+        Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
       auto *NodeA = DT.getNode(Parent);
@@ -10713,7 +10713,7 @@ class InstructionsCompatibilityAnalysis {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Parent = I->getParent();
         Operands.clear();
-        Operands[I->getOpcode()].insert(I->op_begin(), I->op_end());
+        Operands.insert(I->op_begin(), I->op_end());
       }
     }
     unsigned BestOpcodeNum = 0;
@@ -10721,9 +10721,9 @@ class InstructionsCompatibilityAnalysis {
     for (const auto &P : Candidates) {
       if (P.second.size() < BestOpcodeNum)
         continue;
-      const auto &Ops = Operands.at(P.first);
       // If have inner dependencies - skip.
-      if (any_of(P.second, [&](Instruction *I) { return Ops.contains(I); }))
+      if (any_of(P.second,
+                 [&](Instruction *I) { return Operands.contains(I); }))
         continue;
       for (Instruction *I : P.second) {
         if (IsSupportedInstruction(I, AnyUndef)) {
@@ -17638,7 +17638,9 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
-       E->doesNotNeedToSchedule()) ||
+       (E->doesNotNeedToSchedule() ||
+        (E->hasCopyableElements() && !E->isCopyableElement(LastInst) &&
+         isUsedOutsideBlock(LastInst)))) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -19466,7 +19468,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       assert(getNumElements(Cond->getType()) == TrueNumElements &&
              "Cannot vectorize Instruction::Select");
-      Value *V = Builder.CreateSelect(Cond, True, False);
+      Value *V =
+          Builder.CreateSelectWithUnknownProfile(Cond, True, False, DEBUG_TYPE);
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
@@ -23586,18 +23589,19 @@ class HorizontalReduction {
     switch (Kind) {
     case RecurKind::Or: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
-            RHS, Name);
+            RHS, DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
     case RecurKind::And: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, RHS,
-            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)), Name);
+            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)),
+            DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
@@ -23618,7 +23622,8 @@ class HorizontalReduction {
       if (UseSelect) {
         CmpInst::Predicate Pred = llvm::getMinMaxReductionPredicate(Kind);
         Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+        return Builder.CreateSelectWithUnknownProfile(Cmp, LHS, RHS, DEBUG_TYPE,
+                                                      Name);
       }
       [[fallthrough]];
     case RecurKind::FMax:
