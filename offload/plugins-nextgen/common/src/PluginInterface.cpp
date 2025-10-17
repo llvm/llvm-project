@@ -2133,6 +2133,19 @@ int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
 }
 
+
+int32_t GenericPluginTy::is_pinned_ptr(int32_t DeviceId, void *HstPtr) {
+  GenericDeviceTy &Device = getDevice(DeviceId);
+
+  size_t BaseSize;
+  void *BaseHstPtr, *BaseDevAccessiblePtr;
+  auto Result = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,BaseDevAccessiblePtr, BaseSize);
+  if (!Result)
+      return false;
+  
+  return *Result;
+}
+
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
                                     const char *Name, void **DevicePtr) {
   assert(Binary.handle && "Invalid device binary handle");
