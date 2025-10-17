@@ -2520,18 +2520,6 @@ def : RWSysReg<"ICV_HAPR_EL1",            0b11, 0b001, 0b1100, 0b0000, 0b011>;
 def : RWSysReg<"ICV_HPPIR_EL1",           0b11, 0b000, 0b1100, 0b1010, 0b011>;
 def : RWSysReg<"ICV_PCR_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b010>;
 
-// PPI Registers
-foreach n=0-1 in {
-  defvar nb = !cast<bit>(n);
-//                                               Op0   Op1    CRn     CRm     Op2
-  def : RWSysReg<"ICC_PPI_CACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b00,nb}>;
-  def : RWSysReg<"ICC_PPI_CPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b10,nb}>;
-  def : RWSysReg<"ICC_PPI_ENABLER"#n#"_EL1",     0b11, 0b000, 0b1100, 0b1010, {0b11,nb}>;
-  def : RWSysReg<"ICC_PPI_SACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b01,nb}>;
-  def : RWSysReg<"ICC_PPI_SPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b11,nb}>;
-  def : ROSysReg<"ICC_PPI_HMR"#n#"_EL1",         0b11, 0b000, 0b1100, 0b1010, {0b00,nb}>;
-}
-
 foreach n=0-3 in {
   defvar nb = !cast<bits<2>>(n);
 //                                             Op0   Op1    CRn     CRm     Op2
@@ -2545,17 +2533,22 @@ foreach n=0-15 in{
   def : RWSysReg<"ICC_PPI_PRIORITYR"#n#"_EL1",   0b11, 0b000, 0b1100, {0b111,nb{3}}, nb{2-0}>;
 }
 
-// Virtual PPI Registers
-foreach n=0-1 in {
-  defvar nb = !cast<bit>(n);
-//                                               Op0   Op1    CRn     CRm     Op2
-  def : RWSysReg<"ICV_PPI_CACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b00,nb}>;
-  def : RWSysReg<"ICV_PPI_CPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b10,nb}>;
-  def : RWSysReg<"ICV_PPI_ENABLER"#n#"_EL1",     0b11, 0b000, 0b1100, 0b1010, {0b11,nb}>;
-  def : RWSysReg<"ICV_PPI_SACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b01,nb}>;
-  def : RWSysReg<"ICV_PPI_SPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b11,nb}>;
-  def : RWSysReg<"ICV_PPI_HMR"#n#"_EL1",         0b11, 0b000, 0b1100, 0b1010, {0b00,nb}>;
+// PPI and Virtual PPI Registers
+multiclass PPIRegisters<string prefix> {
+  foreach n=0-1 in {
+    defvar nb = !cast<bit>(n);
+//                                                  Op0   Op1    CRn     CRm     Op2
+    def : RWSysReg<prefix#"_PPI_CACTIVER"#n#"_EL1", 0b11, 0b000, 0b1100, 0b1101, {0b00,nb}>;
+    def : RWSysReg<prefix#"_PPI_CPENDR"#n#"_EL1",   0b11, 0b000, 0b1100, 0b1101, {0b10,nb}>;
+    def : RWSysReg<prefix#"_PPI_ENABLER"#n#"_EL1",  0b11, 0b000, 0b1100, 0b1010, {0b11,nb}>;
+    def : RWSysReg<prefix#"_PPI_SACTIVER"#n#"_EL1", 0b11, 0b000, 0b1100, 0b1101, {0b01,nb}>;
+    def : RWSysReg<prefix#"_PPI_SPENDR"#n#"_EL1",   0b11, 0b000, 0b1100, 0b1101, {0b11,nb}>;
+    def : RWSysReg<prefix#"_PPI_HMR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1010, {0b00,nb}>;
+  }
 }
+
+defm : PPIRegisters<"ICC">;  // PPI Registers
+defm : PPIRegisters<"ICV">;  // Virtual PPI Registers
 
 foreach n=0-15 in {
   defvar nb = !cast<bits<4>>(n);
