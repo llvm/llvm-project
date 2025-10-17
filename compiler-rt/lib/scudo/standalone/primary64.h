@@ -24,6 +24,8 @@
 #include "thread_annotations.h"
 #include "tracing.h"
 
+#include <inttypes.h>
+
 namespace scudo {
 
 // SizeClassAllocator64 is an allocator tuned for 64-bit address space.
@@ -1146,17 +1148,24 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
         BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
   }
   const uptr TotalChunks = Region->MemMapInfo.AllocatedUser / BlockSize;
+  const u64 CurTimeNs = getMonotonicTime();
+  const u64 DiffSinceLastReleaseNs =
+      CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
+  const u64 LastReleaseSecAgo = DiffSinceLastReleaseNs / 1000000000;
+  const u64 LastReleaseMsAgo = (DiffSinceLastReleaseNs % 1000000000) / 1000000;
+
   Str->append(
       "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
       "inuse: %6zu total: %6zu releases attempted: %6zu last "
       "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
-      "(0x%zx)\n",
+      "(0x%zx) Latest release: %" PRIu64 ":%" PRIu64 " seconds ago\n",
       Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
       Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
       Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
       Region->ReleaseInfo.NumReleasesAttempted,
       Region->ReleaseInfo.LastReleasedBytes >> 10, RegionPushedBytesDelta >> 10,
-      Region->RegionBeg, getRegionBaseByClassId(ClassId));
+      Region->RegionBeg, getRegionBaseByClassId(ClassId), LastReleaseSecAgo,
+      LastReleaseMsAgo);
 }
 
 template <typename Config>
@@ -1486,7 +1495,7 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
     Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
     Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
   }
-  Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
+  Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
 
   if (Region->ReleaseInfo.PendingPushedBytesDelta > 0) {
     // Instead of increasing the threshold by the amount of
