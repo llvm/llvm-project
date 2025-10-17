@@ -601,6 +601,9 @@ def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
 def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
   "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
 
+def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
+  "Enable Virtual Memory Tagging Extension">;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//

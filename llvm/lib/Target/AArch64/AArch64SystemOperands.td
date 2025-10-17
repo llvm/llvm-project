@@ -205,6 +205,7 @@ def lookupDCByName : SearchIndex {
   let Key = ["Name"];
 }
 
+//                Op1    CRn     CRm     Op2
 def : DC<"ZVA",   0b011, 0b0111, 0b0100, 0b001>;
 def : DC<"IVAC",  0b000, 0b0111, 0b0110, 0b001>;
 def : DC<"ISW",   0b000, 0b0111, 0b0110, 0b010>;
@@ -239,6 +240,11 @@ def : DC<"CGDVAP",  0b011, 0b0111, 0b1100, 0b101>;
 def : DC<"CGDVADP", 0b011, 0b0111, 0b1101, 0b101>;
 def : DC<"CIGDVAC", 0b011, 0b0111, 0b1110, 0b101>;
 def : DC<"GZVA",    0b011, 0b0111, 0b0100, 0b100>;
+}
+
+let Requires = [{ {AArch64::FeatureMTETC} }] in {
+def : DC<"ZGBVA",   0b011, 0b0111, 0b0100, 0b101>;
+def : DC<"GBVA",    0b011, 0b0111, 0b0100, 0b111>;
 }
 
 let Requires = [{ {AArch64::FeatureMEC} }] in {

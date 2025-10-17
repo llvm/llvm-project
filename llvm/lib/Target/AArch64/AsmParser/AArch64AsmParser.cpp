@@ -3887,6 +3887,7 @@ static const struct Extension {
     {"lscp", {AArch64::FeatureLSCP}},
     {"tlbid", {AArch64::FeatureTLBID}},
     {"mpamv2", {AArch64::FeatureMPAMv2}},
+    {"mtetc", {AArch64::FeatureMTETC}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
