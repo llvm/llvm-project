@@ -83,7 +83,7 @@ static bool shouldParallelize(Operation *op) {
   // True if the op is a runtime call to Assign
   if (isRuntimeCall(op)) {
     fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-    auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+    auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
     if (funcName == FortranAssignStr) {
       return true;
     }
@@ -354,7 +354,6 @@ static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
     rewriter.create<mlir::omp::YieldOp>(doLoop->getLoc());
     terminatorOp->erase();
   }
-  return;
 }
 
 /// workdistributeDoLower method finds the fir.do_loop unoredered
@@ -621,13 +620,10 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
   targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
   SmallVector<Operation *> opsToErase;
   for (auto &op : workdistribute.getOps()) {
-    if (&op == terminator) {
-      break;
-    }
     if (isRuntimeCall(&op)) {
       rewriter.setInsertionPoint(&op);
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+      auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
       if (funcName == FortranAssignStr) {
         if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
           // Record the target ops to process later
@@ -786,7 +782,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
 /// getNestedOpToIsolate function is designed to identify a specific teams
 /// parallel op within the body of an omp::TargetOp that should be "isolated."
 /// This returns a tuple of op, if its first op in targetBlock, or if the op is
-/// last op in the tragte block.
+/// last op in the traget block.
 static std::optional<std::tuple<Operation *, bool, bool>>
 getNestedOpToIsolate(omp::TargetOp targetOp) {
   if (targetOp.getRegion().empty())
@@ -1350,7 +1346,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     // Check for runtime calls to be replaced.
     if (isRuntimeCall(clonedOp)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+      auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
       if (funcName == FortranAssignStr) {
         opsToReplace.push_back(clonedOp);
       } else {
@@ -1398,7 +1394,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     // Replace runtime calls with omp versions.
     else if (isRuntimeCall(op)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+      auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
       if (funcName == FortranAssignStr) {
         rewriter.setInsertionPoint(op);
         fir::FirOpBuilder builder{rewriter, op};
