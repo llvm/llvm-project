@@ -992,10 +992,10 @@ def CIR_InlineAttr : CIR_EnumAttr<CIR_InlineKind, "inline"> {
 
     Example:
     ```
-    cir.func @noinline_func(%arg0: !s32i) -> !s32i #cir.inline<never> {
+    cir.func @noinline_func(%arg0: !s32i) -> !s32i inline(never) {
       cir.return %arg0 : !s32i
     }
-    cir.func @always_inline_func() -> !s32i #cir.inline<always> {
+    cir.func @always_inline_func() -> !s32i inline(always) {
       %0 = cir.const #cir.int<42> : !s32i
       cir.return %0 : !s32i
     }
