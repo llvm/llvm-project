@@ -65,9 +65,16 @@ def plain_text_comparison(data, metric, baseline_name=None, candidate_name=None)
     """
     data = data.replace(numpy.nan, None) # avoid NaNs in tabulate output
     headers = ['Benchmark', baseline_name, candidate_name, 'Difference', '% Difference']
-    fmt = (None, '.2f', '.2f', '.2f', '.2f')
-    table = data[['benchmark', f'{metric}_0', f'{metric}_1', 'difference', 'percent']].set_index('benchmark')
-    return tabulate.tabulate(table, headers=headers, floatfmt=fmt, numalign='right')
+    fmt = (None, '.2f', '.2f', '.2f', '.2%')
+    table = data[['benchmark', f'{metric}_0', f'{metric}_1', 'difference', 'percent']]
+
+    # Compute the geomean and report on their difference
+    geomean_0 = statistics.geometric_mean(data[f'{metric}_0'])
+    geomean_1 = statistics.geometric_mean(data[f'{metric}_1'])
+    geomean_row = ['Geomean', geomean_0, geomean_1, (geomean_1 - geomean_0), (geomean_1 - geomean_0) / geomean_0]
+    table.loc[len(table)] = geomean_row
+
+    return tabulate.tabulate(table.set_index('benchmark'), headers=headers, floatfmt=fmt, numalign='right')
 
 def create_chart(data, metric, subtitle=None, series_names=None):
     """
@@ -154,7 +161,7 @@ def main(argv):
     # If we have exactly two data sets, compute additional info in new columns
     if len(lnt_inputs) == 2:
         data['difference'] = data[f'{args.metric}_1'] - data[f'{args.metric}_0']
-        data['percent'] = 100 * (data['difference'] / data[f'{args.metric}_0'])
+        data['percent'] = data['difference'] / data[f'{args.metric}_0']
 
     if args.filter is not None:
         keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
