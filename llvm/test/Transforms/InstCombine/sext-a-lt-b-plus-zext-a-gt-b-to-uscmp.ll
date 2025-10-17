@@ -187,11 +187,7 @@ define i8 @signed_add_neg5(i32 %a, i32 %b) {
 define i8 @signed_add_ge_le(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @signed_add_ge_le(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LE8:%.*]] = sext i1 [[LE]] to i8
-; CHECK-NEXT:    [[GE:%.*]] = icmp sge i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8]], [[GE8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %le = icmp sle i32 %a, %b
@@ -206,11 +202,7 @@ define i8 @signed_add_ge_le(i32 %a, i32 %b) {
 define i8 @unsigned_add_ge_le(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @unsigned_add_ge_le(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LE:%.*]] = icmp ule i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LE8:%.*]] = sext i1 [[LE]] to i8
-; CHECK-NEXT:    [[GE:%.*]] = icmp uge i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8]], [[GE8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %le = icmp ule i32 %a, %b
@@ -225,11 +217,7 @@ define i8 @unsigned_add_ge_le(i32 %a, i32 %b) {
 define i8 @signed_sub_ge_le(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @signed_sub_ge_le(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LE8_NEG:%.*]] = sext i1 [[LE]] to i8
-; CHECK-NEXT:    [[GE:%.*]] = icmp sge i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8_NEG]], [[GE8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %le = icmp sle i32 %a, %b
@@ -244,11 +232,7 @@ define i8 @signed_sub_ge_le(i32 %a, i32 %b) {
 define i8 @unsigned_sub_ge_le(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @unsigned_sub_ge_le(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LE:%.*]] = icmp ule i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LE8_NEG:%.*]] = sext i1 [[LE]] to i8
-; CHECK-NEXT:    [[GE:%.*]] = icmp uge i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8_NEG]], [[GE8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %le = icmp ule i32 %a, %b
