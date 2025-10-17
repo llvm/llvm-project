@@ -23,21 +23,34 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = [
-    InterfaceMethod<
-      "Returns the source buffer from which the view is created.",
-      "::mlir::Value", "getViewSource">,
-    InterfaceMethod<
-      /*desc=*/[{ Returns the buffer which the view created. }],
-      /*retTy=*/"::mlir::Value",
-      /*methodName=*/"getViewDest",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
+  let methods =
+      [InterfaceMethod<
+           "Returns the source buffer from which the view is created.",
+           "::mlir::Value", "getViewSource">,
+       InterfaceMethod<
+           /*desc=*/[{ Returns the buffer which the view created. }],
+           /*retTy=*/"::mlir::Value",
+           /*methodName=*/"getViewDest",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
         return $_op->getResult(0);
-      }]
-    >
-  ];
+      }]>,
+       InterfaceMethod<
+           // TBD: should it be generalized into isPartialView that will
+           // return true in any of these cases?
+           //   1. Resulting view is a slice view of the source.
+           //   2. Resulting view's start does not match the source's start.
+           //   3. Resulting view's end does not match the source's end.
+           /*desc=*/
+           [{ Returns true iff the source buffer and the resulting view start at the same "address". }],
+           /*retTy=*/"bool",
+           /*methodName=*/"isSameStart",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        return false;
+      }]>];
 }
 
 def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface"> {
