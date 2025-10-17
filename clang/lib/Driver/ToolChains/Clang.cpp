@@ -7565,20 +7565,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                           << value;
   }
 
-  // Set the default fexec-charset as the system charset.
-  CmdArgs.push_back("-fexec-charset");
-  CmdArgs.push_back(Args.MakeArgString(Triple.getDefaultTextEncoding()));
   if (Arg *execEncoding = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
     StringRef value = execEncoding->getValue();
-    llvm::ErrorOr<llvm::TextEncodingConverter> ErrorOrConverter =
-        llvm::TextEncodingConverter::create("UTF-8", value.data());
-    if (ErrorOrConverter) {
-      CmdArgs.push_back("-fexec-charset");
-      CmdArgs.push_back(Args.MakeArgString(value));
-    } else {
-      D.Diag(diag::err_drv_invalid_value)
-          << execEncoding->getAsString(Args) << value;
+    bool KnownEncoding =
+        llvm::TextEncodingConverter::getKnownEncoding(value).has_value();
+    if (!KnownEncoding) {
+      llvm::ErrorOr<llvm::TextEncodingConverter> ErrorOrConverter =
+          llvm::TextEncodingConverter::create("UTF-8", value.data());
+      if (!ErrorOrConverter)
+        D.Diag(diag::err_drv_invalid_value)
+            << execEncoding->getAsString(Args) << value;
     }
+    CmdArgs.push_back("-fexec-charset");
+    CmdArgs.push_back(Args.MakeArgString(value));
+  } else {
+    // Set the default fexec-charset as the system charset.
+    CmdArgs.push_back("-fexec-charset");
+    CmdArgs.push_back(
+        Args.MakeArgString(Triple.getDefaultNarrowTextEncoding()));
   }
 
   RenderDiagnosticsOptions(D, Args, CmdArgs);

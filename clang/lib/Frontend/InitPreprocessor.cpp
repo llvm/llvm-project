@@ -1034,7 +1034,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__clang_literal_encoding__", LangOpts.ExecEncoding);
   else
     Builder.defineMacro("__clang_literal_encoding__",
-                        TI.getTriple().getDefaultTextEncoding());
+                        TI.getTriple().getDefaultNarrowTextEncoding());
   if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
     // FIXME: 32-bit wchar_t signals UTF-32. This may change
     // if -fwide-exec-charset= is ever supported.

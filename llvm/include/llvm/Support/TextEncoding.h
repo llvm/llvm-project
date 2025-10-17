@@ -135,6 +135,9 @@ public:
       return std::string(Result);
     return EC;
   }
+
+  // Maps the encoding name to enum constant if possible.
+  static std::optional<TextEncoding> getKnownEncoding(StringRef Name);
 };
 
 } // namespace llvm

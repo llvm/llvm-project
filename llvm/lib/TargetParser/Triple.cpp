@@ -1447,7 +1447,7 @@ StringRef Triple::getOSAndEnvironmentName() const {
 }
 
 // Default encoding on z/OS is IBM-1047 and UTF-8 otherwise
-StringRef Triple::getDefaultTextEncoding() const {
+StringRef Triple::getDefaultNarrowTextEncoding() const {
   if (getOS() == llvm::Triple::ZOS)
     return "IBM-1047";
   return "UTF-8";

@@ -16,20 +16,25 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TextEncoding.h"
 
-enum ConversionAction { NoConversion, ToSystemEncoding, ToExecEncoding };
+enum ConversionAction {
+  CA_NoConversion,
+  CA_ToSystemEncoding,
+  CA_ToExecEncoding
+};
 
 class LiteralConverter {
   llvm::StringRef InternalEncoding;
   llvm::StringRef SystemEncoding;
   llvm::StringRef ExecEncoding;
-  llvm::TextEncodingConverter *ToSystemEncodingConverter;
-  llvm::TextEncodingConverter *ToExecEncodingConverter;
+  llvm::TextEncodingConverter *ToSystemEncodingConverter = nullptr;
+  llvm::TextEncodingConverter *ToExecEncodingConverter = nullptr;
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action);
-  void setConvertersFromOptions(const clang::LangOptions &Opts,
-                                const clang::TargetInfo &TInfo,
-                                clang::DiagnosticsEngine &Diags);
+  static std::error_code
+  setConvertersFromOptions(LiteralConverter &LiteralConv,
+                           const clang::LangOptions &Opts,
+                           const clang::TargetInfo &TInfo);
 };
 
 #endif

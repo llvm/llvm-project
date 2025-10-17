@@ -251,7 +251,7 @@
 // source-charset-utf-16: invalid value 'utf-16' in '/source-charset:utf-16'
 
 // /execution-charset: should warn on invalid charsets.
-// RUN: %clang_cl /execution-charset:invalid-charset -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-invalid %s
+// RUN: not %clang_cl /execution-charset:invalid-charset -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-invalid %s
 // execution-charset-invalid: invalid value 'invalid-charset' in '/execution-charset:invalid-charset'
 //
 
