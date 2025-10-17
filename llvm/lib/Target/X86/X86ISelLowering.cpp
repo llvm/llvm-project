@@ -2744,7 +2744,8 @@ bool X86TargetLowering::useStackGuardXorFP() const {
 }
 
 SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                                               const SDLoc &DL) const {
+                                               const SDLoc &DL,
+                                               bool FailureBB) const {
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
   MachineSDNode *Node = DAG.getMachineNode(XorOp, DL, PtrTy, Val);

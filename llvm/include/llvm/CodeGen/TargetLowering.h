@@ -5828,7 +5828,7 @@ public:
   virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
   virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                                      const SDLoc &DL) const {
+                                      const SDLoc &DL, bool FailureBB) const {
     llvm_unreachable("not implemented for this target");
   }
 

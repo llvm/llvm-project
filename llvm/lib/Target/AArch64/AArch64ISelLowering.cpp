@@ -29242,6 +29242,25 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
+bool AArch64TargetLowering::useStackGuardXorFP() const {
+  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
+  return Subtarget->getTargetTriple().isOSMSVCRT() &&
+         !Subtarget->isTargetMachO() &&
+         !getTargetMachine().Options.EnableGlobalISel;
+}
+
+SDValue AArch64TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG,
+                                                   SDValue Val, const SDLoc &DL,
+                                                   bool FailureBB) const {
+  if (FailureBB) {
+    return DAG.getNode(
+        ISD::XOR, DL, Val.getValueType(), Val,
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                           getStackPointerRegisterToSaveRestore(), MVT::i64));
+  }
+  return Val;
+}
+
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
   // reciprocal if there are three or more FDIVs.

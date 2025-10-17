@@ -1592,9 +1592,8 @@ namespace llvm {
     bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                                const SDLoc &DL) const override;
-
+    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val, const SDLoc &DL,
+                                bool FailureBB) const override;
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
