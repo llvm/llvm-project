@@ -147,7 +147,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   // that would have been \", which would not have been the end of string.
   unsigned ResultChar = *ThisTokBuf++;
   char Escape = ResultChar;
-  bool Translate = true;
+  bool Transcode = true;
   bool Invalid = false;
   switch (ResultChar) {
   // These map to themselves.
@@ -189,7 +189,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     ResultChar = 11;
     break;
   case 'x': { // Hex escape.
-    Translate = false;
+    Transcode = false;
     ResultChar = 0;
     if (ThisTokBuf != ThisTokEnd && *ThisTokBuf == '{') {
       Delimited = true;
@@ -253,7 +253,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   case '4': case '5': case '6': case '7': {
     // Octal escapes.
     --ThisTokBuf;
-    Translate = false;
+    Transcode = false;
     ResultChar = 0;
 
     // Octal escapes are a series of octal digits with maximum length 3.
@@ -373,7 +373,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     HadError = true;
   }
 
-  if (Translate && Converter) {
+  if (Transcode && Converter) {
     // Invalid escapes are written as '?' and then translated.
     char ByteChar = Invalid ? '?' : ResultChar;
     SmallString<8> ResultCharConv;
@@ -1834,8 +1834,8 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   }
 
   llvm::TextEncodingConverter *Converter = nullptr;
-  if (!isUTFLiteral(Kind) && LiteralConv)
-    Converter = LiteralConv->getConverter(ToExecEncoding);
+  if (!isUTFLiteral(Kind) && !isWideLiteral(Kind) && LiteralConv)
+    Converter = LiteralConv->getConverter(CA_ToExecEncoding);
 
   while (begin != end) {
     // Is this a span of non-escape characters?
@@ -2142,7 +2142,7 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
   SourceLocation UDSuffixTokLoc;
 
   llvm::TextEncodingConverter *Converter = nullptr;
-  if (!isUTFLiteral(Kind) && LiteralConv)
+  if (!isUTFLiteral(Kind) && !isWideLiteral(Kind) && LiteralConv)
     Converter = LiteralConv->getConverter(Action);
 
   for (unsigned i = 0, e = StringToks.size(); i != e; ++i) {
@@ -2264,9 +2264,18 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
           SmallString<256> CpConv;
           int ResultLength = BeforeCRLF.size() * CharByteWidth;
           char *Cp = ResultPtr - ResultLength;
-          Converter->convert(StringRef(Cp, ResultLength), CpConv);
-          memcpy(Cp, CpConv.data(), ResultLength);
-          ResultPtr = Cp + CpConv.size();
+          std::error_code EC =
+              Converter->convert(StringRef(Cp, ResultLength), CpConv);
+          if (EC) {
+            if (Diags)
+              Diags->Report(StringToks[i].getLocation(),
+                            diag::err_exec_charset_conversion_failed)
+                  << EC.message();
+            hadError = true;
+          } else {
+            memcpy(Cp, CpConv.data(), ResultLength);
+            ResultPtr = Cp + CpConv.size();
+          }
         }
         // Point into the \n inside the \r\n sequence and operate on the
         // remaining portion of the literal.
@@ -2314,9 +2323,18 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
             SmallString<256> CpConv;
             int ResultLength = Length * CharByteWidth;
             char *Cp = ResultPtr - ResultLength;
-            Converter->convert(StringRef(Cp, ResultLength), CpConv);
-            memcpy(Cp, CpConv.data(), ResultLength);
-            ResultPtr = Cp + CpConv.size();
+            std::error_code EC =
+                Converter->convert(StringRef(Cp, ResultLength), CpConv);
+            if (EC) {
+              if (Diags)
+                Diags->Report(StringToks[i].getLocation(),
+                              diag::err_exec_charset_conversion_failed)
+                    << EC.message();
+              hadError = true;
+            } else {
+              memcpy(Cp, CpConv.data(), ResultLength);
+              ResultPtr = Cp + CpConv.size();
+            }
           }
           continue;
         }

@@ -251,7 +251,7 @@ public:
   StringLiteralParser(
       ArrayRef<Token> StringToks, Preprocessor &PP,
       StringLiteralEvalMethod StringMethod = StringLiteralEvalMethod::Evaluated,
-      ConversionAction Action = ToExecEncoding);
+      ConversionAction Action = CA_ToExecEncoding);
   StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
                       const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
@@ -260,7 +260,7 @@ public:
         Kind(tok::unknown), ResultPtr(ResultBuf.data()),
         EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
         Pascal(false) {
-    init(StringToks, NoConversion);
+    init(StringToks, CA_NoConversion);
   }
 
   bool hadError;

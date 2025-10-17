@@ -232,14 +232,16 @@
 // RUN: not %clang -### -S -finput-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
 // CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
 
-// RUN: %clang -### -S -fexec-charset=invalid-charset -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
-// CHECK-INVALID-INPUT-CHARSET: error: invalid value 'invalid-charset' in '-fexec-charset=invalid-charset'
+// RUN: not %clang -### -S -fexec-charset=invalid-charset -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-EXEC-CHARSET %s
+// CHECK-INVALID-EXEC-CHARSET: error: invalid value 'invalid-charset' in '-fexec-charset=invalid-charset'
 
-// Test that we support the following exec charsets.
-// RUN: %clang -### -S -fexec-charset=UTF-8 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID %s
-// RUN: %clang -### -S -fexec-charset=ISO8859-1 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID %s
-// RUN: %clang -### -S -fexec-charset=IBM-1047 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID %s
-// INVALID-NOT: error: invalid value
+// Test that we support the following exec charsets. The preferred MIME name is
+// `IBM1047`, but `IBM-1047` is the name used by z/OS USS utilities such as
+// `chtag`.
+// RUN: %clang -### -S -fexec-charset=UTF-8 -o /dev/null %s 2>&1 | FileCheck --check-prefix=CHECK-EXEC-CHARSET-UTF-8 %s
+// RUN: %clang -### -S -fexec-charset=IBM-1047 -o /dev/null %s 2>&1 | FileCheck --check-prefix=CHECK-EXEC-CHARSET-IBM-1047 %s
+// CHECK-EXEC-CHARSET-UTF-8: "-fexec-charset" "UTF-8"
+// CHECK-EXEC-CHARSET-IBM-1047: "-fexec-charset" "IBM-1047"
 
 // Test that we don't error on these.
 // RUN: not %clang -### -S -Werror                                                \
