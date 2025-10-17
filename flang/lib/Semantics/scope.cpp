@@ -154,7 +154,7 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
   }
 }
 
-Symbol *Scope::FindCommonBlockInSurroundingScopes(
+Symbol *Scope::FindCommonBlockInVisibleScopes(
     const SourceName &name) const {
   if (Symbol * cb{FindCommonBlock(name)}) {
     return cb;
@@ -163,12 +163,12 @@ Symbol *Scope::FindCommonBlockInSurroundingScopes(
   } else if (IsSubmodule()) {
     if (const Scope *parent{
             symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr}) {
-      if (auto *cb{parent->FindCommonBlockInSurroundingScopes(name)}) {
+      if (auto *cb{parent->FindCommonBlockInVisibleScopes(name)}) {
         return cb;
       }
     }
   } else if (!IsTopLevel() && parent_) {
-    if (auto *cb{parent_->FindCommonBlockInSurroundingScopes(name)}) {
+    if (auto *cb{parent_->FindCommonBlockInVisibleScopes(name)}) {
       return cb;
     }
   }
