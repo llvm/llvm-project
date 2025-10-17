@@ -2601,6 +2601,7 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
+  bool isSpanLikeType() const;
   bool isSignableType(const ASTContext &Ctx) const;
   bool isSignablePointerType() const;
   bool isSignableIntegerType(const ASTContext &Ctx) const;
