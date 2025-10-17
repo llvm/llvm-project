@@ -4527,6 +4527,10 @@ ExprResult Sema::SubstConceptTemplateArguments(
           /*Pattern=*/nullptr,
           /*ForConstraintInstantiation=*/true);
 
+  // Rebuild a constraint, only substituting non-dependent concept names
+  // and nothing else.
+  // Given C<SomeType, SomeValue, SomeConceptName, SomeDependentConceptName>.
+  // only SomeConceptName is substituted, in the constraint expression of C.
   struct ConstraintExprTransformer : TreeTransform<ConstraintExprTransformer> {
     using Base = TreeTransform<ConstraintExprTransformer>;
     MultiLevelTemplateArgumentList &MLTAL;
@@ -4550,6 +4554,9 @@ ExprResult Sema::SubstConceptTemplateArguments(
       return E;
     }
 
+    // Rebuild both branches of a conjunction / disjunction
+    // even if there is a substitution failure in one of
+    // the branch.
     ExprResult TransformBinaryOperator(BinaryOperator *E) {
       if (!(E->getOpcode() == BinaryOperatorKind::BO_LAnd ||
             E->getOpcode() == BinaryOperatorKind::BO_LOr))
