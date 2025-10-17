@@ -620,7 +620,7 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
-computePaddedShape(OpBuilder &rewriter, TypedValue<RankedTensorType> v,
+computePaddedShape(OpBuilder &, TypedValue<RankedTensorType> v,
                    AffineMap indexingMap, ArrayRef<OpFoldResult> indexingSizes,
                    const PadTilingInterfaceOptions &options);
 
@@ -630,17 +630,13 @@ using PadSizeComputationFunction =
         const PadTilingInterfaceOptions &)>;
 
 /// Specific helper for Linalg ops.
-FailureOr<SmallVector<OpFoldResult>> computeIndexingMapOpInterfacePaddedShape(
-    OpBuilder &rewriter, OpOperand &operandToPad,
-    ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options);
+FailureOr<SmallVector<OpFoldResult>>
+computeIndexingMapOpInterfacePaddedShape(OpBuilder &, OpOperand &operandToPad,
+                                         ArrayRef<Range> iterationDomain,
+                                         const PadTilingInterfaceOptions &);
 
-/// Pad the iterator dimensions of `toPad`.
-/// * "options.paddingSizes" indicates that each padding dimension should be
-///   padded to the specified padding size.
-/// * "options.padToMultipleOf" indicates that the paddingSizes should be
-//    interpreted as the bounding box (dynamic) value to pad to.
-/// * Use "options.paddingValues" to set the padding value of the created
-//    tensor::PadOp.
+/// Operations and values created in the process of padding a TilingInterface
+/// operation.
 struct PadTilingInterfaceResult {
   /// The operands of the padded op.
   SmallVector<tensor::PadOp> padOps;
@@ -649,6 +645,14 @@ struct PadTilingInterfaceResult {
   /// Slices of the padded op's results, same types as `toPad`.
   SmallVector<Value> replacements;
 };
+
+/// Pad the iterator dimensions of `toPad`.
+/// * "options.paddingSizes" indicates that each padding dimension should be
+///   padded to the specified padding size.
+/// * "options.padToMultipleOf" indicates that the paddingSizes should be
+//    interpreted as the bounding box (dynamic) value to pad to.
+/// * Use "options.paddingValues" to set the padding value of the created
+//    tensor::PadOp.
 FailureOr<PadTilingInterfaceResult>
 rewriteAsPaddedOp(OpBuilder &, TilingInterface toPad,
                   PadTilingInterfaceOptions options,

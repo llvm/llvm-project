@@ -96,7 +96,7 @@ static int64_t extractConstantMultiplier(AffineExpr expr) {
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
-linalg::computePaddedShape(OpBuilder &rewriter, TypedValue<RankedTensorType> v,
+linalg::computePaddedShape(OpBuilder &builder, TypedValue<RankedTensorType> v,
                            AffineMap indexingMap,
                            ArrayRef<OpFoldResult> indexingSizes,
                            const PadTilingInterfaceOptions &options) {
@@ -110,7 +110,7 @@ linalg::computePaddedShape(OpBuilder &rewriter, TypedValue<RankedTensorType> v,
 
   // "Full-rank" padding specification.
   SmallVector<OpFoldResult> paddingSizes =
-      getFullRankPaddingSizes(rewriter, indexingSizes, options);
+      getFullRankPaddingSizes(builder, indexingSizes, options);
 
   // For each dimension in the operand's shape, iterate over indexingSizes and
   // add the various term contributions.
@@ -148,28 +148,27 @@ linalg::computePaddedShape(OpBuilder &rewriter, TypedValue<RankedTensorType> v,
       OpFoldResult paddingDimOfr;
       if (options.padToMultipleOf) {
         AffineExpr d0, s0;
-        bindDims(rewriter.getContext(), d0);
-        bindSymbols(rewriter.getContext(), s0);
+        bindDims(builder.getContext(), d0);
+        bindSymbols(builder.getContext(), s0);
         AffineMap ceilMap = AffineMap::get(1, 1, d0.ceilDiv(s0) * s0);
         AffineMap composedMap = projectedMap.compose(ceilMap);
         paddingDimOfr = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, composedMap,
-            {indexingSizes[paddingDim], paddingSize},
+            builder, loc, composedMap, {indexingSizes[paddingDim], paddingSize},
             /*composeAffineMin=*/true);
       } else {
         // Otherwise just set to paddingSize.
         paddingDimOfr = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, projectedMap, paddingSize);
+            builder, loc, projectedMap, paddingSize);
       }
 
       // Adjust for the maximum accessed index, which is (paddingSize - 1) *
       // multiplier.
       AffineExpr d0;
-      bindDims(rewriter.getContext(), d0);
+      bindDims(builder.getContext(), d0);
       int64_t multiplier = extractConstantMultiplier(projectedMap.getResult(0));
       AffineMap subtractMap = AffineMap::get(1, 0, d0 - multiplier);
       OpFoldResult maxAccessIdx = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, subtractMap, {paddingDimOfr});
+          builder, loc, subtractMap, {paddingDimOfr});
       terms.push_back(maxAccessIdx);
 
       LLVM_DEBUG(DBGS() << "------new term: " << terms.back() << "\n");
@@ -178,19 +177,19 @@ linalg::computePaddedShape(OpBuilder &rewriter, TypedValue<RankedTensorType> v,
     // If there are no terms, just return the dim.
     if (terms.empty()) {
       paddedShape[resultIndex] =
-          createFoldedDimOp(rewriter, loc, v, resultIndex);
+          createFoldedDimOp(builder, loc, v, resultIndex);
       continue;
     }
 
     // Sum individual terms' contributions.
     SmallVector<AffineExpr> dims(terms.size());
-    bindDimsList(rewriter.getContext(), MutableArrayRef{dims});
+    bindDimsList(builder.getContext(), MutableArrayRef{dims});
     AffineExpr sumExpr = dims.front();
     for (unsigned i = 1; i < dims.size(); ++i)
       sumExpr = sumExpr + dims[i];
     // Add 1 to the maximum accessed index and get the final padded size.
-    OpFoldResult paddedDimOfr = affine::makeComposedFoldedAffineApply(
-        rewriter, loc, sumExpr + 1, terms);
+    OpFoldResult paddedDimOfr =
+        affine::makeComposedFoldedAffineApply(builder, loc, sumExpr + 1, terms);
     paddedShape[resultIndex] = paddedDimOfr;
   }
 
@@ -199,7 +198,7 @@ linalg::computePaddedShape(OpBuilder &rewriter, TypedValue<RankedTensorType> v,
 
 FailureOr<SmallVector<OpFoldResult>>
 linalg::computeIndexingMapOpInterfacePaddedShape(
-    OpBuilder &rewriter, OpOperand &operandToPad,
+    OpBuilder &builder, OpOperand &operandToPad,
     ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options) {
   auto transferOp =
       llvm::dyn_cast<IndexingMapOpInterface>(operandToPad.getOwner());
@@ -207,9 +206,9 @@ linalg::computeIndexingMapOpInterfacePaddedShape(
     return failure();
 
   // clang-format off
-  assert(llvm::all_of(iterationDomain, [&rewriter](Range r) {
-    return r.offset == OpFoldResult(rewriter.getIndexAttr(0)) &&
-    r.stride == OpFoldResult(rewriter.getIndexAttr(1));
+  assert(llvm::all_of(iterationDomain, [&builder](Range r) {
+    return r.offset == OpFoldResult(builder.getIndexAttr(0)) &&
+    r.stride == OpFoldResult(builder.getIndexAttr(1));
   }) && "expected 0-offset 1-stride loop ranges");
   // clang-format on
   SmallVector<OpFoldResult> loopUpperBounds;
@@ -219,13 +218,13 @@ linalg::computeIndexingMapOpInterfacePaddedShape(
 
   AffineMap indexingMap = transferOp.getMatchingIndexingMap(&operandToPad);
   return computePaddedShape(
-      rewriter, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
+      builder, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
       indexingMap, loopUpperBounds, options);
 }
 
 /// Pad a single operand to `paddedShape` using `paddingValueAttr` as padding
 /// Value.
-static Value padOperand(OpBuilder &rewriter, TilingInterface opToPad,
+static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
                         TypedValue<RankedTensorType> v,
                         ArrayRef<OpFoldResult> paddedShape,
                         Attribute paddingValueAttr) {
@@ -233,15 +232,15 @@ static Value padOperand(OpBuilder &rewriter, TilingInterface opToPad,
   if (auto complexTy =
           dyn_cast<ComplexType>(getElementTypeOrSelf(v.getType()))) {
     if (auto complexAttr = dyn_cast<ArrayAttr>(paddingValueAttr)) {
-      paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
+      paddingValue = complex::ConstantOp::create(builder, opToPad.getLoc(),
                                                  complexTy, complexAttr);
     }
   } else if (isa<ub::PoisonAttr>(paddingValueAttr)) {
-    paddingValue = ub::PoisonOp::create(rewriter, opToPad.getLoc(),
+    paddingValue = ub::PoisonOp::create(builder, opToPad.getLoc(),
                                         getElementTypeOrSelf(v.getType()));
   } else if (auto typedAttr = dyn_cast<TypedAttr>(paddingValueAttr)) {
     paddingValue =
-        arith::ConstantOp::create(rewriter, opToPad.getLoc(), typedAttr);
+        arith::ConstantOp::create(builder, opToPad.getLoc(), typedAttr);
   }
   assert(paddingValue && "failed to create value from padding attribute");
 
@@ -260,7 +259,7 @@ static Value padOperand(OpBuilder &rewriter, TilingInterface opToPad,
       RankedTensorType::get(tensorShape, getElementTypeOrSelf(v));
   LLVM_DEBUG(DBGS() << "--SUCCESS, makeComposedPadHighOp with type: "
                     << paddedTensorType);
-  return makeComposedPadHighOp(rewriter, opToPad.getLoc(), paddedTensorType, v,
+  return makeComposedPadHighOp(builder, opToPad.getLoc(), paddedTensorType, v,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 

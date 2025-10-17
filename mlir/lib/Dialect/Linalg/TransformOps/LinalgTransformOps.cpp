@@ -2469,14 +2469,11 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
-
-    const auto &[paddedOperands, paddedOp, slicedResults] = *maybePadOps;
+    const auto &[paddedOperands, paddedOp, slicedResults] = maybePadOps.value();
 
     // Set transform results.
     paddedOps.push_back(paddedOp);
     padOps.append(paddedOperands.begin(), paddedOperands.end());
-
-    // erase targetOp:
     rewriter.replaceOp(targetOp.getOperation(), slicedResults);
   }
 
