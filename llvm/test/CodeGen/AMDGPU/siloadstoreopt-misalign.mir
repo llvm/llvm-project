@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -start-before=si-load-store-opt %s -o - | FileCheck %s
+
+# CHECK-LABEL: misaligned_vgpr:
+# CHECK: ; %bb.0:
+# CHECK:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+# CHECK:         v_mov_b64_e32 v[0:1], 0
+# CHECK:         v_mov_b32_e32 v2, 0
+# CHECK:         v_mov_b32_e32 v3, v0
+# CHECK:         v_mov_b32_e32 v4, v1
+# CHECK:         flat_store_dwordx3 v[0:1], v[2:4]
+# CHECK:         s_endpgm
+
+--- |
+  define void @misaligned_vgpr() { ret void }
+...
+
+---
+name: misaligned_vgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %10:vreg_64_align2 = IMPLICIT_DEF
+    %11:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    FLAT_STORE_DWORD %10:vreg_64_align2, %11:vgpr_32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr addrspace(1) undef`)
+    %14:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    FLAT_STORE_DWORDX2 %10:vreg_64_align2, killed %14:vreg_64_align2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `ptr addrspace(1) undef`, align 4)
+    S_ENDPGM 0
+
+---
