@@ -182,3 +182,193 @@ define i8 @signed_add_neg5(i32 %a, i32 %b) {
   %r = add i8 %lt8, %gt8
   ret i8 %r
 }
+
+; sext(A s<= B) + zext(A s>= B) => scmp(A, B)
+define i8 @signed_add_ge_le(i32 %a, i32 %b) {
+; CHECK-LABEL: define i8 @signed_add_ge_le(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[A]], [[B]]
+; CHECK-NEXT:    [[LE8:%.*]] = sext i1 [[LE]] to i8
+; CHECK-NEXT:    [[GE:%.*]] = icmp sge i32 [[A]], [[B]]
+; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8]], [[GE8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %le = icmp sle i32 %a, %b
+  %le8 = sext i1 %le to i8
+  %ge = icmp sge i32 %a, %b
+  %ge8 = zext i1 %ge to i8
+  %r = add i8 %le8, %ge8
+  ret i8 %r
+}
+
+; Unsigned version of >= and <=
+define i8 @unsigned_add_ge_le(i32 %a, i32 %b) {
+; CHECK-LABEL: define i8 @unsigned_add_ge_le(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[LE:%.*]] = icmp ule i32 [[A]], [[B]]
+; CHECK-NEXT:    [[LE8:%.*]] = sext i1 [[LE]] to i8
+; CHECK-NEXT:    [[GE:%.*]] = icmp uge i32 [[A]], [[B]]
+; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8]], [[GE8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %le = icmp ule i32 %a, %b
+  %le8 = sext i1 %le to i8
+  %ge = icmp uge i32 %a, %b
+  %ge8 = zext i1 %ge to i8
+  %r = add i8 %le8, %ge8
+  ret i8 %r
+}
+
+; zext(A s>= B) - zext(A s<= B) => scmp(A, B)
+define i8 @signed_sub_ge_le(i32 %a, i32 %b) {
+; CHECK-LABEL: define i8 @signed_sub_ge_le(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[A]], [[B]]
+; CHECK-NEXT:    [[LE8_NEG:%.*]] = sext i1 [[LE]] to i8
+; CHECK-NEXT:    [[GE:%.*]] = icmp sge i32 [[A]], [[B]]
+; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8_NEG]], [[GE8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %le = icmp sle i32 %a, %b
+  %le8 = zext i1 %le to i8
+  %ge = icmp sge i32 %a, %b
+  %ge8 = zext i1 %ge to i8
+  %r = sub i8 %ge8, %le8
+  ret i8 %r
+}
+
+; Unsigned version of >= and <= subtraction
+define i8 @unsigned_sub_ge_le(i32 %a, i32 %b) {
+; CHECK-LABEL: define i8 @unsigned_sub_ge_le(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[LE:%.*]] = icmp ule i32 [[A]], [[B]]
+; CHECK-NEXT:    [[LE8_NEG:%.*]] = sext i1 [[LE]] to i8
+; CHECK-NEXT:    [[GE:%.*]] = icmp uge i32 [[A]], [[B]]
+; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8_NEG]], [[GE8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %le = icmp ule i32 %a, %b
+  %le8 = zext i1 %le to i8
+  %ge = icmp uge i32 %a, %b
+  %ge8 = zext i1 %ge to i8
+  %r = sub i8 %ge8, %le8
+  ret i8 %r
+}
+
+; Constant canonicalization: (a > 4) - (a < 6) => scmp(a, 5)
+define i8 @signed_sub_const_canonicalization(i32 %a) {
+; CHECK-LABEL: define i8 @signed_sub_const_canonicalization(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    [[LT8_NEG:%.*]] = sext i1 [[LT]] to i8
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8_NEG]], [[GT8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt = icmp slt i32 %a, 6
+  %lt8 = zext i1 %lt to i8
+  %gt = icmp sgt i32 %a, 4
+  %gt8 = zext i1 %gt to i8
+  %r = sub i8 %gt8, %lt8
+  ret i8 %r
+}
+
+; Constant canonicalization: (a >= 5) - (a <= 5) => scmp(a, 5)
+define i8 @signed_sub_const_canonicalization2(i32 %a) {
+; CHECK-LABEL: define i8 @signed_sub_const_canonicalization2(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[LE:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    [[LE8_NEG:%.*]] = sext i1 [[LE]] to i8
+; CHECK-NEXT:    [[GE:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8_NEG]], [[GE8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %le = icmp sle i32 %a, 5
+  %le8 = zext i1 %le to i8
+  %ge = icmp sge i32 %a, 5
+  %ge8 = zext i1 %ge to i8
+  %r = sub i8 %ge8, %le8
+  ret i8 %r
+}
+
+; Unsigned constant canonicalization: (a > 4) - (a < 6) => ucmp(a, 5)
+define i8 @unsigned_sub_const_canonicalization(i32 %a) {
+; CHECK-LABEL: define i8 @unsigned_sub_const_canonicalization(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[A]], 6
+; CHECK-NEXT:    [[LT8_NEG:%.*]] = sext i1 [[LT]] to i8
+; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i32 [[A]], 4
+; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8_NEG]], [[GT8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt = icmp ult i32 %a, 6
+  %lt8 = zext i1 %lt to i8
+  %gt = icmp ugt i32 %a, 4
+  %gt8 = zext i1 %gt to i8
+  %r = sub i8 %gt8, %lt8
+  ret i8 %r
+}
+
+; Constant canonicalization with >= and <=: (a >= 5) - (a <= 5) => scmp(a, 5)
+define i8 @signed_sub_const_canonicalization_ge_le(i32 %a) {
+; CHECK-LABEL: define i8 @signed_sub_const_canonicalization_ge_le(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[LE:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    [[LE8_NEG:%.*]] = sext i1 [[LE]] to i8
+; CHECK-NEXT:    [[GE:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[GE8:%.*]] = zext i1 [[GE]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LE8_NEG]], [[GE8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %le = icmp sle i32 %a, 5
+  %le8 = zext i1 %le to i8
+  %ge = icmp sge i32 %a, 5
+  %ge8 = zext i1 %ge to i8
+  %r = sub i8 %ge8, %le8
+  ret i8 %r
+}
+
+; More constant canonicalization: (a > 2) - (a < 4) => scmp(a, 3)
+define i8 @signed_sub_const_canonicalization3(i32 %a) {
+; CHECK-LABEL: define i8 @signed_sub_const_canonicalization3(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], 4
+; CHECK-NEXT:    [[LT8_NEG:%.*]] = sext i1 [[LT]] to i8
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], 2
+; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8_NEG]], [[GT8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt = icmp slt i32 %a, 4
+  %lt8 = zext i1 %lt to i8
+  %gt = icmp sgt i32 %a, 2
+  %gt8 = zext i1 %gt to i8
+  %r = sub i8 %gt8, %lt8
+  ret i8 %r
+}
+
+; Negative test: constants that are more than one apart - should NOT canonicalize
+define i8 @signed_sub_const_no_canonicalization(i32 %a) {
+; CHECK-LABEL: define i8 @signed_sub_const_no_canonicalization(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], 10
+; CHECK-NEXT:    [[LT8_NEG:%.*]] = sext i1 [[LT]] to i8
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8_NEG]], [[GT8]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt = icmp slt i32 %a, 10
+  %lt8 = zext i1 %lt to i8
+  %gt = icmp sgt i32 %a, 4
+  %gt8 = zext i1 %gt to i8
+  %r = sub i8 %gt8, %lt8
+  ret i8 %r
+}
