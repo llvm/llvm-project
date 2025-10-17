@@ -769,13 +769,11 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
 }
 
 template <typename EntryOp, typename ExitOp>
-static void emitCtorDtorPair(mlir::OpBuilder &modBuilder,
-                             fir::FirOpBuilder &builder,
-                             mlir::Location operandLocation,
-                             fir::GlobalOp globalOp,
-                             mlir::acc::DataClause clause,
-                             std::stringstream &asFortran,
-                             const std::string &ctorName) {
+static void
+emitCtorDtorPair(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
+                 mlir::Location operandLocation, fir::GlobalOp globalOp,
+                 mlir::acc::DataClause clause, std::stringstream &asFortran,
+                 const std::string &ctorName) {
   createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
                         mlir::acc::DeclareEnterOp, ExitOp>(
       modBuilder, builder, operandLocation, globalOp, clause, ctorName,
@@ -783,10 +781,11 @@ static void emitCtorDtorPair(mlir::OpBuilder &modBuilder,
 
   std::stringstream dtorName;
   dtorName << globalOp.getSymName().str() << "_acc_dtor";
-  createDeclareGlobalOp<mlir::acc::GlobalDestructorOp, mlir::acc::GetDevicePtrOp,
-                        mlir::acc::DeclareExitOp, ExitOp>(
-      modBuilder, builder, operandLocation, globalOp, clause, dtorName.str(),
-      /*implicit=*/false, asFortran);
+  createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
+                        mlir::acc::GetDevicePtrOp, mlir::acc::DeclareExitOp,
+                        ExitOp>(modBuilder, builder, operandLocation, globalOp,
+                                clause, dtorName.str(),
+                                /*implicit=*/false, asFortran);
 }
 
 template <typename EntryOp, typename ExitOp>
@@ -807,25 +806,26 @@ static void genDeclareDataOperandOperations(
     // Handle COMMON/global symbols via module-level ctor/dtor path.
     if (symbol.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
         Fortran::semantics::FindCommonBlockContaining(symbol)) {
-      emitCommonGlobal(converter, builder, accObject, dataClause,
+      emitCommonGlobal(
+          converter, builder, accObject, dataClause,
           [&](mlir::OpBuilder &modBuilder, mlir::Location loc,
               fir::GlobalOp globalOp, mlir::acc::DataClause clause,
               std::stringstream &asFortranStr, const std::string &ctorName) {
             if constexpr (std::is_same_v<EntryOp, mlir::acc::DeclareLinkOp>) {
-              createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
-                                    mlir::acc::DeclareLinkOp,
-                                    mlir::acc::DeclareEnterOp,
-                                    mlir::acc::DeclareLinkOp>(modBuilder,
-                  builder, loc, globalOp, clause, ctorName,
+              createDeclareGlobalOp<
+                  mlir::acc::GlobalConstructorOp, mlir::acc::DeclareLinkOp,
+                  mlir::acc::DeclareEnterOp, mlir::acc::DeclareLinkOp>(
+                  modBuilder, builder, loc, globalOp, clause, ctorName,
                   /*implicit=*/false, asFortranStr);
-            } else if constexpr (
-                std::is_same_v<EntryOp, mlir::acc::CreateOp> ||
-                std::is_same_v<EntryOp, mlir::acc::CopyinOp> ||
-                std::is_same_v<EntryOp, mlir::acc::DeclareDeviceResidentOp> ||
-                std::is_same_v<ExitOp, mlir::acc::CopyoutOp>) {
-              emitCtorDtorPair<EntryOp, ExitOp>(
-                  modBuilder, builder, loc, globalOp, clause, asFortranStr,
-                  ctorName);
+            } else if constexpr (std::is_same_v<EntryOp, mlir::acc::CreateOp> ||
+                                 std::is_same_v<EntryOp, mlir::acc::CopyinOp> ||
+                                 std::is_same_v<
+                                     EntryOp,
+                                     mlir::acc::DeclareDeviceResidentOp> ||
+                                 std::is_same_v<ExitOp, mlir::acc::CopyoutOp>) {
+              emitCtorDtorPair<EntryOp, ExitOp>(modBuilder, builder, loc,
+                                                globalOp, clause, asFortranStr,
+                                                ctorName);
             } else {
               // No module-level ctor/dtor for this clause (e.g., deviceptr,
               // present). Handled via structured declare region only.
@@ -3506,7 +3506,6 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *ifClause =
@@ -4366,9 +4365,10 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
                                   dataClause);
 }
 
-static fir::GlobalOp lookupGlobalBySymbolOrEquivalence(
-    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
-    const Fortran::semantics::Symbol &sym) {
+static fir::GlobalOp
+lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
+                                  fir::FirOpBuilder &builder,
+                                  const Fortran::semantics::Symbol &sym) {
   const Fortran::semantics::Symbol *commonBlock =
       Fortran::semantics::FindCommonBlockContaining(sym);
   std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
@@ -4392,15 +4392,18 @@ static fir::GlobalOp lookupGlobalBySymbolOrEquivalence(
 
 template <typename EmitterFn>
 static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
-    fir::FirOpBuilder &builder, const Fortran::parser::AccObject &obj,
-    mlir::acc::DataClause clause, EmitterFn &&emitCtorDtor) {
+                             fir::FirOpBuilder &builder,
+                             const Fortran::parser::AccObject &obj,
+                             mlir::acc::DataClause clause,
+                             EmitterFn &&emitCtorDtor) {
   Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
   if (!(sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
         Fortran::semantics::FindCommonBlockContaining(sym))) {
     return;
   }
 
-  fir::GlobalOp globalOp = lookupGlobalBySymbolOrEquivalence(converter, builder, sym);
+  fir::GlobalOp globalOp =
+      lookupGlobalBySymbolOrEquivalence(converter, builder, sym);
   if (!globalOp) {
     llvm::report_fatal_error("could not retrieve global symbol");
   }
@@ -4421,7 +4424,7 @@ static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
 
   auto savedIP = builder.saveInsertionPoint();
   emitCtorDtor(modBuilder, operandLocation, globalOp, clause, asFortran,
-      ctorName.str());
+               ctorName.str());
   builder.restoreInsertionPoint(savedIP);
 }
 
