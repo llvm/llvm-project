@@ -879,6 +879,11 @@ public:
            MI.getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
+  bool isMFMA(uint16_t Opcode) const {
+    return isMAI(Opcode) && Opcode != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
+  }
+
   static bool isDOT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::IsDOT;
   }
@@ -893,6 +898,10 @@ public:
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
     return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
+  }
+
+  bool isMFMAorWMMA(uint16_t Opcode) const {
+    return isMFMA(Opcode) || isWMMA(Opcode) || isSWMMAC(Opcode);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
