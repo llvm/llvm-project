@@ -25,3 +25,7 @@
 // RUN: %clang -target aarch64 -march=armv9.7a+lscp -### -c %s 2>&1 | FileCheck -check-prefix=V97A-LSCP %s
 // RUN: %clang -target aarch64 -march=armv9.7-a+lscp -### -c %s 2>&1 | FileCheck -check-prefix=V97A-LSCP %s
 // V97A-LSCP: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+lscp"
+
+// RUN: %clang -target aarch64 -march=armv9.7a+tlbid -### -c %s 2>&1 | FileCheck -check-prefix=V97A-TLBID %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+tlbid -### -c %s 2>&1 | FileCheck -check-prefix=V97A-TLBID %s
+// V97A-TLBID: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+tlbid"

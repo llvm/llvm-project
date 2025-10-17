@@ -595,6 +595,9 @@ def FeatureCMH : ExtensionWithMArch<"cmh", "CMH", "FEAT_CMH",
 def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
   "Enable Armv9.7-A Load-acquire and store-release pair extension">;
 
+def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
+  "Enable Armv9.7-A TLBI Domains extension">;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//

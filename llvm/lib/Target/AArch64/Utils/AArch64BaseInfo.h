@@ -409,6 +409,16 @@ struct SysAliasReg : SysAlias {
       : SysAlias(N, E, F), NeedsReg(R) {}
 };
 
+struct SysAliasOptionalReg : SysAlias {
+  bool NeedsReg;
+  bool OptionalReg;
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O)
+      : SysAlias(N, E), NeedsReg(R), OptionalReg(O) {}
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O,
+                                FeatureBitset F)
+      : SysAlias(N, E, F), NeedsReg(R), OptionalReg(O) {}
+};
+
 struct SysAliasImm : SysAlias {
   uint16_t ImmValue;
   constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I)
@@ -796,16 +806,16 @@ namespace AArch64SysReg {
 }
 
 namespace AArch64TLBI {
-  struct TLBI : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_TLBITable_DECL
-  #include "AArch64GenSystemOperands.inc"
+struct TLBI : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_TLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64TLBIP {
-struct TLBIP : SysAliasReg {
-  using SysAliasReg::SysAliasReg;
+struct TLBIP : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
 };
 #define GET_TLBIPTable_DECL
 #include "AArch64GenSystemOperands.inc"
