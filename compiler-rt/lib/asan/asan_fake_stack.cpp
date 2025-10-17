@@ -217,10 +217,12 @@ void FakeStack::ForEachFakeFrame(RangeIteratorCallback callback, void* arg) {
 static THREADLOCAL FakeStack* fake_stack_tls;
 
 static FakeStack* GetTLSFakeStack() { return fake_stack_tls; }
-void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
+static void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
+void ResetTLSFakeStack() { fake_stack_tls = nullptr; }
 #else
 static FakeStack* GetTLSFakeStack() { return nullptr; }
-void SetTLSFakeStack(FakeStack* fs) {}
+static void SetTLSFakeStack(FakeStack*) {}
+void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
 static FakeStack* GetFakeStack() {
