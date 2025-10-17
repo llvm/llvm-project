@@ -26,6 +26,14 @@
 // RUN: %clang -target aarch64 -march=armv9.7-a+sve2p3 -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SVE2p3 %s
 // V97A-SVE2p3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+sve2p3"
 
+// RUN: %clang -target aarch64 -march=armv9.7a+sve-b16mm -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SVE-B16MM %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+sve-b16mm -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SVE-B16MM %s
+// V97A-SVE-B16MM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+sve-b16mm"
+
+// RUN: %clang -target aarch64 -march=armv9.7a+f16mm -### -c %s 2>&1 | FileCheck -check-prefix=V97A-F16MM %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+f16mm -### -c %s 2>&1 | FileCheck -check-prefix=V97A-F16MM %s
+// V97A-F16MM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+f16mm"
+
 // RUN: %clang -target aarch64 -march=armv9.7a+cmh -### -c %s 2>&1 | FileCheck -check-prefix=V97A-CMH %s
 // RUN: %clang -target aarch64 -march=armv9.7-a+cmh -### -c %s 2>&1 | FileCheck -check-prefix=V97A-CMH %s
 // V97A-CMH: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+cmh"
