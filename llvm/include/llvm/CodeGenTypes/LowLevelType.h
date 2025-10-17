@@ -215,7 +215,7 @@ public:
   }
 
   LLVM_ABI explicit LLT(MVT VT, bool AllowExtendedLLT = false);
-  explicit constexpr LLT() : Info(static_cast<Kind>(0)), RawData(0) {}
+  explicit constexpr LLT() : RawData(0), Info(static_cast<Kind>(0)) {}
 
   constexpr bool isValid() const { return isToken() || RawData != 0; }
   constexpr bool isScalar() const {
