@@ -4,8 +4,8 @@
 @.str.b0 = private unnamed_addr constant [3 x i8] c"B0\00", align 1
 
 ; CHECK-DAG: OpCapability Shader
-; CHECK-DAG: OpCapability StorageImageArrayDynamicIndexing
 ; CHECK-DAG: OpCapability Image1D
+; CHECK-DAG: OpCapability Int8
 ; CHECK-NOT: OpCapability
 
 ; CHECK-DAG: OpDecorate [[Var:%[0-9]+]] DescriptorSet 3
