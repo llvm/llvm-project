@@ -1668,8 +1668,8 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
           DiffValBB = PredBB;
         }
       }
-      BasicBlock *CurBB = PN.getParent();
-      if (DiffVals == 2 || DiffValBB != CurBB)
+
+      if (DiffVals != 1)
         continue;
       // Now check that the backedge incoming values are two select
       // instructions that are in the same BB, and have the same condition.
@@ -1682,9 +1682,6 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
 
       auto *SI = cast<SelectInst>(Val);
       auto *IdenticalSI = cast<SelectInst>(IdenticalVal);
-      if (SI->getParent() != CurBB || IdenticalSI->getParent() != CurBB ||
-          SI->getNumUses() != 1)
-        continue;
       if (SI->getCondition() != IdenticalSI->getCondition() ||
           (SI->getTrueValue() != IdenticalSI->getTrueValue() &&
            SI->getFalseValue() != IdenticalSI->getFalseValue()))
@@ -1713,8 +1710,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
       if (cast<PHINode>(IdenticalSIOtherVal) != &IdenticalPN)
         continue;
       auto *SIOtherValAsSel = cast<SelectInst>(SIOtherVal);
-      if (SIOtherValAsSel->getParent() != CurBB ||
-          !SameSelAndPhi(SIOtherValAsSel, &IdenticalPN, &PN))
+      if (!SameSelAndPhi(SIOtherValAsSel, &IdenticalPN, &PN))
         continue;
 
       ++NumPHICSEs;
