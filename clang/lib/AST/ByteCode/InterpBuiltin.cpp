@@ -23,7 +23,7 @@
 namespace clang {
 namespace interp {
 
-LLVM_ATTRIBUTE_UNUSED static bool isNoopBuiltin(unsigned ID) {
+[[maybe_unused]] static bool isNoopBuiltin(unsigned ID) {
   switch (ID) {
   case Builtin::BIas_const:
   case Builtin::BIforward:
