@@ -346,6 +346,9 @@ public:
            isComposedOfHomogeneousFloatingPointTypes(Ty);
   }
 
+  /// Returns true if the intrinsic is fcmp.
+  static bool isFCmpIntrinsic(const Instruction &Inst);
+
   static bool classof(const Value *V) {
     unsigned Opcode;
     if (auto *I = dyn_cast<Instruction>(V))
@@ -372,7 +375,8 @@ public:
     case Instruction::PHI:
     case Instruction::Select:
     case Instruction::Call: {
-      return isSupportedFloatingPointType(V->getType());
+      return isSupportedFloatingPointType(V->getType()) ||
+             isFCmpIntrinsic(*dyn_cast<Instruction>(V));
     }
     default:
       return false;

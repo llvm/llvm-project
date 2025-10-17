@@ -4065,9 +4065,11 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
-:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
-:ref:`call <i_call>` instructions that return floating-point types may use the
-following flags to enable otherwise unsafe floating-point transformations.
+:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`,
+:ref:`call <i_call>` instructions that return floating-point types, or
+:ref:`call <i_call>` instructions that call fcmp related intrinsics
+may use the following flags to enable otherwise unsafe floating-point
+transformations.
 
 ``fast``
    This flag is a shorthand for specifying all fast-math flags at once, and
