@@ -402,6 +402,8 @@ def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                        AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
                        AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
+def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
+                       AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;

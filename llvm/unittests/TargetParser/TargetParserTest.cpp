@@ -1445,6 +1445,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
       AArch64::AEK_SVESM4,       AArch64::AEK_CMH,
       AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
+      AArch64::AEK_MPAMV2,
   };
 
   std::vector<StringRef> Features;
@@ -1559,6 +1560,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cmh"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1728,6 +1730,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"cmh", "nocmh", "+cmh", "-cmh"},
       {"lscp", "nolscp", "+lscp", "-lscp"},
       {"tlbid", "notlbid", "+tlbid", "-tlbid"},
+      {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

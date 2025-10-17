@@ -917,6 +917,17 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   if (CnVal == 7) {
     switch (CmVal) {
     default: return false;
+    // MLBI aliases
+    case 0: {
+      const AArch64MLBI::MLBI *MLBI =
+          AArch64MLBI::lookupMLBIByEncoding(Encoding);
+      if (!MLBI || !MLBI->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      NeedsReg = MLBI->NeedsReg;
+      Ins = "mlbi\t";
+      Name = std::string(MLBI->Name);
+    } break;
     // Maybe IC, maybe Prediction Restriction
     case 1:
       switch (Op1Val) {

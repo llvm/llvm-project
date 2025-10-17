@@ -1880,12 +1880,6 @@ def : ROSysReg<"ERXPFGF_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b100>;
 // v8.4a MPAM registers
 //                             Op0   Op1    CRn     CRm     Op2
 let Requires = [{ {AArch64::FeatureMPAM} }] in {
-def : RWSysReg<"MPAM0_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b001>;
-def : RWSysReg<"MPAM1_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAM2_EL2",    0b11, 0b100, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAM3_EL3",    0b11, 0b110, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAM1_EL12",   0b11, 0b101, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAMHCR_EL2",  0b11, 0b100, 0b1010, 0b0100, 0b000>;
 def : RWSysReg<"MPAMVPMV_EL2", 0b11, 0b100, 0b1010, 0b0100, 0b001>;
 def : RWSysReg<"MPAMVPM0_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b000>;
 def : RWSysReg<"MPAMVPM1_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b001>;
@@ -1895,7 +1889,6 @@ def : RWSysReg<"MPAMVPM4_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b100>;
 def : RWSysReg<"MPAMVPM5_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b101>;
 def : RWSysReg<"MPAMVPM6_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b110>;
 def : RWSysReg<"MPAMVPM7_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b111>;
-def : ROSysReg<"MPAMIDR_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b100>;
 } //FeatureMPAM
 
 // v8.4a Activity Monitor registers
@@ -2336,6 +2329,26 @@ def : RWSysReg<"MPAMBW0_EL1",             0b11, 0b000, 0b1010, 0b0101, 0b101>;
 def : RWSysReg<"MPAMBWCAP_EL2",           0b11, 0b100, 0b1010, 0b0101, 0b110>;
 def : RWSysReg<"MPAMBWSM_EL1",            0b11, 0b000, 0b1010, 0b0101, 0b111>;
 
+// v9.7a Memory partitioning and monitoring version 2
+// (FEAT_MPAMv2) registers
+//                               Op0   Op1    CRn     CRm     Op2
+// MPAM system registers that are also available for MPAMv2
+def : RWSysReg<"MPAM0_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b001>;
+def : RWSysReg<"MPAM1_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b000>;
+def : RWSysReg<"MPAM1_EL12",   0b11, 0b101, 0b1010, 0b0101, 0b000>;
+def : RWSysReg<"MPAM2_EL2",    0b11, 0b100, 0b1010, 0b0101, 0b000>;
+def : RWSysReg<"MPAM3_EL3",    0b11, 0b110, 0b1010, 0b0101, 0b000>;
+def : RWSysReg<"MPAMHCR_EL2",  0b11, 0b100, 0b1010, 0b0100, 0b000>;
+def : ROSysReg<"MPAMIDR_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b100>;
+// Only MPAMv2 registers
+def : RWSysReg<"MPAMCTL_EL1",   0b11, 0b000, 0b1010, 0b0101, 0b010>;
+def : RWSysReg<"MPAMCTL_EL12",  0b11, 0b101, 0b1010, 0b0101, 0b010>;
+def : RWSysReg<"MPAMCTL_EL2",   0b11, 0b100, 0b1010, 0b0101, 0b010>;
+def : RWSysReg<"MPAMCTL_EL3",   0b11, 0b110, 0b1010, 0b0101, 0b010>;
+def : RWSysReg<"MPAMVIDCR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b000>;
+def : RWSysReg<"MPAMVIDSR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b001>;
+def : RWSysReg<"MPAMVIDSR_EL3", 0b11, 0b110, 0b1010, 0b0111, 0b001>;
+
 //===----------------------------------------------------------------------===//
 // FEAT_SRMASK v9.6a registers
 //===----------------------------------------------------------------------===//
@@ -2442,3 +2455,35 @@ foreach n = 0-3 in {
 }
 
 def : ROSysReg<"TLBIDIDR_EL1",      0b11,  0b000, 0b1010, 0b0100, 0b110>;
+
+// MPAM Lookaside Buffer Invalidate (MLBI) instructions
+class MLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
+  string Name = name;
+  bits<14> Encoding;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit NeedsReg = needsreg;
+  string RequiresStr = [{ {AArch64::FeatureMPAMv2} }];
+}
+
+def MLBITable : GenericTable {
+  let FilterClass = "MLBI";
+  let CppTypeName = "MLBI";
+  let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupMLBIByEncoding";
+}
+
+def lookupMLBIByName : SearchIndex {
+  let Table = MLBITable;
+  let Key = ["Name"];
+}
+
+//                     Op1    CRn     CRm     Op2    needsReg
+def : MLBI<"ALLE1",    0b100, 0b0111, 0b0000, 0b100, 0>;
+def : MLBI<"VMALLE1",  0b100, 0b0111, 0b0000, 0b101, 0>;
+def : MLBI<"VPIDE1",   0b100, 0b0111, 0b0000, 0b110, 1>;
+def : MLBI<"VPMGE1",   0b100, 0b0111, 0b0000, 0b111, 1>;
