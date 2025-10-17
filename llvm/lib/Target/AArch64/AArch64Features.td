@@ -604,6 +604,9 @@ def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
   "Enable Virtual Memory Tagging Extension">;
 
+def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
+  "Enable Armv9.7-A GICv5 (Generic Interrupt Controller) CPU Interface Extension", [FeatureNMI]>;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//

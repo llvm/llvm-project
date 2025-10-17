@@ -829,6 +829,30 @@ struct MLBI : SysAliasReg {
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64MLBI
 
+namespace AArch64GIC {
+struct GIC : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_GICTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+
+namespace AArch64GICR {
+struct GICR : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_GICRTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+
+namespace AArch64GSB {
+struct GSB : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_GSBTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+
 namespace AArch64II {
 /// Target Operand Flag enum.
 enum TOF {

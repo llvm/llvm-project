@@ -205,6 +205,27 @@ namespace AArch64MLBI {
 } // namespace llvm
 
 namespace llvm {
+namespace AArch64GIC {
+#define GET_GICTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GICR {
+#define GET_GICRTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GSB {
+#define GET_GSBTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64SVCR {
 #define GET_SVCRsList_IMPL
 #include "AArch64GenSystemOperands.inc"
