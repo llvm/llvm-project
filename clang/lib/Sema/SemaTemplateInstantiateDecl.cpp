@@ -765,10 +765,18 @@ static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
 
 static void instantiateDependentHLSLParamModifierAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const HLSLParamModifierAttr *Attr, Decl *New) {
-  ParmVarDecl *P = cast<ParmVarDecl>(New);
-  P->addAttr(Attr->clone(S.getASTContext()));
-  P->setType(S.HLSL().getInoutParameterType(P->getType()));
+    const HLSLParamModifierAttr *Attr, const Decl *Old, Decl *New) {
+  ParmVarDecl *NewParm = cast<ParmVarDecl>(New);
+  NewParm->addAttr(Attr->clone(S.getASTContext()));
+
+  const Type *OldParmTy = cast<ParmVarDecl>(Old)->getType().getTypePtr();
+  if (OldParmTy->isDependentType() && Attr->isAnyOut())
+    NewParm->setType(S.HLSL().getInoutParameterType(NewParm->getType()));
+
+  assert(
+      (!Attr->isAnyOut() || (NewParm->getType().isRestrictQualified() &&
+                             NewParm->getType()->isReferenceType())) &&
+      "out or inout parameter type must be a reference and restrict qualified");
 }
 
 void Sema::InstantiateAttrsForDecl(
@@ -923,7 +931,7 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
       instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
-                                                New);
+                                                Tmpl, New);
       continue;
     }
 
