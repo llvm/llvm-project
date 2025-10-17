@@ -13,7 +13,7 @@
 # flexibility for RA.
 
 # If Unclustered High RP Reschedule gets run, the following CHECK will have to be removed.
-# CHECK: Unclustered High Register Pressure Reschedule: No regions scheduled, resetting min occupancy
+# CHECK: Unclustered High Register Pressure Reschedule: No regions scheduled, min occupancy stays at 4, MFI occupancy stays at 4.
 
 ---
 name:            no_sched_metric_due_to_spills
