@@ -5468,7 +5468,7 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
        (TH == AMDGPU::CPol::TH_NT_HT)))
     return PrintError("invalid th value for SMEM instruction");
 
-  if (TH == AMDGPU::CPol::TH_BYPASS) {
+  if (TH == AMDGPU::CPol::TH_WB) { // TH_LU == TH_WB == 3
     if ((Scope != AMDGPU::CPol::SCOPE_SYS &&
          CPol & AMDGPU::CPol::TH_REAL_BYPASS) ||
         (Scope == AMDGPU::CPol::SCOPE_SYS &&
@@ -7261,7 +7261,7 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
                 .Case("RT_NT", AMDGPU::CPol::TH_RT_NT)
                 .Case("NT_HT", AMDGPU::CPol::TH_NT_HT)
                 .Case("NT_WB", AMDGPU::CPol::TH_NT_WB)
-                .Case("BYPASS", AMDGPU::CPol::TH_BYPASS)
+                .Case("BYPASS", AMDGPU::CPol::TH_LU)
                 .Default(0xffffffff);
   }
 
