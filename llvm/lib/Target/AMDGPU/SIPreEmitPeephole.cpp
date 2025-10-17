@@ -47,9 +47,6 @@ private:
                              const MachineBasicBlock &From,
                              const MachineBasicBlock &To) const;
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
-  // Check if the machine instruction being processed is a supported packed
-  // instruction.
-  bool isUnpackingSupportedInstr(MachineInstr &MI) const;
   // Creates a list of packed instructions following an MFMA that are suitable
   // for unpacking.
   void collectUnpackingCandidates(MachineInstr &BeginMI,
@@ -454,23 +451,6 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
   return true;
 }
 
-// If support is extended to new operations, add tests in
-// llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir.
-bool SIPreEmitPeephole::isUnpackingSupportedInstr(MachineInstr &MI) const {
-  if (!TII->isNeverCoissue(MI))
-    return false;
-  unsigned Opcode = MI.getOpcode();
-  switch (Opcode) {
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_FMA_F32:
-    return true;
-  default:
-    return false;
-  }
-  llvm_unreachable("Fully covered switch");
-}
-
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -612,10 +592,13 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
+    uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
+    bool IsUnpackable =
+        !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
     if (Instr.isMetaInstruction())
       continue;
     if ((Instr.isTerminator()) ||
-        (TII->isNeverCoissue(Instr) && !isUnpackingSupportedInstr(Instr)) ||
+        (TII->isNeverCoissue(Instr) && !IsUnpackable) ||
         (SIInstrInfo::modifiesModeRegister(Instr) &&
          Instr.modifiesRegister(AMDGPU::EXEC, TRI)))
       return;
@@ -639,7 +622,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
       if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
         return;
     }
-    if (!isUnpackingSupportedInstr(Instr))
+    if (!IsUnpackable)
       continue;
 
     if (canUnpackingClobberRegister(Instr))
@@ -687,8 +670,8 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
                                                         bool IsHiBits) {
   MachineBasicBlock &MBB = *I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  const MachineOperand *SrcMO1 = TII->getNamedOperand(I, AMDGPU::OpName::src0);
-  const MachineOperand *SrcMO2 = TII->getNamedOperand(I, AMDGPU::OpName::src1);
+  const MachineOperand *SrcMO0 = TII->getNamedOperand(I, AMDGPU::OpName::src0);
+  const MachineOperand *SrcMO1 = TII->getNamedOperand(I, AMDGPU::OpName::src1);
   Register DstReg = I.getOperand(0).getReg();
   unsigned OpCode = I.getOpcode();
   Register UnpackedDstReg = IsHiBits ? TRI->getSubReg(DstReg, AMDGPU::sub1)
@@ -702,15 +685,15 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
 
   MachineInstrBuilder NewMI = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
   NewMI.addDef(UnpackedDstReg); // vdst
-  addOperandAndMods(NewMI, Src0Mods, IsHiBits, *SrcMO1);
-  addOperandAndMods(NewMI, Src1Mods, IsHiBits, *SrcMO2);
+  addOperandAndMods(NewMI, Src0Mods, IsHiBits, *SrcMO0);
+  addOperandAndMods(NewMI, Src1Mods, IsHiBits, *SrcMO1);
 
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
-    const MachineOperand *SrcMO3 =
+    const MachineOperand *SrcMO2 =
         TII->getNamedOperand(I, AMDGPU::OpName::src2);
     unsigned Src2Mods =
         TII->getNamedOperand(I, AMDGPU::OpName::src2_modifiers)->getImm();
-    addOperandAndMods(NewMI, Src2Mods, IsHiBits, *SrcMO3);
+    addOperandAndMods(NewMI, Src2Mods, IsHiBits, *SrcMO2);
   }
   NewMI.addImm(ClampVal); // clamp
   // Packed instructions do not support output modifiers. safe to assign them 0
@@ -787,9 +770,13 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
 
   // TODO: Fold this into previous block, if possible. Evaluate and handle any
   // side effects.
+
+  // Perform the extra MF scans only for supported archs
+  if (!ST.hasGFX940Insts())
+    return Changed;
   for (MachineBasicBlock &MBB : MF) {
-    // Unpack packed instructions overlapped by MFMAs. This allows the compiler
-    // to co-issue unpacked instructions with MFMA
+    // Unpack packed instructions overlapped by MFMAs. This allows the
+    // compiler to co-issue unpacked instructions with MFMA
     auto SchedModel = TII->getSchedModel();
     SetVector<MachineInstr *> InstrsToUnpack;
     for (auto &MI : make_early_inc_range(MBB.instrs())) {
