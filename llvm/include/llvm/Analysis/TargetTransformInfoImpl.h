@@ -310,12 +310,13 @@ public:
 
   virtual bool isLegalMaskedStore(Type *DataType, Align Alignment,
                                   unsigned AddressSpace,
-                                  bool IsMaskConstant) const {
+                                  TTI::MaskKind MaskKind) const {
     return false;
   }
 
   virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                 unsigned AddressSpace) const {
+                                 unsigned AddressSpace,
+                                 TTI::MaskKind MaskKind) const {
     return false;
   }
 

@@ -469,14 +469,16 @@ TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
 
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType, Align Alignment,
                                              unsigned AddressSpace,
-                                             bool IsMaskConstant) const {
+                                             TTI::MaskKind MaskKind) const {
   return TTIImpl->isLegalMaskedStore(DataType, Alignment, AddressSpace,
-                                     IsMaskConstant);
+                                     MaskKind);
 }
 
 bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                            unsigned AddressSpace) const {
-  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+                                            unsigned AddressSpace,
+                                            TTI::MaskKind MaskKind) const {
+  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace,
+                                    MaskKind);
 }
 
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
