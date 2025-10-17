@@ -1443,6 +1443,10 @@ APInt TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
 }
 
+APInt TargetTransformInfo::getPriorityMask(const Function &F) const {
+  return TTIImpl->getPriorityMask(F);
+}
+
 bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {
   return TTIImpl->isMultiversionedFunction(F);
 }
