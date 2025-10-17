@@ -49,9 +49,9 @@ struct AllocTokenMetadata {
 /// \param Metadata The metadata about the allocation.
 /// \param MaxTokens The maximum number of tokens (must not be 0)
 /// \return The calculated allocation token ID, or std::nullopt.
-std::optional<uint64_t> getAllocTokenHash(AllocTokenMode Mode,
-                                          const AllocTokenMetadata &Metadata,
-                                          uint64_t MaxTokens);
+LLVM_ABI std::optional<uint64_t>
+getAllocToken(AllocTokenMode Mode, const AllocTokenMetadata &Metadata,
+              uint64_t MaxTokens);
 
 } // end namespace llvm
 
