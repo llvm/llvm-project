@@ -205,7 +205,7 @@ public:
       nb::object res = f(opView, PyPatternRewriter(rewriter));
       return logicalResultFromObject(res);
     };
-    MlirRewritePattern pattern = mlirOpRewritePattenCreate(
+    MlirRewritePattern pattern = mlirOpRewritePatternCreate(
         rootName, benefit, ctx, callbacks, matchAndRewrite.ptr(),
         /* nGeneratedNames */ 0,
         /* generatedNames */ nullptr);

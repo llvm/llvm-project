@@ -3174,12 +3174,19 @@ TEST_P(UncheckedStatusOrAccessModelTest, ConstructStatusFromReference) {
   )cc");
 }
 
-TEST_P(UncheckedStatusOrAccessModelTest, SmartPtr) {
+TEST_P(UncheckedStatusOrAccessModelTest, SmartPtrLikeFromReference) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
+    class GetAble {
+     public:
+      STATUSOR_INT* get() const;
+      STATUSOR_INT* operator->() const;
+      STATUSOR_INT& operator*() const;
+      STATUSOR_INT& value();
+    };
     void target() {
-      const auto sor1 = Make<std::unique_ptr<STATUSOR_INT>>();
-      const auto sor2 = Make<std::unique_ptr<STATUSOR_INT>>();
+      const auto sor1 = Make<GetAble&>();
+      const auto sor2 = Make<GetAble&>();
       if (!sor1->ok() && !sor2->ok()) return;
       if (sor1->ok() && !sor2->ok()) {
       } else if (!sor1->ok() && sor2->ok()) {

@@ -129,7 +129,7 @@ AST_MATCHER(clang::CXXRecordDecl, pointerClass) {
 
 namespace clang::dataflow {
 
-ast_matchers::StatementMatcher isSmartPointerLikeContructor() {
+ast_matchers::StatementMatcher isSmartPointerLikeConstructor() {
   using namespace ast_matchers;
   return cxxConstructExpr(hasType(hasCanonicalType(qualType(
       hasDeclaration(cxxRecordDecl(smartPointerClassWithGetOrValue()))))));
@@ -183,7 +183,7 @@ isSmartPointerLikeGetMethodCall(clang::StringRef MethodName) {
 }
 
 const FunctionDecl *
-getCanonicalSmartPointerLikeOperatorCallee2(const CXXRecordDecl *RD) {
+getCanonicalSmartPointerLikeOperatorCalleeForType(const CXXRecordDecl *RD) {
   const FunctionDecl *CanonicalCallee = nullptr;
   for (const auto *MD : RD->methods()) {
     if (MD->getOverloadedOperator() == OO_Star && MD->isConst() &&
@@ -204,7 +204,7 @@ getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE) {
   const CXXRecordDecl *RD = Callee->getParent();
   if (RD == nullptr)
     return nullptr;
-  return getCanonicalSmartPointerLikeOperatorCallee2(RD);
+  return getCanonicalSmartPointerLikeOperatorCalleeForType(RD);
 }
 
 } // namespace clang::dataflow

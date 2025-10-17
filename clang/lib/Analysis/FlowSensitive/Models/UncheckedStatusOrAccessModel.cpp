@@ -619,16 +619,14 @@ getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
   return nullptr;
 }
 
-static void maybeInitLocForExpr(const Expr *E, StorageLocation &Loc,
+static void maybeInitLocForCtor(QualType T, StorageLocation &Loc,
                                 Environment &Env) {
-  auto T = E->getType();
-  if (!T->isPointerOrReferenceType())
-    return;
-  T = T->getPointeeType();
   if (isStatusOrType(T)) {
     initializeStatusOr(cast<RecordStorageLocation>(Loc), Env);
   } else if (isStatusType(T)) {
     initializeStatus(cast<RecordStorageLocation>(Loc), Env);
+  } else {
+    llvm::errs() << T << "\n";
   }
 }
 
@@ -698,18 +696,18 @@ buildTransferMatchSwitch(ASTContext &Ctx,
              LatticeTransferState &State) {
             transferSmartPointerLikeCachedGet(
                 E, getSmartPtrLikeStorageLocation(*E->getArg(0), State.Env),
-                State, [&](StorageLocation &Loc) {
-                  maybeInitLocForExpr(E, Loc, State.Env);
+                State, [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
                 });
           })
       .CaseOfCFGStmt<CXXConstructExpr>(
-          isSmartPointerLikeContructor(),
+          isSmartPointerLikeConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &Result,
              LatticeTransferState &State) {
             transferSmartPointerLikeConstructor(
                 E, &State.Env.getResultObjectLocation(*E), State,
-                [&](StorageLocation &Loc) {
-                  maybeInitLocForExpr(E, Loc, State.Env);
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
                 });
           })
       .CaseOfCFGStmt<CXXMemberCallExpr>(
@@ -718,8 +716,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
              LatticeTransferState &State) {
             transferSmartPointerLikeCachedDeref(
                 E, getImplicitObjectLocation(*E, State.Env), State,
-                [&](StorageLocation &Loc) {
-                  maybeInitLocForExpr(E, Loc, State.Env);
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
                 });
           })
       .CaseOfCFGStmt<CXXMemberCallExpr>(
@@ -728,8 +726,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
              LatticeTransferState &State) {
             transferSmartPointerLikeCachedGet(
                 E, getImplicitObjectLocation(*E, State.Env), State,
-                [&](StorageLocation &Loc) {
-                  maybeInitLocForExpr(E, Loc, State.Env);
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
                 });
           })
       .Build();

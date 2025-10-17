@@ -102,7 +102,7 @@ public:
     std::vector<SourceLocation> Diagnostics;
     llvm::Error Error = test::checkDataflow<Model>(
         test::AnalysisInputs<Model>(
-            SourceCode, std::move(FuncMatcher),
+            SourceCode, FuncMatcher,
             [](ASTContext &Ctx, Environment &Env) { return Model(Ctx, Env); })
             .withPostVisitCFG(
                 [&Diagnostics,
@@ -117,7 +117,7 @@ public:
                 {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
                 tooling::FileContentMappings(Headers.begin(), Headers.end())),
-        /*VerifyResults=*/[&Diagnostics, SourceCode](
+        /*VerifyResults=*/[&Diagnostics, SourceCode, &FuncMatcher](
                               const llvm::DenseMap<unsigned, std::string>
                                   &Annotations,
                               const test::AnalysisOutputs &AO) {
@@ -128,10 +128,21 @@ public:
           llvm::DenseSet<unsigned> DiagnosticLines;
           for (SourceLocation &Loc : Diagnostics)
             DiagnosticLines.insert(SrcMgr.getPresumedLineNumber(Loc));
-
           EXPECT_THAT(DiagnosticLines, testing::ContainerEq(AnnotationLines))
               << "\nFailing code:\n"
               << SourceCode;
+          ast_matchers::internal::Matcher<FunctionDecl> FM = FuncMatcher;
+          SmallVector<ast_matchers::BoundNodes, 1> MatchResult =
+              ast_matchers::match(
+                  ast_matchers::functionDecl(
+                      ast_matchers::hasBody(ast_matchers::stmt()), FM)
+                      .bind("target"),
+                  AO.ASTCtx);
+          for (auto N : MatchResult) {
+            if (auto *FD = N.getNodeAs<FunctionDecl>("target")) {
+              FD->dump(llvm::errs());
+            }
+          }
         });
     if (Error)
       FAIL() << llvm::toString(std::move(Error));
