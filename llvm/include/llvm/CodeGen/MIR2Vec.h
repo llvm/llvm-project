@@ -7,9 +7,20 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the MIR2Vec vocabulary
-/// analysis(MIR2VecVocabLegacyAnalysis), the core mir2vec::MIREmbedder
-/// interface for generating Machine IR embeddings, and related utilities.
+/// This file defines the MIR2Vec framework for generating Machine IR
+/// embeddings.
+///
+/// Architecture Overview:
+/// ----------------------
+/// 1. MIR2VecVocabProvider - Core vocabulary loading logic (no PM dependency)
+///    - Can be used standalone or wrapped by the pass manager
+///    - Requires MachineModuleInfo with parsed machine functions
+///
+/// 2. MIR2VecVocabLegacyAnalysis - Pass manager wrapper (ImmutablePass)
+///    - Integrated and used by llc -print-mir2vec
+///
+/// 3. MIREmbedder - Generates embeddings from vocabulary
+///    - SymbolicMIREmbedder: MIR2Vec embedding implementation
 ///
 /// MIR2Vec extends IR2Vec to support Machine IR embeddings. It represents the
 /// LLVM Machine IR as embeddings which can be used as input to machine learning
@@ -306,26 +317,58 @@ public:
 
 } // namespace mir2vec
 
+/// MIR2Vec vocabulary provider used by pass managers and standalone tools.
+/// This class encapsulates the core vocabulary loading logic and can be used
+/// independently of the pass manager infrastructure. For pass-based usage,
+/// see MIR2VecVocabLegacyAnalysis.
+///
+/// Note: This provider pattern makes new PM migration straightforward when
+/// needed. A new PM analysis wrapper can be added that delegates to this
+/// provider, similar to how MIR2VecVocabLegacyAnalysis currently wraps it.
+class MIR2VecVocabProvider {
+  using VocabMap = std::map<std::string, mir2vec::Embedding>;
+
+public:
+  MIR2VecVocabProvider(const MachineModuleInfo &MMI) : MMI(MMI) {}
+
+  Expected<mir2vec::MIRVocabulary> getVocabulary(const Module &M);
+
+private:
+  Error readVocabulary(VocabMap &OpcVocab, VocabMap &CommonOperandVocab,
+                       VocabMap &PhyRegVocabMap, VocabMap &VirtRegVocabMap);
+  const MachineModuleInfo &MMI;
+};
+
 /// Pass to analyze and populate MIR2Vec vocabulary from a module
 class MIR2VecVocabLegacyAnalysis : public ImmutablePass {
   using VocabVector = std::vector<mir2vec::Embedding>;
   using VocabMap = std::map<std::string, mir2vec::Embedding>;
-  std::optional<mir2vec::MIRVocabulary> Vocab;
 
   StringRef getPassName() const override;
-  Error readVocabulary(VocabMap &OpcVocab, VocabMap &CommonOperandVocab,
-                       VocabMap &PhyRegVocabMap, VocabMap &VirtRegVocabMap);
 
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.setPreservesAll();
   }
+  std::unique_ptr<MIR2VecVocabProvider> Provider;
 
 public:
   static char ID;
   MIR2VecVocabLegacyAnalysis() : ImmutablePass(ID) {}
-  Expected<mir2vec::MIRVocabulary> getMIR2VecVocabulary(const Module &M);
+
+  Expected<mir2vec::MIRVocabulary> getMIR2VecVocabulary(const Module &M) {
+    MachineModuleInfo &MMI =
+        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    if (!Provider)
+      Provider = std::make_unique<MIR2VecVocabProvider>(MMI);
+    return Provider->getVocabulary(M);
+  }
+
+  MIR2VecVocabProvider &getProvider() {
+    assert(Provider && "Provider not initialized");
+    return *Provider;
+  }
 };
 
 /// This pass prints the embeddings in the MIR2Vec vocabulary
