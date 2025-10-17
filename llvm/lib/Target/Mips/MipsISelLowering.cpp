@@ -3176,9 +3176,10 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                     F64Regs);
 }
 
-static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
-                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                       Type *OrigTy, CCState &State) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                        CCValAssign::LocInfo LocInfo,
+                                        ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                        CCState &State);
 
 #include "MipsGenCallingConv.inc"
 

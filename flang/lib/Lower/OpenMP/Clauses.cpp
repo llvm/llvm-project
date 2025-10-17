@@ -219,7 +219,6 @@ MAKE_EMPTY_CLASS(AcqRel, AcqRel);
 MAKE_EMPTY_CLASS(Acquire, Acquire);
 MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
-MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
@@ -235,13 +234,9 @@ MAKE_EMPTY_CLASS(OmpxBare, OmpxBare);
 MAKE_EMPTY_CLASS(Read, Read);
 MAKE_EMPTY_CLASS(Relaxed, Relaxed);
 MAKE_EMPTY_CLASS(Release, Release);
-MAKE_EMPTY_CLASS(ReverseOffload, ReverseOffload);
 MAKE_EMPTY_CLASS(SeqCst, SeqCst);
-MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
-MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
-MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);
@@ -775,7 +770,18 @@ Doacross make(const parser::OmpClause::Doacross &inp,
   return makeDoacross(inp.v.v, semaCtx);
 }
 
-// DynamicAllocators: empty
+DynamicAllocators make(const parser::OmpClause::DynamicAllocators &inp,
+                       semantics::SemanticsContext &semaCtx) {
+  // inp.v -> td::optional<arser::OmpDynamicAllocatorsClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpDynamicAllocatorsClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return DynamicAllocators{/*Required=*/std::move(maybeRequired)};
+}
+
 
 DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
                      semantics::SemanticsContext &semaCtx) {
@@ -1338,7 +1344,18 @@ Reduction make(const parser::OmpClause::Reduction &inp,
 
 // Relaxed: empty
 // Release: empty
-// ReverseOffload: empty
+
+ReverseOffload make(const parser::OmpClause::ReverseOffload &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpReverseOffloadClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpReverseOffloadClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return ReverseOffload{/*Required=*/std::move(maybeRequired)};
+}
 
 Safelen make(const parser::OmpClause::Safelen &inp,
              semantics::SemanticsContext &semaCtx) {
@@ -1390,6 +1407,18 @@ Schedule make(const parser::OmpClause::Schedule &inp,
 }
 
 // SeqCst: empty
+
+SelfMaps make(const parser::OmpClause::SelfMaps &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpSelfMapsClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpSelfMapsClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return SelfMaps{/*Required=*/std::move(maybeRequired)};
+}
 
 Severity make(const parser::OmpClause::Severity &inp,
               semantics::SemanticsContext &semaCtx) {
@@ -1480,8 +1509,29 @@ To make(const parser::OmpClause::To &inp,
              /*LocatorList=*/makeObjects(t3, semaCtx)}};
 }
 
-// UnifiedAddress: empty
-// UnifiedSharedMemory: empty
+UnifiedAddress make(const parser::OmpClause::UnifiedAddress &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpUnifiedAddressClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpUnifiedAddressClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return UnifiedAddress{/*Required=*/std::move(maybeRequired)};
+}
+
+UnifiedSharedMemory make(const parser::OmpClause::UnifiedSharedMemory &inp,
+                         semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpUnifiedSharedMemoryClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpUnifiedSharedMemoryClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return UnifiedSharedMemory{/*Required=*/std::move(maybeRequired)};
+}
 
 Uniform make(const parser::OmpClause::Uniform &inp,
              semantics::SemanticsContext &semaCtx) {
