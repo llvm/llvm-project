@@ -157,11 +157,8 @@ using EqClassKey =
 struct ChainElem {
   Instruction *Inst;
   APInt OffsetFromLeader;
-  unsigned IncrementalBytes = 0;
-  ChainElem(Instruction *Inst, APInt OffsetFromLeader,
-            unsigned IncrementalBytes)
-      : Inst(std::move(Inst)), OffsetFromLeader(std::move(OffsetFromLeader)),
-        IncrementalBytes(std::move(IncrementalBytes)) {}
+  ChainElem(Instruction *Inst, APInt OffsetFromLeader)
+      : Inst(std::move(Inst)), OffsetFromLeader(std::move(OffsetFromLeader)) {}
 };
 using Chain = SmallVector<ChainElem, 1>;
 
@@ -630,9 +627,8 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   Ret.push_back({C.front()});
 
   unsigned ElemBytes = DL.getTypeStoreSize(getChainElemTy(C));
-  assert(C[0].IncrementalBytes ==
-         DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8);
-  APInt PrevReadEnd = C[0].OffsetFromLeader + C[0].IncrementalBytes;
+  APInt PrevReadEnd = C[0].OffsetFromLeader + 
+                    DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
     // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
@@ -642,23 +638,21 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
 
     // Add this instruction to the end of the current chain, or start a new one.
     APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
+    // Alllow redundancy: partial or full overlaping counts as contiguous.
     int ExtraBytes =
         PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
-    bool AreContiguous =
-        It->OffsetFromLeader.sle(PrevReadEnd) && ExtraBytes % ElemBytes == 0;
+    bool AreContiguous = It->OffsetFromLeader.sle(PrevReadEnd) &&
+                         SzBits % ElemBytes == 0 && ExtraBytes % ElemBytes == 0;
 
     LLVM_DEBUG(dbgs() << "LSV: Instruction is "
                       << (AreContiguous ? "contiguous" : "chain-breaker")
                       << *It->Inst << " (starts at offset "
                       << It->OffsetFromLeader << ")\n");
 
-    if (AreContiguous) {
-      It->IncrementalBytes = ExtraBytes;
+    if (AreContiguous)
       CurChain.push_back(*It);
-    } else {
-      assert(It->IncrementalBytes == SzBits / 8);
+    else
       Ret.push_back({*It});
-    }
     PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
   }
 
@@ -888,9 +882,19 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   Type *VecElemTy = getChainElemTy(C);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  unsigned ChainBytes = 0;
-  for (auto &E : C)
-    ChainBytes += E.IncrementalBytes;
+  int BytesAdded =
+      DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
+  APInt PrevReadEnd = C[0].OffsetFromLeader + BytesAdded;
+  int ChainBytes = BytesAdded;
+  for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
+    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*It->Inst));
+    APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
+    // Update ChainBytes considering possible overlap.
+    BytesAdded =
+        PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
+    ChainBytes += BytesAdded;
+    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
+  }
 
   assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
@@ -1583,8 +1587,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
               (ChainIter->first->comesBefore(I) ? I : ChainIter->first))) {
         // `Offset` might not have the expected number of bits, if e.g. AS has a
         // different number of bits than opaque pointers.
-        ChainIter->second.emplace_back(
-            I, Offset.value(), DL.getTypeSizeInBits(getLoadStoreType(I)) / 8);
+        ChainIter->second.emplace_back(I, Offset.value());
         // Move ChainIter to the front of the MRU list.
         MRU.remove(*ChainIter);
         MRU.push_front(*ChainIter);
@@ -1596,8 +1599,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
     if (!MatchFound) {
       APInt ZeroOffset(ASPtrBits, 0);
       InstrListElem *E = new (Allocator.Allocate()) InstrListElem(I);
-      E->second.emplace_back(I, ZeroOffset,
-                             DL.getTypeSizeInBits(getLoadStoreType(I)) / 8);
+      E->second.emplace_back(I, ZeroOffset);
       MRU.push_front(*E);
       Chains.insert(E);
     }
