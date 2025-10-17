@@ -11788,7 +11788,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     const auto *RetVT = E->getType()->castAs<VectorType>();
     unsigned RetLen = RetVT->getNumElements();
-    unsigned SrcLen = SourceVec.getVectorLength();
     unsigned Idx = SourceImm.getInt().getZExtValue() & 1;
 
     SmallVector<APValue, 32> ResultElements;
