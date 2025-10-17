@@ -1435,58 +1435,61 @@ class CursorKind(BaseEnumeration):
     OMP_SCOPE_DIRECTIVE = 306
 
     # OpenMP reverse directive.
-    OMPReverseDirective = 307
+    OMP_REVERSE_DIRECTIVE = 307
 
     # OpenMP interchange directive.
-    OMPInterchangeDirective = 308
+    OMP_INTERCHANGE_DIRECTIVE = 308
 
     # OpenMP assume directive.
-    OMPAssumeDirective = 309
+    OMP_ASSUME_DIRECTIVE = 309
 
     # OpenMP stripe directive.
     OMP_STRIPE_DIRECTIVE = 310
+
+    # OpenMP fuse directive.
+    OMP_FUSE_DIRECTIVE = 311
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
     # OpenACC Loop Construct.
-    OpenACCLoopConstruct = 321
+    OPEN_ACC_LOOP_CONSTRUCT = 321
 
     # OpenACC Combined Constructs.
-    OpenACCCombinedConstruct = 322
+    OPEN_ACC_COMBINED_CONSTRUCT = 322
 
     # OpenACC data Construct.
-    OpenACCDataConstruct = 323
+    OPEN_ACC_DATA_CONSTRUCT = 323
 
     # OpenACC enter data Construct.
-    OpenACCEnterDataConstruct = 324
+    OPEN_ACC_ENTER_DATA_CONSTRUCT = 324
 
     # OpenACC exit data Construct.
-    OpenACCExitDataConstruct = 325
+    OPEN_ACC_EXIT_DATA_CONSTRUCT = 325
 
     # OpenACC host_data Construct.
-    OpenACCHostDataConstruct = 326
+    OPEN_ACC_HOST_DATA_CONSTRUCT = 326
 
     # OpenACC wait Construct.
-    OpenACCWaitConstruct = 327
+    OPEN_ACC_WAIT_CONSTRUCT = 327
 
     # OpenACC init Construct.
-    OpenACCInitConstruct = 328
+    OPEN_ACC_INIT_CONSTRUCT = 328
 
     # OpenACC shutdown Construct.
-    OpenACCShutdownConstruct = 329
+    OPEN_ACC_SHUTDOWN_CONSTRUCT = 329
 
     # OpenACC set Construct.
-    OpenACCSetConstruct = 330
+    OPEN_ACC_SET_CONSTRUCT = 330
 
     # OpenACC update Construct.
-    OpenACCUpdateConstruct = 331
+    OPEN_ACC_UPDATE_CONSTRUCT = 331
 
     # OpenACC atomic Construct.
-    OpenACCAtomicConstruct = 332
+    OPEN_ACC_ATOMIC_CONSTRUCT = 332
 
     # OpenACC cache Construct.
-    OpenACCCacheConstruct = 333
+    OPEN_ACC_CACHE_CONSTRUCT = 333
 
     ###
     # Other Kinds
@@ -3936,6 +3939,8 @@ class Token(Structure):
         cursor._tu = self._tu
 
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
+        if cursor.is_null():
+            return None
 
         return cursor
 

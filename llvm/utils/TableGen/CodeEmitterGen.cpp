@@ -471,12 +471,8 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << ";\n";
   O << R"(
   const unsigned opcode = MI.getOpcode();
-  if (opcode < FirstSupportedOpcode) {
-    std::string msg;
-    raw_string_ostream Msg(msg);
-    Msg << "Unsupported instruction: " << MI;
-    report_fatal_error(Msg.str().c_str());
-  }
+  if (opcode < FirstSupportedOpcode)
+    reportUnsupportedInst(MI);
   unsigned TableIndex = opcode - FirstSupportedOpcode;
 )";
 
@@ -502,10 +498,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
 
   // Default case: unhandled opcode.
   O << "  default:\n"
-    << "    std::string msg;\n"
-    << "    raw_string_ostream Msg(msg);\n"
-    << "    Msg << \"Not supported instr: \" << MI;\n"
-    << "    report_fatal_error(Msg.str().c_str());\n"
+    << "    reportUnsupportedInst(MI);\n"
     << "  }\n";
   if (UseAPInt)
     O << "  Inst = Value;\n";
@@ -521,12 +514,10 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
   emitCaseMap(O, BitOffsetCaseMap);
-  O << "  }\n"
-    << "  std::string msg;\n"
-    << "  raw_string_ostream Msg(msg);\n"
-    << "  Msg << \"Not supported instr[opcode]: \" << MI << \"[\" << OpNum "
-       "<< \"]\";\n"
-    << "  report_fatal_error(Msg.str().c_str());\n"
+  O << "  default:\n"
+    << "    reportUnsupportedInst(MI);\n"
+    << "  }\n"
+    << "  reportUnsupportedOperand(MI, OpNum);\n"
     << "}\n\n"
     << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
 }

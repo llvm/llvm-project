@@ -171,7 +171,7 @@ uint64_t check_integer_overflows(int i) { //expected-note 0+{{declared here}}
   uint64_t a[10];
   a[4608 * 1024 * 1024] = 1;
 #if __cplusplus < 201103L
-// expected-warning@-2 {{array index 536870912 is past the end of the array (that has type 'uint64_t[10]' (aka 'unsigned long long[10]'))}}
+// expected-warning@-2 {{array index 536'870'912 is past the end of the array (that has type 'uint64_t[10]' (aka 'unsigned long long[10]'))}}
 // expected-note@-4 {{array 'a' declared here}}
 #endif
 

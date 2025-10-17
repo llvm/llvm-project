@@ -1100,7 +1100,9 @@ class BinOpSameOpcodeHelper {
       // constant + x cannot be -constant - x
       // instead, it should be x - -constant
       if (Pos == 1 ||
-          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
+          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
+            FromOpcode == Instruction::Xor) &&
+           ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
@@ -1187,6 +1189,10 @@ public:
       case Instruction::And:
         if (CIValue.isAllOnes())
           InterchangeableMask = CanBeAll;
+        break;
+      case Instruction::Xor:
+        if (CIValue.isZero())
+          InterchangeableMask = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT;
         break;
       default:
         if (CIValue.isZero())
@@ -2099,6 +2105,7 @@ public:
     UserIgnoreList = nullptr;
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
+    TreeEntryToStridedPtrInfoMap.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -2234,11 +2241,29 @@ public:
   /// TODO: If load combining is allowed in the IR optimizer, this analysis
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
-  bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-                     const DataLayout &DL, ScalarEvolution &SE,
-                     const bool IsAnyPointerUsedOutGraph, const int64_t Diff,
-                     StridedPtrInfo &SPtrInfo) const;
+  bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
+                     Align Alignment, const int64_t Diff, Value *Ptr0,
+                     Value *PtrN, StridedPtrInfo &SPtrInfo) const;
+
+  /// Return true if an array of scalar loads can be replaced with a strided
+  /// load (with run-time stride).
+  /// \param PointerOps list of pointer arguments of loads.
+  /// \param ScalarTy type of loads.
+  /// \param CommonAlignment common alignement of loads as computed by
+  /// `computeCommonAlignment<LoadInst>`.
+  /// \param SortedIndicies is a list of indicies computed by this function such
+  /// that the sequence `PointerOps[SortedIndices[0]],
+  /// PointerOps[SortedIndicies[1]], ..., PointerOps[SortedIndices[n]]` is
+  /// ordered by the coefficient of the stride. For example, if PointerOps is
+  /// `%base + %stride, %base, %base + 2 * stride` the `SortedIndices` will be
+  /// `[1, 0, 2]`. We follow the convention that if `SortedIndices` has to be
+  /// `0, 1, 2, 3, ...` we return empty vector for `SortedIndicies`.
+  /// \param SPtrInfo If the function return `true`, it also sets all the fields
+  /// of `SPtrInfo` necessary to generate the strided load later.
+  bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ScalarTy,
+                                Align CommonAlignment,
+                                SmallVectorImpl<unsigned> &SortedIndices,
+                                StridedPtrInfo &SPtrInfo) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
@@ -5266,19 +5291,19 @@ private:
         // data.
         for (TreeEntry *TE : Entries) {
           // Check if the user is commutative.
-          // The commutatives are handled later, as their oeprands can be
+          // The commutatives are handled later, as their operands can be
           // reordered.
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
               ::isCommutative(User) ||
               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
-          EdgeInfo EI(TE, U.getOperandNo());
           if (!IsCommutativeUser && !isa<CmpInst>(User)) {
             unsigned &OpCnt =
                 OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
+            EdgeInfo EI(TE, U.getOperandNo());
             if (!getScheduleCopyableData(EI, Op) && OpCnt < NumOps)
-              return false;
+              continue;
             // Found copyable operand - continue.
             ++OpCnt;
             continue;
@@ -5287,33 +5312,38 @@ private:
                 .first->getSecond();
         }
       }
-      // Check the commutative/cmp entries.
-      if (!PotentiallyReorderedEntriesCount.empty()) {
-        for (auto &P : PotentiallyReorderedEntriesCount) {
-          auto *It = find(P.first->Scalars, User);
-          assert(It != P.first->Scalars.end() &&
-                 "User is not in the tree entry");
-          int Lane = std::distance(P.first->Scalars.begin(), It);
-          assert(Lane >= 0 && "Lane is not found");
-          if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
-            Lane = P.first->ReorderIndices[Lane];
-          assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
-                 "Couldn't find extract lane");
-          SmallVector<unsigned> OpIndices;
-          for (unsigned OpIdx :
-               seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
-                   P.first->getMainOp()))) {
-            if (P.first->getOperand(OpIdx)[Lane] == Op &&
-                getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
-              --P.getSecond();
-          }
-        }
-        return all_of(PotentiallyReorderedEntriesCount,
+      if (PotentiallyReorderedEntriesCount.empty())
+        return all_of(OrderedEntriesCount,
                       [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                        return P.second == NumOps - 1;
+                        return P.second == NumOps;
                       });
+      // Check the commutative/cmp entries.
+      for (auto &P : PotentiallyReorderedEntriesCount) {
+        auto *It = find(P.first->Scalars, User);
+        assert(It != P.first->Scalars.end() && "User is not in the tree entry");
+        int Lane = std::distance(P.first->Scalars.begin(), It);
+        assert(Lane >= 0 && "Lane is not found");
+        if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
+          Lane = P.first->ReorderIndices[Lane];
+        assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
+               "Couldn't find extract lane");
+        SmallVector<unsigned> OpIndices;
+        for (unsigned OpIdx :
+             seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
+                 P.first->getMainOp()))) {
+          if (P.first->getOperand(OpIdx)[Lane] == Op &&
+              getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
+            --P.getSecond();
+        }
       }
-      return true;
+      return all_of(PotentiallyReorderedEntriesCount,
+                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
+                      return P.second == NumOps - 1;
+                    }) &&
+             all_of(OrderedEntriesCount,
+                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
+                      return P.second == NumOps;
+                    });
     }
 
     SmallVector<ScheduleCopyableData *>
@@ -6818,16 +6848,21 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// 4. Any pointer operand is an instruction with the users outside of the
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
-bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                            ArrayRef<unsigned> Order,
-                            const TargetTransformInfo &TTI,
-                            const DataLayout &DL, ScalarEvolution &SE,
-                            const bool IsAnyPointerUsedOutGraph,
-                            const int64_t Diff,
-                            StridedPtrInfo &SPtrInfo) const {
-  const size_t Sz = VL.size();
+bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
+                            Align Alignment, const int64_t Diff, Value *Ptr0,
+                            Value *PtrN, StridedPtrInfo &SPtrInfo) const {
+  const size_t Sz = PointerOps.size();
+  if (Diff % (Sz - 1) != 0)
+    return false;
+
+  // Try to generate strided load node.
+  auto IsAnyPointerUsedOutGraph = any_of(PointerOps, [&](Value *V) {
+    return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+             return !isVectorized(U) && !MustGather.contains(U);
+           });
+  });
+
   const uint64_t AbsoluteDiff = std::abs(Diff);
-  Type *ScalarTy = VL.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
@@ -6838,20 +6873,9 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
       return false;
-    Align Alignment =
-        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
-            ->getAlign();
-    if (!TTI.isLegalStridedLoadStore(VecTy, Alignment))
+    if (!TTI->isLegalStridedLoadStore(VecTy, Alignment))
       return false;
-    Value *Ptr0;
-    Value *PtrN;
-    if (Order.empty()) {
-      Ptr0 = PointerOps.front();
-      PtrN = PointerOps.back();
-    } else {
-      Ptr0 = PointerOps[Order.front()];
-      PtrN = PointerOps[Order.back()];
-    }
+
     // Iterate through all pointers and check if all distances are
     // unique multiple of Dist.
     SmallSet<int64_t, 4> Dists;
@@ -6860,18 +6884,36 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
       if (Ptr == PtrN)
         Dist = Diff;
       else if (Ptr != Ptr0)
-        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
       // If the strides are not the same or repeated, we can't
       // vectorize.
       if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
         break;
     }
     if (Dists.size() == Sz) {
-      Type *StrideTy = DL.getIndexType(Ptr0->getType());
+      Type *StrideTy = DL->getIndexType(Ptr0->getType());
       SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
       SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
       return true;
     }
+  }
+  return false;
+}
+
+bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
+                                       Type *ScalarTy, Align CommonAlignment,
+                                       SmallVectorImpl<unsigned> &SortedIndices,
+                                       StridedPtrInfo &SPtrInfo) const {
+  const unsigned Sz = PointerOps.size();
+  FixedVectorType *StridedLoadTy = getWidenedType(ScalarTy, Sz);
+  if (Sz <= MinProfitableStridedLoads || !TTI->isTypeLegal(StridedLoadTy) ||
+      !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
+    return false;
+  if (const SCEV *Stride =
+          calculateRtStride(PointerOps, ScalarTy, *DL, *SE, SortedIndices)) {
+    SPtrInfo.Ty = getWidenedType(ScalarTy, PointerOps.size());
+    SPtrInfo.StrideSCEV = Stride;
+    return true;
   }
   return false;
 }
@@ -6916,15 +6958,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted) {
-    if (Sz > MinProfitableStridedLoads && TTI->isTypeLegal(VecTy)) {
-      if (const SCEV *Stride =
-              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order);
-          Stride && TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
-        SPtrInfo.Ty = getWidenedType(ScalarTy, PointerOps.size());
-        SPtrInfo.StrideSCEV = Stride;
-        return LoadsState::StridedVectorize;
-      }
-    }
+    if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
+                                 SPtrInfo))
+      return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
         TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment))
@@ -6956,18 +6992,11 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                                    cast<Instruction>(V), UserIgnoreList);
                              }))
       return LoadsState::CompressVectorize;
-    // Simple check if not a strided access - clear order.
-    bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
-    // Try to generate strided load node.
-    auto IsAnyPointerUsedOutGraph =
-        IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
-          return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
-                   return !isVectorized(U) && !MustGather.contains(U);
-                 });
-        });
-    if (IsPossibleStrided &&
-        isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
-                      IsAnyPointerUsedOutGraph, *Diff, SPtrInfo))
+    Align Alignment =
+        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
+            ->getAlign();
+    if (isStridedLoad(PointerOps, ScalarTy, Alignment, *Diff, Ptr0, PtrN,
+                      SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -8945,6 +8974,8 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         const SmallDenseSet<Value *> &UserIgnoreLst) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
@@ -8953,6 +8984,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
@@ -10624,7 +10657,10 @@ class InstructionsCompatibilityAnalysis {
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
-    return Opcode == Instruction::Add || Opcode == Instruction::LShr;
+    return Opcode == Instruction::Add || Opcode == Instruction::LShr ||
+           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
+           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
+           Opcode == Instruction::Or || Opcode == Instruction::Xor;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10634,7 +10670,9 @@ class InstructionsCompatibilityAnalysis {
   void findAndSetMainInstruction(ArrayRef<Value *> VL, const BoUpSLP &R) {
     BasicBlock *Parent = nullptr;
     // Checks if the instruction has supported opcode.
-    auto IsSupportedInstruction = [&](Instruction *I) {
+    auto IsSupportedInstruction = [&](Instruction *I, bool AnyUndef) {
+      if (AnyUndef && (I->isIntDivRem() || I->isFPDivRem() || isa<CallInst>(I)))
+        return false;
       return I && isSupportedOpcode(I->getOpcode()) &&
              (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
     };
@@ -10642,10 +10680,13 @@ class InstructionsCompatibilityAnalysis {
     // will be unable to schedule anyway.
     SmallDenseSet<Value *, 8> Operands;
     SmallMapVector<unsigned, SmallVector<Instruction *>, 4> Candidates;
+    bool AnyUndef = false;
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
-      if (!I)
+      if (!I) {
+        AnyUndef |= isa<UndefValue>(V);
         continue;
+      }
       if (!DT.isReachableFromEntry(I->getParent()))
         continue;
       if (Candidates.empty()) {
@@ -10680,7 +10721,7 @@ class InstructionsCompatibilityAnalysis {
       if (P.second.size() < BestOpcodeNum)
         continue;
       for (Instruction *I : P.second) {
-        if (IsSupportedInstruction(I) && !Operands.contains(I)) {
+        if (IsSupportedInstruction(I, AnyUndef) && !Operands.contains(I)) {
           MainOp = I;
           BestOpcodeNum = P.second.size();
           break;
@@ -10941,6 +10982,12 @@ public:
       switch (MainOpcode) {
       case Instruction::Add:
       case Instruction::LShr:
+      case Instruction::Shl:
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
@@ -17522,7 +17569,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
         all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) || E->isCopyableElement(V) ||
+          return isa<PoisonValue>(V) ||
+                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                 E->isCopyableElement(V) ||
                  (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
         }))
       Res = FindLastInst();
@@ -19122,7 +19171,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
-      Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      if (const TreeEntry *OpE = getOperandEntry(E, 1);
+          OpE && !OpE->isGather() && OpE->hasState() &&
+          !OpE->hasCopyableElements())
+        Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      else
+        setInsertPointAfterBundle(E);
       Value *V = vectorizeOperand(E, 1);
       ArrayRef<Value *> Op = E->getOperand(1);
       Type *ScalarTy = Op.front()->getType();
@@ -19406,7 +19460,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       assert(getNumElements(Cond->getType()) == TrueNumElements &&
              "Cannot vectorize Instruction::Select");
-      Value *V = Builder.CreateSelect(Cond, True, False);
+      Value *V =
+          Builder.CreateSelectWithUnknownProfile(Cond, True, False, DEBUG_TYPE);
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
@@ -20026,7 +20081,9 @@ Value *BoUpSLP::vectorizeTree(
     // The is because source vector that supposed to feed this gather node was
     // inserted at the end of the block [after stab instruction]. So we need
     // to adjust insertion point again to the end of block.
-    if (isa<PHINode>(UserI)) {
+    if (isa<PHINode>(UserI) ||
+        (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
       for (User *U : PrevVec->users()) {
@@ -22003,6 +22060,8 @@ bool BoUpSLP::collectValuesToDemote(
       return all_of(E.Scalars, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
+        if (E.isCopyableElement(V))
+          return true;
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
         return AmtKnownBits.getMaxValue().ult(BitWidth);
@@ -22059,8 +22118,10 @@ bool BoUpSLP::collectValuesToDemote(
     auto Checker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
       return all_of(E.Scalars, [&](Value *V) {
-        auto *I = cast<Instruction>(V);
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        if (E.hasCopyableElements() && E.isCopyableElement(V))
+          return MaskedValueIsZero(V, Mask, SimplifyQuery(*DL));
+        auto *I = cast<Instruction>(V);
         return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
                MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
       });
@@ -23520,18 +23581,19 @@ class HorizontalReduction {
     switch (Kind) {
     case RecurKind::Or: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
-            RHS, Name);
+            RHS, DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
     case RecurKind::And: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, RHS,
-            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)), Name);
+            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)),
+            DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
@@ -23552,7 +23614,8 @@ class HorizontalReduction {
       if (UseSelect) {
         CmpInst::Predicate Pred = llvm::getMinMaxReductionPredicate(Kind);
         Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+        return Builder.CreateSelectWithUnknownProfile(Cmp, LHS, RHS, DEBUG_TYPE,
+                                                      Name);
       }
       [[fallthrough]];
     case RecurKind::FMax:

@@ -368,6 +368,10 @@ def c64 : VTCheriCapability<64, 254>;   // 64-bit CHERI capability value
 def c128 : VTCheriCapability<128, 255>; // 128-bit CHERI capability value
 
 let isNormalValueType = false in {
+// Pseudo valuetype mapped to the current CHERI capability pointer size.
+// Should only be used in TableGen.
+def cPTR : VTAny<503>;
+
 def token      : ValueType<0, 504>;  // TokenTy
 def MetadataVT : ValueType<0, 505> { // Metadata
   let LLVMName = "Metadata";
