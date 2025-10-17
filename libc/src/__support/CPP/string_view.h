@@ -44,6 +44,15 @@ private:
         return static_cast<size_t>(End - Str);
   }
 
+  template <size_t N>
+  LIBC_INLINE static constexpr size_t
+  bounded_length(LIBC_LIFETIME_BOUND const char (&Str)[N]) {
+    for (size_t i = 0; i < N; ++i)
+      if (Str[i] == '\0')
+        return i;
+    return N;
+  }
+
   LIBC_INLINE bool equals(string_view Other) const {
     return (Len == Other.Len &&
             compareMemory(Data, Other.Data, Other.Len) == 0);
@@ -77,8 +86,9 @@ public:
   LIBC_INLINE constexpr string_view(const char *Str, size_t N)
       : Data(Str), Len(N) {}
 
-  LIBC_INLINE constexpr string_view(LIBC_LIFETIME_BOUND const char (&Str)[])
-      : Data(Str), Len(length(Str)) {}
+  template <size_t N>
+  LIBC_INLINE constexpr string_view(LIBC_LIFETIME_BOUND const char (&Str)[N])
+      : Data(Str), Len(bounded_length(Str)) {}
 
   LIBC_INLINE constexpr const char *data() const { return Data; }
 
