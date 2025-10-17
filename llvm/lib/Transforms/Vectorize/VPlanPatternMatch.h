@@ -173,10 +173,10 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
-struct bind_const_int {
-  uint64_t &Res;
+struct bind_apint {
+  const APInt *&Res;
 
-  bind_const_int(uint64_t &Res) : Res(Res) {}
+  bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
@@ -188,7 +188,23 @@ struct bind_const_int {
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI)
       return false;
-    if (auto C = CI->getValue().tryZExtValue()) {
+    Res = &CI->getValue();
+    return true;
+  }
+};
+
+inline bind_apint m_APInt(const APInt *&C) { return C; }
+
+struct bind_const_int {
+  uint64_t &Res;
+
+  bind_const_int(uint64_t &Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    const APInt *APConst;
+    if (!bind_apint(APConst).match(VPV))
+      return false;
+    if (auto C = APConst->tryZExtValue()) {
       Res = *C;
       return true;
     }

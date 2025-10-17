@@ -1499,6 +1499,54 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+static uint64_t getTypeSize(mlir::Type type, mlir::Operation &op) {
+  mlir::DataLayout layout(op.getParentOfType<mlir::ModuleOp>());
+  // For LLVM purposes we treat void as u8.
+  if (isa<cir::VoidType>(type))
+    type = cir::IntType::get(type.getContext(), 8, /*isSigned=*/false);
+  return llvm::divideCeil(layout.getTypeSizeInBits(type), 8);
+}
+
+mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
+    cir::PtrDiffOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto dstTy = mlir::cast<cir::IntType>(op.getType());
+  mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+
+  auto lhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
+                                                     adaptor.getLhs());
+  auto rhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
+                                                     adaptor.getRhs());
+
+  auto diff =
+      rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), llvmDstTy, lhs, rhs);
+
+  cir::PointerType ptrTy = op.getLhs().getType();
+  assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
+  uint64_t typeSize = getTypeSize(ptrTy.getPointee(), *op);
+
+  // Avoid silly division by 1.
+  mlir::Value resultVal = diff.getResult();
+  if (typeSize != 1) {
+    auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), llvmDstTy, typeSize);
+
+    if (dstTy.isUnsigned()) {
+      auto uDiv =
+          rewriter.create<mlir::LLVM::UDivOp>(op.getLoc(), diff, typeSizeVal);
+      uDiv.setIsExact(true);
+      resultVal = uDiv.getResult();
+    } else {
+      auto sDiv =
+          rewriter.create<mlir::LLVM::SDivOp>(op.getLoc(), diff, typeSizeVal);
+      sDiv.setIsExact(true);
+      resultVal = sDiv.getResult();
+    }
+  }
+  rewriter.replaceOp(op, resultVal);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMExpectOpLowering::matchAndRewrite(
     cir::ExpectOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
