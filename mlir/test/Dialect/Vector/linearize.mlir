@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -test-vector-linearize -verify-diagnostics | FileCheck %s
 
-// CHECK-LABEL: linearize
+// CHECK-LABEL: elementwise_constant
 // CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>)
-func.func @linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
+func.func @elementwise_constant(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 
   // CHECK: %[[ARG:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<2x2xf32> to vector<4xf32>
   // CHECK: %[[CST:.*]] = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<4xf32>
@@ -21,8 +21,8 @@ func.func @linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 
 // -----
 
-// CHECK-LABEL: linearize_poison
-func.func @linearize_poison() -> vector<2x2xf32> {
+// CHECK-LABEL: poison
+func.func @poison() -> vector<2x2xf32> {
 
   // CHECK: %[[POISON:.*]] = ub.poison : vector<4xf32>
   // CHECK: %[[RES:.*]] = vector.shape_cast %[[POISON]] : vector<4xf32> to vector<2x2xf32>
@@ -406,8 +406,8 @@ func.func @bitcast(%arg0: vector<[4]x2xf32>) -> vector<[4]x4xf16> {
 
 // -----
 
-// CHECK-LABEL: linearize_across_for
-func.func @linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
+// CHECK-LABEL: across_for
+func.func @across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
   %0 = vector.shape_cast %arg0 : vector<4xi8> to vector<2x2xi8>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -428,9 +428,9 @@ func.func @linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
 
 // -----
 
-// CHECK-LABEL: linearize_broadcast_scalar_source
+// CHECK-LABEL: broadcast_scalar_source
 // CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x2xi32>
-func.func @linearize_broadcast_scalar_source(%arg0: i32) -> vector<4x2xi32> {
+func.func @broadcast_scalar_source(%arg0: i32) -> vector<4x2xi32> {
 
   // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[ARG]] : i32 to vector<8xi32>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[BROADCAST]] : vector<8xi32> to vector<4x2xi32>
@@ -441,9 +441,9 @@ func.func @linearize_broadcast_scalar_source(%arg0: i32) -> vector<4x2xi32> {
 
 // -----
 
-// CHECK-LABEL: linearize_broadcast_rank_two_source
+// CHECK-LABEL: broadcast_rank_two_source
 // CHECK-SAME: (%[[ARG:.*]]: vector<1x1xi32>) -> vector<4x2xi32>
-func.func @linearize_broadcast_rank_two_source(%arg0: vector<1x1xi32>) -> vector<4x2xi32> {
+func.func @broadcast_rank_two_source(%arg0: vector<1x1xi32>) -> vector<4x2xi32> {
 
   // CHECK: %[[CAST0:.*]] = vector.shape_cast %[[ARG]] : vector<1x1xi32> to vector<1xi32>
   // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[CAST0]] : vector<1xi32> to vector<8xi32>
@@ -455,9 +455,9 @@ func.func @linearize_broadcast_rank_two_source(%arg0: vector<1x1xi32>) -> vector
 
 // -----
 
-// CHECK-LABEL: linearize_scalable_broadcast
+// CHECK-LABEL: scalable_broadcast
 // CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x[2]xi32>
-func.func @linearize_scalable_broadcast(%arg0: i32) -> vector<4x[2]xi32> {
+func.func @scalable_broadcast(%arg0: i32) -> vector<4x[2]xi32> {
 
   // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[ARG]] : i32 to vector<[8]xi32>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[BROADCAST]] : vector<[8]xi32> to vector<4x[2]xi32>
@@ -469,9 +469,9 @@ func.func @linearize_scalable_broadcast(%arg0: i32) -> vector<4x[2]xi32> {
 
 // -----
 
-// CHECK-LABEL: linearize_create_mask
+// CHECK-LABEL: create_mask
 // CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<1x16xi1>
-func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {
+func.func @create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {
 
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[ARG0]], %[[C0]] : index
@@ -485,17 +485,17 @@ func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1
 }
 
 // -----
-// CHECK-LABEL: linearize_scalable_create_mask
-func.func @linearize_scalable_create_mask(%arg0 : index, %arg1 : index) -> vector<1x[16]xi1> {
+// CHECK-LABEL: scalable_create_mask
+func.func @scalable_create_mask(%arg0 : index, %arg1 : index) -> vector<1x[16]xi1> {
 
   // CHECK: %[[MASK_1D:.*]] = vector.create_mask {{%.*}} : vector<[16]xi1>
   %0 = vector.create_mask %arg0, %arg1 : vector<1x[16]xi1>
   return %0 : vector<1x[16]xi1>
 }
 
-// CHECK-LABEL: linearize_load
+// CHECK-LABEL: load
 // CHECK-SAME: (%[[ARG0:.*]]: memref<2x8xf32>) -> vector<1x4xf32>
-func.func @linearize_load(%arg0: memref<2x8xf32>) -> vector<1x4xf32> {
+func.func @load(%arg0: memref<2x8xf32>) -> vector<1x4xf32> {
   // CHECK: %[[CST0:.*]] = arith.constant 0 : index
   // CHECK: %[[LOAD:.*]] = vector.load %[[ARG0]][%[[CST0]], %[[CST0]]] : memref<2x8xf32>, vector<4xf32>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<4xf32> to vector<1x4xf32>
@@ -505,9 +505,9 @@ func.func @linearize_load(%arg0: memref<2x8xf32>) -> vector<1x4xf32> {
   return %0 : vector<1x4xf32>
 }
 
-// CHECK-LABEL: linearize_store
+// CHECK-LABEL: store
 // CHECK-SAME: (%[[ARG0:.*]]: memref<2x8xf32>, %[[ARG1:.*]]: vector<1x4xf32>)
-func.func @linearize_store(%arg0: memref<2x8xf32>, %arg1: vector<1x4xf32>) {
+func.func @store(%arg0: memref<2x8xf32>, %arg1: vector<1x4xf32>) {
   // CHECK: %[[CAST:.*]] = vector.shape_cast %arg1 : vector<1x4xf32> to vector<4xf32>
   // CHECK: %[[CST0:.*]] = arith.constant 0 : index
   // CHECK: vector.store %[[CAST]], %[[ARG0]][%[[CST0]], %[[CST0]]] : memref<2x8xf32>, vector<4xf32>
@@ -516,9 +516,9 @@ func.func @linearize_store(%arg0: memref<2x8xf32>, %arg1: vector<1x4xf32>) {
   return
 }
 
-// CHECK-LABEL: linearize_load_scalable
+// CHECK-LABEL: load_scalable
 // CHECK-SAME: (%[[ARG0:.*]]: memref<2x8xf32>) -> vector<1x[4]xf32>
-func.func @linearize_load_scalable(%arg0: memref<2x8xf32>) -> vector<1x[4]xf32> {
+func.func @load_scalable(%arg0: memref<2x8xf32>) -> vector<1x[4]xf32> {
   // CHECK: %[[CST0:.*]] = arith.constant 0 : index
   // CHECK: %[[LOAD:.*]] = vector.load %[[ARG0]][%[[CST0]], %[[CST0]]] : memref<2x8xf32>, vector<[4]xf32>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<[4]xf32> to vector<1x[4]xf32>
@@ -528,9 +528,9 @@ func.func @linearize_load_scalable(%arg0: memref<2x8xf32>) -> vector<1x[4]xf32> 
   return %0 : vector<1x[4]xf32>
 }
 
-// CHECK-LABEL: linearize_store_scalable
+// CHECK-LABEL: store_scalable
 // CHECK-SAME: (%[[ARG0:.*]]: memref<2x8xf32>, %[[ARG1:.*]]: vector<1x[4]xf32>)
-func.func @linearize_store_scalable(%arg0: memref<2x8xf32>, %arg1: vector<1x[4]xf32>) {
+func.func @store_scalable(%arg0: memref<2x8xf32>, %arg1: vector<1x[4]xf32>) {
   // CHECK: %[[CAST:.*]] = vector.shape_cast %arg1 : vector<1x[4]xf32> to vector<[4]xf32>
   // CHECK: %[[CST0:.*]] = arith.constant 0 : index
   // CHECK: vector.store %[[CAST]], %[[ARG0]][%[[CST0]], %[[CST0]]] : memref<2x8xf32>, vector<[4]xf32>
