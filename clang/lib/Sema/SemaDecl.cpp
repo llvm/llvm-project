@@ -13121,9 +13121,9 @@ namespace {
     // Skip checking for file-scope constexpr variables - constant evaluation
     // will produce appropriate errors without needing runtime diagnostics.
     // Local constexpr should still emit runtime warnings.
-    if (auto *VD = dyn_cast<VarDecl>(OrigDecl))
-      if (VD->isConstexpr() && VD->isFileVarDecl())
-        return;
+    if (auto *VD = dyn_cast<VarDecl>(OrigDecl);
+        VD && VD->isConstexpr() && VD->isFileVarDecl())
+      return;
 
     E = E->IgnoreParens();
 

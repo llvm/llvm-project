@@ -2734,21 +2734,12 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
     S.Diag(D.Loc, D.PD);
 }
 
-void sema::AnalysisBasedWarnings::FlushDiagnostics(
-    const SmallVector<clang::sema::PossiblyUnreachableDiag, 4> PUDs) {
-  for (const auto &D : PUDs)
-    S.Diag(D.Loc, D.PD);
-}
-
 void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
     AnalysisDeclContext &AC,
     SmallVector<clang::sema::PossiblyUnreachableDiag, 4> PUDs) {
 
-  if (PUDs.empty()) {
+  if (PUDs.empty())
     return;
-  }
-
-  bool Analyzed = false;
 
   for (const auto &D : PUDs) {
     for (const Stmt *S : D.Stmts)
@@ -2756,31 +2747,23 @@ void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
   }
 
   if (AC.getCFG()) {
-    Analyzed = true;
     for (const auto &D : PUDs) {
-      bool AllReachable = true;
-      for (const Stmt *St : D.Stmts) {
-        const CFGBlock *block = AC.getBlockForRegisteredExpression(St);
-        CFGReverseBlockReachabilityAnalysis *cra =
-            AC.getCFGReachablityAnalysis();
-        if (block && cra) {
-          // Can this block be reached from the entrance?
-          if (!cra->isReachable(&AC.getCFG()->getEntry(), block)) {
-            AllReachable = false;
-            break;
-          }
-        }
-        // If we cannot map to a basic block, assume the statement is
-        // reachable.
-      }
-
-      if (AllReachable)
+      if (llvm::all_of(D.Stmts, [&](const Stmt *St) {
+            const CFGBlock *Block = AC.getBlockForRegisteredExpression(St);
+            CFGReverseBlockReachabilityAnalysis *Analysis =
+                AC.getCFGReachablityAnalysis();
+            if (Block && Analysis)
+              if (!Analysis->isReachable(&AC.getCFG()->getEntry(), Block))
+                return false;
+            return true;
+          })) {
         S.Diag(D.Loc, D.PD);
+      }
     }
+  } else {
+    for (const auto &D : PUDs)
+      S.Diag(D.Loc, D.PD);
   }
-
-  if (!Analyzed)
-    FlushDiagnostics(PUDs);
 }
 
 void sema::AnalysisBasedWarnings::RegisterVarDeclWarning(
@@ -2790,12 +2773,10 @@ void sema::AnalysisBasedWarnings::RegisterVarDeclWarning(
 
 void sema::AnalysisBasedWarnings::IssueWarningsForRegisteredVarDecl(
     VarDecl *VD) {
-  if (VarDeclPossiblyUnreachableDiags.find(VD) ==
-      VarDeclPossiblyUnreachableDiags.end()) {
+  if (!llvm::is_contained(VarDeclPossiblyUnreachableDiags, VD))
     return;
-  }
 
-  AnalysisDeclContext AC(nullptr, VD);
+  AnalysisDeclContext AC(/*Mgr=*/nullptr, VD);
 
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
   AC.getCFGBuildOptions().AddEHEdges = false;
