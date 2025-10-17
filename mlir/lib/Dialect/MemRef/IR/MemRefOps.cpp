@@ -2166,10 +2166,6 @@ public:
 
   LogicalResult matchAndRewrite(ReinterpretCastOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Using counting comparison instead of direct comparison because
-    // getMixedValues (and consequently ReinterpretCastOp::getMixed...) returns
-    // IntegerAttrs, while constifyIndexValues (and consequently
-    // ReinterpretCastOp::getConstifiedMixed...) returns IndexAttrs.
     unsigned srcStaticCount = llvm::count_if(
         llvm::concat<OpFoldResult>(op.getMixedOffsets(), op.getMixedSizes(),
                                    op.getMixedStrides()),
@@ -2179,6 +2175,10 @@ public:
     SmallVector<OpFoldResult> sizes = op.getConstifiedMixedSizes();
     SmallVector<OpFoldResult> strides = op.getConstifiedMixedStrides();
 
+    // TODO: Using counting comparison instead of direct comparison because
+    // getMixedValues (and therefore ReinterpretCastOp::getMixed...) returns
+    // IntegerAttrs, while constifyIndexValues (and therefore
+    // ReinterpretCastOp::getConstifiedMixed...) returns IndexAttrs.
     if (srcStaticCount ==
         llvm::count_if(llvm::concat<OpFoldResult>(offsets, sizes, strides),
                        [](OpFoldResult ofr) { return isa<Attribute>(ofr); }))
