@@ -36,7 +36,7 @@ defm VFWMACCBF16_V : VWMAC_FV_V_F<"vfwmaccbf16", 0b111011>;
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
+let Predicates = [HasStdExtZvfbfmin] in {
   defm PseudoVFWCVTBF16_F_F : VPseudoVWCVTD_V;
   defm PseudoVFNCVTBF16_F_F : VPseudoVNCVTD_W_RM;
 }
@@ -47,7 +47,31 @@ let mayRaiseFPException = true, Predicates = [HasStdExtZvfbfwma] in
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
+multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
+                                  bit isSEWAware = 0> {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in
+  {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
+                          fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
+  }
+}
+
+multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
+                                     bit isSEWAware = 0> {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
+                                      fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
+                                      fvti.LMul, fvti.RegClass, fwti.RegClass,
+                                      isSEWAware>;
+  }
+}
+
+let Predicates = [HasStdExtZvfbfmin] in {
   defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
                                 "PseudoVFWCVTBF16_F_F", isSEWAware=1>;
   defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
@@ -56,7 +80,6 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
   foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
-    let Predicates = [HasVInstructionsBF16Minimal] in
     def : Pat<(fwti.Vector (any_riscv_fpextend_vl
                                (fvti.Vector fvti.RegClass:$rs1),
                                (fvti.Mask VMV0:$vm),
@@ -66,18 +89,16 @@ let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
                   (fvti.Mask VMV0:$vm),
                   GPR:$vl, fvti.Log2SEW, TA_MA)>;
 
-    let Predicates = [HasVInstructionsBF16Minimal] in
-      def : Pat<(fvti.Vector (any_riscv_fpround_vl
-                                 (fwti.Vector fwti.RegClass:$rs1),
-                                 (fwti.Mask VMV0:$vm), VLOpFrag)),
-                (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
-                    (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
-                    (fwti.Mask VMV0:$vm),
-                    // Value to indicate no rounding mode change in
-                    // RISCVInsertReadWriteCSR
-                    FRM_DYN,
-                    GPR:$vl, fvti.Log2SEW, TA_MA)>;
-    let Predicates = [HasVInstructionsBF16Minimal] in
+    def : Pat<(fvti.Vector (any_riscv_fpround_vl
+                               (fwti.Vector fwti.RegClass:$rs1),
+                               (fwti.Mask VMV0:$vm), VLOpFrag)),
+              (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                  (fwti.Mask VMV0:$vm),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
     def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
               (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                   (fvti.Vector (IMPLICIT_DEF)),

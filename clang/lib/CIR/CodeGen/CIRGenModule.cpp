@@ -451,7 +451,7 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, funcOp);
-  assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
+  setCIRFunctionAttributesForDefinition(funcDecl, funcOp);
 
   auto getPriority = [this](const auto *attr) -> int {
     Expr *e = attr->getPriority();
@@ -1917,6 +1917,91 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     const Decl *decl = globalDecl.getDecl();
     func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
   }
+}
+
+void CIRGenModule::setCIRFunctionAttributesForDefinition(
+    const clang::FunctionDecl *decl, cir::FuncOp f) {
+  assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+  assert(!cir::MissingFeatures::stackProtector());
+
+  std::optional<cir::InlineKind> existingInlineKind = f.getInlineKind();
+  bool isNoInline =
+      existingInlineKind && *existingInlineKind == cir::InlineKind::NoInline;
+  bool isAlwaysInline = existingInlineKind &&
+                        *existingInlineKind == cir::InlineKind::AlwaysInline;
+
+  if (!decl) {
+    assert(!cir::MissingFeatures::hlsl());
+
+    if (!isAlwaysInline &&
+        codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+      // If inlining is disabled and we don't have a declaration to control
+      // inlining, mark the function as 'noinline' unless it is explicitly
+      // marked as 'alwaysinline'.
+      f.setInlineKindAttr(
+          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+    }
+
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opFuncArmStreamingAttr());
+  assert(!cir::MissingFeatures::opFuncArmNewAttr());
+  assert(!cir::MissingFeatures::opFuncOptNoneAttr());
+  assert(!cir::MissingFeatures::opFuncMinSizeAttr());
+  assert(!cir::MissingFeatures::opFuncNakedAttr());
+  assert(!cir::MissingFeatures::opFuncNoDuplicateAttr());
+  assert(!cir::MissingFeatures::hlsl());
+
+  // Handle inline attributes
+  if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
+    // Add noinline if the function isn't always_inline.
+    f.setInlineKindAttr(
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+  } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
+    // Don't override AlwaysInline with NoInline, or vice versa, since we can't
+    // specify both in IR.
+    f.setInlineKindAttr(
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline));
+  } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+    // If inlining is disabled, force everything that isn't always_inline
+    // to carry an explicit noinline attribute.
+    if (!isAlwaysInline) {
+      f.setInlineKindAttr(
+          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+    }
+  } else {
+    // Otherwise, propagate the inline hint attribute and potentially use its
+    // absence to mark things as noinline.
+    // Search function and template pattern redeclarations for inline.
+    if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
+      // TODO: Share this checkForInline implementation with classic codegen.
+      // This logic is likely to change over time, so sharing would help ensure
+      // consistency.
+      auto checkForInline = [](const FunctionDecl *decl) {
+        auto checkRedeclForInline = [](const FunctionDecl *redecl) {
+          return redecl->isInlineSpecified();
+        };
+        if (any_of(decl->redecls(), checkRedeclForInline))
+          return true;
+        const FunctionDecl *pattern = decl->getTemplateInstantiationPattern();
+        if (!pattern)
+          return false;
+        return any_of(pattern->redecls(), checkRedeclForInline);
+      };
+      if (checkForInline(fd)) {
+        f.setInlineKindAttr(cir::InlineAttr::get(&getMLIRContext(),
+                                                 cir::InlineKind::InlineHint));
+      } else if (codeGenOpts.getInlining() ==
+                     CodeGenOptions::OnlyHintInlining &&
+                 !fd->isInlined() && !isAlwaysInline) {
+        f.setInlineKindAttr(
+            cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+      }
+    }
+  }
+
+  assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
