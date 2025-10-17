@@ -2258,6 +2258,8 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
     return Pointer(Ptr.asFunctionPointer().getFunction(), N);
+  } else if (!Ptr.isBlockPointer()) {
+    return std::nullopt;
   }
 
   assert(Ptr.isBlockPointer());
@@ -3096,7 +3098,8 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   }
 
   if (Offset.isZero()) {
-    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+    if (const Descriptor *Desc = Ptr.getFieldDesc();
+        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
@@ -3126,7 +3129,8 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   }
 
   if (Offset.isZero()) {
-    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+    if (const Descriptor *Desc = Ptr.getFieldDesc();
+        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
