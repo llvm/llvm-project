@@ -2861,7 +2861,7 @@ def AtomicUpdateOp : OpenACC_Op<"atomic.update",
   let arguments = (ins Arg<OpenACC_PointerLikeType,
                            "Address of variable to be updated",
                            [MemRead, MemWrite]>:$x,
-                   Optional<I1>:$ifCond);
+                       Optional<I1>:$ifCond);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
     oilist(

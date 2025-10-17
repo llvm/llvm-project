@@ -328,7 +328,7 @@ genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
 
   mlir::acc::AtomicReadOp::create(firOpBuilder, loc, fromAddress, toAddress,
                                   mlir::TypeAttr::get(elementType),
-                                  /*IfCond=*/mlir::Value{});
+                                  /*ifCond=*/mlir::Value{});
 }
 
 /// Used to generate atomic.write operation which is created in existing
