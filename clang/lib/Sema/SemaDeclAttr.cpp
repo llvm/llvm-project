@@ -1839,6 +1839,38 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  RestrictAttr(S.Context, AL, DeallocE, DeallocPtrIdx));
 }
 
+static bool isSpanLikeType(const QualType &Ty) {
+  // Check that the type is a plain record with the first field being a pointer
+  // type and the second field being an integer. This matches the common
+  // implementation of std::span or sized_allocation_t in P0901R11.
+  // Note that there may also be numerous cases of pointer+integer structures
+  // not actually exhibiting a span-like semantics, so sometimes
+  // this heuristic expectedly leads to false positive results.
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD || RD->isUnion())
+    return false;
+  const RecordDecl *Def = RD->getDefinition();
+  if (!Def)
+    return false; // This is an incomplete type.
+  auto FieldsBegin = Def->field_begin();
+  if (std::distance(FieldsBegin, Def->field_end()) != 2)
+    return false;
+  const FieldDecl *FirstField = *FieldsBegin;
+  const FieldDecl *SecondField = *std::next(FieldsBegin);
+  return FirstField->getType()->isAnyPointerType() &&
+         SecondField->getType()->isIntegerType();
+}
+
+static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  QualType ResultType = getFunctionOrMethodResultType(D);
+  if (!isSpanLikeType(ResultType)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_return_span_only)
+        << AL << getFunctionOrMethodResultSourceRange(D);
+    return;
+  }
+  D->addAttr(::new (S.Context) MallocSpanAttr(S.Context, AL));
+}
+
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Ensure we don't combine these with themselves, since that causes some
   // confusing behavior.
@@ -7267,6 +7299,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Restrict:
     handleRestrictAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_MallocSpan:
+    handleMallocSpanAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Mode:
     handleModeAttr(S, D, AL);
