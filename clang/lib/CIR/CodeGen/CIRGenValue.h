@@ -307,9 +307,8 @@ class AggValueSlot {
   /// This is set to true if some external code is responsible for setting up a
   /// destructor for the slot.  Otherwise the code which constructs it should
   /// push the appropriate cleanup.
-  [[maybe_unused]] 
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned destructedFlag : 1;
+  [[maybe_unused]]
+  LLVM_PREFERRED_TYPE(bool) unsigned destructedFlag : 1;
 
   /// This is set to true if the memory in the slot is known to be zero before
   /// the assignment into it.  This means that zero fields don't need to be set.
@@ -327,18 +326,16 @@ class AggValueSlot {
   /// over.  Since it's invalid in general to memcpy a non-POD C++
   /// object, it's important that this flag never be set when
   /// evaluating an expression which constructs such an object.
-  [[maybe_unused]] 
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned aliasedFlag : 1;
+  [[maybe_unused]]
+  LLVM_PREFERRED_TYPE(bool) unsigned aliasedFlag : 1;
 
   /// This is set to true if the tail padding of this slot might overlap
   /// another object that may have already been initialized (and whose
   /// value must be preserved by this initialization). If so, we may only
   /// store up to the dsize of the type. Otherwise we can widen stores to
   /// the size of the type.
-  [[maybe_unused]] 
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned overlapFlag : 1;
+  [[maybe_unused]]
+  LLVM_PREFERRED_TYPE(bool) unsigned overlapFlag : 1;
 
 public:
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
