@@ -1224,7 +1224,7 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Populate the init region
   bool needsFree = false;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
-                               varName, bounds, needsFree))) {
+                              varName, bounds, needsFree))) {
     recipe.erase();
     return std::nullopt;
   }
@@ -1232,12 +1232,12 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Only create destroy region if the allocation needs deallocation
   if (needsFree) {
     // Extract the allocated value from the init block's yield operation
-    auto yieldOp = cast<acc::YieldOp>(
-        recipe.getInitRegion().front().getTerminator());
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
     Value allocRes = yieldOp.getOperand(0);
 
     if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
-                                    varType, allocRes, bounds))) {
+                                   varType, allocRes, bounds))) {
       recipe.erase();
       return std::nullopt;
     }
@@ -1296,14 +1296,14 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Populate the init region
   bool needsFree = false;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
-                               varName, bounds, needsFree))) {
+                              varName, bounds, needsFree))) {
     recipe.erase();
     return std::nullopt;
   }
 
   // Populate the copy region
   if (failed(createCopyRegion(builder, loc, recipe.getCopyRegion(), varType,
-                               bounds))) {
+                              bounds))) {
     recipe.erase();
     return std::nullopt;
   }
@@ -1311,12 +1311,12 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Only create destroy region if the allocation needs deallocation
   if (needsFree) {
     // Extract the allocated value from the init block's yield operation
-    auto yieldOp = cast<acc::YieldOp>(
-        recipe.getInitRegion().front().getTerminator());
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
     Value allocRes = yieldOp.getOperand(0);
 
     if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
-                                    varType, allocRes, bounds))) {
+                                   varType, allocRes, bounds))) {
       recipe.erase();
       return std::nullopt;
     }
