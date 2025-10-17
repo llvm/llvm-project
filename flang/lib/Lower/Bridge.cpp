@@ -6076,7 +6076,7 @@ private:
         if (resTy != wrappedSymTy) {
           // check size of the pointed to type so we can't overflow by writing
           // double precision to a single precision allocation, etc
-          LLVM_ATTRIBUTE_UNUSED auto getBitWidth = [this](mlir::Type ty) {
+          [[maybe_unused]] auto getBitWidth = [this](mlir::Type ty) {
             // 15.6.2.6.3: differering result types should be integer, real,
             // complex or logical
             if (auto cmplx = mlir::dyn_cast_or_null<mlir::ComplexType>(ty))
