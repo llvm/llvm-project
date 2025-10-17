@@ -1321,6 +1321,14 @@ add_header_library(
 )
 
 add_header_library(
+  fma
+  HDRS
+    fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_header_library(
   ffma
   HDRS
     ffma.h
