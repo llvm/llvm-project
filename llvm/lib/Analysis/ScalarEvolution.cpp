@@ -3577,13 +3577,11 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
   }
 
   // ((-C + (C smax %x)) /u %x) evaluates to zero, for any positive constant C.
-  const APInt *NegC;
-  const SCEVConstant *VC;
-  if (match(LHS, m_scev_Add(
-                     m_scev_APInt(NegC),
-                     m_scev_SMax(m_SCEVConstant(VC), m_scev_Specific(RHS)))) &&
-      NegC->isNegative() && !NegC->isMinSignedValue() &&
-      VC->getAPInt() == -*NegC)
+  const APInt *NegC, *C;
+  if (match(LHS,
+            m_scev_Add(m_scev_APInt(NegC),
+                       m_scev_SMax(m_scev_APInt(C), m_scev_Specific(RHS)))) &&
+      NegC->isNegative() && !NegC->isMinSignedValue() && *C == -*NegC)
     return getZero(LHS->getType());
 
   // TODO: Generalize to handle any common factors.
