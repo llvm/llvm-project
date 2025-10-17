@@ -372,9 +372,6 @@ bool isBoxedRecordType(mlir::Type ty);
 /// Return true iff `ty` is a type that contains descriptor information.
 bool isTypeWithDescriptor(mlir::Type ty);
 
-/// Return true if CLASS(*)
-bool isClassStarType(mlir::Type ty);
-
 /// Return true iff `ty` is a scalar boxed record type.
 /// e.g. !fir.box<!fir.type<derived>>
 ///      !fir.box<!fir.heap<!fir.type<derived>>>
@@ -391,6 +388,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// Return true iff `ty` is the type of an unlimited polymorphic entity or
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
+
+/// Return true if CLASS(*)
+bool isClassStarType(mlir::Type ty);
 
 /// Return true iff `ty` is the type of an assumed type. In FIR,
 /// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
