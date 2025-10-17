@@ -182,7 +182,10 @@ public:
                                   Intrinsic::ID IID) const override;
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddrSpace,
-                          bool IsMaskConstant) const override;
+                          TTI::MaskKind MaskKind) const override;
+
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddrSpace,
+                         TTI::MaskKind MaskKind) const override;
 
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 

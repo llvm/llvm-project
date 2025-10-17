@@ -594,9 +594,8 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
 bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
                                       unsigned AddrSpace,
-                                      bool IsMaskConstant) const {
-
-  if (!IsMaskConstant)
+                                      TTI::MaskKind MaskKind) const {
+  if (MaskKind != TTI::MaskKind::ConstantMask)
     return false;
 
   //  We currently only support this feature for 256-bit vectors, so the
@@ -617,6 +616,17 @@ bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
     return true;
 
   return false;
+}
+
+bool NVPTXTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                     unsigned /*AddrSpace*/,
+                                     TTI::MaskKind MaskKind) const {
+  if (MaskKind != TTI::MaskKind::ConstantMask)
+    return false;
+
+  if (Alignment < DL.getTypeStoreSize(DataTy))
+    return false;
+  return true;
 }
 
 unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
