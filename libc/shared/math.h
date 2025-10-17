@@ -140,6 +140,7 @@
 #include "math/fma.h"
 #include "math/fmabf16.h"
 #include "math/fmaf.h"
+#include "math/fmaf16.h"
 #include "math/fmax.h"
 #include "math/fmaxbf16.h"
 #include "math/fmaxf.h"
