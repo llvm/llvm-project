@@ -78,7 +78,7 @@ void binary_assign_struct() {
   lsv = gsv;
 }
 
-// CIR: cir.func{{.*}} @binary_assign_struct() {
+// CIR: cir.func{{.*}} @binary_assign_struct()
 // CIR:   %[[LS:.*]] = cir.alloca ![[REC_S:.*]], !cir.ptr<![[REC_S]]>, ["ls"]
 // CIR:   %[[LSV:.*]] = cir.alloca ![[REC_SV:.*]], !cir.ptr<![[REC_SV]]>, ["lsv"]
 // CIR:   %[[GS_PTR:.*]] = cir.get_global @gs : !cir.ptr<![[REC_S]]>
@@ -87,7 +87,7 @@ void binary_assign_struct() {
 // CIR:   cir.copy %[[GSV_PTR]] to %[[LSV]] volatile : !cir.ptr<![[REC_SV]]>
 // CIR:   cir.return
 
-// LLVM: define {{.*}}void @binary_assign_struct() {
+// LLVM: define {{.*}}void @binary_assign_struct()
 // LLVM:   %[[LS_PTR:.*]] = alloca %struct.S
 // LLVM:   %[[LSV_PTR:.*]] = alloca %struct.SV
 // LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[LS_PTR]], ptr @gs, i32 8, i1 false)
