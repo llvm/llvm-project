@@ -101,7 +101,7 @@ public:
     EVT VT = EVT::getEVT(Ty);
     assert(VT.isSimple() && "Can expand only simple types");
 
-    return find(ExpandableTypes, VT.getSimpleVT()) != ExpandableTypes.end();
+    return is_contained(ExpandableTypes, VT.getSimpleVT());
   }
 
   static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
@@ -120,9 +120,8 @@ public:
   /// Return true if the pass should expand "frem" instructions of some any for
   /// the target represented by \p TLI.
   static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
-    return std::any_of(
-        ExpandableTypes.begin(), ExpandableTypes.end(),
-        [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
+    return any_of(ExpandableTypes,
+                  [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
