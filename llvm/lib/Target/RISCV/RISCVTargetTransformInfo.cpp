@@ -1589,6 +1589,17 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                CmpInst::FCMP_UNO, CostKind);
     return Cost;
   }
+  case Intrinsic::vp_load_ff: {
+    Type *DataTy = RetTy->getStructElementType(0);
+    EVT DataTypeVT = TLI->getValueType(DL, DataTy);
+    // TODO: Extend IntrinsicCostAttributes to accept Align parameter.
+    Align Alignment;
+    if (!TLI->isLegalFirstFaultLoad(DataTypeVT, Alignment))
+      return InstructionCost::getInvalid();
+
+    return getMemoryOpCost(Instruction::Load, DataTy, Alignment, 0, CostKind,
+                           {TTI::OK_AnyValue, TTI::OP_None}, nullptr);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {

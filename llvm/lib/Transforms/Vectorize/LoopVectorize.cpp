@@ -4076,7 +4076,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPReductionPHISC:
       case VPDef::VPInterleaveEVLSC:
       case VPDef::VPInterleaveSC:
-      case VPDef::VPWidenFFLoadSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
       case VPDef::VPWidenStoreEVLSC:
@@ -4116,7 +4115,23 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
       if (!Visited.insert({ScalarTy}).second)
         continue;
-      Type *WideTy = toVectorizedTy(ScalarTy, VF);
+
+      Type *WideTy;
+      if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(&R);
+          WI && ScalarTy->isStructTy()) {
+        auto *StructTy = cast<StructType>(ScalarTy);
+        SmallVector<Type *, 2> Tys;
+        for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+          Type *ElementTy = StructTy->getStructElementType(I);
+          if (!isVectorIntrinsicWithStructReturnScalarAtField(
+                  WI->getVectorIntrinsicID(), I))
+            ElementTy = toVectorizedTy(ElementTy, VF);
+          Tys.push_back(ElementTy);
+        }
+        WideTy = StructType::create(Tys);
+      } else
+        WideTy = toVectorizedTy(ScalarTy, VF);
+
       if (any_of(getContainedTypes(WideTy), WillGenerateTargetVectors))
         return true;
     }
@@ -7504,9 +7519,9 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
-VPWidenMemoryRecipe *
-VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
-                                  VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
+                                                ArrayRef<VPValue *> Operands,
+                                                VFRange &Range) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Must be called with either a load or store");
 
@@ -7564,9 +7579,21 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
-  if (Legal->getPotentiallyFaultingLoads().contains(I))
-    return new VPWidenFFLoadRecipe(*cast<LoadInst>(I), Ptr, &Plan.getVF(), Mask,
-                                   VPIRMetadata(*I, LVer), I->getDebugLoc());
+
+  if (Legal->getPotentiallyFaultingLoads().contains(I)) {
+    auto *I32Ty = IntegerType::getInt32Ty(Plan.getContext());
+    auto *RetTy = StructType::create({I->getType(), I32Ty});
+    DebugLoc DL = I->getDebugLoc();
+    if (!Mask)
+      Mask = Plan.getOrAddLiveIn(
+          ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
+    auto *FFLoad = new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_load_ff, {Ptr, Mask, &Plan.getVF()}, RetTy, DL);
+    Builder.insert(FFLoad);
+    VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, 0));
+    return new VPWidenRecipe(Instruction::ExtractValue, {FFLoad, Zero}, {}, {},
+                             DL);
+  }
 
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
@@ -8405,10 +8432,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       if (Recipe->getNumDefinedValues() == 1) {
         SingleDef->replaceAllUsesWith(Recipe->getVPSingleValue());
         Old2New[SingleDef] = Recipe->getVPSingleValue();
-      } else if (isa<VPWidenFFLoadRecipe>(Recipe)) {
-        VPValue *Data = Recipe->getVPValue(0);
-        SingleDef->replaceAllUsesWith(Data);
-        Old2New[SingleDef] = Data;
       } else {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
