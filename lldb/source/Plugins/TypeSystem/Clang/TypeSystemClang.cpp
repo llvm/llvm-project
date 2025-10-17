@@ -6858,7 +6858,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           }
         }
 
-        if (cxx_record_decl) {
+        if (cxx_record_decl && !cxx_record_decl->isAnonymousStructOrUnion()) {
           const clang::RecordDecl *parent_record_decl = cxx_record_decl;
 
           // Didn't find things easily, lets let clang do its thang...
@@ -6870,7 +6870,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                   [decl_name](const clang::CXXBaseSpecifier *specifier,
                               clang::CXXBasePath &path) {
                     CXXRecordDecl *record =
-                      specifier->getType()->getAsCXXRecordDecl();
+                        specifier->getType()->getAsCXXRecordDecl();
                     auto r = record->lookup(decl_name);
                     path.Decls = r.begin();
                     return !r.empty();
@@ -6899,8 +6899,9 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               for (clang::DeclContext::lookup_iterator I = path->Decls, E;
                    I != E; ++I) {
                 RecordChildResult result{};
-                bool success = GetIndexForRecordChild(
-                    parent_record_decl, *I, omit_empty_base_classes, true, result);
+                bool success = GetIndexForRecordChild(parent_record_decl, *I,
+                                                      omit_empty_base_classes,
+                                                      true, result);
                 if (!success) {
                   child_indexes.clear();
                   return 0;
