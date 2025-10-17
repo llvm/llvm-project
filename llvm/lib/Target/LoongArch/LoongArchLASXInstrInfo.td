@@ -2403,6 +2403,10 @@ def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),
 def : Pat<(int_loongarch_lasx_xvpickve_d_f v4f64:$xj, timm:$imm),
           (XVPICKVE_D v4f64:$xj, (to_valid_timm timm:$imm))>;
 
+// Vector floating-point conversion
+def : Pat<(v8f32 (loongarch_vfcvt_s_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
+          (XVFCVT_S_D LASX256:$xj, LASX256:$xk)>;
+
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
           (XVLD GPR:$rj, (to_valid_timm timm:$imm))>;
