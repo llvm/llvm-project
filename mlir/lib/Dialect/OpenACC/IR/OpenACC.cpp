@@ -1030,12 +1030,12 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
 //===----------------------------------------------------------------------===//
 
 /// Create and populate an init region for privatization recipes.
-/// Returns the init block on success, or nullptr on failure.
+/// Returns success if the region is populated, failure otherwise.
 /// Sets needsFree to indicate if the allocated memory requires deallocation.
-static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
-                                               Type varType, StringRef varName,
-                                               ValueRange bounds,
-                                               bool &needsFree) {
+static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
+                                      Region &initRegion, Type varType,
+                                      StringRef varName, ValueRange bounds,
+                                      bool &needsFree) {
   // Create init block with arguments: original value + bounds
   SmallVector<Type> argTypes{varType};
   SmallVector<Location> argLocs{loc};
@@ -1044,9 +1044,9 @@ static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
     argLocs.push_back(loc);
   }
 
-  auto initBlock = std::make_unique<Block>();
+  Block *initBlock = builder.createBlock(&initRegion);
   initBlock->addArguments(argTypes, argLocs);
-  builder.setInsertionPointToStart(initBlock.get());
+  builder.setInsertionPointToStart(initBlock);
 
   Value privatizedValue;
 
@@ -1060,7 +1060,7 @@ static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
     privatizedValue = mappableTy.generatePrivateInit(
         builder, loc, typedVar, varName, bounds, {}, needsFree);
     if (!privatizedValue)
-      return nullptr;
+      return failure();
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
     auto pointerLikeTy = cast<PointerLikeType>(varType);
@@ -1068,21 +1068,21 @@ static std::unique_ptr<Block> createInitRegion(OpBuilder &builder, Location loc,
     privatizedValue = pointerLikeTy.genAllocate(builder, loc, varName, varType,
                                                 blockArgVar, needsFree);
     if (!privatizedValue)
-      return nullptr;
+      return failure();
   }
 
   // Add yield operation to init block
   acc::YieldOp::create(builder, loc, privatizedValue);
 
-  return initBlock;
+  return success();
 }
 
 /// Create and populate a copy region for firstprivate recipes.
-/// Returns the copy block on success, or nullptr on failure.
+/// Returns success if the region is populated, failure otherwise.
 /// TODO: Handle MappableType - it does not yet have a copy API.
-static std::unique_ptr<Block> createCopyRegion(OpBuilder &builder, Location loc,
-                                               Type varType,
-                                               ValueRange bounds) {
+static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
+                                      Region &copyRegion, Type varType,
+                                      ValueRange bounds) {
   // Create copy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> copyArgTypes{varType, varType};
@@ -1092,16 +1092,16 @@ static std::unique_ptr<Block> createCopyRegion(OpBuilder &builder, Location loc,
     copyArgLocs.push_back(loc);
   }
 
-  auto copyBlock = std::make_unique<Block>();
+  Block *copyBlock = builder.createBlock(&copyRegion);
   copyBlock->addArguments(copyArgTypes, copyArgLocs);
-  builder.setInsertionPointToStart(copyBlock.get());
+  builder.setInsertionPointToStart(copyBlock);
 
   bool isMappable = isa<MappableType>(varType);
   bool isPointerLike = isa<PointerLikeType>(varType);
   // TODO: Handle MappableType - it does not yet have a copy API.
   // Otherwise, for now just fallback to pointer-like behavior.
   if (isMappable && !isPointerLike)
-    return nullptr;
+    return failure();
 
   // Generate copy region body based on variable type
   if (isPointerLike) {
@@ -1113,21 +1113,20 @@ static std::unique_ptr<Block> createCopyRegion(OpBuilder &builder, Location loc,
     if (!pointerLikeTy.genCopy(
             builder, loc, cast<TypedValue<PointerLikeType>>(privatizedArg),
             cast<TypedValue<PointerLikeType>>(originalArg), varType))
-      return nullptr;
+      return failure();
   }
 
   // Add terminator to copy block
   acc::TerminatorOp::create(builder, loc);
 
-  return copyBlock;
+  return success();
 }
 
 /// Create and populate a destroy region for privatization recipes.
-/// Returns the destroy block on success, or nullptr if not needed.
-static std::unique_ptr<Block> createDestroyRegion(OpBuilder &builder,
-                                                  Location loc, Type varType,
-                                                  Value allocRes,
-                                                  ValueRange bounds) {
+/// Returns success if the region is populated, failure otherwise.
+static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
+                                         Region &destroyRegion, Type varType,
+                                         Value allocRes, ValueRange bounds) {
   // Create destroy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> destroyArgTypes{varType, varType};
@@ -1137,28 +1136,25 @@ static std::unique_ptr<Block> createDestroyRegion(OpBuilder &builder,
     destroyArgLocs.push_back(loc);
   }
 
-  auto destroyBlock = std::make_unique<Block>();
+  Block *destroyBlock = builder.createBlock(&destroyRegion);
   destroyBlock->addArguments(destroyArgTypes, destroyArgLocs);
-  builder.setInsertionPointToStart(destroyBlock.get());
+  builder.setInsertionPointToStart(destroyBlock);
 
-  bool isMappable = isa<MappableType>(varType);
-  bool isPointerLike = isa<PointerLikeType>(varType);
-  // TODO: Handle MappableType - it does not yet have a deallocation API.
-  // Otherwise, for now just fallback to pointer-like behavior.
-  if (isMappable && !isPointerLike)
-    return nullptr;
-
-  assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
-  auto pointerLikeTy = cast<PointerLikeType>(varType);
-  auto privatizedArg =
+  auto varToFree =
       cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
-  // Pass allocRes to help determine the allocation type
-  if (!pointerLikeTy.genFree(builder, loc, privatizedArg, allocRes, varType))
-    return nullptr;
+  if (isa<MappableType>(varType)) {
+    auto mappableTy = cast<MappableType>(varType);
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree))
+      return failure();
+  } else {
+    assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    if (!pointerLikeTy.genFree(builder, loc, varToFree, allocRes, varType))
+      return failure();
+  }
 
   acc::TerminatorOp::create(builder, loc);
-
-  return destroyBlock;
+  return success();
 }
 
 } // namespace
@@ -1220,39 +1216,32 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   if (!isMappable && !isPointerLike)
     return std::nullopt;
 
-  // Create init and destroy blocks using shared helpers
   OpBuilder::InsertionGuard guard(builder);
 
-  // Save the original insertion point for creating the recipe operation later
-  auto originalInsertionPoint = builder.saveInsertionPoint();
-
-  bool needsFree = false;
-  auto initBlock =
-      createInitRegion(builder, loc, varType, varName, bounds, needsFree);
-  if (!initBlock)
-    return std::nullopt;
-
-  // Only create destroy region if the allocation needs deallocation
-  std::unique_ptr<Block> destroyBlock;
-  if (needsFree) {
-    // Extract the allocated value from the init block's yield operation
-    auto yieldOp = cast<acc::YieldOp>(initBlock->getTerminator());
-    Value allocRes = yieldOp.getOperand(0);
-
-    destroyBlock = createDestroyRegion(builder, loc, varType, allocRes, bounds);
-    if (!destroyBlock)
-      return std::nullopt;
-  }
-
-  // Now create the recipe operation at the original insertion point and attach
-  // the blocks
-  builder.restoreInsertionPoint(originalInsertionPoint);
+  // Create the recipe operation first so regions have proper parent context
   auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
 
-  // Move the blocks into the recipe's regions
-  recipe.getInitRegion().push_back(initBlock.release());
-  if (destroyBlock)
-    recipe.getDestroyRegion().push_back(destroyBlock.release());
+  // Populate the init region
+  bool needsFree = false;
+  if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
+                              varName, bounds, needsFree))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Only create destroy region if the allocation needs deallocation
+  if (needsFree) {
+    // Extract the allocated value from the init block's yield operation
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
+    Value allocRes = yieldOp.getOperand(0);
+
+    if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
+                                   varType, allocRes, bounds))) {
+      recipe.erase();
+      return std::nullopt;
+    }
+  }
 
   return recipe;
 }
@@ -1299,44 +1288,39 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   if (!isMappable && !isPointerLike)
     return std::nullopt;
 
-  // Create init, copy, and destroy blocks using shared helpers
   OpBuilder::InsertionGuard guard(builder);
 
-  // Save the original insertion point for creating the recipe operation later
-  auto originalInsertionPoint = builder.saveInsertionPoint();
-
-  bool needsFree = false;
-  auto initBlock =
-      createInitRegion(builder, loc, varType, varName, bounds, needsFree);
-  if (!initBlock)
-    return std::nullopt;
-
-  auto copyBlock = createCopyRegion(builder, loc, varType, bounds);
-  if (!copyBlock)
-    return std::nullopt;
-
-  // Only create destroy region if the allocation needs deallocation
-  std::unique_ptr<Block> destroyBlock;
-  if (needsFree) {
-    // Extract the allocated value from the init block's yield operation
-    auto yieldOp = cast<acc::YieldOp>(initBlock->getTerminator());
-    Value allocRes = yieldOp.getOperand(0);
-
-    destroyBlock = createDestroyRegion(builder, loc, varType, allocRes, bounds);
-    if (!destroyBlock)
-      return std::nullopt;
-  }
-
-  // Now create the recipe operation at the original insertion point and attach
-  // the blocks
-  builder.restoreInsertionPoint(originalInsertionPoint);
+  // Create the recipe operation first so regions have proper parent context
   auto recipe = FirstprivateRecipeOp::create(builder, loc, recipeName, varType);
 
-  // Move the blocks into the recipe's regions
-  recipe.getInitRegion().push_back(initBlock.release());
-  recipe.getCopyRegion().push_back(copyBlock.release());
-  if (destroyBlock)
-    recipe.getDestroyRegion().push_back(destroyBlock.release());
+  // Populate the init region
+  bool needsFree = false;
+  if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
+                              varName, bounds, needsFree))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Populate the copy region
+  if (failed(createCopyRegion(builder, loc, recipe.getCopyRegion(), varType,
+                              bounds))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Only create destroy region if the allocation needs deallocation
+  if (needsFree) {
+    // Extract the allocated value from the init block's yield operation
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
+    Value allocRes = yieldOp.getOperand(0);
+
+    if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
+                                   varType, allocRes, bounds))) {
+      recipe.erase();
+      return std::nullopt;
+    }
+  }
 
   return recipe;
 }
