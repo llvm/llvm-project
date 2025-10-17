@@ -19,11 +19,13 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
-namespace clang {
-namespace {
-bool typeContainsPointer(QualType T,
-                         llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
-                         bool &IncompleteType) {
+using namespace clang;
+using namespace infer_alloc;
+
+static bool
+typeContainsPointer(QualType T,
+                    llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
+                    bool &IncompleteType) {
   QualType CanonicalType = T.getCanonicalType();
   if (CanonicalType->isPointerType())
     return true; // base case
@@ -70,7 +72,7 @@ bool typeContainsPointer(QualType T,
 }
 
 /// Infer type from a simple sizeof expression.
-QualType inferTypeFromSizeofExpr(const Expr *E) {
+static QualType inferTypeFromSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   if (const auto *UET = dyn_cast<UnaryExprOrTypeTraitExpr>(Arg)) {
     if (UET->getKind() == UETT_SizeOf) {
@@ -96,7 +98,7 @@ QualType inferTypeFromSizeofExpr(const Expr *E) {
 ///
 ///   malloc(sizeof(HasFlexArray) + sizeof(int) * 32);  // infers 'HasFlexArray'
 ///
-QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
+static QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   // The argument is a lone sizeof expression.
   if (QualType T = inferTypeFromSizeofExpr(Arg); !T.isNull())
@@ -132,7 +134,7 @@ QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
 ///   size_t my_size = sizeof(MyType);
 ///   void *x = malloc(my_size);  // infers 'MyType'
 ///
-QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
+static QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
@@ -148,8 +150,8 @@ QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
 ///
 ///   MyType *x = (MyType *)malloc(4096);  // infers 'MyType'
 ///
-QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
-                                       const CastExpr *CastE) {
+static QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
+                                              const CastExpr *CastE) {
   if (!CastE)
     return QualType();
   QualType PtrType = CastE->getType();
@@ -157,12 +159,10 @@ QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
     return PtrType->getPointeeType();
   return QualType();
 }
-} // anonymous namespace
 
-namespace infer_alloc {
-
-QualType inferPossibleType(const CallExpr *E, const ASTContext &Ctx,
-                           const CastExpr *CastE) {
+QualType clang::infer_alloc::inferPossibleType(const CallExpr *E,
+                                               const ASTContext &Ctx,
+                                               const CastExpr *CastE) {
   QualType AllocType;
   // First check arguments.
   for (const Expr *Arg : E->arguments()) {
@@ -179,7 +179,7 @@ QualType inferPossibleType(const CallExpr *E, const ASTContext &Ctx,
 }
 
 std::optional<llvm::AllocTokenMetadata>
-getAllocTokenMetadata(QualType T, const ASTContext &Ctx) {
+clang::infer_alloc::getAllocTokenMetadata(QualType T, const ASTContext &Ctx) {
   llvm::AllocTokenMetadata ATMD;
 
   // Get unique type name.
@@ -199,6 +199,3 @@ getAllocTokenMetadata(QualType T, const ASTContext &Ctx) {
 
   return ATMD;
 }
-
-} // namespace infer_alloc
-} // namespace clang
