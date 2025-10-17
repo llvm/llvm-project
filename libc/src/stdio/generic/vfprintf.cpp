@@ -27,7 +27,7 @@ LLVM_LIBC_FUNCTION(int, vfprintf,
                                  // destruction automatically.
   auto ret_val = printf_core::vfprintf_internal(stream, format, args);
   if (ret_val.has_error()) {
-    libc_errno = printf_core::internal_error_to_errno(ret_val.error, stream);
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error);
     return -1;
   }
   if (ret_val.value > cpp::numeric_limits<int>::max()) {

@@ -118,7 +118,7 @@ private:
   size_t read_limit;
 
   bool eof;
-  int err_code;
+  bool err;
 
   // This is a convenience RAII class to lock and unlock file objects.
   class FileLock {
@@ -161,7 +161,7 @@ public:
                                   /*robust=*/false, /*pshared=*/false),
         ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
         own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err_code(0) {
+        read_limit(0), eof(false), err(false) {
     adjust_buf();
   }
 
@@ -214,8 +214,8 @@ public:
       if (prev_op == FileOp::WRITE && pos > 0) {
         auto buf_result = platform_write(this, buf, pos);
         if (buf_result.has_error() || buf_result.value < pos) {
-          err_code = buf_result.has_error() ? buf_result.error : EIO;
-          return err_code;
+          err = true;
+          return buf_result.error;
         }
       }
     }
@@ -250,21 +250,14 @@ public:
   void lock() { mutex.lock(); }
   void unlock() { mutex.unlock(); }
 
-  bool error_unlocked() const { return err_code != 0; }
+  bool error_unlocked() const { return err; }
 
   bool error() {
     FileLock l(this);
     return error_unlocked();
   }
 
-  int error_code_unlocked() const { return err_code; }
-
-  int error_code() {
-    FileLock l(this);
-    return error_code_unlocked();
-  }
-
-  void clearerr_unlocked() { err_code = 0; }
+  void clearerr_unlocked() { err = false; }
 
   void clearerr() {
     FileLock l(this);

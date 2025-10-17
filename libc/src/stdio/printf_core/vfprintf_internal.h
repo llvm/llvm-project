@@ -36,8 +36,8 @@ LIBC_INLINE void funlockfile(FILE *f) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(f)->unlock();
 }
 
-LIBC_INLINE size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
-                                   FILE *f) {
+LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
+                                         size_t nmemb, FILE *f) {
   return reinterpret_cast<LIBC_NAMESPACE::File *>(f)->write_unlocked(
       ptr, size * nmemb);
 }
@@ -48,9 +48,9 @@ LIBC_INLINE void flockfile(::FILE *f) { ::flockfile(f); }
 
 LIBC_INLINE void funlockfile(::FILE *f) { ::funlockfile(f); }
 
-LIBC_INLINE size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
-                                   ::FILE *f) {
-  return ::fwrite_unlocked(ptr, size, nmemb, f);
+LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
+                                         size_t nmemb, ::FILE *f) {
+  return {::fwrite_unlocked(ptr, size, nmemb, f), 0}; // todo err
 }
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace internal
@@ -61,10 +61,22 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   ::FILE *target_file = reinterpret_cast<::FILE *>(fp);
   // Write new_str to the target file. The logic preventing a zero-length write
   // is in the writer, so we don't check here.
-  size_t written = internal::fwrite_unlocked(new_str.data(), sizeof(char),
-                                             new_str.size(), target_file);
-  if (written != new_str.size() || internal::ferror_unlocked(target_file))
+  auto write_result = internal::fwrite_unlocked(new_str.data(), sizeof(char),
+                                                new_str.size(), target_file);
+  // Propagate actual system error in FileIOResult.
+  if (write_result.has_error())
+    return -write_result.error;
+
+  // On short write no system error is returned, so return custom error.
+  if (write_result.value != new_str.size())
+    return SHORT_WRITE_ERROR;
+
+  // Return custom error in case error wasn't set on FileIOResult for some
+  // reason (like using LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+  if (internal::ferror_unlocked(target_file)) {
     return FILE_WRITE_ERROR;
+  }
+
   return WRITE_OK;
 }
 

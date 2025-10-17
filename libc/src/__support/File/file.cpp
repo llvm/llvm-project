@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
-    err_code = EBADF;
+    err = true;
     return {0, EBADF};
   }
 
@@ -45,16 +45,16 @@ FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
     FileIOResult write_result = platform_write(this, buf, write_size);
     pos = 0; // Buffer is now empty so reset pos to the beginning.
     // If less bytes were written than expected, then an error occurred.
-    if (write_result.has_error() || write_result < write_size) {
-      err_code = write_result.has_error() ? write_result.error : EIO;
+    if (write_result < write_size) {
+      err = true;
       // No bytes from data were written, so return 0.
-      return {0, err_code};
+      return {0, write_result.error};
     }
   }
 
   FileIOResult write_result = platform_write(this, data, len);
-  if (write_result.has_error() || write_result < len)
-    err_code = write_result.has_error() ? write_result.error : EIO;
+  if (write_result < len)
+    err = true;
   return write_result;
 }
 
@@ -106,8 +106,9 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // If less bytes were written than expected, then an error occurred. Return
   // the number of bytes that have been written from |data|.
   if (buf_result.has_error() || bytes_written < write_size) {
-    err_code = buf_result.has_error() ? buf_result.error : EIO;
-    return {bytes_written <= init_pos ? 0 : bytes_written - init_pos, err_code};
+    err = true;
+    return {bytes_written <= init_pos ? 0 : bytes_written - init_pos,
+            buf_result.error};
   }
 
   // The second piece is handled basically the same as the first, although we
@@ -127,8 +128,8 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.
     if (result.has_error() || bytes_written < remainder.size()) {
-      err_code = result.has_error() ? result.error : EIO;
-      return {primary.size() + bytes_written, err_code};
+      err = true;
+      return {primary.size() + bytes_written, result.error};
     }
   }
 
@@ -165,21 +166,18 @@ FileIOResult File::write_unlocked_lbf(const uint8_t *data, size_t len) {
 
   size_t written = 0;
 
-  auto write_result = write_unlocked_nbf(primary.data(), primary.size());
-  written += write_result;
-  if (write_result.has_error() || written < primary.size()) {
-    err_code = write_result.has_error() ? write_result.error : EIO;
-    return {written, err_code};
+  written = write_unlocked_nbf(primary.data(), primary.size());
+  if (written < primary.size()) {
+    err = true;
+    return written;
   }
 
   flush_unlocked();
 
-  write_result = write_unlocked_fbf(remainder.data(), remainder.size());
-  written += write_result;
-  ;
-  if (write_result.has_error() || written < len) {
-    err_code = write_result.has_error() ? write_result.error : EIO;
-    return {written, err_code};
+  written += write_unlocked_fbf(remainder.data(), remainder.size());
+  if (written < len) {
+    err = true;
+    return written;
   }
 
   return len;
@@ -187,7 +185,7 @@ FileIOResult File::write_unlocked_lbf(const uint8_t *data, size_t len) {
 
 FileIOResult File::read_unlocked(void *data, size_t len) {
   if (!read_allowed()) {
-    err_code = EBADF;
+    err = true;
     return {0, EBADF};
   }
 
@@ -246,7 +244,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
       if (!result.has_error())
         eof = true;
       else
-        err_code = result.error;
+        err = true;
       return {available_data + fetched_size, result.error};
     }
     return len;
@@ -264,7 +262,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
     if (!result.has_error())
       eof = true;
     else
-      err_code = result.error;
+      err = true;
   }
   return {transfer_size + available_data, result.error};
 }
@@ -284,7 +282,7 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
     if (!result.has_error())
       eof = true;
     else
-      err_code = result.error;
+      err = true;
   }
   return {result + available_data, result.error};
 }
@@ -323,7 +321,7 @@ int File::ungetc_unlocked(int c) {
   }
 
   eof = false; // There is atleast one character that can be read now.
-  err_code = 0; // This operation was a success.
+  err = false; // This operation was a success.
   return c;
 }
 
@@ -333,8 +331,8 @@ ErrorOr<int> File::seek(off_t offset, int whence) {
 
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
-      err_code = buf_result.has_error() ? buf_result.error : EIO;
-      return Error(err_code);
+      err = true;
+      return Error(buf_result.error);
     }
   } else if (prev_op == FileOp::READ && whence == SEEK_CUR) {
     // More data could have been read out from the platform file than was
@@ -371,8 +369,8 @@ int File::flush_unlocked() {
   if (prev_op == FileOp::WRITE && pos > 0) {
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
-      err_code = buf_result.has_error() ? buf_result.error : EIO;
-      return err_code;
+      err = true;
+      return buf_result.error;
     }
     pos = 0;
   }

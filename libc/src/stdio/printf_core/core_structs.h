@@ -148,29 +148,24 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
 constexpr int WRITE_OK = 0;
 // These are the printf return values for when an error has occurred. They are
 // all negative, and should be distinct.
-constexpr int FILE_WRITE_ERROR = -1;
-constexpr int FILE_STATUS_ERROR = -2;
-constexpr int NULLPTR_WRITE_ERROR = -3;
-constexpr int INT_CONVERSION_ERROR = -4;
-constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
-constexpr int ALLOCATION_ERROR = -6;
+constexpr int FILE_WRITE_ERROR = -1001;
+constexpr int FILE_STATUS_ERROR = -1002;
+constexpr int NULLPTR_WRITE_ERROR = -1003;
+constexpr int INT_CONVERSION_ERROR = -1004;
+constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
+constexpr int ALLOCATION_ERROR = -1006;
+constexpr int SHORT_WRITE_ERROR = -1007;
 
-LIBC_INLINE static int internal_error_to_errno(int internal_errno,
-                                               FILE *f = nullptr) {
-#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
-  LIBC_NAMESPACE::File *file = reinterpret_cast<LIBC_NAMESPACE::File *>(f);
-#else
-  LIBC_NAMESPACE::File *file = nullptr;
-  (void)f;
-#endif
+LIBC_INLINE static int internal_error_to_errno(int internal_errno) {
+  if (internal_errno < 1001) {
+    return internal_errno;
+  }
 
   switch (-internal_errno) {
   case WRITE_OK:
     return 0;
   case FILE_WRITE_ERROR:
-    if (file == nullptr)
-      return EIO;
-    return file->error_unlocked() ? file->error_code_unlocked() : EIO;
+    return EIO;
   case FILE_STATUS_ERROR:
     return EIO;
   case NULLPTR_WRITE_ERROR:
@@ -181,6 +176,8 @@ LIBC_INLINE static int internal_error_to_errno(int internal_errno,
     return EINVAL;
   case ALLOCATION_ERROR:
     return ENOMEM;
+  case SHORT_WRITE_ERROR:
+    return EIO;
   default:
     LIBC_ASSERT(
         false &&

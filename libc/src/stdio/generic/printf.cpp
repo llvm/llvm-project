@@ -35,8 +35,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   auto ret_val = printf_core::vfprintf_internal(
       reinterpret_cast<::FILE *>(PRINTF_STDOUT), format, args);
   if (ret_val.has_error()) {
-    libc_errno = printf_core::internal_error_to_errno(
-        ret_val.error, reinterpret_cast<::FILE *>(PRINTF_STDOUT));
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error);
     return -1;
     ;
     return -1;
