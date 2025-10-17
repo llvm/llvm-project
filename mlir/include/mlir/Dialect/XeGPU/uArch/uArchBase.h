@@ -49,7 +49,7 @@ struct Instruction {
   Instruction(InstructionKind kind, InstructionScope scope)
       : instKind(kind), scope(scope) {}
 
-  virtual ~Instruction() = default;
+  ~Instruction() = default;
   // Get methods
   InstructionKind getInstructionKind() const { return instKind; }
   InstructionScope getScope() const { return scope; }
