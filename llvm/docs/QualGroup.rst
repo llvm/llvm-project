@@ -75,6 +75,16 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - capitan-davide
      - capitan_davide
      - capitan-davide
+   * - Jorge Pinto Sousa
+     - Critical Techworks
+     - sousajo-cc
+     - sousajo-cc
+     - sousajo-cc
+   * - José Rui Simões
+     - Critical Software
+     - jr-simoes
+     - jr_simoes
+     - iznogoud-zz
    * - Oscar Slotosch
      - Validas
      - slotosch
@@ -100,6 +110,11 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - YoungJunLee
      - YoungJunLee
      - IamYJLee
+   * - Zaky Hermawan
+     - No Affiliation
+     - ZakyHermawan
+     - quarkz99
+     - zakyHermawan
 
 
 Organizations are limited to three representatives within the group to maintain diversity.

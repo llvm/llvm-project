@@ -38,11 +38,6 @@ namespace pointer_union_detail {
     return std::min<int>({PointerLikeTypeTraits<Ts>::NumLowBitsAvailable...});
   }
 
-  /// Find the first type in a list of types.
-  template <typename T, typename...> struct GetFirstType {
-    using type = T;
-  };
-
   /// Provide PointerLikeTypeTraits for void* that is used by PointerUnion
   /// for the template arguments.
   template <typename ...PTs> class PointerUnionUIntTraits {
@@ -264,8 +259,7 @@ struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
 // Teach DenseMap how to use PointerUnions as keys.
 template <typename ...PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
   using Union = PointerUnion<PTs...>;
-  using FirstInfo =
-      DenseMapInfo<typename pointer_union_detail::GetFirstType<PTs...>::type>;
+  using FirstInfo = DenseMapInfo<TypeAtIndex<0, PTs...>>;
 
   static inline Union getEmptyKey() { return Union(FirstInfo::getEmptyKey()); }
 

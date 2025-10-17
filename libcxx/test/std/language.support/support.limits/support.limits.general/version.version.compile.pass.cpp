@@ -6325,8 +6325,8 @@
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++26"
 #  endif
-#  if __cpp_lib_atomic_ref != 201806L
-#    error "__cpp_lib_atomic_ref should have the value 201806L in c++26"
+#  if __cpp_lib_atomic_ref != 202411L
+#    error "__cpp_lib_atomic_ref should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
