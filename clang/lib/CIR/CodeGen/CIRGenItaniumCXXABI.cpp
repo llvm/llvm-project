@@ -1945,6 +1945,15 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   return cgf.cgm.createRuntimeFunction(FTy, "__dynamic_cast");
 }
 
+static Address emitDynamicCastToVoid(CIRGenFunction &cgf, mlir::Location loc,
+                                     QualType srcRecordTy, Address src) {
+  bool vtableUsesRelativeLayout =
+      cgf.cgm.getItaniumVTableContext().isRelativeLayout();
+  mlir::Value ptr = cgf.getBuilder().createDynCastToVoid(
+      loc, src.getPointer(), vtableUsesRelativeLayout);
+  return Address{ptr, src.getAlignment()};
+}
+
 static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     mlir::Location loc,
                                                     QualType srcRecordTy,
@@ -1979,10 +1988,8 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
   bool isCastToVoid = destRecordTy.isNull();
   assert((!isCastToVoid || !isRefCast) && "cannot cast to void reference");
 
-  if (isCastToVoid) {
-    cgm.errorNYI(loc, "emitDynamicCastToVoid");
-    return {};
-  }
+  if (isCastToVoid)
+    return emitDynamicCastToVoid(cgf, loc, srcRecordTy, src).getPointer();
 
   // If the destination is effectively final, the cast succeeds if and only
   // if the dynamic type of the pointer is exactly the destination type.
