@@ -1102,14 +1102,7 @@ Expected<AllocTokenOptions> parseAllocTokenPassOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("mode=")) {
-      auto Mode = StringSwitch<std::optional<AllocTokenMode>>(ParamName)
-                      .Case("increment", AllocTokenMode::Increment)
-                      .Case("random", AllocTokenMode::Random)
-                      .Case("typehash", AllocTokenMode::TypeHash)
-                      .Case("typehashpointersplit",
-                            AllocTokenMode::TypeHashPointerSplit)
-                      .Default(std::nullopt);
-      if (Mode)
+      if (auto Mode = getAllocTokenModeFromString(ParamName))
         Result.Mode = *Mode;
       else
         return make_error<StringError>(

@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_ALLOCTOKEN_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <optional>
 
@@ -40,6 +41,11 @@ enum class AllocTokenMode {
 inline constexpr AllocTokenMode DefaultAllocTokenMode =
     AllocTokenMode::TypeHashPointerSplit;
 
+/// Returns the AllocTokenMode from its canonical string name; if an invalid
+/// name was provided returns nullopt.
+LLVM_ABI std::optional<AllocTokenMode>
+getAllocTokenModeFromString(StringRef Name);
+
 /// Metadata about an allocation used to generate a token ID.
 struct AllocTokenMetadata {
   SmallString<64> TypeName;
@@ -53,9 +59,9 @@ struct AllocTokenMetadata {
 /// \param Metadata The metadata about the allocation.
 /// \param MaxTokens The maximum number of tokens (must not be 0)
 /// \return The calculated allocation token ID, or std::nullopt.
-std::optional<uint64_t> getAllocTokenHash(AllocTokenMode Mode,
-                                          const AllocTokenMetadata &Metadata,
-                                          uint64_t MaxTokens);
+LLVM_ABI std::optional<uint64_t>
+getAllocToken(AllocTokenMode Mode, const AllocTokenMetadata &Metadata,
+              uint64_t MaxTokens);
 
 } // end namespace llvm
 
