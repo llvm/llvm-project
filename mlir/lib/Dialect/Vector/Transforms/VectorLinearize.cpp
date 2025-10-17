@@ -827,7 +827,7 @@ struct LinearizeVectorToElements final
 /// The above becomes,
 ///
 /// ```mlir
-///   %out_1d = vector.splat %value : f32 to vector<16xf32>
+///   %out_1d = vector.broadcast %value : f32 to vector<16xf32>
 ///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
 /// ```
 struct LinearizeVectorBroadcast final
