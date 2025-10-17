@@ -1758,6 +1758,36 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
+  // Parse optional inline kind: inline(never|always|hint)
+  if (parser.parseOptionalKeyword("inline").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+
+    llvm::StringRef inlineKindStr;
+    const std::array<llvm::StringRef, cir::getMaxEnumValForInlineKind()>
+        allowedInlineKindStrs{
+            cir::stringifyInlineKind(cir::InlineKind::NoInline),
+            cir::stringifyInlineKind(cir::InlineKind::AlwaysInline),
+            cir::stringifyInlineKind(cir::InlineKind::InlineHint),
+        };
+    if (parser.parseOptionalKeyword(&inlineKindStr, allowedInlineKindStrs)
+            .failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected 'never', 'always', or 'hint'");
+
+    std::optional<InlineKind> inlineKind =
+        cir::symbolizeInlineKind(inlineKindStr);
+    if (!inlineKind)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "invalid inline kind");
+
+    state.addAttribute(getInlineKindAttrName(state.name),
+                       cir::InlineAttr::get(builder.getContext(), *inlineKind));
+
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1849,6 +1879,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
+  }
+
+  if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
+    p << " inline(" << cir::stringifyInlineKind(inlineAttr.getValue()) << ")";
   }
 
   // Print the body if this is not an external function.
