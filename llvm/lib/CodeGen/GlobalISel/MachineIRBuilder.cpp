@@ -9,6 +9,7 @@
 /// This file implements the MachineIRBuidler class.
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -173,6 +174,13 @@ MachineInstrBuilder MachineIRBuilder::buildConstantPool(const DstOp &Res,
   Res.addDefToMIB(*getMRI(), MIB);
   MIB.addConstantPoolIndex(Idx);
   return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildConstantPool(const DstOp &Res,
+                                                        const Constant *V) {
+  Align Alignment(getDataLayout().getABITypeAlign(V->getType()));
+  return buildConstantPool(
+      Res, getMF().getConstantPool()->getConstantPoolIndex(V, Alignment));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildJumpTable(const LLT PtrTy,

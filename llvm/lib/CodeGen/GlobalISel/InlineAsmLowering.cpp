@@ -13,6 +13,8 @@
 
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -454,26 +456,53 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-
-        if (!OpInfo.isIndirect) {
-          LLVM_DEBUG(dbgs()
-                     << "Cannot indirectify memory input operands yet\n");
-          return false;
-        }
-
-        assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
-
         const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
         InlineAsm::Flag OpFlags(InlineAsm::Kind::Mem, 1);
         OpFlags.setMemConstraint(ConstraintID);
         Inst.addImm(OpFlags);
-        ArrayRef<Register> SourceRegs =
-            GetOrCreateVRegs(*OpInfo.CallOperandVal);
-        assert(
-            SourceRegs.size() == 1 &&
-            "Expected the memory input to fit into a single virtual register");
-        Inst.addReg(SourceRegs[0]);
+
+        if (OpInfo.isIndirect) {
+          // already indirect
+          ArrayRef<Register> SourceRegs =
+              GetOrCreateVRegs(*OpInfo.CallOperandVal);
+          assert(SourceRegs.size() == 1 && "Expected the memory input to fit "
+                                           "into a single virtual register");
+          Inst.addReg(SourceRegs[0]);
+          break;
+        }
+
+        // Needs to be made indirect.
+        Value *OpVal = OpInfo.CallOperandVal;
+        // Constants go into the constant pool.
+        if (isa<ConstantFP>(OpVal) || isa<ConstantInt>(OpVal) ||
+            isa<ConstantVector>(OpVal) || isa<ConstantDataVector>(OpVal)) {
+          unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+          LLT AddrPtrTy =
+              LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+          auto Addr =
+              MIRBuilder.buildConstantPool(AddrPtrTy, cast<Constant>(OpVal));
+          Inst.addReg(Addr.getReg(0));
+        } else {
+          // TODO: Is using the DL instead of OpInfo fine here?
+          unsigned Bytes = DL.getTypeStoreSize(OpVal->getType());
+          Align Alignment = DL.getPrefTypeAlign(OpVal->getType());
+          int FrameIdx =
+              MF.getFrameInfo().CreateStackObject(Bytes, Alignment, false);
+
+          unsigned AddrSpace = DL.getAllocaAddrSpace();
+          LLT FramePtrTy =
+              LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+          auto Ptr = MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx).getReg(0);
+          ArrayRef<Register> SourceRegs =
+              GetOrCreateVRegs(*OpInfo.CallOperandVal);
+          assert(SourceRegs.size() == 1 && "Expected the memory input to fit "
+                                           "into a single virtual register");
+          MIRBuilder.buildStore(SourceRegs[0], Ptr,
+                                MachinePointerInfo::getFixedStack(MF, FrameIdx),
+                                Alignment);
+          Inst.addReg(Ptr);
+        }
         break;
       }
 

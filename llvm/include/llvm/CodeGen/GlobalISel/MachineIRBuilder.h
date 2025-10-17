@@ -502,6 +502,19 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildConstantPool(const DstOp &Res, unsigned Idx);
 
+  /// Build and insert \p Res = G_CONSTANT_POOL \p Idx
+  ///
+  /// G_CONSTANT_POOL materializes the address of an object in the constant
+  /// pool.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with pointer type.
+  ///
+  /// \param Idx LLVM Constant that will be inserted into the constant pool.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildConstantPool(const DstOp &Res, const Constant *V);
+
   /// Build and insert \p Res = G_PTR_ADD \p Op0, \p Op1
   ///
   /// G_PTR_ADD adds \p Op1 addressible units to the pointer specified by \p Op0,
