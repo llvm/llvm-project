@@ -2,6 +2,7 @@ struct Base {
   int b;
   struct {
     int x;
+    int y;
   };
 };
 
@@ -14,5 +15,6 @@ int main() {
   d.b = 1;
   d.x = 2;
   d.d = 3;
+  d.y = 4;
   return 0; // Set breakpoint here
 }

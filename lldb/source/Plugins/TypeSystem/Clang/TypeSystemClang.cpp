@@ -6690,9 +6690,9 @@ uint32_t TypeSystemClang::GetIndexForRecordBase(
   return UINT32_MAX;
 }
 
-uint32_t TypeSystemClang::GetIndexForRecordChild(
+bool TypeSystemClang::GetIndexForRecordChild(
     const clang::RecordDecl *record_decl, clang::NamedDecl *canonical_decl,
-    bool omit_empty_base_classes) {
+    bool omit_empty_base_classes, RecordChildResult &out) {
   uint32_t child_idx = TypeSystemClang::GetNumBaseClasses(
       llvm::dyn_cast<clang::CXXRecordDecl>(record_decl),
       omit_empty_base_classes);
@@ -6700,11 +6700,70 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
   clang::RecordDecl::field_iterator field, field_end;
   for (field = record_decl->field_begin(), field_end = record_decl->field_end();
        field != field_end; ++field, ++child_idx) {
-    if (field->getCanonicalDecl() == canonical_decl)
-      return child_idx;
+    out = RecordChildResult{};
+
+    // If finding an `IndirectFieldDecl x` from `struct { int x; ... };`
+    if (auto *IFD = llvm::dyn_cast<clang::IndirectFieldDecl>(canonical_decl)) {
+      // Only meaningful is the field is an anonymous struct/union.
+      if (!field->isAnonymousStructOrUnion())
+        continue;
+
+      // Find the anonymous aggregate record that is a direct field of
+      // `record_decl`, and the target field inside that aggregate, we need the
+      // latter to compute the correct child index to the anonymous field.
+      const clang::FieldDecl *anon_aggregate = nullptr;
+      const clang::FieldDecl *target_field_in_anon = nullptr;
+
+      for (clang::NamedDecl *ND : IFD->chain()) {
+        if (auto *FD = llvm::dyn_cast<clang::FieldDecl>(ND)) {
+          if (FD->isAnonymousStructOrUnion() &&
+              FD->getDeclContext() == record_decl)
+            anon_aggregate = FD;
+          if (!FD->isAnonymousStructOrUnion())
+            target_field_in_anon = FD;
+        }
+      }
+      if (!anon_aggregate || !target_field_in_anon)
+        continue;
+
+      // If this field is not the anonymous aggregate, skip.
+      if (field->getCanonicalDecl() != anon_aggregate->getCanonicalDecl())
+        continue;
+
+      // the child_idx now points to the anonymous aggregate.
+      out.index = child_idx;
+
+      // Compute inner slot: within the anonymous aggregate's record.
+      auto inner_rd = anon_aggregate->getType()
+                          ->getAsCXXRecordDecl()
+                          ->getDefinitionOrSelf();
+      if (!inner_rd) {
+        out.has_inner = false;
+        return true;
+      }
+
+      uint32_t inner_idx =
+          TypeSystemClang::GetNumBaseClasses(inner_rd, omit_empty_base_classes);
+
+      for (auto inner_f = inner_rd->field_begin(),
+                inner_e = inner_rd->field_end();
+           inner_f != inner_e; ++inner_f, ++inner_idx) {
+        if (inner_f->getCanonicalDecl() ==
+            target_field_in_anon->getCanonicalDecl()) {
+          out.has_inner = true;
+          out.inner_index = inner_idx;
+          return true;
+        }
+      }
+
+    } else if (field->getCanonicalDecl() == canonical_decl) {
+      out.index = child_idx;
+      out.has_inner = false;
+      return true;
+    }
   }
 
-  return UINT32_MAX;
+  return false;
 }
 
 // Look for a child member (doesn't include base classes, but it does include
@@ -6825,13 +6884,16 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               }
               for (clang::DeclContext::lookup_iterator I = path->Decls, E;
                    I != E; ++I) {
-                child_idx = GetIndexForRecordChild(
-                    parent_record_decl, *I, omit_empty_base_classes);
-                if (child_idx == UINT32_MAX) {
+                RecordChildResult result{};
+                bool success = GetIndexForRecordChild(
+                    parent_record_decl, *I, omit_empty_base_classes, result);
+                if (!success) {
                   child_indexes.clear();
                   return 0;
                 } else {
-                  child_indexes.push_back(child_idx);
+                  child_indexes.push_back(result.index);
+                  if (result.has_inner)
+                    child_indexes.push_back(result.inner_index);
                 }
               }
             }

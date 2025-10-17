@@ -31,6 +31,11 @@ class TestTypeLookupAnonBaseMember(TestBase):
         self.assertTrue(x.IsValid())
         self.assertEqual(x.GetValueAsSigned(), 2)
 
+        # y from anonymous struct (inside Base)
+        x = d.GetChildMemberWithName("y")
+        self.assertTrue(x.IsValid())
+        self.assertEqual(x.GetValueAsSigned(), 4)
+
         # d from Derived
         dd = d.GetChildMemberWithName("d")
         self.assertTrue(dd.IsValid())
