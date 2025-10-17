@@ -611,10 +611,10 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
   // Remove dead registers or mask bits.
   SmallSet<Register, 8> SeenRegs;
   for (auto &MO : CurrMI->operands()) {
-    if (MO.isUse() && CurrMI->getOpcode() == AMDGPU::PHI)
-      break;
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
+    if (MO.isUse() && CurrMI->getOpcode() == AMDGPU::PHI)
+      break;
     if (MO.isUse() && !MO.readsReg())
       continue;
     if (!UseInternalIterator && MO.isDef())
