@@ -1,4 +1,4 @@
-//===--- StaticAssertCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,8 +38,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(
           hasAnyOperatorName("&&", "=="),
           hasEitherOperand(ignoringImpCasts(stringLiteral().bind("assertMSG"))),
-          anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
-                anything()))
+          optionally(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast))))
           .bind("assertExprRoot"),
       IsAlwaysFalse);
   auto NonConstexprFunctionCall =
@@ -52,12 +51,10 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
   auto NonConstexprCode =
       expr(anyOf(NonConstexprFunctionCall, NonConstexprVariableReference));
   auto AssertCondition =
-      expr(
-          anyOf(expr(ignoringParenCasts(anyOf(
-                    AssertExprRoot, unaryOperator(hasUnaryOperand(
-                                        ignoringParenCasts(AssertExprRoot)))))),
-                anything()),
-          unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
+      expr(optionally(expr(ignoringParenCasts(anyOf(
+               AssertExprRoot, unaryOperator(hasUnaryOperand(
+                                   ignoringParenCasts(AssertExprRoot))))))),
+           unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
   auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(

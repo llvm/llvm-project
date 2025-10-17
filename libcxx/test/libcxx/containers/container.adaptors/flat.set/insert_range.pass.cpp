@@ -13,8 +13,7 @@
 
 // As an extension, libc++ flat containers support inserting a non forward range into
 // a pre-C++23 container that doesn't provide insert_range(...), since many containers
-// out there are in that situation.
-// https://github.com/llvm/llvm-project/issues/136656
+// out there are in that situation. See https://llvm.org/PR136656
 
 #include <algorithm>
 #include <cassert>
@@ -24,23 +23,33 @@
 #include <vector>
 
 #include "../flat_helpers.h"
+#include "test_iterators.h"
 #include "test_macros.h"
 
-void test() {
+constexpr bool test() {
   NotQuiteSequenceContainer<int> v;
   std::flat_set s(v);
-  std::istringstream ints("0 1 1 0");
-  auto r = std::ranges::subrange(std::istream_iterator<int>(ints), std::istream_iterator<int>()) |
-           std::views::transform([](int i) { return i * i; });
+
+  int ar[]   = {0, 1, 1, 0};
+  using Iter = cpp20_input_iterator<const int*>;
+  using Sent = sentinel_wrapper<Iter>;
+  using R    = std::ranges::subrange<Iter, Sent>;
+  auto r     = R(Iter(ar), Sent(Iter(ar + 4)));
+
   static_assert(
       ![](auto& t) { return requires { t.insert_range(t.end(), r); }; }(v),
       "This test is to test the case where the underlying container does not provide insert_range");
   s.insert_range(r);
   assert(std::ranges::equal(s, std::vector<int>{0, 1}));
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

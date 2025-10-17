@@ -46,7 +46,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -117,7 +117,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -206,7 +206,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -289,7 +289,7 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[IV_END]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[IV_END]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -374,9 +374,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:  Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.0:
-; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
-; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = logical-and vp<[[NOT1]]>, vp<[[NOT2]]>
-; CHECK-NEXT:    BLEND ir<%ysd.0> = vp<[[PHI]]> ir<%psd>/vp<[[SEL2]]>
+; CHECK-NEXT:    BLEND ir<%ysd.0> = ir<%psd> vp<[[PHI]]>/vp<[[OR1]]>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%isd>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%ysd.0>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -394,7 +392,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -479,7 +477,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[IV_END]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[IV_END]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -548,7 +546,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -616,7 +614,7 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -686,7 +684,7 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -776,7 +774,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -855,7 +853,7 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -905,7 +903,8 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
-; CHECK-NEXT:    REPLICATE store ir<%zext>, ir<%p1>
+; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-element ir<%zext>
+; CHECK-NEXT:    CLONE store vp<[[EXT]]>, ir<%p1>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:  No successors
@@ -961,8 +960,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -972,8 +971,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_P:%.*]]> = phi [ vp<[[RESUME_1]]>, middle.block ], [ ir<22>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:

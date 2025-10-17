@@ -22,11 +22,13 @@
 
 namespace llvm {
 
+class LanaiSubtarget;
+
 class LanaiInstrInfo : public LanaiGenInstrInfo {
   const LanaiRegisterInfo RegisterInfo;
 
 public:
-  LanaiInstrInfo();
+  LanaiInstrInfo(const LanaiSubtarget &STI);
 
   // getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   // such, whenever a client has an instance of instruction info, it should

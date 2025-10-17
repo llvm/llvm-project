@@ -107,7 +107,7 @@
 // LOCAL: #[[LOCALATAG:.+]] = #llvm.tbaa_tag<base_type = #[[LOCALAVAR]], access_type = #[[LOCALAVAR]], offset = 0>
 // LOCAL: #[[LOCALATTAG:.+]] = #llvm.tbaa_tag<base_type = #[[LOCALATVAR]], access_type = #[[LOCALATVAR]], offset = 0>
 
-module {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global @_QMdataEglob : !fir.array<10xf32> {
     %0 = fir.zero_bits !fir.array<10xf32>
     fir.has_value %0 : !fir.array<10xf32>
@@ -263,12 +263,12 @@ module {
     fir.store %cst to %67 : !fir.ref<f32>
     %68 = fir.array_coor %20(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real :: local(10)
-// DEFAULT-NOT: fir.store{{.*}}tbaa
+// DEFAULT: fir.store{{.*}}tbaa
 // LOCAL: fir.store{{.*}}{tbaa = [#[[LOCALTAG]]]} : !fir.ref<f32>
     fir.store %cst to %68 : !fir.ref<f32>
     %69 = fir.array_coor %33(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real, target :: localt(10)
-// DEFAULT-NOT: fir.store{{.*}}tbaa
+// DEFAULT: fir.store{{.*}}tbaa
 // LOCAL: fir.store{{.*}}{tbaa = [#[[LOCALTTAG]]]} : !fir.ref<f32>
     fir.store %cst to %69 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
@@ -278,7 +278,7 @@ module {
     %73 = fir.shape_shift %72#0, %72#1 : (index, index) -> !fir.shapeshift<1>
     %74 = fir.array_coor %71(%73) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable :: locala(:)
-// DEFAULT-NOT: fir.store{{.*}}tbaa
+// DEFAULT: fir.store{{.*}}tbaa
 // LOCAL: fir.store{{.*}}{tbaa = [#[[LOCALATAG]]]} : !fir.ref<f32>
     fir.store %cst to %74 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
@@ -288,7 +288,7 @@ module {
     %78 = fir.shape_shift %77#0, %77#1 : (index, index) -> !fir.shapeshift<1>
     %79 = fir.array_coor %76(%78) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable, target :: localat(:)
-// DEFAULT-NOT: fir.store{{.*}}tbaa
+// DEFAULT: fir.store{{.*}}tbaa
 // LOCAL: fir.store{{.*}}{tbaa = [#[[LOCALATTAG]]]} : !fir.ref<f32>
     fir.store %cst to %79 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
@@ -297,7 +297,7 @@ module {
     %82 = fir.shift %81#0 : (index) -> !fir.shift<1>
     %83 = fir.array_coor %80(%82) %c1 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // real, pointer :: localp(:)
-// DEFAULT-NOT: fir.store{{.*}}tbaa
+// DEFAULT: fir.store{{.*}}tbaa
 // LOCAL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
     fir.store %cst to %83 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa

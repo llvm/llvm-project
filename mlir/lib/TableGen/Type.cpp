@@ -12,7 +12,6 @@
 
 #include "mlir/TableGen/Type.h"
 #include "mlir/TableGen/Dialect.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/TableGen/Record.h"
 

@@ -21,7 +21,7 @@ define dso_local void @e() nounwind {
 ; CHECK-NEXT:    movl $260, %edx # encoding: [0xba,0x04,0x01,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x104
 ; CHECK-NEXT:    callq memcpy@PLT # encoding: [0xe8,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: memcpy@PLT-4, kind: FK_PCRel_4
+; CHECK-NEXT:    # fixup A - offset: 1, value: memcpy@PLT, kind: FK_PCRel_4
 ; CHECK-NEXT:    movl $32, %ecx # encoding: [0xb9,0x20,0x00,0x00,0x00]
 ; CHECK-NEXT:    movl %esp, %edi # encoding: [0x89,0xe7]
 ; CHECK-NEXT:    movl %ebx, %esi # encoding: [0x89,0xde]
@@ -29,7 +29,7 @@ define dso_local void @e() nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x8b,0x84,0x24,0x08,0x02,0x00,0x00]
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp) # encoding: [0x67,0x89,0x84,0x24,0x00,0x01,0x00,0x00]
 ; CHECK-NEXT:    callq d # encoding: [0xe8,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: d-4, kind: FK_PCRel_4
+; CHECK-NEXT:    # fixup A - offset: 1, value: d, kind: FK_PCRel_4
 ; CHECK-NEXT:    addl $528, %esp # encoding: [0x81,0xc4,0x10,0x02,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x210
 ; CHECK-NEXT:    popq %rbx # encoding: [0x5b]

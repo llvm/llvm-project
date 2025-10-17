@@ -10,6 +10,7 @@ define void @sdiv() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = sdiv <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V6i32 = sdiv <6 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i32 = sdiv <8 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = sdiv <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = sdiv <2 x i16> undef, undef
@@ -19,6 +20,7 @@ define void @sdiv() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = sdiv <32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = sdiv <2 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = sdiv <4 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V6i8 = sdiv <6 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = sdiv <8 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = sdiv <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = sdiv <32 x i8> undef, undef
@@ -48,6 +50,7 @@ define void @sdiv() {
   %V8i64 = sdiv <8 x i64> undef, undef
   %V2i32 = sdiv <2 x i32> undef, undef
   %V4i32 = sdiv <4 x i32> undef, undef
+  %V6i32 = sdiv <6 x i32> undef, undef
   %V8i32 = sdiv <8 x i32> undef, undef
   %V16i32 = sdiv <16 x i32> undef, undef
   %V2i16 = sdiv <2 x i16> undef, undef
@@ -57,6 +60,7 @@ define void @sdiv() {
   %V32i16 = sdiv <32 x i16> undef, undef
   %V2i8 = sdiv <2 x i8> undef, undef
   %V4i8 = sdiv <4 x i8> undef, undef
+  %V6i8 = sdiv <6 x i8> undef, undef
   %V8i8 = sdiv <8 x i8> undef, undef
   %V16i8 = sdiv <16 x i8> undef, undef
   %V32i8 = sdiv <32 x i8> undef, undef
@@ -89,6 +93,7 @@ define void @udiv() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = udiv <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V6i32 = udiv <6 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i32 = udiv <8 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = udiv <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = udiv <2 x i16> undef, undef
@@ -98,6 +103,7 @@ define void @udiv() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = udiv <32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = udiv <2 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = udiv <4 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V6i8 = udiv <6 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = udiv <8 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = udiv <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = udiv <32 x i8> undef, undef
@@ -127,6 +133,7 @@ define void @udiv() {
   %V8i64 = udiv <8 x i64> undef, undef
   %V2i32 = udiv <2 x i32> undef, undef
   %V4i32 = udiv <4 x i32> undef, undef
+  %V6i32 = udiv <6 x i32> undef, undef
   %V8i32 = udiv <8 x i32> undef, undef
   %V16i32 = udiv <16 x i32> undef, undef
   %V2i16 = udiv <2 x i16> undef, undef
@@ -136,6 +143,7 @@ define void @udiv() {
   %V32i16 = udiv <32 x i16> undef, undef
   %V2i8 = udiv <2 x i8> undef, undef
   %V4i8 = udiv <4 x i8> undef, undef
+  %V6i8 = udiv <6 x i8> undef, undef
   %V8i8 = udiv <8 x i8> undef, undef
   %V16i8 = udiv <16 x i8> undef, undef
   %V32i8 = udiv <32 x i8> undef, undef
@@ -479,42 +487,42 @@ define void @udiv_uniformconstpow2() {
 
 define void @sdiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'sdiv_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = sdiv <2 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = sdiv <16 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = sdiv <2 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = sdiv <4 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = sdiv <8 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = sdiv <16 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = sdiv <32 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = sdiv <2 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = sdiv <4 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = sdiv <8 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = sdiv <16 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = sdiv <32 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = sdiv <64 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i64 = sdiv <vscale x 2 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i64 = sdiv <vscale x 4 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i64 = sdiv <vscale x 8 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i32 = sdiv <vscale x 2 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i32 = sdiv <vscale x 4 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i32 = sdiv <vscale x 8 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %NV16i32 = sdiv <vscale x 16 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i16 = sdiv <vscale x 2 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i16 = sdiv <vscale x 4 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i16 = sdiv <vscale x 8 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %NV16i16 = sdiv <vscale x 16 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %NV32i16 = sdiv <vscale x 32 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i8 = sdiv <vscale x 2 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i8 = sdiv <vscale x 4 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i8 = sdiv <vscale x 8 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %NV16i8 = sdiv <vscale x 16 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %NV32i8 = sdiv <vscale x 32 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %NV64i8 = sdiv <vscale x 64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i32 = sdiv <2 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V16i32 = sdiv <16 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i16 = sdiv <2 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i16 = sdiv <4 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i16 = sdiv <8 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V16i16 = sdiv <16 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V32i16 = sdiv <32 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V2i8 = sdiv <2 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i8 = sdiv <4 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i8 = sdiv <8 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V16i8 = sdiv <16 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V32i8 = sdiv <32 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V64i8 = sdiv <64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i64 = sdiv <vscale x 2 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i64 = sdiv <vscale x 4 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i64 = sdiv <vscale x 8 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i32 = sdiv <vscale x 2 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i32 = sdiv <vscale x 4 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i32 = sdiv <vscale x 8 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %NV16i32 = sdiv <vscale x 16 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i16 = sdiv <vscale x 2 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i16 = sdiv <vscale x 4 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i16 = sdiv <vscale x 8 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %NV16i16 = sdiv <vscale x 16 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %NV32i16 = sdiv <vscale x 32 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV2i8 = sdiv <vscale x 2 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV4i8 = sdiv <vscale x 4 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV8i8 = sdiv <vscale x 8 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:4 SizeLat:4 for: %NV16i8 = sdiv <vscale x 16 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %NV32i8 = sdiv <vscale x 32 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %NV64i8 = sdiv <vscale x 64 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)

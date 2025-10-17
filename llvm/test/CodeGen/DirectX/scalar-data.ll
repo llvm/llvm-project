@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
+; RUN: opt -S -passes='dxil-data-scalarization,dxil-flatten-arrays' -mtriple=dxil-unknown-shadermodel6.5-compute %s | FileCheck %s
 
 ; Make sure we don't touch arrays without vectors and that can recurse and flatten multiple-dimension arrays of vectors
 

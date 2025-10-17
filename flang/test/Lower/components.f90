@@ -136,7 +136,7 @@ end subroutine
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0{"c"}   shape %[[VAL_3]] typeparams %[[VAL_8]] : (!fir.ref<!fir.array<10x!fir.type<_QFlhs_char_sectionTt
-! CHECK:           hlfir.assign %[[VAL_7]]#0 to %[[VAL_9]] : !fir.ref<!fir.char<1,5>>, !fir.box<!fir.array<10x!fir.char<1,5>>>
+! CHECK:           hlfir.assign %[[VAL_7]]#0 to %[[VAL_9]] : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>
 ! CHECK:           return
 ! CHECK:         }
 
@@ -163,7 +163,7 @@ end subroutine
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_10]]) typeparams %[[VAL_8]] dummy_scope %[[VAL_2]] {uniq_name = "_QFrhs_char_sectionEc"} : (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.ref<!fir.array<10x!fir.char<1,10>>>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_13:.*]] = hlfir.designate %[[VAL_5]]#0{"c"}   shape %[[VAL_4]] typeparams %[[VAL_12]] : (!fir.ref<!fir.array<10x!fir.type<_QFrhs_char_sectionTt
-! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_11]]#0 : !fir.box<!fir.array<10x!fir.char<1,10>>>, !fir.ref<!fir.array<10x!fir.char<1,10>>>
+! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_11]]#0 : !fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.ref<!fir.array<10x!fir.char<1,10>>>
 ! CHECK:           return
 ! CHECK:         }
 
@@ -192,7 +192,7 @@ end subroutine
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]] typeparams %[[VAL_12]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_14:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
 ! CHECK:           ^bb0(%[[VAL_15:.*]]: index):
-! CHECK:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_15]])  typeparams %[[VAL_9]] : (!fir.box<!fir.array<10x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
+! CHECK:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_15]])  typeparams %[[VAL_9]] : (!fir.ref<!fir.array<10x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
 ! CHECK:             %[[VAL_17:.*]] = arith.constant false
 ! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_9]] : (index) -> i64

@@ -18,10 +18,29 @@ define <vscale x 1 x i8> @masked_load_nxv1i8(ptr %a, <vscale x 1 x i1> %mask) no
 ; ZVE32-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; ZVE32-NEXT:    vle8.v v8, (a0), v0.t
 ; ZVE32-NEXT:    ret
-  %load = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr %a, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> undef)
+  %load = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr %a, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> poison)
   ret <vscale x 1 x i8> %load
 }
-declare <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x i8>)
+
+define <vscale x 1 x i8> @masked_load_passthru_nxv1i8(ptr %a, <vscale x 1 x i1> %mask) nounwind {
+; V-LABEL: masked_load_passthru_nxv1i8:
+; V:       # %bb.0:
+; V-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; V-NEXT:    vmv.v.i v8, 0
+; V-NEXT:    vle8.v v8, (a0), v0.t
+; V-NEXT:    ret
+;
+; ZVE32-LABEL: masked_load_passthru_nxv1i8:
+; ZVE32:       # %bb.0:
+; ZVE32-NEXT:    csrr a1, vlenb
+; ZVE32-NEXT:    srli a1, a1, 3
+; ZVE32-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; ZVE32-NEXT:    vmv.v.i v8, 0
+; ZVE32-NEXT:    vle8.v v8, (a0), v0.t
+; ZVE32-NEXT:    ret
+  %load = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr %a, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> zeroinitializer)
+  ret <vscale x 1 x i8> %load
+}
 
 define <vscale x 1 x i16> @masked_load_nxv1i16(ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; V-LABEL: masked_load_nxv1i16:
@@ -37,7 +56,7 @@ define <vscale x 1 x i16> @masked_load_nxv1i16(ptr %a, <vscale x 1 x i1> %mask) 
 ; ZVE32-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; ZVE32-NEXT:    vle16.v v8, (a0), v0.t
 ; ZVE32-NEXT:    ret
-  %load = call <vscale x 1 x i16> @llvm.masked.load.nxv1i16(ptr %a, i32 2, <vscale x 1 x i1> %mask, <vscale x 1 x i16> undef)
+  %load = call <vscale x 1 x i16> @llvm.masked.load.nxv1i16(ptr %a, i32 2, <vscale x 1 x i1> %mask, <vscale x 1 x i16> poison)
   ret <vscale x 1 x i16> %load
 }
 declare <vscale x 1 x i16> @llvm.masked.load.nxv1i16(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x i16>)
@@ -56,7 +75,7 @@ define <vscale x 1 x i32> @masked_load_nxv1i32(ptr %a, <vscale x 1 x i1> %mask) 
 ; ZVE32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; ZVE32-NEXT:    vle32.v v8, (a0), v0.t
 ; ZVE32-NEXT:    ret
-  %load = call <vscale x 1 x i32> @llvm.masked.load.nxv1i32(ptr %a, i32 4, <vscale x 1 x i1> %mask, <vscale x 1 x i32> undef)
+  %load = call <vscale x 1 x i32> @llvm.masked.load.nxv1i32(ptr %a, i32 4, <vscale x 1 x i1> %mask, <vscale x 1 x i32> poison)
   ret <vscale x 1 x i32> %load
 }
 declare <vscale x 1 x i32> @llvm.masked.load.nxv1i32(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x i32>)
@@ -67,7 +86,7 @@ define <vscale x 2 x i8> @masked_load_nxv2i8(ptr %a, <vscale x 2 x i1> %mask) no
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   ret <vscale x 2 x i8> %load
 }
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
@@ -78,7 +97,7 @@ define <vscale x 2 x i16> @masked_load_nxv2i16(ptr %a, <vscale x 2 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %a, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %a, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> poison)
   ret <vscale x 2 x i16> %load
 }
 declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
@@ -89,7 +108,7 @@ define <vscale x 2 x i32> @masked_load_nxv2i32(ptr %a, <vscale x 2 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %a, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %a, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> poison)
   ret <vscale x 2 x i32> %load
 }
 declare <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
@@ -100,7 +119,7 @@ define <vscale x 4 x i8> @masked_load_nxv4i8(ptr %a, <vscale x 4 x i1> %mask) no
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
   ret <vscale x 4 x i8> %load
 }
 declare <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
@@ -111,7 +130,7 @@ define <vscale x 4 x i16> @masked_load_nxv4i16(ptr %a, <vscale x 4 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %a, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i16> undef)
+  %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %a, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
   ret <vscale x 4 x i16> %load
 }
 declare <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i16>)
@@ -122,7 +141,7 @@ define <vscale x 4 x i32> @masked_load_nxv4i32(ptr %a, <vscale x 4 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison)
   ret <vscale x 4 x i32> %load
 }
 declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
@@ -133,7 +152,7 @@ define <vscale x 8 x i8> @masked_load_nxv8i8(ptr %a, <vscale x 8 x i1> %mask) no
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> undef)
+  %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> poison)
   ret <vscale x 8 x i8> %load
 }
 declare <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i8>)
@@ -144,7 +163,7 @@ define <vscale x 8 x i16> @masked_load_nxv8i16(ptr %a, <vscale x 8 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> undef)
+  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> poison)
   ret <vscale x 8 x i16> %load
 }
 declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
@@ -155,7 +174,7 @@ define <vscale x 8 x i32> @masked_load_nxv8i32(ptr %a, <vscale x 8 x i1> %mask) 
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32(ptr %a, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x i32> undef)
+  %load = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32(ptr %a, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x i32> poison)
   ret <vscale x 8 x i32> %load
 }
 declare <vscale x 8 x i32> @llvm.masked.load.nxv8i32(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i32>)
@@ -166,7 +185,7 @@ define <vscale x 16 x i8> @masked_load_nxv16i8(ptr %a, <vscale x 16 x i1> %mask)
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %a, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %a, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> poison)
   ret <vscale x 16 x i8> %load
 }
 declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
@@ -177,7 +196,7 @@ define <vscale x 16 x i16> @masked_load_nxv16i16(ptr %a, <vscale x 16 x i1> %mas
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 16 x i16> @llvm.masked.load.nxv16i16(ptr %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i16> undef)
+  %load = call <vscale x 16 x i16> @llvm.masked.load.nxv16i16(ptr %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i16> poison)
   ret <vscale x 16 x i16> %load
 }
 declare <vscale x 16 x i16> @llvm.masked.load.nxv16i16(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x i16>)
@@ -188,7 +207,7 @@ define <vscale x 16 x i32> @masked_load_nxv16i32(ptr %a, <vscale x 16 x i1> %mas
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 16 x i32> @llvm.masked.load.nxv16i32(ptr %a, i32 4, <vscale x 16 x i1> %mask, <vscale x 16 x i32> undef)
+  %load = call <vscale x 16 x i32> @llvm.masked.load.nxv16i32(ptr %a, i32 4, <vscale x 16 x i1> %mask, <vscale x 16 x i32> poison)
   ret <vscale x 16 x i32> %load
 }
 declare <vscale x 16 x i32> @llvm.masked.load.nxv16i32(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x i32>)
@@ -199,7 +218,7 @@ define <vscale x 32 x i8> @masked_load_nxv32i8(ptr %a, <vscale x 32 x i1> %mask)
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %a, i32 1, <vscale x 32 x i1> %mask, <vscale x 32 x i8> undef)
+  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %a, i32 1, <vscale x 32 x i1> %mask, <vscale x 32 x i8> poison)
   ret <vscale x 32 x i8> %load
 }
 declare <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr, i32, <vscale x 32 x i1>, <vscale x 32 x i8>)
@@ -210,7 +229,7 @@ define <vscale x 32 x i16> @masked_load_nxv32i16(ptr %a, <vscale x 32 x i1> %mas
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(ptr %a, i32 2, <vscale x 32 x i1> %mask, <vscale x 32 x i16> undef)
+  %load = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(ptr %a, i32 2, <vscale x 32 x i1> %mask, <vscale x 32 x i16> poison)
   ret <vscale x 32 x i16> %load
 }
 declare <vscale x 32 x i16> @llvm.masked.load.nxv32i16(ptr, i32, <vscale x 32 x i1>, <vscale x 32 x i16>)
@@ -221,7 +240,7 @@ define <vscale x 64 x i8> @masked_load_nxv64i8(ptr %a, <vscale x 64 x i1> %mask)
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr %a, i32 1, <vscale x 64 x i1> %mask, <vscale x 64 x i8> undef)
+  %load = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr %a, i32 1, <vscale x 64 x i1> %mask, <vscale x 64 x i8> poison)
   ret <vscale x 64 x i8> %load
 }
 declare <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr, i32, <vscale x 64 x i1>, <vscale x 64 x i8>)
@@ -230,7 +249,7 @@ define <vscale x 2 x i8> @masked_load_zero_mask(ptr %a) nounwind {
 ; CHECK-LABEL: masked_load_zero_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i8> undef)
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i8> poison)
   ret <vscale x 2 x i8> %load
 }
 

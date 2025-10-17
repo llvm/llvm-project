@@ -79,24 +79,22 @@ PipePosix &PipePosix::operator=(PipePosix &&pipe_posix) {
 
 PipePosix::~PipePosix() { Close(); }
 
-Status PipePosix::CreateNew(bool child_processes_inherit) {
+Status PipePosix::CreateNew() {
   std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
 
   Status error;
 #if PIPE2_SUPPORTED
-  if (::pipe2(m_fds, (child_processes_inherit) ? 0 : O_CLOEXEC) == 0)
+  if (::pipe2(m_fds, O_CLOEXEC) == 0)
     return error;
 #else
   if (::pipe(m_fds) == 0) {
 #ifdef FD_CLOEXEC
-    if (!child_processes_inherit) {
-      if (!SetCloexecFlag(m_fds[0]) || !SetCloexecFlag(m_fds[1])) {
-        error = Status::FromErrno();
-        CloseUnlocked();
-        return error;
-      }
+    if (!SetCloexecFlag(m_fds[0]) || !SetCloexecFlag(m_fds[1])) {
+      error = Status::FromErrno();
+      CloseUnlocked();
+      return error;
     }
 #endif
     return error;
@@ -109,7 +107,7 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
   return error;
 }
 
-Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
+Status PipePosix::CreateNew(llvm::StringRef name) {
   std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status::FromErrorString("Pipe is already opened");
@@ -121,7 +119,6 @@ Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
 }
 
 Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
-                                       bool child_process_inherit,
                                        llvm::SmallVectorImpl<char> &name) {
   llvm::SmallString<128> named_pipe_path;
   llvm::SmallString<128> pipe_spec((prefix + ".%%%%%%").str());
@@ -137,7 +134,7 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
   do {
     llvm::sys::fs::createUniquePath(tmpdir_file_spec.GetPath(), named_pipe_path,
                                     /*MakeAbsolute=*/false);
-    error = CreateNew(named_pipe_path, child_process_inherit);
+    error = CreateNew(named_pipe_path);
   } while (error.GetError() == EEXIST);
 
   if (error.Success())
@@ -145,16 +142,13 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
   return error;
 }
 
-Status PipePosix::OpenAsReader(llvm::StringRef name,
-                               bool child_process_inherit) {
+Status PipePosix::OpenAsReader(llvm::StringRef name) {
   std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
 
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status::FromErrorString("Pipe is already opened");
 
-  int flags = O_RDONLY | O_NONBLOCK;
-  if (!child_process_inherit)
-    flags |= O_CLOEXEC;
+  int flags = O_RDONLY | O_NONBLOCK | O_CLOEXEC;
 
   Status error;
   int fd = FileSystem::Instance().Open(name.str().c_str(), flags);
@@ -167,15 +161,12 @@ Status PipePosix::OpenAsReader(llvm::StringRef name,
 }
 
 llvm::Error PipePosix::OpenAsWriter(llvm::StringRef name,
-                                    bool child_process_inherit,
                                     const Timeout<std::micro> &timeout) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return llvm::createStringError("Pipe is already opened");
 
-  int flags = O_WRONLY | O_NONBLOCK;
-  if (!child_process_inherit)
-    flags |= O_CLOEXEC;
+  int flags = O_WRONLY | O_NONBLOCK | O_CLOEXEC;
 
   using namespace std::chrono;
   std::optional<time_point<steady_clock>> finish_time;

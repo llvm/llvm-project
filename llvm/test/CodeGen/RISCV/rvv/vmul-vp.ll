@@ -1206,7 +1206,7 @@ define <vscale x 8 x i64> @vmul_vv_undef_nxv8i64(<vscale x 8 x i64> %va, <vscale
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> undef, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> poison, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
 }
 
@@ -1218,7 +1218,7 @@ define <vscale x 8 x i64> @vmul_vx_undef_nxv8i64_unmasked(<vscale x 8 x i64> %va
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> undef, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> poison, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
 }
 

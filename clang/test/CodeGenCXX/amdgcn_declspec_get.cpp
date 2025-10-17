@@ -15,10 +15,10 @@ extern const A a;
 // CHECK-LABEL: define{{.*}} void @_Z4testv()
 // CHECK:  %i = alloca i32, align 4, addrspace(5)
 // CHECK:  %[[ii:.*]] = addrspacecast ptr addrspace(5) %i to ptr
-// CHECK:  call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) %i)
+// CHECK:  call void @llvm.lifetime.start.p5(ptr addrspace(5) %i)
 // CHECK:  %call = call noundef i32 @_ZN1A6_get_xEv()
 // CHECK:  store i32 %call, ptr %[[ii]]
-// CHECK:  call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) %i)
+// CHECK:  call void @llvm.lifetime.end.p5(ptr addrspace(5) %i)
 void test()
 {
   int i = a.x;

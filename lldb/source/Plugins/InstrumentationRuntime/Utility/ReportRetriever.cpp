@@ -83,7 +83,7 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
-  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+  if (auto [m, _] = GetPreferredAsanModule(process_sp->GetTarget()); m) {
     SymbolContextList sc_list;
     sc_list.Append(SymbolContext(std::move(m)));
     options.SetPreferredSymbolContexts(std::move(sc_list));

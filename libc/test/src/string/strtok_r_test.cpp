@@ -122,3 +122,20 @@ TEST(LlvmLibcStrTokReentrantTest, DelimitersShouldNotBeIncludedInToken) {
   token = LIBC_NAMESPACE::strtok_r(nullptr, "_:,_", &reserve);
   ASSERT_STREQ(token, nullptr);
 }
+
+TEST(LlvmLibcStrTokReentrantTest, SubsequentSearchesReturnNull) {
+  char src[] = "a";
+  char *reserve = nullptr;
+  char *token = LIBC_NAMESPACE::strtok_r(src, ":", &reserve);
+  ASSERT_STREQ(token, "a");
+  ASSERT_EQ(LIBC_NAMESPACE::strtok_r(nullptr, ":", &reserve), nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::strtok_r(nullptr, ":", &reserve), nullptr);
+}
+
+TEST(LlvmLibcStrTokReentrantTest, TopBitSet) {
+  char top_bit_set_str[] = "hello\x80world";
+  char *p;
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok_r(top_bit_set_str, "\x80", &p), "hello");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok_r(nullptr, "\x80", &p), "world");
+  ASSERT_EQ(LIBC_NAMESPACE::strtok_r(nullptr, "\x80", &p), nullptr);
+}

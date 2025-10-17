@@ -12,11 +12,8 @@
 
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 
 using namespace mlir;
 
@@ -63,11 +60,11 @@ SmallVector<Value> x86vector::MaskCompressOp::getIntrinsicOperands(
   if (adaptor.getSrc()) {
     src = adaptor.getSrc();
   } else if (adaptor.getConstantSrc()) {
-    src = rewriter.create<LLVM::ConstantOp>(loc, opType,
-                                            adaptor.getConstantSrcAttr());
+    src = LLVM::ConstantOp::create(rewriter, loc, opType,
+                                   adaptor.getConstantSrcAttr());
   } else {
     auto zeroAttr = rewriter.getZeroAttr(opType);
-    src = rewriter.create<LLVM::ConstantOp>(loc, opType, zeroAttr);
+    src = LLVM::ConstantOp::create(rewriter, loc, opType, zeroAttr);
   }
 
   return SmallVector<Value>{adaptor.getA(), src, adaptor.getK()};
@@ -80,7 +77,7 @@ x86vector::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
   SmallVector<Value> intrinsicOperands(operands);
   // Dot product of all elements, broadcasted to all elements.
   Value scale =
-      rewriter.create<LLVM::ConstantOp>(getLoc(), rewriter.getI8Type(), 0xff);
+      LLVM::ConstantOp::create(rewriter, getLoc(), rewriter.getI8Type(), 0xff);
   intrinsicOperands.push_back(scale);
 
   return intrinsicOperands;

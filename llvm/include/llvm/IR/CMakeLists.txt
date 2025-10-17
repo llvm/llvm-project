@@ -1,6 +1,9 @@
 set(LLVM_TARGET_DEFINITIONS Attributes.td)
 tablegen(LLVM Attributes.inc -gen-attrs)
 
+set(LLVM_TARGET_DEFINITIONS RuntimeLibcalls.td)
+tablegen(LLVM RuntimeLibcalls.inc -gen-runtime-libcalls)
+
 set(LLVM_TARGET_DEFINITIONS Intrinsics.td)
 tablegen(LLVM IntrinsicImpl.inc -gen-intrinsic-impl)
 tablegen(LLVM IntrinsicEnums.inc -gen-intrinsic-enums)

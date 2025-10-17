@@ -10,9 +10,9 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK:  i32.sub $[[BASE:[0-9]+]]=,
 ; CHECK:  local.copy $[[ARG:[0-9]+]]=, $0{{$}}
-; CHECK:  i32.const $[[A0:[0-9]+]]=, 1{{$}}
-; CHECK:  i32.and $[[A1:[0-9]+]]=, $[[ARG]], $[[A0]]{{$}}
-; CHECK:  i32.store8 8($[[BASE]]), $[[A1]]{{$}}
+; CHECK:  i32.const $push[[A0:[0-9]+]]=, 1{{$}}
+; CHECK:  i32.and $push[[A1:[0-9]+]]=, $[[ARG]], $pop[[A0]]{{$}}
+; CHECK:  i32.store8 8($[[BASE]]), $pop[[A1]]{{$}}
 
 define void @test(i8 %byte) {
   %t = alloca { i8, i8 }, align 8

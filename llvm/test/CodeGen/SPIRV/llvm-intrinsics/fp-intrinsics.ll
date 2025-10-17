@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#extinst_id:]] = OpExtInstImport "OpenCL.std"
 
@@ -337,3 +338,68 @@ entry:
 }
 
 declare float @llvm.fma.f32(float, float, float)
+
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#fracPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#integralPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK: %[[#integral:]] = OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
+; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
+; CHECK: OpFunctionEnd
+define void @TestModf(double %d, ptr addrspace(1) %frac, ptr addrspace(1) %integral) {
+entry:
+  %4 = tail call { double, double } @llvm.modf.f64(double %d)
+  %5 = extractvalue { double, double } %4, 0
+  %6 = extractvalue { double, double } %4, 1
+  store double %5, ptr addrspace(1) %frac, align 8
+  store double %6, ptr addrspace(1) %integral, align 8
+  ret void
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#fracPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#integralPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#entryBlock:]] = OpLabel
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: OpBranchConditional %[[#]] %[[#lor_lhs_falseBlock:]] %[[#if_thenBlock:]]
+; CHECK: %[[#lor_lhs_falseBlock]] = OpLabel
+; CHECK: OpBranchConditional %[[#]] %[[#if_endBlock:]] %[[#if_thenBlock]]
+; CHECK: %[[#if_thenBlock]] = OpLabel
+; CHECK: OpBranch %[[#returnBlock:]]
+; CHECK: %[[#if_endBlock]] = OpLabel
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK: %[[#integral:]] = OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
+; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
+; CHECK: OpFunctionEnd
+define dso_local void @TestModf2(double noundef %d, ptr noundef %frac, ptr noundef %integral) {
+entry:
+  %0 = load ptr, ptr %frac, align 8
+  %tobool = icmp ne ptr %0, null
+  br i1 %tobool, label %lor.lhs.false, label %if.then
+
+lor.lhs.false:
+  %1 = load ptr, ptr %integral, align 8
+  %tobool1 = icmp ne ptr %1, null
+  br i1 %tobool1, label %if.end, label %if.then
+
+if.then:
+  br label %return
+
+if.end:
+  %6 = tail call { double, double } @llvm.modf.f64(double %d)
+  %7 = extractvalue { double, double } %6, 0
+  %8 = extractvalue { double, double } %6, 1
+  store double %7, ptr %frac, align 4
+  store double %8, ptr %integral, align 4
+  br label %return
+
+return:
+  ret void
+}
+
+declare { double, double } @llvm.modf.f64(double)

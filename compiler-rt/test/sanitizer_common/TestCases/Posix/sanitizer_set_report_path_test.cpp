@@ -1,6 +1,6 @@
 // Test __sanitizer_set_report_path and __sanitizer_get_report_path:
 // RUN: %clangxx -O2 %s -o %t
-// RUN: %env HOME=%t.homedir TMPDIR=%t.tmpdir %run %t 2>&1 | FileCheck %s
+// RUN: %env HOME=%device_rundir/%t.homedir TMPDIR=%device_rundir/%t.tmpdir %run %t 2>&1 | FileCheck %s
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
