@@ -446,14 +446,10 @@ ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   if (!complete_objc_class_type_sp)
     return std::nullopt;
 
-  CompilerType complete_class(
-      complete_objc_class_type_sp->GetFullCompilerType());
-  if (complete_class.GetCompleteType()) {
-    if (is_pointer_type)
-      return complete_class.GetPointerType();
-    else
-      return complete_class;
-  }
+  if (CompilerType complete_class =
+          complete_objc_class_type_sp->GetFullCompilerType();
+      complete_class.GetCompleteType())
+    return is_pointer_type ? complete_class.GetPointerType() : complete_class;
 
   return std::nullopt;
 }

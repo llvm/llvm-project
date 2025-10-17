@@ -249,6 +249,51 @@ void ValueObject::ClearDynamicTypeInformation() {
   SetSyntheticChildren(lldb::SyntheticChildrenSP());
 }
 
+CompilerType ValueObject::LookupInModulesVendor(ConstString class_name,
+                                                Target &target) {
+  assert(class_name);
+
+  auto *persistent_state = llvm::cast<ClangPersistentVariables>(
+      target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+  if (!persistent_state)
+    return {};
+
+  auto clang_modules_decl_vendor_sp =
+      persistent_state->GetClangModulesDeclVendor();
+  if (!clang_modules_decl_vendor_sp)
+    return {};
+
+  auto types = clang_modules_decl_vendor_sp->FindTypes(
+      class_name, /*max_matches*/ UINT32_MAX);
+  if (types.empty())
+    return {};
+
+  return types.front();
+}
+
+CompilerType ValueObject::LookupInRuntime(ConstString class_name,
+                                          Process &process) {
+  auto *objc_language_runtime = ObjCLanguageRuntime::Get(process);
+  if (!objc_language_runtime)
+    return {};
+
+  auto *runtime_vendor = objc_language_runtime->GetDeclVendor();
+  if (!runtime_vendor)
+    return {};
+
+  std::vector<CompilerDecl> compiler_decls;
+  runtime_vendor->FindDecls(class_name, false, UINT32_MAX, compiler_decls);
+  if (compiler_decls.empty())
+    return {};
+
+  auto *ctx =
+      llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
+  if (!ctx)
+    return {};
+
+  return ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
+}
+
 CompilerType ValueObject::MaybeCalculateCompleteType() {
   CompilerType compiler_type(GetCompilerTypeImpl());
 
@@ -277,7 +322,6 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
     }
   }
 
-  std::vector<clang::NamedDecl *> decls;
   CompilerType class_type;
   bool is_pointer_type = false;
   if (TypeSystemClang::IsObjCObjectPointerType(compiler_type, &class_type))
@@ -291,49 +335,18 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   if (!class_name)
     return compiler_type;
 
-  // try the modules
-  if (TargetSP target_sp = GetTargetSP()) {
-    auto *persistent_state = llvm::cast<ClangPersistentVariables>(
-      target_sp->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
-    if (!persistent_state)
-      return compiler_type;
-
-    if (auto clang_modules_decl_vendor =
-            persistent_state->GetClangModulesDeclVendor()) {
-      ConstString key_cs(class_name);
-      auto types = clang_modules_decl_vendor->FindTypes(
-          key_cs, /*max_matches*/ UINT32_MAX);
-      if (!types.empty()) {
-        auto module_type = types.front();
-        m_override_type =
-            is_pointer_type ? module_type.GetPointerType() : module_type;
-      }
-
-      if (m_override_type.IsValid())
-        return m_override_type;
+  if (auto target_sp = GetTargetSP()) {
+    if (CompilerType found = LookupInModulesVendor(class_name, *target_sp)) {
+      m_override_type = is_pointer_type ? found.GetPointerType() : found;
+      return m_override_type;
     }
   }
 
-  // then try the runtime
-  if (auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-    if (auto *runtime_vendor = objc_language_runtime->GetDeclVendor()) {
-      std::vector<CompilerDecl> compiler_decls;
-      runtime_vendor->FindDecls(class_name, false, UINT32_MAX, compiler_decls);
-      if (!compiler_decls.empty()) {
-        auto *ctx =
-            llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
-        if (ctx) {
-          CompilerType runtime_type =
-              ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
-          m_override_type =
-              is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
-        }
-      }
-
-      if (m_override_type.IsValid())
-        return m_override_type;
-    }
+  if (CompilerType found = LookupInRuntime(class_name, *process_sp)) {
+    m_override_type = is_pointer_type ? found.GetPointerType() : found;
+    return m_override_type;
   }
+
   return compiler_type;
 }
 

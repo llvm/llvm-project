@@ -1104,6 +1104,9 @@ protected:
 
 private:
   virtual CompilerType MaybeCalculateCompleteType();
+  CompilerType LookupInRuntime(ConstString class_name, Process &process);
+  CompilerType LookupInModulesVendor(ConstString class_name, Target &process);
+
   void UpdateChildrenAddressType() {
     GetRoot()->DoUpdateChildrenAddressType(*this);
   }
