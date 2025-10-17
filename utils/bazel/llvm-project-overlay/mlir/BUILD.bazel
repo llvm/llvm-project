@@ -7066,6 +7066,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AMDGPUUtils",
         ":ConversionPassIncGen",
         ":DialectUtils",
         ":FuncDialect",
@@ -7079,6 +7080,7 @@ cc_library(
         ":ROCDLDialect",
         ":TransformUtils",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
