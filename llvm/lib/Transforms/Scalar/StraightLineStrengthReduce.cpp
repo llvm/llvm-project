@@ -215,20 +215,23 @@ public:
     /// Cost model: Evaluate the computational efficiency of the candidate.
     ///
     /// Efficiency levels (higher is better):
-    ///   5 - No instruction:
-    ///       [Variable] or [Const]
-    ///   4 - One instruction with one variable:
-    ///       [Variable + Const] or [Variable * Const]
-    ///   3 - One instruction with two variables:
-    ///       [Variable + Variable] or [Variable * Variable]
-    ///   2 - Two instructions with one variable:
-    ///       [Const + Const * Variable]
-    ///   1 - Two instructions with two variables:
-    ///       [Variable + Const * Variable]
-    static unsigned getComputationEfficiency(Kind CandidateKind,
-                                             const ConstantInt *Index,
-                                             const Value *Stride,
-                                             const SCEV *Base = nullptr) {
+    ///   ZeroInst (5) - [Variable] or [Const]
+    ///   OneInstOneVar (4) - [Variable + Const] or [Variable * Const]
+    ///   OneInstTwoVar (3) - [Variable + Variable] or [Variable * Variable]
+    ///   TwoInstOneVar (2) - [Const + Const * Variable]
+    ///   TwoInstTwoVar (1) - [Variable + Const * Variable]
+    enum EfficiencyLevel : unsigned {
+      Unknown = 0,
+      TwoInstTwoVar = 1,
+      TwoInstOneVar = 2,
+      OneInstTwoVar = 3,
+      OneInstOneVar = 4,
+      ZeroInst = 5
+    };
+
+    static EfficiencyLevel
+    getComputationEfficiency(Kind CandidateKind, const ConstantInt *Index,
+                             const Value *Stride, const SCEV *Base = nullptr) {
       bool IsConstantBase = false;
       bool IsZeroBase = false;
       // When evaluating the efficiency of a rewrite, if the Basis's SCEV is
@@ -243,42 +246,47 @@ public:
           IsConstantStride && cast<ConstantInt>(Stride)->isZero();
       // All constants
       if (IsConstantBase && IsConstantStride)
-        return 5;
+        return ZeroInst;
 
       // [(Base + Index) * Stride]
       if (CandidateKind == Mul) {
         if (IsZeroStride)
-          return 5;
+          return ZeroInst;
         if (Index->isZero())
-          return (IsConstantStride || IsConstantBase) ? 4 : 3;
+          return (IsConstantStride || IsConstantBase) ? OneInstOneVar
+                                                      : OneInstTwoVar;
 
         if (IsConstantBase)
-          return IsZeroBase && (Index->isOne() || Index->isMinusOne()) ? 5 : 4;
+          return IsZeroBase && (Index->isOne() || Index->isMinusOne())
+                     ? ZeroInst
+                     : OneInstOneVar;
 
         if (IsConstantStride) {
           auto *CI = cast<ConstantInt>(Stride);
-          return (CI->isOne() || CI->isMinusOne()) ? 4 : 2;
+          return (CI->isOne() || CI->isMinusOne()) ? OneInstOneVar
+                                                   : TwoInstOneVar;
         }
-        return 1;
+        return TwoInstTwoVar;
       }
 
       // Base + Index * Stride
       assert(CandidateKind == Add || CandidateKind == GEP);
       if (Index->isZero() || IsZeroStride)
-        return 5;
+        return ZeroInst;
 
       bool IsSimpleIndex = Index->isOne() || Index->isMinusOne();
 
       if (IsConstantBase)
-        return IsZeroBase ? (IsSimpleIndex ? 5 : 4) : (IsSimpleIndex ? 4 : 2);
+        return IsZeroBase ? (IsSimpleIndex ? ZeroInst : OneInstOneVar)
+                          : (IsSimpleIndex ? OneInstOneVar : TwoInstOneVar);
 
       if (IsConstantStride)
-        return IsZeroStride ? 5 : 4;
+        return IsZeroStride ? ZeroInst : OneInstOneVar;
 
       if (IsSimpleIndex)
-        return 3;
+        return OneInstTwoVar;
 
-      return 1;
+      return TwoInstTwoVar;
     }
 
     // Evaluate if the given delta is profitable to rewrite this candidate.
@@ -299,12 +307,13 @@ public:
     }
 
     // Evaluate the rewrite profit of this candidate with its Basis
-    unsigned getRewriteProfit() const {
-      return Basis ? getRewriteProfit(Delta, DeltaKind) : 0;
+    EfficiencyLevel getRewriteProfit() const {
+      return Basis ? getRewriteProfit(Delta, DeltaKind) : Unknown;
     }
 
     // Evaluate the rewrite profit of this candidate with a given delta
-    unsigned getRewriteProfit(const Value *Delta, const DKind DeltaKind) const {
+    EfficiencyLevel getRewriteProfit(const Value *Delta,
+                                     const DKind DeltaKind) const {
       switch (DeltaKind) {
       case BaseDelta: // [X + Delta]
         return getComputationEfficiency(
@@ -316,12 +325,13 @@ public:
         return getComputationEfficiency(CandidateKind, cast<ConstantInt>(Delta),
                                         Stride);
       default:
-        return 0;
+        return Unknown;
       }
     }
 
     bool isHighEfficiency() const {
-      return getComputationEfficiency(CandidateKind, Index, Stride, Base) >= 4;
+      return getComputationEfficiency(CandidateKind, Index, Stride, Base) >=
+             OneInstOneVar;
     }
 
     // Verify that this candidate has valid delta components relative to the
@@ -769,8 +779,8 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 // Z = A + 3
 // Return the delta info for C aginst the new Basis
 auto StraightLineStrengthReduce::compressPath(Candidate &C,
-                                              Candidate *Basis) const
-    -> DeltaInfo {
+  Candidate *Basis) const
+-> DeltaInfo {
   if (!Basis || !Basis->Basis || C.CandidateKind == Candidate::Mul)
     return {};
   Candidate *Root = Basis;
