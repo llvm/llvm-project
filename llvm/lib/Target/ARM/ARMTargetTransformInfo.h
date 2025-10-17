@@ -186,12 +186,12 @@ public:
 
   bool isProfitableLSRChainElement(Instruction *I) const override;
 
-  bool isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                         unsigned AddressSpace) const override;
+  bool isLegalMaskedLoad(Type *DataTy, Align Alignment, unsigned AddressSpace,
+                         TTI::MaskKind MaskKind) const override;
 
   bool isLegalMaskedStore(Type *DataTy, Align Alignment, unsigned AddressSpace,
-                          bool /*IsMaskConstant*/) const override {
-    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
+                          TTI::MaskKind MaskKind) const override {
+    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace, MaskKind);
   }
 
   bool forceScalarizeMaskedGather(VectorType *VTy,

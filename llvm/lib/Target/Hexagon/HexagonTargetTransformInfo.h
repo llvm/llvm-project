@@ -167,9 +167,9 @@ public:
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
                           unsigned AddressSpace,
-                          bool IsMaskConstant) const override;
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace) const override;
+                          TTI::MaskKind MaskKind) const override;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                         TTI::MaskKind MaskKind) const override;
 
   /// @}
 
