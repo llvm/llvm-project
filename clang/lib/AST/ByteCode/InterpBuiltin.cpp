@@ -3319,7 +3319,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call, [](const APSInt &Src) {
+        S, OpPC, Call, [](const APSInt &Src) -> APInt {
           return APInt(Src.getBitWidth(), Src.countLeadingZeros());
         });
 
@@ -3327,7 +3327,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_tzcnt_u32:
   case clang::X86::BI__builtin_ia32_tzcnt_u64:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call, [](const APSInt &Src) {
+        S, OpPC, Call, [](const APSInt &Src) -> APInt {
           return APInt(Src.getBitWidth(), Src.countTrailingZeros());
         });
 
@@ -3799,7 +3799,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_knotsi:
   case X86::BI__builtin_ia32_knotdi:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call, [](const APSInt &Src) { return ~Src; });
+        S, OpPC, Call, [](const APSInt &Src) -> APInt { return ~Src; });
 
   case X86::BI__builtin_ia32_kaddqi:
   case X86::BI__builtin_ia32_kaddhi:
