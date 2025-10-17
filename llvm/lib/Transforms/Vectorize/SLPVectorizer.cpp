@@ -2242,7 +2242,8 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                     Align Alignment, const int64_t Diff, size_t Sz) const;
+                     Align Alignment, const int64_t Diff,
+                     const size_t Sz) const;
 
   /// Return true if an array of scalar loads can be replaced with a strided
   ///  load (with constant stride).
@@ -6890,7 +6891,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
                             Align Alignment, const int64_t Diff,
-                            size_t Sz) const {
+                            const size_t Sz) const {
   if (Diff % (Sz - 1) != 0)
     return false;
 
@@ -6920,11 +6921,11 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
-    const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align CommonAlignment,
+    const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align Alignment,
     const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
     Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
-  if (!isStridedLoad(PointerOps, ScalarTy, CommonAlignment, Diff, Sz))
+  if (!isStridedLoad(PointerOps, ScalarTy, Alignment, Diff, Sz))
     return false;
 
   int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
