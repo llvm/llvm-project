@@ -1,5 +1,22 @@
 ; RUN: llc -O0 -mcpu=gfx1030 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-dwarfdump --debug-info - | FileCheck %s
 
+@GlobMutable = protected addrspace(1) global i32 0, align 4, !dbg !39
+; CHECK-LABEL: DW_AT_name ("GlobMutable")
+; CHECK-NEXT:  DW_AT_type
+; CHECK-NEXT:  DW_AT_external
+; CHECK-NEXT:  DW_AT_decl_file
+; CHECK-NEXT:  DW_AT_decl_line
+; CHECK-NEXT:  DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_global)
+; CHECK-NEXT:  DW_AT_location (DW_OP_addrx 0x0, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
+
+@GlobConst = internal addrspace(4) constant i32 0, align 4, !dbg !41
+; CHECK-LABEL: DW_AT_name ("GlobConst")
+; CHECK-NEXT:  DW_AT_type
+; CHECK-NEXT:  DW_AT_decl_file
+; CHECK-NEXT:  DW_AT_decl_line
+; CHECK-NEXT:  DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_constant)
+; CHECK-NEXT:  DW_AT_location (DW_OP_addrx 0x1, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
+
 ; CHECK-LABEL: DW_AT_name ("test_loc_single")
 define void @test_loc_single(ptr addrspace(3) %ptr) #0 !dbg !9 {
   ; Verify that the right address class attribute is attached to the variable's
@@ -122,7 +139,7 @@ attributes #0 = { "frame-pointer"="all" }
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 19.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 19.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None, globals: !38)
 !1 = !DIFile(filename: "t.cpp", directory: "/")
 !2 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !3 = !{i32 7, !"Dwarf Version", i32 5}
@@ -160,3 +177,8 @@ attributes #0 = { "frame-pointer"="all" }
 !35 = !{!36}
 !36 = !DILocalVariable(name: "not_divergent", scope: !34, file: !1, line: 1, type: !14)
 !37 = !DILocation(line: 1, column: 1, scope: !34)
+!38 = !{!39, !41}
+!39 = !DIGlobalVariableExpression(var: !40, expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)))
+!40 = distinct !DIGlobalVariable(name: "GlobMutable", linkageName: "GlobMutable", scope: !0, file: !1, line: 1, type: !15, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
+!41 = !DIGlobalVariableExpression(var: !42, expr: !DIExpression(DIOpArg(0, ptr addrspace(4)), DIOpDeref(i32)))
+!42 = distinct !DIGlobalVariable(name: "GlobConst", linkageName: "GlobConst", scope: !0, file: !1, line: 1, type: !15, isLocal: true, isDefinition: true, memorySpace: DW_MSPACE_LLVM_constant)
