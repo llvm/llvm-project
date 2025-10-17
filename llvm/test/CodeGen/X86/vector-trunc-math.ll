@@ -2110,7 +2110,7 @@ define <4 x i32> @trunc_mul_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm2, %xmm2
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [2,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
@@ -2253,13 +2253,13 @@ define <8 x i16> @trunc_mul_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 define <16 x i8> @trunc_mul_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ; SSE-LABEL: trunc_mul_const_v16i64_v16i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [2,3]
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [4,5]
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [6,7]
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [8,9]
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [10,11]
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [12,13]
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [14,15]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
 ; SSE-NEXT:    pand %xmm8, %xmm7
 ; SSE-NEXT:    pand %xmm8, %xmm6
@@ -2280,18 +2280,18 @@ define <16 x i8> @trunc_mul_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ;
 ; AVX1-LABEL: trunc_mul_const_v16i64_v16i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm4
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm4 # [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm5
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,3]
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm5 # [4,5]
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm6
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [6,7]
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm6 # [8,9]
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm7
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [10,11]
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm7 # [12,13]
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [14,15]
 ; AVX1-NEXT:    vpmovzxbq {{.*#+}} xmm8 = [255,255]
 ; AVX1-NEXT:    vpand %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vpand %xmm7, %xmm8, %xmm7
@@ -2313,10 +2313,10 @@ define <16 x i8> @trunc_mul_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_mul_const_v16i64_v16i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,2,3]
+; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [4,5,6,7]
+; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [8,9,10,11]
+; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [12,13,14,15]
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
 ; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
@@ -2335,8 +2335,8 @@ define <16 x i8> @trunc_mul_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ;
 ; AVX512F-LABEL: trunc_mul_const_v16i64_v16i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; AVX512F-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512F-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,4,5,6,7]
+; AVX512F-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [8,9,10,11,12,13,14,15]
 ; AVX512F-NEXT:    vpmovqb %zmm1, %xmm1
 ; AVX512F-NEXT:    vpmovqb %zmm0, %xmm0
 ; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2345,8 +2345,8 @@ define <16 x i8> @trunc_mul_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ;
 ; AVX512BW-LABEL: trunc_mul_const_v16i64_v16i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,4,5,6,7]
+; AVX512BW-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [8,9,10,11,12,13,14,15]
 ; AVX512BW-NEXT:    vpmovqb %zmm1, %xmm1
 ; AVX512BW-NEXT:    vpmovqb %zmm0, %xmm0
 ; AVX512BW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2371,27 +2371,27 @@ define <16 x i8> @trunc_mul_const_v16i32_v16i8(<16 x i32> %a0) nounwind {
 ; SSE-LABEL: trunc_mul_const_v16i32_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,2,3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [1,u,3,u]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [5,u,7,u]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [8,9,10,11]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [9,u,11,u]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [12,13,14,15]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
-; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [13,u,15,u]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
