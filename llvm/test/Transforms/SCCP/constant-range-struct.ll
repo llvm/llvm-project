@@ -161,7 +161,7 @@ define void @struct2_caller() {
 %"phi_type" =  type {i64, i64}
 
 ; Function Attrs: mustprogress
-define internal noundef %"phi_type" @test(i32 noundef %input) local_unnamed_addr readnone nounwind {
+define internal %"phi_type" @test(i32 %input) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br label [[COND_TRUE_I:%.*]]
 ; CHECK:       cond.true.i:
@@ -187,7 +187,7 @@ cond.end.i:
   ret %"phi_type" %retval
 }
 
-define dso_local noundef %"phi_type" @test2() {
+define %"phi_type" @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[CALL_1:%.*]] = tail call fastcc [[PHI_TYPE:%.*]] @[[TEST:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](i32 noundef 1)
 ; CHECK-NEXT:    ret [[PHI_TYPE]] { i64 1, i64 2 }

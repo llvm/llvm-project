@@ -761,7 +761,7 @@ private:
   void handleCallArguments(CallBase &CB);
   void handleExtractOfWithOverflow(ExtractValueInst &EVI,
                                    const WithOverflowInst *WO, unsigned Idx);
-  bool isInstUnderDefined(Instruction &Inst);
+  bool isInstOverDefined(Instruction &Inst);
 
 private:
   friend class InstVisitor<SCCPInstVisitor>;
@@ -1381,9 +1381,9 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
   if (PN.getNumIncomingValues() > 64)
     return (void)markOverdefined(&PN);
 
-  if (isInstUnderDefined(PN))
+  if (isInstOverDefined(PN))
     return;
-  llvm::SmallVector<unsigned> FeasibleIncomingIndices;
+  SmallVector<unsigned> FeasibleIncomingIndices;
   for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
     if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
       continue;
@@ -2146,10 +2146,10 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
   }
 }
 
-bool SCCPInstVisitor::isInstUnderDefined(Instruction &Inst) {
-  // For structure Type, we handle each member seperately.
-  // A structure object won't be considered as overDefined when
-  // there is at least one member can become constant.
+bool SCCPInstVisitor::isInstOverDefined(Instruction &Inst) {
+  // For structure Type, we handle each member separately.
+  // A structure object won't be considered as overdefined when
+  // there is at least one member that is not overdefined.
   if (StructType *STy = dyn_cast<StructType>(Inst.getType())) {
     for (unsigned i = 0, e = STy->getNumElements(); i < e; ++i) {
       if (!getStructValueState(&Inst, i).isOverdefined())
