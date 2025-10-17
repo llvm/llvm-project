@@ -349,7 +349,7 @@ genAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.restoreInsertionPoint(insertionPoint);
 
   mlir::acc::AtomicWriteOp::create(firOpBuilder, loc, lhsAddr, rhsExpr,
-                                   /*IfCond=*/mlir::Value{});
+                                   /*ifCond=*/mlir::Value{});
 }
 
 /// Used to generate atomic.update operation which is created in existing
@@ -466,7 +466,7 @@ static inline void genAtomicUpdateStatement(
   mlir::Operation *atomicUpdateOp = nullptr;
   atomicUpdateOp =
       mlir::acc::AtomicUpdateOp::create(firOpBuilder, currentLocation, lhsAddr,
-                                        /*IfCond=*/mlir::Value{});
+                                        /*ifCond=*/mlir::Value{});
 
   llvm::SmallVector<mlir::Type> varTys = {varType};
   llvm::SmallVector<mlir::Location> locs = {currentLocation};
@@ -593,7 +593,7 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
   mlir::Operation *atomicCaptureOp = nullptr;
   atomicCaptureOp =
       mlir::acc::AtomicCaptureOp::create(firOpBuilder, loc,
-                                         /*IfCond=*/mlir::Value{});
+                                         /*ifCond=*/mlir::Value{});
 
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
