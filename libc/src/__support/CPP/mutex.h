@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H
 
-#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -29,17 +28,14 @@ template <typename MutexType> class lock_guard {
 
 public:
   // Calls `m.lock()` upon resource acquisition.
-  LIBC_INLINE explicit lock_guard(LIBC_LIFETIME_BOUND MutexType &m) : mutex(m) {
-    mutex.lock();
-  }
+  explicit lock_guard(MutexType &m) : mutex(m) { mutex.lock(); }
 
   // Acquires ownership of the mutex object `m` without attempting to lock
   // it. The behavior is undefined if the current thread does not hold the
   // lock on `m`. Does not call `m.lock()` upon resource acquisition.
-  LIBC_INLINE lock_guard(LIBC_LIFETIME_BOUND MutexType &m, adopt_lock_t /* t */)
-      : mutex(m) {}
+  lock_guard(MutexType &m, adopt_lock_t /* t */) : mutex(m) {}
 
-  LIBC_INLINE ~lock_guard() { mutex.unlock(); }
+  ~lock_guard() { mutex.unlock(); }
 
   // non-copyable
   lock_guard &operator=(const lock_guard &) = delete;
