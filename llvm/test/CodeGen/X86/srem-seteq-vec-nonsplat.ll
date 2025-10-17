@@ -2335,10 +2335,10 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [34048,34048,26368,37632,21760,33024,22016,35072]
+; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [0,133,0,133,0,103,0,147,0,85,0,129,0,86,0,137]
 ; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [20224,26368,6912,30976,33024,33024,33024,12032]
+; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [0,79,0,103,0,27,0,121,0,129,0,129,0,129,0,47]
 ; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
 ; CHECK-AVX1-NEXT:    vpackuswb %xmm3, %xmm4, %xmm4
 ; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm5 # [0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0]
@@ -2369,10 +2369,10 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX1-NEXT:    vpsubb %xmm4, %xmm0, %xmm4
 ; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm6 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6 # [2304,0,10496,37632,33024,33024,21760,36096]
+; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6 # [0,9,0,0,0,41,0,147,0,129,0,129,0,85,0,141]
 ; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm6, %xmm6
 ; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm7 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7, %xmm7 # [22016,24320,37632,11008,12544,32512,16640,37632]
+; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7, %xmm7 # [0,86,0,95,0,147,0,43,0,49,0,127,0,65,0,147]
 ; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm7, %xmm7
 ; CHECK-AVX1-NEXT:    vpackuswb %xmm6, %xmm7, %xmm6
 ; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm7 # [0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0]
@@ -2417,10 +2417,10 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15],ymm2[24],ymm0[24],ymm2[25],ymm0[25],ymm2[26],ymm0[26],ymm2[27],ymm0[27],ymm2[28],ymm0[28],ymm2[29],ymm0[29],ymm2[30],ymm0[30],ymm2[31],ymm0[31]
-; CHECK-AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [34048,34048,26368,37632,21760,33024,22016,35072,2304,0,10496,37632,33024,33024,21760,36096]
+; CHECK-AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [0,133,0,133,0,103,0,147,0,85,0,129,0,86,0,137,0,9,0,0,0,41,0,147,0,129,0,129,0,85,0,141]
 ; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm3, %ymm3
 ; CHECK-AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm4 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[16],ymm0[16],ymm2[17],ymm0[17],ymm2[18],ymm0[18],ymm2[19],ymm0[19],ymm2[20],ymm0[20],ymm2[21],ymm0[21],ymm2[22],ymm0[22],ymm2[23],ymm0[23]
-; CHECK-AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4 # [20224,26368,6912,30976,33024,33024,33024,12032,22016,24320,37632,11008,12544,32512,16640,37632]
+; CHECK-AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4 # [0,79,0,103,0,27,0,121,0,129,0,129,0,129,0,47,0,86,0,95,0,147,0,43,0,49,0,127,0,65,0,147]
 ; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm4, %ymm4
 ; CHECK-AVX2-NEXT:    vpackuswb %ymm3, %ymm4, %ymm3
 ; CHECK-AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm4 # [0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0]
