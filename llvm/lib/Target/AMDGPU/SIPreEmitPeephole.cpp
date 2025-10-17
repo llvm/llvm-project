@@ -593,12 +593,12 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
     uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
-    bool IsUnpackable = !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
+    bool IsUnpackable =
+        !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
     if (Instr.isMetaInstruction())
       continue;
     if ((Instr.isTerminator()) ||
-        (TII->isNeverCoissue(Instr) &&
-         !IsUnpackable) ||
+        (TII->isNeverCoissue(Instr) && !IsUnpackable) ||
         (SIInstrInfo::modifiesModeRegister(Instr) &&
          Instr.modifiesRegister(AMDGPU::EXEC, TRI)))
       return;
