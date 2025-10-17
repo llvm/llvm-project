@@ -7,7 +7,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
   llvm.func @bar() {}
   llvm.func @baz() {}
 
-  omp.declare_reduction @add_reduction_byref_box_5xf32 : !llvm.ptr alloc {
+  omp.declare_reduction @add_reduction_byref_box_5xf32 : !llvm.ptr attributes {byref_element_type = !llvm.array<5 x f32>} alloc {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -67,9 +67,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // CHECK:     br label %[[CONT_BB:.*]]
 
 // CHECK:   [[CONT_BB]]:
-// CHECK-NEXT: %[[RED_RHS:.*]] = phi ptr [ %final.rhs, %{{.*}} ]
-// CHECK-NEXT: store ptr %[[RED_RHS]], ptr %{{.*}}, align 8
-// CHECK-NEXT: br label %.omp.reduction.done
+// CHECK-NEXT: %[[RED_RHS:.*]] = phi ptr [ %{{.*}}, %{{.*}} ]
 // CHECK: }
 
 // CHECK: define internal void @"{{.*}}$reduction$reduction_func"(ptr noundef %0, ptr noundef %1) #0 {
