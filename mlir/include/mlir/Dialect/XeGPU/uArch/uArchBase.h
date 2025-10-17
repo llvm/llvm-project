@@ -32,8 +32,11 @@ namespace uArch {
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
-  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
-        // multiply-add operation
+  DPAS,       // Dot Product Accumulate Systolic (DPAS) is a matrix
+              // multiply-add operation
+  STORE_ND,   // Subgroup-level 2D block write instruction
+  LOAD_ND,    // Subgroup-level 2D block load instruction
+  PREFETCH_ND // Subgroup-level 2D block prefetch instruction
   // @TODO: Add more instructions as needed
 };
 
@@ -48,12 +51,18 @@ struct Instruction {
 
   virtual ~Instruction() = default;
   // Get methods
-  InstructionKind getInstructionKind() { return instKind; }
-  InstructionScope getScope() { return scope; }
+  InstructionKind getInstructionKind() const { return instKind; }
+  InstructionScope getScope() const { return scope; }
   static llvm::StringRef toString(InstructionKind instKind) {
     switch (instKind) {
     case InstructionKind::DPAS:
       return "dpas";
+    case InstructionKind::STORE_ND:
+      return "store_nd";
+    case InstructionKind::LOAD_ND:
+      return "load_nd";
+    case InstructionKind::PREFETCH_ND:
+      return "prefetch_nd";
     }
     llvm_unreachable("Unknown InstructionKind");
   }
@@ -66,9 +75,9 @@ struct Instruction {
   }
 
 protected:
-  InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
-  InstructionScope scope;   // scope of the instruction (e.g., lane, subgroup,
-                            // workgroup, cluster)
+  const InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
+  const InstructionScope scope;   // scope of the instruction (e.g., lane,
+                                  // subgroup, workgroup, cluster)
   // @TODO: Add more fields as needed
 };
 
@@ -129,61 +138,37 @@ protected:
   // latency, throughput, bandwidth)
 };
 
-// A struct to represent the uArch
-// This struct is used to represent the microarchitecture of a target device.
 struct uArch {
   // Constructor
-  uArch(
-      const std::string &name, const std::string &description,
-      const std::map<RegisterFileType, RegisterFileInfo> &registerFileInfo = {},
-      const llvm::SmallVector<CacheInfo, 4> &cacheInfo = {},
-      const std::map<InstructionKind, std::shared_ptr<Instruction>>
-          &instructions = {})
-      : name(name), description(description),
-        registerFileInfo(registerFileInfo), cacheInfo(cacheInfo),
-        instructions(instructions) {}
+  uArch(StringRef name, StringRef description,
+        llvm::ArrayRef<const Instruction *> instructionRegistry)
+      : name(name), description(description) {
+    for (const Instruction *instr : instructionRegistry)
+      this->instructionRegistry[instr->getInstructionKind()] = instr;
+  }
+  virtual ~uArch() = default;
+  StringRef getName() const { return name; }
+  StringRef getDescription() const { return description; }
+  virtual int getSubgroupSize() const = 0;
+  virtual unsigned getPackedFormatBitSize() const = 0;
+  virtual unsigned getPackedFormatBitSizeGatherScatter() const = 0;
 
-  // Get methods
-  const std::string &getName() const { return name; }
-
-  const std::string &getDescription() const { return description; }
-
-  const std::map<RegisterFileType, RegisterFileInfo> &
-  getRegisterFileInfo() const {
-    return registerFileInfo;
+  const Instruction *getInstruction(InstructionKind instKind) const {
+    auto it = instructionRegistry.find(instKind);
+    assert(it != instructionRegistry.end() &&
+           "Instruction not found in registry");
+    return it->second;
   }
 
-  const llvm::SmallVector<CacheInfo, 4> &getCacheInfo() const {
-    return cacheInfo;
-  }
-
-  const std::map<InstructionKind, std::shared_ptr<Instruction>> &
-  getInstructions() const {
-    return instructions;
-  }
-
-  // Get the name of the supported instruction names for that
-  // architecture. It returns the names of the instructions added to the uArch.
-  llvm::SmallVector<StringRef, 8> getSupportedInstructionNames() const {
-    llvm::SmallVector<StringRef, 8> instructionNames;
-    for (const auto &inst : instructions) {
-      instructionNames.push_back(Instruction::toString(inst.first));
-    }
-    return instructionNames;
-  }
-
-  // Checks if an instruction is supported in this uArch
-  bool checkSupportedInstruction(InstructionKind instr) const {
-    return instructions.find(instr) != instructions.end();
+  bool isSupportedInstruction(InstructionKind instr) const {
+    return instructionRegistry.contains(instr);
   }
 
 protected:
-  std::string name; // Name of the uArch, similar to target triple
-  std::string description;
-  std::map<RegisterFileType, RegisterFileInfo> registerFileInfo;
-  llvm::SmallVector<CacheInfo, 4> cacheInfo;
-  std::map<InstructionKind, std::shared_ptr<Instruction>>
-      instructions; // set of instructions supported by the uArch
+  StringRef name;
+  StringRef description;
+  llvm::SmallDenseMap<InstructionKind, const Instruction *, 32>
+      instructionRegistry;
 };
 
 // A struct to represent shared memory information
@@ -251,9 +236,9 @@ struct MMAInstructionInterface {
                         std::pair<uint32_t, uint32_t> CShape,
                         std::pair<uint32_t, uint32_t> DShape, Type AType,
                         Type BType, Type CType, Type DType) = 0;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) = 0;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) = 0;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) const = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) const = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) const = 0;
 
   virtual ~MMAInstructionInterface() = default;
 };
