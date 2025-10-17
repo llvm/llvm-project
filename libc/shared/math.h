@@ -139,6 +139,7 @@
 #include "math/floorl.h"
 #include "math/fma.h"
 #include "math/fmabf16.h"
+#include "math/fmaf.h"
 #include "math/fmax.h"
 #include "math/fmaxbf16.h"
 #include "math/fmaxf.h"
