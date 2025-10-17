@@ -226,7 +226,7 @@ bool isLinearizableVector(VectorType type);
 ///
 /// Note: all read offsets are set to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             VectorType &vecToReadTy,
+                             const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,
                              bool useInBoundsInsteadOfMasking = false);
 

@@ -317,7 +317,8 @@ bool vector::isLinearizableVector(VectorType type) {
 }
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
-                                     Value source, VectorType &vecToReadTy,
+                                     Value source,
+                                     const VectorType &vecToReadTy,
                                      std::optional<Value> padValue,
                                      bool useInBoundsInsteadOfMasking) {
   assert(!llvm::is_contained(vecToReadTy.getScalableDims(),
@@ -361,7 +362,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
           ? memref::getMixedSizes(builder, loc, source)
           : tensor::getMixedSizes(builder, loc, source);
 
-  auto maskType = vecToReadTy.clone(builder.getI1Type());
+  auto maskType = vecToReadTy.cloneWith(/*shape=*/{}, builder.getI1Type());
   Value mask =
       vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
