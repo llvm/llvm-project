@@ -414,6 +414,18 @@ public:
     return VT.getFixedSizeInBits() >= 64; // vector 'bic'
   }
 
+  bool hasOrNot(SDValue X) const override {
+    EVT VT = X.getValueType();
+
+    if (!VT.isVector())
+      return VT == MVT::i32 || VT == MVT::i64; // scalar 'orn'
+
+    if (VT.isScalableVector())
+      return true;
+
+    return VT.getFixedSizeInBits() >= 64; // vector 'orn'
+  }
+
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
       SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
       unsigned OldShiftOpcode, unsigned NewShiftOpcode,

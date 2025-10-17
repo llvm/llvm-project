@@ -17788,6 +17788,16 @@ static SDValue PerformShiftCombine(SDNode *N,
   return SDValue();
 }
 
+bool ARMTargetLowering::hasOrNot(SDValue Y) const {
+  // We can use orns for any scalar.
+  EVT VT = Y.getValueType();
+  if (!VT.isVector())
+    return Subtarget->isThumb2() && VT == MVT::i32; // scalar 'orn'
+  if (Subtarget->hasNEON() || Subtarget->hasMVEIntegerOps())
+    return VT.getFixedSizeInBits() >= 64; // vector 'orn'
+  return false;
+}
+
 // Look for a sign/zero/fpextend extend of a larger than legal load. This can be
 // split into multiple extending loads, which are simpler to deal with than an
 // arbitrary extend. For fp extends we use an integer extending load and a VCVTL

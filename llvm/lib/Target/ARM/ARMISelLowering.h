@@ -614,6 +614,8 @@ class VectorType;
       return V.getValueType().isScalarInteger();
     }
 
+    bool hasOrNot(SDValue Y) const override;
+
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
