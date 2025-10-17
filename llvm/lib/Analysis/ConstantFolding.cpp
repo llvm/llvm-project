@@ -2177,16 +2177,13 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
     return PoisonValue::get(VT->getElementType());
 
   // TODO: Handle undef.
-  if (!isa<ConstantVector>(Op) && !isa<ConstantDataVector>(Op))
-    return nullptr;
-
-  auto *EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
+  auto *EltC = dyn_cast_or_null<ConstantInt>(Op->getAggregateElement(0U));
   if (!EltC)
     return nullptr;
 
   APInt Acc = EltC->getValue();
   for (unsigned I = 1, E = VT->getNumElements(); I != E; I++) {
-    if (!(EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(I))))
+    if (!(EltC = dyn_cast_or_null<ConstantInt>(Op->getAggregateElement(I))))
       return nullptr;
     const APInt &X = EltC->getValue();
     switch (IID) {
@@ -3059,35 +3056,25 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       Val = Val | Val << 1;
       return ConstantInt::get(Ty, Val);
     }
-
-    default:
-      return nullptr;
     }
   }
 
-  switch (IntrinsicID) {
-  default: break;
-  case Intrinsic::vector_reduce_add:
-  case Intrinsic::vector_reduce_mul:
-  case Intrinsic::vector_reduce_and:
-  case Intrinsic::vector_reduce_or:
-  case Intrinsic::vector_reduce_xor:
-  case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_umin:
-  case Intrinsic::vector_reduce_umax:
-    if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
-      return C;
-    break;
-  }
-
-  // Support ConstantVector in case we have an Undef in the top.
-  if (isa<ConstantVector>(Operands[0]) ||
-      isa<ConstantDataVector>(Operands[0]) ||
-      isa<ConstantAggregateZero>(Operands[0])) {
+  if (Operands[0]->getType()->isVectorTy()) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+      if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
+        return C;
+      break;
     case Intrinsic::x86_sse_cvtss2si:
     case Intrinsic::x86_sse_cvtss2si64:
     case Intrinsic::x86_sse2_cvtsd2si:
@@ -3116,10 +3103,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::wasm_alltrue:
       // Check each element individually
       unsigned E = cast<FixedVectorType>(Op->getType())->getNumElements();
-      for (unsigned I = 0; I != E; ++I)
-        if (Constant *Elt = Op->getAggregateElement(I))
-          if (Elt->isZeroValue())
-            return ConstantInt::get(Ty, 0);
+      for (unsigned I = 0; I != E; ++I) {
+        Constant *Elt = Op->getAggregateElement(I);
+        // Return false as soon as we find a non-true element.
+        if (Elt && Elt->isZeroValue())
+          return ConstantInt::get(Ty, 0);
+        // Bail as soon as we find an element we cannot prove to be true.
+        if (!Elt || !isa<ConstantInt>(Elt))
+          return nullptr;
+      }
 
       return ConstantInt::get(Ty, 1);
     }
