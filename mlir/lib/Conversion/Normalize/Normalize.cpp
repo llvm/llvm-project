@@ -34,12 +34,14 @@ using namespace mlir;
 #define DEBUG_TYPE "normalize"
 
 namespace {
+/// NormalizePass aims to transform MLIR into it's normal form
 struct NormalizePass : public impl::NormalizeBase<NormalizePass> {
   NormalizePass() = default;
 
   void runOnOperation() override;
 
 private:
+  // Random constant for hashing, so the state isn't zero.
   const uint64_t MagicHashConstant = 0x6acaa36bef8325c5ULL;
   void
   collectOutputOperations(Block &block,
@@ -49,7 +51,7 @@ private:
   void reorderOperation(Operation *used, Operation *user,
                         llvm::SmallPtrSet<const Operation *, 32> &visited);
   void renameOperations(const SmallVector<Operation *, 16> &Outputs);
-  void RenameOperation(Operation *op,
+  void renameOperation(Operation *op,
                        SmallPtrSet<const Operation *, 32> &visited);
   bool isInitialOperation(Operation *const op) const noexcept;
   void
@@ -62,12 +64,13 @@ private:
   llvm::SetVector<int>
   getOutputFootprint(Operation *op,
                      llvm::SmallPtrSet<const Operation *, 32> &visited) const;
-  void foldOperation(Operation *op);
+  void appendRenamedOperands(Operation *op, SmallString<512> &opName);
   void reorderOperationOperandsByName(Operation *op);
   OpPrintingFlags flags{};
 };
 } // namespace
 
+/// Entry method to the NormalizePass
 void NormalizePass::runOnOperation() {
   flags.printNameLocAsPrefix(true);
 
@@ -90,10 +93,13 @@ void NormalizePass::renameOperations(
   llvm::SmallPtrSet<const Operation *, 32> visited;
 
   for (auto *op : Outputs)
-    RenameOperation(op, visited);
+    renameOperation(op, visited);
 }
 
-void NormalizePass::RenameOperation(
+/// Renames operations graphically (recursive) in accordance with the
+/// def-use tree, starting from the initial operations (defs), finishing at
+/// the output (top-most user) operations.
+void NormalizePass::renameOperation(
     Operation *op, SmallPtrSet<const Operation *, 32> &visited) {
   if (!visited.count(op)) {
     visited.insert(op);
@@ -103,15 +109,19 @@ void NormalizePass::RenameOperation(
     } else {
       nameAsRegularOperation(op, visited);
     }
-    foldOperation(op);
-    reorderOperationOperandsByName(op);
+    if (op->hasTrait<OpTrait::IsCommutative>())
+      reorderOperationOperandsByName(op);
   }
 }
 
+/// Helper method checking whether a given operation has users and only
+/// immediate operands.
 bool NormalizePass::isInitialOperation(Operation *const op) const noexcept {
   return !op->use_empty() and hasOnlyImmediateOperands(op);
 }
 
+/// Helper method checking whether all operands of a given operation has a
+/// ConstantLike OpTrait
 bool NormalizePass::hasOnlyImmediateOperands(
     Operation *const op) const noexcept {
   for (Value operand : op->getOperands())
@@ -155,12 +165,21 @@ std::string inline split(std::string_view str, const char &delimiter,
   return nullptr;
 }
 
+/// Names operation following the scheme:
+/// vl00000Callee$Operands$
+///
+/// Where 00000 is a hash calculated considering operation's opcode and output
+/// footprint. Callee's name is only included when operations's type is
+/// CallOp. If the operation has operands, the renaming is further handled
+/// in appendRenamedOperands, otherwise if it's a call operation with no
+/// arguments, void is appended, else a hash of the definition of the operation
+/// is appended.
 void NormalizePass::nameAsInitialOperation(
     Operation *op, llvm::SmallPtrSet<const Operation *, 32> &visited) {
 
   for (Value operand : op->getOperands())
     if (Operation *defOp = operand.getDefiningOp())
-      RenameOperation(defOp, visited);
+      renameOperation(defOp, visited);
 
   uint64_t Hash = MagicHashConstant;
 
@@ -173,7 +192,7 @@ void NormalizePass::nameAsInitialOperation(
   for (const auto &Output : OutputFootprint)
     Hash = llvm::hashing::detail::hash_16_bytes(Hash, Output);
 
-  std::string Name{""};
+  SmallString<512> Name;
   Name.append("vl" + std::to_string(Hash).substr(0, 5));
 
   if (auto call = dyn_cast<func::CallOp>(op)) {
@@ -194,20 +213,31 @@ void NormalizePass::nameAsInitialOperation(
       Name.append(hash);
     }
     Name.append("$");
+
+    OpBuilder b(op->getContext());
+    StringAttr sat = b.getStringAttr(Name);
+    Location newLoc = NameLoc::get(sat, op->getLoc());
+    op->setLoc(newLoc);
+
+    return;
   }
 
-  OpBuilder b(op->getContext());
-  StringAttr sat = b.getStringAttr(Name);
-  Location newLoc = NameLoc::get(sat, op->getLoc());
-  op->setLoc(newLoc);
+  appendRenamedOperands(op, Name);
 }
 
+/// Names operation following the scheme:
+/// op00000Callee$Operands$
+///
+/// Where 00000 is a hash calculated considering operation's opcode and its
+/// operands opcode. Callee's name is only included when operations's type is
+/// CallOp. A regular operation must have operands, thus the renaming is further
+/// handled in appendRenamedOperands.
 void NormalizePass::nameAsRegularOperation(
     Operation *op, llvm::SmallPtrSet<const Operation *, 32> &visited) {
 
   for (Value operand : op->getOperands())
     if (Operation *defOp = operand.getDefiningOp())
-      RenameOperation(defOp, visited);
+      renameOperation(defOp, visited);
 
   uint64_t Hash = MagicHashConstant;
 
@@ -234,10 +264,7 @@ void NormalizePass::nameAsRegularOperation(
     Name.append(callee.str());
   }
 
-  OpBuilder b(op->getContext());
-  StringAttr sat = b.getStringAttr(Name);
-  Location newLoc = NameLoc::get(sat, op->getLoc());
-  op->setLoc(newLoc);
+  appendRenamedOperands(op, Name);
 }
 
 bool inline starts_with(std::string_view base,
@@ -246,17 +273,15 @@ bool inline starts_with(std::string_view base,
          std::equal(check.begin(), check.end(), base.begin());
 }
 
-void NormalizePass::foldOperation(Operation *op) {
-  if (isOutput(*op) || op->getNumOperands() == 0)
-    return;
-
-  std::string TextRepresentation;
-  AsmState state(op, flags);
-  llvm::raw_string_ostream Stream(TextRepresentation);
-  op->print(Stream, state);
-
-  auto opName = split(Stream.str(), '=', 0);
-  if (!starts_with(opName, "%op") && !starts_with(opName, "%vl"))
+/// This function serves a dual purpose of appending the operands name in the
+/// operation while at the same time shortening it. Because of the recursive
+/// def-use chain traversal, the operands should already have been renamed and
+/// if they were an initial / regular operation, we truncate them by taking the
+/// first 7 characters of the renamed operand. The operand could also have been
+/// a block/function argument which is handled separately.
+void NormalizePass::appendRenamedOperands(Operation *op,
+                                          SmallString<512> &Name) {
+  if (op->getNumOperands() == 0)
     return;
 
   SmallVector<std::string, 4> Operands;
@@ -296,9 +321,6 @@ void NormalizePass::foldOperation(Operation *op) {
   if (op->hasTrait<OpTrait::IsCommutative>())
     llvm::sort(Operands.begin(), Operands.end());
 
-  SmallString<512> Name;
-  Name.append(opName.substr(1, 7));
-
   Name.append("$");
   for (size_t i = 0, size_ = Operands.size(); i < size_; ++i) {
     Name.append(Operands[i]);
@@ -309,11 +331,12 @@ void NormalizePass::foldOperation(Operation *op) {
   Name.append("$");
 
   OpBuilder b(op->getContext());
-  StringAttr sat = b.getStringAttr(Name);
-  Location newLoc = NameLoc::get(sat, op->getLoc());
+  Location newLoc = NameLoc::get(b.getStringAttr(Name), op->getLoc());
   op->setLoc(newLoc);
 }
 
+/// Reorders operation's operands alphabetically. This method assumes
+/// that passed operation is commutative.
 void NormalizePass::reorderOperationOperandsByName(Operation *op) {
   if (op->getNumOperands() == 0)
     return;
@@ -339,6 +362,8 @@ void NormalizePass::reorderOperationOperandsByName(Operation *op) {
   }
 }
 
+/// Reorders operations by walking up the tree from each operand of an output
+/// operation and reducing the def-use distance.
 void NormalizePass::reorderOperations(
     const SmallVector<Operation *, 16> &Outputs) {
   llvm::SmallPtrSet<const Operation *, 32> visited;
@@ -375,6 +400,13 @@ void NormalizePass::collectOutputOperations(
       Outputs.emplace_back(&innerOp);
 }
 
+/// The following Operations are termed as output:
+///  - Terminator operations are outputs
+///  - Any operation that implements MemoryEffectOpInterface and reports at
+///  least
+///    one MemoryEffects::Write effect is an output
+///  - func::CallOp is treated as an output (calls are conservatively assumed to
+///    possibly produce side effects).
 bool NormalizePass::isOutput(Operation &op) const noexcept {
   if (op.hasTrait<OpTrait::IsTerminator>())
     return true;
@@ -393,6 +425,9 @@ bool NormalizePass::isOutput(Operation &op) const noexcept {
   return false;
 }
 
+/// Helper method returning indices (distance from the beginning of the basic
+/// block) of output operations using the given operation. Walks down the
+/// def-use tree recursively
 llvm::SetVector<int> NormalizePass::getOutputFootprint(
     Operation *op, llvm::SmallPtrSet<const Operation *, 32> &visited) const {
   llvm::SetVector<int> Outputs;
