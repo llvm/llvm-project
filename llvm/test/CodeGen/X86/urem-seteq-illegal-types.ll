@@ -167,7 +167,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; SSE41-NEXT:    pinsrd $1, %esi, %xmm0
 ; SSE41-NEXT:    pinsrd $2, %edx, %xmm0
 ; SSE41-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [683,1463,819,u]
 ; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm1 = [2047,2047,2047,2047]
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm2
@@ -193,7 +193,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX1-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [683,1463,819,u]
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2047,2047,2047,2047]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vpsrld $1, %xmm2, %xmm2
@@ -218,7 +218,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX2-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [683,1463,819,u]
 ; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2047,2047,2047,2047]
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -240,7 +240,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX512VL-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [683,1463,819,u]
 ; AVX512VL-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2047,2047,2047,2047]
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm0, %xmm0

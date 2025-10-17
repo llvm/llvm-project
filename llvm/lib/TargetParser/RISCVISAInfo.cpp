@@ -887,7 +887,7 @@ void RISCVISAInfo::updateImplication() {
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {
-    {"b"},     {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},
+    {"a"},     {"b"},     {"zk"},   {"zkn"},   {"zks"},   {"zvkn"},
     {"zvknc"}, {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
 };
 
