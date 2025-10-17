@@ -1,6 +1,10 @@
 ; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not "DW_AT_language"
 
-; CHECK: DW_AT_language_name (DW_LNAME_ObjC_plus_plus)
+; CHECK:     DW_AT_language_name (DW_LNAME_ObjC_plus_plus)
+; CHECK:     DW_AT_language_name (DW_LNAME_C_plus_plus)
+; CHECK:     DW_AT_language_version (201100)
+; CHECK:     DW_AT_language_name (DW_LNAME_Rust)
+; CHECK-NOT: DW_AT_language_version
 
 @x = global i32 0, align 4, !dbg !0
 
@@ -9,7 +13,7 @@ define void @_Z4funcv() !dbg !8 {
   ret void, !dbg !11
 }
 
-!llvm.dbg.cu = !{!2}
+!llvm.dbg.cu = !{!2, !12, !13}
 !llvm.module.flags = !{!6, !7}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -24,3 +28,5 @@ define void @_Z4funcv() !dbg !8 {
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 !11 = !DILocation(line: 2, column: 14, scope: !8)
+!12 = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 201100, file: !3, producer: "handwritten", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!13 = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_Rust, sourceLanguageVersion: 0, file: !3, producer: "handwritten", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")

@@ -127,6 +127,14 @@ public:
   cir::BoolType getBoolTy() { return cir::BoolType::get(getContext()); }
   cir::VoidType getVoidTy() { return cir::VoidType::get(getContext()); }
 
+  cir::IntType getUIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, false);
+  }
+
+  cir::IntType getSIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, true);
+  }
+
   cir::PointerType getPointerTo(mlir::Type ty) {
     return cir::PointerType::get(ty);
   }
