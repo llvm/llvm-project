@@ -21,57 +21,6 @@ using namespace clang;
 using namespace ento;
 using namespace retaincountchecker;
 
-StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugKind BT) {
-  switch (BT) {
-  case UseAfterRelease:
-    return "Use-after-release";
-  case ReleaseNotOwned:
-    return "Bad release";
-  case DeallocNotOwned:
-    return "-dealloc sent to non-exclusively owned object";
-  case FreeNotOwned:
-    return "freeing non-exclusively owned object";
-  case OverAutorelease:
-    return "Object autoreleased too many times";
-  case ReturnNotOwnedForOwned:
-    return "Method should return an owned object";
-  case LeakWithinFunction:
-    return "Leak";
-  case LeakAtReturn:
-    return "Leak of returned object";
-  }
-  llvm_unreachable("Unknown RefCountBugKind");
-}
-
-StringRef RefCountBug::getDescription() const {
-  switch (BT) {
-  case UseAfterRelease:
-    return "Reference-counted object is used after it is released";
-  case ReleaseNotOwned:
-    return "Incorrect decrement of the reference count of an object that is "
-           "not owned at this point by the caller";
-  case DeallocNotOwned:
-    return "-dealloc sent to object that may be referenced elsewhere";
-  case FreeNotOwned:
-    return  "'free' called on an object that may be referenced elsewhere";
-  case OverAutorelease:
-    return "Object autoreleased too many times";
-  case ReturnNotOwnedForOwned:
-    return "Object with a +0 retain count returned to caller where a +1 "
-           "(owning) retain count is expected";
-  case LeakWithinFunction:
-  case LeakAtReturn:
-    return "";
-  }
-  llvm_unreachable("Unknown RefCountBugKind");
-}
-
-RefCountBug::RefCountBug(CheckerNameRef Checker, RefCountBugKind BT)
-    : BugType(Checker, bugTypeToName(BT), categories::MemoryRefCount,
-              /*SuppressOnSink=*/BT == LeakWithinFunction ||
-                  BT == LeakAtReturn),
-      BT(BT) {}
-
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
   return isa<IntegerLiteral, CharacterLiteral, FloatingLiteral,
@@ -312,9 +261,11 @@ namespace retaincountchecker {
 class RefCountReportVisitor : public BugReporterVisitor {
 protected:
   SymbolRef Sym;
+  bool IsReleaseUnowned;
 
 public:
-  RefCountReportVisitor(SymbolRef sym) : Sym(sym) {}
+  RefCountReportVisitor(SymbolRef S, bool IRU)
+      : Sym(S), IsReleaseUnowned(IRU) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -334,7 +285,8 @@ public:
 class RefLeakReportVisitor : public RefCountReportVisitor {
 public:
   RefLeakReportVisitor(SymbolRef Sym, const MemRegion *LastBinding)
-      : RefCountReportVisitor(Sym), LastBinding(LastBinding) {}
+      : RefCountReportVisitor(Sym, /*IsReleaseUnowned=*/false),
+        LastBinding(LastBinding) {}
 
   PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                     const ExplodedNode *N,
@@ -452,12 +404,6 @@ annotateStartParameter(const ExplodedNode *N, SymbolRef Sym,
 PathDiagnosticPieceRef
 RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
                                  PathSensitiveBugReport &BR) {
-
-  const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
-
-  bool IsFreeUnowned = BT.getBugType() == RefCountBug::FreeNotOwned ||
-                       BT.getBugType() == RefCountBug::DeallocNotOwned;
-
   const SourceManager &SM = BRC.getSourceManager();
   CallEventManager &CEMgr = BRC.getStateManager().getCallEventManager();
   if (auto CE = N->getLocationAs<CallExitBegin>())
@@ -490,7 +436,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
 
-  if (PrevT && IsFreeUnowned && CurrV.isNotOwned() && PrevT->isOwned()) {
+  if (PrevT && IsReleaseUnowned && CurrV.isNotOwned() && PrevT->isOwned()) {
     os << "Object is now not exclusively owned";
     auto Pos = PathDiagnosticLocation::create(N->getLocation(), SM);
     return std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
@@ -815,10 +761,8 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
         if (K == ObjKind::ObjC || K == ObjKind::CF) {
           os << "whose name ('" << *FD
              << "') does not contain 'Copy' or 'Create'.  This violates the "
-                "naming"
-                " convention rules given in the Memory Management Guide for "
-                "Core"
-                " Foundation";
+                "naming convention rules given in the Memory Management Guide "
+                "for Core Foundation";
         } else if (RV->getObjKind() == ObjKind::OS) {
           std::string FuncName = FD->getNameAsString();
           os << "whose name ('" << FuncName << "') starts with '"
@@ -836,19 +780,20 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
-                               ExplodedNode *n, SymbolRef sym, bool isLeak)
-    : PathSensitiveBugReport(D, D.getDescription(), n), Sym(sym),
+                               ExplodedNode *n, SymbolRef sym, bool isLeak,
+                               bool IsReleaseUnowned)
+    : PathSensitiveBugReport(D, D.getReportMessage(), n), Sym(sym),
       isLeak(isLeak) {
   if (!isLeak)
-    addVisitor<RefCountReportVisitor>(sym);
+    addVisitor<RefCountReportVisitor>(sym, IsReleaseUnowned);
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                ExplodedNode *n, SymbolRef sym,
                                StringRef endText)
-    : PathSensitiveBugReport(D, D.getDescription(), endText, n) {
+    : PathSensitiveBugReport(D, D.getReportMessage(), endText, n) {
 
-  addVisitor<RefCountReportVisitor>(sym);
+  addVisitor<RefCountReportVisitor>(sym, /*IsReleaseUnowned=*/false);
 }
 
 void RefLeakReport::deriveParamLocation(CheckerContext &Ctx) {

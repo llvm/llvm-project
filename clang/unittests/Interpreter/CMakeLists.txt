@@ -1,23 +1,15 @@
-add_distinct_clang_unittest(ClangReplInterpreterTests
-  IncrementalCompilerBuilderTest.cpp
-  IncrementalProcessingTest.cpp
-  InterpreterTest.cpp
-  InterpreterExtensionsTest.cpp
-  CodeCompletionTest.cpp
-
-  EXPORT_SYMBOLS
-
-  CLANG_LIBS
-  clangAST
-  clangBasic
+if(EMSCRIPTEN)
+set(LLVM_COMPONENTS_TO_LINK
+  ""
+  )
+set(LLVM_LIBS_TO_LINK
+  ""
+  )
+set(CLANG_LIBS_TO_LINK
   clangInterpreter
-  clangFrontend
-  clangSema
-
-  LINK_LIBS
-  LLVMTestingSupport
-
-  LLVM_COMPONENTS
+  )
+else()
+set(LLVM_COMPONENTS_TO_LINK
   ${LLVM_TARGETS_TO_BUILD}
   Core
   MC
@@ -25,6 +17,80 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   Support
   TargetParser
   )
+set(LLVM_LIBS_TO_LINK
+  LLVMTestingSupport
+  )
+set(CLANG_LIBS_TO_LINK
+  clangAST
+  clangBasic
+  clangInterpreter
+  clangFrontend
+  clangSema
+  )
+endif()
+
+set(CLANG_REPL_TEST_SOURCES
+  IncrementalCompilerBuilderTest.cpp
+  IncrementalProcessingTest.cpp
+  InterpreterTest.cpp
+  InterpreterExtensionsTest.cpp
+  CodeCompletionTest.cpp
+)
+
+if(TARGET compiler-rt AND LLVM_ON_UNIX)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    OutOfProcessInterpreterTests.cpp
+  )
+  message(STATUS "Compiler-RT found, enabling out of process JIT tests")
+endif()
+
+add_distinct_clang_unittest(ClangReplInterpreterTests
+  ${CLANG_REPL_TEST_SOURCES}
+
+  PARTIAL_SOURCES_INTENDED
+
+  EXPORT_SYMBOLS
+
+  CLANG_LIBS
+  ${CLANG_LIBS_TO_LINK}
+
+  LINK_LIBS
+  ${LLVM_LIBS_TO_LINK}
+
+  LLVM_COMPONENTS
+  ${LLVM_COMPONENTS_TO_LINK}
+  )
+
+if(TARGET compiler-rt AND LLVM_ON_UNIX)
+  add_dependencies(ClangReplInterpreterTests 
+    llvm-jitlink-executor 
+    compiler-rt
+  )
+  message(STATUS "Adding dependency on compiler-rt for out of process JIT tests")
+endif()
+
+if(EMSCRIPTEN)
+# Without the above you try to link to LLVMSupport twice, and end
+# up with a duplicate symbol error when creating the main module
+get_target_property(LINKED_LIBS ClangReplInterpreterTests LINK_LIBRARIES)
+list(REMOVE_ITEM LINKED_LIBS LLVMSupport)
+set_target_properties(ClangReplInterpreterTests PROPERTIES LINK_LIBRARIES "${LINKED_LIBS}")
+target_link_options(ClangReplInterpreterTests
+  PUBLIC "SHELL: -s MAIN_MODULE=1"
+  PUBLIC "SHELL: -s ALLOW_MEMORY_GROWTH=1"
+  PUBLIC "SHELL: -s STACK_SIZE=32mb"
+  PUBLIC "SHELL: -s INITIAL_MEMORY=128mb"
+  PUBLIC "SHELL: --emrun"
+  PUBLIC "SHELL: -Wl,--export=__clang_Interpreter_SetValueWithAlloc"
+  PUBLIC "SHELL: -Wl,--export=__clang_Interpreter_SetValueNoAlloc"
+  PUBLIC "SHELL: -Wl,--export=_ZnwmPv26__clang_Interpreter_NewTag"
+  PUBLIC "SHELL: -Wl,--export=_Z9getGlobalv"
+  PUBLIC "SHELL: -Wl,--export=_Z9setGlobali"
+)
+set_target_properties(ClangReplInterpreterTests PROPERTIES
+  SUFFIX ".html"
+)
+endif()
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)

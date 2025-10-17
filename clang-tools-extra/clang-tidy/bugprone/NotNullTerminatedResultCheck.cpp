@@ -1,4 +1,4 @@
-//===--- NotNullTerminatedResultCheck.cpp - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,15 +64,17 @@ static unsigned getLength(const Expr *E,
   if (!E)
     return 0;
 
-  Expr::EvalResult Length;
   E = E->IgnoreImpCasts();
 
   if (const auto *LengthDRE = dyn_cast<DeclRefExpr>(E))
     if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl()))
       if (!isa<ParmVarDecl>(LengthVD))
-        if (const Expr *LengthInit = LengthVD->getInit())
+        if (const Expr *LengthInit = LengthVD->getInit();
+            LengthInit && !LengthInit->isValueDependent()) {
+          Expr::EvalResult Length;
           if (LengthInit->EvaluateAsInt(Length, *Result.Context))
             return Length.Val.getInt().getZExtValue();
+        }
 
   if (const auto *LengthIL = dyn_cast<IntegerLiteral>(E))
     return LengthIL->getValue().getZExtValue();
@@ -677,7 +679,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                 std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
-          LengthPos(LengthPos), WithIncrease(WithIncrease){};
+          LengthPos(LengthPos), WithIncrease(WithIncrease) {};
 
     StringRef Name;
     std::optional<unsigned> DestinationPos;
@@ -702,17 +704,16 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
     return hasArgument(
         CC.LengthPos,
         allOf(
-            anyOf(
-                ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
-                allOf(unless(hasDefinition(SizeOfCharExpr)),
-                      allOf(CC.WithIncrease
-                                ? ignoringImpCasts(hasDefinition(HasIncOp))
-                                : ignoringImpCasts(allOf(
-                                      unless(hasDefinition(HasIncOp)),
-                                      anyOf(hasDefinition(binaryOperator().bind(
-                                                UnknownLengthName)),
-                                            hasDefinition(anything())))),
-                            AnyOfWrongLengthInit))),
+            anyOf(ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
+                  allOf(unless(hasDefinition(SizeOfCharExpr)),
+                        allOf(CC.WithIncrease
+                                  ? ignoringImpCasts(hasDefinition(HasIncOp))
+                                  : ignoringImpCasts(
+                                        allOf(unless(hasDefinition(HasIncOp)),
+                                              hasDefinition(optionally(
+                                                  binaryOperator().bind(
+                                                      UnknownLengthName))))),
+                              AnyOfWrongLengthInit))),
             expr().bind(LengthExprName)));
   };
 

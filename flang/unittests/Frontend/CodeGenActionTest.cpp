@@ -50,6 +50,15 @@ public:
 
   static void build(
       ::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState) {}
+
+  static FakeOp create(
+      ::mlir::OpBuilder &odsBuilder, ::mlir::Location location) {
+    ::mlir::OperationState state(location, getOperationName());
+    build(odsBuilder, state);
+    auto res = ::llvm::dyn_cast<FakeOp>(odsBuilder.create(state));
+    assert(res && "builder didn't return the right type");
+    return res;
+  }
 };
 } // namespace dummy
 } // namespace test
@@ -77,7 +86,7 @@ public:
     mlir::OpBuilder builder(mlirCtx.get());
     builder.setInsertionPointToStart(&mlirModule->getRegion().front());
     // Create a fake op to trip conversion to LLVM.
-    builder.create<test::dummy::FakeOp>(loc);
+    test::dummy::FakeOp::create(builder, loc);
 
     llvmCtx = std::make_unique<llvm::LLVMContext>();
   }

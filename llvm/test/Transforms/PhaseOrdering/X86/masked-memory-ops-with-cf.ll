@@ -13,7 +13,7 @@ define void @basic(i1 %cond, ptr %b, ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[B:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16 [[TMP2]] to <1 x i16>
-; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP7]], ptr [[B]], i32 2, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP7]], ptr [[B]], i32 8, <1 x i1> [[TMP0]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
 ; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP8]], ptr [[P]], i32 4, <1 x i1> [[TMP0]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP6]] to <1 x i64>

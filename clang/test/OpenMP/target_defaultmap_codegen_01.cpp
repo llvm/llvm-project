@@ -6,6 +6,8 @@
 
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
+// Verify implicit-behavior 'storage' as alias for 'alloc' in OpenMP 6.0
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -DOMP6 -verify -Wno-vla -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
@@ -43,8 +45,12 @@ void implicit_maps_double_complex (int a){
 // CK1-DAG: store ptr [[PTR]], ptr [[P1]]
 
 // CK1: call void [[KERNEL:@.+]](ptr [[PTR]])
-#pragma omp target defaultmap(alloc \
-                              : scalar)
+#ifdef OMP6
+// 'storage' is an alias for 'alloc' in OpenMP 6.0
+#pragma omp target defaultmap(storage : scalar)
+#else
+#pragma omp target defaultmap(alloc : scalar)
+#endif // OMP6
   {
    dc *= dc;
   }
@@ -235,6 +241,8 @@ void implicit_maps_double (int a){
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
+// Verify implicit-behavior 'alloc' still accepted in OpenMP 6.0
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5

@@ -290,6 +290,28 @@ void foo() {
 
 } // namespace local_assignment_to_global
 
+namespace member_var {
+
+  struct WrapperObj {
+    CheckedObj checked;
+    CheckedObj& checkedRef;
+    void foo() {
+      auto *a = &checked;
+      a->method();
+      auto *b = &checkedRef;
+      // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      b->method();
+    }
+
+    void bar(WrapperObj& wrapper) {
+      CheckedObj* ptr = &wrapper.checked;
+      // expected-warning@-1{{Local variable 'ptr' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      ptr->method();
+    }
+  };
+
+}
+
 namespace local_refcountable_checkable_object {
 
 RefCountableAndCheckable* provide_obj();

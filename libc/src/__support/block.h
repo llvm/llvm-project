@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BLOCK_H
 #define LLVM_LIBC_SRC___SUPPORT_BLOCK_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/limits.h"
@@ -19,8 +20,6 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

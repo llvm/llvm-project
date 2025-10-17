@@ -1,6 +1,7 @@
 // RUN: %clang %cflags -march=armv8.3-a+pauth-lr -Wl,--no-relax %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth  %t.exe 2>&1 | FileCheck %s
+// RUN: llvm-bolt-binary-analysis --scanners=pacret                        %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,NOFPAC %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,FPAC %s
 
 // The detection of compiler-generated explicit pointer checks is tested in
 // gs-pauth-address-checks.s, for that reason only test here "dummy-load" and
@@ -57,7 +58,7 @@ good_sign_auted_checked_brk:
         autda   x0, x2
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc472
 1:
         pacda   x0, x1
         ret
@@ -66,9 +67,10 @@ good_sign_auted_checked_brk:
         .globl  bad_sign_authed_unchecked
         .type   bad_sign_authed_unchecked,@function
 bad_sign_authed_unchecked:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_sign_authed_unchecked, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// FPAC-NOT: bad_sign_authed_unchecked
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_sign_authed_unchecked, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         autda   x0, x2
         pacda   x0, x1
         ret
@@ -266,9 +268,10 @@ bad_call_between_checked_and_used:
         .globl  bad_transition_check_then_auth
         .type   bad_transition_check_then_auth,@function
 bad_transition_check_then_auth:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_transition_check_then_auth, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// FPAC-NOT: bad_transition_check_then_auth
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_transition_check_then_auth, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         ldr     x2, [x0]
         autda   x0, x2
         pacda   x0, x1
@@ -278,9 +281,10 @@ bad_transition_check_then_auth:
         .globl  bad_transition_auth_then_auth
         .type   bad_transition_auth_then_auth,@function
 bad_transition_auth_then_auth:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_transition_auth_then_auth, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// FPAC-NOT: bad_transition_auth_then_auth
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_transition_auth_then_auth, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         autda   x0, x2
         autda   x0, x2
         pacda   x0, x1
@@ -351,7 +355,7 @@ good_sign_auted_checked_brk_multi_bb:
 1:
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 2f
-        brk     0x1234
+        brk     0xc472
 2:
         cbz     x4, 3f
         nop
@@ -363,9 +367,10 @@ good_sign_auted_checked_brk_multi_bb:
         .globl  bad_sign_authed_unchecked_multi_bb
         .type   bad_sign_authed_unchecked_multi_bb,@function
 bad_sign_authed_unchecked_multi_bb:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_sign_authed_unchecked_multi_bb, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// FPAC-NOT: bad_sign_authed_unchecked_multi_bb
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_sign_authed_unchecked_multi_bb, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         autda   x0, x2
         cbz     x3, 1f
         ldr     x2, [x0]
@@ -505,21 +510,16 @@ bad_one_auted_one_checked_multi_bb:
 // * untrusted: not even s-t-d - from arg and from memory
 // * untrusted: subreg clobbered - between address materialization and use, between auth and check, between check and use
 // * untrusted: first checked then auted, auted then auted, checked then checked
-//
-// Note that it is important to sign and authenticate LR, as it is not kept
-// safe-to-dereference across unconditional branches.
 
         .globl  good_sign_addr_mat_nocfg
         .type   good_sign_addr_mat_nocfg,@function
 good_sign_addr_mat_nocfg:
 // CHECK-NOT: good_sign_addr_mat_nocfg
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         adr     x0, sym
         pacda   x0, x1
-        autiasp
         ret
         .size good_sign_addr_mat_nocfg, .-good_sign_addr_mat_nocfg
 
@@ -527,30 +527,27 @@ good_sign_addr_mat_nocfg:
         .type   good_sign_auted_checked_ldr_nocfg,@function
 good_sign_auted_checked_ldr_nocfg:
 // CHECK-NOT: good_sign_auted_checked_ldr_nocfg
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         autda   x0, x2
         ldr     x2, [x0]
         pacda   x0, x1
-        autiasp
         ret
         .size good_sign_auted_checked_ldr_nocfg, .-good_sign_auted_checked_ldr_nocfg
 
         .globl  bad_sign_authed_unchecked_nocfg
         .type   bad_sign_authed_unchecked_nocfg,@function
 bad_sign_authed_unchecked_nocfg:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_sign_authed_unchecked_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
+// FPAC-NOT: bad_sign_authed_unchecked_nocfg
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_sign_authed_unchecked_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         adr     x3, 1f
         br      x3
 1:
         autda   x0, x2
         pacda   x0, x1
-        autiasp
         ret
         .size bad_sign_authed_unchecked_nocfg, .-bad_sign_authed_unchecked_nocfg
 
@@ -560,13 +557,11 @@ bad_sign_checked_not_auted_nocfg:
 // CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_sign_checked_not_auted_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         ldr     x2, [x0]
         pacda   x0, x1
-        autiasp
         ret
         .size bad_sign_checked_not_auted_nocfg, .-bad_sign_checked_not_auted_nocfg
 
@@ -576,12 +571,10 @@ bad_sign_plain_arg_nocfg:
 // CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_sign_plain_arg_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         pacda   x0, x1
-        autiasp
         ret
         .size bad_sign_plain_arg_nocfg, .-bad_sign_plain_arg_nocfg
 
@@ -592,13 +585,11 @@ bad_sign_plain_mem_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x0, [x1]
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         ldr     x0, [x1]
         pacda   x0, x1
-        autiasp
         ret
         .size bad_sign_plain_mem_nocfg, .-bad_sign_plain_mem_nocfg
 
@@ -609,14 +600,12 @@ bad_clobber_between_addr_mat_and_use_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w0, w4
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         adr     x0, sym
         mov     w0, w4
         pacda   x0, x1
-        autiasp
         ret
         .size bad_clobber_between_addr_mat_and_use_nocfg, .-bad_clobber_between_addr_mat_and_use_nocfg
 
@@ -627,7 +616,6 @@ bad_clobber_between_auted_and_checked_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w0, w4
-        paciasp
         adr     x3, 1f
         br      x3
 1:
@@ -635,7 +623,6 @@ bad_clobber_between_auted_and_checked_nocfg:
         mov     w0, w4
         ldr     x2, [x0]
         pacda   x0, x1
-        autiasp
         ret
         .size bad_clobber_between_auted_and_checked_nocfg, .-bad_clobber_between_auted_and_checked_nocfg
 
@@ -646,7 +633,6 @@ bad_clobber_between_checked_and_used_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w0, w4
-        paciasp
         adr     x3, 1f
         br      x3
 1:
@@ -654,41 +640,38 @@ bad_clobber_between_checked_and_used_nocfg:
         ldr     x2, [x0]
         mov     w0, w4
         pacda   x0, x1
-        autiasp
         ret
         .size bad_clobber_between_checked_and_used_nocfg, .-bad_clobber_between_checked_and_used_nocfg
 
         .globl  bad_transition_check_then_auth_nocfg
         .type   bad_transition_check_then_auth_nocfg,@function
 bad_transition_check_then_auth_nocfg:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_transition_check_then_auth_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
+// FPAC-NOT: bad_transition_check_then_auth_nocfg
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_transition_check_then_auth_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         adr     x3, 1f
         br      x3
 1:
         ldr     x2, [x0]
         autda   x0, x2
         pacda   x0, x1
-        autiasp
         ret
         .size bad_transition_check_then_auth_nocfg, .-bad_transition_check_then_auth_nocfg
 
         .globl  bad_transition_auth_then_auth_nocfg
         .type   bad_transition_auth_then_auth_nocfg,@function
 bad_transition_auth_then_auth_nocfg:
-// CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_transition_auth_then_auth_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
+// FPAC-NOT: bad_transition_auth_then_auth_nocfg
+// NOFPAC-LABEL: GS-PAUTH: signing oracle found in function bad_transition_auth_then_auth_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         adr     x3, 1f
         br      x3
 1:
         autda   x0, x2
         autda   x0, x2
         pacda   x0, x1
-        autiasp
         ret
         .size bad_transition_auth_then_auth_nocfg, .-bad_transition_auth_then_auth_nocfg
 
@@ -698,14 +681,12 @@ bad_transition_check_then_check_nocfg:
 // CHECK-LABEL: GS-PAUTH: signing oracle found in function bad_transition_check_then_check_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:     pacda   x0, x1
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
         adr     x3, 1f
         br      x3
 1:
         ldr     x2, [x0]
         ldr     x2, [x0]
         pacda   x0, x1
-        autiasp
         ret
         .size bad_transition_check_then_check_nocfg, .-bad_transition_check_then_check_nocfg
 
@@ -732,7 +713,7 @@ good_resign_with_increment_brk:
         add     x0, x0, #8
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc472
 1:
         mov     x2, x0
         pacda   x2, x1

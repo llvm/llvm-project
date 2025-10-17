@@ -48,11 +48,6 @@ public:
     Fedora,
     Gentoo,
     OpenSUSE,
-    UbuntuHardy,
-    UbuntuIntrepid,
-    UbuntuJaunty,
-    UbuntuKarmic,
-    UbuntuLucid,
     UbuntuMaverick,
     UbuntuNatty,
     UbuntuOneiric,
@@ -84,6 +79,7 @@ public:
     UbuntuOracular,
     UbuntuPlucky,
     UbuntuQuesting,
+    UbuntuResolute,
     UnknownDistro
   };
 
@@ -135,7 +131,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuQuesting;
+    return DistroVal >= UbuntuMaverick && DistroVal <= UbuntuResolute;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

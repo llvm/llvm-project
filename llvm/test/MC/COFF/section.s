@@ -29,7 +29,7 @@
 .section s      ; .long 1
 .section s_, "" ; .long 1
 .section s_a,"a"; .long 1
-.section s_b,"b"; .long 1
+.section s_b,"b"; .long 0
 .section s_d,"d"; .long 1
 .section s_D,"D"; .long 1
 .section s_n,"n"; .long 1

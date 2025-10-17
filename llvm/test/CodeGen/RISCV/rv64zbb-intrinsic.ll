@@ -62,7 +62,7 @@ define i64 @orcb64_knownbits(i64 %a) nounwind {
 ; RV64ZBB-NEXT:    lui a1, 65535
 ; RV64ZBB-NEXT:    lui a2, 4080
 ; RV64ZBB-NEXT:    slli a1, a1, 12
-; RV64ZBB-NEXT:    addiw a2, a2, 255
+; RV64ZBB-NEXT:    addi a2, a2, 255
 ; RV64ZBB-NEXT:    and a0, a0, a1
 ; RV64ZBB-NEXT:    slli a1, a2, 40
 ; RV64ZBB-NEXT:    orc.b a0, a0

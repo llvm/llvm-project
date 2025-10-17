@@ -10,8 +10,8 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -161,7 +161,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
 
-  if (Triple.isRISCV64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");

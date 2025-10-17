@@ -78,9 +78,6 @@ public:
   };
 
 protected:
-  /// TargetTriple - What processor and OS we're targeting.
-  Triple TargetTriple;
-
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align StackAlignment;
@@ -96,7 +93,6 @@ protected:
   /// Which cpu directive was used.
   unsigned CPUDirective;
 
-  bool IsPPC64;
   bool IsLittleEndian;
 
   POPCNTDKind HasPOPCNTD;
@@ -119,8 +115,7 @@ public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
-  PPCSubtarget(const Triple &TT, const std::string &CPU,
-               const std::string &TuneCPU, const std::string &FS,
+  PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
                const PPCTargetMachine &TM);
 
   ~PPCSubtarget() override;
@@ -171,10 +166,6 @@ private:
   void initSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 public:
-  /// isPPC64 - Return true if we are generating code for 64-bit pointer mode.
-  ///
-  bool isPPC64() const;
-
   // useSoftFloat - Return true if soft-float option is turned on.
   bool useSoftFloat() const {
     if (isAIXABI() && !HasHardFloat)
@@ -210,13 +201,11 @@ public:
 
   POPCNTDKind hasPOPCNTD() const { return HasPOPCNTD; }
 
-  const Triple &getTargetTriple() const { return TargetTriple; }
+  bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
+  bool isTargetMachO() const { return getTargetTriple().isOSBinFormatMachO(); }
+  bool isTargetLinux() const { return getTargetTriple().isOSLinux(); }
 
-  bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
-  bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
-  bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
-
-  bool isAIXABI() const { return TargetTriple.isOSAIX(); }
+  bool isAIXABI() const { return getTargetTriple().isOSAIX(); }
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
 
@@ -240,7 +229,8 @@ public:
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override;

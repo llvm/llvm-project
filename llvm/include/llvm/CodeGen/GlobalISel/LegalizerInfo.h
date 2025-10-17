@@ -115,14 +115,17 @@ struct LegalityQuery {
   struct MemDesc {
     LLT MemoryTy;
     uint64_t AlignInBits;
-    AtomicOrdering Ordering;
+    AtomicOrdering Ordering; //< For cmpxchg this is the success ordering.
+    AtomicOrdering FailureOrdering; //< For cmpxchg, otherwise NotAtomic.
 
     MemDesc() = default;
-    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering)
-        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering) {}
+    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering,
+            AtomicOrdering FailureOrdering)
+        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering),
+          FailureOrdering(FailureOrdering) {}
     MemDesc(const MachineMemOperand &MMO)
         : MemDesc(MMO.getMemoryType(), MMO.getAlign().value() * 8,
-                  MMO.getSuccessOrdering()) {}
+                  MMO.getSuccessOrdering(), MMO.getFailureOrdering()) {}
   };
 
   /// Operations which require memory can use this to place requirements on the
@@ -380,7 +383,8 @@ LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p Ty.
-LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+                                               ElementCount EC);
 
 /// Change the scalar size or element size to have the same scalar size as type
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
@@ -933,6 +937,16 @@ public:
                             std::initializer_list<LLT> Types2) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1,
                                      Types2);
+  }
+
+  /// The instruction is custom when the predicate is true and type indexes 0
+  /// and 1 are all in their respective lists.
+  LegalizeRuleSet &
+  customForCartesianProduct(bool Pred, std::initializer_list<LLT> Types0,
+                            std::initializer_list<LLT> Types1) {
+    if (!Pred)
+      return *this;
+    return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
   }
 
   /// Unconditionally custom lower.

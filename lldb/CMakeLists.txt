@@ -37,6 +37,9 @@ endif()
 
 include(LLDBConfig)
 include(AddLLDB)
+include(LLDBLayeringCheck)
+
+set(LLDB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
@@ -124,6 +127,8 @@ add_subdirectory(utils/TableGen)
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)
+
+check_lldb_plugin_layering()
 
 if (LLDB_ENABLE_PYTHON)
   if(LLDB_BUILD_FRAMEWORK)

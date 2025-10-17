@@ -228,7 +228,7 @@ void InputFunction::setTableIndex(uint32_t index) {
 // witten.
 static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
                                      uint64_t value) {
-  switch (rel.Type) {
+  switch (rel.getType()) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -239,16 +239,33 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
     return encodeULEB128(value, buf);
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_TABLE_INDEX_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB:
     return encodeSLEB128(static_cast<int64_t>(value), buf);
-  default:
-    llvm_unreachable("unexpected relocation type");
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_GLOBAL_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_FUNCTION_INDEX_I32:
+    fatal("relocation compression not supported for " +
+          relocTypeToString(rel.Type));
   }
+  llvm_unreachable("unhandled relocation type");
 }
 
 static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
-  switch (rel.Type) {
+  switch (rel.getType()) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -256,15 +273,32 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_TABLE_NUMBER_LEB:
   case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_REL_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
     return 5;
   case R_WASM_TABLE_INDEX_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_LEB64:
   case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     return 10;
-  default:
-    llvm_unreachable("unexpected relocation type");
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_GLOBAL_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_FUNCTION_INDEX_I32:
+    fatal("relocation compression not supported for " +
+          relocTypeToString(rel.Type));
   }
+  llvm_unreachable("unhandled relocation type");
 }
 
 static unsigned getRelocWidth(const WasmRelocation &rel, uint64_t value) {
@@ -372,6 +406,14 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
   return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
 
+bool isValidRuntimeRelocation(WasmRelocType type) {
+  // TODO(https://github.com/llvm/llvm-project/issues/146923): Currently
+  // this means that R_WASM_FUNCTION_INDEX_I32 is not valid in `-pie` data
+  // sections.
+  return type == R_WASM_TABLE_INDEX_I32 || type == R_WASM_TABLE_INDEX_I64 ||
+         type == R_WASM_MEMORY_ADDR_I32 || type == R_WASM_MEMORY_ADDR_I64;
+}
+
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
@@ -390,8 +432,6 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   for (const WasmRelocation &rel : relocations) {
-    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
-
     Symbol *sym = file->getSymbol(rel);
     // Runtime relocations are needed when we don't know the address of
     // a symbol statically.
@@ -399,6 +439,13 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     if (!requiresRuntimeReloc)
       continue;
 
+    if (!isValidRuntimeRelocation(rel.getType())) {
+      error("invalid runtime relocation type in data section: " +
+            relocTypetoString(rel.Type));
+      continue;
+    }
+
+    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
                       << " output offset=" << offset << "\n");

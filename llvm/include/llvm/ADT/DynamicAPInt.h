@@ -16,6 +16,7 @@
 #ifndef LLVM_ADT_DYNAMICAPINT_H
 #define LLVM_ADT_DYNAMICAPINT_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SlowDynamicAPInt.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -116,6 +117,14 @@ public:
       : ValSmall(Val) {
     ValLarge.Val.BitWidth = 0;
   }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE explicit DynamicAPInt(const APInt &Val) {
+    if (Val.getBitWidth() <= 64) {
+      ValSmall = Val.getSExtValue();
+      ValLarge.Val.BitWidth = 0;
+    } else {
+      new (&ValLarge) detail::SlowDynamicAPInt(Val);
+    }
+  }
   LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt() : DynamicAPInt(0) {}
   LLVM_ATTRIBUTE_ALWAYS_INLINE ~DynamicAPInt() {
     if (LLVM_UNLIKELY(isLarge()))
@@ -212,7 +221,7 @@ public:
   friend DynamicAPInt operator/(int64_t A, const DynamicAPInt &B);
   friend DynamicAPInt operator%(int64_t A, const DynamicAPInt &B);
 
-  friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
+  LLVM_ABI friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
 
   LLVM_ABI void static_assert_layout(); // NOLINT
 

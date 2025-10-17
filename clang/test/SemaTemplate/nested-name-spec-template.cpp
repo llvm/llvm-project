@@ -1,37 +1,30 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-c++20-extensions
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-c++11-extensions -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
-namespace N { 
+namespace N {
   namespace M {
     template<typename T> struct Promote;
-    
+
     template<> struct Promote<short> {
       typedef int type;
     };
-    
+
     template<> struct Promote<int> {
       typedef int type;
     };
-    
+
     template<> struct Promote<float> {
       typedef double type;
     };
-    
+
     Promote<short>::type *ret_intptr(int* ip) { return ip; }
     Promote<int>::type *ret_intptr2(int* ip) { return ip; }
   }
 
   M::Promote<int>::type *ret_intptr3(int* ip) { return ip; }
-  M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; } 
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{'template' keyword outside of a template}}
-#endif
-
+  M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; }
   M::template Promote<int> pi;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{'template' keyword outside of a template}}
-#endif
 }
 
 N::M::Promote<int>::type *ret_intptr5(int* ip) { return ip; }
@@ -87,7 +80,7 @@ namespace PR7385 {
     template< typename > struct has_xxx0_introspect
     {
       template< typename > struct has_xxx0_substitute ;
-      template< typename V > 
+      template< typename V >
       int int00( has_xxx0_substitute < typename V::template xxx< > > = 0 );
     };
     static const int value = has_xxx0_introspect<int>::value; // expected-error{{no member named 'value'}}
@@ -130,7 +123,7 @@ namespace PR9226 {
 
   template<typename T, typename U>
   struct Y {
-    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'X::template f'}}
+    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'PR9226::X::template f'}}
   };
 
   Y<X, int> yxi; // expected-note{{in instantiation of template class 'PR9226::Y<PR9226::X, int>' requested here}}
@@ -154,3 +147,66 @@ namespace sugared_template_instantiation {
   struct B { typedef int type1; };
   typedef A<const B> type2;
 } // namespace sugated_template_instantiation
+
+namespace unresolved_using {
+  template <class> struct A {
+    struct B {
+      typedef int X;
+    };
+  };
+  template <class T> struct C : A<T> {
+    using typename A<T>::B;
+    typedef typename B::X Y;
+  };
+  template struct C<int>;
+} // namespace unresolved_using
+
+#if __cplusplus >= 201703L
+namespace SubstTemplateTypeParmPackType {
+  template <int...> struct A {};
+
+  template <class... Ts> void f() {
+    []<int ... Is>(A<Is...>) { (Ts::g(Is) && ...); }(A<0>{});
+  };
+
+  struct B { static void g(int); };
+
+  template void f<B>();
+} // namespace SubstTemplateTypeParmPackType
+#endif
+
+namespace DependentUnaryTransform {
+  template <class T> using decay_t = __decay(T);
+  template <class, class> struct A;
+  template <class T> struct A<T, typename decay_t<T>::X>;
+} // namespace DependentUnaryTransform
+
+namespace DependentSizedArray {
+  template <int V> using Z = int[V];
+  template <class, class> struct A;
+  template <class T> struct A<T, typename Z<T(0)>::X>;
+} // namespace DependentUnaryTransform
+
+namespace GH155281 {
+  template <bool> struct enable_if;
+  template <class _Tp, _Tp> struct integral_constant;
+  template <typename> struct conjunction;
+  template <typename T> using value_type_t = T;
+  template <class Check> using require_t = typename enable_if<Check::value>::type;
+  template <template <class> class, template <class> class,
+            template <class> class, class... Check>
+  using container_type_check_base =
+      integral_constant<bool, conjunction<Check...>::value>;
+  template <typename> struct is_std_vector;
+  template <template <class> class TypeCheck, class... Check>
+  using require_std_vector_vt =
+      require_t<container_type_check_base<is_std_vector, value_type_t, TypeCheck,
+                                          Check...> >;
+  template <typename, typename> class vector_seq_view;
+  namespace internal {
+  template <typename> using is_matrix_or_std_vector = int;
+  }
+  template <typename T>
+  class vector_seq_view<
+      T, require_std_vector_vt<internal::is_matrix_or_std_vector, T> >;
+} // namespace GH155281

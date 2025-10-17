@@ -34,7 +34,7 @@ define void @throw(ptr %p) {
 ; CHECK:       call      foo
 ; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       global.set  __stack_pointer
-; CHECK:       i32.{{store|const}} {{.*}} __wasm_lpad_context
+; CHECK:       i32.store __wasm_lpad_context
 ; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0
@@ -573,4 +573,5 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
 
-; CHECK: __cpp_exception:
+;; The exception tag should not be defined locally
+; CHECK-NOT: __cpp_exception:

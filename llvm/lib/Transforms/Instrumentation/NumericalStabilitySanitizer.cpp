@@ -468,7 +468,8 @@ private:
       // Floating-point constants.
       Type *Ty = Config.getExtendedFPType(CFP->getType());
       return ConstantFP::get(
-          Ty, extendConstantFP(CFP->getValueAPF(), Ty->getFltSemantics()));
+          Ty, extendConstantFP(CFP->getValueAPF(),
+                               Ty->getScalarType()->getFltSemantics()));
     }
     // Vector, array, or aggregate constants.
     if (C->getType()->isVectorTy()) {

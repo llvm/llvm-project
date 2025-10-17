@@ -92,7 +92,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
 
   ASTContext &Ctx = C.getASTContext();
   SValBuilder &SVB = C.getSValBuilder();
-  CanQualType SizeTy = Ctx.getSizeType();
+  QualType SizeTy = Ctx.getSizeType();
   uint64_t SizeMax =
       SVB.getBasicValueFactory().getMaxValue(SizeTy)->getZExtValue();
 

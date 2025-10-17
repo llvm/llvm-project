@@ -18,7 +18,10 @@ bar:
 ; CHECK: brbc    1, bar            ; encoding: [0bAAAAA001,0b111101AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 29 f4      brne .+10
-; INST-NEXT: 09 f4      brne .+2
-; INST-NEXT: 29 f4      brne .+10
-; INST-NEXT: 01 f4      brne .+0
+; INST-NEXT: f9 f7      brne .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0xc
+; INST-NEXT: f9 f7      brne .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6
+; INST-NEXT: f9 f7      brne .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x10
+; INST-NEXT: f9 f7      brne .-2

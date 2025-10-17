@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_EXCEPTIONBREAKPOINT_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,14 +19,20 @@
 
 namespace lldb_dap {
 
+enum ExceptionKind : unsigned {
+  eExceptionKindCatch,
+  eExceptionKindThrow,
+};
+
 class ExceptionBreakpoint {
 public:
   ExceptionBreakpoint(DAP &d, std::string f, std::string l,
-                      lldb::LanguageType lang)
+                      lldb::LanguageType lang, ExceptionKind kind)
       : m_dap(d), m_filter(std::move(f)), m_label(std::move(l)),
-        m_language(lang), m_bp() {}
+        m_language(lang), m_kind(kind), m_bp() {}
 
-  void SetBreakpoint();
+  protocol::Breakpoint SetBreakpoint() { return SetBreakpoint(""); };
+  protocol::Breakpoint SetBreakpoint(llvm::StringRef condition);
   void ClearBreakpoint();
 
   lldb::break_id_t GetID() const { return m_bp.GetID(); }
@@ -39,6 +46,7 @@ protected:
   std::string m_filter;
   std::string m_label;
   lldb::LanguageType m_language;
+  ExceptionKind m_kind;
   lldb::SBBreakpoint m_bp;
 };
 
