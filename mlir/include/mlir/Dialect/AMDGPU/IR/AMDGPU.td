@@ -168,7 +168,7 @@ def AMDGPU_ScaledExtPacked816Op
     `blockSize` `(` $blockSize `)`
     `firstScaleLane` `(` $firstScaleLane`)`
     `firstScaleByte` `(` $firstScaleByte `)`
-    `:` functional-type(operands, results)
+    `:` type($source) `,` type($scale) `->` type($res)
   }];
 
   let hasVerifier = 1;
