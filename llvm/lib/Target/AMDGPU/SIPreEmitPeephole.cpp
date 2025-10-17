@@ -772,24 +772,24 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
   // side effects.
 
   // Perform the extra MF scans only for supported archs
-  if (ST.hasGFX940Insts()) {
-    for (MachineBasicBlock &MBB : MF) {
-      // Unpack packed instructions overlapped by MFMAs. This allows the
-      // compiler to co-issue unpacked instructions with MFMA
-      auto SchedModel = TII->getSchedModel();
-      SetVector<MachineInstr *> InstrsToUnpack;
-      for (auto &MI : make_early_inc_range(MBB.instrs())) {
-        if (!SIInstrInfo::isMFMA(MI))
-          continue;
-        const MCSchedClassDesc *SchedClassDesc =
-            SchedModel.resolveSchedClass(&MI);
-        uint16_t NumMFMACycles =
-            SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-        collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
-      }
-      for (MachineInstr *MI : InstrsToUnpack) {
-        performF32Unpacking(*MI);
-      }
+  if (!ST.hasGFX940Insts())
+    return Changed;
+  for (MachineBasicBlock &MBB : MF) {
+    // Unpack packed instructions overlapped by MFMAs. This allows the
+    // compiler to co-issue unpacked instructions with MFMA
+    auto SchedModel = TII->getSchedModel();
+    SetVector<MachineInstr *> InstrsToUnpack;
+    for (auto &MI : make_early_inc_range(MBB.instrs())) {
+      if (!SIInstrInfo::isMFMA(MI))
+        continue;
+      const MCSchedClassDesc *SchedClassDesc =
+          SchedModel.resolveSchedClass(&MI);
+      uint16_t NumMFMACycles =
+          SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
+    }
+    for (MachineInstr *MI : InstrsToUnpack) {
+      performF32Unpacking(*MI);
     }
   }
 
