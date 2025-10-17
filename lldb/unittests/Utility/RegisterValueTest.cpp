@@ -82,8 +82,6 @@ void TestSetValueFromData128(void *src, const lldb::ByteOrder endianness) {
 // Test that the "RegisterValue::SetValueFromData" method works correctly
 // with 128-bit little-endian data that represents an integer.
 TEST(RegisterValueTest, SetValueFromData_128_le) {
-  RegisterValue rv;
-
   uint8_t src[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
                    0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
   TestSetValueFromData128(src, lldb::ByteOrder::eByteOrderLittle);
@@ -92,8 +90,6 @@ TEST(RegisterValueTest, SetValueFromData_128_le) {
 // Test that the "RegisterValue::SetValueFromData" method works correctly
 // with 128-bit big-endian data that represents an integer.
 TEST(RegisterValueTest, SetValueFromData_128_be) {
-  RegisterValue rv;
-
   uint8_t src[] = {0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
                    0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
   TestSetValueFromData128(src, lldb::ByteOrder::eByteOrderBig);
