@@ -61,30 +61,49 @@ return:
   ret i32 %p
 }
 
-; Check that switch's of powers of two range is not reduced if default case is reachable
+; Check that switch's of powers of two range with the default case reachable is reduced
+; w/ Zbb enabled, by jumping non-power-of-two inputs to the default block.
 define i32 @switch_of_powers_reachable_default(i32 %x) {
-; CHECK-LABEL: @switch_of_powers_reachable_default(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[RETURN:%.*]] [
-; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
-; CHECK-NEXT:      i32 8, label [[BB2:%.*]]
-; CHECK-NEXT:      i32 16, label [[BB3:%.*]]
-; CHECK-NEXT:      i32 32, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 64, label [[BB5:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ -1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[P]]
+; RV64I-LABEL: @switch_of_powers_reachable_default(
+; RV64I-NEXT:  entry:
+; RV64I-NEXT:    switch i32 [[X:%.*]], label [[RETURN:%.*]] [
+; RV64I-NEXT:      i32 1, label [[BB1:%.*]]
+; RV64I-NEXT:      i32 8, label [[BB2:%.*]]
+; RV64I-NEXT:      i32 16, label [[BB3:%.*]]
+; RV64I-NEXT:      i32 32, label [[BB4:%.*]]
+; RV64I-NEXT:      i32 64, label [[BB5:%.*]]
+; RV64I-NEXT:    ]
+; RV64I:       bb1:
+; RV64I-NEXT:    br label [[RETURN]]
+; RV64I:       bb2:
+; RV64I-NEXT:    br label [[RETURN]]
+; RV64I:       bb3:
+; RV64I-NEXT:    br label [[RETURN]]
+; RV64I:       bb4:
+; RV64I-NEXT:    br label [[RETURN]]
+; RV64I:       bb5:
+; RV64I-NEXT:    br label [[RETURN]]
+; RV64I:       return:
+; RV64I-NEXT:    [[P:%.*]] = phi i32 [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ -1, [[ENTRY:%.*]] ]
+; RV64I-NEXT:    ret i32 [[P]]
+;
+; RV64ZBB-LABEL: @switch_of_powers_reachable_default(
+; RV64ZBB-NEXT:  entry:
+; RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; RV64ZBB-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1
+; RV64ZBB-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT:%.*]], label [[RETURN:%.*]]
+; RV64ZBB:       entry.split:
+; RV64ZBB-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; RV64ZBB-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 7
+; RV64ZBB-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN]]
+; RV64ZBB:       switch.lookup:
+; RV64ZBB-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
+; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_reachable_default, i64 0, i64 [[TMP4]]
+; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; RV64ZBB-NEXT:    br label [[RETURN]]
+; RV64ZBB:       return:
+; RV64ZBB-NEXT:    [[P:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ -1, [[ENTRY_SPLIT]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
+; RV64ZBB-NEXT:    ret i32 [[P]]
 ;
 entry:
   switch i32 %x, label %default_case [
