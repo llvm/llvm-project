@@ -75,6 +75,10 @@ public:
   ///     record type).
   StorageLocation &getOrCreateConstMethodReturnStorageLocation(
       const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
+      Environment &Env,
+      llvm::function_ref<void(QualType, StorageLocation &)> Initialize);
+  StorageLocation &getOrCreateConstMethodReturnStorageLocation(
+      const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
       Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
 
   void clearConstMethodReturnValues(const RecordStorageLocation &RecordLoc) {
@@ -196,7 +200,8 @@ template <typename Base>
 StorageLocation &
 CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
     const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
-    Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
+    Environment &Env,
+    llvm::function_ref<void(QualType, StorageLocation &)> Initialize) {
   assert(Callee != nullptr);
   QualType Type = Callee->getReturnType();
   assert(!Type.isNull());
@@ -206,11 +211,22 @@ CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
   if (it != ObjMap.end())
     return *it->second;
 
+  auto T = Type.getNonReferenceType();
   StorageLocation &Loc = Env.createStorageLocation(Type.getNonReferenceType());
-  Initialize(Loc);
+  Initialize(T, Loc);
 
   ObjMap.insert({Callee, &Loc});
   return Loc;
+}
+
+template <typename Base>
+StorageLocation &
+CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
+    const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
+    Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
+  return getOrCreateConstMethodReturnStorageLocation(
+      RecordLoc, Callee, Env,
+      [Initialize](QualType T, StorageLocation &Loc) { Initialize(Loc); });
 }
 
 } // namespace dataflow
