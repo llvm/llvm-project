@@ -4565,14 +4565,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_mode_EQ)) {
     StringRef S = Arg->getValue();
-    auto Mode = llvm::StringSwitch<std::optional<llvm::AllocTokenMode>>(S)
-                    .Case("increment", llvm::AllocTokenMode::Increment)
-                    .Case("random", llvm::AllocTokenMode::Random)
-                    .Case("typehash", llvm::AllocTokenMode::TypeHash)
-                    .Case("typehashpointersplit",
-                          llvm::AllocTokenMode::TypeHashPointerSplit)
-                    .Default(std::nullopt);
-    if (Mode)
+    if (auto Mode = getAllocTokenModeFromString(S))
       Opts.AllocTokenMode = Mode;
     else
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
