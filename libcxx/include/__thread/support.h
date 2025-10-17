@@ -47,6 +47,20 @@ _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_unlock(__libcpp_mutex_t*);
 int __libcpp_mutex_destroy(__libcpp_mutex_t*);
 
 //
+// Shared mutex (optional API)
+//
+#define _LIBCPP_HAS_NATIVE_RW_MUTEX {0|1}
+using __libcpp_rw_mutex_t = ...;
+#define _LIBCPP_RW_MUTEX_INITIALIZER ...
+
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_rw_mutex_lock(__libcpp_rw_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_rw_mutex_lock_shared(__libcpp_rw_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_rw_mutex_trylock(__libcpp_rw_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_rw_mutex_trylock_shared(__libcpp_rw_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_rw_mutex_unlock(__libcpp_rw_mutex_t*);
+int __libcpp_rw_mutex_destroy(__libcpp_rw_mutex_t*);
+
+//
 // Condition Variable
 //
 using __libcpp_condvar_t = ...;
