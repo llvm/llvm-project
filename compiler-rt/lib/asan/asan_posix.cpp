@@ -14,11 +14,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_POSIX
 
-// tid_t is also defined in AIX header /usr/include/sys/types.h which is
-// included by system pthread.h
-#  define tid_t tid_t_temp
 #  include <pthread.h>
-#  undef tid_t
 #  include <signal.h>
 #  include <stdlib.h>
 #  include <sys/resource.h>
