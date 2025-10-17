@@ -18023,11 +18023,17 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                                   unsigned Factor,
                                                   const APInt &GapMask) const {
 
-  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
-         "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
+
+  if (isProfitableToInterleaveWithGatherScatter() &&
+      Factor > getMaxSupportedInterleaveFactor())
+    return lowerInterleavedStoreWithShuffle(SI, SVI, Factor);
+
+  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
+         "Invalid interleave factor");
+
   assert(!LaneMask && GapMask.popcount() == Factor &&
          "Unexpected mask on store");
 
@@ -18168,6 +18174,136 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                             BaseAddr, LaneLen * Factor);
 
     Ops.push_back(BaseAddr);
+    Builder.CreateCall(StNFunc, Ops);
+  }
+  return true;
+}
+
+/// If the interleaved vector elements are greter than supported MaxFactor
+/// then, interleaving the data with additional shuffles can be used to
+/// achieve the same.
+/// Below shows how 8 interleaved data are shuffled to store with stN
+/// instructions. Data need store in this order v0,v1,v2,v3,v4,v5,v6,v7
+///      v0      v4      v2      v6      v1      v5      v3      v7
+///      |       |       |       |       |       |       |       |
+///       \     /         \     /         \     /         \     /
+///     [zip v0,v4]      [zip v2,v6]    [zip v1,v5]      [zip v3,v7]==> stN = 4
+///          |               |              |                 |
+///           \             /                \               /
+///            \           /                  \             /
+///             \         /                    \           /
+///         [zip [v0,v2,v4,v6]]            [zip [v1,v3,v5,v7]]     ==> stN = 2
+///
+/// In stN = 4 level upper half of interleaved data V0,V1,V2,V3 is store
+/// withone st4 instruction. Lower half V4,V5,V6,V7 store with another st4.
+///
+/// In stN = 2 level first upper half of interleaved data V0,V1 is store
+/// with one st2 instruction. Second set V2,V3 with store with another st2.
+/// Total of 4 st2 are  required.
+bool AArch64TargetLowering::lowerInterleavedStoreWithShuffle(
+    StoreInst *SI, ShuffleVectorInst *SVI, unsigned Factor) const {
+  unsigned MaxSupportedFactor = getMaxSupportedInterleaveFactor();
+
+  auto *VecTy = cast<FixedVectorType>(SVI->getType());
+  assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
+
+  unsigned LaneLen = VecTy->getNumElements() / Factor;
+  Type *EltTy = VecTy->getElementType();
+  auto *SubVecTy = FixedVectorType::get(EltTy, Factor);
+
+  const DataLayout &DL = SI->getModule()->getDataLayout();
+  bool UseScalable;
+
+  // Skip if we do not have NEON and skip illegal vector types. We can
+  // "legalize" wide vector types into multiple interleaved accesses as long as
+  // the vector types are divisible by 128.
+  if (!Subtarget->hasNEON() ||
+      !isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+    return false;
+
+  if (UseScalable)
+    return false;
+
+  SmallVector<Value *, 8> Shufflelist;
+  Shufflelist.push_back(SVI);
+  unsigned ConcatLevel = Factor;
+  while (ConcatLevel > 1) {
+    SmallVector<Value *, 8> ShufflelistIntermediate;
+    ShufflelistIntermediate = Shufflelist;
+    Shufflelist.clear();
+    while (!ShufflelistIntermediate.empty()) {
+      ShuffleVectorInst *SFL =
+          dyn_cast<ShuffleVectorInst>(ShufflelistIntermediate[0]);
+      if (!SFL)
+        break;
+      ShufflelistIntermediate.erase(ShufflelistIntermediate.begin());
+
+      Value *Op0 = SFL->getOperand(0);
+      Value *Op1 = SFL->getOperand(1);
+
+      Shufflelist.push_back(dyn_cast<Value>(Op0));
+      Shufflelist.push_back(dyn_cast<Value>(Op1));
+    }
+    if (!ShufflelistIntermediate.empty()) {
+      Shufflelist = ShufflelistIntermediate;
+      break;
+    }
+    ConcatLevel = ConcatLevel >> 1;
+  }
+
+  if (Shufflelist.size() != Factor)
+    return false;
+
+  IRBuilder<> Builder(SI);
+  auto Mask = createInterleaveMask(LaneLen, 2);
+  SmallVector<int, 16> UpperHalfMask, LowerHalfMask;
+  for (unsigned i = 0; i < (2 * LaneLen); i++)
+    if (i < LaneLen)
+      LowerHalfMask.push_back(Mask[i]);
+    else
+      UpperHalfMask.push_back(Mask[i]);
+
+  unsigned InterleaveFactor = Factor >> 1;
+  while (InterleaveFactor >= MaxSupportedFactor) {
+    SmallVector<Value *, 8> ShufflelistIntermediate;
+    for (unsigned j = 0; j < Factor; j += (InterleaveFactor * 2)) {
+      for (unsigned i = 0; i < InterleaveFactor; i++) {
+        auto *Shuffle = Builder.CreateShuffleVector(
+            Shufflelist[i + j], Shufflelist[i + j + InterleaveFactor],
+            LowerHalfMask);
+        ShufflelistIntermediate.push_back(Shuffle);
+      }
+      for (unsigned i = 0; i < InterleaveFactor; i++) {
+        auto *Shuffle = Builder.CreateShuffleVector(
+            Shufflelist[i + j], Shufflelist[i + j + InterleaveFactor],
+            UpperHalfMask);
+        ShufflelistIntermediate.push_back(Shuffle);
+      }
+    }
+
+    Shufflelist = ShufflelistIntermediate;
+    InterleaveFactor = InterleaveFactor >> 1;
+  }
+
+  Type *PtrTy = SI->getPointerOperandType();
+  auto *STVTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
+
+  Value *BaseAddr = SI->getPointerOperand();
+  Function *StNFunc = getStructuredStoreFunction(
+      SI->getModule(), MaxSupportedFactor, UseScalable, STVTy, PtrTy);
+  for (unsigned i = 0; i < (Factor / MaxSupportedFactor); i++) {
+    SmallVector<Value *, 5> Ops;
+    for (unsigned j = 0; j < MaxSupportedFactor; j++)
+      Ops.push_back(Shufflelist[i * MaxSupportedFactor + j]);
+
+    if (i > 0) {
+      // We will compute the pointer operand of each store from the original
+      // base address using GEPs. Cast the base address to a pointer to the
+      // scalar  element type.
+      BaseAddr = Builder.CreateConstGEP1_32(
+          SubVecTy->getElementType(), BaseAddr, LaneLen * MaxSupportedFactor);
+    }
+    Ops.push_back(Builder.CreateBitCast(BaseAddr, PtrTy));
     Builder.CreateCall(StNFunc, Ops);
   }
   return true;
