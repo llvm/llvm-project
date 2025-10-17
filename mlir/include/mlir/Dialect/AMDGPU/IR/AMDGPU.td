@@ -164,7 +164,7 @@ def AMDGPU_ScaledExtPacked816Op
 
   let assemblyFormat = [{
     attr-dict $source
-    `scale` `(` $scale `)`
+    `scale` `(` $scale `:` type($scale) `)`
     `blockSize` `(` $blockSize `)`
     `firstScaleLane` `(` $firstScaleLane`)`
     `firstScaleByte` `(` $firstScaleByte `)`
