@@ -877,13 +877,32 @@ LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
   assert(AM.ScaledReg == 0 && AM.Scale == 0 &&
          "Addressing mode not supported for folding");
 
-  return BuildMI(MBB, MemI, DL, get(MemI.getOpcode()))
-      .addReg(MemI.getOperand(0).getReg(),
-              MemI.mayLoad() ? RegState::Define : 0)
-      .addReg(AM.BaseReg)
-      .addImm(AM.Displacement)
-      .setMemRefs(MemI.memoperands())
-      .setMIFlags(MemI.getFlags());
+  unsigned MemIOp = MemI.getOpcode();
+  switch (MemIOp) {
+  default:
+    return BuildMI(MBB, MemI, DL, get(MemIOp))
+        .addReg(MemI.getOperand(0).getReg(),
+                MemI.mayLoad() ? RegState::Define : 0)
+        .addReg(AM.BaseReg)
+        .addImm(AM.Displacement)
+        .setMemRefs(MemI.memoperands())
+        .setMIFlags(MemI.getFlags());
+  case LoongArch::VSTELM_B:
+  case LoongArch::VSTELM_H:
+  case LoongArch::VSTELM_W:
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_B:
+  case LoongArch::XVSTELM_H:
+  case LoongArch::XVSTELM_W:
+  case LoongArch::XVSTELM_D:
+    return BuildMI(MBB, MemI, DL, get(MemIOp))
+        .addReg(MemI.getOperand(0).getReg(), 0)
+        .addReg(AM.BaseReg)
+        .addImm(AM.Displacement)
+        .addImm(MemI.getOperand(3).getImm())
+        .setMemRefs(MemI.memoperands())
+        .setMIFlags(MemI.getFlags());
+  }
 }
 
 // Returns true if this is the sext.w pattern, addi.w rd, rs, 0.
