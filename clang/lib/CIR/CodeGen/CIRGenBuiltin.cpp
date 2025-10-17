@@ -463,7 +463,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
-  cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
+  cgm.errorNYI(e->getSourceRange(),
+               std::string("unimplemented builtin call: ") +
+                   getContext().BuiltinInfo.getName(builtinID));
   return getUndefRValue(e->getType());
 }
 
