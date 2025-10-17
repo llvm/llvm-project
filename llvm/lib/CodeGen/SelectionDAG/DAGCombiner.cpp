@@ -13008,9 +13008,6 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 //
 // partial_reduce_fmla(acc, fmul(fpext(a), fpext(b)), splat(1.0))
 // -> partial_reduce_fmla(acc, a, b)
-//
-// partial_reduce_fmla(acc, fmul(fpext(x), splat(C)), splat(1.0))
-// -> partial_reduce_fmla(acc, x, C)
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
@@ -13134,20 +13131,17 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
-  if (!(N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
-        llvm::isOneOrOneSplatFP(Op2)) &&
-      !llvm::isOneOrOneSplat(Op2))
+  if (!llvm::isOneOrOneSplat(Op2) && !llvm::isOneOrOneSplatFP(Op2))
     return SDValue();
 
   unsigned Op1Opcode = Op1.getOpcode();
   if (!ISD::isExtOpcode(Op1Opcode) && Op1Opcode != ISD::FP_EXTEND)
     return SDValue();
 
-  bool Op1IsSigned = Op1Opcode == ISD::SIGN_EXTEND;
+  bool Op1IsSigned = Op1Opcode == ISD::SIGN_EXTEND || Op1Opcode == ISD::FP_EXTEND;
   bool NodeIsSigned = N->getOpcode() != ISD::PARTIAL_REDUCE_UMLA;
   EVT AccElemVT = Acc.getValueType().getVectorElementType();
-  if (N->getOpcode() != ISD::PARTIAL_REDUCE_FMLA &&
-      Op1IsSigned != NodeIsSigned &&
+  if (Op1IsSigned != NodeIsSigned &&
       Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 

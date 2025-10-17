@@ -9474,7 +9474,6 @@ multiclass sve_float_dot<bit bf, bit o2, ZPRRegOp dst_ty, ZPRRegOp src_ty,
                          string asm, ValueType InVT, SDPatternOperator op> {
   def NAME : sve_float_dot<bf, o2, dst_ty, src_ty, asm>;
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, InVT, InVT, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Pat<nxv4f32, partial_reduce_fmla, nxv4f32, InVT, InVT, !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp8_dot<bit bf, ZPRRegOp dstrc, string asm, ValueType vt,
