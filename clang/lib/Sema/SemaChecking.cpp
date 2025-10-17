@@ -12311,7 +12311,7 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
          Source != Target);
 
   // Lone surrogates have a distinct representation in UTF-32.
-  // Converting betweem UTF-16 and UTF-32 codepoint seems very widespread,
+  // Converting between UTF-16 and UTF-32 codepoints seems very widespread,
   // so don't warn on such conversion.
   if (Source->isChar16Type() && Target->isChar32Type())
     return;
