@@ -904,7 +904,7 @@ unsigned getCmpOperandFoldingProfit(Register CmpOp, MachineRegisterInfo &MRI) {
 // Helper function for matchFpTruncFpTrunc.
 // Checks that the given definition belongs to an FPTRUNC and that the source is
 // not an integer, as no rounding is necessary due to the range of values
-bool checkTruncSrc(MachineRegisterInfo &MRI, MachineInstr *MaybeFpTrunc) {
+bool isFPTruncFromDouble(MachineRegisterInfo &MRI, MachineInstr *MaybeFpTrunc) {
   if (!MaybeFpTrunc || MaybeFpTrunc->getOpcode() != TargetOpcode::G_FPTRUNC)
     return false;
 
@@ -930,8 +930,7 @@ bool checkTruncSrc(MachineRegisterInfo &MRI, MachineInstr *MaybeFpTrunc) {
 // truncating an FP that came from an integer this is not a problem as the range
 // of values is lower in the int
 bool matchFpTruncFpTrunc(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  if (MI.getOpcode() != TargetOpcode::G_FPTRUNC)
-    return false;
+  assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC && "Expected G_FPTRUNC");
 
   // Check the destination is 16 bits as we only want to match a very specific
   // pattern
@@ -959,10 +958,9 @@ bool matchFpTruncFpTrunc(MachineInstr &MI, MachineRegisterInfo &MRI) {
     for (unsigned OpIdx = 1, NumOperands = ParentDef->getNumOperands();
          OpIdx != NumOperands; ++OpIdx) {
       Register FpTruncDst = ParentDef->getOperand(OpIdx).getReg();
-
       FpTruncDef = getDefIgnoringCopies(FpTruncDst, MRI);
 
-      if (!checkTruncSrc(MRI, FpTruncDef))
+      if (!isFPTruncFromDouble(MRI, FpTruncDef))
         return false;
     }
 
@@ -973,40 +971,42 @@ bool matchFpTruncFpTrunc(MachineInstr &MI, MachineRegisterInfo &MRI) {
     Register VecExtractDst = ParentDef->getOperand(2).getReg();
     MachineInstr *VecExtractDef = getDefIgnoringCopies(VecExtractDst, MRI);
 
+    if (!VecExtractDef ||
+        VecExtractDef->getOpcode() != TargetOpcode::G_EXTRACT_VECTOR_ELT)
+      return false;
+
     Register FpTruncDst = VecExtractDef->getOperand(1).getReg();
     FpTruncDef = getDefIgnoringCopies(FpTruncDst, MRI);
-
-    if (!checkTruncSrc(MRI, FpTruncDef))
-      return false;
     break;
   }
   case TargetOpcode::G_FPTRUNC: {
     Register FpTruncDst = ParentDef->getOperand(1).getReg();
     FpTruncDef = getDefIgnoringCopies(FpTruncDst, MRI);
-
-    if (!checkTruncSrc(MRI, FpTruncDef))
-      return false;
     break;
   }
   }
+
+  if (!isFPTruncFromDouble(MRI, FpTruncDef))
+    return false;
 
   return true;
 }
 
 void applyFpTruncFpTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) {
+  assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC && "Expected G_FPTRUNC");
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
+
+  MachineInstr *ParentDef = getDefIgnoringCopies(Src, MRI);
+  if (!ParentDef)
+    return;
 
   LLT V2F32 = LLT::fixed_vector(2, LLT::scalar(32));
   LLT V4F32 = LLT::fixed_vector(4, LLT::scalar(32));
   LLT V4F16 = LLT::fixed_vector(4, LLT::scalar(16));
 
   B.setInstrAndDebugLoc(MI);
-
-  MachineInstr *ParentDef = getDefIgnoringCopies(Src, MRI);
-  if (!ParentDef)
-    return;
 
   switch (ParentDef->getOpcode()) {
   default:
@@ -1055,8 +1055,6 @@ void applyFpTruncFpTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
     MRI.setRegClass(LoFp64, &AArch64::FPR128RegClass);
     Register HiFp64 = FpTrunc2Def->getOperand(1).getReg();
     MRI.setRegClass(HiFp64, &AArch64::FPR128RegClass);
-
-    B.setInstrAndDebugLoc(MI);
 
     // Convert the lower half
     Register LoFp32 = MRI.createGenericVirtualRegister(V2F32);

@@ -1491,11 +1491,10 @@ bool AArch64LegalizerInfo::legalizeCustom(
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(MI, Helper);
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
     // In order to vectorise f16 to f64 properly, we need to use f32 as an
     // intermediary
-    return legalizeViaF32(MI, MIRBuilder, MRI, TargetOpcode::G_FPEXT);
-  case TargetOpcode::G_FPTRUNC:
-    return legalizeViaF32(MI, MIRBuilder, MRI, TargetOpcode::G_FPTRUNC);
+    return legalizeFpextFptrunc(MI, MIRBuilder, MRI);
   }
 
   llvm_unreachable("expected switch to return");
@@ -2421,10 +2420,9 @@ bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
   return true;
 }
 
-bool AArch64LegalizerInfo::legalizeViaF32(MachineInstr &MI,
-                                          MachineIRBuilder &MIRBuilder,
-                                          MachineRegisterInfo &MRI,
-                                          unsigned Opcode) const {
+bool AArch64LegalizerInfo::legalizeFpextFptrunc(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    MachineRegisterInfo &MRI) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -2435,7 +2433,7 @@ bool AArch64LegalizerInfo::legalizeViaF32(MachineInstr &MI,
   MachineInstrBuilder Mid;
   MachineInstrBuilder Fin;
   MIRBuilder.setInstrAndDebugLoc(MI);
-  switch (Opcode) {
+  switch (MI.getOpcode()) {
   default:
     return false;
   case TargetOpcode::G_FPEXT: {
