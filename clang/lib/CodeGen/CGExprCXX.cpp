@@ -23,7 +23,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
-#include <cstdio>
 
 using namespace clang;
 using namespace CodeGen;
@@ -1743,18 +1742,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // Check what type of constructor call the sanitizer is checking
   // Different UB can occour with custom overloads of operator new
   TypeCheckKind checkKind = CodeGenFunction::TCK_ConstructorCall;
-  const TargetInfo& TI = getContext().getTargetInfo();
+  const TargetInfo &TI = getContext().getTargetInfo();
   unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
   SourceManager &SM = getContext().getSourceManager();
   SourceLocation Loc = E->getOperatorNew()->getLocation();
   bool IsCustomOverload = !SM.isInSystemHeader(Loc);
-  if (
-    SanOpts.has(SanitizerKind::Alignment) && 
-    IsCustomOverload &&
-    (DefaultTargetAlignment > CGM.getContext().getTypeAlignInChars(allocType).getQuantity())
-  )
+  if (SanOpts.has(SanitizerKind::Alignment) && IsCustomOverload &&
+      (DefaultTargetAlignment >
+       CGM.getContext().getTypeAlignInChars(allocType).getQuantity()))
     checkKind = CodeGenFunction::TCK_ConstructorCallOverloadedNew;
-  
+
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may
   // have already checked that the pointer is non-null.
@@ -1762,10 +1759,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // we'll null check the wrong pointer here.
   SanitizerSet SkippedChecks;
   SkippedChecks.set(SanitizerKind::Null, nullCheck);
-  EmitTypeCheck(checkKind,
-                E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-                result, allocType, result.getAlignment(), SkippedChecks,
-                numElements);
+  EmitTypeCheck(
+      checkKind, E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+      result, allocType, result.getAlignment(), SkippedChecks, numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
