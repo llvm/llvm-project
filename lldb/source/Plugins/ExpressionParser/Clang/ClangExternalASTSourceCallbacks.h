@@ -9,7 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXTERNALASTSOURCECALLBACKS_H
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXTERNALASTSOURCECALLBACKS_H
 
-#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
 #include <optional>
@@ -22,15 +21,13 @@ class Module;
 
 namespace lldb_private {
 
-class ClangExternalASTSourceCallbacks : public ImporterBackedASTSource {
+class ClangExternalASTSourceCallbacks : public clang::ExternalASTSource {
   /// LLVM RTTI support.
   static char ID;
 
 public:
   /// LLVM RTTI support.
-  bool isA(const void *ClassID) const override {
-    return ClassID == &ID || ImporterBackedASTSource::isA(ClassID);
-  }
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
   static bool classof(const clang::ExternalASTSource *s) { return s->isA(&ID); }
 
   ClangExternalASTSourceCallbacks(TypeSystemClang &ast) : m_ast(ast) {}

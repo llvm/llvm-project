@@ -13,7 +13,6 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
-#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
@@ -2033,9 +2032,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     m_ast.SetMetadata(class_template_decl, metadata);
     m_ast.SetMetadata(class_specialization_decl, metadata);
     RegisterDIE(die.GetDIE(), clang_type);
-    if (auto *source = llvm::dyn_cast_or_null<ImporterBackedASTSource>(
-            m_ast.getASTContext().getExternalSource()))
-      source->MarkRedeclChainsAsOutOfDate(m_ast.getASTContext());
   }
 
   if (!clang_type) {

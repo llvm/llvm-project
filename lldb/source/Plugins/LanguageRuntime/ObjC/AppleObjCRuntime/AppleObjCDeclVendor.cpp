@@ -11,7 +11,6 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -25,7 +24,7 @@
 using namespace lldb_private;
 
 class lldb_private::AppleObjCExternalASTSource
-    : public ImporterBackedASTSource {
+    : public clang::ExternalASTSource {
 public:
   AppleObjCExternalASTSource(AppleObjCDeclVendor &decl_vendor)
       : m_decl_vendor(decl_vendor) {}

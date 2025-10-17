@@ -1,5 +1,4 @@
 add_lldb_library(lldbPluginTypeSystemClang PLUGIN
-  ImporterBackedASTSource.cpp
   TypeSystemClang.cpp
 
   LINK_COMPONENTS

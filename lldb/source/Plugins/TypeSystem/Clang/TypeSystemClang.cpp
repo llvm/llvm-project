@@ -1186,18 +1186,11 @@ CompilerType TypeSystemClang::GetTypeForDecl(clang::NamedDecl *decl) {
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(TagDecl *decl) {
-  // Create the type for the TagDecl. Pass the previous decl to make sure that
-  // all redeclarations share the same type.
-  return GetType(
-      getASTContext().getTypeDeclType(decl, decl->getPreviousDecl()));
+  return GetType(getASTContext().getTagDeclType(decl));
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(const ObjCInterfaceDecl *decl) {
-  // FIXME: getObjCInterfaceType second parameter could be const.
-  // Create the type for the ObjCInterfaceDecl. Pass the previous decl to make
-  // sure that all redeclarations share the same type.
-  return GetType(getASTContext().getObjCInterfaceType(
-      decl, const_cast<ObjCInterfaceDecl *>(decl->getPreviousDecl())));
+  return GetType(getASTContext().getObjCInterfaceType(decl));
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(clang::ValueDecl *value_decl) {
@@ -1715,13 +1708,6 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
 
   class_template_specialization_decl->setSpecializationKind(
       TSK_ExplicitSpecialization);
-
-  // Store the information that is needed to later redeclare this exact
-  // template specialization.
-  ClassTemplateRedeclInfo redecl_info;
-  redecl_info.m_template_args = template_param_infos;
-  m_class_template_redecl_infos[class_template_specialization_decl] =
-      redecl_info;
 
   return class_template_specialization_decl;
 }
@@ -2539,17 +2525,9 @@ void TypeSystemClang::SetMetadataAsUserID(const clang::Type *type,
   SetMetadata(type, meta_data);
 }
 
-/// Returns the Decl in a redeclaration chain that is used to store the
-/// the ClangASTMetadata in the metadata map.
-static const clang::Decl *GetDeclForMetadataStorage(const clang::Decl *d) {
-  // Only the first Decl never changes and never requires any loading from
-  // the ExternalASTSource, so it can be a stable key for the map.
-  return ClangUtil::GetFirstDecl(d);
-}
-
 void TypeSystemClang::SetMetadata(const clang::Decl *object,
                                   ClangASTMetadata metadata) {
-  m_decl_metadata[GetDeclForMetadataStorage(object)] = metadata;
+  m_decl_metadata[object] = metadata;
 }
 
 void TypeSystemClang::SetMetadata(const clang::Type *object,
@@ -2559,7 +2537,7 @@ void TypeSystemClang::SetMetadata(const clang::Type *object,
 
 std::optional<ClangASTMetadata>
 TypeSystemClang::GetMetadata(const clang::Decl *object) {
-  auto It = m_decl_metadata.find(GetDeclForMetadataStorage(object));
+  auto It = m_decl_metadata.find(object);
   if (It != m_decl_metadata.end())
     return It->second;
 
@@ -8463,11 +8441,7 @@ bool TypeSystemClang::StartTagDeclarationDefinition(const CompilerType &type) {
     if (tag_type) {
       clang::TagDecl *tag_decl = tag_type->getDecl();
       if (tag_decl) {
-        // There are several declarations in the redeclaration chain that could
-        // define this type. The most logical declaration that we could turn
-        // into a definition is the most recent one.
-        clang::TagDecl *def = tag_decl->getMostRecentDecl();
-        def->startDefinition();
+        tag_decl->startDefinition();
         return true;
       }
     }
@@ -8477,11 +8451,7 @@ bool TypeSystemClang::StartTagDeclarationDefinition(const CompilerType &type) {
     if (object_type) {
       clang::ObjCInterfaceDecl *interface_decl = object_type->getInterface();
       if (interface_decl) {
-        // There are several declarations in the redeclaration chain that could
-        // define this type. The most logical declaration that we could turn
-        // into a definition is the most recent one.
-        clang::ObjCInterfaceDecl *def = interface_decl->getMostRecentDecl();
-        def->startDefinition();
+        interface_decl->startDefinition();
         return true;
       }
     }
@@ -9152,87 +9122,6 @@ void TypeSystemClang::CompleteObjCInterfaceDecl(
     if (clang_type)
       sym_file->CompleteType(clang_type);
   }
-}
-
-/// Appends an existing declaration to the redeclaration chain.
-/// \param ts The TypeSystemClang that contains the two declarations.
-/// \param prev The most recent existing declaration.
-/// \param redecl The new declaration which should be appended to the end of
-/// redeclaration chain.
-template <typename T>
-static void ConnectRedeclToPrev(TypeSystemClang &ts, T *prev, T *redecl) {
-  assert(&ts.getASTContext() == &prev->getASTContext() && "Not ");
-  redecl->setPreviousDecl(prev);
-  // Now that the redecl chain is done, create the type explicitly via
-  // the TypeSystemClang interface that will reuse the type of the previous
-  // decl.
-  ts.GetTypeForDecl(redecl);
-  // The previous decl and the redeclaration both declare the same type.
-  // FIXME: rdar://123500660, this is causing large number of test failures.
-  // assert(prev->getTypeForDecl() == redecl->getTypeForDecl());
-}
-
-/// Returns the ClangModuleID for the given declaration.
-static OptionalClangModuleID GetModuleForDecl(clang::Decl *d) {
-  if (!d->isFromASTFile() || !d->getOwningModuleID())
-    return OptionalClangModuleID();
-  return OptionalClangModuleID(d->getOwningModuleID());
-}
-
-CompilerType TypeSystemClang::CreateRedeclaration(CompilerType ct) {
-  // All the cases below just check for a specific declaration kind, create
-  // a new declaration with matching data. We don't care about metadata which
-  // should only be tracked in the first redeclaration and should be identical
-  // for all redeclarations.
-
-  if (clang::ObjCInterfaceDecl *interface = ClangUtil::GetAsObjCDecl(ct)) {
-    clang::NamedDecl *res = CreateObjCDecl(
-        interface->getName(), interface->getDeclContext()->getRedeclContext(),
-        GetModuleForDecl(interface), interface->isImplicit());
-    clang::ObjCInterfaceDecl *redecl = llvm::cast<ObjCInterfaceDecl>(res);
-    ConnectRedeclToPrev(*this, interface, redecl);
-    return GetTypeForDecl(redecl);
-  }
-
-  clang::TagDecl *tag_decl = ClangUtil::GetAsTagDecl(ct);
-  if (!tag_decl)
-    return {};
-
-  if (clang::EnumDecl *enum_decl = dyn_cast<EnumDecl>(tag_decl)) {
-    Declaration decl;
-    clang::EnumDecl *redecl = CreateEnumerationDecl(
-        enum_decl->getNameAsString().c_str(),
-        tag_decl->getDeclContext()->getRedeclContext(),
-        GetModuleForDecl(enum_decl), decl, GetType(enum_decl->getIntegerType()),
-        enum_decl->isScoped());
-    ConnectRedeclToPrev(*this, enum_decl, redecl);
-    return GetTypeForDecl(redecl);
-  }
-
-  if (auto *template_decl =
-          dyn_cast<ClassTemplateSpecializationDecl>(tag_decl)) {
-    auto redecl_info = m_class_template_redecl_infos.find(template_decl);
-    // If we are asked to redeclare a template that we haven't declared, then
-    // there is nothing we can do.
-    assert(redecl_info != m_class_template_redecl_infos.end());
-    TemplateParameterInfos template_infos = redecl_info->second.m_template_args;
-    auto *redecl = CreateClassTemplateSpecializationDecl(
-        tag_decl->getDeclContext()->getRedeclContext(),
-        GetModuleForDecl(template_decl),
-        template_decl->getSpecializedTemplate(),
-        llvm::to_underlying(tag_decl->getTagKind()), template_infos);
-    ConnectRedeclToPrev(*this, template_decl, redecl);
-    return GetType(clang::QualType(redecl->getTypeForDecl(), 0U));
-  }
-
-  assert(llvm::isa<RecordDecl>(tag_decl));
-  clang::NamedDecl *redecl_record = CreateRecordDecl(
-      tag_decl->getDeclContext()->getRedeclContext(),
-      GetModuleForDecl(tag_decl), lldb::eAccessPublic, tag_decl->getName(),
-      llvm::to_underlying(tag_decl->getTagKind()), eLanguageTypeC_plus_plus);
-  clang::TagDecl *redecl = llvm::cast<TagDecl>(redecl_record);
-  ConnectRedeclToPrev(*this, tag_decl, redecl);
-  return GetTypeForDecl(redecl);
 }
 
 DWARFASTParser *TypeSystemClang::GetDWARFParser() {
