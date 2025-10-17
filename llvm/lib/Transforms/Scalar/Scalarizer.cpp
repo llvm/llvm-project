@@ -252,14 +252,30 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
+      if (NumPacked < VS.NumPacked) {
+        // If last pack of remained bits not aligned to target pack size.
+        ExtendMask.resize(NumPacked);
+      }
+
       Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
       if (I == 0) {
         Res = Fragment;
       } else {
         for (unsigned J = 0; J < NumPacked; ++J)
           InsertMask[I * VS.NumPacked + J] = NumElements + J;
-        Res = Builder.CreateShuffleVector(Res, Fragment, InsertMask,
-                                          Name + ".upto" + Twine(I));
+
+        if (NumPacked < VS.NumPacked) {
+          for (unsigned J = 0; J < NumPacked; ++J) {
+            auto FragmentBit = Builder.CreateExtractElement(Fragment, J);
+            Res = Builder.CreateInsertElement(Res, FragmentBit,
+                                              I * VS.NumPacked + J);
+          }
+          Res->setName(Name + ".upto" + Twine(I));
+        } else {
+          Res = Builder.CreateShuffleVector(Res, Fragment, InsertMask,
+                                            Name + ".upto" + Twine(I));
+        }
+
         for (unsigned J = 0; J < NumPacked; ++J)
           InsertMask[I * VS.NumPacked + J] = I * VS.NumPacked + J;
       }
