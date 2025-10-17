@@ -154,8 +154,7 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
   }
 }
 
-Symbol *Scope::FindCommonBlockInVisibleScopes(
-    const SourceName &name) const {
+Symbol *Scope::FindCommonBlockInVisibleScopes(const SourceName &name) const {
   if (Symbol * cb{FindCommonBlock(name)}) {
     return cb;
   } else if (Symbol * cb{FindCommonBlockUse(name)}) {
