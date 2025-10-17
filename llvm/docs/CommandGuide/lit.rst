@@ -346,6 +346,10 @@ The timing data is stored in the `test_exec_root` in a file named
 
     LIT_XFAIL="affinity/kmp-hw-subset.c;libomptarget :: x86_64-pc-linux-gnu :: offloading/memory_manager.cpp"
 
+.. option:: --xfail-from-file PATH
+
+  Read a line separated list of tests from a file to be used by :option:`--xfail`.
+
 .. option:: --xfail-not LIST
 
   Do not treat the specified tests as ``XFAIL``.  The environment variable
@@ -355,6 +359,10 @@ The timing data is stored in the `test_exec_root` in a file named
   including an :option:`--xfail` appearing later on the command line.  The
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
+
+.. option:: --xfail-not-from-file PATH
+
+  Read a line separated list of tests from a file to be used by :option:`--xfail-not`.
 
 .. option:: --exclude-xfail
 
