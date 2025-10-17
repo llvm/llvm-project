@@ -1897,73 +1897,21 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
 
   const ConstantMatrixType *MT = DeclType->castAs<ConstantMatrixType>();
   QualType ElemTy = MT->getElementType();
-  const unsigned Rows = MT->getNumRows();
-  const unsigned Cols = MT->getNumColumns();
-  const unsigned MaxElts = Rows * Cols;
+  const unsigned MaxElts = MT->getNumElementsFlattened();
 
   unsigned NumEltsInit = 0;
   InitializedEntity ElemEnt =
       InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
 
-  // A Matrix initalizer should be able to take scalars, vectors, and matrices.
-  auto HandleInit = [&](InitListExpr *List, unsigned &Idx) {
-    Expr *Init = List->getInit(Idx);
-    QualType ITy = Init->getType();
-
-    if (ITy->isVectorType()) {
-      const VectorType *IVT = ITy->castAs<VectorType>();
-      unsigned N = IVT->getNumElements();
-      QualType VTy =
-          ITy->isExtVectorType()
-              ? SemaRef.Context.getExtVectorType(ElemTy, N)
-              : SemaRef.Context.getVectorType(ElemTy, N, IVT->getVectorKind());
-      ElemEnt.setElementIndex(Idx);
-      CheckSubElementType(ElemEnt, List, VTy, Idx, StructuredList,
-                          StructuredIndex);
-      NumEltsInit += N;
-      return;
-    }
-
-    if (ITy->isMatrixType()) {
-      const ConstantMatrixType *IMT = ITy->castAs<ConstantMatrixType>();
-      unsigned N = IMT->getNumRows() * IMT->getNumColumns();
-      QualType MTy = SemaRef.Context.getConstantMatrixType(
-          ElemTy, IMT->getNumRows(), IMT->getNumColumns());
-      ElemEnt.setElementIndex(Idx);
-      CheckSubElementType(ElemEnt, List, MTy, Idx, StructuredList,
-                          StructuredIndex);
-      NumEltsInit += N;
-      return;
-    }
-
-    // Scalar element
-    ElemEnt.setElementIndex(Idx);
-    CheckSubElementType(ElemEnt, List, ElemTy, Idx, StructuredList,
+  while (NumEltsInit < MaxElts && Index < IList->getNumInits()) {
+    // Not a sublist: just consume directly.
+    ElemEnt.setElementIndex(Index);
+    CheckSubElementType(ElemEnt, IList, ElemTy, Index, StructuredList,
                         StructuredIndex);
     ++NumEltsInit;
-  };
-
-  // Column-major: each top-level sublist is treated as a column.
-  while (NumEltsInit < MaxElts && Index < IList->getNumInits()) {
-    Expr *Init = IList->getInit(Index);
-
-    if (auto *SubList = dyn_cast<InitListExpr>(Init)) {
-      unsigned SubIdx = 0;
-      unsigned Row = 0;
-      while (Row < Rows && SubIdx < SubList->getNumInits() &&
-             NumEltsInit < MaxElts) {
-        HandleInit(SubList, SubIdx);
-        ++Row;
-      }
-      ++Index; // advance past this column sublist
-      continue;
-    }
-
-    // Not a sublist: just consume directly.
-    HandleInit(IList, Index);
   }
 
-  // HLSL requires exactly Rows*Cols initializers after flattening.
+  // HLSL requires exactly NumEltsInit to equal Max initializers.
   if (NumEltsInit != MaxElts) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
