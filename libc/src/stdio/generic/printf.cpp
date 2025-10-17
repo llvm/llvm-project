@@ -34,18 +34,16 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   va_end(vlist);
   auto ret_val = printf_core::vfprintf_internal(
       reinterpret_cast<::FILE *>(PRINTF_STDOUT), format, args);
-  if (ret_val.has_error()) {
-    libc_errno = printf_core::internal_error_to_errno(ret_val.error);
-    return -1;
-    ;
+  if (!ret_val.has_value()) {
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error());
     return -1;
   }
-  if (ret_val.value > cpp::numeric_limits<int>::max()) {
+  if (ret_val.value() > cpp::numeric_limits<int>::max()) {
     libc_errno = EOVERFLOW;
     return -1;
   }
 
-  return static_cast<int>(ret_val.value);
+  return static_cast<int>(ret_val.value());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

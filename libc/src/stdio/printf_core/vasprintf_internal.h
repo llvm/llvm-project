@@ -11,6 +11,7 @@
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/error_or.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
@@ -43,28 +44,28 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 
-LIBC_INLINE PrintfResult vasprintf_internal(char **ret,
-                                            const char *__restrict format,
-                                            internal::ArgList args) {
+LIBC_INLINE ErrorOr<size_t> vasprintf_internal(char **ret,
+                                               const char *__restrict format,
+                                               internal::ArgList args) {
   char init_buff_on_stack[DEFAULT_BUFFER_SIZE];
   printf_core::WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> wb(
       init_buff_on_stack, DEFAULT_BUFFER_SIZE, resize_overflow_hook);
   printf_core::Writer writer(wb);
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
-  if (ret_val.has_error()) {
+  if (!ret_val.has_value()) {
     *ret = nullptr;
     return ret_val;
   }
   if (wb.buff == init_buff_on_stack) {
-    *ret = static_cast<char *>(malloc(ret_val.value + 1));
+    *ret = static_cast<char *>(malloc(ret_val.value() + 1));
     if (ret == nullptr)
-      return {0, ALLOCATION_ERROR};
-    inline_memcpy(*ret, wb.buff, ret_val.value);
+      return Error(ALLOCATION_ERROR);
+    inline_memcpy(*ret, wb.buff, ret_val.value());
   } else {
     *ret = wb.buff;
   }
-  (*ret)[ret_val.value] = '\0';
+  (*ret)[ret_val.value()] = '\0';
   return ret_val;
 }
 } // namespace printf_core

@@ -127,6 +127,7 @@ add_header_library(
     .writer
     .core_structs
     libc.src.__support.arg_list
+    libc.src.__support.error_or
 )
 
 add_header_library(
@@ -138,6 +139,7 @@ add_header_library(
     libc.hdr.func.free
     libc.hdr.func.realloc
     libc.src.__support.arg_list
+    libc.src.__support.error_or
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
 )
@@ -154,6 +156,7 @@ add_header_library(
     vfprintf_internal.h
   DEPENDS
     libc.src.__support.File.file
+    libc.src.__support.error_or
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer

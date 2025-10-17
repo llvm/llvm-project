@@ -12,6 +12,7 @@
 #include "hdr/errno_macros.h"
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -80,9 +81,9 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   return WRITE_OK;
 }
 
-LIBC_INLINE PrintfResult vfprintf_internal(::FILE *__restrict stream,
-                                           const char *__restrict format,
-                                           internal::ArgList &args) {
+LIBC_INLINE ErrorOr<size_t> vfprintf_internal(::FILE *__restrict stream,
+                                              const char *__restrict format,
+                                              internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
   printf_core::WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value> wb(
@@ -90,13 +91,13 @@ LIBC_INLINE PrintfResult vfprintf_internal(::FILE *__restrict stream,
   Writer writer(wb);
   internal::flockfile(stream);
   auto retval = printf_main(&writer, format, args);
-  if (retval.has_error()) {
+  if (!retval.has_value()) {
     internal::funlockfile(stream);
     return retval;
   }
   int flushval = wb.overflow_write("");
   if (flushval != WRITE_OK)
-    retval.error = -flushval;
+    retval = Error(-flushval);
   internal::funlockfile(stream);
   return retval;
 }

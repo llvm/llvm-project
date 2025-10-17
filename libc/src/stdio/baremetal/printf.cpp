@@ -43,8 +43,8 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
   auto retval = printf_core::printf_main(&writer, format, args);
-  if (retval.has_error()) {
-    libc_errno = retval.error; // TODO map
+  if (!retval.has_value()) {
+    libc_errno = retval.error(); // TODO map
     return -1;
   }
 
@@ -54,12 +54,12 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
     return -1;
   }
 
-  if (retval.value > cpp::numeric_limits<int>::max()) {
+  if (retval.value() > cpp::numeric_limits<int>::max()) {
     libc_errno = EOVERFLOW;
     return -1;
   }
 
-  return static_cast<int>(retval.value);
+  return static_cast<int>(retval.value());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

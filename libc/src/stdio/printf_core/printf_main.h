@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H
 
 #include "src/__support/arg_list.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -22,8 +23,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <WriteMode write_mode>
-PrintfResult printf_main(Writer<write_mode> *writer, const char *__restrict str,
-                         internal::ArgList &args) {
+ErrorOr<size_t> printf_main(Writer<write_mode> *writer,
+                            const char *__restrict str,
+                            internal::ArgList &args) {
   Parser<internal::ArgList> parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
@@ -34,7 +36,7 @@ PrintfResult printf_main(Writer<write_mode> *writer, const char *__restrict str,
     else
       result = writer->write(cur_section.raw_string);
     if (result < 0)
-      return {0, -result};
+      return Error(-result);
   }
 
   return writer->get_chars_written();
