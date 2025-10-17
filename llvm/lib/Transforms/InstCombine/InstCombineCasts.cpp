@@ -1649,7 +1649,8 @@ static bool fitsInFPType(APFloat F, const fltSemantics &Sem) {
   return !losesInfo;
 }
 
-static Type *shrinkFPConstant(LLVMContext &Ctx, APFloat F, bool PreferBFloat) {
+static Type *shrinkFPConstant(LLVMContext &Ctx, const APFloat &F,
+                              bool PreferBFloat) {
   // See if the value can be truncated to bfloat and then reextended.
   if (PreferBFloat && fitsInFPType(F, APFloat::BFloat()))
     return Type::getBFloatTy(Ctx);
@@ -1675,8 +1676,9 @@ static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
 
   Type *ShrinkTy =
       shrinkFPConstant(CFP->getContext(), CFP->getValueAPF(), PreferBFloat);
-  if (auto *VecTy = dyn_cast<VectorType>(Ty))
-    ShrinkTy = VectorType::get(ShrinkTy, VecTy);
+  if (ShrinkTy)
+    if (auto *VecTy = dyn_cast<VectorType>(Ty))
+      ShrinkTy = VectorType::get(ShrinkTy, VecTy);
 
   return ShrinkTy;
 }
