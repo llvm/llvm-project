@@ -8140,10 +8140,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_partial_reduce_fadd: {
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
-    setValue(&I,
-             DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(), Acc,
-                         Input,
-                         DAG.getConstantFP(1.0, sdl, Input.getValueType())));
+    setValue(&I, DAG.getNode(
+                     ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(), Acc,
+                     Input, DAG.getConstantFP(1.0, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
