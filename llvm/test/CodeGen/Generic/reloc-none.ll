@@ -1,5 +1,4 @@
 ; RUN: llc < %s | FileCheck %s
-; RUN: llc -O2 < %s | FileCheck %s
 
 ; CHECK: .reloc {{.*}}, BFD_RELOC_NONE, foo
 
