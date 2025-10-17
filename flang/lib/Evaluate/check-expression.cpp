@@ -1501,32 +1501,21 @@ public:
     return !actualTreatAsContiguous && dummyNeedsContiguity;
   }
 
-  // Returns true, if actual and dummy have polymorphic differences
   bool HavePolymorphicDifferences() const {
-    bool dummyIsAssumedRank{dummyObj_.type.attrs().test(
-        characteristics::TypeAndShape::Attr::AssumedRank)};
-    bool actualIsAssumedRank{semantics::IsAssumedRank(actual_)};
-    bool dummyIsAssumedShape{dummyObj_.type.attrs().test(
-        characteristics::TypeAndShape::Attr::AssumedShape)};
-    bool actualIsAssumedShape{semantics::IsAssumedShape(actual_)};
-    if ((actualIsAssumedRank && dummyIsAssumedRank) ||
-        (actualIsAssumedShape && dummyIsAssumedShape)) {
-      // Assumed-rank and assumed-shape arrays are represented by descriptors,
-      // so don't need to do polymorphic check.
-    } else if (!dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
-      // flang supports limited cases of passing polymorphic to non-polimorphic.
-      // These cases require temporary of non-polymorphic type. (For example,
-      // the actual argument could be polymorphic array of child type,
-      // while the dummy argument could be non-polymorphic array of parent
-      // type.)
-      bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
-      auto actualType{
-          characteristics::TypeAndShape::Characterize(actual_, fc_)};
-      bool actualIsPolymorphic{
-          actualType && actualType->type().IsPolymorphic()};
-      if (actualIsPolymorphic && !dummyIsPolymorphic) {
-        return true;
-      }
+    // These cases require temporary of non-polymorphic type. (For example,
+    // the actual argument could be polymorphic array of child type,
+    // while the dummy argument could be non-polymorphic array of parent
+    // type.)
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
+      return false;
+    }
+    auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)};
+    if (actualType && actualType->type().IsPolymorphic() &&
+        !actualType->type().IsAssumedType() &&
+        !dummyObj_.IsPassedByDescriptor(/*isBindC*/ false)) {
+      // Not passing a descriptor, so will need to make a copy of the data
+      // with a proper type.
+      return true;
     }
     return false;
   }
