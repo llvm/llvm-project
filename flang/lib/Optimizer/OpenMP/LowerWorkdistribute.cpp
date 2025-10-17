@@ -612,11 +612,9 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
     emitError(loc, "teams with multiple blocks\n");
     return failure();
   }
-  auto *workdistributeBlock = &workdistribute.getRegion().front();
   bool changed = false;
-  omp::TargetOp targetOp;
   // Get the target op parent of teams
-  targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
+  omp::TargetOp targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
   SmallVector<Operation *> opsToErase;
   for (auto &op : workdistribute.getOps()) {
     if (isRuntimeCall(&op)) {
