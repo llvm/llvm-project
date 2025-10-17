@@ -39,8 +39,30 @@ using ::clang::ast_matchers::StatementMatcher;
 
 } // namespace
 
-static bool isStatusOrOperatorBaseType(QualType type) {
-  return isRecordTypeWithName(type, "absl::internal_statusor::OperatorBase");
+static bool namespaceEquals(const NamespaceDecl *NS,
+                            clang::ArrayRef<clang::StringRef> NamespaceNames) {
+  while (!NamespaceNames.empty() && NS) {
+    if (NS->getName() != NamespaceNames.consume_back())
+      return false;
+    NS = dyn_cast_or_null<NamespaceDecl>(NS->getParent());
+  }
+  return NamespaceNames.empty() && !NS;
+}
+
+// TODO: move this to a proper place to share with the rest of clang
+static bool isTypeNamed(QualType Type, clang::ArrayRef<clang::StringRef> NS,
+                        StringRef Name) {
+  if (Type.isNull())
+    return false;
+  if (auto *RD = Type->getAsRecordDecl())
+    if (RD->getName() == Name)
+      if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD->getDeclContext()))
+        return namespaceEquals(N, NS);
+  return false;
+}
+
+static bool isStatusOrOperatorBaseType(QualType Type) {
+  return isTypeNamed(Type, {"absl", "internal_statusor"}, "OperatorBase");
 }
 
 static bool isSafeUnwrap(RecordStorageLocation *StatusOrLoc,
@@ -231,17 +253,6 @@ clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass() {
       hasName("absl::internal_statusor::OperatorBase"));
 }
 
-clang::ast_matchers::TypeMatcher possiblyAliasedStatusOrType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return hasUnqualifiedDesugaredType(
-      recordType(hasDeclaration(statusOrClass())));
-}
-
-clang::ast_matchers::TypeMatcher possiblyAliasedStatusType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return hasUnqualifiedDesugaredType(recordType(hasDeclaration(statusClass())));
-}
-
 clang::ast_matchers::TypeMatcher statusOrType() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return hasCanonicalType(qualType(hasDeclaration(statusOrClass())));
@@ -253,11 +264,11 @@ bool isRecordTypeWithName(QualType Type, llvm::StringRef TypeName) {
 }
 
 bool isStatusOrType(QualType Type) {
-  return isRecordTypeWithName(Type, "absl::StatusOr");
+  return isTypeNamed(Type, {"absl"}, "StatusOr");
 }
 
 bool isStatusType(QualType Type) {
-  return isRecordTypeWithName(Type, "absl::Status");
+  return isTypeNamed(Type, {"absl"}, "Status");
 }
 
 llvm::StringMap<QualType> getSyntheticFields(QualType Ty, QualType StatusType,
