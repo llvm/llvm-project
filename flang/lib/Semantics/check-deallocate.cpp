@@ -114,7 +114,8 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
             },
             [&](const parser::MsgVariable &var) {
               WarnOnDeferredLengthCharacterScalar(context_,
-                  GetExpr(context_, var), var.v.thing.thing.GetSource(),
+                  GetExpr(context_, var),
+                  parser::UnwrapRef<parser::Variable>(var).GetSource(),
                   "ERRMSG=");
               if (gotMsg) {
                 context_.Say(

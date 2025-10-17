@@ -1313,10 +1313,10 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
-  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
-                               mlir::Type ElementTy, Address BeginPtr,
-                               mlir::Value NumElements,
-                               mlir::Value AllocSizeWithoutCookie);
+  void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
+                               mlir::Type elementTy, Address beginPtr,
+                               mlir::Value numElements,
+                               mlir::Value allocSizeWithoutCookie);
 
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
