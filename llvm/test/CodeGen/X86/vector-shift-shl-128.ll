@@ -996,12 +996,12 @@ define <4 x i32> @constant_shift_v4i32(<4 x i32> %a) nounwind {
 ;
 ; SSE41-LABEL: constant_shift_v4i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [16,32,64,128]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: constant_shift_v4i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,32,64,128]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: constant_shift_v4i32:

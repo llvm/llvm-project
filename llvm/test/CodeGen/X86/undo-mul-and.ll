@@ -73,13 +73,13 @@ define <4 x i32> @mul_and_to_neg_shl_and_vec_fail_no_splat(<4 x i32> %x) {
 ;
 ; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec_fail_no_splat:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [56,56,56,64]
 ; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: mul_and_to_neg_shl_and_vec_fail_no_splat:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [56,56,56,64]
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 56, i32 56, i32 56, i32 64>
@@ -102,13 +102,13 @@ define <4 x i32> @mul_and_to_neg_shl_and_vec_todo_no_splat1(<4 x i32> %x) {
 ;
 ; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec_todo_no_splat1:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [56,56,56,48]
 ; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: mul_and_to_neg_shl_and_vec_todo_no_splat1:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [56,56,56,48]
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 56, i32 56, i32 56, i32 48>
@@ -131,7 +131,7 @@ define <4 x i32> @mul_and_to_neg_shl_and_vec_todo_no_splat2(<4 x i32> %x) {
 ;
 ; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec_todo_no_splat2:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [56,56,56,56]
 ; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
