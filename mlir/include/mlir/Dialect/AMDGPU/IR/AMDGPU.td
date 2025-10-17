@@ -154,45 +154,33 @@ def AMDGPU_ScaledExtPacked816Op
     ```mlir
     // Input: 8-element vector of F8E4M3FN, converting to F32
     // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 1
-    %result = amdgpu.scaled_ext_packed816 %source
-    scale(%scales)
-    blockSize(32)
-    firstScaleLane(0)
-    firstScaleByte(0)
-    : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(32) firstScaleLane(0) firstScaleByte(0)
+      : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
 
     // Input: 16-element vector of F6E2M3FN, converting to F16
     // Lanes 0-15 read from byte 2, lanes 16-31 read from byte 3
-    %result = amdgpu.scaled_ext_packed816 %source
-    scale(%scales)
-    blockSize(32)
-    firstScaleLane(1)
-    firstScaleByte(2)
-    : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(32) firstScaleLane(1) firstScaleByte(2)
+      : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
     ```
 
     However, when the block size is 16, `firstScaleByte` can be 0 or 1.
     Lanes 0-15 read from the `firstScaleByte`th element of the scale vectors,
     while lanes 16-31 read from `firstScaleByte` + 2.
     For example:
-    ```
+    ```mlir
     // Input: 8-element vector of F8E5M2, converting to BF16
     // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 2 (0+2)
-    %result = amdgpu.scaled_ext_packed816 %source
-    scale(%scales)
-    blockSize(16)
-    firstScaleLane(0)
-    firstScaleByte(0)
-    : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(16) firstScaleLane(0) firstScaleByte(0)
+      : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
 
     // Input: 16-element vector of F6E3M2FN, converting to F32
     // Lanes 0-15 read from byte 1, lanes 16-31 read from byte 3 (1+2)
-    %result = amdgpu.scaled_ext_packed816 %source
-    scale(%scales)
-    blockSize(16)
-    firstScaleLane(1)
-    firstScaleByte(1)
-    : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(16) firstScaleLane(1) firstScaleByte(1)
+      : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
     ```
 
     Note: the layout for the scales generally mirrors how the WMMA
