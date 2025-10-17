@@ -2166,6 +2166,10 @@ public:
 
   LogicalResult matchAndRewrite(ReinterpretCastOp op,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Using counting comparison instead of direct comparison because
+    // getMixedValues (and consequently ReinterpretCastOp::getMixed...) returns
+    // IntegerAttrs, while constifyIndexValues (and consequently
+    // ReinterpretCastOp::getConstifiedMixed...) returns IndexAttrs.
     unsigned srcStaticCount = llvm::count_if(
         llvm::concat<OpFoldResult>(op.getMixedOffsets(), op.getMixedSizes(),
                                    op.getMixedStrides()),
