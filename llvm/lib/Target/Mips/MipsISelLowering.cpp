@@ -3404,19 +3404,20 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
     CSInfo = MachineFunction::CallSiteInfo(*CB);
 
-  // Check if it's really possible to do a tail call. Restrict it to functions
-  // that are part of this compilation unit.
+  // Check if it's really possible to do a tail call.
+  // For non-musttail calls, restrict to functions that won't require $gp
+  // restoration. In PIC mode, calling external functions via tail call can
+  // cause issues with $gp register handling (see D24763).
   bool InternalLinkage = false;
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
         CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>(), IsMustTail);
-    if (IsTailCall) {
+    // For non-musttail calls, restrict to local or non-interposable functions
+    if (IsTailCall && !IsMustTail) {
       if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
         InternalLinkage = G->getGlobal()->hasInternalLinkage();
-        IsTailCall &= (InternalLinkage || G->getGlobal()->hasLocalLinkage() ||
-                       G->getGlobal()->isDSOLocal() ||
-                       G->getGlobal()->hasPrivateLinkage() ||
+        IsTailCall &= (G->getGlobal()->hasLocalLinkage() ||
                        G->getGlobal()->hasHiddenVisibility() ||
                        G->getGlobal()->hasProtectedVisibility());
       }

@@ -21,3 +21,77 @@ define i32 @test_musttail_args(i32 %x, i32 %y, i32 %z) {
   %ret = musttail call i32 @callee_args(i32 %x, i32 %y, i32 %z)
   ret i32 %ret
 }
+
+; Test musttail with many arguments that spill to stack (involves memory)
+; MIPS O32 ABI: first 4 args in $a0-$a3, rest on stack
+declare i32 @many_args_callee(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
+
+define i32 @test_musttail_many_args(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
+; MIPS32-LABEL: test_musttail_many_args:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    lw $1, 24($sp)
+; MIPS32-NEXT:    lw $2, 20($sp)
+; MIPS32-NEXT:    lw $3, 16($sp)
+; MIPS32-NEXT:    sw $3, 16($sp)
+; MIPS32-NEXT:    sw $2, 20($sp)
+; MIPS32-NEXT:    sw $1, 24($sp)
+; MIPS32-NEXT:    lw $1, 28($sp)
+; MIPS32-NEXT:    j many_args_callee
+; MIPS32-NEXT:    sw $1, 28($sp)
+;
+; MIPS64-LABEL: test_musttail_many_args:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    j many_args_callee
+; MIPS64-NEXT:    nop
+  %ret = musttail call i32 @many_args_callee(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
+  ret i32 %ret
+}
+
+; Test musttail with large struct passed by value (involves memory)
+%struct.large = type { i32, i32, i32, i32, i32, i32, i32, i32 }
+
+declare i32 @callee_with_struct(%struct.large %s, i32 %x)
+
+define i32 @test_musttail_struct(%struct.large %s, i32 %x) {
+; MIPS32-LABEL: test_musttail_struct:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    lw $1, 28($sp)
+; MIPS32-NEXT:    lw $2, 24($sp)
+; MIPS32-NEXT:    lw $3, 20($sp)
+; MIPS32-NEXT:    lw $8, 16($sp)
+; MIPS32-NEXT:    sw $8, 16($sp)
+; MIPS32-NEXT:    sw $3, 20($sp)
+; MIPS32-NEXT:    sw $2, 24($sp)
+; MIPS32-NEXT:    sw $1, 28($sp)
+; MIPS32-NEXT:    lw $1, 32($sp)
+; MIPS32-NEXT:    j callee_with_struct
+; MIPS32-NEXT:    sw $1, 32($sp)
+;
+; MIPS64-LABEL: test_musttail_struct:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    ld $1, 0($sp)
+; MIPS64-NEXT:    j callee_with_struct
+; MIPS64-NEXT:    sd $1, 0($sp)
+  %ret = musttail call i32 @callee_with_struct(%struct.large %s, i32 %x)
+  ret i32 %ret
+}
+
+; Test musttail with mixed int and float arguments that use stack
+declare float @mixed_args_callee(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f)
+
+define float @test_musttail_mixed_args(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f) {
+; MIPS32-LABEL: test_musttail_mixed_args:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    lw $1, 16($sp)
+; MIPS32-NEXT:    sw $1, 16($sp)
+; MIPS32-NEXT:    lwc1 $f0, 20($sp)
+; MIPS32-NEXT:    j mixed_args_callee
+; MIPS32-NEXT:    swc1 $f0, 20($sp)
+;
+; MIPS64-LABEL: test_musttail_mixed_args:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    j mixed_args_callee
+; MIPS64-NEXT:    nop
+  %ret = musttail call float @mixed_args_callee(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f)
+  ret float %ret
+}
