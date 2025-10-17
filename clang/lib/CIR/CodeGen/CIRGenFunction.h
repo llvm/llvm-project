@@ -854,7 +854,6 @@ public:
                      clang::SourceLocation startLoc);
 
   /// returns true if aggregate type has a volatile member.
-  /// TODO(cir): this could be a common AST helper between LLVM / CIR.
   bool hasVolatileMember(QualType t) {
     if (const auto *rd = t->getAsRecordDecl())
       return rd->hasVolatileMember();

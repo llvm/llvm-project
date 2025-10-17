@@ -1870,7 +1870,7 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
 /// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {
-    emitAnyExpr(e, AggValueSlot::ignored(), true);
+    emitAnyExpr(e, AggValueSlot::ignored(), /*ignoreResult=*/true);
     return;
   }
 
