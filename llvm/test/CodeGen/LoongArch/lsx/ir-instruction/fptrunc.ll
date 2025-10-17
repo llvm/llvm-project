@@ -21,22 +21,15 @@ define void @fptrunc_v2f64_to_v2f32(ptr %res, ptr %a0) nounwind {
 ; LA32-LABEL: fptrunc_v2f64_to_v2f32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vreplvei.d $vr1, $vr0, 0
-; LA32-NEXT:    fcvt.s.d $fa1, $fa1
-; LA32-NEXT:    vreplvei.d $vr0, $vr0, 1
-; LA32-NEXT:    fcvt.s.d $fa0, $fa0
-; LA32-NEXT:    fst.s $fa0, $a0, 4
-; LA32-NEXT:    fst.s $fa1, $a0, 0
+; LA32-NEXT:    vfcvt.s.d $vr0, $vr0, $vr0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: fptrunc_v2f64_to_v2f32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vreplvei.d $vr1, $vr0, 1
-; LA64-NEXT:    fcvt.s.d $fa1, $fa1
-; LA64-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LA64-NEXT:    fcvt.s.d $fa0, $fa0
-; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
+; LA64-NEXT:    vfcvt.s.d $vr0, $vr0, $vr0
 ; LA64-NEXT:    vstelm.d $vr0, $a0, 0, 0
 ; LA64-NEXT:    ret
 entry:
@@ -51,17 +44,7 @@ define void @fptrunc_v4f64_to_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 16
-; CHECK-NEXT:    vreplvei.d $vr2, $vr0, 1
-; CHECK-NEXT:    fcvt.s.d $fa2, $fa2
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    fcvt.s.d $fa0, $fa0
-; CHECK-NEXT:    vextrins.w $vr0, $vr2, 16
-; CHECK-NEXT:    vreplvei.d $vr2, $vr1, 0
-; CHECK-NEXT:    fcvt.s.d $fa2, $fa2
-; CHECK-NEXT:    vextrins.w $vr0, $vr2, 32
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 1
-; CHECK-NEXT:    fcvt.s.d $fa1, $fa1
-; CHECK-NEXT:    vextrins.w $vr0, $vr1, 48
+; CHECK-NEXT:    vfcvt.s.d $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

@@ -2472,6 +2472,8 @@ defm : PatXrF<fceil, "XVFRINTRP">;
 defm : PatXrF<ffloor, "XVFRINTRM">;
 defm : PatXrF<ftrunc, "XVFRINTRZ">;
 defm : PatXrF<froundeven, "XVFRINTRNE">;
+def : Pat<(v8f32 (loongarch_vfcvt_s_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
+          (XVFCVT_S_D LASX256:$xj, LASX256:$xk)>;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
