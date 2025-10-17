@@ -15782,8 +15782,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
             RHS = A;
             LHS = B;
           }
-          Guards.NotEqualMap[LHS].insert(RHS);
-          Guards.NotEqualMap[RHS].insert(LHS);
+          if (LHS > RHS)
+            std::swap(LHS, RHS);
+          Guards.NotEqual.insert({LHS, RHS});
           continue;
         }
         break;
@@ -15917,7 +15918,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
   class SCEVLoopGuardRewriter
       : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
     const DenseMap<const SCEV *, const SCEV *> &Map;
-    const DenseMap<const SCEV *, SmallPtrSet<const SCEV *, 2>> &NotEqualMap;
+    const SmallDenseSet<std::pair<const SCEV *, const SCEV *>> &NotEqual;
 
     SCEV::NoWrapFlags FlagMask = SCEV::FlagAnyWrap;
 
@@ -15925,7 +15926,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     SCEVLoopGuardRewriter(ScalarEvolution &SE,
                           const ScalarEvolution::LoopGuards &Guards)
         : SCEVRewriteVisitor(SE), Map(Guards.RewriteMap),
-          NotEqualMap(Guards.NotEqualMap) {
+          NotEqual(Guards.NotEqual) {
       if (Guards.PreserveNUW)
         FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNUW);
       if (Guards.PreserveNSW)
@@ -15985,8 +15986,9 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
       auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
         const SCEV *LHS, *RHS;
         if (MatchBinarySub(S, LHS, RHS)) {
-          auto It = NotEqualMap.find(LHS);
-          if (It != NotEqualMap.end() && It->second.contains(RHS))
+          if (LHS > RHS)
+            std::swap(LHS, RHS);
+          if (NotEqual.contains({LHS, RHS}))
             return SE.getUMaxExpr(S, SE.getOne(S->getType()));
         }
         return nullptr;
@@ -16043,7 +16045,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
   };
 
-  if (RewriteMap.empty() && NotEqualMap.empty())
+  if (RewriteMap.empty() && NotEqual.empty())
     return Expr;
 
   SCEVLoopGuardRewriter Rewriter(SE, *this);
