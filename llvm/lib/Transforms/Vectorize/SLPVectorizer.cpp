@@ -24127,6 +24127,8 @@ public:
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
     SmallVector<SmallVector<Value *>> LocalReducedVals;
+    // Try merge consecutive reduced values into a single vectorizable group and
+    // check, if they can be vectorized as copyables.
     for (ArrayRef<Value *> RV : ReducedVals) {
       // Loads are not very compatible with undefs.
       if (isa<UndefValue>(RV.front()) &&
