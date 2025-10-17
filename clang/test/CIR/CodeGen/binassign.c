@@ -17,7 +17,7 @@ void binary_assign(void) {
     i = 42;
 }
 
-// CIR-LABEL: cir.func{{.*}} @binary_assign() {
+// CIR-LABEL: cir.func{{.*}} @binary_assign()
 // CIR:         %[[B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"]
 // CIR:         %[[C:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"]
 // CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]
@@ -33,7 +33,7 @@ void binary_assign(void) {
 // CIR:         cir.store{{.*}} %[[INT_VAL]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.return
 
-// LLVM-LABEL: define {{.*}}void @binary_assign() {
+// LLVM-LABEL: define {{.*}}void @binary_assign(){{.*}} {
 // LLVM:         %[[B_PTR:.*]] = alloca i8
 // LLVM:         %[[C_PTR:.*]] = alloca i8
 // LLVM:         %[[F_PTR:.*]] = alloca float

@@ -291,6 +291,7 @@ struct DeferredFile {
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
+#if LLVM_ENABLE_THREADS
 class SerialBackgroundQueue {
   std::deque<std::function<void()>> queue;
   std::thread *running;
@@ -359,7 +360,6 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
       (void)t;
     }
   };
-#if LLVM_ENABLE_THREADS
   { // Create scope for waiting for the taskGroup
     std::atomic_size_t index = 0;
     llvm::parallel::TaskGroup taskGroup;
@@ -373,7 +373,6 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         }
       });
   }
-#endif
 #ifndef NDEBUG
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
@@ -390,6 +389,7 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
     multiThreadedPageInBackground(files);
   });
 }
+#endif
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
                               DeferredFiles *archiveContents, StringRef path,
@@ -1430,6 +1430,7 @@ static void createFiles(const InputArgList &args) {
     }
   }
 
+#if LLVM_ENABLE_THREADS
   if (config->readWorkers) {
     multiThreadedPageIn(deferredFiles);
 
@@ -1447,6 +1448,7 @@ static void createFiles(const InputArgList &args) {
     for (auto *archive : archives)
       archive->addLazySymbols();
   }
+#endif
 }
 
 static void gatherInputSections() {
@@ -1834,6 +1836,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
 
   if (auto *arg = args.getLastArg(OPT_read_workers)) {
+#if LLVM_ENABLE_THREADS
     StringRef v(arg->getValue());
     unsigned workers = 0;
     if (!llvm::to_integer(v, workers, 0))
@@ -1841,6 +1844,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
             ": expected a non-negative integer, but got '" + arg->getValue() +
             "'");
     config->readWorkers = workers;
+#else
+    error(arg->getSpelling() +
+          ": option unavailable because lld was not built with thread support");
+#endif
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
