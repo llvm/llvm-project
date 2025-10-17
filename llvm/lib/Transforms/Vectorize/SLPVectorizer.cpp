@@ -6889,7 +6889,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                            Align Alignment, const int64_t Diff, size_t Sz) const {
+                            Align Alignment, const int64_t Diff,
+                            size_t Sz) const {
   if (Diff % (Sz - 1) != 0)
     return false;
 
@@ -6913,8 +6914,9 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
       return false;
     if (!TTI->isLegalStridedLoadStore(VecTy, Alignment))
       return false;
+    return true;
   }
-  return true;
+  return false;
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
