@@ -28014,9 +28014,13 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
 
   // Simplify scalar inserts into an undef vector:
   // insert_subvector undef, (splat X), N2 -> splat X
-  if (N0.isUndef() && N1.getOpcode() == ISD::SPLAT_VECTOR)
-    if (DAG.isConstantValueOfAnyType(N1.getOperand(0)) || N1.hasOneUse())
+  auto *BV0 = dyn_cast<BuildVectorSDNode>(N1);
+  if (N0.isUndef() && (N1.getOpcode() == ISD::SPLAT_VECTOR || BV0)) {
+    SDValue Splat = BV0 ? BV0->getSplatValue() : N1.getOperand(0);
+    if (Splat &&
+        (N1.hasOneUse() || (!BV0 && DAG.isConstantValueOfAnyType(Splat))))
       return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
+  }
 
   // insert_subvector (splat X), (splat X), N2 -> splat X
   if (N0.getOpcode() == ISD::SPLAT_VECTOR && N0.getOpcode() == N1.getOpcode() &&
