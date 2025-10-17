@@ -46,3 +46,11 @@ void f2(void) {
   [[some, attributes]] defer { g(); } // expected-warning 2 {{unknown attribute}}
   __attribute__((some_attribute)) defer { g(); } // expected-warning {{unknown attribute}}
 }
+
+void f3(void) {
+  _Defer 1; // expected-warning {{expression result unused}}
+  _Defer {}
+  _Defer _Defer {}
+  _Defer { defer {} _Defer {} }
+  _Defer if (g()) g();
+}

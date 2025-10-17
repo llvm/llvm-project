@@ -735,6 +735,7 @@ ALIAS("__typeof_unqual"  , typeof_unqual, KEYALL)
 ALIAS("__typeof_unqual__", typeof_unqual, KEYALL)
 ALIAS("__volatile"       , volatile     , KEYALL)
 ALIAS("__volatile__"     , volatile     , KEYALL)
+ALIAS("_Defer"           , defer        , KEYNOCXX)
 
 // Type nullability.
 KEYWORD(_Nonnull                 , KEYALL)
