@@ -327,6 +327,10 @@ Attribute Changes in Clang
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
+- New function attribute `malloc_span` is added. It has the `malloc` semantics, but must be applied
+  not to functions returning pointers, but to functions returning span-like structures (i.e. those
+  that contain a pointer field and a size integer field).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,

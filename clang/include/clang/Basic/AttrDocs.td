@@ -5247,6 +5247,20 @@ yet implemented in clang.
   }];
 }
 
+def MallocSpanDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "malloc_span";
+  let Content = [{
+The ``malloc_span`` marks that a function acts like a system memory allocation
+function returning a span-like structure does not alias storage from any other
+object accessible to the caller.
+
+In this context, a span-like structure is assumed to have a pointer as its first
+field and an integer with the size of the actually allocated memory as the
+second field.
+  }];
+}
+
 def ReturnsNonNullDocs : Documentation {
   let Category = NullabilityDocs;
   let Content = [{

@@ -6642,7 +6642,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                                   CalleeDecl);
     }
     if (CalleeDecl->hasAttr<RestrictAttr>() ||
-        CalleeDecl->hasAttr<AllocSizeAttr>()) {
+        CalleeDecl->hasAttr<AllocSizeAttr>() ||
+        CalleeDecl->hasAttr<MallocSpanAttr>()) {
       // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
       if (SanOpts.has(SanitizerKind::AllocToken)) {
         // Set !alloc_token metadata.

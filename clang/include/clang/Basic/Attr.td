@@ -2068,6 +2068,12 @@ def Restrict : InheritableAttr {
   let Documentation = [RestrictDocs];
 }
 
+def MallocSpan : InheritableAttr {
+  let Spellings = [Clang<"malloc_span">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MallocSpanDocs];
+}
+
 def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"layout_version">];
   let Args = [UnsignedArgument<"Version">];
