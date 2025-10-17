@@ -989,7 +989,7 @@ define <2 x i64> @mul_v2i64_17_65(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_17_65:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [17,65]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 17, i64 65>
   ret <2 x i64> %1
@@ -1384,7 +1384,7 @@ define <2 x i64> @mul_v2i64_15_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_15_63:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [15,63]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 15, i64 63>
   ret <2 x i64> %1
@@ -1473,7 +1473,7 @@ define <2 x i64> @mul_v2i64_neg_15_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_15_63:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [18446744073709551601,18446744073709551553]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 -15, i64 -63>
   ret <2 x i64> %1
@@ -1562,7 +1562,7 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_17_65:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [18446744073709551599,18446744073709551551]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 -17, i64 -65>
   ret <2 x i64> %1
@@ -1674,7 +1674,7 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_0_1:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 0, i64 -1>
   ret <2 x i64> %1
@@ -1763,7 +1763,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_15_neg_63:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [15,18446744073709551553]
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 15, i64 -63>
   ret <2 x i64> %1
@@ -1947,7 +1947,7 @@ define <2 x i64> @mul_v2i64_68_132(<2 x i64> %x) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_68_132:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [68,132]
 ; X64-AVX512DQ-NEXT:    retq
   %mul = mul <2 x i64> %x, <i64 68, i64 132>
   ret <2 x i64> %mul
@@ -2009,7 +2009,7 @@ define <2 x i64> @mul_v2i64_60_120(<2 x i64> %x) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_60_120:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [60,124]
 ; X64-AVX512DQ-NEXT:    retq
   %mul = mul <2 x i64> %x, <i64 60, i64 124>
   ret <2 x i64> %mul
