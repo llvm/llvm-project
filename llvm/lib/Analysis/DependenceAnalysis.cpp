@@ -206,7 +206,8 @@ namespace {
 ///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) <=
 ///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
 ///
-/// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, y in their domains.
+/// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, and y are elements of their
+/// respective domains.
 ///
 /// Likewise F is "monotonically decreasing with respect to the k-th loop"
 /// if x <= y implies
@@ -214,12 +215,11 @@ namespace {
 ///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) >=
 ///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
 ///
-/// A function F with either monotonically increasing or decreasing with
-/// respect to the k-th loop is simply called
-/// "monotonic with respect to k-th loop".
+/// A function F that is monotonically increasing or decreasing with respect to
+/// the k-th loop is simply called "monotonic with respect to k-th loop".
 ///
-/// A function F is said to be "multimonotonic" when it is monotonic with
-/// respect to all of the N loops.
+/// A function F is said to be "multivariate monotonic" when it is monotonic
+/// with respect to all of the N loops.
 ///
 /// Since integer comparison can be either signed or unsigned, we need to
 /// distinguish monotonicity in the signed sense from that in the unsigned
@@ -235,10 +235,10 @@ enum class SCEVMonotonicityType {
   /// words, the function F corresponding to the SCEV is a constant function.
   Invariant,
 
-  /// The function F corresponding to the SCEV is multimonotonic in a signed
-  /// sense. Note that the multimonotonic function may also be a constant
-  /// function. The order employed in the definition of monotonicity is not
-  /// strict order.
+  /// The function F corresponding to the SCEV is multivariate monotonic in a
+  /// signed sense. Note that the multivariate monotonic function may also be a
+  /// constant function. The order employed in the definition of monotonicity
+  /// is not strict order.
   MultivariateSignedMonotonic,
 };
 
@@ -261,6 +261,10 @@ private:
   const SCEV *FailurePoint;
 };
 
+/// Check the monotonicity of a SCEV. Since dependence tests (SIV, MIV, etc.)
+/// assume that subscript expressions are (multivariate) monotonic, we need to
+/// verify this property before applying those tests. Violating this assumption
+/// may cause them to produce incorrect results.
 struct SCEVMonotonicityChecker
     : public SCEVVisitor<SCEVMonotonicityChecker, SCEVMonotonicity> {
 
@@ -909,7 +913,16 @@ SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
 }
 
 /// We only care about an affine AddRec at the moment. For an affine AddRec,
-/// the monotonicity can be inferred from its nowrap property.
+/// the monotonicity can be inferred from its nowrap property. For example, let
+/// X and Y be loop-invariant, and assume Y is non-negative. An AddRec
+/// {X,+.Y}<nsw> implies:
+///
+///   X <=s (X + Y) <=s ((X + Y) + Y) <=s ...
+///
+/// Thus, we can conclude that the AddRec is monotonically increasing with
+/// respect to the associated loop in a signed sense. The similar reasoning
+/// applies when Y is non-positive, leading to a monotonically decreasing
+/// AddRec.
 SCEVMonotonicity
 SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
