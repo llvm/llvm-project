@@ -25,6 +25,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/SmartPointerAccessorCaching.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LLVM.h"
@@ -608,6 +609,27 @@ static void transferStatusConstructor(const CXXConstructExpr *Expr,
     initializeStatus(StatusLoc, State.Env);
 }
 
+static RecordStorageLocation *
+getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
+  if (!E.isPRValue())
+    return dyn_cast_or_null<RecordStorageLocation>(Env.getStorageLocation(E));
+  if (auto *PointerVal = dyn_cast_or_null<PointerValue>(Env.getValue(E)))
+    return dyn_cast_or_null<RecordStorageLocation>(
+        &PointerVal->getPointeeLoc());
+  return nullptr;
+}
+
+static void maybeInitLocForCtor(QualType T, StorageLocation &Loc,
+                                Environment &Env) {
+  if (isStatusOrType(T)) {
+    initializeStatusOr(cast<RecordStorageLocation>(Loc), Env);
+  } else if (isStatusType(T)) {
+    initializeStatus(cast<RecordStorageLocation>(Loc), Env);
+  } else {
+    llvm::errs() << T << "\n";
+  }
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -667,6 +689,47 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                        transferStatusOrConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
                                        transferStatusConstructor)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isPointerLikeOperatorArrow(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getSmartPtrLikeStorageLocation(*E->getArg(0), State.Env),
+                State, [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isSmartPointerLikeConstructor(),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeConstructor(
+                E, &State.Env.getResultObjectLocation(*E), State,
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeValueMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeGetMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
       .Build();
 }
 

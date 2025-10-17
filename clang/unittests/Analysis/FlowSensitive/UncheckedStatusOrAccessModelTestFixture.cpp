@@ -3174,6 +3174,30 @@ TEST_P(UncheckedStatusOrAccessModelTest, ConstructStatusFromReference) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, SmartPtrLikeFromReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+    class GetAble {
+     public:
+      STATUSOR_INT* get() const;
+      STATUSOR_INT* operator->() const;
+      STATUSOR_INT& operator*() const;
+      STATUSOR_INT& value();
+    };
+    void target() {
+      const auto sor1 = Make<GetAble&>();
+      const auto sor2 = Make<GetAble&>();
+      if (!sor1->ok() && !sor2->ok()) return;
+      if (sor1->ok() && !sor2->ok()) {
+      } else if (!sor1->ok() && sor2->ok()) {
+      } else {
+        sor1->value();
+        sor2->value();
+      }
+    }
+  )cc");
+}
+
 } // namespace
 
 std::string
@@ -3221,6 +3245,7 @@ GetHeaders(UncheckedStatusOrAccessModelTestAliasKind AliasKind) {
 #include "std_optional.h"
 #include "std_vector.h"
 #include "std_pair.h"
+#include "std_unique_ptr.h"
 #include "absl_log.h"
 #include "testing_defs.h"
 
