@@ -3,7 +3,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
-
+@skipIf(bugnumber="rdar://162712775")
 class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
