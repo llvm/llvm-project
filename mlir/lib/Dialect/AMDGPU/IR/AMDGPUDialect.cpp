@@ -345,10 +345,11 @@ LogicalResult ScaledExtPacked816Op::verify() {
   int blockSize = getBlockSize();
   assert((blockSize == 16 || blockSize == 32) && "invalid block size");
   int firstScaleByte = getFirstScaleByte();
-  if (blockSize == 16 && !::llvm::is_contained({0, 1}, firstScaleByte)) {
+  if (blockSize == 16 && !llvm::is_contained({0, 1}, firstScaleByte)) {
     return emitOpError(
         "blockSize of 16 can only have firstScaleByte be 0 or 1.");
-  } else if (blockSize == 32 && !::llvm::is_contained({0, 2}, firstScaleByte)) {
+  }
+  if (blockSize == 32 && !llvm::is_contained({0, 2}, firstScaleByte)) {
     return emitOpError(
         "blockSize of 32 can only have firstScaleByte be 0 or 2.");
   }
