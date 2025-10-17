@@ -160,7 +160,6 @@ define void @struct2_caller() {
 
 %"phi_type" =  type {i64, i64}
 
-; Function Attrs: mustprogress
 define internal %"phi_type" @test(i32 %input) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br label [[COND_TRUE_I:%.*]]
