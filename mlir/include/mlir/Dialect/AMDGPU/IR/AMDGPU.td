@@ -113,32 +113,28 @@ def AMDGPU_ExtPackedFp8Op :
 }
 
 def IsValidBlockSize: AttrConstraint<
-    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == 16 || ::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == 32">,
+    CPred<"::llvm::is_contained({16, 32}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
     "whose value is 16 or 32">;
 
-
-def Vector4Scales :
-  AllOfType<[FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>],
-    "vector of 4 F8E8M0FNU scales",
-    "::mlir::VectorType">,
-  BuildableType<"::mlir::VectorType::get({4}, $_builder.getType<::mlir::Float8E8M0FNUType>());">;
-
 def AMDGPU_ScaledExtPacked816Op
-    : AMDGPU_Op<"scaled_ext_packed816", [Pure]>,
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure, AllShapesMatch<["source", "res"]>]>,
       Arguments<(
-          ins AnyTypeOf<[VectorOfLengthAndType<[8], [F4E2M1FN,F8E4M3FN,F8E5M2]>,
-                         VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>]>:$source,
-          Vector4Scales:$scale,
+          ins AnyTypeOf<[FixedVectorOfShapeAndType<[8], F4E2M1FN>,
+                         FixedVectorOfShapeAndType<[8], F8E4M3FN>,
+                         FixedVectorOfShapeAndType<[8], F8E5M2>,
+                         FixedVectorOfShapeAndType<[16], F6E2M3FN>,
+                         FixedVectorOfShapeAndType<[16], F6E3M2FN>]>:$source,
+          FixedVectorOfShapeAndType<[4], F8E8M0FNU>:$scale,
           ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2>]>:$firstScaleByte)>,
       Results<(
-          outs AnyTypeOf<[FixedVectorOfLengthAndType<[8], [F32]>,
-                          FixedVectorOfLengthAndType<[8], [F16]>,
-                          FixedVectorOfLengthAndType<[8], [BF16]>,
-                          FixedVectorOfLengthAndType<[16], [F32]>,
-                          FixedVectorOfLengthAndType<[16], [F16]>,
-                          FixedVectorOfLengthAndType<[16], [BF16]>]>:$res)> {
+          outs AnyTypeOf<[FixedVectorOfShapeAndType<[8], F32>,
+                          FixedVectorOfShapeAndType<[8], F16>,
+                          FixedVectorOfShapeAndType<[8], BF16>,
+                          FixedVectorOfShapeAndType<[16], F32>,
+                          FixedVectorOfShapeAndType<[16], F16>,
+                          FixedVectorOfShapeAndType<[16], BF16>]>:$res)> {
 
   let summary = "Extend a vector of packed floating point values";
 

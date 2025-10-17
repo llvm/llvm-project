@@ -348,6 +348,7 @@ LogicalResult ScaledExtPacked816Op::verify() {
   if (blockSize == 16 && firstScaleByte == 2) {
     return emitOpError("blockSize of 16 cannot have firstScaleByte be 2.");
   }
+
   return success();
 }
 
