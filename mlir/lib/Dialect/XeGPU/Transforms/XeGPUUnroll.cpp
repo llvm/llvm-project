@@ -941,7 +941,9 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
   LogicalResult matchAndRewrite(xegpu::LoadMatrixOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    VectorType valueTy = op.getType();
+    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getType());
+    assert(valueTy && "the value type must be vector type!");
+
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
       return failure();
@@ -984,7 +986,8 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
       return failure();
 
     Location loc = op.getLoc();
-    VectorType valueTy = op.getData().getType();
+    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getData().getType());
+    assert(valueTy && "the value type must be vector type!");
     ArrayRef<int64_t> shape = valueTy.getShape();
     auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
 

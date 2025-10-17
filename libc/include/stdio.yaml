@@ -197,10 +197,24 @@ functions:
       - type: FILE *
       - type: long
       - type: int
+  - name: fseeko
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: FILE *
+      - type: off_t
+      - type: int
   - name: ftell
     standards:
       - stdc
     return_type: long
+    arguments:
+      - type: FILE *
+  - name: ftello
+    standards:
+      - POSIX
+    return_type: off_t
     arguments:
       - type: FILE *
   - name: funlockfile

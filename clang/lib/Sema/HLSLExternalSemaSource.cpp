@@ -159,7 +159,8 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                                                   SourceLocation(), ColsParam));
   TemplateParams.emplace_back(ColsParam);
 
-  const unsigned MaxMatDim = 4;
+  const unsigned MaxMatDim = SemaPtr->getLangOpts().MaxMatrixDimension;
+
   auto *MaxRow = IntegerLiteral::Create(
       AST, llvm::APInt(AST.getIntWidth(AST.IntTy), MaxMatDim), AST.IntTy,
       SourceLocation());

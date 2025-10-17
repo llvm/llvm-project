@@ -2080,7 +2080,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
   // referencee.  InitListExprs for unions and arrays can't have references.
   if (const RecordType *RT = E->getType()->getAsCanonical<RecordType>()) {
     if (!RT->isUnionType()) {
-      RecordDecl *SD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      RecordDecl *SD = RT->getDecl()->getDefinitionOrSelf();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
 
       unsigned ILEElement = 0;
@@ -2133,7 +2133,7 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
     if (const RecordType *RT = CGF.getContext()
                                    .getBaseElementType(E->getType())
                                    ->getAsCanonical<RecordType>()) {
-      const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getOriginalDecl());
+      const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
       if (RD->hasUserDeclaredConstructor())
         return;
     }

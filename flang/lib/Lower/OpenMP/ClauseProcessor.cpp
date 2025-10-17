@@ -1343,8 +1343,10 @@ bool ClauseProcessor::processMap(
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &[mapType, typeMods, refMod, mappers, iterator, objects] =
-        clause.t;
+    const auto &[mapType, typeMods, attachMod, refMod, mappers, iterator,
+                 objects] = clause.t;
+    if (attachMod)
+      TODO(currentLocation, "ATTACH modifier is not implemented yet");
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     std::string mapperIdName = "__implicit_mapper";

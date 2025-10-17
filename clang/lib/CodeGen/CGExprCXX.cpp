@@ -1236,8 +1236,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
     if (const RecordType *RType =
             ILE->getType()->getAsCanonical<RecordType>()) {
-      if (RType->getOriginalDecl()->isStruct()) {
-        const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
+      if (RType->getDecl()->isStruct()) {
+        const RecordDecl *RD = RType->getDecl()->getDefinitionOrSelf();
         unsigned NumElements = 0;
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();

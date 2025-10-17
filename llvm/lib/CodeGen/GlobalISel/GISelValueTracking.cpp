@@ -112,7 +112,7 @@ APInt GISelValueTracking::getKnownOnes(Register R) {
   return getKnownBits(R).One;
 }
 
-LLVM_ATTRIBUTE_UNUSED static void
+[[maybe_unused]] static void
 dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
   dbgs() << "[" << Depth << "] Compute known bits: " << MI << "[" << Depth
          << "] Computed for: " << MI << "[" << Depth << "] Known: 0x"

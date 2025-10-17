@@ -179,13 +179,14 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
-  auto name{bounds.name.thing.thing};
-  const auto *lowerExpr{
-      GetExpr(exprAnalyzer_.context(), bounds.lower.thing.thing)};
-  const auto *upperExpr{
-      GetExpr(exprAnalyzer_.context(), bounds.upper.thing.thing)};
+  const auto &name{parser::UnwrapRef<parser::Name>(bounds.name)};
+  const auto *lowerExpr{GetExpr(
+      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.lower))};
+  const auto *upperExpr{GetExpr(
+      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.upper))};
   const auto *stepExpr{bounds.step
-          ? GetExpr(exprAnalyzer_.context(), bounds.step->thing.thing)
+          ? GetExpr(exprAnalyzer_.context(),
+                parser::UnwrapRef<parser::Expr>(bounds.step))
           : nullptr};
   if (lowerExpr && upperExpr) {
     // Fold the bounds expressions (again) in case any of them depend
@@ -240,7 +241,9 @@ bool DataInitializationCompiler<DSV>::Scan(
   return common::visit(
       common::visitors{
           [&](const parser::Scalar<common::Indirection<parser::Designator>>
-                  &var) { return Scan(var.thing.value()); },
+                  &var) {
+            return Scan(parser::UnwrapRef<parser::Designator>(var));
+          },
           [&](const common::Indirection<parser::DataImpliedDo> &ido) {
             return Scan(ido.value());
           },

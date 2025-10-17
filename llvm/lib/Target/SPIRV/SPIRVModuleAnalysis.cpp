@@ -2155,6 +2155,9 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::LocalSize, ST);
     }
+    if (F.getFnAttribute("enable-maximal-reconvergence").getValueAsBool()) {
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+    }
     if (F.getMetadata("work_group_size_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,

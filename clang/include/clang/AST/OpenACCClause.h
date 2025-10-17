@@ -1301,46 +1301,25 @@ struct OpenACCReductionRecipe {
   // AST), or in a separate collection when being semantically analyzed.
   llvm::ArrayRef<CombinerRecipe> CombinerRecipes;
 
+  bool isSet() const { return AllocaDecl; }
+
+private:
+  friend class OpenACCReductionClause;
   OpenACCReductionRecipe(VarDecl *A, llvm::ArrayRef<CombinerRecipe> Combiners)
       : AllocaDecl(A), CombinerRecipes(Combiners) {}
-
-  bool isSet() const { return AllocaDecl; }
 };
 
 // A version of the above that is used for semantic analysis, at a time before
 // the OpenACCReductionClause node has been created.  This one has storage for
 // the CombinerRecipe, since Trailing storage for it doesn't exist yet.
-struct OpenACCReductionRecipeWithStorage : OpenACCReductionRecipe {
-private:
-  llvm::SmallVector<CombinerRecipe, 1> CombinerRecipeStorage;
-
-public:
-  OpenACCReductionRecipeWithStorage(VarDecl *A,
-                                    llvm::ArrayRef<CombinerRecipe> Combiners)
-      : OpenACCReductionRecipe(A, {}), CombinerRecipeStorage(Combiners) {
-    CombinerRecipes = CombinerRecipeStorage;
-  }
+struct OpenACCReductionRecipeWithStorage {
+  VarDecl *AllocaDecl;
+  llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe, 1> CombinerRecipes;
 
   OpenACCReductionRecipeWithStorage(
-      const OpenACCReductionRecipeWithStorage &Other)
-      : OpenACCReductionRecipe(Other),
-        CombinerRecipeStorage(Other.CombinerRecipeStorage) {
-    CombinerRecipes = CombinerRecipeStorage;
-  }
-
-  OpenACCReductionRecipeWithStorage(OpenACCReductionRecipeWithStorage &&Other)
-      : OpenACCReductionRecipe(std::move(Other)),
-        CombinerRecipeStorage(std::move(Other.CombinerRecipeStorage)) {
-    CombinerRecipes = CombinerRecipeStorage;
-  }
-
-  // There is no real problem implementing these, we just have to make sure the
-  // array-ref this inherits from stays in sync. But as we don't need it at the
-  // moment, make sure we don't accidentially call these.
-  OpenACCReductionRecipeWithStorage &
-  operator=(OpenACCReductionRecipeWithStorage &&) = delete;
-  OpenACCReductionRecipeWithStorage &
-  operator=(const OpenACCReductionRecipeWithStorage &) = delete;
+      VarDecl *A,
+      llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
 
   static OpenACCReductionRecipeWithStorage Empty() {
     return OpenACCReductionRecipeWithStorage(/*AllocaDecl=*/nullptr, {});

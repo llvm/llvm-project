@@ -378,8 +378,10 @@ struct SourceMgrDiagnosticHandlerImpl {
     }
 
     // Otherwise, try to load the source file.
-    std::string ignored;
-    unsigned id = mgr.AddIncludeFile(std::string(filename), SMLoc(), ignored);
+    auto bufferOrErr = llvm::MemoryBuffer::getFile(filename);
+    if (!bufferOrErr)
+      return 0;
+    unsigned id = mgr.AddNewSourceBuffer(std::move(*bufferOrErr), SMLoc());
     filenameToBufId[filename] = id;
     return id;
   }
