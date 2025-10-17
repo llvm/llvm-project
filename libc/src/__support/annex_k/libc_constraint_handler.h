@@ -23,4 +23,4 @@ LIBC_INLINE static constraint_handler_t libc_constraint_handler =
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif  // LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
