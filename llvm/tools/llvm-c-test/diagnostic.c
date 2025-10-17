@@ -69,7 +69,7 @@ int llvm_test_diagnostic_handler(void) {
 
 
   LLVMModuleRef M;
-  int Ret = LLVMGetBitcodeModule2(MB, &M);
+  int Ret = LLVMGetBitcodeModuleInContext2(C, MB, &M);
   if (Ret)
     LLVMDisposeMemoryBuffer(MB);
 
