@@ -634,6 +634,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
