@@ -2166,14 +2166,22 @@ public:
 
   LogicalResult matchAndRewrite(ReinterpretCastOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!llvm::any_of(llvm::concat<OpFoldResult>(op.getOffsets(), op.getSizes(),
-                                                 op.getStrides()),
-                      getConstantIntValue))
+    unsigned srcStaticCount = llvm::count_if(
+        llvm::concat<OpFoldResult>(op.getMixedOffsets(), op.getMixedSizes(),
+                                   op.getMixedStrides()),
+        [](OpFoldResult ofr) { return isa<Attribute>(ofr); });
+
+    SmallVector<OpFoldResult> offsets = {op.getConstifiedMixedOffset()};
+    SmallVector<OpFoldResult> sizes = op.getConstifiedMixedSizes();
+    SmallVector<OpFoldResult> strides = op.getConstifiedMixedStrides();
+
+    if (srcStaticCount ==
+        llvm::count_if(llvm::concat<OpFoldResult>(offsets, sizes, strides),
+                       [](OpFoldResult ofr) { return isa<Attribute>(ofr); }))
       return failure();
 
     auto newReinterpretCast = ReinterpretCastOp::create(
-        rewriter, op->getLoc(), op.getSource(), op.getConstifiedMixedOffset(),
-        op.getConstifiedMixedSizes(), op.getConstifiedMixedStrides());
+        rewriter, op->getLoc(), op.getSource(), offsets[0], sizes, strides);
 
     rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newReinterpretCast);
     return success();
