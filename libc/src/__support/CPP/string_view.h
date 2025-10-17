@@ -77,9 +77,8 @@ public:
   LIBC_INLINE constexpr string_view(const char *Str, size_t N)
       : Data(Str), Len(N) {}
 
-  template <size_t N>
-  LIBC_INLINE constexpr string_view(LIBC_LIFETIME_BOUND const char (&Str)[N])
-      : Data(Str), Len(N) {}
+  LIBC_INLINE constexpr string_view(LIBC_LIFETIME_BOUND const char (&Str)[])
+      : Data(Str), Len(length(Str)) {}
 
   LIBC_INLINE constexpr const char *data() const { return Data; }
 
