@@ -2434,8 +2434,33 @@ __attribute__((convergent)) T WaveReadLaneAt(T, uint32_t);
 // \brief Returns the value of the expression for the active lane of the current wave with the smallest index.
 template <typename T>
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_first)
 __attribute__((convergent)) T WaveReadLaneFirst(T);
+
+// \brief Returns the value of the expression for the given lane index within
+// the specified quad.
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_lane_at)
+__attribute__((convergent)) T QuadReadLaneAt(T, uint32_t);
+
+// \brief Returns the specified local value which is read from the diagonally opposite lane in this quad.
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_accross_diagonal)
+__attribute__((convergent)) T QuadReadAcrossDiagonal(T, uint32_t);
+
+// \brief Returns the specified source value read from the other lane in this quad in the X direction.
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_accross_x)
+__attribute__((convergent)) T QuadReadAcrossX(T, uint32_t);
+
+// \brief Returns the specified source value read from the other lane in this quad in the Y direction.
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_accross_y)
+__attribute__((convergent)) T QuadReadAcrossY(T, uint32_t);
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
