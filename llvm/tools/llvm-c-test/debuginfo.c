@@ -43,6 +43,9 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
     strlen(Filename), ".", 1);
 
+  LLVMMetadataRef FileCS = LLVMDIBuilderCreateFileWithChecksum(
+      DIB, Filename, strlen(Filename), ".", 1, CSK_MD5, "1234", 4, "source", 6);
+
   LLVMMetadataRef CompileUnit = LLVMDIBuilderCreateCompileUnit(
       DIB, LLVMDWARFSourceLanguageC, File, "llvm-c-test", 11, 0, NULL, 0, 0,
       NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1, "", 0);
@@ -61,7 +64,7 @@ int llvm_test_dibuilder(void) {
                               "/test/include/llvm-c-test-import.h", 34,
                               "", 0);
   LLVMMetadataRef ImportedModule = LLVMDIBuilderCreateImportedModuleFromModule(
-      DIB, Module, OtherModule, File, 42, NULL, 0);
+      DIB, Module, OtherModule, FileCS, 42, NULL, 0);
   LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule, File,
                                              42, NULL, 0);
 

@@ -235,6 +235,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds execution modes and decorations to control floating-point computations in both kernels and shaders. It can be used on whole modules and individual instructions.
    * - ``SPV_INTEL_predicated_io``
      - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
+   * - ``SPV_KHR_maximal_reconvergence``
+     - Adds execution mode and capability to enable maximal reconvergence.
 
 SPIR-V representation in LLVM IR
 ================================

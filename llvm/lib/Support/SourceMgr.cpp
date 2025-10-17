@@ -69,11 +69,11 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
                            std::string &IncludedFile) {
-  if (!FS)
-    reportFatalInternalError("Opening include file from SourceMgr without VFS");
+  auto GetFile = [this](StringRef Path) {
+    return FS ? FS->getBufferForFile(Path) : MemoryBuffer::getFile(Path);
+  };
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      FS->getBufferForFile(Filename);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFile(Filename);
 
   SmallString<64> Buffer(Filename);
   // If the file didn't exist directly, see if it's in an include path.
@@ -81,7 +81,7 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
        ++i) {
     Buffer = IncludeDirectories[i];
     sys::path::append(Buffer, Filename);
-    NewBufOrErr = FS->getBufferForFile(Buffer);
+    NewBufOrErr = GetFile(Buffer);
   }
 
   if (NewBufOrErr)

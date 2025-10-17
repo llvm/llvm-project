@@ -386,6 +386,7 @@ defm SPV_KHR_float_controls2 : ExtensionOperand<124, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
 defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
+defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -698,7 +699,7 @@ defm IntersectionNV: ExecutionModelOperand<5314, [RayTracingNV]>;
 defm AnyHitNV: ExecutionModelOperand<5315, [RayTracingNV]>;
 defm ClosestHitNV: ExecutionModelOperand<5316, [RayTracingNV]>;
 defm MissNV: ExecutionModelOperand<5317, [RayTracingNV]>;
-defm CallableNV: ExecutionModelOperand<5318, [RayTracingNV]>;
+defm CallableNV : ExecutionModelOperand<5318, [RayTracingNV]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemoryModel enum values and at the same time
@@ -805,6 +806,7 @@ defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
 defm FPFastMathDefault : ExecutionModeOperand<6028, [FloatControls2]>;
+defm MaximallyReconvergesKHR : ExecutionModeOperand<6023, [Shader]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time

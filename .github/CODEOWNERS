@@ -131,6 +131,7 @@
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/lib/Bindings/Python @makslevental @rolfmorel
+/mlir/include/Bindings/Python @makslevental @rolfmorel
 
 # MLIR Mem2Reg/SROA
 /mlir/**/Transforms/Mem2Reg.* @moxinilian

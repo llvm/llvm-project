@@ -96,9 +96,9 @@ createExecutorFromCommandLineArgs(int &argc, const char **argv,
 // and thus register the StandaloneToolExecutorPlugin etc.
 extern volatile int StandaloneToolExecutorAnchorSource;
 extern volatile int AllTUsToolExecutorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED StandaloneToolExecutorAnchorDest =
+[[maybe_unused]] static int StandaloneToolExecutorAnchorDest =
     StandaloneToolExecutorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED AllTUsToolExecutorAnchorDest =
+[[maybe_unused]] static int AllTUsToolExecutorAnchorDest =
     AllTUsToolExecutorAnchorSource;
 
 } // end namespace tooling

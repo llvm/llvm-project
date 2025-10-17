@@ -112,7 +112,7 @@ public:
 /// Helper to parse a META_BLOCK for a bitstream remark container.
 class BitstreamMetaParserHelper
     : public BitstreamBlockParserHelper<BitstreamMetaParserHelper> {
-  friend class BitstreamBlockParserHelper;
+  friend class BitstreamBlockParserHelper<BitstreamMetaParserHelper>;
 
 public:
   struct ContainerInfo {
@@ -137,7 +137,7 @@ protected:
 /// Helper to parse a REMARK_BLOCK for a bitstream remark container.
 class BitstreamRemarkParserHelper
     : public BitstreamBlockParserHelper<BitstreamRemarkParserHelper> {
-  friend class BitstreamBlockParserHelper;
+  friend class BitstreamBlockParserHelper<BitstreamRemarkParserHelper>;
 
 protected:
   SmallVector<uint64_t, 5> Record;

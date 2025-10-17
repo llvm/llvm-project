@@ -695,6 +695,9 @@ def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
+def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
+                        AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
+                            "'Zvfbfmin' (Vector BF16 Converts)">;
 
 def FeatureStdExtZvfbfwma
     : RISCVExtension<1, 0, "Vector BF16 widening mul-add",

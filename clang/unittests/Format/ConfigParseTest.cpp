@@ -1264,6 +1264,13 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               IndentWidth, 56u);
 }
 
+TEST(ConfigParseTest, AllowCommentOnlyConfigFile) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  EXPECT_EQ(parseConfiguration("#Language: C", &Style), ParseError::Success);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
+}
+
 TEST(ConfigParseTest, AllowCppForC) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_C;
