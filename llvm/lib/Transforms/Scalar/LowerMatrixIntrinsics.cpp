@@ -115,17 +115,15 @@ static bool isSplat(Value *V) {
 
 /// Match any mul operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyMul(const LTy &L, const RTy &R) {
+static auto m_AnyMul(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Mul(L, R), m_FMul(L, R));
 }
 
 /// Match any add operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyAdd(const LTy &L, const RTy &R) {
+static auto m_AnyAdd(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Add(L, R), m_FAdd(L, R));
 }
-
-namespace {
 
 // Given an element pointer \p BasePtr to the start of a (sub) matrix, compute
 // the start address of vector \p VecIdx with type (\p EltType x \p NumElements)
@@ -167,9 +165,9 @@ namespace {
 //         v_2_0 |v_2_1 |v_2_2 |v_2_3
 //         v_3_0 {v_3_1 {v_3_2  v_3_3
 //
-Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
-                         unsigned NumElements, Type *EltType,
-                         IRBuilder<> &Builder) {
+static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
+                                unsigned NumElements, Type *EltType,
+                                IRBuilder<> &Builder) {
 
   assert((!isa<ConstantInt>(Stride) ||
           cast<ConstantInt>(Stride)->getZExtValue() >= NumElements) &&
@@ -338,6 +336,8 @@ computeShapeInfoForInst(Instruction *I,
   return std::nullopt;
 }
 
+namespace {
+
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
 ///
 /// Currently, the lowering for each matrix intrinsic is done as follows:
@@ -371,7 +371,8 @@ class LowerMatrixIntrinsics {
   LoopInfo *LI = nullptr;
   OptimizationRemarkEmitter *ORE = nullptr;
 
-  /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
+  /// Contains estimates of the number of operations (loads, stores, compute)
+  /// required to lower a matrix operation.
   struct OpInfoTy {
     /// Number of stores emitted to generate this matrix.
     unsigned NumStores = 0;
