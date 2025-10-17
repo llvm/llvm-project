@@ -6690,9 +6690,21 @@ uint32_t TypeSystemClang::GetIndexForRecordBase(
   return UINT32_MAX;
 }
 
+uint32_t
+TypeSystemClang::GetIndexForRecordChild(const clang::RecordDecl *record_decl,
+                                        clang::NamedDecl *canonical_decl,
+                                        bool omit_empty_base_classes) {
+  RecordChildResult result;
+  // For script backward-compatibility, we don't check anonymous bases here.
+  bool success = GetIndexForRecordChild(record_decl, canonical_decl,
+                                        omit_empty_base_classes, false, result);
+  return success ? result.index : UINT32_MAX;
+}
+
 bool TypeSystemClang::GetIndexForRecordChild(
     const clang::RecordDecl *record_decl, clang::NamedDecl *canonical_decl,
-    bool omit_empty_base_classes, RecordChildResult &out) {
+    bool omit_empty_base_classes, bool check_anonymous_bases,
+    RecordChildResult &out) {
   uint32_t child_idx = TypeSystemClang::GetNumBaseClasses(
       llvm::dyn_cast<clang::CXXRecordDecl>(record_decl),
       omit_empty_base_classes);
@@ -6704,6 +6716,8 @@ bool TypeSystemClang::GetIndexForRecordChild(
 
     // If finding an `IndirectFieldDecl x` from `struct { int x; ... };`
     if (auto *IFD = llvm::dyn_cast<clang::IndirectFieldDecl>(canonical_decl)) {
+      if (!check_anonymous_bases)
+        continue;
       // Only meaningful is the field is an anonymous struct/union.
       if (!field->isAnonymousStructOrUnion())
         continue;
@@ -6886,7 +6900,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                    I != E; ++I) {
                 RecordChildResult result{};
                 bool success = GetIndexForRecordChild(
-                    parent_record_decl, *I, omit_empty_base_classes, result);
+                    parent_record_decl, *I, omit_empty_base_classes, true, result);
                 if (!success) {
                   child_indexes.clear();
                   return 0;
