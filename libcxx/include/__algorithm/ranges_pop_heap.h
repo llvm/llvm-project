@@ -48,7 +48,9 @@ struct __pop_heap {
     auto __len       = __last_iter - __first;
 
     auto&& __projected_comp = std::__make_projected(__comp, __proj);
-    std::__pop_heap<_RangeAlgPolicy>(std::move(__first), __last_iter, __projected_comp, __len);
+
+    if (__len > 1)
+      std::__pop_heap<_RangeAlgPolicy>(std::move(__first), ranges::prev(__last_iter), __projected_comp, __len);
 
     return __last_iter;
   }
