@@ -2105,6 +2105,10 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
     // Only plain immediates are inlinable (e.g. "clamp" attribute is not)
     return false;
   }
+
+  if (getModifiers().Lit != LitModifier::None)
+    return false;
+
   // TODO: We should avoid using host float here. It would be better to
   // check the float bit values which is what a few other places do.
   // We've had bot failures before due to weird NaN support on mips hosts.
@@ -2349,7 +2353,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-      if (AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
+      if (Lit == LitModifier::None &&
+          AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
                                        AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(Literal.getZExtValue()));
         return;
@@ -2386,14 +2391,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
             Val = Hi_32(Val);
           }
         }
-
-        if (Lit != LitModifier::None) {
-          Inst.addOperand(
-              MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
-        } else {
-          Inst.addOperand(MCOperand::createImm(Val));
-        }
-        return;
+        break;
       }
 
       // We don't allow fp literals in 64-bit integer instructions. It is
@@ -2405,20 +2403,14 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       if (CanUse64BitLiterals && Lit == LitModifier::None &&
           (isInt<32>(Val) || isUInt<32>(Val)))
         Lit = LitModifier::Lit64;
-
-      if (Lit != LitModifier::None) {
-        Inst.addOperand(
-            MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
-      } else {
-        Inst.addOperand(MCOperand::createImm(Val));
-      }
-      return;
+      break;
 
     case AMDGPU::OPERAND_REG_IMM_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
-      if (AsmParser->hasInv2PiInlineImm() && Literal == 0x3fc45f306725feed) {
+      if (Lit == LitModifier::None && AsmParser->hasInv2PiInlineImm() &&
+          Literal == 0x3fc45f306725feed) {
         // This is the 1/(2*pi) which is going to be truncated to bf16 with the
         // loss of precision. The constant represents ideomatic fp32 value of
         // 1/(2*pi) = 0.15915494 since bf16 is in fact fp32 with cleared low 16
@@ -2456,14 +2448,19 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       // We allow precision lost but not overflow or underflow. This should be
       // checked earlier in isLiteralImm()
 
-      uint64_t ImmVal = FPLiteral.bitcastToAPInt().getZExtValue();
-      Inst.addOperand(MCOperand::createImm(ImmVal));
-      return;
+      Val = FPLiteral.bitcastToAPInt().getZExtValue();
+      break;
     }
     default:
       llvm_unreachable("invalid operand size");
     }
 
+    if (Lit != LitModifier::None) {
+      Inst.addOperand(
+          MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
+    } else {
+      Inst.addOperand(MCOperand::createImm(Val));
+    }
     return;
   }
 
@@ -2483,12 +2480,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
+    break;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-    if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
+    if (Lit == LitModifier::None &&
+        AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       return;
     }
@@ -2499,19 +2496,13 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     // LSBs.
     if (!AsmParser->has64BitLiterals() || Lit == LitModifier::Lit)
       Val = Lo_32(Val);
-
-    if (Lit != LitModifier::None) {
-      Inst.addOperand(
-          MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
-    } else {
-      Inst.addOperand(MCOperand::createImm(Val));
-    }
-    return;
+    break;
 
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
+    if (Lit == LitModifier::None &&
+        AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       return;
     }
@@ -2534,14 +2525,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     // For FP64 operands lit() specifies the high half of the value.
     if (Lit == LitModifier::Lit)
       Val = Hi_32(Val);
-
-    if (Lit != LitModifier::None) {
-      Inst.addOperand(
-          MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
-    } else {
-      Inst.addOperand(MCOperand::createImm(Val));
-    }
-    return;
+    break;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -2554,23 +2538,22 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
+    break;
 
   case AMDGPU::OPERAND_KIMM64:
     if ((isInt<32>(Val) || isUInt<32>(Val)) && Lit != LitModifier::Lit64)
       Val <<= 32;
-
-    if (Lit != LitModifier::None) {
-      Inst.addOperand(
-          MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
-    } else {
-      Inst.addOperand(MCOperand::createImm(Val));
-    }
-    return;
+    break;
 
   default:
     llvm_unreachable("invalid operand type");
+  }
+
+  if (Lit != LitModifier::None) {
+    Inst.addOperand(
+        MCOperand::createExpr(AMDGPUMCExpr::createLit(Lit, Val, Ctx)));
+  } else {
+    Inst.addOperand(MCOperand::createImm(Val));
   }
 }
 

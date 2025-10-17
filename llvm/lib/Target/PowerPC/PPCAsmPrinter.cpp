@@ -2404,7 +2404,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
             << static_cast<unsigned>(((V) & (TracebackTable::Field##Mask)) >>  \
                                      (TracebackTable::Field##Shift))
 
-  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobaLinkage);
+  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobalLinkage);
   GENBOOLCOMMENT(", ", FirstHalfOfMandatoryField, IsOutOfLineEpilogOrPrologue);
   EmitComment();
 
