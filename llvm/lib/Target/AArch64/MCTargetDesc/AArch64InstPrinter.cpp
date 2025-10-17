@@ -1508,6 +1508,17 @@ void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
     markup(O, Markup::Immediate) << '#' << formatImm(btihintop);
 }
 
+void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
+                                                unsigned OpNum,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  unsigned priorityhint_op = MI->getOperand(OpNum).getImm();
+  auto PHint =
+      AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(priorityhint_op);
+  if (PHint)
+    O << PHint->Name;
+}
+
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {

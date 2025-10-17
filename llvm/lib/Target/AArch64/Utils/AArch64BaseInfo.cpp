@@ -139,6 +139,13 @@ namespace llvm {
 }
 
 namespace llvm {
+namespace AArch64CMHPriorityHint {
+#define GET_CMHPRIORITYHINT_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64CMHPriorityHint
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64SysReg {
 #define GET_SysRegsList_IMPL
 #include "AArch64GenSystemOperands.inc"

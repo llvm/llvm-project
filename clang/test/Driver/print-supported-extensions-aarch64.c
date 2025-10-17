@@ -8,6 +8,7 @@
 // CHECK-NEXT:     bf16                FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
+// CHECK-NEXT:     cmh                 FEAT_CMH                                               Enable Armv9.7-A Contention Management Hints
 // CHECK-NEXT:     cmpbr               FEAT_CMPBR                                             Enable Armv9.6-A base compare and branch instructions
 // CHECK-NEXT:     fcma                FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support
 // CHECK-NEXT:     cpa                 FEAT_CPA                                               Enable Armv9.5-A Checked Pointer Arithmetic
@@ -37,6 +38,7 @@
 // CHECK-NEXT:     ite                 FEAT_ITE                                               Enable Armv9.4-A Instrumentation Extension
 // CHECK-NEXT:     jscvt               FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     ls64                FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
+// CHECK-NEXT:     lscp                FEAT_LSCP                                              Enable Armv9.7-A Load-acquire and store-release pair extension
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
 // CHECK-NEXT:     lsfe                FEAT_LSFE                                              Enable Armv9.6-A base Atomic floating-point in-memory instructions

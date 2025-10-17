@@ -589,6 +589,11 @@ def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSV
 //  Armv9.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
+def FeatureCMH : ExtensionWithMArch<"cmh", "CMH", "FEAT_CMH",
+  "Enable Armv9.7-A Contention Management Hints">;
+
+def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
+  "Enable Armv9.7-A Load-acquire and store-release pair extension">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features

@@ -266,6 +266,7 @@ private:
   ParseStatus tryParseRPRFMOperand(OperandVector &Operands);
   ParseStatus tryParsePSBHint(OperandVector &Operands);
   ParseStatus tryParseBTIHint(OperandVector &Operands);
+  ParseStatus tryParseCMHPriorityHint(OperandVector &Operands);
   ParseStatus tryParseAdrpLabel(OperandVector &Operands);
   ParseStatus tryParseAdrLabel(OperandVector &Operands);
   template <bool AddFPZeroAsLiteral>
@@ -370,6 +371,7 @@ private:
     k_PSBHint,
     k_PHint,
     k_BTIHint,
+    k_CMHPriorityHint,
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -499,6 +501,11 @@ private:
     unsigned Length;
     unsigned Val;
   };
+  struct CMHPriorityHintOp {
+    const char *Data;
+    unsigned Length;
+    unsigned Val;
+  };
 
   struct SVCROp {
     const char *Data;
@@ -525,6 +532,7 @@ private:
     struct PSBHintOp PSBHint;
     struct PHintOp PHint;
     struct BTIHintOp BTIHint;
+    struct CMHPriorityHintOp CMHPriorityHint;
     struct ShiftExtendOp ShiftExtend;
     struct SVCROp SVCR;
   };
@@ -594,6 +602,9 @@ public:
       break;
     case k_BTIHint:
       BTIHint = o.BTIHint;
+      break;
+    case k_CMHPriorityHint:
+      CMHPriorityHint = o.CMHPriorityHint;
       break;
     case k_ShiftExtend:
       ShiftExtend = o.ShiftExtend;
@@ -767,6 +778,16 @@ public:
   StringRef getBTIHintName() const {
     assert(Kind == k_BTIHint && "Invalid access!");
     return StringRef(BTIHint.Data, BTIHint.Length);
+  }
+
+  unsigned getCMHPriorityHint() const {
+    assert(Kind == k_CMHPriorityHint && "Invalid access!");
+    return CMHPriorityHint.Val;
+  }
+
+  StringRef getCMHPriorityHintName() const {
+    assert(Kind == k_CMHPriorityHint && "Invalid access!");
+    return StringRef(CMHPriorityHint.Data, CMHPriorityHint.Length);
   }
 
   StringRef getSVCR() const {
@@ -1511,6 +1532,7 @@ public:
   bool isPSBHint() const { return Kind == k_PSBHint; }
   bool isPHint() const { return Kind == k_PHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
+  bool isCMHPriorityHint() const { return Kind == k_CMHPriorityHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
     if (!isShiftExtend())
@@ -2196,6 +2218,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getBTIHint()));
   }
 
+  void addCMHPriorityHintOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getCMHPriorityHint()));
+  }
+
   void addShifterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm =
@@ -2547,6 +2574,17 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
+  CreateCMHPriorityHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_CMHPriorityHint, Ctx);
+    Op->CMHPriorityHint.Val = Val;
+    Op->CMHPriorityHint.Data = Str.data();
+    Op->CMHPriorityHint.Length = Str.size();
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
   CreateMatrixRegister(unsigned RegNum, unsigned ElementWidth, MatrixKind Kind,
                        SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_MatrixRegister, Ctx);
@@ -2655,6 +2693,9 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case k_BTIHint:
     OS << getBTIHintName();
+    break;
+  case k_CMHPriorityHint:
+    OS << getCMHPriorityHintName();
     break;
   case k_MatrixRegister:
     OS << "<matrix " << getMatrixReg() << ">";
@@ -3279,6 +3320,24 @@ ParseStatus AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+/// tryParseCMHPriorityHint - Try to parse a CMHPriority operand
+ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("invalid operand for instruction");
+
+  auto CMHPriority =
+      AArch64CMHPriorityHint::lookupCMHPriorityHintByName(Tok.getString());
+  if (!CMHPriority)
+    return TokError("invalid operand for instruction");
+
+  Operands.push_back(AArch64Operand::CreateCMHPriorityHint(
+      CMHPriority->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
+  return ParseStatus::Success;
+}
+
 /// tryParseAdrpLabel - Parse and validate a source label for the ADRP
 /// instruction.
 ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
@@ -3824,6 +3883,8 @@ static const struct Extension {
     {"ssve-bitperm", {AArch64::FeatureSSVE_BitPerm}},
     {"sme-mop4", {AArch64::FeatureSME_MOP4}},
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
+    {"cmh", {AArch64::FeatureCMH}},
+    {"lscp", {AArch64::FeatureLSCP}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
