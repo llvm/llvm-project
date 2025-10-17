@@ -711,6 +711,84 @@ static void genDataOperandOperations(
   }
 }
 
+template <typename GlobalOp, typename EntryOp, typename DeclareOp,
+          typename ExitOp>
+static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
+                                  fir::FirOpBuilder &builder,
+                                  mlir::Location loc, fir::GlobalOp globalOp,
+                                  mlir::acc::DataClause clause,
+                                  const std::string &declareGlobalName,
+                                  bool implicit, std::stringstream &asFortran) {
+  GlobalOp declareGlobalOp =
+      GlobalOp::create(modBuilder, loc, declareGlobalName);
+  builder.createBlock(&declareGlobalOp.getRegion(),
+                      declareGlobalOp.getRegion().end(), {}, {});
+  builder.setInsertionPointToEnd(&declareGlobalOp.getRegion().back());
+
+  fir::AddrOfOp addrOp = fir::AddrOfOp::create(
+      builder, loc, fir::ReferenceType::get(globalOp.getType()),
+      globalOp.getSymbol());
+  addDeclareAttr(builder, addrOp, clause);
+
+  llvm::SmallVector<mlir::Value> bounds;
+  EntryOp entryOp = createDataEntryOp<EntryOp>(
+      builder, loc, addrOp.getResTy(), asFortran, bounds,
+      /*structured=*/false, implicit, clause, addrOp.getResTy().getType(),
+      /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+  if constexpr (std::is_same_v<DeclareOp, mlir::acc::DeclareEnterOp>)
+    DeclareOp::create(builder, loc,
+                      mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+                      mlir::ValueRange(entryOp.getAccVar()));
+  else
+    DeclareOp::create(builder, loc, mlir::Value{},
+                      mlir::ValueRange(entryOp.getAccVar()));
+  if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
+    if constexpr (std::is_same_v<ExitOp, mlir::acc::DeclareLinkOp>) {
+      // No destructor emission for declare link in this path to avoid
+      // complex var/varType/varPtrPtr signatures. The ctor registers the link.
+    } else if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
+                         std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>) {
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getVar(), entryOp.getVarType(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+    } else {
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+    }
+  }
+  mlir::acc::TerminatorOp::create(builder, loc);
+  modBuilder.setInsertionPointAfter(declareGlobalOp);
+}
+
+template <typename EntryOp, typename ExitOp>
+static void emitCtorDtorPair(mlir::OpBuilder &modBuilder,
+                             fir::FirOpBuilder &builder,
+                             mlir::Location operandLocation,
+                             fir::GlobalOp globalOp,
+                             mlir::acc::DataClause clause,
+                             std::stringstream &asFortran,
+                             const std::string &ctorName) {
+  createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
+                        mlir::acc::DeclareEnterOp, ExitOp>(
+      modBuilder, builder, operandLocation, globalOp, clause, ctorName,
+      /*implicit=*/false, asFortran);
+
+  std::stringstream dtorName;
+  dtorName << globalOp.getSymName().str() << "_acc_dtor";
+  createDeclareGlobalOp<mlir::acc::GlobalDestructorOp, mlir::acc::GetDevicePtrOp,
+                        mlir::acc::DeclareExitOp, ExitOp>(
+      modBuilder, builder, operandLocation, globalOp, clause, dtorName.str(),
+      /*implicit=*/false, asFortran);
+}
+
 template <typename EntryOp, typename ExitOp>
 static void genDeclareDataOperandOperations(
     const Fortran::parser::AccObjectList &objectList,
@@ -726,10 +804,36 @@ static void genDeclareDataOperandOperations(
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    // Skip COMMON/global symbols: handled via global ctor/dtor path in declare.
+    // Handle COMMON/global symbols via module-level ctor/dtor path.
     if (symbol.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
-        Fortran::semantics::FindCommonBlockContaining(symbol))
+        Fortran::semantics::FindCommonBlockContaining(symbol)) {
+      emitCommonGlobal(converter, builder, accObject, dataClause,
+          [&](mlir::OpBuilder &modBuilder, mlir::Location loc,
+              fir::GlobalOp globalOp, mlir::acc::DataClause clause,
+              std::stringstream &asFortranStr, const std::string &ctorName) {
+            if constexpr (std::is_same_v<EntryOp, mlir::acc::DeclareLinkOp>) {
+              createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                                    mlir::acc::DeclareLinkOp,
+                                    mlir::acc::DeclareEnterOp,
+                                    mlir::acc::DeclareLinkOp>(modBuilder,
+                  builder, loc, globalOp, clause, ctorName,
+                  /*implicit=*/false, asFortranStr);
+            } else if constexpr (
+                std::is_same_v<EntryOp, mlir::acc::CreateOp> ||
+                std::is_same_v<EntryOp, mlir::acc::CopyinOp> ||
+                std::is_same_v<EntryOp, mlir::acc::DeclareDeviceResidentOp> ||
+                std::is_same_v<ExitOp, mlir::acc::CopyoutOp>) {
+              emitCtorDtorPair<EntryOp, ExitOp>(
+                  modBuilder, builder, loc, globalOp, clause, asFortranStr,
+                  ctorName);
+            } else {
+              // No module-level ctor/dtor for this clause (e.g., deviceptr,
+              // present). Handled via structured declare region only.
+              return;
+            }
+          });
       continue;
+    }
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     fir::factory::AddrAndBoundsInfo info =
@@ -4085,86 +4189,6 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     waitOp.setAsyncAttr(firOpBuilder.getUnitAttr());
 }
 
-template <typename GlobalOp, typename EntryOp, typename DeclareOp,
-          typename ExitOp>
-static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
-                                  fir::FirOpBuilder &builder,
-                                  mlir::Location loc, fir::GlobalOp globalOp,
-                                  mlir::acc::DataClause clause,
-                                  const std::string &declareGlobalName,
-                                  bool implicit, std::stringstream &asFortran) {
-  GlobalOp declareGlobalOp =
-      GlobalOp::create(modBuilder, loc, declareGlobalName);
-  builder.createBlock(&declareGlobalOp.getRegion(),
-                      declareGlobalOp.getRegion().end(), {}, {});
-  builder.setInsertionPointToEnd(&declareGlobalOp.getRegion().back());
-
-  fir::AddrOfOp addrOp = fir::AddrOfOp::create(
-      builder, loc, fir::ReferenceType::get(globalOp.getType()),
-      globalOp.getSymbol());
-  addDeclareAttr(builder, addrOp, clause);
-
-  llvm::SmallVector<mlir::Value> bounds;
-  EntryOp entryOp = createDataEntryOp<EntryOp>(
-      builder, loc, addrOp.getResTy(), asFortran, bounds,
-      /*structured=*/false, implicit, clause, addrOp.getResTy().getType(),
-      /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  if constexpr (std::is_same_v<DeclareOp, mlir::acc::DeclareEnterOp>)
-    DeclareOp::create(builder, loc,
-                      mlir::acc::DeclareTokenType::get(entryOp.getContext()),
-                      mlir::ValueRange(entryOp.getAccVar()));
-  else
-    DeclareOp::create(builder, loc, mlir::Value{},
-                      mlir::ValueRange(entryOp.getAccVar()));
-  if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
-    if constexpr (std::is_same_v<ExitOp, mlir::acc::DeclareLinkOp>) {
-      // No destructor emission for declare link in this path to avoid
-      // complex var/varType/varPtrPtr signatures. The ctor registers the link.
-    } else if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
-                         std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>) {
-      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
-                     entryOp.getVar(), entryOp.getVarType(),
-                     entryOp.getBounds(), entryOp.getAsyncOperands(),
-                     entryOp.getAsyncOperandsDeviceTypeAttr(),
-                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
-                     /*structured=*/false, /*implicit=*/false,
-                     builder.getStringAttr(*entryOp.getName()));
-    } else {
-      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
-                     entryOp.getBounds(), entryOp.getAsyncOperands(),
-                     entryOp.getAsyncOperandsDeviceTypeAttr(),
-                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
-                     /*structured=*/false, /*implicit=*/false,
-                     builder.getStringAttr(*entryOp.getName()));
-    }
-  }
-  mlir::acc::TerminatorOp::create(builder, loc);
-  modBuilder.setInsertionPointAfter(declareGlobalOp);
-}
-
-// Small helper to emit a constructor/destructor pair for a given global
-// declare Entry/Exit Op combination.
-template <typename EntryOp, typename ExitOp>
-static void emitCtorDtorPair(mlir::OpBuilder &modBuilder,
-                             fir::FirOpBuilder &builder,
-                             mlir::Location operandLocation,
-                             fir::GlobalOp globalOp,
-                             mlir::acc::DataClause clause,
-                             std::stringstream &asFortran,
-                             const std::string &ctorName) {
-  createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
-                        mlir::acc::DeclareEnterOp, ExitOp>(
-      modBuilder, builder, operandLocation, globalOp, clause, ctorName,
-      /*implicit=*/false, asFortran);
-
-  std::stringstream dtorName;
-  dtorName << globalOp.getSymName().str() << "_acc_dtor";
-  createDeclareGlobalOp<mlir::acc::GlobalDestructorOp, mlir::acc::GetDevicePtrOp,
-                        mlir::acc::DeclareExitOp, ExitOp>(
-      modBuilder, builder, operandLocation, globalOp, clause, dtorName.str(),
-      /*implicit=*/false, asFortran);
-}
-
 template <typename EntryOp>
 static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
                                    fir::FirOpBuilder &builder,
@@ -4426,22 +4450,9 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                                dataClauseOperands.end());
     } else if (const auto *createClause =
                    std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
-      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
-          createClause->v;
-      const auto &accObjectList =
-          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
-      for (const auto &obj : accObjectList.v) {
-        emitCommonGlobal(converter, builder, obj,
-            mlir::acc::DataClause::acc_create,
-            [&](mlir::OpBuilder &modBuilder, mlir::Location operandLocation,
-                fir::GlobalOp globalOp, mlir::acc::DataClause clause,
-                std::stringstream &asFortran, const std::string &ctorName) {
-              emitCtorDtorPair<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-                  modBuilder, builder, operandLocation, globalOp, clause,
-                  asFortran, ctorName);
-            });
-      }
       auto crtDataStart = dataClauseOperands.size();
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(createClause->v.t);
       genDeclareDataOperandOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
           accObjectList, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_create,
@@ -4461,20 +4472,6 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                                   dataClauseOperands.end());
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
-      const auto &listWithModifier = copyinClause->v;
-      const auto &copyinObjs =
-          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
-      for (const auto &obj : copyinObjs.v) {
-        emitCommonGlobal(converter, builder, obj,
-            mlir::acc::DataClause::acc_copyin,
-            [&](mlir::OpBuilder &modBuilder, mlir::Location operandLocation,
-                fir::GlobalOp globalOp, mlir::acc::DataClause clause,
-                std::stringstream &asFortran, const std::string &ctorName) {
-              emitCtorDtorPair<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
-                  modBuilder, builder, operandLocation, globalOp, clause,
-                  asFortran, ctorName);
-            });
-      }
       auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                                   mlir::acc::DeleteOp>(
@@ -4487,22 +4484,9 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
                        &clause.u)) {
-      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
-          copyoutClause->v;
-      const auto &accObjectList =
-          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
-      for (const auto &obj : accObjectList.v) {
-        emitCommonGlobal(converter, builder, obj,
-            mlir::acc::DataClause::acc_copyout,
-            [&](mlir::OpBuilder &modBuilder, mlir::Location operandLocation,
-                fir::GlobalOp globalOp, mlir::acc::DataClause clause,
-                std::stringstream &asFortran, const std::string &ctorName) {
-              emitCtorDtorPair<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-                  modBuilder, builder, operandLocation, globalOp, clause,
-                  asFortran, ctorName);
-            });
-      }
       auto crtDataStart = dataClauseOperands.size();
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(copyoutClause->v.t);
       genDeclareDataOperandOperations<mlir::acc::CreateOp,
                                       mlir::acc::CopyoutOp>(
           accObjectList, converter, semanticsContext, stmtCtx,
@@ -4520,21 +4504,6 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*implicit=*/false);
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
-      const auto &linkObjs = linkClause->v;
-      for (const auto &obj : linkObjs.v) {
-        emitCommonGlobal(converter, builder, obj,
-            mlir::acc::DataClause::acc_declare_link,
-            [&](mlir::OpBuilder &modBuilder, mlir::Location operandLocation,
-                fir::GlobalOp globalOp, mlir::acc::DataClause clause,
-                std::stringstream &asFortran, const std::string &ctorName) {
-              createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
-                                    mlir::acc::DeclareLinkOp,
-                                    mlir::acc::DeclareEnterOp,
-                                    mlir::acc::DeclareLinkOp>(modBuilder,
-                    builder, operandLocation, globalOp, clause, ctorName,
-                    /*implicit=*/false, asFortran);
-            });
-      }
       genDeclareDataOperandOperations<mlir::acc::DeclareLinkOp,
                                       mlir::acc::DeclareLinkOp>(
           linkClause->v, converter, semanticsContext, stmtCtx,
@@ -4543,18 +4512,6 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceResidentClause =
                    std::get_if<Fortran::parser::AccClause::DeviceResident>(
                        &clause.u)) {
-      const auto &devResObjs = deviceResidentClause->v;
-      for (const auto &obj : devResObjs.v) {
-        emitCommonGlobal(converter, builder, obj,
-            mlir::acc::DataClause::acc_declare_device_resident,
-            [&](mlir::OpBuilder &modBuilder, mlir::Location operandLocation,
-                fir::GlobalOp globalOp, mlir::acc::DataClause clause,
-                std::stringstream &asFortran, const std::string &ctorName) {
-              emitCtorDtorPair<mlir::acc::DeclareDeviceResidentOp,
-                               mlir::acc::DeleteOp>(modBuilder, builder,
-                  operandLocation, globalOp, clause, asFortran, ctorName);
-            });
-      }
       auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::DeclareDeviceResidentOp,
                                       mlir::acc::DeleteOp>(
