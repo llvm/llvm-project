@@ -112,6 +112,8 @@ public:
 
   bool IsValid() const;
 
+  bool IsHost() const;
+
   void Clear();
 
   const char *GetWorkingDirectory();
