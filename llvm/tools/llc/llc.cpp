@@ -15,6 +15,7 @@
 #include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PGOOptions.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -57,6 +59,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <cassert>
 #include <memory>
 #include <optional>
 using namespace llvm;
@@ -203,6 +206,13 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<std::string> SaveStats(
+    "save-stats",
+    cl::desc("Save LLVM statistics to a file in the current directory"
+             "(`-save-stats`/`-save-stats=cwd`) or the directory of the output"
+             "file (`-save-stats=obj`). (default: cwd)"),
+    cl::init(""), cl::ValueOptional);
+
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
@@ -276,7 +286,8 @@ static void setPGOOptions(TargetMachine &TM) {
     TM.setPGOOption(PGOOpt);
 }
 
-static int compileModule(char **, LLVMContext &);
+static int compileModule(char **argv, LLVMContext &Context,
+                         std::string &OutputFilename);
 
 [[noreturn]] static void reportError(Twine Msg, StringRef Filename = "") {
   SmallString<256> Prefix;
@@ -353,6 +364,50 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   }
 
   return FDOut;
+}
+
+static int MaybeEnableStats() {
+  if (SaveStats.getNumOccurrences() > 0) {
+    if (SaveStats.empty() || SaveStats == "cwd" || SaveStats == "obj") {
+      llvm::EnableStatistics(false);
+    } else {
+      WithColor::error(errs(), "llc")
+          << "Invalid --save-stats value: " << SaveStats
+          << ", must be empty, 'cwd' or 'obj'\n";
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int MaybeSaveStats(std::string &&OutputFilename) {
+  if (SaveStats.getNumOccurrences() > 0) {
+    SmallString<128> StatsFilename;
+    if (SaveStats == "obj") {
+      StatsFilename = OutputFilename;
+      llvm::sys::path::remove_filename(StatsFilename);
+    } else {
+      assert((SaveStats.empty() || SaveStats == "cwd") &&
+             "Should have been a valid --save-stats value");
+    }
+
+    auto BaseName = llvm::sys::path::filename(OutputFilename);
+    llvm::sys::path::append(StatsFilename, BaseName);
+    llvm::sys::path::replace_extension(StatsFilename, "stats");
+
+    auto FileFlags = llvm::sys::fs::OF_TextWithCRLF;
+    std::error_code EC;
+    auto StatsOS =
+        std::make_unique<llvm::raw_fd_ostream>(StatsFilename, EC, FileFlags);
+    if (EC) {
+      WithColor::error(errs(), "llc")
+          << "Unable to open statistics file: " << EC.message() << "\n";
+      return 1;
+    } else {
+      llvm::PrintStatisticsJSON(*StatsOS);
+    }
+  }
+  return 0;
 }
 
 // main - Entry point for the llc compiler.
@@ -432,18 +487,23 @@ int main(int argc, char **argv) {
     reportError(std::move(E), RemarksFilename);
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
+  if (int RetVal = MaybeEnableStats())
+    return RetVal;
+  std::string OutputFilename;
+
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
     reportError("input language must be '', 'IR' or 'MIR'");
 
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
   for (unsigned I = TimeCompilations; I; --I)
-    if (int RetVal = compileModule(argv, Context))
+    if (int RetVal = compileModule(argv, Context, OutputFilename))
       return RetVal;
 
   if (RemarksFile)
     RemarksFile->keep();
-  return 0;
+
+  return MaybeSaveStats(std::move(OutputFilename));
 }
 
 static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
@@ -475,7 +535,8 @@ static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
   return false;
 }
 
-static int compileModule(char **argv, LLVMContext &Context) {
+static int compileModule(char **argv, LLVMContext &Context,
+                         std::string &OutputFilename) {
   // Load the module to be compiled...
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
@@ -658,6 +719,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Ensure the filename is passed down to CodeViewDebug.
   Target->Options.ObjectFilenameForDebug = Out->outputFilename();
+
+  // Return a copy of the output filename via the output param
+  OutputFilename = Out->outputFilename();
 
   // Tell target that this tool is not necessarily used with argument ABI
   // compliance (i.e. narrow integer argument extensions).
