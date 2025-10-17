@@ -454,45 +454,34 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
   return PreservedAnalyses::all();
 }
 
-namespace {
-class DXILTranslateMetadataLegacy : public ModulePass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  explicit DXILTranslateMetadataLegacy() : ModulePass(ID) {}
+void DXILTranslateMetadataLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<DXILResourceTypeWrapperPass>();
+  AU.addRequired<DXILResourceWrapperPass>();
+  AU.addRequired<ShaderFlagsAnalysisWrapper>();
+  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+  AU.addRequired<RootSignatureAnalysisWrapper>();
 
-  StringRef getPassName() const override { return "DXIL Translate Metadata"; }
+  AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+  AU.addPreserved<DXILResourceBindingWrapperPass>();
+  AU.addPreserved<DXILResourceWrapperPass>();
+  AU.addPreserved<RootSignatureAnalysisWrapper>();
+  AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceWrapperPass>();
-    AU.addRequired<ShaderFlagsAnalysisWrapper>();
-    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
-    AU.addRequired<RootSignatureAnalysisWrapper>();
+bool DXILTranslateMetadataLegacy::runOnModule(Module &M) {
+  DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  const ModuleShaderFlags &ShaderFlags =
+      getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
+  dxil::ModuleMetadataInfo MMDI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
-    AU.addPreserved<RootSignatureAnalysisWrapper>();
-    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
-  }
-
-  bool runOnModule(Module &M) override {
-    DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
-    DXILResourceTypeMap &DRTM =
-        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-    const ModuleShaderFlags &ShaderFlags =
-        getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
-    dxil::ModuleMetadataInfo MMDI =
-        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-
-    translateGlobalMetadata(M, DRM, DRTM, ShaderFlags, MMDI);
-    translateInstructionMetadata(M);
-    return true;
-  }
-};
-
-} // namespace
+  translateGlobalMetadata(M, DRM, DRTM, ShaderFlags, MMDI);
+  translateInstructionMetadata(M);
+  return true;
+}
 
 char DXILTranslateMetadataLegacy::ID = 0;
 
