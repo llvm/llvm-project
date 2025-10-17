@@ -10,7 +10,6 @@
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
-#include "src/stdio/fopencookie.h"
 #include "src/stdio/fread.h"
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
@@ -21,18 +20,21 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#if defined(LIBC_TARGET_OS_IS_LINUX) &&                                        \
+    !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+#include "src/stdio/fopencookie.h"
+#endif
+
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;
 using LIBC_NAMESPACE::ferror;
 using LIBC_NAMESPACE::fopen;
-using LIBC_NAMESPACE::fopencookie;
 using LIBC_NAMESPACE::fread;
 #else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
 using ::fopen;
-using ::fopencookie;
 using ::fread;
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace printf_test
@@ -86,11 +88,13 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   written =
       LIBC_NAMESPACE::fprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
-  ASSERT_ERRNO_EQ(EIO);
+  ASSERT_ERRNO_EQ(EBADF);
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
 
+#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) &&                               \
+    defined(LIBC_TARGET_OS_IS_LINUX)
 TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
   struct NoopStream {};
   auto noop_write = [](void *, const char *, size_t size) -> ssize_t {
@@ -99,7 +103,7 @@ TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
 
   NoopStream stream;
   cookie_io_functions_t funcs = {nullptr, +noop_write, nullptr, nullptr};
-  ::FILE *file = printf_test::fopencookie(&stream, "w", funcs);
+  ::FILE *file = LIBC_NAMESPACE::fopencookie(&stream, "w", funcs);
   ASSERT_NE(file, nullptr);
 
   // Trigger an overflow in the return value of fprintf by writing more than
@@ -113,6 +117,8 @@ TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
 
   EXPECT_EQ(printf_test::fclose(file), 0);
 }
+#endif // #if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) &&
+       // defined(LIBC_TARGET_OS_IS_LINUX)
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 TEST(LlvmLibcFPrintfTest, NullPtrCheck) {

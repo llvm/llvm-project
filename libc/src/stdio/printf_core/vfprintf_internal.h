@@ -51,7 +51,7 @@ LIBC_INLINE void funlockfile(::FILE *f) { ::funlockfile(f); }
 
 LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
                                          size_t nmemb, ::FILE *f) {
-  return {::fwrite_unlocked(ptr, size, nmemb, f), 0}; // todo err
+  return {::fwrite_unlocked(ptr, size, nmemb, f), errno};
 }
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace internal
@@ -68,15 +68,11 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   if (write_result.has_error())
     return -write_result.error;
 
-  // On short write no system error is returned, so return custom error.
-  if (write_result.value != new_str.size())
-    return SHORT_WRITE_ERROR;
-
-  // Return custom error in case error wasn't set on FileIOResult for some
-  // reason (like using LIBC_COPT_STDIO_USE_SYSTEM_FILE)
-  if (internal::ferror_unlocked(target_file)) {
+  // In case short write occured or error was not set on FileIOResult for some
+  // reason.
+  if (write_result.value != new_str.size() ||
+      internal::ferror_unlocked(target_file))
     return FILE_WRITE_ERROR;
-  }
 
   return WRITE_OK;
 }

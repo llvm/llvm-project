@@ -134,22 +134,24 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
 
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
-// These are the printf return values for when an error has occurred. They are
-// all negative, and should be distinct.
+// These are the error return values used by the printf engine when an
+// error has occurred. They are all large negative, distinct values starting
+// from -1000 to not overlap with system errors.
 constexpr int FILE_WRITE_ERROR = -1001;
 constexpr int FILE_STATUS_ERROR = -1002;
 constexpr int NULLPTR_WRITE_ERROR = -1003;
 constexpr int INT_CONVERSION_ERROR = -1004;
 constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
 constexpr int ALLOCATION_ERROR = -1006;
-constexpr int SHORT_WRITE_ERROR = -1007;
 
-LIBC_INLINE static int internal_error_to_errno(int internal_errno) {
-  if (internal_errno < 1001) {
-    return internal_errno;
+LIBC_INLINE static int internal_error_to_errno(int internal_error) {
+  // System error occured, return error as is.
+  if (internal_error < 1001) {
+    return internal_error;
   }
 
-  switch (-internal_errno) {
+  // Map internal error to errno.
+  switch (-internal_error) {
   case WRITE_OK:
     return 0;
   case FILE_WRITE_ERROR:
@@ -164,8 +166,6 @@ LIBC_INLINE static int internal_error_to_errno(int internal_errno) {
     return EINVAL;
   case ALLOCATION_ERROR:
     return ENOMEM;
-  case SHORT_WRITE_ERROR:
-    return EIO;
   default:
     LIBC_ASSERT(
         false &&
