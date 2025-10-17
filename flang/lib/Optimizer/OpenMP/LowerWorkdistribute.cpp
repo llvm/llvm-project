@@ -613,7 +613,6 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
     return failure();
   }
   auto *workdistributeBlock = &workdistribute.getRegion().front();
-  auto *terminator = workdistributeBlock->getTerminator();
   bool changed = false;
   omp::TargetOp targetOp;
   // Get the target op parent of teams
