@@ -4408,12 +4408,12 @@ def CIR_TryOp : CIR_Op<"try",[
   let arguments = (ins
     UnitAttr:$synthetic,
     UnitAttr:$cleanup,
-    CIR_TryHandlerArrayAttr:$handler_types
+    DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
   );
 
   let regions = (region
     AnyRegion:$try_region,
-    VariadicRegion<MinSizedRegion<1>>:$handler_regions
+    VariadicRegion<AnyRegion>:$handler_regions
   );
 
   let assemblyFormat = [{

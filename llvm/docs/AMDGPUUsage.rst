@@ -883,6 +883,8 @@ supported for the ``amdgcn`` target.
      Buffer Fat Pointer                    7               N/A         N/A              160     0
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
+     *reserved for downstream use*         10
+     *reserved for downstream use*         11
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
