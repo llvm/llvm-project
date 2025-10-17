@@ -166,7 +166,6 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
-    .llvm-libc-types.stdfix-types
     .llvm-libc-types.int_hk_t
     .llvm-libc-types.int_hr_t
     .llvm-libc-types.int_k_t
