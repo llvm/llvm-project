@@ -3,7 +3,6 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for freeze_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_shadd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_srhadd
 
 %struct.T = type { i32, i32 }
@@ -485,12 +484,21 @@ define <8 x i16> @freeze_urhadd(<8 x i16> %a0, <8 x i16> %a1) {
 }
 
 define <8 x i16> @freeze_shadd(<8 x i8> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: freeze_shadd:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
-; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_shadd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-SD-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_shadd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-GI-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    sshr v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = ashr <8 x i16> %a1, splat (i16 8)
   %avg = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
