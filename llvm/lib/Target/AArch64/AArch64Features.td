@@ -980,12 +980,12 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2, FeatureLSUI, FeatureOCCMO],
-  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
     FeatureLSUI, FeatureOCCMO])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
-  [HasV9_6aOps, FeatureSVE2p3],
-  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3])>;
+  [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT],
+  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
