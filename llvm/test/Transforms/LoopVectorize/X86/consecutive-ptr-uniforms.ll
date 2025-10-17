@@ -48,7 +48,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <16 x float> [[STRIDED_VEC2]], [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> [[TMP4]], <16 x ptr> [[TMP2]], i32 4, <16 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 80)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <16 x i64> [[VEC_IND]], splat (i64 80)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6384
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -210,7 +210,7 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; FORCE:       [[PRED_STORE_CONTINUE2]]:
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
+; FORCE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i8> [[VEC_IND]], splat (i8 2)
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:
