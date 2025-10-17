@@ -588,15 +588,15 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
 
-  StringRef LongestSup = DiagSection->getLongestMatch("src", F, "");
-  if (LongestSup.empty())
+  unsigned SuppressLineNo = DiagSection->getLastMatch("src", F, "");
+  if (!SuppressLineNo)
     return false;
 
-  StringRef LongestEmit = DiagSection->getLongestMatch("src", F, "emit");
-  if (LongestEmit.empty())
+  unsigned EmitLineNo = DiagSection->getLastMatch("src", F, "emit");
+  if (!EmitLineNo)
     return true;
 
-  return LongestSup.size() > LongestEmit.size();
+  return SuppressLineNo > EmitLineNo;
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
