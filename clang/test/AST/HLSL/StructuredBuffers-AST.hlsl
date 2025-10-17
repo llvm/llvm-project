@@ -4,7 +4,7 @@
 //
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -DRESOURCE=StructuredBuffer %s | FileCheck -DRESOURCE=StructuredBuffer \
-// RUN:   -check-prefixes=CHECK,CHECK-SRV,CHECK-SUBSCRIPT,CHECK-LOAD %s
+// RUN:   -check-prefixes=CHECK,CHECK-SRV,CHECK-SUBSCRIPT,CHECK-LOAD,CHECK-BINDING %s
 //
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
 // RUN:  -DRESOURCE=RWStructuredBuffer %s | FileCheck -DRESOURCE=RWStructuredBuffer \
@@ -141,59 +141,133 @@ RESOURCE<float> Buffer;
 
 // Static __createFromBinding method
 
-// CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *)' static
-// CHECK-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
-// CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: DeclStmt
-// CHECK-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+// CHECK-BINDING: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *)' static
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} range 'int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} name 'const char *'
+// CHECK-BINDING-NEXT: CompoundStmt
+// CHECK-BINDING-NEXT: DeclStmt
+// CHECK-BINDING-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-BINDING-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' 'void (...) noexcept'
+// CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
+// CHECK-BINDING-NEXT: ReturnStmt
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Static __createFromImplicitBinding method
 
-// CHECK: CXXMethodDecl {{.*}} __createFromImplicitBinding 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *)' static
-// CHECK-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
-// CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
-// CHECK-NEXT: CompoundStmt {{.*}}
-// CHECK-NEXT: DeclStmt {{.*}}
-// CHECK-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
-// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+// CHECK-BINDING: CXXMethodDecl {{.*}} __createFromImplicitBinding 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *)' static
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} range 'int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK-BINDING-NEXT: ParmVarDecl {{.*}} name 'const char *'
+// CHECK-BINDING-NEXT: CompoundStmt {{.*}}
+// CHECK-BINDING-NEXT: DeclStmt {{.*}}
+// CHECK-BINDING-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-BINDING-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
+// CHECK-BINDING-NEXT: ReturnStmt
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-BINDING-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
+// CHECK-COUNTER-HANDLE: CXXMethodDecl {{.*}} __createFromBindingWithImplicitCounter 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)' static
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} range 'int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} name 'const char *'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} counterOrderId 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: CompoundStmt
+// CHECK-COUNTER-HANDLE-NEXT: DeclStmt
+// CHECK-COUNTER-HANDLE-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
+// CHECK-COUNTER-HANDLE-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__counter_handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'counterOrderId' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ReturnStmt
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
+// CHECK-COUNTER-HANDLE: CXXMethodDecl {{.*}} __createFromImplicitBindingWithImplicitCounter 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)' static
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} range 'int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} name 'const char *'
+// CHECK-COUNTER-HANDLE-NEXT: ParmVarDecl {{.*}} counterOrderId 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: CompoundStmt
+// CHECK-COUNTER-HANDLE-NEXT: DeclStmt
+// CHECK-COUNTER-HANDLE-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
+// CHECK-COUNTER-HANDLE-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__counter_handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'counterOrderId' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-COUNTER-HANDLE-NEXT: ReturnStmt
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
+// CHECK-COUNTER-HANDLE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Subscript operators
 
@@ -263,7 +337,7 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-COUNTER-NEXT: CXXThisExpr {{.*}} 'hlsl::RWStructuredBuffer<element_type>' lvalue implicit this
 // CHECK-COUNTER-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-COUNTER-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -279,7 +353,7 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-COUNTER-NEXT: CXXThisExpr {{.*}} 'hlsl::RWStructuredBuffer<element_type>' lvalue implicit this
 // CHECK-COUNTER-NEXT: IntegerLiteral {{.*}} 'int' -1
 // CHECK-COUNTER-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -305,7 +379,7 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-APPEND-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-APPEND-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-APPEND-NEXT: DeclRefExpr {{.*}} 'element_type' ParmVar {{.*}} 'value' 'element_type'
@@ -330,7 +404,7 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-CONSUME-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-CONSUME-NEXT: IntegerLiteral {{.*}} 'int' -1
 

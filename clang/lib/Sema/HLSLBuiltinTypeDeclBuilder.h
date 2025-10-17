@@ -83,8 +83,7 @@ public:
   BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
 
   // Static create methods
-  BuiltinTypeDeclBuilder &addCreateFromBinding();
-  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addStaticInitializationFunctions(bool HasCounter);
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
@@ -98,6 +97,10 @@ public:
   BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
 
 private:
+  BuiltinTypeDeclBuilder &addCreateFromBinding();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addCreateFromBindingWithImplicitCounter();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBindingWithImplicitCounter();
   BuiltinTypeDeclBuilder &addResourceMember(StringRef MemberName,
                                             ResourceClass RC, bool IsROV,
                                             bool RawBuffer, bool IsCounter,

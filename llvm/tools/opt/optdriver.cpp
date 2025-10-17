@@ -232,16 +232,6 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::value_desc("layout-string"),
                                          cl::init(""));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> RunTwice("run-twice",
                               cl::desc("Run all passes twice, re-using the "
                                        "same pass manager (legacy PM only)."),
@@ -753,9 +743,9 @@ extern "C" int optMain(
     return runPassPipeline(
                argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
                RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
-               OK, VK, PreserveAssemblyUseListOrder,
-               PreserveBitcodeUseListOrder, EmitSummaryIndex, EmitModuleHash,
-               EnableDebugify, VerifyDebugInfoPreserve,
+               OK, VK, /* ShouldPreserveAssemblyUseListOrder */ false,
+               /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
+               EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
                EnableProfileVerification, UnifiedLTO)
                ? 0
                : 1;
@@ -877,9 +867,11 @@ extern "C" int optMain(
       OS = BOS.get();
     }
     if (OutputAssembly)
-      Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
+      Passes.add(createPrintModulePass(
+          *OS, "", /* ShouldPreserveAssemblyUseListOrder */ false));
     else
-      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder));
+      Passes.add(createBitcodeWriterPass(
+          *OS, /* ShouldPreserveBitcodeUseListOrder */ true));
   }
 
   // Before executing passes, print the final values of the LLVM options.

@@ -632,7 +632,7 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   case MVT::f32: {
     SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i32);
     if (Subtarget.is64Bit())
-      NewVal = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, NewVal);
+      NewVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, NewVal);
     return DAG.getNode(Subtarget.is64Bit() ? LoongArchISD::MOVGR2FR_W_LA64
                                            : LoongArchISD::MOVGR2FR_W,
                        DL, VT, NewVal);
@@ -2860,8 +2860,7 @@ static SDValue fillSubVectorFromBuildVector(BuildVectorSDNode *Node,
                                             EVT ResTy, unsigned first) {
   unsigned NumElts = ResTy.getVectorNumElements();
 
-  assert(first >= 0 &&
-         first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
+  assert(first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
 
   SmallVector<SDValue, 16> Ops(Node->op_begin() + first,
                                Node->op_begin() + first + NumElts);
