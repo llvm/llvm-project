@@ -380,18 +380,16 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::inaccessibleMemOnly();
   else if (R->isSubClassOf("IntrRead")) {
     MemoryEffects ReadMask = MemoryEffects::writeOnly();
-    for (const Record *RLoc : R->getValueAsListOfDefs("Loc"))
+    for (const Record *RLoc : R->getValueAsListOfDefs("MemLoc"))
       ReadMask = ReadMask.getWithModRef(getValueAsIRMemLocation(RLoc),
                                         ModRefInfo::ModRef);
     ME &= ReadMask;
-
   } else if (R->isSubClassOf("IntrWrite")) {
     MemoryEffects WriteMask = MemoryEffects::readOnly();
-    for (const Record *RLoc : R->getValueAsListOfDefs("Loc"))
-      WriteMask = WriteMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+    for (const Record *WLoc : R->getValueAsListOfDefs("MemLoc"))
+      WriteMask = WriteMask.getWithModRef(getValueAsIRMemLocation(WLoc),
                                           ModRefInfo::ModRef);
     ME &= WriteMask;
-
   } else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
@@ -477,10 +475,6 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
           .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
           .Default(IRMemLocation::Other); // fallback enum
 
-  if (Loc == IRMemLocation::Other)
-    PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
-
-  return Loc;
   if (Loc == IRMemLocation::Other)
     PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
 

@@ -62,7 +62,7 @@ define void @caller.2(ptr %ptr) {
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop inaccessiblemem_or_argmemonly.
 define internal void @ptrarg.3(ptr %arg, i32 %val) inaccessiblemem_or_argmemonly nounwind {
-; CHECK: Function Attrs: nounwind memory(readwrite)
+; CHECK: Function Attrs: nounwind memory(readwrite, target_mem0: none, target_mem1: none)
 ; CHECK-LABEL: @ptrarg.3(
 ; CHECK-NEXT:    store i32 10, ptr @g, align 4
 ; CHECK-NEXT:    ret void
@@ -165,7 +165,7 @@ define i32 @caller.6.cs.attributes(i32 %n) {
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind memory(readwrite, inaccessiblemem: none) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR2]] = { nounwind memory(readwrite) }
+; CHECK: attributes #[[ATTR2]] = { nounwind memory(readwrite, target_mem0: none, target_mem1: none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR4]] = { nounwind }
 ;.
