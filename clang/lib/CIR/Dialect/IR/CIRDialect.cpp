@@ -3011,8 +3011,11 @@ static mlir::ParseResult parseTryHandlerRegions(
       return failure();
     }
 
-    if (!currRegion.empty() && !(currRegion.back().mightHaveTerminator() &&
-                                 currRegion.back().getTerminator()))
+    if (currRegion.empty())
+      return parser.emitError(regionLoc, "handler region shall not be empty");
+
+    if (!(currRegion.back().mightHaveTerminator() &&
+          currRegion.back().getTerminator()))
       return parser.emitError(
           regionLoc, "blocks are expected to be explicitly terminated");
 
