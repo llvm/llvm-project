@@ -127,9 +127,7 @@ struct SpecSig {
   }
 };
 
-enum CallSiteStatusT {
-  AWAITING_PARENT, HAS_PARENT, NO_PARENT
-};
+enum CallSiteStatusT { AWAITING_PARENT, HAS_PARENT, NO_PARENT };
 
 struct SpecCall {
   CallBase *CallSite;
