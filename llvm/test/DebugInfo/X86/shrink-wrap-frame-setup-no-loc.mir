@@ -1,7 +1,7 @@
-# RUN: %llc_dwarf %s -o - -mtriple=x86_64-unknown-unknown | FileCheck %s
+# RUN: %llc_dwarf %s -o - -mtriple=x86_64-unknown-unknown --start-after=livedebugvalues | FileCheck %s
 
-## Check the line number from the ret above `.LBB0_1` doesn't leak onto the
-## frame setup instructions in the `.LBB0_1` block; `pushq   %rax` should
+## Check the line number from the ret above `.LBB0_2` doesn't leak onto the
+## frame setup instructions in the `.LBB0_2` block; `pushq   %rax` should
 ## explicitly get set to line zero.
 
 # CHECK: loop:
@@ -11,11 +11,11 @@
 # CHECK-NEXT:         .file   1 "/" "test.c"
 # CHECK-NEXT:         .loc    1 5 16 prologue_end             # test.c:5:16
 # CHECK-NEXT:         testq   %rax, %rax
-# CHECK-NEXT:         je      .LBB0_1
-# CHECK-NEXT: # %bb.2:
+# CHECK-NEXT:         je      .LBB0_2
+# CHECK-NEXT: # %bb.1:
 # CHECK-NEXT:         .loc    1 5 16                          # test.c:5:16
 # CHECK-NEXT:         retq
-# CHECK-NEXT: .LBB0_1:
+# CHECK-NEXT: .LBB0_2:
 # -- Check the .loc below sets the current location to line 0.
 # CHECK-NEXT:         .loc    1 0 16 is_stmt 0                # test.c:0:16
 # CHECK-NEXT:         pushq   %rax
@@ -61,22 +61,22 @@
 name:            loop
 alignment:       16
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr32 }
-  - { id: 4, class: gr64 }
-  - { id: 5, class: gr32 }
-  - { id: 6, class: gr32 }
-  - { id: 7, class: gr64 }
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$rdi' }
 frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
 machineFunctionInfo:
   amxProgModel:    None
 body:             |
@@ -84,15 +84,16 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $rdi
 
-    %7:gr64 = IMPLICIT_DEF
-    TEST64rr undef %7, undef %7, implicit-def $eflags,  debug-location !7
-    JCC_1 %bb.2, 5, implicit $eflags
-    JMP_1 %bb.1
-
-  bb.1:
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    TEST64rr undef renamable $rax, undef renamable $rax, implicit-def $eflags,  debug-location !7
+    JCC_1 %bb.1, 4, implicit $eflags
 
   bb.2:
-    RET 0,  debug-location !7
+    RET64 debug-location !7
+
+  bb.1:
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
+    frame-destroy CFI_INSTRUCTION def_cfa_offset 8
+    RET64 debug-location !7
 ...
