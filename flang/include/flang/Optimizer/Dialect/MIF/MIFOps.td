@@ -116,6 +116,13 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
 //===----------------------------------------------------------------------===//
 // Synchronization
 //===----------------------------------------------------------------------===//
+// NOTE: Every operation in this section corresponds to a Fortran 
+//   "image control statement" (F23 11.7.1). This means they end a Fortran 
+//   "segment" and start another (F23 11.7.2), which affects the memory 
+//   consistency semantics of surrounding accesses in the multi-image execution. 
+//   For now we've modeled this by *deliberately* omitting mlir::MemoryEffects
+//   on these operations, to ensure analysis treats these ops conservatively.
+//===----------------------------------------------------------------------===//
 
 def mif_SyncAllOp : mif_Op<"sync_all", [AttrSizedOperandSegments]> {
   let summary =
