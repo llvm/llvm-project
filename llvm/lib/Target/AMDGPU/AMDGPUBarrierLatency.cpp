@@ -33,7 +33,7 @@ public:
 };
 
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
-  const unsigned SyntheticLatency = 2000;
+  constexpr unsigned SyntheticLatency = 2000;
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr *MI = SU.getInstr();
     if (MI->getOpcode() != AMDGPU::ATOMIC_FENCE)
