@@ -73,12 +73,18 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     InterfaceMethod<
       /*description=*/[{
         Generates allocation operations for the pointer-like type. It will create
-        an allocate that produces memory space for an instance of the current type.
+        an allocate operation that produces memory space for an instance of the
+        current type.
 
         The `varName` parameter is optional and can be used to provide a name
-        for the allocated variable. If the current type is represented
-        in a way that it does not capture the pointee type, `varType` must be
-        passed in to provide the necessary type information.
+        for the allocated variable. When provided, it must be used by the
+        implementation; and if the implementing dialect does not have its own
+        way to save it, the discardable `acc.var_name` attribute from the acc
+        dialect will be used.
+
+        If the current type is represented in a way that it does not capture
+        the pointee type, `varType` must be passed in to provide the necessary
+        type information.
 
         The `originalVar` parameter is optional but enables support for dynamic
         types (e.g., dynamic memrefs). When provided, implementations can extract

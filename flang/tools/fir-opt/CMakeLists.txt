@@ -7,6 +7,7 @@ if(FLANG_INCLUDE_TESTS)
   set(test_libs
     FIRTestAnalysis
     FIRTestOpenACCInterfaces
+    MLIROpenACCTestPasses
     MLIRTestIR
     )
 endif()

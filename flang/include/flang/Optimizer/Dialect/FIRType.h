@@ -389,6 +389,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
+/// Return true if CLASS(*)
+bool isClassStarType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an assumed type. In FIR,
 /// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
 /// or `fir.ref|ptr|heap<[fir.array]none>`.

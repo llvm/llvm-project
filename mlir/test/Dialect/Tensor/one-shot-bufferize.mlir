@@ -490,3 +490,32 @@ func.func @collapse_shape_regression(
   tensor.collapse_shape %0[[0, 1]] : tensor<5x6xf32> into tensor<30xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func private @mult_return_callee(
+//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
+//  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> index {
+//       CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
+//       CHECK: ^bb1:
+//       CHECK:   return %[[A]] : index
+//       CHECK: ^bb2:
+//       CHECK:   return %[[B]] : index
+func.func private @mult_return_callee(%t: tensor<?xf32>,  %cond:i1, %a: index, %b: index) -> (tensor<10xf32>, index) {
+  %casted = tensor.cast %t : tensor<?xf32> to tensor<10xf32>
+  cf.cond_br %cond,^a, ^b
+^a:
+  return %casted, %a : tensor<10xf32>, index
+^b:
+  return %casted, %b : tensor<10xf32>, index
+}
+
+// CHECK-LABEL: func @mult_return(
+//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
+//  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> (memref<?xf32, strided<[?], offset: ?>>, index) {
+func.func @mult_return(%t: tensor<?xf32>,  %cond:i1, %a: index, %b: index) -> (tensor<10xf32>, index) {
+  // CHECK: %[[RET:.*]] = call @mult_return_callee(%[[T]], %[[COND]], %[[A]], %[[B]]) : (memref<?xf32, strided<[?], offset: ?>>, i1, index, index) -> index
+  // CHECK: return %[[T]], %[[RET]] : memref<?xf32, strided<[?], offset: ?>>, index
+  %t_res, %v = func.call @mult_return_callee(%t, %cond, %a, %b) : (tensor<?xf32>, i1, index, index) -> (tensor<10xf32>, index) 
+  return %t_res, %v : tensor<10xf32>, index
+}

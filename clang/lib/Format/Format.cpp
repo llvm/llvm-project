@@ -2184,8 +2184,9 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   Input >> Styles;
   if (Input.error())
     return Input.error();
+  if (Styles.empty())
+    return make_error_code(ParseError::Success);
 
-  assert(!Styles.empty());
   const auto StyleCount = Styles.size();
 
   // Start from the second style as (only) the first one may be the default.

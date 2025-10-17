@@ -91,7 +91,7 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
 
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
-  // transpose pattens. Otherwise, these patterns are not applicable.
+  // transpose patterns. Otherwise, these patterns are not applicable.
   if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
                                   op.getPermutation()))
     return failure();

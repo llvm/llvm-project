@@ -8,9 +8,9 @@
 // CHECK-NEXT:   "c:@F@fib#i#": {
 // CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "fib(unsigned int)",
+// CHECK-NEXT:     "CFGSize": "5",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxBugClassSize": "{{[0-9]+}}",
-// CHECK-NEXT:     "MaxCFGSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxQueueSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxReachableSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxTimeSpentSolvingZ3Queries": "{{[0-9]+}}",
@@ -45,9 +45,9 @@
 // CHECK-NEXT:   "c:@F@main#I#**C#": {
 // CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "main(int, char **)",
+// CHECK-NEXT:     "CFGSize": "3",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxBugClassSize": "{{[0-9]+}}",
-// CHECK-NEXT:     "MaxCFGSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxQueueSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxReachableSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxTimeSpentSolvingZ3Queries": "{{[0-9]+}}",

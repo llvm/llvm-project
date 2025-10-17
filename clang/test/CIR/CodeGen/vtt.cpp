@@ -445,7 +445,7 @@ D::D() {}
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[C_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1DC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]]) {
+// LLVM-COMMON: define {{.*}} void @_ZN1DC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]]){{.*}} {
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   %[[VTT_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
@@ -484,7 +484,7 @@ D::D() {}
 // CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr %[[THIS_ARG:.*]]) {
+// LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr %[[THIS_ARG:.*]]){{.*}} {
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8

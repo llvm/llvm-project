@@ -34,61 +34,43 @@ define <32 x i8> @PR162812(<32 x i8> %a, <32 x i8> %mask) {
 ;
 ; SSE42-LABEL: PR162812:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
-; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    movdqa %xmm0, %xmm4
+; SSE42-NEXT:    psrlw $2, %xmm2
+; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [8224,8224,8224,8224,8224,8224,8224,8224]
+; SSE42-NEXT:    pand %xmm5, %xmm2
+; SSE42-NEXT:    paddb %xmm2, %xmm2
+; SSE42-NEXT:    paddb %xmm2, %xmm2
 ; SSE42-NEXT:    movdqa %xmm0, %xmm6
-; SSE42-NEXT:    psllw $2, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; SSE42-NEXT:    pand %xmm7, %xmm6
-; SSE42-NEXT:    psrlw $2, %xmm5
-; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [8224,8224,8224,8224,8224,8224,8224,8224]
-; SSE42-NEXT:    pand %xmm4, %xmm5
-; SSE42-NEXT:    paddb %xmm5, %xmm5
-; SSE42-NEXT:    movdqa %xmm5, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm6, %xmm2
-; SSE42-NEXT:    movdqa %xmm2, %xmm6
-; SSE42-NEXT:    paddb %xmm2, %xmm6
-; SSE42-NEXT:    paddb %xmm5, %xmm5
-; SSE42-NEXT:    movdqa %xmm5, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm6, %xmm2
-; SSE42-NEXT:    movdqa %xmm1, %xmm5
-; SSE42-NEXT:    psllw $2, %xmm5
-; SSE42-NEXT:    pand %xmm7, %xmm5
-; SSE42-NEXT:    psrlw $2, %xmm3
-; SSE42-NEXT:    pand %xmm3, %xmm4
-; SSE42-NEXT:    paddb %xmm4, %xmm4
-; SSE42-NEXT:    movdqa %xmm4, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm5, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm3
-; SSE42-NEXT:    paddb %xmm1, %xmm3
-; SSE42-NEXT:    paddb %xmm4, %xmm4
-; SSE42-NEXT:    movdqa %xmm4, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm3, %xmm1
+; SSE42-NEXT:    paddb %xmm0, %xmm6
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    pblendvb %xmm0, %xmm6, %xmm4
+; SSE42-NEXT:    psrlw $2, %xmm3
+; SSE42-NEXT:    pand %xmm3, %xmm5
+; SSE42-NEXT:    paddb %xmm5, %xmm5
+; SSE42-NEXT:    paddb %xmm5, %xmm5
+; SSE42-NEXT:    movdqa %xmm1, %xmm2
+; SSE42-NEXT:    paddb %xmm1, %xmm2
+; SSE42-NEXT:    movdqa %xmm5, %xmm0
+; SSE42-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
+; SSE42-NEXT:    movdqa %xmm4, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: PR162812:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
 ; AVX2-NEXT:    vpsrlw $2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR162812:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
+; AVX512-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
 ; AVX512-NEXT:    vpsrlw $2, %ymm1, %ymm1
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; AVX512-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq

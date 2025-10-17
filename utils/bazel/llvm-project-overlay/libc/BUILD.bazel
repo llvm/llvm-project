@@ -2948,6 +2948,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_exp2m1f",
+    hdrs = ["src/__support/math/exp2m1f.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
+        ":__support_math_exp10f_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp10",
     hdrs = ["src/__support/math/exp10.h"],
     deps = [
@@ -3734,8 +3750,7 @@ libc_math_function(
 libc_math_function(
     name = "exp2m1f",
     additional_deps = [
-        ":__support_fputil_polyeval",
-        ":__support_math_exp10f_utils",
+        ":__support_math_exp2m1f",
     ],
 )
 
