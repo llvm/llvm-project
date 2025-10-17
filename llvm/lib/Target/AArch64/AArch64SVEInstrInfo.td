@@ -4639,6 +4639,15 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   def SDOT_ZZZI_BtoH : sve_intx_dot_by_indexed_elem_x<0b0, "sdot">;
   def UDOT_ZZZI_BtoH : sve_intx_dot_by_indexed_elem_x<0b1, "udot">;
 
+  // SVE2 fp convert, narrow and interleave to integer, rounding toward zero
+  defm FCVTZSN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzsn", 0b0>;
+  defm FCVTZUN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzun", 0b1>;
+
+  // SVE2 signed/unsigned integer convert to floating-point
+  defm SCVTF_ZZ   : sve2_int_to_fp_upcvt<"scvtf",   0b00>;
+  defm SCVTFLT_ZZ : sve2_int_to_fp_upcvt<"scvtflt", 0b10>;
+  defm UCVTF_ZZ   : sve2_int_to_fp_upcvt<"ucvtf",   0b01>;
+  defm UCVTFLT_ZZ : sve2_int_to_fp_upcvt<"ucvtflt", 0b11>;
 } // End HasSME2p3orSVE2p3
 
 //===----------------------------------------------------------------------===//
