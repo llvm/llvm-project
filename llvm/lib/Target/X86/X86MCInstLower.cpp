@@ -1959,6 +1959,7 @@ static void addConstantComments(const MachineInstr *MI,
     }
 
     CASE_ARITH_RM(PMADDWD)
+    CASE_ARITH_RM(PMULLD)
     CASE_ARITH_RM(PMULLW)
     CASE_ARITH_RM(PMULHW)
     CASE_ARITH_RM(PMULHUW)

@@ -788,13 +788,13 @@ define <16 x i8> @combine_shl_pshufb(<4 x i32> %a0) {
 ;
 ; SSE41-LABEL: combine_shl_pshufb:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,256,65536,65536]
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_shl_pshufb:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,256,65536,65536]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
 ; AVX1-NEXT:    retq
 ;
