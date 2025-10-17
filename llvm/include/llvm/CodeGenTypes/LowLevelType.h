@@ -469,9 +469,9 @@ public:
 
 private:
   /// LLT is packed into 64 bits as follows:
-  /// Info : 4
   /// RawData : 60
-  /// with 60 bits of RawData remaining for Kind-specific data, packed in
+  /// Info : 4
+  /// RawData remaining for Kind-specific data, packed in
   /// bitfields as described below. As there isn't a simple portable way to pack
   /// bits into bitfields, here the different fields in the packed structure is
   /// described in static const *Field variables. Each of these variables
@@ -484,51 +484,52 @@ private:
    63       56       47       39       31       23       15       7      0
    |        |        |        |        |        |        |        |      |
   |xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|
-   ........ ........ ........ ........                                      (1)
-   ******** ********                                                        (2)
-                     ~~~~~~~~ ~~~~~~~~ ~~~~~~~~                             (3)
-                                                ^^^^^^^^ ^^^^^^^^           (4)
-                                                                     @      (5)
-                                            ###                             (6)
-                                                                      %%%%  (7)
+   %%%%                                                                     (1)
+       .... ........ ........ ........ ....                                 (2)
+       **** ******** ****                                                   (3)
+                         ~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~                        (4)
+                                                 ###                        (5)
+                                                    ^^^^ ^^^^^^^^ ^^^^      (6)
+                                                                         @  (7)
 
-  (1) ScalarSize:          [63:32]
-  (2) PointerSize:         [63:48]
-  (3) PointerAddressSpace: [47:24]
-  (4) VectorElements:      [23:8]
-  (5) VectorScalable:      [4:4]
-  (6) FPVariant:           [26:24]
-  (7) Kind:                [3:0]
+  (1) Kind:                [63:60]
+  (2) ScalarSize:          [59:28]
+  (3) PointerSize:         [59:44]
+  (4) PointerAddressSpace: [43:20]
+  (5) FPVariant:           [22:20]
+  (6) VectorElements:      [19:4]
+  (7) VectorScalable:      [0:0]
 
   */
 
   /// This is how the LLT are packed per Kind:
   /// * Invalid:
-  ///   Info: [3:0] = 0
-  ///   RawData: [63:4] = 0;
+  ///   Info: [63:60] = 0
+  ///   RawData: [59:0] = 0;
   ///
   /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
-  ///   Info: [3:0];
-  ///   FPVariant: [26:24];
-  ///   SizeOfElement: [63:32];
+  ///   Info: [63:60];
+  ///   SizeOfElement: [59:28];
+  ///   FPVariant: [22:20];
   ///
   /// * Pointer (isPointer == 1 && isVector == 0):
-  ///   Info: [3:0];
-  ///   AddressSpace: [47:24];
-  ///   SizeInBits: [63:48];
+  ///   Info: [63:60];
+  ///   SizeInBits: [59:44];
+  ///   AddressSpace: [43:20];
   ///
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
-  ///   Info: [3:0]
-  ///   Scalable: [4:4];
-  ///   VectorElements: [23:8];
-  ///   FPVariant: [26:24];
-  ///   SizeOfElement: [63:32];
+  ///   Info: [63:60]
+  ///   SizeOfElement: [59:28];
+  ///   FPVariant: [22:20];
+  ///   VectorElements: [19:4];
+  ///   Scalable: [0:0];
   ///
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
-  ///   Scalable: [4:4];
-  ///   VectorElements: [23:8];
-  ///   AddressSpace: [47:24];
-  ///   SizeInBits: [63:48];
+  ///   Info: [63:60];
+  ///   SizeInBits: [59:44];
+  ///   AddressSpace: [43:20];
+  ///   VectorElements: [19:4];
+  ///   Scalable: [0:0];
 
   /// BitFieldInfo: {Size, Offset}
   typedef int BitFieldInfo[2];
@@ -539,8 +540,8 @@ private:
   static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
   static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
 
-  Kind Info : 4;
   uint64_t RawData : 60;
+  Kind Info : 4;
 
   static constexpr uint64_t getMask(const BitFieldInfo FieldInfo) {
     const int FieldSizeInBits = FieldInfo[0];
@@ -582,7 +583,7 @@ private:
 
 public:
   constexpr uint64_t getUniqueRAWLLTData() const {
-    return ((uint64_t)RawData) << 4 | ((uint64_t)Info);
+    return ((uint64_t)RawData) | ((uint64_t)Info) << 60;
   }
 };
 

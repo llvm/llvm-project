@@ -66,17 +66,17 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_p0s32,
-// CHECK-NEXT:    GILLT_p0s64,
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:    GILLT_s64,
-// CHECK-NEXT:  }
+// CHECK-NEXT:    GILLT_p0s32,
+// CHECK-NEXT:    GILLT_p0s64,
+// CHECK-NEXT:  };
 // CHECK-NEXT:  const static size_t NumTypeObjects = 4;
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::pointer(0, 32),
-// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:    LLT::scalar(32),
 // CHECK-NEXT:    LLT::scalar(64),
+// CHECK-NEXT:    LLT::pointer(0, 32),
+// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
