@@ -2516,9 +2516,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   // out of order.
   if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
     return {};
-  return llvm::map_to_vector(replacements, [&](Value replacement) {
-    return OpFoldResult(replacement);
-  });
+  return llvm::to_vector_of<OpFoldResult>(replacements);
 }
 
 /// Canonicalize the bounds of the given loop.
