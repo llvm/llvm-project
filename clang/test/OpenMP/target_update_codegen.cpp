@@ -1134,7 +1134,7 @@ void foo(int arg) {
   // CK20: store i64 {{32|64}}, ptr [[STRIDE]],
   // CK20: [[DIM_2:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
   // CK20: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
-  // CK20: store i64 1, ptr [[OFFSET_2]],
+  // CK20: store i64 {{8|16}}, ptr [[OFFSET_2]],
   // CK20: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK20: store i64 4, ptr [[COUNT_2]],
   // CK20: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
@@ -1143,9 +1143,9 @@ void foo(int arg) {
   // CK20: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
   // CK20: store i64 0, ptr [[OFFSET_3]],
   // CK20: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
-  // CK20: store i64 1, ptr [[COUNT_3]],
+  // CK20: store i64 {{8|16}}, ptr [[COUNT_3]],
   // CK20: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
-  // CK20: store i64 {{8|16}}, ptr [[STRIDE_3]],
+  // CK20: store i64 1, ptr [[STRIDE_3]],
   // CK20-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
   // CK20-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
   // CK20-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -1202,7 +1202,7 @@ struct ST {
     // CK21: store i64 {{400|800}}, ptr [[STRIDE_1]],
     // CK21: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
     // CK21: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
-    // CK21: store i64 1, ptr [[OFFSET_2]],
+    // CK21: store i64 {{40|80}}, ptr [[OFFSET_2]],
     // CK21: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
     // CK21: store i64 3, ptr [[COUNT_2]],
     // CK21: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
@@ -1218,9 +1218,9 @@ struct ST {
     // CK21: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
     // CK21: store i64 0, ptr [[OFFSET_4]],
     // CK21: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
-    // CK21: store i64 1, ptr [[COUNT_4]],
+    // CK21: store i64 {{4|8}}, ptr [[COUNT_4]],
     // CK21: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
-    // CK21: store i64 {{4|8}}, ptr [[STRIDE_4]],
+    // CK21: store i64 1, ptr [[STRIDE_4]],
     // CK21-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPSZ:%.+]], ptr [[MTYPE]]{{.+}})
     // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
     // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -1276,7 +1276,7 @@ struct ST {
     // CK22: store i64 200, ptr [[STRIDE]],
     // CK22: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
     // CK22: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
-    // CK22: store i64 1, ptr [[OFFSET]],
+    // CK22: store i64 40, ptr [[OFFSET]],
     // CK22: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
     // CK22: store i64 3, ptr [[COUNT]],
     // CK22: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
@@ -1292,9 +1292,9 @@ struct ST {
     // CK22: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
     // CK22: store i64 0, ptr [[OFFSET]],
     // CK22: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
-    // CK22: store i64 1, ptr [[COUNT]],
+    // CK22: store i64 4, ptr [[COUNT]],
     // CK22: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
-    // CK22: store i64 4, ptr [[STRIDE]],
+    // CK22: store i64 1, ptr [[STRIDE]],
     // CK22-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
     // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
     // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -1357,7 +1357,7 @@ void foo(int arg) {
   // CK23: store i64 200, ptr [[STRIDE]],
   // CK23: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
   // CK23: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
-  // CK23: store i64 1, ptr [[OFFSET_2]],
+  // CK23: store i64 20, ptr [[OFFSET_2]],
   // CK23: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK23: store i64 2, ptr [[COUNT_2]],
   // CK23: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
@@ -1373,9 +1373,9 @@ void foo(int arg) {
   // CK23: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
   // CK23: store i64 0, ptr [[OFFSET_4]],
   // CK23: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
-  // CK23: store i64 1, ptr [[COUNT_4]],
+  // CK23: store i64 4, ptr [[COUNT_4]],
   // CK23: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
-  // CK23: store i64 4, ptr [[STRIDE_4]],
+  // CK23: store i64 1, ptr [[STRIDE_4]],
   // CK23-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
   // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
   // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -1419,6 +1419,7 @@ void foo(int arg) {
   // CK24: [[MUL:%.+]] = mul nuw i64 8,
   // CK24: [[SUB:%.+]] = sub nuw i64 4, [[ARG:%.+]]
   // CK24: [[LEN:%.+]] = udiv {{.+}} [[SUB]], 1
+  // CK24: [[MUL_ARG:%.+]] = mul nuw i64 40, [[ARG]]
   // CK24: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
   // CK24: store ptr [[ARR]], ptr [[BP0]],
   // CK24: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], {{.+}} 0, {{.+}} 0
@@ -1432,7 +1433,7 @@ void foo(int arg) {
   // CK24: store i64 320, ptr [[STRIDE]],
   // CK24: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
   // CK24: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
-  // CK24: store i64 [[ARG]], ptr [[OFFSET_2]],
+  // CK24: store i64 [[MUL_ARG]], ptr [[OFFSET_2]],
   // CK24: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK24: store i64 [[LEN]], ptr [[COUNT_2]],
   // CK24: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
@@ -1448,9 +1449,9 @@ void foo(int arg) {
   // CK24: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
   // CK24: store i64 0, ptr [[OFFSET_4]],
   // CK24: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
-  // CK24: store i64 1, ptr [[COUNT_4]],
+  // CK24: store i64 8, ptr [[COUNT_4]],
   // CK24: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
-  // CK24: store i64 8, ptr [[STRIDE_4]],
+  // CK24: store i64 1, ptr [[STRIDE_4]],
   // CK24-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
   // CK24-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
   // CK24-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -1515,7 +1516,7 @@ void foo(int arg) {
   // CK25: store i64 20, ptr [[STRIDE_2]],
   // CK25: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
   // CK25: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
-  // CK25: store i64 1, ptr [[OFFSET_3]],
+  // CK25: store i64 4, ptr [[OFFSET_3]],
   // CK25: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 4, ptr [[COUNT_3]],
   // CK25: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
@@ -1524,9 +1525,9 @@ void foo(int arg) {
   // CK25: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 0, ptr [[OFFSET_4]],
   // CK25: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
-  // CK25: store i64 1, ptr [[COUNT_4]],
+  // CK25: store i64 4, ptr [[COUNT_4]],
   // CK25: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
-  // CK25: store i64 4, ptr [[STRIDE_4]],
+  // CK25: store i64 1, ptr [[STRIDE_4]],
   // CK25: [[PTRS:%.+]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
   // CK25: store ptr [[DIMS]], ptr [[PTRS]],
   // CK25: [[DIM_5:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS_2]], {{.+}} 0, {{.+}} 0
@@ -1538,7 +1539,7 @@ void foo(int arg) {
   // CK25: store i64 12, ptr [[STRIDE_2_1]],
   // CK25: [[DIM_6:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS_2]], {{.+}} 0, {{.+}} 1
   // CK25: [[OFFSET_2_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 0
-  // CK25: store i64 1, ptr [[OFFSET_2_2]],
+  // CK25: store i64 4, ptr [[OFFSET_2_2]],
   // CK25: [[COUNT_2_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 2, ptr [[COUNT_2_2]],
   // CK25: [[STRIDE_2_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 2
@@ -1547,9 +1548,9 @@ void foo(int arg) {
   // CK25: [[OFFSET_2_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 0, ptr [[OFFSET_2_3]],
   // CK25: [[COUNT_2_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 1
-  // CK25: store i64 1, ptr [[COUNT_2_3]],
+  // CK25: store i64 4, ptr [[COUNT_2_3]],
   // CK25: [[STRIDE_2_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 2
-  // CK25: store i64 4, ptr [[STRIDE_2_3]],
+  // CK25: store i64 1, ptr [[STRIDE_2_3]],
   // CK25: [[PTRS_2:%.+]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 2
   // CK25: store ptr [[DIMS_2]], ptr [[PTRS_2]],
   // CK25-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 3, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
