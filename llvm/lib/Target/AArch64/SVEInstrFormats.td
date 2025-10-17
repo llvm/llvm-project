@@ -10050,18 +10050,19 @@ multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, SDPatte
 }
 
 // SVE2 multi-vec shift narrow
-class sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, bits<2> tsz>
-    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn, vecshiftR16:$imm4),
-        mnemonic, "\t$Zd, $Zn, $imm4",
+class sve2p1_multi_vec_shift_narrow<string mnemonic, ZPRRegOp ZdRC, RegisterOperand ZSrcOp,
+                                    Operand immtype, bits<3> opc, bits<2> tsz>
+    : I<(outs ZdRC:$Zd), (ins ZSrcOp:$Zn, immtype:$imm),
+        mnemonic, "\t$Zd, $Zn, $imm",
         "", []>, Sched<[]> {
   bits<5> Zd;
   bits<4> Zn;
-  bits<4> imm4;
+  bits<4> imm;
   let Inst{31-23} = 0b010001011;
   let Inst{22}    = tsz{1};
   let Inst{21}    = 0b1;
   let Inst{20}    = tsz{0};
-  let Inst{19-16} = imm4;
+  let Inst{18-16} = imm{2-0};  // imm3
   let Inst{15-14} = 0b00;
   let Inst{13-11} = opc;
   let Inst{10}    = 0b0;
@@ -10072,12 +10073,19 @@ class sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, bits<2> tsz>
   let hasSideEffects = 0;
 }
 
-multiclass sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, SDPatternOperator intrinsic> {
-  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, opc, 0b01>;
+multiclass sve_multi_vec_shift_narrow<string mnemonic, bits<3> opc, SDPatternOperator intrinsic> {
+  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, ZPR16, ZZ_s_mul_r, vecshiftR16, opc, 0b01> {
+    let Inst{19} = imm{3}; // imm4
+  }
 
   def : SVE2p1_Sat_Shift_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32, vecshiftR16>;
 }
 
+multiclass sve_multi_vec_round_shift_narrow<string mnemonic, bits<3> opc> {
+  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, ZPR8, ZZ_h_mul_r, vecshiftR8, opc, 0b00> {
+    let Inst{19} = 0b1;    // always 1 for imm3 version
+  }
+}
 
 // SME2 multi-vec contiguous load (scalar plus scalar, two registers)
 class sve2p1_mem_cld_ss_2z<string mnemonic, bits<2> msz, bit n,
