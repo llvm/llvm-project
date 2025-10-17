@@ -1134,7 +1134,7 @@ private:
   }
 
   /// Converts a linear index to multi-dimensional position within a given
-  /// shape. Used for both tile iteration and source coordinate computation.
+  /// shape.
   SmallVector<int64_t> linearIndexToMultiDim(int64_t linearIndex,
                                              ArrayRef<int64_t> shape) const {
     SmallVector<int64_t> position(shape.size());
