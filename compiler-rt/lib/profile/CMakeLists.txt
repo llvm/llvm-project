@@ -135,6 +135,10 @@ if(COMPILER_RT_TARGET_HAS_UNAME)
      -DCOMPILER_RT_HAS_UNAME=1)
 endif()
 
+if(OS_NAME MATCHES "Linux")
+  list(APPEND EXTRA_FLAGS "-D_DEFAULT_SOURCE")
+endif()
+
 if(MSVC)
   # profile historically has only been supported with the static runtime
   # on windows
@@ -162,8 +166,7 @@ if(APPLE)
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile
-    EXTENSIONS ON)
+    PARENT_TARGET profile)
 else()
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
@@ -171,6 +174,5 @@ else()
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile
-    EXTENSIONS ON)
+    PARENT_TARGET profile)
 endif()
