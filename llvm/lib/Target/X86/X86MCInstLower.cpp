@@ -1954,21 +1954,7 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
-    CASE_ARITH_RM(PMADDUBSW) {
-      unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        std::string Comment;
-        raw_string_ostream CS(Comment);
-        unsigned VectorWidth =
-            X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-        CS << "[";
-        printConstant(C, VectorWidth, CS);
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-      }
-      break;
-    }
-
+    CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
     CASE_ARITH_RM(PMULDQ)
     CASE_ARITH_RM(PMULUDQ)
