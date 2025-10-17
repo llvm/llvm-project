@@ -202,6 +202,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
+
+  // Enable relaxed TBUFFER OOB mode if amdgpu.oob.mode has bit 0x2 set.
+  if (const auto *CI = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("amdgpu.oob.mode"));
+      CI && (CI->getZExtValue() & 0x2))
+    setRelaxedTBufferOOBMode(true);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
@@ -749,6 +755,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
+      RelaxedTBufferOOBMode(MFI.isRelaxedTBufferOOBMode()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
@@ -798,6 +805,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  RelaxedTBufferOOBMode = YamlMFI.RelaxedTBufferOOBMode;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

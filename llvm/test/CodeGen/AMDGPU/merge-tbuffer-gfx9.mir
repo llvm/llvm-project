@@ -3,6 +3,8 @@
 
 ---
 name: gfx9_tbuffer_load_x_xyz
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz
@@ -25,6 +27,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xyz_x
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xyz_x
@@ -47,6 +51,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy
@@ -69,6 +75,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy
@@ -91,6 +99,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_x
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_x
@@ -114,6 +124,8 @@ body:             |
 
 
 name: gfx9_tbuffer_load_x_x
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x
@@ -136,6 +148,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_format_32_32_32_32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_format_32_32_32_32
@@ -158,6 +172,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_float_32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_float_32
@@ -199,6 +215,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_sint_32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_sint_32
@@ -240,6 +258,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_uint_32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_uint_32
@@ -281,6 +301,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_data_format_mismatch
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_data_format_mismatch
@@ -316,6 +338,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_num_format_mismatch
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_num_format_mismatch
@@ -351,6 +375,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_xyz
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -385,6 +411,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_xyz_x
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -419,6 +447,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_xy_xy
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -455,6 +485,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_xy
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -489,6 +521,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_xy_x
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -524,6 +558,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_x
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -556,6 +592,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_x_format_32_32_32_32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -588,6 +626,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_float32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -644,6 +684,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_sint32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -700,6 +742,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_uint32
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -756,6 +800,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_not_merged_data_format_mismatch
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -812,6 +858,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_not_merged_num_format_mismatch
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -868,6 +916,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_swizzled_0
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_swizzled_0
@@ -889,6 +939,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_swizzled_1
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_swizzled_1
@@ -910,6 +962,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_merge_across_swizzle
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_merge_across_swizzle
@@ -934,6 +988,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_merge_across_swizzled_store
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_merge_across_swizzled_store
@@ -959,6 +1015,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_idxen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_idxen
@@ -983,6 +1041,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_idxen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_idxen
@@ -1007,6 +1067,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen
@@ -1031,6 +1093,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_idxen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_idxen
@@ -1055,6 +1119,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_bothen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_bothen
@@ -1079,6 +1145,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_bothen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_bothen
@@ -1103,6 +1171,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen
@@ -1127,6 +1197,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_bothen
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_bothen
@@ -1151,6 +1223,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_idxen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_idxen_exact
@@ -1175,6 +1249,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_idxen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_idxen_exact
@@ -1199,6 +1275,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen_exact
@@ -1223,6 +1301,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_idxen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_idxen_exact
@@ -1247,6 +1327,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_idxen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_idxen_exact
@@ -1274,6 +1356,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_idxen_exact_swizzled_0
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_idxen_exact_swizzled_0
@@ -1300,6 +1384,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_bothen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_bothen_exact
@@ -1324,6 +1410,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_bothen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_bothen_exact
@@ -1348,6 +1436,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen_exact
@@ -1372,6 +1462,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_bothen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_bothen_exact
@@ -1396,6 +1488,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_bothen_exact
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_bothen_exact
@@ -1423,6 +1517,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_bothen_exact_swizzled_0
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_bothen_exact_swizzled_0
@@ -1449,6 +1545,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_vaddr
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_vaddr
@@ -1474,6 +1572,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_srsrc
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_srsrc
@@ -1501,6 +1601,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_vaddr
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_vaddr
@@ -1526,6 +1628,8 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_srsrc
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0.entry:
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_srsrc
