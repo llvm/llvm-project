@@ -10,31 +10,9 @@ include (FindPackageHandleStandardArgs)
 # Looking for LLVM...
 ################################################################################
 
-if (OPENMP_STANDALONE_BUILD)
-  # Complete LLVM package is required for building libomptarget
-  # in an out-of-tree mode.
-  find_package(LLVM REQUIRED)
-  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-  message(STATUS "Using LLVM in: ${LLVM_DIR}")
-  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
-  include(AddLLVM)
-  if(TARGET omptarget)
-    message(FATAL_ERROR "CMake target 'omptarget' already exists. "
-                        "Use an LLVM installation that doesn't expose its 'omptarget' target.")
-  endif()
-else()
-  # Note that OPENMP_STANDALONE_BUILD is FALSE, when
-  # openmp is built with -DLLVM_ENABLE_RUNTIMES="openmp" vs
-  # -DLLVM_ENABLE_PROJECTS="openmp", but openmp build
-  # is actually done as a standalone project build with many
-  # LLVM CMake variables propagated to it.
-  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS
-    ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include
-    )
-  message(STATUS
-    "Using LLVM include directories: ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
-endif()
+list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include
+)
 
 ################################################################################
 # Looking for libffi...
