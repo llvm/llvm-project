@@ -294,9 +294,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   // just DISubprogram's, referenced from anywhere within the Function being
   // cloned prior to calling MapMetadata / RemapInstruction to avoid their
   // duplication later as DICompileUnit's are also directly referenced by
-  // llvm.dbg.cu list. Therefore we need to collect DICompileUnit's here as well.
-  // Also, DICompileUnit's may reference DISubprogram's too and therefore need
-  // to be at least looked through.
+  // llvm.dbg.cu list. Therefore we need to collect DICompileUnit's here as
+  // well. Also, DICompileUnit's may reference DISubprogram's too and therefore
+  // need to be at least looked through.
   processCompileUnit(SP->getUnit());
   processType(SP->getType());
   for (auto *Element : SP->getTemplateParams()) {
