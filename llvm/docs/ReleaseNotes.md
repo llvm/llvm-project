@@ -175,6 +175,7 @@ Changes to the LLVM tools
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
+* Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
 
 Changes to LLDB
 ---------------------------------
