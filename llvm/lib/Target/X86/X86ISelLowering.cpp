@@ -47726,6 +47726,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                                                            DL, DAG, Subtarget))
       return V;
 
+  // If the sign bit is known then BLENDV can be folded away.
+  if (N->getOpcode() == X86ISD::BLENDV) {
+    KnownBits KnownCond = DAG.computeKnownBits(Cond);
+    if (KnownCond.isNegative())
+      return LHS;
+    if (KnownCond.isNonNegative())
+      return RHS;
+  }
+
   if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> CondMask;
     if (createShuffleMaskFromVSELECT(CondMask, Cond,
