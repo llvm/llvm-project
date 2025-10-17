@@ -4379,8 +4379,9 @@ lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
   }
   // Not found: if not a COMMON member, try equivalence members
   if (!commonBlock) {
-    if (auto *eqSet = Fortran::semantics::FindEquivalenceSet(sym)) {
-      for (Fortran::semantics::EquivalenceObject eqObj : *eqSet) {
+    if (const Fortran::semantics::EquivalenceSet *eqSet =
+            Fortran::semantics::FindEquivalenceSet(sym)) {
+      for (const Fortran::semantics::EquivalenceObject &eqObj : *eqSet) {
         std::string eqName = converter.mangleName(eqObj.symbol);
         if (fir::GlobalOp g = builder.getNamedGlobal(eqName))
           return g;
