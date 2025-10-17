@@ -553,7 +553,7 @@ def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.f
 
 //===---------------------------------------------------------------------===//
 // WMMA intrinsics
-class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands = [],
+class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
                         list<Trait> traits = []> :
   ROCDL_IntrOp<mnemonic, [0], overloadedOperands, traits, 1>,
   Arguments<(ins Variadic<LLVM_Type>:$args)> {
