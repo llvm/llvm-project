@@ -1,5 +1,6 @@
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/libs/zstd/enable.gni")
@@ -86,6 +87,12 @@ write_lit_cfg("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
     extra_values += [ "LLVM_ENABLE_LIBXML2=0" ]  # Must be 0.
+  }
+
+  if (llvm_enable_threads) {
+    extra_values += [ "LLVM_ENABLE_THREADS=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_THREADS=0" ]  # Must be 0.
   }
 
   if (llvm_enable_zlib) {
