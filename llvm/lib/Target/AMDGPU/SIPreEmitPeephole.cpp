@@ -593,11 +593,12 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
     uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
+    bool IsUnpackable = !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
     if (Instr.isMetaInstruction())
       continue;
     if ((Instr.isTerminator()) ||
         (TII->isNeverCoissue(Instr) &&
-         (UnpackedOpCode == std::numeric_limits<uint16_t>::max())) ||
+         !IsUnpackable) ||
         (SIInstrInfo::modifiesModeRegister(Instr) &&
          Instr.modifiesRegister(AMDGPU::EXEC, TRI)))
       return;
@@ -621,7 +622,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
       if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
         return;
     }
-    if (UnpackedOpCode == std::numeric_limits<uint16_t>::max())
+    if (!IsUnpackable)
       continue;
 
     if (canUnpackingClobberRegister(Instr))
@@ -771,7 +772,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
   // side effects.
 
   // Perform the extra MF scans only for supported archs
-  if (ST.hasGFX950Insts() || ST.hasGFX940Insts()) {
+  if (ST.hasGFX940Insts()) {
     for (MachineBasicBlock &MBB : MF) {
       // Unpack packed instructions overlapped by MFMAs. This allows the
       // compiler to co-issue unpacked instructions with MFMA
