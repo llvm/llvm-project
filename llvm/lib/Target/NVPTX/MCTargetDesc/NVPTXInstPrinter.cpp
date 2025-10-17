@@ -395,6 +395,16 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  auto &Op = MI->getOperand(OpNum);
+  assert(Op.isImm() && "Invalid operand");
+  uint32_t Imm = (uint32_t)Op.getImm();
+  if (Imm != UINT32_MAX) {
+    O << ".pragma \"used_bytes_mask " << Imm << "\";\n\t";
+  }
+}
+
 void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
                                                  raw_ostream &O,
                                                  const char *Modifier) {
