@@ -7549,17 +7549,27 @@ bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
 
 bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
                                          MachineIRBuilder &B) const {
-  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
-  if (!ST.hasArchitectedSGPRs())
-    return false;
-  LLT S32 = LLT::scalar(32);
   Register DstReg = MI.getOperand(0).getReg();
-  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
-  auto LSB = B.buildConstant(S32, 25);
-  auto Width = B.buildConstant(S32, 5);
-  B.buildUbfx(DstReg, TTMP8, LSB, Width);
-  MI.eraseFromParent();
-  return true;
+
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (ST.hasArchitectedSGPRs()) {
+    LLT S32 = LLT::scalar(32);
+    auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+    auto LSB = B.buildConstant(S32, 25);
+    auto Width = B.buildConstant(S32, 5);
+    B.buildUbfx(DstReg, TTMP8, LSB, Width);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // GFX942/GFX950 has wave_id_in_workgroup in ttmp11
+  if (ST.hasGFX940Insts()) {
+    B.buildCopy(DstReg, Register(AMDGPU::TTMP11));
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
