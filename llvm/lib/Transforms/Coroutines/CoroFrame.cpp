@@ -1598,12 +1598,12 @@ static bool willLeaveFunctionImmediatelyAfter(BasicBlock *BB,
   return true;
 }
 
-static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
+static bool localAllocaNeedsStackSave(AnyCoroAllocaAllocInst *AI) {
   // Look for a free that isn't sufficiently obviously followed by
   // either a suspend or a termination, i.e. something that will leave
   // the coro resumption frame.
   for (auto *U : AI->users()) {
-    auto FI = dyn_cast<CoroAllocaFreeInst>(U);
+    auto FI = dyn_cast<AnyCoroAllocaFreeInst>(U);
     if (!FI) continue;
 
     if (!willLeaveFunctionImmediatelyAfter(FI->getParent()))
@@ -1616,8 +1616,8 @@ static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
 
 /// Turn each of the given local allocas into a normal (dynamic) alloca
 /// instruction.
-static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
-                              SmallVectorImpl<Instruction*> &DeadInsts) {
+static void lowerLocalAllocas(ArrayRef<AnyCoroAllocaAllocInst *> LocalAllocas,
+                              SmallVectorImpl<Instruction *> &DeadInsts) {
   for (auto *AI : LocalAllocas) {
     IRBuilder<> Builder(AI);
 
@@ -1640,7 +1640,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
       // alloca.alloc is required to obey a stack discipline, although we
       // don't enforce that structurally.
       } else {
-        auto FI = cast<CoroAllocaFreeInst>(U);
+        auto FI = cast<AnyCoroAllocaFreeInst>(U);
         if (StackSave) {
           Builder.SetInsertPoint(FI);
           Builder.CreateStackRestore(StackSave);
@@ -2146,7 +2146,7 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
   // Collect the spills for arguments and other not-materializable values.
   coro::collectSpillsFromArgs(Spills, F, Checker);
   SmallVector<Instruction *, 4> DeadInstructions;
-  SmallVector<CoroAllocaAllocInst *, 4> LocalAllocas;
+  SmallVector<AnyCoroAllocaAllocInst *, 4> LocalAllocas;
   coro::collectSpillsAndAllocasFromInsts(Spills, Allocas, DeadInstructions,
                                          LocalAllocas, F, Checker, DT, Shape);
   coro::collectSpillsFromDbgInfo(Spills, F, Checker);

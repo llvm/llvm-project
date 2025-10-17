@@ -325,7 +325,9 @@ void coro::Shape::analyze(Function &F,
     auto Prototype = ContinuationId->getPrototype();
     RetconLowering.ResumePrototype = Prototype;
     RetconLowering.Alloc = ContinuationId->getAllocFunction();
+    RetconLowering.AllocFrame = ContinuationId->getAllocFrameFunction();
     RetconLowering.Dealloc = ContinuationId->getDeallocFunction();
+    RetconLowering.DeallocFrame = ContinuationId->getDeallocFrameFunction();
     RetconLowering.Storage = ContinuationId->getStorage();
     RetconLowering.Allocator = ContinuationId->getAllocator();
     RetconLowering.ReturnBlock = nullptr;
@@ -523,7 +525,7 @@ static void addCallToCallGraph(CallGraph *CG, CallInst *Call, Function *Callee){
 }
 
 Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
-                              CallGraph *CG) const {
+                              AnyCoroAllocaAllocInst *AI, CallGraph *CG) const {
   switch (ABI) {
   case coro::ABI::Switch:
     llvm_unreachable("can't allocate memory in coro switch-lowering");
@@ -537,7 +539,13 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
       sizeParamIndex = 1;
       Args.push_back(RetconLowering.Allocator);
     }
-    auto Alloc = RetconLowering.Alloc;
+    Function *Alloc = nullptr;
+    if (isa_and_nonnull<CoroAllocaAllocFrameInst>(AI)) {
+      assert(ABI == coro::ABI::RetconOnceDynamic);
+      Alloc = RetconLowering.AllocFrame;
+    } else {
+      Alloc = RetconLowering.Alloc;
+    }
     Size = Builder.CreateIntCast(
         Size, Alloc->getFunctionType()->getParamType(sizeParamIndex),
         /*is signed*/ false);
@@ -559,7 +567,7 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
 }
 
 void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
-                              CallGraph *CG) const {
+                              AnyCoroAllocaAllocInst *AI, CallGraph *CG) const {
   switch (ABI) {
   case coro::ABI::Switch:
     llvm_unreachable("can't allocate memory in coro switch-lowering");
@@ -567,7 +575,13 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
   case coro::ABI::RetconOnceDynamic: {
-    auto Dealloc = RetconLowering.Dealloc;
+    Function *Dealloc = nullptr;
+    if (isa_and_nonnull<CoroAllocaAllocFrameInst>(AI)) {
+      assert(ABI == coro::ABI::RetconOnceDynamic);
+      Dealloc = RetconLowering.DeallocFrame;
+    } else {
+      Dealloc = RetconLowering.Dealloc;
+    }
     SmallVector<Value *, 2> Args;
     unsigned allocationParamIndex = 0;
     if (ABI == coro::ABI::RetconOnceDynamic) {
