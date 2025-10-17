@@ -1005,24 +1005,22 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
     // Fold the operation. Leave any dead instructions for DCE to clean up.
     if (FoldedOpc) {
-      // NewVReg might be XZR/WZR. In that case create a COPY into a virtual
-      // register.
-      if (!Register::isVirtualRegister(NewReg)) {
-        unsigned ZeroReg = NewReg;
-        NewReg = MRI.createVirtualRegister(RC);
-        BuildMI(MBB, I, DL, get(TargetOpcode::COPY), NewReg).addReg(ZeroReg);
-      }
-
       FalseReg = NewReg;
       Opc = FoldedOpc;
-      // The extends the live range of NewVReg.
+      // Extend the live range of NewReg.
       MRI.clearKillFlags(NewReg);
     }
   }
 
   // Pull all virtual register into the appropriate class.
   MRI.constrainRegClass(TrueReg, RC);
-  MRI.constrainRegClass(FalseReg, RC);
+  // FalseReg might be WZR or XZR if the folded operand is a literal 1.
+  assert(
+      (FalseReg.isVirtual() || FalseReg == AArch64::WZR ||
+       FalseReg == AArch64::XZR) &&
+      "FalseReg was folded into a non-virtual register other than WZR or XZR");
+  if (FalseReg.isVirtual())
+    MRI.constrainRegClass(FalseReg, RC);
 
   // Insert the csel.
   BuildMI(MBB, I, DL, get(Opc), DstReg)
