@@ -1487,7 +1487,7 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
     if (!SrcTy->isVectorTy() && shouldChangeType(DstBits, SrcBits)) {
       Constant *Mask =
           ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcBits, DstBits));
-      Value *And =  Trunc->hasNoUnsignedWrap() ? X : Builder.CreateAnd(X, Mask);
+      Value *And = Trunc->hasNoUnsignedWrap() ? X : Builder.CreateAnd(X, Mask);
       Constant *WideC = ConstantInt::get(SrcTy, C.zext(SrcBits));
       return new ICmpInst(Pred, And, WideC);
     }
