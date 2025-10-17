@@ -703,27 +703,50 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
     uint64_t RangeEnd = Range.first.second;
     uint64_t Count = Range.second;
 
-    InstructionPointer IP(Binary, RangeBegin, true);
-    // Disjoint ranges may have range in the middle of two instr,
-    // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
-    // can be Addr1+1 to Addr2-1. We should ignore such range.
-    if (IP.Address > RangeEnd)
-      continue;
+    if (!SkipDisassembly) {
+      InstructionPointer IP(Binary, RangeBegin, true);
+      // Disjoint ranges may have range in the middle of two instr,
+      // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
+      // can be Addr1+1 to Addr2-1. We should ignore such range.
+      if (IP.Address > RangeEnd)
+        continue;
 
-    do {
-      const SampleContextFrameVector FrameVec =
-          Binary->getFrameLocationStack(IP.Address);
-      if (!FrameVec.empty()) {
-        // FIXME: As accumulating total count per instruction caused some
-        // regression, we changed to accumulate total count per byte as a
-        // workaround. Tuning hotness threshold on the compiler side might be
-        // necessary in the future.
-        FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
-            FrameVec, Count * Binary->getInstSize(IP.Address));
-        updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
-                                            Count);
-      }
-    } while (IP.advance() && IP.Address <= RangeEnd);
+      do {
+        const SampleContextFrameVector FrameVec =
+            Binary->getFrameLocationStack(IP.Address);
+        if (!FrameVec.empty()) {
+          // FIXME: As accumulating total count per instruction caused some
+          // regression, we changed to accumulate total count per byte as a
+          // workaround. Tuning hotness threshold on the compiler side might be
+          // necessary in the future.
+          FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
+              FrameVec, Count * Binary->getInstSize(IP.Address));
+          updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
+                                              Count);
+        }
+      } while (IP.advance() && IP.Address <= RangeEnd);
+    } else {
+      uint64_t IP = RangeBegin;
+      do {
+        const SampleContextFrameVector FrameVec =
+            Binary->getFrameLocationStack(IP);
+
+        if (!FrameVec.empty()) {
+          auto DISequenceEnd = FrameVec.back().EndAddress.value_or(UINT64_MAX);
+          // Sometimes the profile is more granular than the debug info.
+          // Ensure we don't drop this granularity.
+          auto SequenceEnd = std::min({DISequenceEnd, RangeEnd + 1});
+          auto SequenceLength = SequenceEnd - IP;
+          FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
+              FrameVec, Count * SequenceLength);
+          updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
+                                              Count);
+          IP += SequenceLength;
+        } else {
+          IP += 1;
+        }
+      } while (IP <= RangeEnd);
+    }
   }
 }
 

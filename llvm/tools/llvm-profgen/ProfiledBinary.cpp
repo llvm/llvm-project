@@ -38,6 +38,12 @@ cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only",
                                   cl::desc("Print disassembled code."),
                                   cl::cat(ProfGenCategory));
 
+cl::opt<bool> SkipDisassembly(
+    "skip-disassembly",
+    cl::desc("Skip disassembly. Disables some profile quality warnings. "
+             "Incompatible with CSSPGO."),
+    cl::cat(ProfGenCategory));
+
 cl::opt<bool> ShowSourceLocations("show-source-locations",
                                   cl::desc("Print source locations."),
                                   cl::cat(ProfGenCategory));
@@ -294,7 +300,7 @@ void ProfiledBinary::load(StringRef TripleStr) {
     loadSymbolsFromSymtab(Obj);
 
   // Disassemble the text sections.
-  disassemble(Obj);
+  analyze(Obj);
 
   // Use function start and return address to infer prolog and epilog
   ProEpilogTracker.inferPrologAddresses(StartAddrToFuncRangeMap);
@@ -591,7 +597,6 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   uint64_t NextStartAddress =
       (SI + 1 < SE) ? Symbols[SI + 1].Addr : SectionAddress + SectSize;
   FuncRange *FRange = findFuncRange(StartAddress);
-  setIsFuncEntry(FRange, FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
   StringRef SymbolName =
       ShowCanonicalFnName
           ? FunctionSamples::getCanonicalFnName(Symbols[SI].Name)
@@ -771,7 +776,7 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
-void ProfiledBinary::disassemble(const ObjectFile *Obj) {
+void ProfiledBinary::analyze(const ObjectFile *Obj) {
   // Set up disassembler and related components.
   setUpDisassembler(Obj);
 
@@ -811,9 +816,6 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
     if (!SectSize)
       continue;
 
-    // Register the text section.
-    TextSections.insert({SectionAddress, SectSize});
-
     StringRef SectionName = unwrapOrError(Section.getName(), FileName);
 
     if (ShowDisassemblyOnly) {
@@ -826,6 +828,9 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
     if (isa<ELFObjectFileBase>(Obj) && SectionName == ".plt")
       continue;
 
+    // Register the text section.
+    TextSections.emplace(SectionAddress, SectSize);
+
     // Get the section data.
     ArrayRef<uint8_t> Bytes =
         arrayRefFromStringRef(unwrapOrError(Section.getContents(), FileName));
@@ -833,10 +838,15 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
     // Get the list of all the symbols in this section.
     SectionSymbolsTy &Symbols = AllSymbols[Section];
 
-    // Disassemble symbol by symbol.
     for (std::size_t SI = 0, SE = Symbols.size(); SI != SE; ++SI) {
-      if (!dissassembleSymbol(SI, Bytes, Symbols, Section))
-        exitWithError("disassembling error", FileName);
+      uint64_t StartAddress = Symbols[SI].Addr;
+      FuncRange *FRange = findFuncRange(StartAddress);
+      setIsFuncEntry(FRange,
+                     FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
+
+      if (!SkipDisassembly)
+        if (!dissassembleSymbol(SI, Bytes, Symbols, Section))
+          exitWithError("disassembling error", FileName);
     }
   }
 
@@ -1166,7 +1176,8 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 
     LineLocation Line(LineOffset, Discriminator);
     auto It = NameStrings.insert(FunctionName.str());
-    CallStack.emplace_back(FunctionId(StringRef(*It.first)), Line);
+    CallStack.emplace_back(FunctionId(StringRef(*It.first)), Line,
+                           CallerFrame.EndAddress);
   }
 
   return CallStack;

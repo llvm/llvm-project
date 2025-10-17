@@ -1023,7 +1023,8 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
     uint64_t StartAddress = TargetAddress;
     if (Binary->addressIsCode(StartAddress) &&
         Binary->addressIsCode(EndAddress) &&
-        isValidFallThroughRange(StartAddress, EndAddress, Binary))
+        (SkipDisassembly ||
+         isValidFallThroughRange(StartAddress, EndAddress, Binary)))
       Counter.recordRangeCount(StartAddress, EndAddress, Repeat);
     EndAddress = SourceAddress;
   }
@@ -1309,8 +1310,10 @@ void PerfScriptReader::warnInvalidRange() {
         !Binary->addressIsCode(EndAddress))
       continue;
 
-    if (!Binary->addressIsCode(StartAddress) ||
-        !Binary->addressIsTransfer(EndAddress)) {
+    // addressIsTransfer relies on disassembly info, so we can't run this check
+    // with --skip-disassembly.
+    if (!SkipDisassembly && (!Binary->addressIsCode(StartAddress) ||
+                             !Binary->addressIsTransfer(EndAddress))) {
       InstNotBoundary += I.second;
       WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
     }
@@ -1330,7 +1333,9 @@ void PerfScriptReader::warnInvalidRange() {
       WarnInvalidRange(StartAddress, EndAddress, RangeCrossFuncMsg);
     }
 
-    if (Binary->addressIsCode(StartAddress) &&
+    // isValidFallThroughRange relies on disassembly info, so we can't run this
+    // check with --skip-disassembly either.
+    if (!SkipDisassembly && Binary->addressIsCode(StartAddress) &&
         Binary->addressIsCode(EndAddress) &&
         !isValidFallThroughRange(StartAddress, EndAddress, Binary)) {
       BogusRange += I.second;

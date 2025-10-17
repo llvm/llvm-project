@@ -16,6 +16,7 @@ extern cl::OptionCategory ProfGenCategory;
 
 extern cl::opt<std::string> OutputFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
+extern cl::opt<bool> SkipDisassembly;
 extern cl::opt<bool> ShowSourceLocations;
 extern cl::opt<bool> SkipSymbolization;
 extern cl::opt<bool> ShowDetailedWarning;

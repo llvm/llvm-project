@@ -11,6 +11,7 @@
 
 #include "CallContext.h"
 #include "ErrorHandling.h"
+#include "Options.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -233,7 +234,7 @@ class ProfiledBinary {
   std::unique_ptr<MCInstPrinter> IPrinter;
   // A list of text sections sorted by start RVA and size. Used to check
   // if a given RVA is a valid code address.
-  std::set<std::pair<uint64_t, uint64_t>> TextSections;
+  std::map<uint64_t, uint64_t> TextSections;
 
   // A map of mapping function name to BinaryFunction info.
   std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
@@ -406,7 +407,7 @@ class ProfiledBinary {
   void warnNoFuncEntry();
 
   /// Dissassemble the text section and build various address maps.
-  void disassemble(const object::ObjectFile *O);
+  void analyze(const object::ObjectFile *O);
 
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
@@ -475,16 +476,32 @@ public:
   }
 
   bool addressIsCode(uint64_t Address) const {
-    return AddressToInstSizeMap.find(Address) != AddressToInstSizeMap.end();
+    if (!SkipDisassembly)
+      return AddressToInstSizeMap.find(Address) != AddressToInstSizeMap.end();
+
+    // If we haven't disassembled, we don't know where instr boundaries are,
+    // but we guess that Address lies on one because we can't do any better.
+    Address -= getPreferredBaseAddress();
+    auto Section = TextSections.upper_bound(Address);
+    if (Section == TextSections.begin())
+      return false;
+    Section--;
+    return Address - Section->first < Section->second;
   }
 
+  // These functions are only used by CSSPGO which is incompatible with
+  // SkipDisassembly anyway, so they don't need to handle that flag
+  // even though they use data from disassembly.
   bool addressIsCall(uint64_t Address) const {
+    assert(!SkipDisassembly);
     return CallAddressSet.count(Address);
   }
   bool addressIsReturn(uint64_t Address) const {
+    assert(!SkipDisassembly);
     return RetAddressSet.count(Address);
   }
   bool addressInPrologEpilog(uint64_t Address) const {
+    assert(!SkipDisassembly);
     return ProEpilogTracker.PrologEpilogSet.count(Address);
   }
 
@@ -495,11 +512,13 @@ public:
     return IndirectBranchAddressSet.count(Address);
   }
   bool addressIsTransfer(uint64_t Address) {
+    assert(!SkipDisassembly);
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);
   }
 
   bool rangeCrossUncondBranch(uint64_t Start, uint64_t End) {
+    assert(!SkipDisassembly && "can't find branches without disassembly!");
     if (Start >= End)
       return false;
     auto R = UncondBranchAddrSet.lower_bound(Start);

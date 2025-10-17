@@ -496,11 +496,16 @@ enum ContextAttributeMask {
 struct SampleContextFrame {
   FunctionId Func;
   LineLocation Location;
+  std::optional<uint64_t> EndAddress;
 
   SampleContextFrame() : Location(0, 0) {}
 
   SampleContextFrame(FunctionId Func, LineLocation Location)
       : Func(Func), Location(Location) {}
+
+  SampleContextFrame(FunctionId Func, LineLocation Location,
+                     std::optional<uint64_t> EndAddress)
+      : Func(Func), Location(Location), EndAddress(EndAddress) {}
 
   bool operator==(const SampleContextFrame &That) const {
     return Location == That.Location && Func == That.Func;

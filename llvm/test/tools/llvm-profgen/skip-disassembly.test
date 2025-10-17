@@ -1,0 +1,17 @@
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t --skip-disassembly
+; RUN: FileCheck %s --input-file %t
+
+CHECK: main:2547:0
+CHECK-NEXT:  0: 0
+CHECK-NEXT:  2: 0
+CHECK-NEXT:  1: foo:2547
+CHECK-NEXT:   2.1: 42
+CHECK-NEXT:   3: 62
+CHECK-NEXT:   3.2: 21
+CHECK-NEXT:   4: 0
+CHECK-NEXT:   65526: 62
+CHECK-NEXT:   3.1: bar:546
+CHECK-NEXT:    1: 42
+CHECK-NEXT:    65533: 42
+CHECK-NEXT:   3.2: bar:189
+CHECK-NEXT:    1: 21
