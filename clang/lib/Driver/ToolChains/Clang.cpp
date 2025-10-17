@@ -7578,11 +7578,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasFlag(options::OPT_funique_source_file_names,
                    options::OPT_fno_unique_source_file_names, false)) {
-    if (Arg *A = Args.getLastArg(options::OPT_unique_source_file_identifier_EQ))
-      A->render(Args, CmdArgs);
-    else
+    Arg *A = Args.getLastArg(options::OPT_unique_source_file_identifier_EQ,
+                             options::OPT_funique_source_file_output_paths);
+    if (!A) {
       CmdArgs.push_back(Args.MakeArgString(
           Twine("-funique-source-file-identifier=") + Input.getBaseInput()));
+    } else if (A->getOption().matches(
+                   options::OPT_funique_source_file_output_paths)) {
+      if (Output.isFilename())
+        CmdArgs.push_back(Args.MakeArgString(
+            Twine("-funique-source-file-identifier=") + Output.getFilename()));
+      else
+        D.Diag(diag::err_drv_no_output_filename) << A->getSpelling();
+    } else {
+      A->render(Args, CmdArgs);
+    }
   }
 
   // Setup statistics file output.
