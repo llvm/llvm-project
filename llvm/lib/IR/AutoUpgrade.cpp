@@ -6042,8 +6042,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   Triple T(TT);
   // The only data layout upgrades needed for pre-GCN, SPIR or SPIRV are setting
   // the address space of globals to 1. This does not apply to SPIRV Logical.
-  if (((T.isAMDGPU() && !T.isAMDGCN()) ||
-       (T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical()))) &&
+  if ((T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical())) &&
       !DL.contains("-G") && !DL.starts_with("G")) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
@@ -6056,35 +6055,43 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return DL.str();
   }
 
+  // AMDGPU data layout upgrades.
   std::string Res = DL.str();
-  // AMDGCN data layout upgrades.
-  if (T.isAMDGCN()) {
+  if (T.isAMDGPU()) {
     // Define address spaces for constants.
     if (!DL.contains("-G") && !DL.starts_with("G"))
       Res.append(Res.empty() ? "G1" : "-G1");
 
-    // Add missing non-integral declarations.
-    // This goes before adding new address spaces to prevent incoherent string
-    // values.
-    if (!DL.contains("-ni") && !DL.starts_with("ni"))
-      Res.append("-ni:7:8:9");
-    // Update ni:7 to ni:7:8:9.
-    if (DL.ends_with("ni:7"))
-      Res.append(":8:9");
-    if (DL.ends_with("ni:7:8"))
-      Res.append(":9");
+    // AMDGCN data layout upgrades.
+    if (T.isAMDGCN()) {
 
-    // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
-    // resources) An empty data layout has already been upgraded to G1 by now.
-    if (!DL.contains("-p7") && !DL.starts_with("p7"))
-      Res.append("-p7:160:256:256:32");
-    if (!DL.contains("-p8") && !DL.starts_with("p8"))
-      Res.append("-p8:128:128:128:48");
-    constexpr StringRef OldP8("-p8:128:128-");
-    if (DL.contains(OldP8))
-      Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
-    if (!DL.contains("-p9") && !DL.starts_with("p9"))
-      Res.append("-p9:192:256:256:32");
+      // Add missing non-integral declarations.
+      // This goes before adding new address spaces to prevent incoherent string
+      // values.
+      if (!DL.contains("-ni") && !DL.starts_with("ni"))
+        Res.append("-ni:7:8:9");
+      // Update ni:7 to ni:7:8:9.
+      if (DL.ends_with("ni:7"))
+        Res.append(":8:9");
+      if (DL.ends_with("ni:7:8"))
+        Res.append(":9");
+
+      // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
+      // resources) An empty data layout has already been upgraded to G1 by now.
+      if (!DL.contains("-p7") && !DL.starts_with("p7"))
+        Res.append("-p7:160:256:256:32");
+      if (!DL.contains("-p8") && !DL.starts_with("p8"))
+        Res.append("-p8:128:128:128:48");
+      constexpr StringRef OldP8("-p8:128:128-");
+      if (DL.contains(OldP8))
+        Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
+      if (!DL.contains("-p9") && !DL.starts_with("p9"))
+        Res.append("-p9:192:256:256:32");
+    }
+
+    // Upgrade the ELF mangling mode.
+    if (!DL.contains("m:e"))
+      Res = Res.empty() ? "m:e" : "m:e-" + Res;
 
     return Res;
   }
