@@ -66,16 +66,6 @@ clang::TagDecl *ClangUtil::GetAsTagDecl(const CompilerType &type) {
   return qual_type->getAsTagDecl();
 }
 
-clang::Decl *ClangUtil::GetFirstDecl(clang::Decl *d) {
-  if (!d)
-    return nullptr;
-  if (auto *td = llvm::dyn_cast<clang::TagDecl>(d))
-    return td->getFirstDecl();
-  if (auto *od = llvm::dyn_cast<clang::ObjCInterfaceDecl>(d))
-    return od->getFirstDecl();
-  return d;
-}
-
 clang::ObjCInterfaceDecl *ClangUtil::GetAsObjCDecl(const CompilerType &type) {
   clang::QualType qual_type = ClangUtil::GetCanonicalQualType(type);
   if (qual_type.isNull())

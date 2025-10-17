@@ -9,7 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTUTILS_H
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTUTILS_H
 
-#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
@@ -30,7 +29,7 @@ namespace lldb_private {
 /// Wraps an ExternalASTSource into an ExternalSemaSource.
 ///
 /// Assumes shared ownership of the underlying source.
-class ExternalASTSourceWrapper : public ImporterBackedASTSource {
+class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
   llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
@@ -281,7 +280,7 @@ public:
 /// provide more accurate replies to the requests, but might not be able to
 /// answer all requests. The debug information will be used as a fallback then
 /// to provide information that is not in the C++ module.
-class SemaSourceWithPriorities : public ImporterBackedASTSource {
+class SemaSourceWithPriorities : public clang::ExternalSemaSource {
 
 private:
   /// The sources ordered in decreasing priority.

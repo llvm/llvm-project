@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
