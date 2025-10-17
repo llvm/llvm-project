@@ -467,28 +467,28 @@ define amdgpu_kernel void @srem_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v2
 ; GCN-NEXT:    s_abs_i32 s2, s2
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, s2
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
+; GCN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GCN-NEXT:    s_sub_i32 s6, 0, s2
-; GCN-NEXT:    s_ashr_i32 s5, s3, 31
+; GCN-NEXT:    s_ashr_i32 s5, s4, 31
 ; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v2
-; GCN-NEXT:    s_abs_i32 s3, s3
-; GCN-NEXT:    v_readfirstlane_b32 s4, v3
+; GCN-NEXT:    s_abs_i32 s4, s4
+; GCN-NEXT:    v_readfirstlane_b32 s3, v3
 ; GCN-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v0
 ; GCN-NEXT:    s_mul_i32 s6, s6, s7
 ; GCN-NEXT:    s_mul_hi_u32 s6, s7, s6
 ; GCN-NEXT:    s_add_i32 s7, s7, s6
-; GCN-NEXT:    s_mul_hi_u32 s6, s3, s7
+; GCN-NEXT:    s_mul_hi_u32 s6, s4, s7
 ; GCN-NEXT:    s_mul_i32 s6, s6, s2
-; GCN-NEXT:    s_sub_i32 s3, s3, s6
-; GCN-NEXT:    s_sub_i32 s6, s3, s2
-; GCN-NEXT:    s_cmp_ge_u32 s3, s2
-; GCN-NEXT:    s_cselect_b32 s3, s6, s3
-; GCN-NEXT:    s_sub_i32 s6, s3, s2
-; GCN-NEXT:    s_cmp_ge_u32 s3, s2
-; GCN-NEXT:    s_cselect_b32 s2, s6, s3
-; GCN-NEXT:    s_abs_i32 s3, s4
+; GCN-NEXT:    s_sub_i32 s4, s4, s6
+; GCN-NEXT:    s_sub_i32 s6, s4, s2
+; GCN-NEXT:    s_cmp_ge_u32 s4, s2
+; GCN-NEXT:    s_cselect_b32 s4, s6, s4
+; GCN-NEXT:    s_sub_i32 s6, s4, s2
+; GCN-NEXT:    s_cmp_ge_u32 s4, s2
+; GCN-NEXT:    s_cselect_b32 s2, s6, s4
+; GCN-NEXT:    s_abs_i32 s3, s3
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GCN-NEXT:    s_xor_b32 s2, s2, s5
 ; GCN-NEXT:    s_sub_i32 s7, 0, s3
