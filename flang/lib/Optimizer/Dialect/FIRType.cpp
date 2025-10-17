@@ -336,6 +336,17 @@ bool isBoxedRecordType(mlir::Type ty) {
   return false;
 }
 
+// CLASS(*)
+bool isClassStarType(mlir::Type ty) {
+  if (auto clTy = mlir::dyn_cast<fir::ClassType>(fir::unwrapRefType(ty))) {
+    if (mlir::isa<mlir::NoneType>(clTy.getEleTy()))
+      return true;
+    mlir::Type innerType = clTy.unwrapInnerType();
+    return innerType && mlir::isa<mlir::NoneType>(innerType);
+  }
+  return false;
+}
+
 bool isScalarBoxedRecordType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
@@ -398,12 +409,8 @@ bool isPolymorphicType(mlir::Type ty) {
 
 bool isUnlimitedPolymorphicType(mlir::Type ty) {
   // CLASS(*)
-  if (auto clTy = mlir::dyn_cast<fir::ClassType>(fir::unwrapRefType(ty))) {
-    if (mlir::isa<mlir::NoneType>(clTy.getEleTy()))
-      return true;
-    mlir::Type innerType = clTy.unwrapInnerType();
-    return innerType && mlir::isa<mlir::NoneType>(innerType);
-  }
+  if (isClassStarType(ty))
+    return true;
   // TYPE(*)
   return isAssumedType(ty);
 }
