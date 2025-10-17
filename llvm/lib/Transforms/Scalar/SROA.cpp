@@ -431,7 +431,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       Inst->setMetadata(LLVMContext::MD_DIAssignID, NewID);
     }
 
-
     DbgVariableRecord *NewAssign;
     if (IsSplit) {
       ::Value *NewValue = Value ? Value : DbgAssign->getValue();
