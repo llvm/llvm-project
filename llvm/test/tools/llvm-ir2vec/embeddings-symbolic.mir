@@ -67,7 +67,7 @@ body:             |
 # CHECK-FUNC-LEVEL-ADD-NEXT: Function vector:  [ 26.50  27.10  27.70 ]
 # CHECK-FUNC-LEVEL-ADD-NOT: simple_function
 
-# CHECK-FUNC-MISSING: Error: Function 'missing_function' not found
+# CHECK-FUNC-MISSING: error: Function 'missing_function' not found
 
 # CHECK-BB-LEVEL: MIR2Vec embeddings for machine function add_function:
 # CHECK-BB-LEVEL-NEXT: Basic block vectors:
