@@ -437,7 +437,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
-          if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
+          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) &&
+              Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
                                      &DeviceEntry.Address) != OFFLOAD_SUCCESS)
             REPORT("Failed to load symbol %s\n", Entry.SymbolName);
 
@@ -446,7 +447,9 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           // the device to point to the memory on the host.
           if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
-            if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
+            if (!(OMP_DECLARE_TARGET_INDIRECT_VTABLE |
+                  OMP_DECLARE_TARGET_INDIRECT) &&
+                Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
                                         Entry.Address,
                                         Entry.Size) != OFFLOAD_SUCCESS)
               REPORT("Failed to write symbol for USM %s\n", Entry.SymbolName);

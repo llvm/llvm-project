@@ -605,6 +605,9 @@ protected:
                           LValue PosLVal, const OMPTaskDataTy::DependData &Data,
                           Address DependenciesArray);
 
+  /// Keep track of VTable Declarations so we don't register duplicate VTable.
+  llvm::DenseMap<CXXRecordDecl*, const VarDecl*> VTableDeclMap;
+
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);
   virtual ~CGOpenMPRuntime() {}
@@ -1114,6 +1117,16 @@ public:
   /// \param PerformInit true if initialization expression is not constant.
   virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
                                          llvm::GlobalValue *GV);
+
+  /// Register VTable to OpenMP offload entry.
+  /// \param VTable VTable of the C++ class.
+  /// \param RD C++ class decl.
+  virtual void registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                          const VarDecl *VD);
+  /// Emit code for registering vtable by scanning through map clause
+  /// in OpenMP target region.
+  /// \param D OpenMP target directive.
+  virtual void registerVTable(const OMPExecutableDirective &D);
 
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
