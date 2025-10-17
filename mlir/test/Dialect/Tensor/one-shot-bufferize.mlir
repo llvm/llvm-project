@@ -496,18 +496,18 @@ func.func @collapse_shape_regression(
 // CHECK-LABEL: func private @mult_return_callee(
 //  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
 //  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> index {
+//       CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
+//       CHECK: ^bb1:
+//       CHECK:   return %[[A]] : index
+//       CHECK: ^bb2:
+//       CHECK:   return %[[B]] : index
 func.func private @mult_return_callee(%t: tensor<?xf32>,  %cond:i1, %a: index, %b: index) -> (tensor<10xf32>, index) {
   %casted = tensor.cast %t : tensor<?xf32> to tensor<10xf32>
-  // CHECK: cf.cond_br %[[COND]], ^bb1, ^bb2
-  // CHECK:  ^bb1:
-  // CHECK:    return %[[A]] : index
-  // CHECK:  ^bb2:
-  // CHECK:    return %[[B]] : index
   cf.cond_br %cond,^a, ^b
-  ^a:
-    return %casted, %a : tensor<10xf32>, index
-  ^b:
-    return %casted, %b : tensor<10xf32>, index
+^a:
+  return %casted, %a : tensor<10xf32>, index
+^b:
+  return %casted, %b : tensor<10xf32>, index
 }
 
 // CHECK-LABEL: func @mult_return(

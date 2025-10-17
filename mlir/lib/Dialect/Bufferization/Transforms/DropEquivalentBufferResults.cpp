@@ -52,17 +52,16 @@ static SmallVector<func::ReturnOp> getReturnOps(func::FuncOp funcOp) {
   return returnOps;
 }
 
-/// Get the values at the same position in the `returnOps`.
+/// Get the operands at the specified position for all returnOps.
 static SmallVector<Value>
 getReturnOpsOperandInPos(ArrayRef<func::ReturnOp> returnOps, size_t pos) {
-  SmallVector<Value> operands;
-  for (func::ReturnOp returnOp : returnOps) {
-    operands.push_back(returnOp.getOperand(pos));
-  }
-  return operands;
+  return llvm::map_to_vector(returnOps, [&](func::ReturnOp returnOp) {
+    return returnOp.getOperand(pos);
+  });
 }
 
-/// Check if the value in operands is equal to the argument.
+/// Check if all given values are the same buffer as the block argument (modulo
+/// cast ops).
 static bool operandsEqualFuncArgument(ArrayRef<Value> operands,
                                       BlockArgument argument) {
   for (Value val : operands) {
@@ -95,13 +94,14 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
     if (returnOps.empty())
       continue;
-    func::ReturnOp returnOp = returnOps.front();
 
     // Compute erased results.
-    SmallVector<SmallVector<Value>> newReturnValues(returnOps.size());
-    BitVector erasedResultIndices(funcOp.getFunctionType().getNumResults());
+    size_t numReturnOps = returnOps.size();
+    size_t numReturnValues = funcOp.getFunctionType().getNumResults();
+    SmallVector<SmallVector<Value>> newReturnValues(numReturnOps);
+    BitVector erasedResultIndices(numReturnValues);
     DenseMap<int64_t, int64_t> resultToArgs;
-    for (size_t i = 0, e = returnOp.getOperands().size(); i < e; ++i) {
+    for (size_t i = 0; i < numReturnValues; ++i) {
       bool erased = false;
       SmallVector<Value> returnOperands =
           getReturnOpsOperandInPos(returnOps, i);
