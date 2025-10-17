@@ -607,6 +607,12 @@ def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
 def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
   "Enable Armv9.7-A GICv5 (Generic Interrupt Controller) CPU Interface Extension", [FeatureNMI]>;
 
+def FeatureSVE2p3 : ExtensionWithMArch<"sve2p3", "SVE2p3", "FEAT_SVE2p3",
+  "Enable Armv9.7-A Scalable Vector Extension 2.3 instructions", [FeatureSVE2p2]>;
+
+def FeatureSME2p3 : ExtensionWithMArch<"sme2p3", "SME2p3", "FEAT_SME2p3",
+  "Enable Armv9.7-A Scalable Matrix Extension 2.3 instructions", [FeatureSME2p2]>;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
@@ -966,8 +972,8 @@ def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
   !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
     FeatureLSUI, FeatureOCCMO])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
-  [HasV9_6aOps],
-  !listconcat(HasV9_6aOps.DefaultExts, [])>;
+  [HasV9_6aOps, FeatureSVE2p3],
+  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

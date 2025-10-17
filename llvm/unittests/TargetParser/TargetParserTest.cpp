@@ -1446,7 +1446,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SVESM4,       AArch64::AEK_CMH,
       AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
       AArch64::AEK_MPAMV2,       AArch64::AEK_MTETC,
-      AArch64::AEK_GCIE,
+      AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
+      AArch64::AEK_SVE2P3,
   };
 
   std::vector<StringRef> Features;
@@ -1564,6 +1565,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mtetc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+gcie"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme2p3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2p3"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1736,6 +1739,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
       {"mtetc", "nomtetc", "+mtetc", "-mtetc"},
       {"gcie", "nogcie", "+gcie", "-gcie"},
+      {"sme2p3", "nosme2p3", "+sme2p3", "-sme2p3"},
+      {"sve2p3", "nosve2p3", "+sve2p3", "-sve2p3"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2054,6 +2059,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosve2p1", "sve2p2"}, {"sve2p1", "sve2p2"}, {}},
         {AArch64::ARMV9_6A, {"sve2p2", "nosve2p1"}, {}, {"sve2p1", "sve2p2"}},
 
+        // sve2p2 -> {sve2p3}
+        {AArch64::ARMV9_7A, {"nosve2p2", "sve2p3"}, {"sve2p2", "sve2p3"}, {}},
+        {AArch64::ARMV9_7A, {"sve2p3", "nosve2p2"}, {}, {"sve2p2", "sve2p3"}},
+
         // sme -> {sme2, sme-f16f16, sme-f64f64, sme-i16i64, sme-fa64}
         {AArch64::ARMV8A, {"nosme", "sme2"}, {"sme", "sme2"}, {}},
         {AArch64::ARMV8A, {"sme2", "nosme"}, {}, {"sme", "sme2"}},
@@ -2106,6 +2115,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // sme2p1 -> {sme2p2}
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
+
+        // sme2p2 -> {sme2p3}
+        {AArch64::ARMV9_7A, {"nosme2p2", "sme2p3"}, {"sme2p3", "sme2p2"}, {}},
+        {AArch64::ARMV9_7A, {"sme2p3", "nosme2p2"}, {}, {"sme2p2", "sme2p3"}},
 
         // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm, fp8dot4, fp8dot2,
         // ssve-fp8dot4, ssve-fp8dot2}

@@ -6,7 +6,7 @@
 // RUN: %clang -target aarch64 -mlittle-endian -march=armv9.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A %s
-// GENERICV97A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}}
+// GENERICV97A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+sve2p3"
 
 // RUN: %clang -target aarch64_be -march=armv9.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A-BE %s
 // RUN: %clang -target aarch64_be -march=armv9.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A-BE %s
@@ -14,9 +14,17 @@
 // RUN: %clang -target aarch64 -mbig-endian -march=armv9.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV97A-BE %s
-// GENERICV97A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}}
+// GENERICV97A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+sve2p3"
 
 // ===== Features supported on aarch64 =====
+
+// RUN: %clang -target aarch64 -march=armv9.7a+sme2p3 -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SME2p3 %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+sme2p3 -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SME2p3 %s
+// V97A-SME2p3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+sme2p3"
+
+// RUN: %clang -target aarch64 -march=armv9.7a+sve2p3 -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SVE2p3 %s
+// RUN: %clang -target aarch64 -march=armv9.7-a+sve2p3 -### -c %s 2>&1 | FileCheck -check-prefix=V97A-SVE2p3 %s
+// V97A-SVE2p3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+sve2p3"
 
 // RUN: %clang -target aarch64 -march=armv9.7a+cmh -### -c %s 2>&1 | FileCheck -check-prefix=V97A-CMH %s
 // RUN: %clang -target aarch64 -march=armv9.7-a+cmh -### -c %s 2>&1 | FileCheck -check-prefix=V97A-CMH %s
