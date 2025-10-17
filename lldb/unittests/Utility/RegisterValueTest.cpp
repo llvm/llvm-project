@@ -61,7 +61,7 @@ static const Scalar etalon128(APInt(128, 0xffeeddccbbaa9988ull) << 64 |
                               APInt(128, 0x7766554433221100ull));
 
 void TestSetValueFromData128(const RegisterInfo &ri, void *src,
-                              const lldb::ByteOrder endianness) {
+                             const lldb::ByteOrder endianness) {
   DataExtractor src_extractor(src, 16, endianness, 8);
   RegisterValue rv;
   EXPECT_TRUE(rv.SetValueFromData(ri, src_extractor, 0, false).Success());
