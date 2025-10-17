@@ -310,11 +310,23 @@ def parse_args():
         default=os.environ.get("LIT_XFAIL", ""),
     )
     selection_group.add_argument(
+        "--xfail-from-file",
+        metavar="PATH",
+        help="XFAIL tests with paths in the line separated list contained in "
+        "the specified file",
+    )
+    selection_group.add_argument(
         "--xfail-not",
         metavar="LIST",
         type=_semicolon_list,
         help="do not XFAIL tests with paths in the semicolon separated list",
         default=os.environ.get("LIT_XFAIL_NOT", ""),
+    )
+    selection_group.add_argument(
+        "--xfail-not-from-file",
+        metavar="PATH",
+        help="do not XFAIL tests with paths in the line separated list "
+        "contained in the specified file",
     )
     selection_group.add_argument(
         "--exclude-xfail",
@@ -395,6 +407,13 @@ def parse_args():
 
     for report in opts.reports:
         report.use_unique_output_file_name = opts.use_unique_output_file_name
+
+    if opts.xfail_from_file:
+        with open(opts.xfail_from_file, "r", encoding="utf-8") as f:
+            opts.xfail.extend(f.read().splitlines())
+    if opts.xfail_not_from_file:
+        with open(opts.xfail_not_from_file, "r", encoding="utf-8") as f:
+            opts.xfail_not.extend(f.read().splitlines())
 
     return opts
 

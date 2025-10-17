@@ -16,6 +16,10 @@
 # RUN:   %{inputs}/xfail-cl \
 # RUN: | FileCheck --check-prefixes=CHECK-EXCLUDED,CHECK-EXCLUDED-OVERRIDE %s
 
+# RUN: %{lit} --xfail-from-file %{inputs}/xfail-cl/xfail.list \
+# RUN:   --xfail-not-from-file %{inputs}/xfail-cl/xfail-not.list \
+# RUN:   %{inputs}/xfail-cl \
+# RUN: | FileCheck --check-prefix=CHECK-FILTER %s
 
 # RUN: env LIT_XFAIL='false.txt;false2.txt;top-level-suite :: b :: test.txt' \
 # RUN:   LIT_XFAIL_NOT='true-xfail.txt;top-level-suite :: a :: test-xfail.txt' \
