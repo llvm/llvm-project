@@ -5204,7 +5204,10 @@ bool TreeTransform<Derived>::TransformConceptTemplateArguments(
     InputIterator First, InputIterator Last, TemplateArgumentListInfo &Outputs,
     bool Uneval) {
 
-  auto isNonDependentConcept = [](const TemplateArgument &Arg) {
+  // [C++26][temp.constr.normal]
+  // any non-dependent concept template argument
+  // is substituted into the constraint-expression of C.
+  auto isNonDependentConceptArgument = [](const TemplateArgument &Arg) {
     return !Arg.isDependent() && Arg.isConceptOrConceptTemplateParameter();
   };
 
@@ -5224,7 +5227,7 @@ bool TreeTransform<Derived>::TransformConceptTemplateArguments(
       continue;
     }
 
-    if (!isNonDependentConcept(In.getArgument())) {
+    if (!isNonDependentConceptArgument(In.getArgument())) {
       Outputs.addArgument(In);
       continue;
     }

@@ -1231,7 +1231,8 @@ SubstituteConceptsInConstrainExpression(Sema &S, const NamedDecl *D,
   ConceptDecl *Concept = CSE->getNamedConcept()->getCanonicalDecl();
   Sema::ArgPackSubstIndexRAII _(S, SubstIndex);
 
-  const auto *ArgsAsWritten = CSE->getTemplateArgsAsWritten();
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
   if (llvm::none_of(
           ArgsAsWritten->arguments(), [&](const TemplateArgumentLoc &ArgLoc) {
             return !ArgLoc.getArgument().isDependent() &&
@@ -1260,8 +1261,7 @@ bool Sema::CheckConstraintSatisfaction(
     return true;
 
   llvm::SmallVector<AssociatedConstraint, 1> Constraints;
-  Constraints.emplace_back(
-      ConstraintExpr->getNamedConcept()->getConstraintExpr());
+  Constraints.emplace_back(Res.get());
 
   MultiLevelTemplateArgumentList MLTAL(ConstraintExpr->getNamedConcept(),
                                        ConstraintExpr->getTemplateArguments(),

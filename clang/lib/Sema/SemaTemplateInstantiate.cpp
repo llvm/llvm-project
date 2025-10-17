@@ -4492,7 +4492,8 @@ ExprResult Sema::SubstConceptTemplateArguments(
     const MultiLevelTemplateArgumentList &MLTAL) {
   TemplateInstantiator Instantiator(*this, MLTAL, SourceLocation(),
                                     DeclarationName());
-  auto *ArgsAsWritten = CSE->getTemplateArgsAsWritten();
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
   TemplateArgumentListInfo SubstArgs(ArgsAsWritten->getLAngleLoc(),
                                      ArgsAsWritten->getRAngleLoc());
 
@@ -4502,6 +4503,9 @@ ExprResult Sema::SubstConceptTemplateArguments(
       CSE->getNamedConcept(),
       ArgsAsWritten->arguments().front().getSourceRange());
 
+  if (Inst.isInvalid())
+    return ExprError();
+
   if (Instantiator.TransformConceptTemplateArguments(
           ArgsAsWritten->getTemplateArgs(),
           ArgsAsWritten->getTemplateArgs() +
@@ -4509,10 +4513,9 @@ ExprResult Sema::SubstConceptTemplateArguments(
           SubstArgs))
     return true;
 
-  llvm::SmallVector<TemplateArgument, 4> NewArgList;
-  NewArgList.reserve(SubstArgs.arguments().size());
-  for (const auto &ArgLoc : SubstArgs.arguments())
-    NewArgList.push_back(ArgLoc.getArgument());
+  llvm::SmallVector<TemplateArgument, 4> NewArgList = llvm::map_to_vector(
+      SubstArgs.arguments(),
+      [](const TemplateArgumentLoc &Loc) { return Loc.getArgument(); });
 
   MultiLevelTemplateArgumentList MLTALForConstraint =
       getTemplateInstantiationArgs(
