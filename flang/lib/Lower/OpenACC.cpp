@@ -4342,8 +4342,30 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
                                   dataClause);
 }
 
-// Emit module-level declare for COMMON symbols referenced by an ACC clause.
-// The emitter functor is responsible for creating ctor/dtor operations.
+static fir::GlobalOp lookupGlobalBySymbolOrEquivalence(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::Symbol *commonBlock =
+      Fortran::semantics::FindCommonBlockContaining(sym);
+  std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
+                                       : converter.mangleName(sym);
+  if (fir::GlobalOp g = builder.getNamedGlobal(globalName)) {
+    return g;
+  }
+  // Not found: if not a COMMON member, try equivalence members
+  if (!commonBlock) {
+    if (auto *eqSet = Fortran::semantics::FindEquivalenceSet(sym)) {
+      for (Fortran::semantics::EquivalenceObject eqObj : *eqSet) {
+        std::string eqName = converter.mangleName(eqObj.symbol);
+        if (fir::GlobalOp g = builder.getNamedGlobal(eqName)) {
+          return g;
+        }
+      }
+    }
+  }
+  return {};
+}
+
 template <typename EmitterFn>
 static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
     fir::FirOpBuilder &builder, const Fortran::parser::AccObject &obj,
@@ -4354,25 +4376,13 @@ static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
     return;
   }
 
-  std::string globalName = converter.mangleName(sym);
-  fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
-  if (!globalOp) {
-    if (Fortran::semantics::FindEquivalenceSet(sym)) {
-      for (Fortran::semantics::EquivalenceObject eqObj :
-          *Fortran::semantics::FindEquivalenceSet(sym)) {
-        std::string eqName = converter.mangleName(eqObj.symbol);
-        globalOp = builder.getNamedGlobal(eqName);
-        if (globalOp)
-          break;
-      }
-    }
-  }
+  fir::GlobalOp globalOp = lookupGlobalBySymbolOrEquivalence(converter, builder, sym);
   if (!globalOp) {
     llvm::report_fatal_error("could not retrieve global symbol");
   }
 
   std::stringstream ctorName;
-  ctorName << globalName << "_acc_ctor";
+  ctorName << globalOp.getSymName().str() << "_acc_ctor";
   if (builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
           ctorName.str())) {
     return;
