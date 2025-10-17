@@ -694,6 +694,12 @@ public:
                                   TemplateArgumentListInfo &Outputs,
                                   bool Uneval = false);
 
+  template <typename InputIterator>
+  bool TransformConceptTemplateArguments(InputIterator First,
+                                         InputIterator Last,
+                                         TemplateArgumentListInfo &Outputs,
+                                         bool Uneval = false);
+
   /// Checks if the argument pack from \p In will need to be expanded and does
   /// the necessary prework.
   /// Whether the expansion is needed is captured in Info.Expand.
@@ -5183,6 +5189,49 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     }
 
     // The simple case:
+    if (getDerived().TransformTemplateArgument(In, Out, Uneval))
+      return true;
+
+    Outputs.addArgument(Out);
+  }
+
+  return false;
+}
+
+template <typename Derived>
+template <typename InputIterator>
+bool TreeTransform<Derived>::TransformConceptTemplateArguments(
+    InputIterator First, InputIterator Last, TemplateArgumentListInfo &Outputs,
+    bool Uneval) {
+
+  // [C++26][temp.constr.normal]
+  // any non-dependent concept template argument
+  // is substituted into the constraint-expression of C.
+  auto isNonDependentConceptArgument = [](const TemplateArgument &Arg) {
+    return !Arg.isDependent() && Arg.isConceptOrConceptTemplateParameter();
+  };
+
+  for (; First != Last; ++First) {
+    TemplateArgumentLoc Out;
+    TemplateArgumentLoc In = *First;
+
+    if (In.getArgument().getKind() == TemplateArgument::Pack) {
+      typedef TemplateArgumentLocInventIterator<Derived,
+                                                TemplateArgument::pack_iterator>
+          PackLocIterator;
+      if (TransformConceptTemplateArguments(
+              PackLocIterator(*this, In.getArgument().pack_begin()),
+              PackLocIterator(*this, In.getArgument().pack_end()), Outputs,
+              Uneval))
+        return true;
+      continue;
+    }
+
+    if (!isNonDependentConceptArgument(In.getArgument())) {
+      Outputs.addArgument(In);
+      continue;
+    }
+
     if (getDerived().TransformTemplateArgument(In, Out, Uneval))
       return true;
 
