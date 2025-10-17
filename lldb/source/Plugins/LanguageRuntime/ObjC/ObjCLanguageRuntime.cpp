@@ -423,6 +423,46 @@ Status ObjCLanguageRuntime::ObjCExceptionPrecondition::ConfigurePrecondition(
   return error;
 }
 
+CompilerType ObjCLanguageRuntime::LookupInModulesVendor(ConstString class_name,
+                                                        Target &target) {
+  assert(class_name);
+
+  auto *persistent_state = llvm::cast<ClangPersistentVariables>(
+      target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+  if (!persistent_state)
+    return {};
+
+  auto clang_modules_decl_vendor_sp =
+      persistent_state->GetClangModulesDeclVendor();
+  if (!clang_modules_decl_vendor_sp)
+    return {};
+
+  auto types = clang_modules_decl_vendor_sp->FindTypes(
+      class_name, /*max_matches*/ UINT32_MAX);
+  if (types.empty())
+    return {};
+
+  return types.front();
+}
+
+CompilerType ObjCLanguageRuntime::LookupInRuntime(ConstString class_name) {
+  auto *runtime_vendor = GetDeclVendor();
+  if (!runtime_vendor)
+    return {};
+
+  std::vector<CompilerDecl> compiler_decls;
+  runtime_vendor->FindDecls(class_name, false, UINT32_MAX, compiler_decls);
+  if (compiler_decls.empty())
+    return {};
+
+  auto *ctx =
+      llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
+  if (!ctx)
+    return {};
+
+  return ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
+}
+
 std::optional<CompilerType>
 ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   CompilerType class_type;
@@ -442,14 +482,21 @@ ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   if (!class_name)
     return std::nullopt;
 
-  TypeSP complete_objc_class_type_sp = LookupInCompleteClassCache(class_name);
-  if (!complete_objc_class_type_sp)
-    return std::nullopt;
+  if (TypeSP complete_objc_class_type_sp =
+          LookupInCompleteClassCache(class_name)) {
+    if (CompilerType complete_class =
+            complete_objc_class_type_sp->GetFullCompilerType();
+        complete_class.GetCompleteType())
+      return is_pointer_type ? complete_class.GetPointerType() : complete_class;
+  }
 
-  if (CompilerType complete_class =
-          complete_objc_class_type_sp->GetFullCompilerType();
-      complete_class.GetCompleteType())
-    return is_pointer_type ? complete_class.GetPointerType() : complete_class;
+  assert(m_process);
+  if (CompilerType found =
+          LookupInModulesVendor(class_name, m_process->GetTarget()))
+    return is_pointer_type ? found.GetPointerType() : found;
+
+  if (CompilerType found = LookupInRuntime(class_name))
+    return is_pointer_type ? found.GetPointerType() : found;
 
   return std::nullopt;
 }
