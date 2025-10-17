@@ -7,10 +7,6 @@
 #error "missing __builtin_infer_alloc_token"
 #endif
 
-#ifndef TOKEN_MAX
-#define TOKEN_MAX 0
-#endif
-
 struct NoPtr {
   int x;
   long y;
@@ -27,11 +23,15 @@ static_assert(__builtin_infer_alloc_token(sizeof(int)) == 2689373973731826898ULL
 static_assert(__builtin_infer_alloc_token(sizeof(char*)) == 2250492667400517147ULL);
 static_assert(__builtin_infer_alloc_token(sizeof(NoPtr)) == 7465259095297095368ULL);
 static_assert(__builtin_infer_alloc_token(sizeof(WithPtr)) == 11898882936532569145ULL);
-#elif TOKEN_MAX == 2
+#elif defined(TOKEN_MAX)
+#  if TOKEN_MAX == 2
 static_assert(__builtin_infer_alloc_token(sizeof(int)) == 0);
 static_assert(__builtin_infer_alloc_token(sizeof(char*)) == 1);
 static_assert(__builtin_infer_alloc_token(sizeof(NoPtr)) == 0);
 static_assert(__builtin_infer_alloc_token(sizeof(WithPtr)) == 1);
+#  else
+#    error "unhandled TOKEN_MAX case"
+#  endif
 #else
 static_assert(__builtin_infer_alloc_token(sizeof(int)) == 2689373973731826898ULL);
 static_assert(__builtin_infer_alloc_token(sizeof(char*)) == 11473864704255292954ULL);
@@ -53,5 +53,6 @@ static_assert(__builtin_infer_alloc_token(sizeof(NoPtr) << 8) == get_token<NoPtr
 void negative_tests() {
   __builtin_infer_alloc_token(); // expected-error {{too few arguments to function call}}
   __builtin_infer_alloc_token((void)0); // expected-error {{argument may not have 'void' type}}
-  constexpr auto inference_fail = __builtin_infer_alloc_token(123); // expected-error {{must be initialized by a constant expression}}
+  constexpr auto inference_fail = __builtin_infer_alloc_token(123); // expected-error {{must be initialized by a constant expression}} \
+                                                                    // expected-note {{could not infer allocation type for __builtin_infer_alloc_token}}
 }

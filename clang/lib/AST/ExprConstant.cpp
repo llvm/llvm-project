@@ -14421,18 +14421,19 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // can be checked with __builtin_constant_p(...).
     QualType AllocType = infer_alloc::inferPossibleType(E, Info.Ctx, nullptr);
     if (AllocType.isNull())
-      return Error(E);
+      return Error(
+          E, diag::note_constexpr_infer_alloc_token_type_inference_failed);
     auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, Info.Ctx);
     if (!ATMD)
-      return Error(E);
+      return Error(E, diag::note_constexpr_infer_alloc_token_no_metadata);
     auto Mode =
         Info.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
     uint64_t BitWidth = Info.Ctx.getTypeSize(Info.Ctx.getSizeType());
     uint64_t MaxTokens =
         Info.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
-    auto MaybeToken = llvm::getAllocTokenHash(Mode, *ATMD, MaxTokens);
+    auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
     if (!MaybeToken)
-      return Error(E);
+      return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);
     return Success(llvm::APInt(BitWidth, *MaybeToken), E);
   }
 
