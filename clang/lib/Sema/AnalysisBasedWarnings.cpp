@@ -2734,6 +2734,80 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
     S.Diag(D.Loc, D.PD);
 }
 
+void sema::AnalysisBasedWarnings::FlushDiagnostics(
+    const SmallVector<clang::sema::PossiblyUnreachableDiag, 4> PUDs) {
+  for (const auto &D : PUDs)
+    S.Diag(D.Loc, D.PD);
+}
+
+void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
+    AnalysisDeclContext &AC,
+    SmallVector<clang::sema::PossiblyUnreachableDiag, 4> PUDs) {
+
+  if (PUDs.empty()) {
+    return;
+  }
+
+  bool Analyzed = false;
+
+  for (const auto &D : PUDs) {
+    for (const Stmt *S : D.Stmts)
+      AC.registerForcedBlockExpression(S);
+  }
+
+  if (AC.getCFG()) {
+    Analyzed = true;
+    for (const auto &D : PUDs) {
+      bool AllReachable = true;
+      for (const Stmt *St : D.Stmts) {
+        const CFGBlock *block = AC.getBlockForRegisteredExpression(St);
+        CFGReverseBlockReachabilityAnalysis *cra =
+            AC.getCFGReachablityAnalysis();
+        if (block && cra) {
+          // Can this block be reached from the entrance?
+          if (!cra->isReachable(&AC.getCFG()->getEntry(), block)) {
+            AllReachable = false;
+            break;
+          }
+        }
+        // If we cannot map to a basic block, assume the statement is
+        // reachable.
+      }
+
+      if (AllReachable)
+        S.Diag(D.Loc, D.PD);
+    }
+  }
+
+  if (!Analyzed)
+    FlushDiagnostics(PUDs);
+}
+
+void sema::AnalysisBasedWarnings::RegisterVarDeclWarning(
+    VarDecl *VD, clang::sema::PossiblyUnreachableDiag PUD) {
+  VarDeclPossiblyUnreachableDiags[VD].emplace_back(PUD);
+}
+
+void sema::AnalysisBasedWarnings::IssueWarningsForRegisteredVarDecl(
+    VarDecl *VD) {
+  if (VarDeclPossiblyUnreachableDiags.find(VD) ==
+      VarDeclPossiblyUnreachableDiags.end()) {
+    return;
+  }
+
+  AnalysisDeclContext AC(nullptr, VD);
+
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddEHEdges = false;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddTemporaryDtors = true;
+  AC.getCFGBuildOptions().AddCXXNewAllocator = false;
+  AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+
+  EmitPossiblyUnreachableDiags(AC, VarDeclPossiblyUnreachableDiags[VD]);
+}
+
 // An AST Visitor that calls a callback function on each callable DEFINITION
 // that is NOT in a dependent context:
 class CallableVisitor : public DynamicRecursiveASTVisitor {
@@ -2945,45 +3019,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Emit delayed diagnostics.
-  if (!fscope->PossiblyUnreachableDiags.empty()) {
-    bool analyzed = false;
-
-    // Register the expressions with the CFGBuilder.
-    for (const auto &D : fscope->PossiblyUnreachableDiags) {
-      for (const Stmt *S : D.Stmts)
-        AC.registerForcedBlockExpression(S);
-    }
-
-    if (AC.getCFG()) {
-      analyzed = true;
-      for (const auto &D : fscope->PossiblyUnreachableDiags) {
-        bool AllReachable = true;
-        for (const Stmt *S : D.Stmts) {
-          const CFGBlock *block = AC.getBlockForRegisteredExpression(S);
-          CFGReverseBlockReachabilityAnalysis *cra =
-              AC.getCFGReachablityAnalysis();
-          // FIXME: We should be able to assert that block is non-null, but
-          // the CFG analysis can skip potentially-evaluated expressions in
-          // edge cases; see test/Sema/vla-2.c.
-          if (block && cra) {
-            // Can this block be reached from the entrance?
-            if (!cra->isReachable(&AC.getCFG()->getEntry(), block)) {
-              AllReachable = false;
-              break;
-            }
-          }
-          // If we cannot map to a basic block, assume the statement is
-          // reachable.
-        }
-
-        if (AllReachable)
-          S.Diag(D.Loc, D.PD);
-      }
-    }
-
-    if (!analyzed)
-      flushDiagnostics(S, fscope);
-  }
+  EmitPossiblyUnreachableDiags(AC, fscope->PossiblyUnreachableDiags);
 
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
