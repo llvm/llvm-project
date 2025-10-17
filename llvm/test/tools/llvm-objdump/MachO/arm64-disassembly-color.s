@@ -6,7 +6,7 @@
 // RUN: llvm-objdump --disassembler-color=off --disassemble %t | FileCheck %s --check-prefix=NOCOLOR
 // RUN: llvm-objdump --disassembler-color=terminal --disassemble %t | FileCheck %s --check-prefix=NOCOLOR
 
-// Test with --macho flag to ensure DisassembleMachO respects color settings
+//// Test with --macho flag to ensure DisassembleMachO respects color settings.
 // RUN: llvm-objdump --disassembler-color=on --macho --disassemble %t | FileCheck %s --check-prefix=COLOR
 // RUN: llvm-objdump --disassembler-color=off --macho --disassemble %t | FileCheck %s --check-prefix=NOCOLOR
 

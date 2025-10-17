@@ -7235,6 +7235,22 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
   return DbgObj;
 }
 
+static void setupMachOInstPrinter(MCInstPrinter *IP) {
+  IP->setPrintImmHex(PrintImmHex);
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    IP->setUseColor(true);
+    break;
+  case ColorOutput::Auto:
+    IP->setUseColor(outs().has_colors());
+    break;
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    IP->setUseColor(false);
+    break;
+  }
+}
+
 static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
@@ -7319,21 +7335,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
-  // Set the display preference for hex vs. decimal immediates.
-  IP->setPrintImmHex(PrintImmHex);
-  // Set up disassembler color output.
-  switch (DisassemblyColor) {
-  case ColorOutput::Enable:
-    IP->setUseColor(true);
-    break;
-  case ColorOutput::Auto:
-    IP->setUseColor(outs().has_colors());
-    break;
-  case ColorOutput::Disable:
-  case ColorOutput::Invalid:
-    IP->setUseColor(false);
-    break;
-  }
+  setupMachOInstPrinter(IP.get());
+
   // Comment stream and backing vector.
   SmallString<128> CommentsToEmit;
   raw_svector_ostream CommentStream(CommentsToEmit);
@@ -7385,21 +7388,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
         *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
-    // Set the display preference for hex vs. decimal immediates.
-    ThumbIP->setPrintImmHex(PrintImmHex);
-    // Set up disassembler color output.
-    switch (DisassemblyColor) {
-    case ColorOutput::Enable:
-      ThumbIP->setUseColor(true);
-      break;
-    case ColorOutput::Auto:
-      ThumbIP->setUseColor(outs().has_colors());
-      break;
-    case ColorOutput::Disable:
-    case ColorOutput::Invalid:
-      ThumbIP->setUseColor(false);
-      break;
-    }
+    setupMachOInstPrinter(ThumbIP.get());
   }
 
 #undef CHECK_TARGET_INFO_CREATION
