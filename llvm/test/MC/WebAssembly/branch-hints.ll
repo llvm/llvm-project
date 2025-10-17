@@ -32,15 +32,15 @@
 ; ASM-CHECK-NEXT:       .int8   2
 ; ASM-CHECK-DAG:        .uleb128 test_unlikely_likely_branch@FUNCINDEX
 ; ASM-CHECK-DAG-NEXT:   .int8   2
-; ASM-CHECK-DAG-NEXT:   .uleb128 .Ltmp0@DEBUGREF
+; ASM-CHECK-DAG-NEXT:   .uleb128 .Ltmp0
 ; ASM-CHECK-DAG-NEXT:   .int8   1
 ; ASM-CHECK-DAG-NEXT:   .int8   0
-; ASM-CHECK-DAG-NEXT:   .uleb128 .Ltmp1@DEBUGREF
+; ASM-CHECK-DAG-NEXT:   .uleb128 .Ltmp1
 ; ASM-CHECK-DAG-NEXT:   .int8   1
 ; ASM-CHECK-DAG-NEXT:   .int8   1
 ; ASM-CHECK-DAG:        .uleb128 test_likely_branch@FUNCINDEX
 ; ASM-CHECK-DAG-NEXT:   .int8   1
-; ASM-CHECK-DAG-NEXT:   .uleb128 .Ltmp2@DEBUGREF
+; ASM-CHECK-DAG-NEXT:   .uleb128 .Ltmp2
 ; ASM-CHECK-DAG-NEXT:   .int8   1
 ; ASM-CHECK-DAG-NEXT:   .int8   1
 
@@ -54,7 +54,7 @@
 ; YAML-CHECK-NEXT:         Offset:          0x1
 ; YAML-CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; YAML-CHECK-NEXT:         Index:           1
-; YAML-CHECK-NEXT:         Offset:          0xD
+; YAML-CHECK-NEXT:         Offset:          0x15
 ; YAML-CHECK-NEXT:     Name:            metadata.code.branch_hint
 ; YAML-CHECK-NEXT:     Entries:
 ; YAML-CHECK-NEXT:       - FuncIdx:         0
@@ -224,15 +224,15 @@ test_likely_branch:                     # @test_likely_branch
 	.int8	2
 	.uleb128 test_unlikely_likely_branch@FUNCINDEX
 	.int8	2
-	.uleb128 .Ltmp0@DEBUGREF
+	.uleb128 .Ltmp0
 	.int8	1
 	.int8	0
-	.uleb128 .Ltmp1@DEBUGREF
+	.uleb128 .Ltmp1
 	.int8	1
 	.int8	1
 	.uleb128 test_likely_branch@FUNCINDEX
 	.int8	1
-	.uleb128 .Ltmp2@DEBUGREF
+	.uleb128 .Ltmp2
 	.int8	1
 	.int8	1
 	.section	.text.test_likely_branch,"",@

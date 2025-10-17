@@ -210,12 +210,12 @@ test_func1:                             # @test_func1
  .int8	2
  .uleb128 _start@FUNCINDEX
  .int8	1
- .uleb128 .Ltmp0@DEBUGREF
+ .uleb128 .Ltmp0
  .int8	1
  .int8	0
  .uleb128 test_func1@FUNCINDEX
  .int8	1
- .uleb128 .Ltmp1@DEBUGREF
+ .uleb128 .Ltmp1
  .int8	1
  .int8	1
  .section	.text.test_func1,"",@
@@ -359,15 +359,15 @@ test1:                                  # @test1
  .int8	2
  .uleb128 test0@FUNCINDEX
  .int8	2
- .uleb128 .Ltmp0@DEBUGREF
+ .uleb128 .Ltmp0
  .int8	1
  .int8	0
- .uleb128 .Ltmp1@DEBUGREF
+ .uleb128 .Ltmp1
  .int8	1
  .int8	1
  .uleb128 test1@FUNCINDEX
  .int8	1
- .uleb128 .Ltmp2@DEBUGREF
+ .uleb128 .Ltmp2
  .int8	1
  .int8	1
  .section	.text.test1,"",@

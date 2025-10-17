@@ -472,8 +472,8 @@ void WebAssemblyAsmPrinter::emitBranchHintSection() const {
     OutStreamer->emitULEB128IntValue(Hints.size());
     for (const auto &[instrSym, hint] : Hints) {
       // offset from function start
-      OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
-          instrSym, WebAssembly::S_DEBUG_REF, OutContext));
+      OutStreamer->emitULEB128Value(
+          MCSymbolRefExpr::create(instrSym, WebAssembly::S_None, OutContext));
       OutStreamer->emitULEB128IntValue(1); // hint size
       OutStreamer->emitULEB128IntValue(hint);
     }

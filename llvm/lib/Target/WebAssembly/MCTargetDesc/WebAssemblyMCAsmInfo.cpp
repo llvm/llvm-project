@@ -29,7 +29,6 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {WebAssembly::S_GOT, "GOT"},
     {WebAssembly::S_GOT_TLS, "GOT@TLS"},
     {WebAssembly::S_FUNCINDEX, "FUNCINDEX"},
-    {WebAssembly::S_DEBUG_REF, "DEBUGREF"},
 };
 
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
