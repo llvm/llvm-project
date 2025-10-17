@@ -739,6 +739,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
       Occupancy(MFI.getOccupancy()),
+      MaxArchVGPRPressure(MFI.getMaxArchVGPRPressure()),
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
       FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
       StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)),
@@ -787,6 +788,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   MaxMemoryClusterDWords = YamlMFI.MaxMemoryClusterDWords;
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
+  MaxArchVGPRPressure = YamlMFI.MaxArchVGPRPressure;
   IsEntryFunction = YamlMFI.IsEntryFunction;
   NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;
