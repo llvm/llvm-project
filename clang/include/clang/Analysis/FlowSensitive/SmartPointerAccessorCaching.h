@@ -167,6 +167,8 @@ void transferSmartPointerLikeCachedDeref(
   State.Env.setStorageLocation(*DerefExpr, LocForValue);
 }
 
+// This was introduced after the QualType was added to InitializeLoc, so
+// we don't provide a compatibility wrapper.
 template <typename LatticeT>
 void transferSmartPointerLikeConstructor(
     const CXXConstructExpr *ConstructOperator,
