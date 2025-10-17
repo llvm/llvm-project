@@ -285,11 +285,25 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataSubmitRectImpl(MemcpyRectTy TgtRect, MemcpyRectTy HstRect,
+                           uint32_t Size[3],
+                           AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "Host does not yet support 2D/3D copies");
+  }
+
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     std::memcpy(HstPtr, TgtPtr, Size);
     return Plugin::success();
+  }
+
+  Error dataRetrieveRectImpl(MemcpyRectTy HstRect, MemcpyRectTy TgtRect,
+                             uint32_t Size[3],
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "Host does not yet support 2D/3D copies");
   }
 
   /// Exchange data between two devices within the plugin. This function is not
@@ -301,6 +315,13 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // GenELF64PluginTy::isDataExchangable() returns false.
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "dataExchangeImpl not supported");
+  }
+
+  Error dataExchangeRectImpl(MemcpyRectTy SrcRect, GenericDeviceTy &Dst,
+                             MemcpyRectTy DstRect, uint32_t Size[3],
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "Host does not yet support 2D/3D copies");
   }
 
   /// Insert a data fence between previous data operations and the following
