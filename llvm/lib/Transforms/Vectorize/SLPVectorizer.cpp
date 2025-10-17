@@ -6921,8 +6921,8 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
     ArrayRef<Value *> PointerOps, Type *ElemTy, Align Alignment,
-    const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff, Value *Ptr0,
-    Value *PtrN, StridedPtrInfo &SPtrInfo) const {
+    const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
+    Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const unsigned Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase(Sz);
   // Go through `PointerOps` in sorted order and record offsets from `Ptr0`.
