@@ -1505,16 +1505,16 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       return AffineMap::get(val.getContext());
     // Get the layout of the vector type.
     xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(val);
-    // If no layout is specified, assume the inner most dimension is distributed
-    // for now.
+    // If no layout is specified, that means no distribution.
     if (!layout)
-      return AffineMap::getMultiDimMapWithTargets(
-          vecRank, {static_cast<unsigned int>(vecRank - 1)}, val.getContext());
+      return AffineMap::getMultiDimMapWithTargets(vecRank, {},
+                                                  val.getContext());
     // Expecting vector and layout rank to match.
     assert(layout.getRank() == vecRank &&
            "Expecting vector and layout rank to match");
-    // A dimension is distributed if its layout value is > 1 and the dimension
-    // size is evenly divisible by the layout value.
+    // A dimension is distributed only if layout suggests there are
+    // multiple lanes assigned for this dimension and the shape can be evenly
+    // distributed to those lanes.
     SmallVector<unsigned int> distributedDims;
     for (auto [i, v] : llvm::enumerate(layout.getEffectiveLaneLayoutAsInt())) {
       if (v > 1 && vecType.getShape()[i] % v == 0)
