@@ -711,7 +711,7 @@ static void genDataOperandOperations(
   }
 }
 
-template <typename GlobalOp, typename EntryOp, typename DeclareOp,
+template <typename GlobalCtorOrDtorOp, typename EntryOp, typename DeclareOp,
           typename ExitOp>
 static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
                                   fir::FirOpBuilder &builder,
@@ -719,8 +719,8 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
                                   mlir::acc::DataClause clause,
                                   const std::string &declareGlobalName,
                                   bool implicit, std::stringstream &asFortran) {
-  GlobalOp declareGlobalOp =
-      GlobalOp::create(modBuilder, loc, declareGlobalName);
+  GlobalCtorOrDtorOp declareGlobalOp =
+      GlobalCtorOrDtorOp::create(modBuilder, loc, declareGlobalName);
   builder.createBlock(&declareGlobalOp.getRegion(),
                       declareGlobalOp.getRegion().end(), {}, {});
   builder.setInsertionPointToEnd(&declareGlobalOp.getRegion().back());
@@ -742,7 +742,8 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   else
     DeclareOp::create(builder, loc, mlir::Value{},
                       mlir::ValueRange(entryOp.getAccVar()));
-  if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
+  if constexpr (std::is_same_v<GlobalCtorOrDtorOp,
+                               mlir::acc::GlobalDestructorOp>) {
     if constexpr (std::is_same_v<ExitOp, mlir::acc::DeclareLinkOp>) {
       // No destructor emission for declare link in this path to avoid
       // complex var/varType/varPtrPtr signatures. The ctor registers the link.
@@ -4398,22 +4399,19 @@ static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
                              EmitterFn &&emitCtorDtor) {
   Fortran::semantics::Symbol &sym = getSymbolFromAccObject(obj);
   if (!(sym.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
-        Fortran::semantics::FindCommonBlockContaining(sym))) {
+        Fortran::semantics::FindCommonBlockContaining(sym)))
     return;
-  }
 
   fir::GlobalOp globalOp =
       lookupGlobalBySymbolOrEquivalence(converter, builder, sym);
-  if (!globalOp) {
+  if (!globalOp)
     llvm::report_fatal_error("could not retrieve global symbol");
-  }
 
   std::stringstream ctorName;
   ctorName << globalOp.getSymName().str() << "_acc_ctor";
   if (builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
-          ctorName.str())) {
+          ctorName.str()))
     return;
-  }
 
   mlir::Location operandLocation = genOperandLocation(converter, obj);
   addDeclareAttr(builder, globalOp.getOperation(), clause);
