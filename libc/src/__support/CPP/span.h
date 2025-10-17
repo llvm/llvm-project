@@ -28,7 +28,7 @@ namespace cpp {
 // - No implicit type conversion (e.g. Span<B>, initialized with As where A
 //   inherits from B),
 // - No reverse iterators
-template <typename T> class LIBC_GSL_POINTER span {
+template <typename T> class span {
   template <typename U>
   LIBC_INLINE_VAR static constexpr bool is_const_view_v =
       !cpp::is_const_v<U> && cpp::is_const_v<T> &&
@@ -64,12 +64,11 @@ public:
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  LIBC_INLINE constexpr span(LIBC_LIFETIME_BOUND U (&arr)[N])
-      : span_data(arr), span_size(N) {}
+  LIBC_INLINE constexpr span(U (&arr)[N]) : span_data(arr), span_size(N) {}
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  LIBC_INLINE constexpr span(LIBC_LIFETIME_BOUND array<U, N> &arr)
+  LIBC_INLINE constexpr span(array<U, N> &arr)
       : span_data(arr.data()), span_size(arr.size()) {}
 
   template <typename U, cpp::enable_if_t<is_compatible_v<U>, bool> = true>

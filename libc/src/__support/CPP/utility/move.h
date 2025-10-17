@@ -17,8 +17,7 @@ namespace cpp {
 
 // move
 template <class T>
-LIBC_INLINE constexpr cpp::remove_reference_t<T> &&
-move(LIBC_LIFETIME_BOUND T &&t) {
+LIBC_INLINE constexpr cpp::remove_reference_t<T> &&move(T &&t) {
   return static_cast<typename cpp::remove_reference_t<T> &&>(t);
 }
 
