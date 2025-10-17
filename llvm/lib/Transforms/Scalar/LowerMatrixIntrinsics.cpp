@@ -97,10 +97,11 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
 static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
                                             cl::init(false));
 
-static cl::opt<bool> SplitMatmulRemainder(
-    "matrix-split-matmul-remainder", cl::Hidden,
-    cl::desc("Split remainder vector in the inner loop of matmul"),
-    cl::init(true));
+static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
+    "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
+    cl::desc("Illegal remainder vectors over this size in bits should be split "
+             "in the inner loop of matmul"),
+    cl::init(0));
 
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
@@ -1732,8 +1733,13 @@ public:
       return BlockSize;
 
     // If the remainder is also a legal type just use it.
-    if (TTI.isTypeLegal(FixedVectorType::get(EltType, Remainder)) ||
-        !SplitMatmulRemainder)
+    FixedVectorType *VecTy = FixedVectorType::get(EltType, Remainder);
+    if (TTI.isTypeLegal(VecTy))
+      return Remainder;
+
+    // Similarly, if the vector is small enough that we don't want
+    // to split further.
+    if (VecTy->getPrimitiveSizeInBits() <= SplitMatmulRemainderOverThreshold)
       return Remainder;
 
     // Gradually lower the vectorization factor to cover the
