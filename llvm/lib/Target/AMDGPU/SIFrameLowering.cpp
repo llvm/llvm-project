@@ -1141,7 +1141,9 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   };
 
   // Emit CFI rules for caller saved Arch VGPRs which are clobbered
-  for_each(AMDGPU::VGPR_32RegClass.getRegisters(), ProcessReg);
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  for_each(AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs),
+           ProcessReg);
 
   // Emit CFI rules for caller saved Accum VGPRs which are clobbered
   if (ST.hasMAIInsts()) {
