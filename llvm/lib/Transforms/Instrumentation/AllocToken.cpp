@@ -393,9 +393,8 @@ bool AllocToken::instrumentFunction(Function &F) {
   }
 
   if (!IntrinsicInsts.empty()) {
-    for (auto *II : IntrinsicInsts) {
+    for (auto *II : IntrinsicInsts)
       replaceIntrinsicInst(II, ORE);
-    }
     Modified = true;
     NumFunctionsModified++;
   }
@@ -417,7 +416,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   if (TLI.getLibFunc(*Callee, Func)) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
-  } else if (Options.Extended && getAllocTokenMetadata(CB)) {
+  } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
     return NotLibFunc;
   }
 
