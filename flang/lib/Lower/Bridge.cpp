@@ -4987,11 +4987,8 @@ private:
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
-      if (Fortran::lower::isTransferWithConversion(rhs)) {
+      if (auto elementalOp = Fortran::lower::isTransferWithConversion(rhs)) {
         mlir::OpBuilder::InsertionGuard insertionGuard(builder);
-        auto elementalOp =
-            mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp());
-        assert(elementalOp && "expect elemental op");
         auto designateOp =
             *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
         builder.setInsertionPoint(elementalOp);

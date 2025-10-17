@@ -575,7 +575,7 @@ public:
   /// cached embeddings should be invalidated to ensure
   /// correctness/recomputation. This is a no-op for SymbolicEmbedder but
   /// removes all the cached entries in FlowAwareEmbedder.
-  virtual void invalidateEmbeddings() { return; }
+  virtual void invalidateEmbeddings() {}
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.

@@ -956,7 +956,7 @@ inline parsed_inst_t ExpressionParser::buildNumericOp(
          << ", type = " << ty << " ***";
   auto tysToPop = SmallVector<Type, numOperands>();
   tysToPop.resize(numOperands);
-  std::fill(tysToPop.begin(), tysToPop.end(), ty);
+  llvm::fill(tysToPop, ty);
   auto operands = popOperands(tysToPop);
   if (failed(operands))
     return failure();

@@ -415,6 +415,13 @@ def OpenACC_ConstructResource : Resource<"::mlir::acc::ConstructResource">;
 // Define a resource for the OpenACC current device setting.
 def OpenACC_CurrentDeviceIdResource : Resource<"::mlir::acc::CurrentDeviceIdResource">;
 
+// Attribute for saving variable names - this can be attached to non-acc-dialect
+// operations in order to ensure the name is preserved.
+def OpenACC_VarNameAttr : OpenACC_Attr<"VarName", "var_name"> {
+  let parameters = (ins StringRefParameter<"">:$name);
+  let assemblyFormat = "`<` $name `>`";
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
@@ -1316,6 +1323,24 @@ def OpenACC_PrivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a PrivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1410,6 +1435,24 @@ def OpenACC_FirstprivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a FirstprivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<FirstprivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
