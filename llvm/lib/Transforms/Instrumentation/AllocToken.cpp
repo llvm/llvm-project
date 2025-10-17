@@ -189,8 +189,7 @@ public:
     if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
       AllocTokenMetadata Metadata{S->getString(), containsPointer(N)};
-      if (auto Token =
-              getAllocTokenHash(TokenMode::TypeHash, Metadata, MaxTokens))
+      if (auto Token = getAllocToken(TokenMode::TypeHash, Metadata, MaxTokens))
         return *Token;
     }
     // Fallback.
@@ -222,8 +221,8 @@ public:
     if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
       AllocTokenMetadata Metadata{S->getString(), containsPointer(N)};
-      if (auto Token = getAllocTokenHash(TokenMode::TypeHashPointerSplit,
-                                         Metadata, MaxTokens))
+      if (auto Token = getAllocToken(TokenMode::TypeHashPointerSplit, Metadata,
+                                     MaxTokens))
         return *Token;
     }
     // Pick the fallback token (ClFallbackToken), which by default is 0, meaning
@@ -357,9 +356,8 @@ bool AllocToken::instrumentFunction(Function &F) {
   }
 
   if (!IntrinsicInsts.empty()) {
-    for (auto *II : IntrinsicInsts) {
+    for (auto *II : IntrinsicInsts)
       replaceIntrinsicInst(II, ORE);
-    }
     Modified = true;
     NumFunctionsModified++;
   }
@@ -381,7 +379,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   if (TLI.getLibFunc(*Callee, Func)) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
-  } else if (Options.Extended && getAllocTokenMetadata(CB)) {
+  } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
     return NotLibFunc;
   }
 
