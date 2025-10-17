@@ -40,10 +40,11 @@ module {
 
 cir.func dso_local @invalid_catch_empty_block() {
   cir.scope {
-    // expected-error @below {{'cir.try' op region #1 ('handler_regions') failed to verify constraint: region with at least 1 blocks}}
     cir.try {
       cir.yield
-    } catch all {
+    }
+    // expected-error @below {{'cir.try' handler region shall not be empty}}
+    catch all {
     }
   }
   cir.return
