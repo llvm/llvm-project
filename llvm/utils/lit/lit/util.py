@@ -164,14 +164,7 @@ def mkdir(path):
 def mkdir_p(path):
     """mkdir_p(path) - Make the "path" directory, if it does not exist; this
     will also make directories for any missing parent directories."""
-    if not path or (sys.platform != "cygwin" and os.path.exists(path)):
-        return
-
-    parent = os.path.dirname(path)
-    if parent != path:
-        mkdir_p(parent)
-
-    mkdir(path)
+    os.makedirs(path, exist_ok=True)
 
 
 def listdir_files(dirname, suffixes=None, exclude_filenames=None, prefixes=None):
