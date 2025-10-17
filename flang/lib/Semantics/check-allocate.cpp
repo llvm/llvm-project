@@ -151,7 +151,9 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
@@ -439,7 +441,7 @@ static bool HaveCompatibleLengths(
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{
         evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
@@ -452,7 +454,7 @@ static bool HaveCompatibleLengths(
     auto v1{
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{type2.knownLength()};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
@@ -598,7 +600,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           std::optional<evaluate::ConstantSubscript> lbound;
           if (const auto &lb{std::get<0>(shapeSpec.t)}) {
             lbound.reset();
-            const auto &lbExpr{lb->thing.thing.value()};
+            const auto &lbExpr{parser::UnwrapRef<parser::Expr>(lb)};
             if (const auto *expr{GetExpr(context, lbExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
@@ -609,7 +611,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             lbound = 1;
           }
           if (lbound) {
-            const auto &ubExpr{std::get<1>(shapeSpec.t).thing.thing.value()};
+            const auto &ubExpr{
+                parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t))};
             if (const auto *expr{GetExpr(context, ubExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};

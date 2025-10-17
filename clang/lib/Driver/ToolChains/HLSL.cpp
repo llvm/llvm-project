@@ -64,7 +64,7 @@ bool isLegalShaderModel(Triple &T) {
   } break;
   case Triple::EnvironmentType::RootSignature:
     VersionTuple MinVer(1, 0);
-    VersionTuple MaxVer(1, 1);
+    VersionTuple MaxVer(1, 2);
     return MinVer <= Version && Version <= MaxVer;
   }
   return false;
@@ -218,7 +218,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 
   if (SpvExtensionArg.compare_insensitive("DXC") == 0) {
     bool first = true;
-    std::string Operand;
     for (StringRef E : DxcSupportedExtensions) {
       if (!first)
         out << ",";

@@ -174,7 +174,7 @@ def Shard_NeighborsLinearIndicesOp : Shard_Op<"neighbors_linear_indices", [
     ```
     The above returns two indices, `633` and `693`, which correspond to the
     index of the previous process `(1, 1, 3)`, and the next process 
-    `(1, 3, 3) along the split axis `1`.
+    `(1, 3, 3)` along the split axis `1`.
 
     A negative value is returned if there is no neighbor in the respective
     direction along the given `split_axes`.

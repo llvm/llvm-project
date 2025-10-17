@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1353,6 +1352,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG, MVT::f16, Promote);
     setOperationAction(ISD::FLOG10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
+    setOperationAction(ISD::LRINT, MVT::f16, Expand);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
     setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
@@ -13816,7 +13816,7 @@ bool ARMTargetLowering::isDesirableToCommuteXorWithShift(
 }
 
 bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -13826,7 +13826,8 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   if (!Subtarget->isThumb1Only())
     return true;
 
-  if (Level == BeforeLegalizeTypes)
+  EVT VT = N->getValueType(0);
+  if (VT.getScalarSizeInBits() > 32)
     return true;
 
   return false;

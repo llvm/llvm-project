@@ -8,6 +8,7 @@ add_llvm_unittest(CASTests
   ActionCacheTest.cpp
   CASTestConfig.cpp
   ObjectStoreTest.cpp
+  OnDiskDataAllocatorTest.cpp
   OnDiskTrieRawHashMapTest.cpp
   ProgramTest.cpp
   )

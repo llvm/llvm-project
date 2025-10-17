@@ -2184,8 +2184,9 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   Input >> Styles;
   if (Input.error())
     return Input.error();
+  if (Styles.empty())
+    return make_error_code(ParseError::Success);
 
-  assert(!Styles.empty());
   const auto StyleCount = Styles.size();
 
   // Start from the second style as (only) the first one may be the default.
@@ -2435,7 +2436,7 @@ private:
       const auto *NextLine = I + 1 == End ? nullptr : I[1];
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional || !Token->isOneOf(tok::l_brace, tok::r_brace))
+        if (!Token->Optional || Token->isNoneOf(tok::l_brace, tok::r_brace))
           continue;
         auto *Next = Token->Next;
         assert(Next || Token == Line->Last);
@@ -3199,7 +3200,7 @@ private:
                                Keywords.kw_NS_OPTIONS, TT_ObjCBlockLBrace,
                                TT_ObjCBlockLParen, TT_ObjCDecl, TT_ObjCForIn,
                                TT_ObjCMethodExpr, TT_ObjCMethodSpecifier,
-                               TT_ObjCProperty)) {
+                               TT_ObjCProperty, TT_ObjCSelector)) {
           LLVM_DEBUG(llvm::dbgs()
                      << "Detected ObjC at location "
                      << FormatTok->Tok.getLocation().printToString(

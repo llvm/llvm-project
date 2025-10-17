@@ -208,6 +208,75 @@ void test_dmf_basic2(char *p1, char *res1, char *res2,
   __builtin_mma_build_dmr((__dmr1024*)res2, vv, vv, vv, vv, vv, vv, vv, vv);
   __builtin_mma_disassemble_dmr(res1, (__dmr1024*)p1);
 }
+
+// CHECK-LABEL: define dso_local void @test_dmsha2hash(
+// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_dmsha2hash(
+// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// AIX-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// AIX-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// AIX-NEXT:    ret void
+//
+void test_dmsha2hash(unsigned char *vdmrp1, unsigned char *vdmrp2, unsigned char *resp) {
+  __dmr1024 vdmr1 = *((__dmr1024 *)vdmrp1);
+  __dmr1024 vdmr2 = *((__dmr1024 *)vdmrp2);
+  __builtin_mma_dmsha2hash(&vdmr1, &vdmr2, 1);
+  *((__dmr1024 *)resp) = vdmr1;
+}
+
+// CHECK-LABEL: define dso_local void @test_dmsha3hash(
+// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
+// CHECK-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA9]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_dmsha3hash(
+// AIX-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA9:![0-9]+]]
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
+// AIX-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA9]]
+// AIX-NEXT:    ret void
+//
+void test_dmsha3hash(unsigned char *vdmrpp,  unsigned char *resp) {
+  __dmr2048 vdmrp = *((__dmr2048 *)vdmrpp);
+  __builtin_mma_dmsha3hash(&vdmrp, 4);
+  *((__dmr2048 *)resp) = vdmrp;
+}
+
+// CHECK-LABEL: define dso_local void @test_dmxxshapad(
+// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 1, i32 5)
+// CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_dmxxshapad(
+// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 1, i32 5)
+// AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA6]]
+// AIX-NEXT:    ret void
+//
+void test_dmxxshapad(unsigned char *vdmrp, vector unsigned char vc, unsigned char *resp) {
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
+  __builtin_mma_dmxxshapad(&vdmr, vc, 2, 1, 5);
+  *((__dmr1024 *)resp) = vdmr;
+}
 //.
 // CHECK: [[__VECTOR_PAIR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // CHECK: [[META3]] = !{!"__vector_pair", [[META4:![0-9]+]], i64 0}
@@ -216,6 +285,8 @@ void test_dmf_basic2(char *p1, char *res1, char *res2,
 // CHECK: [[__DMR1024_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
 // CHECK: [[META7]] = !{!"__dmr1024", [[META4]], i64 0}
 // CHECK: [[CHAR_TBAA8]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[__DMR2048_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"__dmr2048", [[META4]], i64 0}
 //.
 // AIX: [[__VECTOR_PAIR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // AIX: [[META3]] = !{!"__vector_pair", [[META4:![0-9]+]], i64 0}
@@ -224,4 +295,6 @@ void test_dmf_basic2(char *p1, char *res1, char *res2,
 // AIX: [[__DMR1024_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
 // AIX: [[META7]] = !{!"__dmr1024", [[META4]], i64 0}
 // AIX: [[CHAR_TBAA8]] = !{[[META4]], [[META4]], i64 0}
+// AIX: [[__DMR2048_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// AIX: [[META10]] = !{!"__dmr2048", [[META4]], i64 0}
 //.

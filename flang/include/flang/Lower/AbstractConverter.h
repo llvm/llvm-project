@@ -123,6 +123,10 @@ public:
   virtual Fortran::lower::SymMap::StorageDesc
   getSymbolStorage(SymbolRef sym) = 0;
 
+  /// Return the Symbol Map used to map semantics::Symbol to their SSA
+  /// values in the generated MLIR.
+  virtual Fortran::lower::SymMap &getSymbolMap() = 0;
+
   /// Override lowering of expression with pre-lowered values.
   /// Associate mlir::Value to evaluate::Expr. All subsequent call to
   /// genExprXXX() will replace any occurrence of an overridden

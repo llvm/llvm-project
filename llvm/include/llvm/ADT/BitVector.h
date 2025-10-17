@@ -570,10 +570,7 @@ public:
   template <class F, class... ArgTys>
   static BitVector &apply(F &&f, BitVector &Out, BitVector const &Arg,
                           ArgTys const &...Args) {
-    assert(llvm::all_of(
-               std::initializer_list<unsigned>{Args.size()...},
-               [&Arg](auto const &BV) { return Arg.size() == BV; }) &&
-           "consistent sizes");
+    assert(((Arg.size() == Args.size()) && ...) && "consistent sizes");
     Out.resize(Arg.size());
     for (size_type I = 0, E = Arg.Bits.size(); I != E; ++I)
       Out.Bits[I] = f(Arg.Bits[I], Args.Bits[I]...);

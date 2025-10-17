@@ -549,8 +549,7 @@ public:
   bool CheckNew = false;
 
   /// The HLSL root signature version for dxil.
-  llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
-      llvm::dxbc::RootSignatureVersion::V1_1;
+  llvm::dxbc::RootSignatureVersion HLSLRootSigVer;
 
   /// The HLSL root signature that will be used to overide the root signature
   /// used for the shader entry point.
@@ -757,6 +756,15 @@ public:
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
+
+  /// Returns the most applicable C standard-compliant language version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<uint32_t> getCLangStd() const;
+
+  /// Returns the most applicable C++ standard-compliant language
+  /// version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<uint32_t> getCPlusPlusLangStd() const;
 };
 
 /// Floating point control options

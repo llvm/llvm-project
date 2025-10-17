@@ -285,11 +285,16 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // When decl is true, it means that module is only being used in this
+    // compilation unit and it is defined elsewhere. But if the file/line/scope
+    // fields are valid, the module is not merged with its definition and is
+    // considered different. So we only set those fields when decl is false.
     modAttr = mlir::LLVM::DIModuleAttr::get(
-        context, fileAttr, scope, mlir::StringAttr::get(context, name),
+        context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
+        mlir::StringAttr::get(context, name),
         /* configMacros */ mlir::StringAttr(),
         /* includePath */ mlir::StringAttr(),
-        /* apinotes */ mlir::StringAttr(), line, decl);
+        /* apinotes */ mlir::StringAttr(), decl ? 0 : line, decl);
     moduleMap[name] = modAttr;
   }
   return modAttr;
@@ -696,7 +701,8 @@ void AddDebugInfoPass::runOnOperation() {
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel,
       /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
-      /*splitDebugFilename=*/mlir::StringAttr());
+      splitDwarfFile.empty() ? mlir::StringAttr()
+                             : mlir::StringAttr::get(context, splitDwarfFile));
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);

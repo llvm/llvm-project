@@ -132,9 +132,9 @@ STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
-static cl::opt<bool>
-EnableCodeSinking("instcombine-code-sinking", cl::desc("Enable code sinking"),
-                                              cl::init(true));
+static cl::opt<bool> EnableCodeSinking("instcombine-code-sinking",
+                                       cl::desc("Enable code sinking"),
+                                       cl::init(true));
 
 static cl::opt<unsigned> MaxSinkNumUsers(
     "instcombine-max-sink-users", cl::init(32),
@@ -144,7 +144,9 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
@@ -1688,6 +1690,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
 //    2) (fp_binop ({s|u}itofp x), FpC)
 //        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
 Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
+  // Don't perform the fold on vectors, as the integer operation may be much
+  // more expensive than the float operation in that case.
+  if (BO.getType()->isVectorTy())
+    return nullptr;
+
   std::array<Value *, 2> IntOps = {nullptr, nullptr};
   Constant *Op1FpC = nullptr;
   // Check for:
@@ -1735,7 +1742,7 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   Constant *Zero = ConstantInt::getNullValue(BO.getType());
   Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
   Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
-  return createSelectInst(X, TVal, FVal);
+  return createSelectInstWithUnknownProfile(X, TVal, FVal);
 }
 
 static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
@@ -1967,12 +1974,6 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
 
     NewPhiValues.push_back(nullptr);
     OpsToMoveUseToIncomingBB.push_back(i);
-
-    // If the InVal is an invoke at the end of the pred block, then we can't
-    // insert a computation after it without breaking the edge.
-    if (isa<InvokeInst>(InVal))
-      if (cast<Instruction>(InVal)->getParent() == InBB)
-        return nullptr;
 
     // Do not push the operation across a loop backedge. This could result in
     // an infinite combine loop, and is generally non-profitable (especially
@@ -5169,6 +5170,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // - or: pick -1
   // - select's condition: if the true value is constant, choose it by making
   //                       the condition true.
+  // - phi: pick the common constant across operands
   // - default: pick 0
   //
   // Note that this transform is intentionally done here rather than
@@ -5179,17 +5181,43 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
   auto getUndefReplacement = [&](Type *Ty) {
-    Value *BestValue = nullptr;
+    auto pickCommonConstantFromPHI = [](PHINode &PN) -> Value * {
+      // phi(freeze(undef), C, C). Choose C for freeze so the PHI can be
+      // removed.
+      Constant *BestValue = nullptr;
+      for (Value *V : PN.incoming_values()) {
+        if (match(V, m_Freeze(m_Undef())))
+          continue;
+
+        Constant *C = dyn_cast<Constant>(V);
+        if (!C)
+          return nullptr;
+
+        if (!isGuaranteedNotToBeUndefOrPoison(C))
+          return nullptr;
+
+        if (BestValue && BestValue != C)
+          return nullptr;
+
+        BestValue = C;
+      }
+      return BestValue;
+    };
+
     Value *NullValue = Constant::getNullValue(Ty);
-    for (const auto *U : I.users()) {
+    Value *BestValue = nullptr;
+    for (auto *U : I.users()) {
       Value *V = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
         V = ConstantInt::getAllOnesValue(Ty);
       else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
         V = ConstantInt::getTrue(Ty);
       else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
-        if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
+        if (V == &I || !isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
           V = NullValue;
+      } else if (auto *PHI = dyn_cast<PHINode>(U)) {
+        if (Value *MaybeV = pickCommonConstantFromPHI(*PHI))
+          V = MaybeV;
       }
 
       if (!BestValue)
@@ -5198,6 +5226,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
         BestValue = NullValue;
     }
     assert(BestValue && "Must have at least one use");
+    assert(BestValue != &I && "Cannot replace with itself");
     return BestValue;
   };
 

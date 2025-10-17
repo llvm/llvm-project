@@ -80,6 +80,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+xwchc %s -o - | FileCheck --check-prefix=RV32XWCHC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zaamo %s -o - | FileCheck --check-prefix=RV32ZAAMO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zalrsc %s -o - | FileCheck --check-prefix=RV32ZALRSC %s
+; RUN: llc -mtriple=riscv32 -mattr=+zaamo,+zalrsc %s -o - | FileCheck --check-prefixes=CHECK,RV32COMBINEINTOA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zca %s -o - | FileCheck --check-prefixes=CHECK,RV32ZCA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zcb %s -o - | FileCheck --check-prefixes=CHECK,RV32ZCB %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zcd %s -o - | FileCheck --check-prefixes=CHECK,RV32ZCD %s
@@ -227,6 +228,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+ztso %s -o - | FileCheck --check-prefixes=CHECK,RV64ZTSO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zaamo %s -o - | FileCheck --check-prefix=RV64ZAAMO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zalrsc %s -o - | FileCheck --check-prefix=RV64ZALRSC %s
+; RUN: llc -mtriple=riscv64 -mattr=+zaamo,+zalrsc %s -o - | FileCheck --check-prefixes=CHECK,RV64COMBINEINTOA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zca %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zcb %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCB %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zcd %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCD %s
@@ -392,6 +394,7 @@
 ; RV32XWCHC: .attribute 5, "rv32i2p1_zca1p0_xwchc2p2"
 ; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo1p0"
 ; RV32ZALRSC: .attribute 5, "rv32i2p1_zalrsc1p0"
+; RV32COMBINEINTOA: .attribute 5, "rv32i2p1_a2p1_zaamo1p0_zalrsc1p0"
 ; RV32ZCA: .attribute 5, "rv32i2p1_zca1p0"
 ; RV32ZCB: .attribute 5, "rv32i2p1_zca1p0_zcb1p0"
 ; RV32ZCD: .attribute 5, "rv32i2p1_f2p2_d2p2_zicsr2p0_zca1p0_zcd1p0"
@@ -443,7 +446,7 @@
 ; RV32ZVFBFWMA: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvfbfwma1p0_zvl32b1p0"
 ; RV32ZVFOFP8MIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfofp8min0p2_zvl32b1p0"
 ; RV32ZACAS: .attribute 5, "rv32i2p1_zaamo1p0_zacas1p0"
-; RV32ZALASR: .attribute 5, "rv32i2p1_zalasr0p1"
+; RV32ZALASR: .attribute 5, "rv32i2p1_zalasr0p9"
 ; RV32ZAMA16B: .attribute 5, "rv32i2p1_zama16b1p0"
 ; RV32ZICFILP: .attribute 5, "rv32i2p1_zicfilp1p0_zicsr2p0"
 ; RV32ZABHA: .attribute 5, "rv32i2p1_zaamo1p0_zabha1p0"
@@ -537,6 +540,7 @@
 ; RV64ZTSO: .attribute 5, "rv64i2p1_ztso1p0"
 ; RV64ZAAMO: .attribute 5, "rv64i2p1_zaamo1p0"
 ; RV64ZALRSC: .attribute 5, "rv64i2p1_zalrsc1p0"
+; RV64COMBINEINTOA: .attribute 5, "rv64i2p1_a2p1_zaamo1p0_zalrsc1p0"
 ; RV64ZCA: .attribute 5, "rv64i2p1_zca1p0"
 ; RV64ZCB: .attribute 5, "rv64i2p1_zca1p0_zcb1p0"
 ; RV64ZCD: .attribute 5, "rv64i2p1_f2p2_d2p2_zicsr2p0_zca1p0_zcd1p0"
@@ -590,8 +594,8 @@
 ; RV64ZVFBFWMA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvfbfwma1p0_zvl32b1p0"
 ; RV64ZVFOFP8MIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfofp8min0p2_zvl32b1p0"
 ; RV64ZACAS: .attribute 5, "rv64i2p1_zaamo1p0_zacas1p0"
-; RV64ZALASR: .attribute 5, "rv64i2p1_zalasr0p1"
-; RV64ZALASRA: .attribute 5, "rv64i2p1_a2p1_zaamo1p0_zalasr0p1_zalrsc1p0"
+; RV64ZALASR: .attribute 5, "rv64i2p1_zalasr0p9"
+; RV64ZALASRA: .attribute 5, "rv64i2p1_a2p1_zaamo1p0_zalasr0p9_zalrsc1p0"
 ; RV64ZICFILP: .attribute 5, "rv64i2p1_zicfilp1p0_zicsr2p0"
 ; RV64ZABHA: .attribute 5, "rv64i2p1_zaamo1p0_zabha1p0"
 ; RV64ZVBC32E: .attribute 5, "rv64i2p1_zicsr2p0_zvbc32e0p7_zve32x1p0_zvl32b1p0"

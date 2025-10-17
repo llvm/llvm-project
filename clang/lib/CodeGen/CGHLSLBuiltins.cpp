@@ -352,6 +352,19 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
+    Value *MainHandle = EmitScalarExpr(E->getArg(0));
+    if (!CGM.getTriple().isSPIRV())
+      return MainHandle;
+
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *OrderID = EmitScalarExpr(E->getArg(1));
+    Value *SpaceOp = EmitScalarExpr(E->getArg(2));
+    llvm::Intrinsic::ID IntrinsicID =
+        llvm::Intrinsic::spv_resource_counterhandlefromimplicitbinding;
+    SmallVector<Value *> Args{MainHandle, OrderID, SpaceOp};
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
+  }
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());

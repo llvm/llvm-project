@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
 
 #include "unique_ptr.h"
 #include "initializer_list.h"
@@ -271,7 +271,7 @@ void initialization(int T, Base b) {
   // CHECK-FIXES: std::unique_ptr<APair> PAggr = std::make_unique<APair>(APair{T, 1});
   PAggr.reset(new APair{T, 1});
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_unique instead
-  // CHECK-FIXES: std::make_unique<APair>(APair{T, 1});
+  // CHECK-FIXES: PAggr = std::make_unique<APair>(APair{T, 1});
 
   // Check aggregate init with intermediate temporaries.
   std::unique_ptr<APair> PAggrTemp = std::unique_ptr<APair>(new APair({T, 1}));
@@ -480,7 +480,7 @@ void initialization(int T, Base b) {
   std::unique_ptr<int[]> FI;
   FI.reset(new int[5]()); // value initialization.
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
-  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
+  // CHECK-FIXES: FI = std::make_unique<int[]>(5); // value initialization.
 
   // The check doesn't give warnings and fixes for cases where the original new
   // expression does default initialization.

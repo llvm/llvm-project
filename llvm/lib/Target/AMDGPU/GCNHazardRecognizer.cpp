@@ -869,7 +869,7 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
   int VDataRCID = -1;
   if (VDataIdx != -1)
-    VDataRCID = Desc.operands()[VDataIdx].RegClass;
+    VDataRCID = TII->getOpRegClassID(Desc.operands()[VDataIdx]);
 
   if (TII->isMUBUF(MI) || TII->isMTBUF(MI)) {
     // There is no hazard if the instruction does not use vector regs
@@ -893,8 +893,8 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   // All our MIMG definitions use a 256-bit T#, so we can skip checking for them.
   if (TII->isMIMG(MI)) {
     int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srsrc);
-    assert(SRsrcIdx != -1 &&
-           AMDGPU::getRegBitWidth(Desc.operands()[SRsrcIdx].RegClass) == 256);
+    assert(SRsrcIdx != -1 && AMDGPU::getRegBitWidth(TII->getOpRegClassID(
+                                 Desc.operands()[SRsrcIdx])) == 256);
     (void)SRsrcIdx;
   }
 

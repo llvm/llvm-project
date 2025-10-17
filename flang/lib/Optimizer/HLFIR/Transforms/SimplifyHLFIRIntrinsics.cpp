@@ -2321,22 +2321,20 @@ public:
 
     auto resultTy = op.getType();
     mlir::Value back = op.getBack();
-    mlir::Value substrLen =
-        hlfir::genCharLength(loc, builder, hlfir::Entity{op.getSubstr()});
-
-    auto substrLenCst = fir::getIntIfConstant(substrLen);
+    auto substrLenCst =
+        hlfir::getCharLengthIfConst(hlfir::Entity{op.getSubstr()});
     if (!substrLenCst) {
       return rewriter.notifyMatchFailure(
           op, "substring length unknown at compile time");
     }
-    mlir::Value strLen =
-        hlfir::genCharLength(loc, builder, hlfir::Entity{op.getStr()});
+    hlfir::Entity strEntity{op.getStr()};
     auto i1Ty = builder.getI1Type();
     auto idxTy = builder.getIndexType();
     if (*substrLenCst == 0) {
       mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
       // zero length substring. For back search replace with
       // strLen+1, or otherwise with 1.
+      mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
       mlir::Value strEnd = mlir::arith::AddIOp::create(
           builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
       if (back)
@@ -2350,7 +2348,7 @@ public:
       return mlir::success();
     }
 
-    if (auto strLenCst = fir::getIntIfConstant(strLen)) {
+    if (auto strLenCst = hlfir::getCharLengthIfConst(strEntity)) {
       if (*strLenCst < *substrLenCst) {
         rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 0));
         return mlir::success();
@@ -2430,6 +2428,7 @@ public:
     //        result = str[at-1] == want ? at : result;
     //    }
     //  }
+    mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
     if (!back)
       back = builder.createIntegerConstant(loc, i1Ty, 0);
     else

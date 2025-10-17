@@ -476,18 +476,20 @@ public:
   }
 
   [[nodiscard]] iterator begin() const {
-    if (shouldReverseIterate())
+    if constexpr (shouldReverseIterate())
       return makeIterator(EndPointer() - 1);
-    return makeIterator(CurArray);
+    else
+      return makeIterator(CurArray);
   }
   [[nodiscard]] iterator end() const { return makeIterator(EndPointer()); }
 
 private:
   /// Create an iterator that dereferences to same place as the given pointer.
   iterator makeIterator(const void *const *P) const {
-    if (shouldReverseIterate())
+    if constexpr (shouldReverseIterate())
       return iterator(P == EndPointer() ? CurArray : P + 1, CurArray, *this);
-    return iterator(P, EndPointer(), *this);
+    else
+      return iterator(P, EndPointer(), *this);
   }
 };
 

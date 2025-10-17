@@ -211,7 +211,7 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired) {
 
   __c11_atomic_compare_exchange_strong(ptr, expected, desired,
                                        __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
-  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg(%{{.+}} : !cir.ptr<!s32i>, %{{.+}} : !s32i, %{{.+}} : !s32i, success = seq_cst, failure = acquire) align(4) : (!s32i, !cir.bool)
+  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
@@ -249,7 +249,7 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired) {
 
   __c11_atomic_compare_exchange_weak(ptr, expected, desired,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
-  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg(%{{.+}} : !cir.ptr<!s32i>, %{{.+}} : !s32i, %{{.+}} : !s32i, success = seq_cst, failure = acquire) align(4) weak : (!s32i, !cir.bool)
+  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
@@ -286,7 +286,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired) {
   // OGCG-LABEL: @atomic_cmpxchg
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
-  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg(%{{.+}} : !cir.ptr<!s32i>, %{{.+}} : !s32i, %{{.+}} : !s32i, success = seq_cst, failure = acquire) align(4) : (!s32i, !cir.bool)
+  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
@@ -317,7 +317,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired) {
   // OGCG-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
-  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg(%{{.+}} : !cir.ptr<!s32i>, %{{.+}} : !s32i, %{{.+}} : !s32i, success = seq_cst, failure = acquire) align(4) weak : (!s32i, !cir.bool)
+  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
@@ -354,7 +354,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired) {
   // OGCG-LABEL: @atomic_cmpxchg_n
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
-  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg(%{{.+}} : !cir.ptr<!s32i>, %{{.+}} : !s32i, %{{.+}} : !s32i, success = seq_cst, failure = acquire) align(4) : (!s32i, !cir.bool)
+  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
@@ -385,7 +385,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired) {
   // OGCG-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
-  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg(%{{.+}} : !cir.ptr<!s32i>, %{{.+}} : !s32i, %{{.+}} : !s32i, success = seq_cst, failure = acquire) align(4) weak : (!s32i, !cir.bool)
+  // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
@@ -427,12 +427,12 @@ void c11_atomic_exchange(_Atomic(int) *ptr, int value) {
   __c11_atomic_exchange(ptr, value, __ATOMIC_RELEASE);
   __c11_atomic_exchange(ptr, value, __ATOMIC_ACQ_REL);
   __c11_atomic_exchange(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
@@ -460,12 +460,12 @@ void atomic_exchange(int *ptr, int *value, int *old) {
   __atomic_exchange(ptr, value, old, __ATOMIC_RELEASE);
   __atomic_exchange(ptr, value, old, __ATOMIC_ACQ_REL);
   __atomic_exchange(ptr, value, old, __ATOMIC_SEQ_CST);
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
@@ -493,12 +493,12 @@ void atomic_exchange_n(int *ptr, int value) {
   __atomic_exchange_n(ptr, value, __ATOMIC_RELEASE);
   __atomic_exchange_n(ptr, value, __ATOMIC_ACQ_REL);
   __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4

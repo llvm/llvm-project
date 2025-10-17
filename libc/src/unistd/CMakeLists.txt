@@ -56,6 +56,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  faccessat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.faccessat
+)
+
+add_entrypoint_object(
   fchdir
   ALIAS
   DEPENDS

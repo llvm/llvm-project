@@ -40,6 +40,7 @@
 #include <cassert>
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 using VectorParts = SmallVector<Value *, 2>;
 
@@ -303,7 +304,6 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   VPRecipeBase *OpR = Op->getDefiningRecipe();
 
   // If the partial reduction is predicated, a select will be operand 0
-  using namespace llvm::VPlanPatternMatch;
   if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(Op), m_VPValue()))) {
     OpR = Op->getDefiningRecipe();
   }
@@ -340,6 +340,14 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                                  : Widen->getOperand(1));
     ExtAType = GetExtendKind(ExtAR);
     ExtBType = GetExtendKind(ExtBR);
+
+    using namespace VPlanPatternMatch;
+    const APInt *C;
+    if (!ExtBR && match(Widen->getOperand(1), m_APInt(C)) &&
+        canConstantBeExtended(C, InputTypeA, ExtAType)) {
+      InputTypeB = InputTypeA;
+      ExtBType = ExtAType;
+    }
   };
 
   if (isa<VPWidenCastRecipe>(OpR)) {
@@ -503,6 +511,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
@@ -870,9 +879,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement: {
-    unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+    unsigned Offset =
+        getOpcode() == VPInstruction::ExtractPenultimateElement ? 2 : 1;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -1146,7 +1157,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
-  LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -1158,6 +1169,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractLastElement ||
+         getOpcode() == VPInstruction::ExtractLastLanePerPart ||
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
@@ -1221,7 +1233,9 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ActiveLaneMask:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1366,6 +1380,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
+    break;
+  case VPInstruction::ExtractLastLanePerPart:
+    O << "extract-last-lane-per-part";
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
@@ -1955,7 +1972,6 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
   VPValue *Op0, *Op1;
-  using namespace llvm::VPlanPatternMatch;
   if (!ScalarCond && ScalarTy->getScalarSizeInBits() == 1 &&
       (match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1))) ||
        match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1))))) {
@@ -2336,7 +2352,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  auto *CanIV = cast<VPCanonicalIVPHIRecipe>(&*getParent()->begin());
+  auto *CanIV = getParent()->getParent()->getCanonicalIV();
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
          getScalarType() == CanIV->getScalarType();
 }
@@ -2755,10 +2771,7 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
-      ExpressionRecipes(SetVector<VPSingleDefRecipe *>(
-                            ExpressionRecipes.begin(), ExpressionRecipes.end())
-                            .takeVector()),
-      ExpressionType(ExpressionType) {
+      ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
       none_of(ExpressionRecipes,
@@ -2773,7 +2786,7 @@ VPExpressionRecipe::VPExpressionRecipe(
   // Recipes in the expression, except the last one, must only be used by
   // (other) recipes inside the expression. If there are other users, external
   // to the expression, use a clone of the recipe for external users.
-  for (VPSingleDefRecipe *R : ExpressionRecipes) {
+  for (VPSingleDefRecipe *R : reverse(ExpressionRecipes)) {
     if (R != ExpressionRecipes.back() &&
         any_of(R->users(), [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
           return !ExpressionRecipesAsSetOfUsers.contains(U);
@@ -2802,14 +2815,22 @@ VPExpressionRecipe::VPExpressionRecipe(
         continue;
       addOperand(Op);
       LiveInPlaceholders.push_back(new VPValue());
-      R->setOperand(Idx, LiveInPlaceholders.back());
     }
   }
+
+  // Replace each external operand with the first one created for it in
+  // LiveInPlaceholders.
+  for (auto *R : ExpressionRecipes)
+    for (auto const &[LiveIn, Tmp] : zip(operands(), LiveInPlaceholders))
+      R->replaceUsesOfWith(LiveIn, Tmp);
 }
 
 void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
-    R->insertBefore(this);
+    // Since the list could contain duplicates, make sure the recipe hasn't
+    // already been inserted.
+    if (!R->getParent())
+      R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
@@ -2839,11 +2860,16 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
                                           Ctx.CostKind);
 
-  case ExpressionTypes::ExtMulAccReduction:
+  case ExpressionTypes::ExtNegatedMulAccReduction:
+    assert(Opcode == Instruction::Add && "Unexpected opcode");
+    Opcode = Instruction::Sub;
+    [[fallthrough]];
+  case ExpressionTypes::ExtMulAccReduction: {
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
+  }
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
@@ -2888,6 +2914,30 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
       Red->getCondOp()->printAsOperand(O, SlotTracker);
     }
     O << ")";
+    break;
+  }
+  case ExpressionTypes::ExtNegatedMulAccReduction: {
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    O << " + reduce."
+      << Instruction::getOpcodeName(
+             RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
+      << " (sub (0, mul";
+    auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[2]);
+    Mul->printFlags(O);
+    O << "(";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+      << *Ext0->getResultType() << "), (";
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
+    O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
+      << *Ext1->getResultType() << ")";
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << "))";
     break;
   }
   case ExpressionTypes::MulAccReduction:
@@ -3076,7 +3126,8 @@ static bool shouldUseAddressAccessSCEV(const VPValue *Ptr) {
   if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
                   cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
                       Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(PtrR)))
+                 isa<VPWidenGEPRecipe>(PtrR) ||
+                 match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
     return false;
 
   // We are looking for a GEP where all indices are either loop invariant or
@@ -3098,7 +3149,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
   while (!WorkList.empty()) {
     auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
-    if (!Cur || !Seen.insert(Cur).second)
+    if (!Cur || !Seen.insert(Cur).second || isa<VPBlendRecipe>(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {
@@ -3130,6 +3181,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
+
+  if (VF.isScalable() && !isSingleScalar())
+    return InstructionCost::getInvalid();
 
   switch (UI->getOpcode()) {
   case Instruction::GetElementPtr:
@@ -3177,9 +3231,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                  ElementCount::getFixed(1), Ctx));
       return ScalarCallCost;
     }
-
-    if (VF.isScalable())
-      return InstructionCost::getInvalid();
 
     return ScalarCallCost * VF.getFixedValue() +
            Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
@@ -3231,9 +3282,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    if (VF.isScalable() && !isSingleScalar())
-      return InstructionCost::getInvalid();
-
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
     const VPRegionBlock *ParentRegion = getParent()->getParent();
@@ -3256,10 +3304,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
-
+    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
+    bool UsedByLoadStoreAddress =
+        !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                              PtrTy, &Ctx.SE, nullptr, Ctx.CostKind);
+                              PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
+                              nullptr, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
@@ -3269,8 +3320,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // don't assign scalarization overhead in general, if the target prefers
     // vectorized addressing or the loaded value is used as part of an address
     // of another load or store.
-    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
-    if (PreferVectorizedAddressing || !isUsedByLoadStoreAddress(this)) {
+    if (!UsedByLoadStoreAddress) {
       bool EfficientVectorLoadStore =
           Ctx.TTI.supportsEfficientVectorElementLoadStore();
       if (!(IsLoad && !PreferVectorizedAddressing) &&

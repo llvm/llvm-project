@@ -535,6 +535,7 @@ public:
     return true;
   }
   void Post(const parser::ComponentDefStmt &) { inComponentDefStmt_ = false; }
+  bool Pre(const parser::KindSelector &) { return !inComponentDefStmt_; }
   bool Pre(const parser::Initialization &x) {
     // Default component initialization expressions (but not DATA-like ones
     // as in DEC STRUCTUREs) were already analyzed in name resolution

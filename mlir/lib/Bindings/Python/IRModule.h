@@ -273,8 +273,7 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      MAKE_MLIR_PYTHON_QUALNAME("ir.Context");
+  static constexpr const char kTypeDescription[] = "Context";
   static PyMlirContext &resolve();
 };
 
@@ -500,8 +499,7 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      MAKE_MLIR_PYTHON_QUALNAME("ir.Location");
+  static constexpr const char kTypeDescription[] = "Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -843,6 +841,8 @@ public:
   PyInsertionPoint(const PyBlock &block);
   /// Creates an insertion point positioned before a reference operation.
   PyInsertionPoint(PyOperationBase &beforeOperationBase);
+  /// Creates an insertion point positioned before a reference operation.
+  PyInsertionPoint(PyOperationRef beforeOperationRef);
 
   /// Shortcut to create an insertion point at the beginning of the block.
   static PyInsertionPoint atBlockBegin(PyBlock &block);

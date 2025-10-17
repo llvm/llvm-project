@@ -393,12 +393,13 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 
   switch (N->getMachineOpcode()) {
   default: {
-    const MCInstrDesc &Desc =
-        Subtarget->getInstrInfo()->get(N->getMachineOpcode());
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
+    const MCInstrDesc &Desc = TII->get(N->getMachineOpcode());
     unsigned OpIdx = Desc.getNumDefs() + OpNo;
     if (OpIdx >= Desc.getNumOperands())
       return nullptr;
-    int RegClass = Desc.operands()[OpIdx].RegClass;
+
+    int16_t RegClass = TII->getOpRegClassID(Desc.operands()[OpIdx]);
     if (RegClass == -1)
       return nullptr;
 
@@ -1111,8 +1112,7 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
         {N->getOperand(0), N->getOperand(1),
          CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
   } else {
-    unsigned Opc = N->getOpcode() == ISD::UADDO ? AMDGPU::S_UADDO_PSEUDO
-                                                : AMDGPU::S_USUBO_PSEUDO;
+    unsigned Opc = IsAdd ? AMDGPU::S_UADDO_PSEUDO : AMDGPU::S_USUBO_PSEUDO;
 
     CurDAG->SelectNodeTo(N, Opc, N->getVTList(),
                          {N->getOperand(0), N->getOperand(1)});
@@ -4353,7 +4353,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
     if (!RC || SIRI->isSGPRClass(RC))
       return false;
 
-    if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass) {
+    if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass &&
+        RC != &AMDGPU::VS_64_Align2RegClass) {
       AllUsesAcceptSReg = false;
       SDNode *User = U->getUser();
       if (User->isMachineOpcode()) {
@@ -4367,7 +4368,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
             const TargetRegisterClass *CommutedRC =
                 getOperandRegClass(U->getUser(), CommutedOpNo);
             if (CommutedRC == &AMDGPU::VS_32RegClass ||
-                CommutedRC == &AMDGPU::VS_64RegClass)
+                CommutedRC == &AMDGPU::VS_64RegClass ||
+                CommutedRC == &AMDGPU::VS_64_Align2RegClass)
               AllUsesAcceptSReg = true;
           }
         }

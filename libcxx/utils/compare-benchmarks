@@ -63,12 +63,7 @@ def plain_text_comparison(data, metric, baseline_name=None, candidate_name=None)
     """
     Create a tabulated comparison of the baseline and the candidate for the given metric.
     """
-    # Compute additional info in new columns. In text mode, we can assume that we are
-    # comparing exactly two data sets (suffixed _0 and _1).
-    data['difference'] = data[f'{metric}_1'] - data[f'{metric}_0']
-    data['percent'] = 100 * (data['difference'] / data[f'{metric}_0'])
-
-    data = data.replace(numpy.nan, None).sort_values(by='benchmark') # avoid NaNs in tabulate output
+    data = data.replace(numpy.nan, None) # avoid NaNs in tabulate output
     headers = ['Benchmark', baseline_name, candidate_name, 'Difference', '% Difference']
     fmt = (None, '.2f', '.2f', '.2f', '.2f')
     table = data[['benchmark', f'{metric}_0', f'{metric}_1', 'difference', 'percent']].set_index('benchmark')
@@ -78,7 +73,7 @@ def create_chart(data, metric, subtitle=None, series_names=None):
     """
     Create a bar chart comparing the given metric across the provided series.
     """
-    data = data.sort_values(by='benchmark').rename(columns={f'{metric}_{i}': series_names[i] for i in range(len(series_names))})
+    data = data.rename(columns={f'{metric}_{i}': series_names[i] for i in range(len(series_names))})
     title = ' vs '.join(series_names)
     figure = plotly.express.bar(data, title=title, subtitle=subtitle, x='benchmark', y=series_names, barmode='group')
     figure.update_layout(xaxis_title='', yaxis_title='', legend_title='')
@@ -102,6 +97,15 @@ def main(argv):
     parser.add_argument('--filter', type=str, required=False,
         help='An optional regular expression used to filter the benchmarks included in the comparison. '
              'Only benchmarks whose names match the regular expression will be included.')
+    parser.add_argument('--sort', type=str, required=False, default='benchmark',
+                        choices=['benchmark', 'baseline', 'candidate', 'percent_diff'],
+        help='Optional sorting criteria for displaying results. By default, results are displayed in '
+             'alphabetical order of the benchmark. Supported sorting criteria are: '
+             '`benchmark` (sort using the alphabetical name of the benchmark), '
+             '`baseline` (sort using the absolute number of the baseline run), '
+             '`candidate` (sort using the absolute number of the candidate run), '
+             'and `percent_diff` (sort using the percent difference between the baseline and the candidate). '
+             'Note that when more than two input files are compared, the only valid sorting order is `benchmark`.')
     parser.add_argument('--format', type=str, choices=['text', 'chart'], default='text',
         help='Select the output format. `text` generates a plain-text comparison in tabular form, and `chart` '
              'generates a self-contained HTML graph that can be opened in a browser. The default is `text`.')
@@ -116,6 +120,8 @@ def main(argv):
              'This option cannot be used with the plain text output.')
     args = parser.parse_args(argv)
 
+    # Validate arguments (the values admissible for various arguments depend on other
+    # arguments, the number of inputs, etc)
     if args.format == 'text':
         if len(args.files) != 2:
             parser.error('--format=text requires exactly two input files to compare')
@@ -123,6 +129,9 @@ def main(argv):
             parser.error('Passing --subtitle makes no sense with --format=text')
         if args.open:
             parser.error('Passing --open makes no sense with --format=text')
+
+    if len(args.files) != 2 and args.sort != 'benchmark':
+        parser.error('Using any sort order other than `benchmark` requires exactly two input files.')
 
     if args.series_names is None:
         args.series_names = ['Baseline']
@@ -142,9 +151,24 @@ def main(argv):
     # Join the inputs into a single dataframe
     data = functools.reduce(lambda a, b: a.merge(b, how='outer', on='benchmark'), inputs)
 
+    # If we have exactly two data sets, compute additional info in new columns
+    if len(lnt_inputs) == 2:
+        data['difference'] = data[f'{args.metric}_1'] - data[f'{args.metric}_0']
+        data['percent'] = 100 * (data['difference'] / data[f'{args.metric}_0'])
+
     if args.filter is not None:
         keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
         data = data[data['benchmark'].isin(keeplist)]
+
+    # Sort the data by the appropriate criteria
+    if args.sort == 'benchmark':
+        data = data.sort_values(by='benchmark')
+    elif args.sort == 'baseline':
+        data = data.sort_values(by=f'{args.metric}_0')
+    elif args.sort == 'candidate':
+        data = data.sort_values(by=f'{args.metric}_1')
+    elif args.sort == 'percent_diff':
+        data = data.sort_values(by=f'percent')
 
     if args.format == 'chart':
         figure = create_chart(data, args.metric, subtitle=args.subtitle, series_names=args.series_names)

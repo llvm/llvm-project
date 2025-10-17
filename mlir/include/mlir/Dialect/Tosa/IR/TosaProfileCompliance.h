@@ -36,12 +36,15 @@ enum CheckCondition {
   allOf
 };
 
+using VersionedTypeInfo =
+    std::pair<SmallVector<TypeInfo>, SpecificationVersion>;
+
 template <typename T>
 struct OpComplianceInfo {
   // Certain operations require multiple modes enabled.
   // e.g. cast bf16 to fp8e4m3 requires EXT-BF16 and EXT-FP8E4M3.
   SmallVector<T> mode;
-  SmallVector<SmallVector<TypeInfo>> operandTypeInfoSet;
+  SmallVector<VersionedTypeInfo> operandTypeInfoSet;
   CheckCondition condition = CheckCondition::anyOf;
 };
 
@@ -130,9 +133,8 @@ public:
   // Find the required profiles or extensions from the compliance info according
   // to the operand type combination.
   template <typename T>
-  SmallVector<T> findMatchedProfile(Operation *op,
-                                    SmallVector<OpComplianceInfo<T>> compInfo,
-                                    CheckCondition &condition);
+  OpComplianceInfo<T>
+  findMatchedEntry(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
 
   SmallVector<Profile> getCooperativeProfiles(Extension ext) {
     switch (ext) {
@@ -168,8 +170,7 @@ public:
 
 private:
   template <typename T>
-  FailureOr<SmallVector<T>> getOperatorDefinition(Operation *op,
-                                                  CheckCondition &condition);
+  FailureOr<OpComplianceInfo<T>> getOperatorDefinition(Operation *op);
 
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;

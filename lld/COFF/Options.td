@@ -289,10 +289,10 @@ def thinlto_distributor : P<"thinlto-distributor",
   "backend compilations will be distributed">;
 def thinlto_distributor_arg : P<"thinlto-distributor-arg",
   "Arguments to pass to the ThinLTO distributor">;
-def thinlto_compiler : P<"thinlto-remote-compiler",
+def thinlto_remote_compiler : P<"thinlto-remote-compiler",
   "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-def thinlto_compiler_arg : P<"thinlto-remote-compiler-arg",
+def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 def lto_obj_path : P<

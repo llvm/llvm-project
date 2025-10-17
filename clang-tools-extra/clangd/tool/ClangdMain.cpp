@@ -578,7 +578,7 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    fs::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(TestScheme::TestDir, Path);
     return std::string(Path);
   }
 

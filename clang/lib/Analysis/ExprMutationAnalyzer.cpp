@@ -755,22 +755,23 @@ ExprMutationAnalyzer::Analyzer::findPointeeMemberMutation(const Expr *Exp) {
 
 const Stmt *
 ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
-  const auto NonConstPointerOrDependentType =
-      type(anyOf(nonConstPointerType(), isDependentType()));
+  const auto NonConstPointerOrNonConstRefOrDependentType = type(
+      anyOf(nonConstPointerType(), nonConstReferenceType(), isDependentType()));
 
   // assign
   const auto InitToNonConst =
-      varDecl(hasType(NonConstPointerOrDependentType),
+      varDecl(hasType(NonConstPointerOrNonConstRefOrDependentType),
               hasInitializer(expr(canResolveToExprPointee(Exp)).bind("stmt")));
-  const auto AssignToNonConst =
-      binaryOperation(hasOperatorName("="),
-                      hasLHS(expr(hasType(NonConstPointerOrDependentType))),
-                      hasRHS(canResolveToExprPointee(Exp)));
+  const auto AssignToNonConst = binaryOperation(
+      hasOperatorName("="),
+      hasLHS(expr(hasType(NonConstPointerOrNonConstRefOrDependentType))),
+      hasRHS(canResolveToExprPointee(Exp)));
   // arguments like
   const auto ArgOfInstantiationDependent = allOf(
       hasAnyArgument(canResolveToExprPointee(Exp)), isInstantiationDependent());
-  const auto ArgOfNonConstParameter = forEachArgumentWithParamType(
-      canResolveToExprPointee(Exp), NonConstPointerOrDependentType);
+  const auto ArgOfNonConstParameter =
+      forEachArgumentWithParamType(canResolveToExprPointee(Exp),
+                                   NonConstPointerOrNonConstRefOrDependentType);
   const auto CallLikeMatcher =
       anyOf(ArgOfNonConstParameter, ArgOfInstantiationDependent);
   const auto PassAsNonConstArg =
@@ -779,9 +780,9 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
                  parenListExpr(has(canResolveToExprPointee(Exp))),
                  initListExpr(hasAnyInit(canResolveToExprPointee(Exp)))));
   // cast
-  const auto CastToNonConst =
-      explicitCastExpr(hasSourceExpression(canResolveToExprPointee(Exp)),
-                       hasDestinationType(NonConstPointerOrDependentType));
+  const auto CastToNonConst = explicitCastExpr(
+      hasSourceExpression(canResolveToExprPointee(Exp)),
+      hasDestinationType(NonConstPointerOrNonConstRefOrDependentType));
 
   // capture
   // FIXME: false positive if the pointee does not change in lambda

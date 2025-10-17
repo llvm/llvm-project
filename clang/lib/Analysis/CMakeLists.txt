@@ -21,8 +21,6 @@ add_clang_library(clangAnalysis
   FixitUtil.cpp
   IntervalPartition.cpp
   IssueHash.cpp
-  LifetimeAnnotations.cpp
-  LifetimeSafety.cpp
   LiveVariables.cpp
   MacroExpansionContext.cpp
   ObjCNoReturn.cpp
@@ -51,3 +49,4 @@ add_clang_library(clangAnalysis
 
 add_subdirectory(plugins)
 add_subdirectory(FlowSensitive)
+add_subdirectory(LifetimeSafety)

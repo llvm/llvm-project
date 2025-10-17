@@ -608,10 +608,10 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
 Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
                            const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  if (Kind != OFK_OpenMP || !Triple.isSPIRV() ||
-      Triple.getVendor() != llvm::Triple::Intel)
-    return Error::success();
-  return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+  if (Kind == OFK_OpenMP && Triple.isSPIRV() &&
+      Triple.getVendor() == llvm::Triple::Intel)
+    return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+  return Error::success();
 }
 
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
@@ -1295,12 +1295,18 @@ int main(int Argc, char **Argv) {
 
   parallel::strategy = hardware_concurrency(1);
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
-    unsigned Threads = 0;
-    if (!llvm::to_integer(Arg->getValue(), Threads) || Threads == 0)
-      reportError(createStringError("%s: expected a positive integer, got '%s'",
-                                    Arg->getSpelling().data(),
-                                    Arg->getValue()));
-    parallel::strategy = hardware_concurrency(Threads);
+    StringRef Val = Arg->getValue();
+    if (Val.equals_insensitive("jobserver"))
+      parallel::strategy = jobserver_concurrency();
+    else {
+      unsigned Threads = 0;
+      if (!llvm::to_integer(Val, Threads) || Threads == 0)
+        reportError(createStringError(
+            "%s: expected a positive integer or 'jobserver', got '%s'",
+            Arg->getSpelling().data(), Val.data()));
+      else
+        parallel::strategy = hardware_concurrency(Threads);
+    }
   }
 
   if (Args.hasArg(OPT_wrapper_time_trace_eq)) {

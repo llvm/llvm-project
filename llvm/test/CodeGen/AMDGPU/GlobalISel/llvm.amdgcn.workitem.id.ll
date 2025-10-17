@@ -1,14 +1,14 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor -o %t.v4.ll
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor -o %t.v6.ll
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global -mcpu=hawaii < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx11-generic -amdgpu-enable-vopd=0 < %t.v6.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global -mcpu=hawaii < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx11-generic -amdgpu-enable-vopd=0 < %t.v6.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0

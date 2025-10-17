@@ -33,8 +33,9 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:    [[FIRST_LANE_SET:%.*]] = xor i1 [[EXTRACT_FIRST_LANE_MASK]], true
 ; CHECK-NEXT:    br i1 [[FIRST_LANE_SET]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[FOR_END:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[FOR_END:.*]]
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -87,8 +88,9 @@ define void @cond_uniform_load(ptr noalias nocapture %dst, ptr nocapture readonl
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[FOR_END:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[FOR_END:.*]]
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body

@@ -82,7 +82,7 @@ void library_builtins() {
   __builtin_abort();
 }
 
-// CIR: cir.func{{.*}} @_Z16library_builtinsv() {
+// CIR: cir.func{{.*}} @_Z16library_builtinsv()
 // CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
 // CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i>) -> !s32i
 // CIR: cir.call @abort() nothrow : () -> ()
@@ -165,9 +165,9 @@ void expect(int x, int y) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z6expectii
 // CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast(integral, %[[X]] : !s32i), !s64i
+// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
 // CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast(integral, %[[Y]] : !s32i), !s64i
+// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
 // CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]]) : !s64i
 // CIR:       }
 
@@ -185,9 +185,9 @@ void expect_prob(int x, int y) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z11expect_probii
 // CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast(integral, %[[X]] : !s32i), !s64i
+// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
 // CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast(integral, %[[Y]] : !s32i), !s64i
+// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
 // CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]], 2.500000e-01) : !s64i
 // CIR:       }
 
