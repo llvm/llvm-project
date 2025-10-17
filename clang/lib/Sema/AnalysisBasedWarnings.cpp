@@ -2747,11 +2747,12 @@ void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
   }
 
   if (AC.getCFG()) {
+    CFGReverseBlockReachabilityAnalysis *Analysis =
+        AC.getCFGReachablityAnalysis();
+
     for (const auto &D : PUDs) {
       if (llvm::all_of(D.Stmts, [&](const Stmt *St) {
             const CFGBlock *Block = AC.getBlockForRegisteredExpression(St);
-            CFGReverseBlockReachabilityAnalysis *Analysis =
-                AC.getCFGReachablityAnalysis();
             if (Block && Analysis)
               if (!Analysis->isReachable(&AC.getCFG()->getEntry(), Block))
                 return false;
