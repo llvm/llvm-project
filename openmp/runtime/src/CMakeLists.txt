@@ -112,20 +112,20 @@ else()
     if(${LIBOMP_ARCH} STREQUAL "i386" OR ${LIBOMP_ARCH} STREQUAL "x86_64")
       libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
     elseif((${LIBOMP_ARCH} STREQUAL "aarch64" OR ${LIBOMP_ARCH} STREQUAL "arm") AND (NOT MSVC OR CMAKE_C_COMPILER_ID STREQUAL "Clang"))
-      # z_Linux_asm.S works for AArch64 and ARM Windows too.
-      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S)
+      # z_OS_asm.S works for AArch64 and ARM Windows too.
+      libomp_append(LIBOMP_GNUASMFILES z_OS_asm.S)
     else()
       # AArch64 with MSVC gets implementations of the functions from
       # ifdeffed sections in z_Windows_NT-586_util.cpp.
     endif()
   else()
     # Unix specific files
-    libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
+    libomp_append(LIBOMP_CXXFILES z_OS_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
     if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
       libomp_append(LIBOMP_GNUASMFILES z_AIX_asm.S) # AIX assembly file
     else()
-      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+      libomp_append(LIBOMP_GNUASMFILES z_OS_asm.S) # Unix assembly file
     endif()
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
