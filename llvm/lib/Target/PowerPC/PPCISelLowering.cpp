@@ -19208,9 +19208,17 @@ static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
   return MatPCRel;
 }
 
+// Transform (add X, (build_vector (T 1), (T 1), ...)) -> (sub X, (XXLEQVOnes))
+// XXLEQVOnes creates an all-1s vector (0xFFFFFFFF...) efficiently via xxleqv
+// Mathematical identity: X + 1 = X - (-1)
+// Applies to v4i32, v2i64, v8i16, v16i8 where all elements are constant 1
+// Requirement: VSX feature for efficient xxleqv generation
 static SDValue combineADDToSUB(SDNode *N, SelectionDAG &DAG,
                                const PPCSubtarget &Subtarget) {
+
   EVT VT = N->getValueType(0);
+  if (!Subtarget.hasVSX())
+    return SDValue();
 
   // Handle v2i64, v4i32, v8i16 and v16i8 types
   if (!(VT == MVT::v8i16 || VT == MVT::v16i8 || VT == MVT::v4i32 ||
@@ -19221,10 +19229,6 @@ static SDValue combineADDToSUB(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
 
   // Check if RHS is BUILD_VECTOR
-  // To satisfy commutative property a+b = b+a
-  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
-    std::swap(LHS, RHS);
-
   if (RHS.getOpcode() != ISD::BUILD_VECTOR)
     return SDValue();
 

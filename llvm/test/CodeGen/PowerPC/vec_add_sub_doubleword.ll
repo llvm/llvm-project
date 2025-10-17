@@ -25,7 +25,7 @@ define <2 x i64> @increment_by_one(<2 x i64> %x) nounwind {
 ; NOVSX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; NOVSX-NEXT:    addi 3, 3, .LCPI1_0@toc@l
 ; NOVSX-NEXT:    lvx 3, 0, 3
-; NOVSX-NEXT:    vsubudm 2, 2, 3
+; NOVSX-NEXT:    vaddudm 2, 2, 3
 ; NOVSX-NEXT:    blr
   %result = add <2 x i64> %x, <i64 1, i64 1>
   ret <2 x i64> %result
