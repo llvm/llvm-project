@@ -60,6 +60,16 @@ TEST(RegisterValueTest, GetScalarValue) {
 static const Scalar etalon128(APInt(128, 0xffeeddccbbaa9988ull) << 64 |
                               APInt(128, 0x7766554433221100ull));
 
+void TestSetValueFromData128(const RegisterInfo &ri, void *src,
+                              const lldb::ByteOrder endianness) {
+  DataExtractor src_extractor(src, 16, endianness, 8);
+  RegisterValue rv;
+  EXPECT_TRUE(rv.SetValueFromData(ri, src_extractor, 0, false).Success());
+  Scalar s;
+  EXPECT_TRUE(rv.GetScalarValue(s));
+  EXPECT_EQ(s, etalon128);
+}
+
 // Test that the "RegisterValue::SetValueFromData" method works correctly
 // with 128-bit little-endian data that represents an integer.
 TEST(RegisterValueTest, SetValueFromData_128_le) {
@@ -77,11 +87,7 @@ TEST(RegisterValueTest, SetValueFromData_128_le) {
 
   uint8_t src[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
                    0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-  DataExtractor src_extractor(src, 16, lldb::ByteOrder::eByteOrderLittle, 8);
-  EXPECT_TRUE(rv.SetValueFromData(ri, src_extractor, 0, false).Success());
-  Scalar s;
-  EXPECT_TRUE(rv.GetScalarValue(s));
-  EXPECT_EQ(s, etalon128);
+  TestSetValueFromData128(ri, src, lldb::ByteOrder::eByteOrderLittle);
 }
 
 // Test that the "RegisterValue::SetValueFromData" method works correctly
@@ -101,9 +107,5 @@ TEST(RegisterValueTest, SetValueFromData_128_be) {
 
   uint8_t src[] = {0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
                    0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
-  DataExtractor src_extractor(src, 16, lldb::ByteOrder::eByteOrderBig, 8);
-  EXPECT_TRUE(rv.SetValueFromData(ri, src_extractor, 0, false).Success());
-  Scalar s;
-  EXPECT_TRUE(rv.GetScalarValue(s));
-  EXPECT_EQ(s, etalon128);
+  TestSetValueFromData128(ri, src, lldb::ByteOrder::eByteOrderBig);
 }
