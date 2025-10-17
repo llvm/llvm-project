@@ -1838,6 +1838,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_URHADD);
   case Intrinsic::aarch64_neon_shadd:
     return LowerBinOp(AArch64::G_SHADD);
+  case Intrinsic::aarch64_neon_srhadd:
+    return LowerBinOp(AArch64::G_SRHADD);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
