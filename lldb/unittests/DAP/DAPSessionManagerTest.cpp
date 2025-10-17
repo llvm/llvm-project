@@ -25,58 +25,77 @@ TEST_F(DAPSessionManagerTest, GetInstanceReturnsSameSingleton) {
   EXPECT_EQ(&instance1, &instance2);
 }
 
-TEST_F(DAPSessionManagerTest, SharedDebuggerSetAndGet) {
+TEST_F(DAPSessionManagerTest, StoreAndTakeTarget) {
   DAPSessionManager &manager = DAPSessionManager::GetInstance();
 
   SBDebugger debugger = SBDebugger::Create();
   ASSERT_TRUE(debugger.IsValid());
+  // Create an empty target (no executable) since we're only testing session
+  // management functionality, not actual debugging operations.
+  SBTarget target = debugger.CreateTarget("");
+  ASSERT_TRUE(target.IsValid());
 
-  uint32_t target_id = 12345;
-  manager.SetSharedDebugger(target_id, debugger);
+  uint32_t target_id = target.GetGloballyUniqueID();
+  manager.StoreTargetById(target_id, target);
 
-  // Retrieval consumes the debugger (removes from map).
-  std::optional<SBDebugger> retrieved = manager.GetSharedDebugger(target_id);
+  // Retrieval consumes the target (removes from map).
+  std::optional<SBTarget> retrieved = manager.TakeTargetById(target_id);
   ASSERT_TRUE(retrieved.has_value());
   EXPECT_TRUE(retrieved->IsValid());
-  EXPECT_EQ(retrieved->GetID(), debugger.GetID());
+  // Verify we got the correct target back.
+  EXPECT_EQ(retrieved->GetDebugger().GetID(), debugger.GetID());
+  EXPECT_EQ(*retrieved, target);
 
-  // Second retrieval should fail.
-  std::optional<SBDebugger> second_retrieval =
-      manager.GetSharedDebugger(target_id);
+  // Second retrieval should fail (one-time retrieval semantics).
+  std::optional<SBTarget> second_retrieval = manager.TakeTargetById(target_id);
   EXPECT_FALSE(second_retrieval.has_value());
 
   SBDebugger::Destroy(debugger);
 }
 
-TEST_F(DAPSessionManagerTest, GetSharedDebuggerWithInvalidId) {
+TEST_F(DAPSessionManagerTest, GetTargetWithInvalidId) {
   DAPSessionManager &manager = DAPSessionManager::GetInstance();
 
-  std::optional<SBDebugger> result = manager.GetSharedDebugger(99999);
+  std::optional<SBTarget> result = manager.TakeTargetById(99999);
 
   EXPECT_FALSE(result.has_value());
 }
 
-TEST_F(DAPSessionManagerTest, MultipleSharedDebuggersWithDifferentIds) {
+TEST_F(DAPSessionManagerTest, MultipleTargetsWithDifferentIds) {
   DAPSessionManager &manager = DAPSessionManager::GetInstance();
 
   SBDebugger debugger1 = SBDebugger::Create();
   SBDebugger debugger2 = SBDebugger::Create();
   ASSERT_TRUE(debugger1.IsValid());
   ASSERT_TRUE(debugger2.IsValid());
+  // Create empty targets (no executable) since we're only testing session
+  // management functionality, not actual debugging operations.
+  SBTarget target1 = debugger1.CreateTarget("");
+  SBTarget target2 = debugger2.CreateTarget("");
+  ASSERT_TRUE(target1.IsValid());
+  ASSERT_TRUE(target2.IsValid());
 
-  uint32_t target_id_1 = 1001;
-  uint32_t target_id_2 = 1002;
+  uint32_t target_id_1 = target1.GetGloballyUniqueID();
+  uint32_t target_id_2 = target2.GetGloballyUniqueID();
 
-  manager.SetSharedDebugger(target_id_1, debugger1);
-  manager.SetSharedDebugger(target_id_2, debugger2);
+  // Sanity check the targets have distinct IDs.
+  EXPECT_NE(target_id_1, target_id_2);
 
-  std::optional<SBDebugger> retrieved1 = manager.GetSharedDebugger(target_id_1);
+  manager.StoreTargetById(target_id_1, target1);
+  manager.StoreTargetById(target_id_2, target2);
+
+  std::optional<SBTarget> retrieved1 = manager.TakeTargetById(target_id_1);
   ASSERT_TRUE(retrieved1.has_value());
-  EXPECT_EQ(retrieved1->GetID(), debugger1.GetID());
+  EXPECT_TRUE(retrieved1->IsValid());
+  // Verify we got the correct target by comparing debugger and target IDs.
+  EXPECT_EQ(retrieved1->GetDebugger().GetID(), debugger1.GetID());
+  EXPECT_EQ(*retrieved1, target1);
 
-  std::optional<SBDebugger> retrieved2 = manager.GetSharedDebugger(target_id_2);
+  std::optional<SBTarget> retrieved2 = manager.TakeTargetById(target_id_2);
   ASSERT_TRUE(retrieved2.has_value());
-  EXPECT_EQ(retrieved2->GetID(), debugger2.GetID());
+  EXPECT_TRUE(retrieved2->IsValid());
+  EXPECT_EQ(retrieved2->GetDebugger().GetID(), debugger2.GetID());
+  EXPECT_EQ(*retrieved2, target2);
 
   SBDebugger::Destroy(debugger1);
   SBDebugger::Destroy(debugger2);
@@ -87,14 +106,32 @@ TEST_F(DAPSessionManagerTest, CleanupSharedResources) {
 
   SBDebugger debugger = SBDebugger::Create();
   ASSERT_TRUE(debugger.IsValid());
-  manager.SetSharedDebugger(5555, debugger);
-  std::optional<SBDebugger> initial_result = manager.GetSharedDebugger(5555);
-  ASSERT_TRUE(initial_result.has_value());
+  // Create empty targets (no executable) since we're only testing session
+  // management functionality, not actual debugging operations.
+  SBTarget target1 = debugger.CreateTarget("");
+  SBTarget target2 = debugger.CreateTarget("");
+  ASSERT_TRUE(target1.IsValid());
+  ASSERT_TRUE(target2.IsValid());
 
+  uint32_t target_id_1 = target1.GetGloballyUniqueID();
+  uint32_t target_id_2 = target2.GetGloballyUniqueID();
+
+  // Sanity check the targets have distinct IDs.
+  EXPECT_NE(target_id_1, target_id_2);
+
+  // Store multiple targets to verify cleanup removes them all.
+  manager.StoreTargetById(target_id_1, target1);
+  manager.StoreTargetById(target_id_2, target2);
+
+  // Cleanup should remove all stored targets.
   manager.CleanupSharedResources();
 
-  std::optional<SBDebugger> result = manager.GetSharedDebugger(5555);
-  EXPECT_FALSE(result.has_value());
+  // Verify both targets are gone after cleanup.
+  std::optional<SBTarget> result1 = manager.TakeTargetById(target_id_1);
+  EXPECT_FALSE(result1.has_value());
+
+  std::optional<SBTarget> result2 = manager.TakeTargetById(target_id_2);
+  EXPECT_FALSE(result2.has_value());
 
   SBDebugger::Destroy(debugger);
 }

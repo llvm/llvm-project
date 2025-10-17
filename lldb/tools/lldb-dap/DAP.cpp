@@ -1312,14 +1312,15 @@ void DAP::StartEventThreads() {
 llvm::Error DAP::InitializeDebugger(std::optional<uint32_t> target_id) {
   // Initialize debugger instance (shared or individual).
   if (target_id) {
-    std::optional<lldb::SBDebugger> shared_debugger =
-        DAPSessionManager::GetInstance().GetSharedDebugger(*target_id);
-    // If the target ID is not valid, then we won't find a debugger.
-    if (!shared_debugger) {
+    std::optional<lldb::SBTarget> shared_target =
+        DAPSessionManager::GetInstance().TakeTargetById(*target_id);
+    // If the target ID is not valid, then we won't find a target.
+    if (!shared_target) {
       return llvm::createStringError(
-          "Unable to find existing debugger for target ID");
+          "Unable to find existing target for target ID");
     }
-    debugger = shared_debugger.value();
+    // Get the debugger from the target and set it up.
+    debugger = shared_target->GetDebugger();
     StartEventThreads();
     return llvm::Error::success();
   }
@@ -1567,10 +1568,9 @@ void DAP::EventThread() {
         } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
           auto target = lldb::SBTarget::GetTargetFromEvent(event);
 
-          // Generate unique target ID and set the shared debugger.
+          // Generate unique target ID and store the target for handoff.
           uint32_t target_id = target.GetGloballyUniqueID();
-          DAPSessionManager::GetInstance().SetSharedDebugger(target_id,
-                                                             debugger);
+          DAPSessionManager::GetInstance().StoreTargetById(target_id, target);
 
           // We create an attach config that will select the unique
           // target ID of the created target. The DAP instance will attach to

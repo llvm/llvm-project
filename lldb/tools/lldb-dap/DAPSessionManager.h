@@ -43,7 +43,10 @@ private:
   std::thread m_event_thread;
 };
 
-/// Global DAP session manager.
+/// Global DAP session manager that manages multiple concurrent DAP sessions in
+/// a single lldb-dap process. Handles session lifecycle tracking, coordinates
+/// shared debugger event threads, and facilitates target handoff between
+/// sessions for dynamically created targets.
 class DAPSessionManager {
 public:
   /// Get the singleton instance of the DAP session manager.
@@ -52,24 +55,27 @@ public:
   /// Register a DAP session.
   void RegisterSession(lldb_private::MainLoop *loop, DAP *dap);
 
-  /// Unregister a DAP session.
+  /// Unregister a DAP session. Called by sessions when they complete their
+  /// disconnection, which unblocks WaitForAllSessionsToDisconnect().
   void UnregisterSession(lldb_private::MainLoop *loop);
 
   /// Get all active DAP sessions.
   std::vector<DAP *> GetActiveSessions();
 
-  /// Disconnect all active sessions.
+  /// Disconnect all registered sessions by calling Disconnect() on
+  /// each and requesting their event loops to terminate. Used during
+  /// shutdown to force all sessions to begin disconnecting.
   void DisconnectAllSessions();
 
-  /// Wait for all sessions to finish disconnecting.
-  /// Returns an error if any client disconnection failed, otherwise success.
+  /// Block until all sessions disconnect and unregister. Returns an error if
+  /// DisconnectAllSessions() was called and any disconnection failed.
   llvm::Error WaitForAllSessionsToDisconnect();
 
-  /// Set the shared debugger instance for a unique target ID.
-  void SetSharedDebugger(uint32_t target_id, lldb::SBDebugger debugger);
+  /// Store a target for later retrieval by another session.
+  void StoreTargetById(uint32_t target_id, lldb::SBTarget target);
 
-  /// Get the shared debugger instance for a unique target ID.
-  std::optional<lldb::SBDebugger> GetSharedDebugger(uint32_t target_id);
+  /// Retrieve and remove a stored target by its globally unique target ID.
+  std::optional<lldb::SBTarget> TakeTargetById(uint32_t target_id);
 
   /// Get or create event thread for a specific debugger.
   std::shared_ptr<ManagedEventThread>
@@ -104,12 +110,12 @@ private:
   std::condition_variable m_sessions_condition;
   std::map<lldb_private::MainLoop *, DAP *> m_active_sessions;
 
-  /// Optional map from target ID to shared debugger set when the native
-  /// process creates a new target.
-  std::map<uint32_t, lldb::SBDebugger> m_target_to_debugger_map;
+  /// Map from target ID to target for handing off newly created targets
+  /// between sessions.
+  std::map<uint32_t, lldb::SBTarget> m_target_map;
 
-  /// Map from debugger ID to its event thread used for when
-  /// multiple DAP sessions are using the same debugger instance.
+  /// Map from debugger ID to its event thread, used when multiple DAP sessions
+  /// share the same debugger instance.
   std::map<lldb::user_id_t, std::weak_ptr<ManagedEventThread>>
       m_debugger_event_threads;
 };
