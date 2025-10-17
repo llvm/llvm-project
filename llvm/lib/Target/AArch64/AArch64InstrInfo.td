@@ -11263,7 +11263,8 @@ defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasCMH] in {
-  defm SHUH  : SHUH<"shuh">;      // Shared Update Hint instruction
+  defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
+  def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 }
 
 include "AArch64InstrAtomics.td"

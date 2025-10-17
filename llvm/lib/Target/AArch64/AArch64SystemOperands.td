@@ -2427,3 +2427,16 @@ def : DC<"CIVAPS",    0b000, 0b0111, 0b1111, 0b001>;
 let Requires = [{ {AArch64::FeaturePoPS, AArch64::FeatureMTE} }] in {
 def : DC<"CIGDVAPS",  0b000, 0b0111, 0b1111, 0b101>;
 }
+
+// v9.7a TLBI domains system registers (MemSys)
+foreach n = 0-3 in {
+  defvar nb = !cast<bits<3>>(n);
+  def : RWSysReg<"VTLBID"#n#"_EL2", 0b11,  0b100, 0b0010, 0b1000, nb>;
+}
+
+foreach n = 0-3 in {
+  defvar nb = !cast<bits<3>>(n);
+  def : RWSysReg<"VTLBIDOS"#n#"_EL2", 0b11,  0b100, 0b0010, 0b1001, nb>;
+}
+
+def : ROSysReg<"TLBIDIDR_EL1",      0b11,  0b000, 0b1010, 0b0100, 0b110>;

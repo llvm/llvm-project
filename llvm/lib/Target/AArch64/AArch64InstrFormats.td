@@ -13305,3 +13305,13 @@ multiclass SHUH<string asm> {
   def NAME : SHUHInst<asm>;
   def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
 }
+
+class STCPHInst<string asm> : I<
+    (outs),
+    (ins),
+    asm, "", "", []>, Sched<[]> {
+    let Inst{31-12} = 0b11010101000000110010;
+    let Inst{11-8}  = 0b0110;
+    let Inst{7-5}   = 0b100;
+    let Inst{4-0}   = 0b11111;
+}
