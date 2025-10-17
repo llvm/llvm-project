@@ -4821,7 +4821,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Left.is(TT_BlockComment)) {
     // No whitespace in x(/*foo=*/1), except for JavaScript.
-    return Style.isJavaScript() || !Left.TokenText.ends_with("=*/");
+    bool EndsWithAssignmentComment = Left.TokenText.ends_with("=*/");
+    if (!EndsWithAssignmentComment && Style.SpaceBeforeClosingBlockComment)
+      EndsWithAssignmentComment = Left.TokenText.ends_with("= */");
+    return Style.isJavaScript() || !EndsWithAssignmentComment;
   }
 
   // Space between template and attribute.
