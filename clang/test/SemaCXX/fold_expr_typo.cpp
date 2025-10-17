@@ -12,3 +12,8 @@ template <typename... U> struct A {
     foo<T>((... + static_cast<U>(1))); // expected-error {{expression contains unexpanded parameter pack 'T'}}
   }
 };
+
+template <typename ... T>
+void foo(T... Params) {
+  (Params ?: 1, ...); // expected-error {{expression not permitted as operand of fold expression}}
+}
