@@ -1217,13 +1217,51 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
+static const ExprResult
+SubstituteConceptsInConstrainExpression(Sema &S, const NamedDecl *D,
+                                        const ConceptSpecializationExpr *CSE,
+                                        UnsignedOrNone SubstIndex) {
+
+  // [C++2c] [temp.constr.normal]
+  // Otherwise, to form CE, any non-dependent concept template argument Ai
+  // is substituted into the constraint-expression of C.
+  // If any such substitution results in an invalid concept-id,
+  // the program is ill-formed; no diagnostic is required.
+
+  ConceptDecl *Concept = CSE->getNamedConcept()->getCanonicalDecl();
+  Sema::ArgPackSubstIndexRAII _(S, SubstIndex);
+
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
+  if (llvm::none_of(
+          ArgsAsWritten->arguments(), [&](const TemplateArgumentLoc &ArgLoc) {
+            return !ArgLoc.getArgument().isDependent() &&
+                   ArgLoc.getArgument().isConceptOrConceptTemplateParameter();
+          })) {
+    return Concept->getConstraintExpr();
+  }
+
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Concept, Concept->getLexicalDeclContext(),
+      /*Final=*/false, CSE->getTemplateArguments(),
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
+  return S.SubstConceptTemplateArguments(CSE, Concept->getConstraintExpr(),
+                                         MLTAL);
+}
+
 bool Sema::CheckConstraintSatisfaction(
     const ConceptSpecializationExpr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
+  ExprResult Res = SubstituteConceptsInConstrainExpression(
+      *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
+  if (!Res.isUsable())
+    return true;
+
   llvm::SmallVector<AssociatedConstraint, 1> Constraints;
-  Constraints.emplace_back(
-      ConstraintExpr->getNamedConcept()->getConstraintExpr());
+  Constraints.emplace_back(Res.get());
 
   MultiLevelTemplateArgumentList MLTAL(ConstraintExpr->getNamedConcept(),
                                        ConstraintExpr->getTemplateArguments(),
@@ -2249,8 +2287,14 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       // Use canonical declarations to merge ConceptDecls across
       // different modules.
       ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
+
+      ExprResult Res =
+          SubstituteConceptsInConstrainExpression(S, D, CSE, SubstIndex);
+      if (!Res.isUsable())
+        return nullptr;
+
       SubNF = NormalizedConstraint::fromAssociatedConstraints(
-          S, CD, AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
+          S, CD, AssociatedConstraint(Res.get(), SubstIndex));
 
       if (!SubNF)
         return nullptr;
