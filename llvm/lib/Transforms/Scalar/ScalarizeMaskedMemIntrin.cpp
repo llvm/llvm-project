@@ -1123,7 +1123,10 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       if (TTI.isLegalMaskedLoad(
               CI->getType(), CI->getParamAlign(0).valueOrOne(),
               cast<PointerType>(CI->getArgOperand(0)->getType())
-                  ->getAddressSpace()))
+                  ->getAddressSpace(),
+              isConstantIntVector(CI->getArgOperand(2))
+                  ? TTI::MaskKind::ConstantMask
+                  : TTI::MaskKind::VariableOrConstantMask))
         return false;
       scalarizeMaskedLoad(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
@@ -1133,7 +1136,9 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
               CI->getParamAlign(1).valueOrOne(),
               cast<PointerType>(CI->getArgOperand(1)->getType())
                   ->getAddressSpace(),
-              isConstantIntVector(CI->getArgOperand(3))))
+              isConstantIntVector(CI->getArgOperand(3))
+                  ? TTI::MaskKind::ConstantMask
+                  : TTI::MaskKind::VariableOrConstantMask))
         return false;
       scalarizeMaskedStore(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
