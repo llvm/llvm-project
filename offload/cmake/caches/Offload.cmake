@@ -7,3 +7,9 @@ set(RUNTIMES_nvptx64-nvidia-cuda_CACHE_FILES "${CMAKE_SOURCE_DIR}/../libcxx/cmak
 set(RUNTIMES_amdgcn-amd-amdhsa_CACHE_FILES "${CMAKE_SOURCE_DIR}/../libcxx/cmake/caches/AMDGPU.cmake" CACHE STRING "")
 set(RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES "compiler-rt;libc;openmp;libcxx;libcxxabi" CACHE STRING "")
 set(RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "compiler-rt;libc;openmp;libcxx;libcxxabi" CACHE STRING "")
+
+# Prevent people mistakenly sending CPU flags to the GPU build.
+set(RUNTIMES_nvptx64-nvidia-cuda_CMAKE_CXX_FLAGS "" CACHE STRING "")
+set(RUNTIMES_amdgcn-amd-amdhsa_CMAKE_CXX_FLAGS "" CACHE STRING "")
+set(RUNTIMES_nvptx64-nvidia-cuda_CMAKE_C_FLAGS "" CACHE STRING "")
+set(RUNTIMES_amdgcn-amd-amdhsa_CMAKE_C_FLAGS "" CACHE STRING "")
