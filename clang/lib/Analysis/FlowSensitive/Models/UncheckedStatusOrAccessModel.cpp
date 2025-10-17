@@ -525,6 +525,18 @@ static void transferNotOkStatusCall(const CallExpr *Expr,
   State.Env.assume(A.makeNot(OkVal.formula()));
 }
 
+static void transferEmplaceCall(const CXXMemberCallExpr *Expr,
+                                const MatchFinder::MatchResult &,
+                                LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusOrLoc == nullptr)
+    return;
+
+  auto &OkVal = valForOk(locForStatus(*StatusOrLoc), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -568,6 +580,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
           })
       .CaseOfCFGStmt<CallExpr>(isOkStatusCall(), transferOkStatusCall)
       .CaseOfCFGStmt<CallExpr>(isNotOkStatusCall(), transferNotOkStatusCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("emplace"),
+                                        transferEmplaceCall)
       .Build();
 }
 
