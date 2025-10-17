@@ -70,8 +70,6 @@ public:
   static lldb::SBModule GetModuleAtIndexFromEvent(const uint32_t idx,
                                                   const lldb::SBEvent &event);
 
-  static const char *GetSessionNameFromEvent(const SBEvent &event);
-
   static const char *GetBroadcasterClassName();
 
   lldb::SBProcess GetProcess();
@@ -367,6 +365,16 @@ public:
   ///     The globally unique ID for this target, or
   ///     LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID if the target is invalid.
   lldb::user_id_t GetGloballyUniqueID() const;
+
+  /// Get the target session name for this target.
+  ///
+  /// The target session name provides a meaningful name for IDEs or tools to
+  /// display to help the user identify the origin and purpose of the target.
+  ///
+  /// \return
+  ///     The target session name for this target, or nullptr if the target is
+  ///     invalid or has no target session name.
+  const char *GetTargetSessionName() const;
 
   SBError SetLabel(const char *label);
 
