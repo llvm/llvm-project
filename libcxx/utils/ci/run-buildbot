@@ -20,25 +20,34 @@ cat <<EOF
 Usage:
 ${PROGNAME} [options] <BUILDER>
 
-[-h|--help]         Display this help and exit.
+[-h|--help]                  Display this help and exit.
 
---llvm-root <DIR>   Path to the root of the LLVM monorepo. By default, we try
-                    to figure it out based on the current working directory.
+--llvm-root <DIR>            Path to the root of the LLVM monorepo. By default, we try
+                             to figure it out based on the current working directory.
 
---build-dir <DIR>   The directory to use for building the library. By default,
-                    this is '<llvm-root>/build/<builder>'.
+--build-dir <DIR>            The directory to use for building the library. By default,
+                             this is '<llvm-root>/build/<builder>'.
+
+--clang-tidy-stdlib <STDLIB> Builds the clang-tidy plugin with the specified standard
+                             library implementation. By default, this is empty. Valid
+                             options are empty, 'libc++', and 'libstdc++'. You should
+                             only set this option when clang-tidy needs to be linked
+                             against a different standard library implementation to
+                             the compiler's default choice.
+
+                             This option only works for Clang.
 
 Environment variables
-CC                  The C compiler to use, this value is used by CMake. This
-                    variable is optional.
+CC                           The C compiler to use, this value is used by CMake. This
+                             variable is optional.
 
-CXX                 The C++ compiler to use, this value is used by CMake. This
-                    variable is optional.
+CXX                          The C++ compiler to use, this value is used by CMake. This
+                             variable is optional.
 
-CMAKE               The CMake binary to use. This variable is optional.
+CMAKE                        The CMake binary to use. This variable is optional.
 
-CLANG_FORMAT        The clang-format binary to use when generating the format
-                    ignore list.
+CLANG_FORMAT                 The clang-format binary to use when generating the format
+                             ignore list.
 
 EOF
 }
@@ -60,6 +69,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build-dir)
             BUILD_DIR="${2}"
+            shift; shift
+            ;;
+        --clang-tidy-stdlib)
+            BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB="${2}"
             shift; shift
             ;;
         *)
@@ -136,6 +149,7 @@ function generate-cmake-base() {
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLIBCXX_ENABLE_WERROR=YES \
+          -DLIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB="${BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB}" \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
           -DCMAKE_INSTALL_MESSAGE=NEVER \
