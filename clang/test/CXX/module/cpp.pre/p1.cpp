@@ -38,6 +38,11 @@
 // RUN: %clang_cc1 -std=c++20 %t/cwg2947_example4.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/cwg2947_example5.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/cwg2947_example6.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/cwg2947_ext1.cpp -verify -E | FileCheck %t/cwg2947_ext1.cpp
+// RUN: %clang_cc1 -std=c++20 %t/cwg2947_ext2.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/cwg2947_ext3.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/preprocessed_module_file.cpp -E | FileCheck %t/preprocessed_module_file.cpp
+// RUN: %clang_cc1 -std=c++20 %t/pedantic-errors.cpp -pedantic-errors -fsyntax-only -verify
 
 
 //--- hash.cpp
@@ -193,8 +198,34 @@ export module M
 export module M; int // expected-warning {{extra tokens at end of 'module' directive}}
   n;                         // OK
 
+//--- cwg2947_ext1.cpp
+// CHECK: export __preprocessed_module m; int x;
+// CHECK-NEXT: extern "C++" int *y = &x;
+export module m; int x; // expected-warning {{extra tokens at end of 'module' directive}}
+extern "C++" int *y = &x;
+
+//--- cwg2947_ext2.cpp
+export module x _Pragma("GCC warning \"Hi\""); // expected-warning {{Hi}}
+
+//--- cwg2947_ext3.cpp
+export module x; _Pragma("GCC warning \"hi\""); // expected-warning {{hi}}
+// expected-warning@-1 {{extra tokens at end of 'module' directive}}
+
 //--- preprocessed_module_file.cpp
+// CHECK: __preprocessed_module;
+// CHECK-NEXT: export __preprocessed_module M;
+// CHECK-NEXT: __preprocessed_import std;
+// CHECK-NEXT: export __preprocessed_import bar;
+// CHECK-NEXT: struct import {};
+// CHECK-EMPTY:
+// CHECK-NEXT: import foo;
+module;
 export module M;
+import std;
+export import bar;
 struct import {};
 #define EMPTY
 EMPTY import foo;
+
+//--- pedantic-errors.cpp
+export module m; int n; // expected-warning {{extra tokens at end of 'module' directive}}

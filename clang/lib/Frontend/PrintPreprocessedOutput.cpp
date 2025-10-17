@@ -1000,7 +1000,6 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       PP.Lex(Tok);
       continue;
     } else if (PP.getLangOpts().CPlusPlusModules && Tok.is(tok::kw_module)) {
-      Callbacks->setEmittedDirectiveOnThisLine();
       assert(!IsCXXModuleDirective && "Is an module directive being printed?");
       IsCXXModuleDirective = true;
       IsStartOfLine = false;

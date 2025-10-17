@@ -414,9 +414,6 @@ private:
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
 
-  /// Whether we're declaring a standard C++20 named Modules.
-  bool DeclaringCXXNamedModules = false;
-
   /// Whether the last token we lexed was an 'export' keyword.
   ExportContextualKeywordInfo LastTokenWasExportKeyword;
 
@@ -2583,12 +2580,6 @@ public:
     assert(getLangOpts().CPlusPlusModules &&
            "Import C++ named modules are only valid for C++20 modules");
     return ImportingCXXNamedModules;
-  }
-
-  bool isDeclaringCXXNamedModules() const {
-    assert(getLangOpts().CPlusPlusModules &&
-           "Declare C++ named modules are only valid for C++20 modules");
-    return DeclaringCXXNamedModules;
   }
 
   /// Allocate a new MacroInfo object with the provided SourceLocation.

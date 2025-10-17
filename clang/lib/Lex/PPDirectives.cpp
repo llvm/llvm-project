@@ -4094,8 +4094,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
 void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   assert(getLangOpts().CPlusPlusModules && ImportTok.is(tok::kw_import));
   llvm::SaveAndRestore<bool> SaveImportingCXXModules(
-      this->ImportingCXXNamedModules);
-  ImportingCXXNamedModules = true;
+      this->ImportingCXXNamedModules, true);
 
   if (LastTokenWasExportKeyword.isValid())
     LastTokenWasExportKeyword.reset();

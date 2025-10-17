@@ -1313,7 +1313,9 @@ void Preprocessor::EnterModuleSuffixTokenStream(ArrayRef<Token> Toks) {
   auto ToksCopy = std::make_unique<Token[]>(Toks.size());
   std::copy(Toks.begin(), Toks.end(), ToksCopy.get());
   EnterTokenStream(std::move(ToksCopy), Toks.size(),
-                   /*DisableMacroExpansion*/ true, /*IsReinject*/ false);
+                   /*DisableMacroExpansion*/ false, /*IsReinject*/ false);
+  assert(CurTokenLexer && "Must have a TokenLexer");
+  CurTokenLexer->setLexingCXXModuleDirective();
 }
 
 /// Lex a token following the 'import' contextual keyword.
