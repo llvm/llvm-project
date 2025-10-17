@@ -13,7 +13,8 @@
     (defined(__cplusplus) && __cplusplus >= 201703L)
 
 // TODO(bassiounix): Who should def this macro (clang vs libc)? Where?
-#define __STDC_LIB_EXT1__ 201112L
+// TODO(bassiounix): uncomment/move when Annex K is fully implemented.
+// #define __STDC_LIB_EXT1__ 201112L
 
 #if defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ == 1
 
