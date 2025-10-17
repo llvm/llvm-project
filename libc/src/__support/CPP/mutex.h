@@ -29,14 +29,14 @@ template <typename MutexType> class lock_guard {
 
 public:
   // Calls `m.lock()` upon resource acquisition.
-  LIBC_INLINE explicit lock_guard(LIBC_LIFETIMEBOUND MutexType &m) : mutex(m) {
+  LIBC_INLINE explicit lock_guard(LIBC_LIFETIME_BOUND MutexType &m) : mutex(m) {
     mutex.lock();
   }
 
   // Acquires ownership of the mutex object `m` without attempting to lock
   // it. The behavior is undefined if the current thread does not hold the
   // lock on `m`. Does not call `m.lock()` upon resource acquisition.
-  LIBC_INLINE lock_guard(LIBC_LIFETIMEBOUND MutexType &m, adopt_lock_t /* t */)
+  LIBC_INLINE lock_guard(LIBC_LIFETIME_BOUND MutexType &m, adopt_lock_t /* t */)
       : mutex(m) {}
 
   LIBC_INLINE ~lock_guard() { mutex.unlock(); }

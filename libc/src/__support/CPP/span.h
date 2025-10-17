@@ -64,12 +64,12 @@ public:
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  LIBC_INLINE constexpr span(LIBC_LIFETIMEBOUND U (&arr)[N])
+  LIBC_INLINE constexpr span(LIBC_LIFETIME_BOUND U (&arr)[N])
       : span_data(arr), span_size(N) {}
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  LIBC_INLINE constexpr span(LIBC_LIFETIMEBOUND array<U, N> &arr)
+  LIBC_INLINE constexpr span(LIBC_LIFETIME_BOUND array<U, N> &arr)
       : span_data(arr.data()), span_size(arr.size()) {}
 
   template <typename U, cpp::enable_if_t<is_compatible_v<U>, bool> = true>

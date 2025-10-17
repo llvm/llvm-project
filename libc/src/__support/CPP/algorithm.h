@@ -25,14 +25,14 @@ template <class T = void> struct bit_or {};
 template <class T = void> struct bit_xor {};
 
 template <class T>
-LIBC_INLINE constexpr const T &max(LIBC_LIFETIMEBOUND const T &a,
-                                   LIBC_LIFETIMEBOUND const T &b) {
+LIBC_INLINE constexpr const T &max(LIBC_LIFETIME_BOUND const T &a,
+                                   LIBC_LIFETIME_BOUND const T &b) {
   return (a < b) ? b : a;
 }
 
 template <class T>
-LIBC_INLINE constexpr const T &min(LIBC_LIFETIMEBOUND const T &a,
-                                   LIBC_LIFETIMEBOUND const T &b) {
+LIBC_INLINE constexpr const T &min(LIBC_LIFETIME_BOUND const T &a,
+                                   LIBC_LIFETIME_BOUND const T &b) {
   return (a < b) ? a : b;
 }
 

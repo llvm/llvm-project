@@ -19,13 +19,13 @@ namespace cpp {
 // forward
 template <typename T>
 LIBC_INLINE constexpr T &&
-forward(LIBC_LIFETIMEBOUND remove_reference_t<T> &value) {
+forward(LIBC_LIFETIME_BOUND remove_reference_t<T> &value) {
   return static_cast<T &&>(value);
 }
 
 template <typename T>
 LIBC_INLINE constexpr T &&
-forward(LIBC_LIFETIMEBOUND remove_reference_t<T> &&value) {
+forward(LIBC_LIFETIME_BOUND remove_reference_t<T> &&value) {
   static_assert(!is_lvalue_reference_v<T>,
                 "cannot forward an rvalue as an lvalue");
   return static_cast<T &&>(value);

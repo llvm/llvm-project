@@ -92,9 +92,9 @@ LIBC_THREAD_MODE_EXTERNAL.
 #endif
 
 #if __has_attribute(lifetimebound)
-#define LIBC_LIFETIMEBOUND [[clang::lifetimebound]]
+#define LIBC_LIFETIME_BOUND [[clang::lifetimebound]]
 #else
-#define LIBC_LIFETIMEBOUND
+#define LIBC_LIFETIME_BOUND
 #endif
 
 #if __has_attribute(lifetime_capture_by)
