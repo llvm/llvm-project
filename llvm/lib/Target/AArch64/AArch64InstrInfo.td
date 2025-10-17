@@ -256,6 +256,10 @@ def HasSVE2p3       : Predicate<"Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
 def HasSME2p3       : Predicate<"Subtarget->hasSME2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p3), "sme2p3">;
+def HasF16F32DOT    : Predicate<"Subtarget->hasF16F32DOT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureF16F32DOT), "f16f32dot">;
+def HasF16F32MM     : Predicate<"Subtarget->hasF16F32MM()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureF16F32MM), "f16f32mm">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -11281,8 +11285,19 @@ let Predicates = [HasLSFE] in {
   def STBFMINNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b111, "stbfminnml">;
 }
 
+let Predicates = [HasF16F32DOT] in {
+  defm FDOT :SIMDThreeSameVectorFDot<"fdot">;
+  defm FDOTlane: SIMDThreeSameVectorFDOTIndex<"fdot">;
+}
+
+let Predicates = [HasF16MM] in
+  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla">;
+
+let Predicates = [HasF16F32MM] in
+  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
+
 let Uses = [FPMR, FPCR] in
-defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
 
 //===----------------------------------------------------------------------===//
 // Contention Management Hints (FEAT_CMH)

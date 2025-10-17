@@ -1448,7 +1448,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_MPAMV2,       AArch64::AEK_MTETC,
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
-      AArch64::AEK_F16MM,
+      AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
+      AArch64::AEK_F16F32MM,
   };
 
   std::vector<StringRef> Features;
@@ -1570,6 +1571,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2p3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-b16mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f16f32dot"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f16f32mm"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1746,6 +1749,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve2p3", "nosve2p3", "+sve2p3", "-sve2p3"},
       {"sve-b16mm", "nosve-b16mm", "+sve-b16mm", "-sve-b16mm"},
       {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
+      {"f16f32dot", "nof16f32dot", "+f16f32dot", "-f16f32dot"},
+      {"f16f32mm", "nof16f32mm", "+f16f32mm", "-f16f32mm"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1960,7 +1965,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nofp", "fprcvt"}, {"fp-armv8", "fprcvt"}, {}},
         {AArch64::ARMV9_6A, {"fprcvt", "nofp"}, {}, {"fp-armv8", "fprcvt"}},
 
-        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, faminmax, lut, fp8}
+        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, faminmax, lut, fp8,
+        // f16f32dot, f16f32mm}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
         {AArch64::ARMV8A, {"aes", "nosimd"}, {}, {"neon", "aes"}},
         {AArch64::ARMV8A, {"nosimd", "sha2"}, {"neon", "sha2"}, {}},
@@ -1979,6 +1985,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosimd", "lut"}, {"neon", "lut"}, {}},
         {AArch64::ARMV9_6A, {"fp8", "nosimd"}, {}, {"neon", "fp8"}},
         {AArch64::ARMV9_6A, {"nosimd", "fp8"}, {"neon", "fp8"}, {}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16f32mm"}, {"neon", "f16f32mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16f32mm", "nosimd"}, {}, {"neon", "f16f32mm"}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16f32dot"}, {"neon", "f16f32dot"}, {}},
+        {AArch64::ARMV9_7A, {"f16f32dot", "nosimd"}, {}, {"neon", "f16f32dot"}},
 
         // fp8 -> {fp8dot4, fp8dot2}
         {AArch64::ARMV9_6A, {"nofp8", "fp8dot4"}, {"fp8", "fp8dot4"}, {}},
@@ -1994,13 +2004,29 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nosimd", "fcma"}, {"neon", "complxnum"}, {}},
         {AArch64::ARMV8A, {"fcma", "nosimd"}, {}, {"neon", "complxnum"}},
 
-        // fp16 -> {fp16fml, sve, f16mm}
+        // fp16 -> {fp16fml, sve, f16f32dot, f16f32mm, f16mm}
         {AArch64::ARMV8A, {"nofp16", "fp16fml"}, {"fullfp16", "fp16fml"}, {}},
         {AArch64::ARMV8A, {"fp16fml", "nofp16"}, {}, {"fullfp16", "fp16fml"}},
         {AArch64::ARMV8A, {"nofp16", "sve"}, {"fullfp16", "sve"}, {}},
         {AArch64::ARMV8A, {"sve", "nofp16"}, {}, {"fullfp16", "sve"}},
         {AArch64::ARMV9_7A, {"nofp16", "f16mm"}, {"fullfp16", "f16mm"}, {}},
         {AArch64::ARMV9_7A, {"f16mm", "nofp16"}, {}, {"fullfp16", "f16mm"}},
+        {AArch64::ARMV9_7A,
+         {"nofp16", "f16f32mm"},
+         {"fullfp16", "f16f32mm"},
+         {}},
+        {AArch64::ARMV9_7A,
+         {"f16f32mm", "nofp16"},
+         {},
+         {"fullfp16", "f16f32mm"}},
+        {AArch64::ARMV9_7A,
+         {"nofp16", "f16f32dot"},
+         {"fullfp16", "f16f32dot"},
+         {}},
+        {AArch64::ARMV9_7A,
+         {"f16f32dot", "nofp16"},
+         {},
+         {"fullfp16", "f16f32dot"}},
 
         // bf16 -> {sme}
         {AArch64::ARMV8A, {"nobf16", "sme"}, {"bf16", "sme"}, {}},

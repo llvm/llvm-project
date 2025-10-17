@@ -3894,6 +3894,8 @@ static const struct Extension {
     {"sve2p3", {AArch64::FeatureSVE2p3}},
     {"sve-b16mm", {AArch64::FeatureSVE_B16MM}},
     {"f16mm", {AArch64::FeatureF16MM}},
+    {"f16f32dot", {AArch64::FeatureF16F32DOT}},
+    {"f16f32mm", {AArch64::FeatureF16F32MM}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

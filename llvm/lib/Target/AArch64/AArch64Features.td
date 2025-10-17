@@ -619,6 +619,12 @@ def FeatureSVE_B16MM : ExtensionWithMArch<"sve-b16mm", "SVE_B16MM", "FEAT_SVE_B1
 def FeatureF16MM : ExtensionWithMArch<"f16mm", "F16MM", "FEAT_F16MM",
   "Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate", [FeatureFullFP16]>;
 
+def FeatureF16F32DOT : ExtensionWithMArch<"f16f32dot", "F16F32DOT", "FEAT_F16F32DOT",
+  "Enable Armv9.7-A Advanced SIMD half-precision dot product accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM",
+  "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
