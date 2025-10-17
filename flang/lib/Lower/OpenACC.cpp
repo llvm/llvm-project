@@ -4382,9 +4382,8 @@ lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
     if (auto *eqSet = Fortran::semantics::FindEquivalenceSet(sym)) {
       for (Fortran::semantics::EquivalenceObject eqObj : *eqSet) {
         std::string eqName = converter.mangleName(eqObj.symbol);
-        if (fir::GlobalOp g = builder.getNamedGlobal(eqName)) {
+        if (fir::GlobalOp g = builder.getNamedGlobal(eqName))
           return g;
-        }
       }
     }
   }
