@@ -304,6 +304,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
+  to align with `P0615R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0615r0.html>`_ changing the term. (#GH157880)
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
   diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
@@ -413,6 +415,7 @@ Bug Fixes in This Version
   (#GH159080)
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
+- Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -517,6 +520,7 @@ X86 Support
 - Remove `[no-]evex512` feature request from intrinsics and builtins.
 - Change features `avx10.x-[256,512]` to `avx10.x`.
 - `-march=wildcatlake` is now supported.
+- `-march=novalake` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
