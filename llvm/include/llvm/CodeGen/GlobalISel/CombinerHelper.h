@@ -661,6 +661,8 @@ public:
   /// KnownBits information.
   bool matchICmpToLHSKnownBits(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
+  bool combineMergedBFXCompare(MachineInstr &MI) const;
+
   /// \returns true if (and (or x, c1), c2) can be replaced with (and x, c2)
   bool matchAndOrDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
