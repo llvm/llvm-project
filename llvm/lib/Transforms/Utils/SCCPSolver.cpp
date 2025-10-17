@@ -761,7 +761,7 @@ private:
   void handleCallArguments(CallBase &CB);
   void handleExtractOfWithOverflow(ExtractValueInst &EVI,
                                    const WithOverflowInst *WO, unsigned Idx);
-  bool isInstOverDefined(Instruction &Inst);
+  bool isInstFullyOverDefined(Instruction &Inst);
 
 private:
   friend class InstVisitor<SCCPInstVisitor>;
@@ -1381,7 +1381,7 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
   if (PN.getNumIncomingValues() > 64)
     return (void)markOverdefined(&PN);
 
-  if (isInstOverDefined(PN))
+  if (isInstFullyOverDefined(PN))
     return;
   SmallVector<unsigned> FeasibleIncomingIndices;
   for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
@@ -2146,7 +2146,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
   }
 }
 
-bool SCCPInstVisitor::isInstOverDefined(Instruction &Inst) {
+bool SCCPInstVisitor::isInstFullyOverDefined(Instruction &Inst) {
   // For structure Type, we handle each member separately.
   // A structure object won't be considered as overdefined when
   // there is at least one member that is not overdefined.
