@@ -37,7 +37,7 @@ target triple = "x86_64-pc-windows-msvc"
 @"??_R0H@8" = external global ptr
 
 ; Function Attrs: sanitize_address
-define noundef i32 @main() sanitize_address personality ptr @__CxxFrameHandler3 {
+define i32 @main() sanitize_address personality ptr @__CxxFrameHandler3 {
 entry:
   %ex = alloca i32, align 4
   invoke void @throw()
