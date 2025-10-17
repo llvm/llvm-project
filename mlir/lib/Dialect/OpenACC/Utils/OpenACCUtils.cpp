@@ -14,9 +14,8 @@
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
   mlir::Operation *parentOp = region.getParentOp();
   while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
+    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp))
       return parentOp;
-    }
     parentOp = parentOp->getParentOp();
   }
   return nullptr;
@@ -25,11 +24,10 @@ mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
 template <typename OpTy>
 static bool isOnlyUsedByOpClauses(mlir::Value val, mlir::Region &region) {
   auto checkIfUsedOnlyByOpInside = [&](mlir::Operation *user) {
-    if (!region.isAncestor(user->getParentRegion())) {
-      // For any users which are not in the current acc region, we can ignore.
-      // Return true so that it can be used in a `all_of` check.
+    // For any users which are not in the current acc region, we can ignore.
+    // Return true so that it can be used in a `all_of` check.
+    if (!region.isAncestor(user->getParentRegion()))
       return true;
-    }
     return mlir::isa<OpTy>(user);
   };
 
@@ -71,13 +69,12 @@ mlir::acc::getDefaultAttr(Operation *op) {
 mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
   mlir::acc::VariableTypeCategory typeCategory =
       mlir::acc::VariableTypeCategory::uncategorized;
-  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(var.getType())) {
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(var.getType()))
     typeCategory = mappableTy.getTypeCategory(var);
-  } else if (auto pointerLikeTy =
-                 dyn_cast<mlir::acc::PointerLikeType>(var.getType())) {
+  else if (auto pointerLikeTy =
+               dyn_cast<mlir::acc::PointerLikeType>(var.getType()))
     typeCategory = pointerLikeTy.getPointeeTypeCategory(
         cast<TypedValue<mlir::acc::PointerLikeType>>(var),
         pointerLikeTy.getElementType());
-  }
   return typeCategory;
 }
