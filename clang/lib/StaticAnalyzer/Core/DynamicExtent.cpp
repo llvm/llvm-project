@@ -128,5 +128,11 @@ ProgramStateRef setDynamicExtent(ProgramStateRef State, const MemRegion *MR,
   return State->set<DynamicExtentMap>(MR->StripCasts(), Size);
 }
 
+void markAllDynamicExtentLive(ProgramStateRef State, SymbolReaper &SymReaper) {
+  for (const auto &I : State->get<DynamicExtentMap>())
+    if (SymbolRef Sym = I.second.getAsSymbol())
+      SymReaper.markLive(Sym);
+}
+
 } // namespace ento
 } // namespace clang
