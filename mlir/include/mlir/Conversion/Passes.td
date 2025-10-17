@@ -947,18 +947,11 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
 // Normalize
 //===----------------------------------------------------------------------===//
 def Normalize : Pass<"normalize", "ModuleOp"> {
-  let summary = "normalize.";
+  let summary = "convert MLIR input to its normalized form";
   let description = [{
-    just normalize bro
+    This pass produces reordered MLIR input with determinstic variable
+    names to reduce the diff between two semantically similar programs
   }];
-  let dependentDialects = [
-    "arith::ArithDialect",
-    "cf::ControlFlowDialect",
-    "func::FuncDialect",
-    "scf::SCFDialect",
-    "vector::VectorDialect",
-    "LLVM::LLVMDialect",
-  ];
 }
 
 //===----------------------------------------------------------------------===//
