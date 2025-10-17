@@ -45,4 +45,4 @@ Options
    references ``X``, then it will not emit a warning for ``X`` not to provoke
    false positive. If you're sure that such references don't extend ``X``
    lifetime and ready to handle possible false positives, then set `StrictMode`
-   to `true`. Defaults to `false`.
+   to `true`. Default is `false`.
