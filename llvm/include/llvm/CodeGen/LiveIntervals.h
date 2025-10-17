@@ -229,8 +229,8 @@ public:
   /// doing something wrong if you call pruneValue directly on a
   /// LiveInterval. Indeed, you are supposed to call pruneValue on the main
   /// LiveRange and all the LiveRanges of the subranges if any.
-  LLVM_ATTRIBUTE_UNUSED void pruneValue(LiveInterval &, SlotIndex,
-                                        SmallVectorImpl<SlotIndex> *) {
+  [[maybe_unused]] void pruneValue(LiveInterval &, SlotIndex,
+                                   SmallVectorImpl<SlotIndex> *) {
     llvm_unreachable(
         "Use pruneValue on the main LiveRange and on each subrange");
   }

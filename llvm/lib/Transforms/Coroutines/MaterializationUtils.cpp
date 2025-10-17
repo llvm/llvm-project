@@ -137,8 +137,7 @@ struct RematGraph {
 
 } // namespace
 
-namespace llvm {
-template <> struct GraphTraits<RematGraph *> {
+template <> struct llvm::GraphTraits<RematGraph *> {
   using NodeRef = RematGraph::RematNode *;
   using ChildIteratorType = RematGraph::RematNode **;
 
@@ -148,8 +147,6 @@ template <> struct GraphTraits<RematGraph *> {
   }
   static ChildIteratorType child_end(NodeRef N) { return N->Operands.end(); }
 };
-
-} // end namespace llvm
 
 // For each instruction identified as materializable across the suspend point,
 // and its associated DAG of other rematerializable instructions,

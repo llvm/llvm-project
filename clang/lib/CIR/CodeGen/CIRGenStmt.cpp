@@ -536,7 +536,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   mlir::Block *currBlock = builder.getBlock();
   mlir::Block *labelBlock = currBlock;
 
-  if (!currBlock->empty()) {
+  if (!currBlock->empty() || currBlock->isEntryBlock()) {
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       labelBlock = builder.createBlock(builder.getBlock()->getParent());

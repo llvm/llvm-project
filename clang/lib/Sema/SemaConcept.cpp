@@ -604,8 +604,11 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return std::nullopt;
   const NormalizedConstraint::OccurenceList &Used =
       Constraint.mappingOccurenceList();
-  SubstitutedOuterMost =
-      llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
+  // The empty MLTAL situation should only occur when evaluating non-dependent
+  // constraints.
+  if (MLTAL.getNumSubstitutedLevels())
+    SubstitutedOuterMost =
+        llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
     TemplateArgument Arg;
@@ -623,10 +626,10 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   if (Offset < SubstitutedOuterMost.size())
     SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
 
-  MLTAL.replaceOutermostTemplateArguments(
-      const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
-      SubstitutedOuterMost);
-  return std::move(MLTAL);
+  MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOuterMost,
+                                                    /*Final=*/false);
+  return std::move(SubstitutedTemplateArgs);
 }
 
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
@@ -956,11 +959,20 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
           ? Constraint.getPackSubstitutionIndex()
           : PackSubstitutionIndex;
 
-  Sema::InstantiatingTemplate _(S, ConceptId->getBeginLoc(),
-                                Sema::InstantiatingTemplate::ConstraintsCheck{},
-                                ConceptId->getNamedConcept(),
-                                MLTAL.getInnermost(),
-                                Constraint.getSourceRange());
+  Sema::InstantiatingTemplate InstTemplate(
+      S, ConceptId->getBeginLoc(),
+      Sema::InstantiatingTemplate::ConstraintsCheck{},
+      ConceptId->getNamedConcept(),
+      // We may have empty template arguments when checking non-dependent
+      // nested constraint expressions.
+      // In such cases, non-SFINAE errors would have already been diagnosed
+      // during parameter mapping substitution, so the instantiating template
+      // arguments are less useful here.
+      MLTAL.getNumSubstitutedLevels() ? MLTAL.getInnermost()
+                                      : ArrayRef<TemplateArgument>{},
+      Constraint.getSourceRange());
+  if (InstTemplate.isInvalid())
+    return ExprError();
 
   unsigned Size = Satisfaction.Details.size();
 
@@ -1205,13 +1217,51 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
+static const ExprResult
+SubstituteConceptsInConstrainExpression(Sema &S, const NamedDecl *D,
+                                        const ConceptSpecializationExpr *CSE,
+                                        UnsignedOrNone SubstIndex) {
+
+  // [C++2c] [temp.constr.normal]
+  // Otherwise, to form CE, any non-dependent concept template argument Ai
+  // is substituted into the constraint-expression of C.
+  // If any such substitution results in an invalid concept-id,
+  // the program is ill-formed; no diagnostic is required.
+
+  ConceptDecl *Concept = CSE->getNamedConcept()->getCanonicalDecl();
+  Sema::ArgPackSubstIndexRAII _(S, SubstIndex);
+
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
+  if (llvm::none_of(
+          ArgsAsWritten->arguments(), [&](const TemplateArgumentLoc &ArgLoc) {
+            return !ArgLoc.getArgument().isDependent() &&
+                   ArgLoc.getArgument().isConceptOrConceptTemplateParameter();
+          })) {
+    return Concept->getConstraintExpr();
+  }
+
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Concept, Concept->getLexicalDeclContext(),
+      /*Final=*/false, CSE->getTemplateArguments(),
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
+  return S.SubstConceptTemplateArguments(CSE, Concept->getConstraintExpr(),
+                                         MLTAL);
+}
+
 bool Sema::CheckConstraintSatisfaction(
     const ConceptSpecializationExpr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
+  ExprResult Res = SubstituteConceptsInConstrainExpression(
+      *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
+  if (!Res.isUsable())
+    return true;
+
   llvm::SmallVector<AssociatedConstraint, 1> Constraints;
-  Constraints.emplace_back(
-      ConstraintExpr->getNamedConcept()->getConstraintExpr());
+  Constraints.emplace_back(Res.get());
 
   MultiLevelTemplateArgumentList MLTAL(ConstraintExpr->getNamedConcept(),
                                        ConstraintExpr->getTemplateArguments(),
@@ -2237,8 +2287,14 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       // Use canonical declarations to merge ConceptDecls across
       // different modules.
       ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
+
+      ExprResult Res =
+          SubstituteConceptsInConstrainExpression(S, D, CSE, SubstIndex);
+      if (!Res.isUsable())
+        return nullptr;
+
       SubNF = NormalizedConstraint::fromAssociatedConstraints(
-          S, CD, AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
+          S, CD, AssociatedConstraint(Res.get(), SubstIndex));
 
       if (!SubNF)
         return nullptr;

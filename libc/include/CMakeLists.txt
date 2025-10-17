@@ -632,8 +632,9 @@ add_header_macro(
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.struct_timeval
     .llvm-libc-macros.sys_time_macros
+    .llvm-libc-types.struct_itimerval
+    .llvm-libc-types.struct_timeval
 )
 
 add_header_macro(

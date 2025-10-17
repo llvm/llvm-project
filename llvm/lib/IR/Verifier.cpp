@@ -893,7 +893,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       if (GV.hasInitializer()) {
         const Constant *Init = GV.getInitializer();
         const ConstantArray *InitArray = dyn_cast<ConstantArray>(Init);
-        Check(InitArray, "wrong initalizer for intrinsic global variable",
+        Check(InitArray, "wrong initializer for intrinsic global variable",
               Init);
         for (Value *Op : InitArray->operands()) {
           Value *V = Op->stripPointerCasts();
@@ -6479,9 +6479,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               NumRows->getZExtValue() * NumColumns->getZExtValue(),
           "Result of a matrix operation does not fit in the returned vector!");
 
-    if (Stride)
+    if (Stride) {
+      Check(Stride->getBitWidth() <= 64, "Stride bitwidth cannot exceed 64!",
+            IF);
       Check(Stride->getZExtValue() >= NumRows->getZExtValue(),
             "Stride must be greater or equal than the number of rows!", IF);
+    }
 
     break;
   }

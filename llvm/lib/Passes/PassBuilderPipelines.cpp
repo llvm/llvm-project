@@ -1658,6 +1658,16 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM;
 
+  // Currently this pipeline is only invoked in an LTO pre link pass or when we
+  // are not running LTO. If that changes the below checks may need updating.
+  assert(isLTOPreLink(Phase) || Phase == ThinOrFullLTOPhase::None);
+
+  // If we are invoking this in non-LTO mode, remove any MemProf related
+  // attributes and metadata, as we don't know whether we are linking with
+  // a library containing the necessary interfaces.
+  if (Phase == ThinOrFullLTOPhase::None)
+    MPM.addPass(MemProfRemoveInfo());
+
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
 
@@ -1803,6 +1813,12 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
 
+  // If we are invoking this without a summary index noting that we are linking
+  // with a library containing the necessary APIs, remove any MemProf related
+  // attributes and metadata.
+  if (!ImportSummary || !ImportSummary->withSupportsHotColdNew())
+    MPM.addPass(MemProfRemoveInfo());
+
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
@@ -1873,6 +1889,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   ModulePassManager MPM;
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
+
+  // If we are invoking this without a summary index noting that we are linking
+  // with a library containing the necessary APIs, remove any MemProf related
+  // attributes and metadata.
+  if (!ExportSummary || !ExportSummary->withSupportsHotColdNew())
+    MPM.addPass(MemProfRemoveInfo());
 
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.

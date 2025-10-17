@@ -192,62 +192,6 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedFailureCase) {
   EXPECT_EQ(ErrMsg, "N is not a multiple of 2");
 }
 
-static void
-round_trip_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                                   orc_rt_WrapperFunctionReturn Return,
-                                   orc_rt_WrapperFunctionBuffer ArgBytes) {
-  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::handle(
-      Session, CallCtx, Return, ArgBytes,
-      [](move_only_function<void(int32_t *)> Return, int32_t *P) {
-        Return(P);
-      });
-}
-
-TEST(SPSWrapperFunctionUtilsTest, TransparentConversionPointers) {
-  int X = 42;
-  int *P = nullptr;
-  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
-      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
-      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); }, &X);
-
-  EXPECT_EQ(P, &X);
-}
-
-TEST(SPSWrapperFunctionUtilsTest, TransparentConversionReferenceArguments) {
-  int X = 42;
-  int *P = nullptr;
-  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
-      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
-      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); },
-      static_cast<int *const &>(&X));
-
-  EXPECT_EQ(P, &X);
-}
-
-static void
-expected_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                                 orc_rt_WrapperFunctionReturn Return,
-                                 orc_rt_WrapperFunctionBuffer ArgBytes) {
-  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::handle(
-      Session, CallCtx, Return, ArgBytes,
-      [](move_only_function<void(Expected<int32_t *>)> Return, int32_t *P) {
-        Return(P);
-      });
-}
-
-TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedPointers) {
-  int X = 42;
-  int *P = nullptr;
-  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::call(
-      DirectCaller(nullptr, expected_int_pointer_sps_wrapper),
-      [&](Expected<Expected<int32_t *>> R) {
-        P = cantFail(cantFail(std::move(R)));
-      },
-      &X);
-
-  EXPECT_EQ(P, &X);
-}
-
 template <size_t N> struct SPSOpCounter {};
 
 namespace orc_rt {

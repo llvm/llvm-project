@@ -17,7 +17,7 @@ void test_temporary_dtor() {
 // CIR:   %[[ALLOCA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["agg.tmp0"]
 // CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A>) -> ()
 
-// LLVM: define dso_local void @_Z19test_temporary_dtorv()
+// LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}
 // LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, i64 1, align 1
 // LLVM:   call void @_ZN1AD1Ev(ptr %[[ALLOCA]])
 
@@ -55,7 +55,7 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // CIR:     cir.yield %[[TERNARY]] : !cir.bool
 // CIR:   } : !cir.bool
 
-// LLVM: define{{.*}} i1 @_Z12test_temp_orv() {
+// LLVM: define{{.*}} i1 @_Z12test_temp_orv(){{.*}} {
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B
 // LLVM:   br label %[[LOR_BEGIN:.*]]
@@ -125,7 +125,7 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // CIR:     cir.yield %[[TERNARY]] : !cir.bool
 // CIR:   } : !cir.bool
 
-// LLVM: define{{.*}} i1 @_Z13test_temp_andv() {
+// LLVM: define{{.*}} i1 @_Z13test_temp_andv(){{.*}} {
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B
 // LLVM:   br label %[[LAND_BEGIN:.*]]
@@ -199,7 +199,7 @@ void test_nested_dtor() {
 // CIR: cir.func{{.*}} @_Z16test_nested_dtorv()
 // CIR:   cir.call @_ZN1DD2Ev(%{{.*}})
 
-// LLVM: define {{.*}} void @_Z16test_nested_dtorv()
+// LLVM: define {{.*}} void @_Z16test_nested_dtorv(){{.*}}
 // LLVM:   call void @_ZN1DD2Ev(ptr %{{.*}})
 
 // OGCG: define {{.*}} void @_Z16test_nested_dtorv()
@@ -236,7 +236,7 @@ void test_base_dtor_call() {
 // CIR: cir.func {{.*}} @_Z19test_base_dtor_callv()
 //   cir.call @_ZN1FD2Ev(%{{.*}}) nothrow : (!cir.ptr<!rec_F>) -> ()
 
-// LLVM: define {{.*}} void @_Z19test_base_dtor_callv()
+// LLVM: define {{.*}} void @_Z19test_base_dtor_callv(){{.*}}
 // LLVM:   call void @_ZN1FD2Ev(ptr %{{.*}})
 
 // OGCG: define {{.*}} void @_Z19test_base_dtor_callv()

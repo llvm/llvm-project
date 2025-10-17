@@ -66,10 +66,10 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   const QualType NonRefTy = QT.getNonReferenceType();
 
   if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TTy->getOriginalDecl());
+    return DeclTypeToString(NonRefTy, TTy->getDecl());
 
   if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TRy->getOriginalDecl());
+    return DeclTypeToString(NonRefTy, TRy->getDecl());
 
   const QualType Canon = NonRefTy.getCanonicalType();
 
@@ -555,7 +555,7 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   InterfaceKind Kind = V.computeInterfaceKind(DesugaredTy);
   switch (Kind) {
   case InterfaceKind::WithAlloc:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case InterfaceKind::CopyArray: {
     // __clang_Interpreter_SetValueWithAlloc.
     ExprResult AllocCall =

@@ -635,9 +635,9 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   const VPRecipeBase *R = &VPBB->back();
   bool IsSwitch = isa<VPInstruction>(R) &&
                   cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
-  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
-                      match(R, m_BranchOnCond(m_VPValue())) ||
-                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
+  bool IsCondBranch =
+      isa<VPBranchOnMaskRecipe>(R) ||
+      match(R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()));
   (void)IsCondBranch;
   (void)IsSwitch;
   if (VPBB->getNumSuccessors() == 2 ||
@@ -1753,14 +1753,14 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
-bool llvm::canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
                                  TTI::PartialReductionExtendKind ExtKind) {
-  APInt TruncatedVal = CI->getValue().trunc(NarrowType->getScalarSizeInBits());
-  unsigned WideSize = CI->getType()->getScalarSizeInBits();
+  APInt TruncatedVal = C->trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = C->getBitWidth();
   APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
                           ? TruncatedVal.sext(WideSize)
                           : TruncatedVal.zext(WideSize);
-  return ExtendedVal == CI->getValue();
+  return ExtendedVal == *C;
 }
 
 TargetTransformInfo::OperandValueInfo
@@ -1776,6 +1776,9 @@ InstructionCost VPCostContext::getScalarizationOverhead(
     bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
+
+  assert(!VF.isScalable() &&
+         "Scalarization overhead not supported for scalable vectors");
 
   InstructionCost ScalarizationCost = 0;
   // Compute the cost of scalarizing the result if needed.

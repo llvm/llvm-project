@@ -978,15 +978,40 @@ static RecipeOp genRecipeOp(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
+  bool needsDestroy = false;
   auto retVal = mappableTy.generatePrivateInit(
       builder, loc,
       mlir::cast<mlir::TypedValue<mlir::acc::MappableType>>(
           initBlock->getArgument(0)),
       initName,
       initBlock->getArguments().take_back(initBlock->getArguments().size() - 1),
-      initValue);
+      initValue, needsDestroy);
   mlir::acc::YieldOp::create(builder, loc,
                              retVal ? retVal : initBlock->getArgument(0));
+  // Create destroy region and generate destruction if requested.
+  if (needsDestroy) {
+    llvm::SmallVector<mlir::Type> destroyArgsTy;
+    llvm::SmallVector<mlir::Location> destroyArgsLoc;
+    // original and privatized/reduction value
+    destroyArgsTy.push_back(ty);
+    destroyArgsTy.push_back(ty);
+    destroyArgsLoc.push_back(loc);
+    destroyArgsLoc.push_back(loc);
+    // Append bounds arguments (if any) in the same order as init region
+    if (argsTy.size() > 1) {
+      destroyArgsTy.append(argsTy.begin() + 1, argsTy.end());
+      destroyArgsLoc.insert(destroyArgsLoc.end(), argsTy.size() - 1, loc);
+    }
+
+    builder.createBlock(&recipe.getDestroyRegion(),
+                        recipe.getDestroyRegion().end(), destroyArgsTy,
+                        destroyArgsLoc);
+    builder.setInsertionPointToEnd(&recipe.getDestroyRegion().back());
+    // Call interface on the privatized/reduction value (2nd argument).
+    (void)mappableTy.generatePrivateDestroy(
+        builder, loc, recipe.getDestroyRegion().front().getArgument(1));
+    mlir::acc::TerminatorOp::create(builder, loc);
+  }
   return recipe;
 }
 

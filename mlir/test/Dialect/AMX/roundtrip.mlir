@@ -1,5 +1,33 @@
 // RUN: mlir-opt -verify-diagnostics %s | mlir-opt | FileCheck %s
 
+// CHECK-LABEL: tloadstore
+// CHECK:      %[[x:.*]] = amx.tile_load %{{.*}}[%{{.*}}], %{{.*}} :
+// CHECK-SAME:   memref<?xbf16> into !amx.tile<16x32xbf16>
+// CHECK:      %[[y:.*]] = amx.tile_load %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} :
+// CHECK-SAME:   memref<?x?xbf16> into !amx.tile<16x32xbf16>
+// CHECK:      %[[z:.*]] = amx.tile_load %{{.*}}[%{{.*}}, %{{.*}}] :
+// CHECK-SAME:   memref<?x?xbf16, strided<[64, 1]>> into !amx.tile<16x32xbf16>
+// CHECK:      amx.tile_store %{{.*}}[%{{.*}}], %[[z]], %{{.*}} :
+// CHECK-SAME:   memref<?xbf16>, !amx.tile<16x32xbf16>
+// CHECK:      amx.tile_store %{{.*}}[%{{.*}}, %{{.*}}], %[[x]], %{{.*}} :
+// CHECK-SAME:   memref<?x?xbf16>, !amx.tile<16x32xbf16>
+// CHECK:      amx.tile_store %{{.*}}[%{{.*}}, %{{.*}}], %[[y]] :
+// CHECK-SAME:   memref<?x?xbf16, strided<[64, 1]>>, !amx.tile<16x32xbf16>
+func.func @tloadstore(%stride: index,
+    %arg0: memref<?xbf16>,
+    %arg1: memref<?x?xbf16>,
+    %arg2: memref<?x?xbf16, strided<[64, 1]>>) {
+  %0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %1 = amx.tile_load %arg0[%0], %stride : memref<?xbf16> into !amx.tile<16x32xbf16>
+  %2 = amx.tile_load %arg1[%0, %0], %stride : memref<?x?xbf16> into !amx.tile<16x32xbf16>
+  %3 = amx.tile_load %arg2[%0, %0] : memref<?x?xbf16, strided<[64, 1]>> into !amx.tile<16x32xbf16>
+  amx.tile_store %arg0[%0], %3, %stride : memref<?xbf16>, !amx.tile<16x32xbf16>
+  amx.tile_store %arg1[%0, %0], %1, %stride : memref<?x?xbf16>, !amx.tile<16x32xbf16>
+  amx.tile_store %arg2[%0, %0], %2 : memref<?x?xbf16, strided<[64, 1]>>, !amx.tile<16x32xbf16>
+  return
+}
+
 // CHECK-LABEL: tzero
 // CHECK: amx.tile_zero : !amx.tile<16x16xbf16>
 // CHECK: amx.tile_store %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} : memref<?x?xbf16>, !amx.tile<16x16xbf16>

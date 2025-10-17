@@ -150,7 +150,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Kind: CBuffer
   ; CHECK:   CBuffer size: 4
 
-  %cb1 = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+  %cb1 = call target("dx.CBuffer", <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>)
      @llvm.dx.resource.handlefrombinding(i32 1, i32 8, i32 1, i32 0, ptr @Constants.str)
   ; CHECK: Resource [[CB1:[0-9]+]]:
   ; CHECK:   Name: Constants
@@ -161,7 +161,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Size: 1
   ; CHECK:   Class: CBV
   ; CHECK:   Kind: CBuffer
-  ; CHECK:   CBuffer size: 4
+  ; CHECK:   CBuffer size: 36
 
   ; CHECK-NOT: Resource {{[0-9]+}}:
 

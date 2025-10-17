@@ -1180,32 +1180,41 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
   S = SE->getTruncateOrZeroExtend(S, MaxType);
   Size = SE->getTruncateOrZeroExtend(Size, MaxType);
 
-  // Special check for addrecs using BE taken count
-  if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    if (AddRec->isAffine() && AddRec->hasNoSignedWrap()) {
-      const SCEV *BECount = SE->getBackedgeTakenCount(AddRec->getLoop());
-      const SCEV *Start = AddRec->getStart();
-      const SCEV *Step = AddRec->getStepRecurrence(*SE);
-      const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
-      const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
-      const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
+  auto CheckAddRecBECount = [&]() {
+    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+    if (!AddRec || !AddRec->isAffine() || !AddRec->hasNoSignedWrap())
+      return false;
+    const SCEV *BECount = collectUpperBound(AddRec->getLoop(), MaxType);
+    // If the BTC cannot be computed, check the base case for S.
+    if (!BECount || isa<SCEVCouldNotCompute>(BECount))
+      return false;
+    const SCEV *Start = AddRec->getStart();
+    const SCEV *Step = AddRec->getStepRecurrence(*SE);
+    const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
+    const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
+    const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
 
-      // If the value of Step is non-negative and the AddRec is non-wrap, it
-      // reaches its maximum at the last iteration. So it's enouth to check
-      // whether End - Size is negative.
-      if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
-        return true;
+    // If the value of Step is non-negative and the AddRec is non-wrap, it
+    // reaches its maximum at the last iteration. So it's enouth to check
+    // whether End - Size is negative.
+    if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
+      return true;
 
-      // If the value of Step is non-positive and the AddRec is non-wrap, the
-      // initial value is its maximum.
-      if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
-        return true;
+    // If the value of Step is non-positive and the AddRec is non-wrap, the
+    // initial value is its maximum.
+    if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
+      return true;
 
-      // Even if we don't know the sign of Step, either Start or End must be
-      // the maximum value of the AddRec since it is non-wrap.
-      if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
-        return true;
-    }
+    // Even if we don't know the sign of Step, either Start or End must be
+    // the maximum value of the AddRec since it is non-wrap.
+    if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
+      return true;
+
+    return false;
+  };
+
+  if (CheckAddRecBECount())
+    return true;
 
   // Check using normal isKnownNegative
   const SCEV *LimitedBound = SE->getMinusSCEV(S, Size);

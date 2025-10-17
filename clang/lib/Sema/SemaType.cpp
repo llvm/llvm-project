@@ -1238,8 +1238,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for typeof?");
     if (!Result->isDependentType())
-      if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getOriginalDecl(), DS.getTypeSpecTypeLoc());
+      if (const auto *TT = Result->getAs<TagType>())
+        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(
         Result, DS.getTypeSpecType() == DeclSpec::TST_typeof_unqualType
@@ -2517,12 +2517,18 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     Diag(AttrLoc, diag::err_attribute_zero_size) << "matrix" << ColRange;
     return QualType();
   }
-  if (!ConstantMatrixType::isDimensionValid(MatrixRows)) {
+  if (MatrixRows > Context.getLangOpts().MaxMatrixDimension &&
+      MatrixColumns > Context.getLangOpts().MaxMatrixDimension) {
+    Diag(AttrLoc, diag::err_attribute_size_too_large)
+        << RowRange << ColRange << "matrix row and column";
+    return QualType();
+  }
+  if (MatrixRows > Context.getLangOpts().MaxMatrixDimension) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << RowRange << "matrix row";
     return QualType();
   }
-  if (!ConstantMatrixType::isDimensionValid(MatrixColumns)) {
+  if (MatrixColumns > Context.getLangOpts().MaxMatrixDimension) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << ColRange << "matrix column";
     return QualType();
@@ -3780,12 +3786,10 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
-  if (!S.getLangOpts().isSYCL()) {
-    for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
-      if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
-        CC = CC_DeviceKernel;
-        break;
-      }
+  for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+    if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
+      CC = CC_DeviceKernel;
+      break;
     }
   }
   return CC;
@@ -9701,7 +9705,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   if (!E->isTypeDependent()) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
-      DiagnoseUseOfDecl(TT->getOriginalDecl(), E->getExprLoc());
+      DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9867,7 +9871,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
                                       SourceLocation Loc) {
   assert(BaseType->isEnumeralType());
-  EnumDecl *ED = BaseType->castAs<EnumType>()->getOriginalDecl();
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
 
   S.DiagnoseUseOfDecl(ED, Loc);
 

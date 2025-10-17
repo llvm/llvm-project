@@ -16,132 +16,131 @@ namespace clang::tidy {
 
 // This anchor is used to force the linker to link the AbseilModule.
 extern volatile int AbseilModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED AbseilModuleAnchorDestination =
+[[maybe_unused]] static int AbseilModuleAnchorDestination =
     AbseilModuleAnchorSource;
 
 // This anchor is used to force the linker to link the AlteraModule.
 extern volatile int AlteraModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED AlteraModuleAnchorDestination =
+[[maybe_unused]] static int AlteraModuleAnchorDestination =
     AlteraModuleAnchorSource;
 
 // This anchor is used to force the linker to link the AndroidModule.
 extern volatile int AndroidModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED AndroidModuleAnchorDestination =
+[[maybe_unused]] static int AndroidModuleAnchorDestination =
     AndroidModuleAnchorSource;
 
 // This anchor is used to force the linker to link the BoostModule.
 extern volatile int BoostModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED BoostModuleAnchorDestination =
+[[maybe_unused]] static int BoostModuleAnchorDestination =
     BoostModuleAnchorSource;
 
 // This anchor is used to force the linker to link the BugproneModule.
 extern volatile int BugproneModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED BugproneModuleAnchorDestination =
+[[maybe_unused]] static int BugproneModuleAnchorDestination =
     BugproneModuleAnchorSource;
 
 // This anchor is used to force the linker to link the CERTModule.
 extern volatile int CERTModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED CERTModuleAnchorDestination =
+[[maybe_unused]] static int CERTModuleAnchorDestination =
     CERTModuleAnchorSource;
 
 // This anchor is used to force the linker to link the ConcurrencyModule.
 extern volatile int ConcurrencyModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ConcurrencyModuleAnchorDestination =
+[[maybe_unused]] static int ConcurrencyModuleAnchorDestination =
     ConcurrencyModuleAnchorSource;
 
 // This anchor is used to force the linker to link the CppCoreGuidelinesModule.
 extern volatile int CppCoreGuidelinesModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED CppCoreGuidelinesModuleAnchorDestination =
+[[maybe_unused]] static int CppCoreGuidelinesModuleAnchorDestination =
     CppCoreGuidelinesModuleAnchorSource;
 
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
 // This anchor is used to force the linker to link the CustomModule.
 extern volatile int CustomModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED CustomModuleAnchorDestination =
+[[maybe_unused]] static int CustomModuleAnchorDestination =
     CustomModuleAnchorSource;
 #endif
 
 // This anchor is used to force the linker to link the DarwinModule.
 extern volatile int DarwinModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED DarwinModuleAnchorDestination =
+[[maybe_unused]] static int DarwinModuleAnchorDestination =
     DarwinModuleAnchorSource;
 
 // This anchor is used to force the linker to link the FuchsiaModule.
 extern volatile int FuchsiaModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED FuchsiaModuleAnchorDestination =
+[[maybe_unused]] static int FuchsiaModuleAnchorDestination =
     FuchsiaModuleAnchorSource;
 
 // This anchor is used to force the linker to link the GoogleModule.
 extern volatile int GoogleModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED GoogleModuleAnchorDestination =
+[[maybe_unused]] static int GoogleModuleAnchorDestination =
     GoogleModuleAnchorSource;
 
 // This anchor is used to force the linker to link the HICPPModule.
 extern volatile int HICPPModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED HICPPModuleAnchorDestination =
+[[maybe_unused]] static int HICPPModuleAnchorDestination =
     HICPPModuleAnchorSource;
 
 // This anchor is used to force the linker to link the LinuxKernelModule.
 extern volatile int LinuxKernelModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED LinuxKernelModuleAnchorDestination =
+[[maybe_unused]] static int LinuxKernelModuleAnchorDestination =
     LinuxKernelModuleAnchorSource;
 
 // This anchor is used to force the linker to link the LLVMModule.
 extern volatile int LLVMModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED LLVMModuleAnchorDestination =
+[[maybe_unused]] static int LLVMModuleAnchorDestination =
     LLVMModuleAnchorSource;
 
 // This anchor is used to force the linker to link the LLVMLibcModule.
 extern volatile int LLVMLibcModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED LLVMLibcModuleAnchorDestination =
+[[maybe_unused]] static int LLVMLibcModuleAnchorDestination =
     LLVMLibcModuleAnchorSource;
 
 // This anchor is used to force the linker to link the MiscModule.
 extern volatile int MiscModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED MiscModuleAnchorDestination =
+[[maybe_unused]] static int MiscModuleAnchorDestination =
     MiscModuleAnchorSource;
 
 // This anchor is used to force the linker to link the ModernizeModule.
 extern volatile int ModernizeModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ModernizeModuleAnchorDestination =
+[[maybe_unused]] static int ModernizeModuleAnchorDestination =
     ModernizeModuleAnchorSource;
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER &&                                       \
     !defined(CLANG_TIDY_DISABLE_STATIC_ANALYZER_CHECKS)
 // This anchor is used to force the linker to link the MPIModule.
 extern volatile int MPIModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
-    MPIModuleAnchorSource;
+[[maybe_unused]] static int MPIModuleAnchorDestination = MPIModuleAnchorSource;
 #endif
 
 // This anchor is used to force the linker to link the ObjCModule.
 extern volatile int ObjCModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ObjCModuleAnchorDestination =
+[[maybe_unused]] static int ObjCModuleAnchorDestination =
     ObjCModuleAnchorSource;
 
 // This anchor is used to force the linker to link the OpenMPModule.
 extern volatile int OpenMPModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED OpenMPModuleAnchorDestination =
+[[maybe_unused]] static int OpenMPModuleAnchorDestination =
     OpenMPModuleAnchorSource;
 
 // This anchor is used to force the linker to link the PerformanceModule.
 extern volatile int PerformanceModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED PerformanceModuleAnchorDestination =
+[[maybe_unused]] static int PerformanceModuleAnchorDestination =
     PerformanceModuleAnchorSource;
 
 // This anchor is used to force the linker to link the PortabilityModule.
 extern volatile int PortabilityModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED PortabilityModuleAnchorDestination =
+[[maybe_unused]] static int PortabilityModuleAnchorDestination =
     PortabilityModuleAnchorSource;
 
 // This anchor is used to force the linker to link the ReadabilityModule.
 extern volatile int ReadabilityModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
+[[maybe_unused]] static int ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
 
 // This anchor is used to force the linker to link the ZirconModule.
 extern volatile int ZirconModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ZirconModuleAnchorDestination =
+[[maybe_unused]] static int ZirconModuleAnchorDestination =
     ZirconModuleAnchorSource;
 
 } // namespace clang::tidy

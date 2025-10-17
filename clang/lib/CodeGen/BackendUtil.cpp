@@ -473,6 +473,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.StackUsageOutput = CodeGenOpts.StackUsageOutput;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
+  Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
   Options.EnableAIXExtendedAltivecABI = LangOpts.EnableAIXExtendedAltivecABI;
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
@@ -1199,7 +1200,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       }
     }
 
-    if (shouldEmitUnifiedLTOModueFlag())
+    if (shouldEmitUnifiedLTOModueFlag() &&
+        !TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 
