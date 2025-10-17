@@ -180,6 +180,27 @@ static auto isPointerComparisonOperatorCall(std::string operator_name) {
           hasType(hasCanonicalType(pointerType(pointee(statusType())))))));
 }
 
+static auto isStatusOrValueAssignmentCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("="),
+      callee(cxxMethodDecl(ofClass(statusOrClass()))),
+      hasArgument(1, anyOf(hasType(hasUnqualifiedDesugaredType(
+                               type(equalsBoundNode("T")))),
+                           nullPointerConstant())));
+}
+
+static auto isStatusOrValueConstructor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(
+      hasType(statusOrType()),
+      hasArgument(0,
+                  anyOf(hasType(hasCanonicalType(type(equalsBoundNode("T")))),
+                        nullPointerConstant(),
+                        hasType(namedDecl(hasAnyName("absl::in_place_t",
+                                                     "std::in_place_t"))))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -537,6 +558,27 @@ static void transferEmplaceCall(const CXXMemberCallExpr *Expr,
   State.Env.assume(OkVal.formula());
 }
 
+static void transferValueAssignmentCall(const CXXOperatorCallExpr *Expr,
+                                        const MatchFinder::MatchResult &,
+                                        LatticeTransferState &State) {
+  assert(Expr->getNumArgs() > 1);
+
+  auto *StatusOrLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
+  if (StatusOrLoc == nullptr)
+    return;
+
+  auto &OkVal = initializeStatusOr(*StatusOrLoc, State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferValueConstructor(const CXXConstructExpr *Expr,
+                                     const MatchFinder::MatchResult &,
+                                     LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatusOr(State.Env.getResultObjectLocation(*Expr), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -582,6 +624,10 @@ buildTransferMatchSwitch(ASTContext &Ctx,
       .CaseOfCFGStmt<CallExpr>(isNotOkStatusCall(), transferNotOkStatusCall)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("emplace"),
                                         transferEmplaceCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isStatusOrValueAssignmentCall(),
+                                          transferValueAssignmentCall)
+      .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrValueConstructor(),
+                                       transferValueConstructor)
       .Build();
 }
 
