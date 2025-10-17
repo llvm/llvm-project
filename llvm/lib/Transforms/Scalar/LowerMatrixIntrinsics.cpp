@@ -1733,7 +1733,7 @@ public:
       return BlockSize;
 
     // If the remainder is also a legal type just use it.
-    FixedVectorType *VecTy = FixedVectorType::get(EltType, Remainder);
+    auto *VecTy = FixedVectorType::get(EltType, Remainder);
     if (TTI.isTypeLegal(VecTy))
       return Remainder;
 
