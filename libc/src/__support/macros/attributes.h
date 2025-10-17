@@ -91,25 +91,29 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_NO_SANITIZE_OOB_ACCESS
 #endif
 
-#if __has_attribute(lifetimebound)
+#if __has_cpp_attribute(clang::lifetimebound)
 #define LIBC_LIFETIME_BOUND [[clang::lifetimebound]]
+#elif __has_cpp_attribute(msvc::lifetimebound)
+#define LIBC_LIFETIME_BOUND [[msvc::lifetimebound]]
+#elif __has_cpp_attribute(lifetimebound)
+#define LIBC_LIFETIME_BOUND [[lifetimebound]]
 #else
 #define LIBC_LIFETIME_BOUND
 #endif
 
-#if __has_attribute(lifetime_capture_by)
+#if __has_cpp_attribute(clang::lifetime_capture_by)
 #define LIBC_LIFETIME_CAPTURE_BY(X) [[clang::lifetime_capture_by(X)]]
 #else
 #define LIBC_LIFETIME_CAPTURE_BY(X)
 #endif
 
-#if defined(__clang__)
+#if __has_cpp_attribute(gsl::Pointer)
 #define LIBC_GSL_POINTER [[gsl::Pointer]]
 #else
 #define LIBC_GSL_POINTER
 #endif
 
-#if defined(__clang__)
+#if __has_cpp_attribute(gsl::Owner)
 #define LIBC_GSL_OWNER [[gsl::Owner]]
 #else
 #define LIBC_GSL_OWNER
