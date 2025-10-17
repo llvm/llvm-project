@@ -1839,8 +1839,10 @@ class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
   Registers_arm64();
   Registers_arm64(const void *registers);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   Registers_arm64(const Registers_arm64 &);
   Registers_arm64 &operator=(const Registers_arm64 &);
+#endif
 
   typedef uint64_t reg_t;
   typedef uint64_t __ptrauth_unwind_registers_arm64_link_reg link_reg_t;
@@ -1956,6 +1958,7 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
 #endif
 }
 
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
 inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
   *this = other;
 }
@@ -1965,13 +1968,11 @@ Registers_arm64::operator=(const Registers_arm64 &other) {
   memmove(&_registers, &other._registers, sizeof(_registers));
   memmove(_vectorHalfRegisters, &other._vectorHalfRegisters,
           sizeof(_vectorHalfRegisters));
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   // We perform this step to ensure that we correctly authenticate and re-sign
   // the pc after the bitwise copy.
   setIP(other.getIP());
-#endif
-  return *this;
 }
+#endif
 
 inline Registers_arm64::Registers_arm64() {
   memset(&_registers, 0, sizeof(_registers));
