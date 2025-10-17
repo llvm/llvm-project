@@ -29,24 +29,24 @@
   source_filename = "reduced.ll"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-unknown"
-  
+
   define void @loop(i64 %i) !dbg !4 {
   entry:
     %cmp.not = icmp eq i64 %i, 0, !dbg !7
     br i1 %cmp.not, label %for.body, label %for.end
-  
+
   for.body:                                         ; preds = %entry
     %puts10 = tail call i32 null(ptr null)
     %inc = add i64 0, 0
     br label %for.end
-  
+
   for.end:                                          ; preds = %for.body, %entry
     ret void
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 22.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/")
   !2 = !{}
@@ -60,80 +60,39 @@
 ---
 name:            loop
 alignment:       16
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHContTarget: false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
-tracksDebugUserValues: false
 registers:
-  - { id: 0, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 3, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 4, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 5, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 6, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 7, class: gr64, preferred-register: '', flags: [  ] }
-liveins:         []
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr64 }
+  - { id: 3, class: gr32 }
+  - { id: 4, class: gr64 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: gr64 }
 frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
   maxAlignment:    1
-  adjustsStack:    false
   hasCalls:        true
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 4294967295
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  isCalleeSavedInfoValid: false
-  localFrameSize:  0
-fixedStack:      []
-stack:           []
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
 machineFunctionInfo:
   amxProgModel:    None
 body:             |
   bb.0:
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $rdi
-  
+
     %7:gr64 = IMPLICIT_DEF
-    TEST64rr undef %7, undef %7, implicit-def $eflags, debug-location !7
+    TEST64rr undef %7, undef %7, implicit-def $eflags,  debug-location !7
     JCC_1 %bb.2, 5, implicit $eflags
     JMP_1 %bb.1
-  
+
   bb.1:
-    successors: %bb.2(0x80000000)
-  
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  
+
   bb.2:
-    RET 0, debug-location !7
+    RET 0,  debug-location !7
 ...
