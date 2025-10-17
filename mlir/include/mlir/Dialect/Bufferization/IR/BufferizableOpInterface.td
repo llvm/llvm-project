@@ -148,8 +148,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpResult bufferizes to a memory write.
-          This is the same property as `bufferizesToMemoryWrite`, but from The
-          perspective of OpResults.
+          This is the same property as `bufferizesToMemoryWrite(OpOperand &)`,
+          but from the perspective of OpResults.
 
           This method will never be called on OpResults that do not have a
           tensor type.
@@ -165,7 +165,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
              Counter-example: bufferization.alloc_tensor
              The op just allocates and does not specify the data of the tensor,
-             so resultBufferizesToMemoryWrite is overridden to return false.
+             so `bufferizesToMemoryWrite` is overridden to return false.
 
           2. At least one aliasing OpOperand bufferizes to a memory write.
 
@@ -192,14 +192,14 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
              write.
           }],
         /*retType=*/"bool",
-        /*methodName=*/"resultBufferizesToMemoryWrite",
+        /*methodName=*/"bufferizesToMemoryWrite",
         /*args=*/(ins "::mlir::OpResult":$opResult,
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(opResult.getDefiningOp() == $_op.getOperation() &&
                  "invalid OpResult");
-          return ::mlir::bufferization::detail::defaultResultBufferizesToMemoryWrite(
+          return ::mlir::bufferization::detail::defaultBufferizesToMemoryWrite(
               opResult, state);
         }]
       >,
