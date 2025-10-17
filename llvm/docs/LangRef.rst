@@ -1553,6 +1553,9 @@ Currently, only the following parameter attributes are defined:
     attribute may only be applied to pointer typed parameters. This is not
     checked or enforced by LLVM; if the parameter or return pointer is null,
     :ref:`poison value <poisonvalues>` is returned or passed instead.
+    The ``nonnull`` attribute only refers to the address bits of the pointers.
+    If all the address bits are zero, the result will be a poison value, even
+    if the pointer has non-zero non-address bits or non-zero external state.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
     to ensure a pointer is not null or otherwise the behavior is undefined.
 
@@ -12976,8 +12979,10 @@ code given as ``cond``. The comparison performed always yields either an
 #. ``sle``: interprets the operands as signed values and yields ``true``
    if ``op1`` is less than or equal to ``op2``.
 
-If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
-are compared as if they were integers.
+If the operands are :ref:`pointer <t_pointer>` typed, the address bits of the
+pointers are compared as if they were integers. Non-address bits or external
+state are not compared. That is, ``icmp`` on pointers is equivalent to ``icmp``
+on the ``ptrtoaddr`` of the pointers.
 
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
