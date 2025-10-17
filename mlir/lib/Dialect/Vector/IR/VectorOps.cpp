@@ -6760,9 +6760,9 @@ public:
 
     // For each element in destination row-major order, pick the corresponding
     // source element.
-    for (int64_t lin = 0; lin < dstNumElements; ++lin) {
+    for (int64_t linearIdx = 0; linearIdx < dstNumElements; ++linearIdx) {
       // Pick the destination element index.
-      dstIdx = delinearize(lin, dstStrides);
+      dstIdx = delinearize(linearIdx, dstStrides);
       // Map the destination element index to the source element index.
       for (int64_t j = 0; j < rank; ++j)
         srcIdx[j] = dstIdx[inversePerm[j]];
