@@ -28017,8 +28017,9 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   auto *BV0 = dyn_cast<BuildVectorSDNode>(N1);
   if (N0.isUndef() && (N1.getOpcode() == ISD::SPLAT_VECTOR || BV0)) {
     SDValue Splat = BV0 ? BV0->getSplatValue() : N1.getOperand(0);
-    if (Splat &&
-        (N1.hasOneUse() || (!BV0 && DAG.isConstantValueOfAnyType(Splat))))
+    bool SplatLegal = TLI.isOperationLegalOrCustom(ISD::SPLAT_VECTOR, VT);
+    if (Splat && (N1.hasOneUse() || (DAG.isConstantValueOfAnyType(Splat) &&
+                                     (!BV0 || SplatLegal))))
       return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
   }
 
