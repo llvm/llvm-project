@@ -41,7 +41,7 @@
 # More importantly, the line number will be at the function definition.
 # CHECK-MERGED-CALLSITES:      FunctionInfo @ 0x[[#%x,BAD_STMT_SEQ:]]: [0x[[#%x,BAD_STMT_SEQ_START:]] - 0x[[#%x,BAD_STMT_SEQ_END:]]) "function_bad_stmt_seq"
 # CHECK-MERGED-CALLSITES-NEXT: LineTable:
-# CHECK-MERGED-CALLSITES-NEXT:   0x00000001000003b0 ./merged_funcs_test.cpp:62
+# CHECK-MERGED-CALLSITES-NEXT:   0x00000001000003b0 ./merged_funcs_test.cpp:65
 
 # CHECK-MERGED-CALLSITES-NEXT: FunctionInfo @ 0x[[#%x,MAIN:]]: [0x[[#%x,MAIN_START:]] - 0x[[#%x,MAIN_END:]]) "main"
 # CHECK-MERGED-CALLSITES:      CallSites (by relative return offset):
@@ -97,7 +97,7 @@
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --address=0x00000001000003b4 --merged-functions | FileCheck --check-prefix=CHECK-BAD %s
 # CHECK-BAD:       Found 1 function at address 0x00000001000003b4:
-# CHECK-BAD-NEXT:     0x00000001000003b4: function_bad_stmt_seq + 4 @ ./merged_funcs_test.cpp:62
+# CHECK-BAD-NEXT:     0x00000001000003b4: function_bad_stmt_seq + 4 @ ./merged_funcs_test.cpp:65
 
 #--- merged_funcs_test.cpp
 #define ATTRIB extern "C" __attribute__((noinline))

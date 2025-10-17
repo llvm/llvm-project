@@ -173,7 +173,7 @@ enum DecimalSignEncoding {
 };
 
 enum EndianityEncoding {
-  // Endianity attribute values
+// Endianity attribute values
 #define HANDLE_DW_END(ID, NAME) DW_END_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_END_lo_user = 0x40,
@@ -1127,6 +1127,9 @@ struct FormParams {
   /// The size of a reference is determined by the DWARF 32/64-bit format.
   uint8_t getDwarfOffsetByteSize() const {
     return dwarf::getDwarfOffsetByteSize(Format);
+  }
+  inline uint64_t getDwarfMaxOffset() const {
+    return (getDwarfOffsetByteSize() == 4) ? UINT32_MAX : UINT64_MAX;
   }
 
   explicit operator bool() const { return Version && AddrSize; }
