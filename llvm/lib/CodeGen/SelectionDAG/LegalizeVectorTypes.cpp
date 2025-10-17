@@ -2464,6 +2464,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
   SDValue PassThru = MLD->getPassThru();
   Align Alignment = MLD->getBaseAlign();
   ISD::LoadExtType ExtType = MLD->getExtensionType();
+  MachineMemOperand::Flags MMOFlags = MLD->getMemOperand()->getFlags();
 
   // Split Mask operand
   SDValue MaskLo, MaskHi;
@@ -2489,9 +2490,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
     std::tie(PassThruLo, PassThruHi) = DAG.SplitVector(PassThru, dl);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MLD->getPointerInfo(), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), Alignment, MLD->getAAInfo(),
-      MLD->getRanges());
+      MLD->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      Alignment, MLD->getAAInfo(), MLD->getRanges());
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
                          MMO, MLD->getAddressingMode(), ExtType,
@@ -2514,8 +2514,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
           LoMemVT.getStoreSize().getFixedValue());
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
-        Alignment, MLD->getAAInfo(), MLD->getRanges());
+        MPI, MMOFlags, LocationSize::beforeOrAfterPointer(), Alignment,
+        MLD->getAAInfo(), MLD->getRanges());
 
     Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, Offset, MaskHi, PassThruHi,
                            HiMemVT, MMO, MLD->getAddressingMode(), ExtType,
