@@ -8,25 +8,25 @@ define void @ptrtoaddr(ptr %in, ptr %out0, ptr %out1, ptr %out2, ptr %out3) {
 ; X64-LABEL: 'ptrtoaddr'
 ; X64-NEXT:  Classifying expressions for: @ptrtoaddr
 ; X64-NEXT:    %p0 = ptrtoaddr ptr %in to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> (ptrtoaddr ptr %in to i64) U: full-set S: full-set
 ; X64-NEXT:    %p1 = ptrtoaddr ptr %in to i32
-; X64-NEXT:    --> %p1 U: full-set S: full-set
+; X64-NEXT:    --> (trunc i64 (ptrtoaddr ptr %in to i64) to i32) U: full-set S: full-set
 ; X64-NEXT:    %p2 = ptrtoaddr ptr %in to i16
-; X64-NEXT:    --> %p2 U: full-set S: full-set
+; X64-NEXT:    --> (trunc i64 (ptrtoaddr ptr %in to i64) to i16) U: full-set S: full-set
 ; X64-NEXT:    %p3 = ptrtoaddr ptr %in to i128
-; X64-NEXT:    --> %p3 U: full-set S: full-set
+; X64-NEXT:    --> (zext i64 (ptrtoaddr ptr %in to i64) to i128) U: [0,18446744073709551616) S: [0,18446744073709551616)
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoaddr
 ;
 ; X32-LABEL: 'ptrtoaddr'
 ; X32-NEXT:  Classifying expressions for: @ptrtoaddr
 ; X32-NEXT:    %p0 = ptrtoaddr ptr %in to i64
-; X32-NEXT:    --> %p0 U: full-set S: full-set
+; X32-NEXT:    --> (zext i32 (ptrtoaddr ptr %in to i32) to i64) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:    %p1 = ptrtoaddr ptr %in to i32
-; X32-NEXT:    --> %p1 U: full-set S: full-set
+; X32-NEXT:    --> (ptrtoaddr ptr %in to i32) U: full-set S: full-set
 ; X32-NEXT:    %p2 = ptrtoaddr ptr %in to i16
-; X32-NEXT:    --> %p2 U: full-set S: full-set
+; X32-NEXT:    --> (trunc i32 (ptrtoaddr ptr %in to i32) to i16) U: full-set S: full-set
 ; X32-NEXT:    %p3 = ptrtoaddr ptr %in to i128
-; X32-NEXT:    --> %p3 U: full-set S: full-set
+; X32-NEXT:    --> (zext i32 (ptrtoaddr ptr %in to i32) to i128) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoaddr
 ;
   %p0 = ptrtoaddr ptr %in to i64
@@ -44,25 +44,25 @@ define void @ptrtoaddr_as1(ptr addrspace(1) %in, ptr %out0, ptr %out1, ptr %out2
 ; X64-LABEL: 'ptrtoaddr_as1'
 ; X64-NEXT:  Classifying expressions for: @ptrtoaddr_as1
 ; X64-NEXT:    %p0 = ptrtoaddr ptr addrspace(1) %in to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> (ptrtoaddr ptr addrspace(1) %in to i64) U: full-set S: full-set
 ; X64-NEXT:    %p1 = ptrtoaddr ptr addrspace(1) %in to i32
-; X64-NEXT:    --> %p1 U: full-set S: full-set
+; X64-NEXT:    --> (trunc i64 (ptrtoaddr ptr addrspace(1) %in to i64) to i32) U: full-set S: full-set
 ; X64-NEXT:    %p2 = ptrtoaddr ptr addrspace(1) %in to i16
-; X64-NEXT:    --> %p2 U: full-set S: full-set
+; X64-NEXT:    --> (trunc i64 (ptrtoaddr ptr addrspace(1) %in to i64) to i16) U: full-set S: full-set
 ; X64-NEXT:    %p3 = ptrtoaddr ptr addrspace(1) %in to i128
-; X64-NEXT:    --> %p3 U: full-set S: full-set
+; X64-NEXT:    --> (zext i64 (ptrtoaddr ptr addrspace(1) %in to i64) to i128) U: [0,18446744073709551616) S: [0,18446744073709551616)
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoaddr_as1
 ;
 ; X32-LABEL: 'ptrtoaddr_as1'
 ; X32-NEXT:  Classifying expressions for: @ptrtoaddr_as1
 ; X32-NEXT:    %p0 = ptrtoaddr ptr addrspace(1) %in to i64
-; X32-NEXT:    --> %p0 U: full-set S: full-set
+; X32-NEXT:    --> (zext i32 (ptrtoaddr ptr addrspace(1) %in to i32) to i64) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:    %p1 = ptrtoaddr ptr addrspace(1) %in to i32
-; X32-NEXT:    --> %p1 U: full-set S: full-set
+; X32-NEXT:    --> (ptrtoaddr ptr addrspace(1) %in to i32) U: full-set S: full-set
 ; X32-NEXT:    %p2 = ptrtoaddr ptr addrspace(1) %in to i16
-; X32-NEXT:    --> %p2 U: full-set S: full-set
+; X32-NEXT:    --> (trunc i32 (ptrtoaddr ptr addrspace(1) %in to i32) to i16) U: full-set S: full-set
 ; X32-NEXT:    %p3 = ptrtoaddr ptr addrspace(1) %in to i128
-; X32-NEXT:    --> %p3 U: full-set S: full-set
+; X32-NEXT:    --> (zext i32 (ptrtoaddr ptr addrspace(1) %in to i32) to i128) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoaddr_as1
 ;
   %p0 = ptrtoaddr ptr addrspace(1) %in to i64
@@ -82,7 +82,7 @@ define void @ptrtoaddr_of_bitcast(ptr %in, ptr %out0) {
 ; X64-NEXT:    %in_casted = bitcast ptr %in to ptr
 ; X64-NEXT:    --> %in U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoaddr ptr %in_casted to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> (ptrtoaddr ptr %in to i64) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_bitcast
 ;
 ; X32-LABEL: 'ptrtoaddr_of_bitcast'
@@ -90,7 +90,7 @@ define void @ptrtoaddr_of_bitcast(ptr %in, ptr %out0) {
 ; X32-NEXT:    %in_casted = bitcast ptr %in to ptr
 ; X32-NEXT:    --> %in U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoaddr ptr %in_casted to i64
-; X32-NEXT:    --> %p0 U: full-set S: full-set
+; X32-NEXT:    --> (zext i32 (ptrtoaddr ptr %in to i32) to i64) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_bitcast
 ;
   %in_casted = bitcast ptr %in to ptr
@@ -103,7 +103,7 @@ define void @ptrtoaddr_of_nullptr(ptr %out0) {
 ; ALL-LABEL: 'ptrtoaddr_of_nullptr'
 ; ALL-NEXT:  Classifying expressions for: @ptrtoaddr_of_nullptr
 ; ALL-NEXT:    %p0 = ptrtoaddr ptr null to i64
-; ALL-NEXT:    --> %p0 U: full-set S: full-set
+; ALL-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; ALL-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_nullptr
 ;
   %p0 = ptrtoaddr ptr null to i64
@@ -117,7 +117,7 @@ define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
 ; X64-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; X64-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> (42 + (ptrtoaddr ptr %in to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep
 ;
 ; X32-LABEL: 'ptrtoaddr_of_gep'
@@ -125,7 +125,7 @@ define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
 ; X32-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; X32-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i64
-; X32-NEXT:    --> %p0 U: full-set S: full-set
+; X32-NEXT:    --> (zext i32 (42 + (ptrtoaddr ptr %in to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep
 ;
   %in_adj = getelementptr inbounds i8, ptr %in, i64 42
