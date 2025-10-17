@@ -920,6 +920,12 @@ public:
   /// operation. Returns an empty attribute if no properties are present.
   Attribute getPropertiesAsAttribute();
 
+  /// Return a named property converted to an attribute.
+  /// This is expensive, and mostly useful when dealing with unregistered
+  /// operations or in language bindings. Returns failure if there's no property
+  /// under such name.
+  FailureOr<Attribute> getPropertyAsAttribute(StringRef name);
+
   /// Set the properties from the provided attribute.
   /// This is an expensive operation that can fail if the attribute is not
   /// matching the expectations of the properties for this operation. This is
@@ -929,6 +935,17 @@ public:
   LogicalResult
   setPropertiesFromAttribute(Attribute attr,
                              function_ref<InFlightDiagnostic()> emitError);
+
+  /// Set a named property from the provided attribute.
+  /// This is an expensive operation that can fail if the attribute is not
+  /// matching the expectations of the properties for this operation. This is
+  /// mostly useful for unregistered operations, used when parsing the
+  /// generic format, or in language bindings. An optional diagnostic emitter
+  /// can be passed in for richer errors, if none is passed then behavior is
+  /// undefined in error case.
+  LogicalResult
+  setPropertyFromAttribute(StringRef name, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError);
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.
