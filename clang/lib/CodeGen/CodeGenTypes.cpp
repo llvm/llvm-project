@@ -311,12 +311,12 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
     // Force conversion of all the relevant record types, to make sure
     // we re-convert the FunctionType when appropriate.
-    if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
-      ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+    if (const auto *RD = FT->getReturnType()->getAsRecordDecl())
+      ConvertRecordDeclType(RD);
     if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
       for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
-        if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
-          ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+        if (const auto *RD = FPT->getParamType(i)->getAsRecordDecl())
+          ConvertRecordDeclType(RD);
 
     SkippedLayout = true;
 
@@ -373,8 +373,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   // RecordTypes are cached and processed specially.
-  if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    return ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+  if (const auto *RT = dyn_cast<RecordType>(Ty))
+    return ConvertRecordDeclType(RT->getDecl()->getDefinitionOrSelf());
 
   llvm::Type *CachedType = nullptr;
   auto TCI = TypeCache.find(Ty);
@@ -700,8 +700,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
 
   case Type::Enum: {
-    const EnumDecl *ED =
-        cast<EnumType>(Ty)->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *ED = Ty->castAsEnumDecl();
     if (ED->isCompleteDefinition() || ED->isFixed())
       return ConvertType(ED->getIntegerType());
     // Return a placeholder 'i32' type.  This can be changed later when the
@@ -814,10 +813,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases()) {
       if (I.isVirtual()) continue;
-      ConvertRecordDeclType(I.getType()
-                                ->castAs<RecordType>()
-                                ->getOriginalDecl()
-                                ->getDefinitionOrSelf());
+      ConvertRecordDeclType(I.getType()->castAsRecordDecl());
     }
   }
 
@@ -875,10 +871,8 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
 
   // Records are non-zero-initializable if they contain any
   // non-zero-initializable subobjects.
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = T->getAsRecordDecl())
     return isZeroInitializable(RD);
-  }
 
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())

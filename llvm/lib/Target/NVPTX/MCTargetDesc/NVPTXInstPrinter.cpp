@@ -149,6 +149,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
     case NVPTX::PTXCvtMode::RNA:
       O << ".rna";
       return;
+    case NVPTX::PTXCvtMode::RS:
+      O << ".rs";
+      return;
     }
   }
   llvm_unreachable("Invalid conversion modifier");
@@ -290,7 +293,8 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
       O << ".acq_rel";
       return;
     case NVPTX::Ordering::SequentiallyConsistent:
-      O << ".seq_cst";
+      report_fatal_error(
+          "NVPTX AtomicCode Printer does not support \"seq_cst\" ordering.");
       return;
     case NVPTX::Ordering::Volatile:
       O << ".volatile";

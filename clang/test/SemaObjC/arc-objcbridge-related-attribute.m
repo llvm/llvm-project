@@ -24,9 +24,9 @@ NSColor * Test1(NSTextField *textField, CGColorRef newColor) {
 }
 
 NSColor * Test2(NSTextField *textField, CGColorRef1 newColor) {
-  foo(newColor); // expected-warning {{incompatible pointer types passing 'CGColorRef1' (aka 'struct CGColor1 *') to parameter of type 'NSColor *'}}
-  textField.backgroundColor = newColor; // expected-warning {{incompatible pointer types assigning to 'NSColor *__strong' from 'CGColorRef1' (aka 'struct CGColor1 *')}}
-  return newColor; // expected-warning {{incompatible pointer types returning 'CGColorRef1' (aka 'struct CGColor1 *') from a function with result type 'NSColor *'}}
+  foo(newColor); // expected-error {{incompatible pointer types passing 'CGColorRef1' (aka 'struct CGColor1 *') to parameter of type 'NSColor *'}}
+  textField.backgroundColor = newColor; // expected-error {{incompatible pointer types assigning to 'NSColor *__strong' from 'CGColorRef1' (aka 'struct CGColor1 *')}}
+  return newColor; // expected-error {{incompatible pointer types returning 'CGColorRef1' (aka 'struct CGColor1 *') from a function with result type 'NSColor *'}}
 }
 
 CGColorRef Test3(NSTextField *textField, CGColorRef newColor) {
@@ -35,6 +35,6 @@ CGColorRef Test3(NSTextField *textField, CGColorRef newColor) {
 }
 
 CGColorRef2 Test4(NSTextField *textField, CGColorRef2 newColor) {
-  newColor = textField.backgroundColor; // expected-warning {{incompatible pointer types assigning}}
-  return textField.backgroundColor; // expected-warning {{incompatible pointer types returning}}
+  newColor = textField.backgroundColor; // expected-error {{incompatible pointer types assigning}}
+  return textField.backgroundColor; // expected-error {{incompatible pointer types returning}}
 }

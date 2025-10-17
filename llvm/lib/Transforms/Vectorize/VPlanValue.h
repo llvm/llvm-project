@@ -38,7 +38,7 @@ struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPInterleaveRecipe;
+class VPInterleaveBase;
 class VPPhiAccessors;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
@@ -48,7 +48,7 @@ class VPPhiAccessors;
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInterleaveRecipe;
+  friend class VPInterleaveBase;
   friend class VPlan;
   friend class VPExpressionRecipe;
 
@@ -147,6 +147,8 @@ public:
       Current++;
     return Current != user_end();
   }
+
+  bool hasOneUse() const { return getNumUsers() == 1; }
 
   void replaceAllUsesWith(VPValue *New);
 
@@ -335,6 +337,7 @@ public:
     VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
+    VPInterleaveEVLSC,
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,

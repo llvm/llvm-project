@@ -70,6 +70,7 @@ add_header_macro(
   dlfcn.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.dl_info
 )
 
 add_header_macro(
@@ -188,6 +189,17 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .inttypes
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.netinet_in_macros
 )
 
 add_header_macro(
@@ -620,8 +632,9 @@ add_header_macro(
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.struct_timeval
     .llvm-libc-macros.sys_time_macros
+    .llvm-libc-types.struct_itimerval
+    .llvm-libc-types.struct_timeval
 )
 
 add_header_macro(

@@ -45,7 +45,7 @@ public:
     referencedObjects.push_back(obj);
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static nb::object createFromCapsule(const nb::object &capsule) {
     MlirExecutionEngine rawPm =
         mlirPythonCapsuleToExecutionEngine(capsule.ptr());
     if (mlirExecutionEngineIsNull(rawPm))
@@ -113,7 +113,7 @@ NB_MODULE(_mlirExecutionEngine, m) {
       .def(
           "raw_register_runtime",
           [](PyExecutionEngine &executionEngine, const std::string &name,
-             nb::object callbackObj) {
+             const nb::object &callbackObj) {
             executionEngine.addReferencedObject(callbackObj);
             uintptr_t rawSym =
                 nb::cast<uintptr_t>(nb::getattr(callbackObj, "value"));
@@ -133,7 +133,7 @@ NB_MODULE(_mlirExecutionEngine, m) {
           "`llvm.mlir.global_ctors` will be run. One common scenario is that "
           "kernel binary compiled from `gpu.module` gets loaded during "
           "initialization. Make sure all symbols are resolvable before "
-          "initialization by calling `raw_register_runtime` or including "
+          "initialization by calling `register_runtime` or including "
           "shared libraries.")
       .def(
           "dump_to_object_file",

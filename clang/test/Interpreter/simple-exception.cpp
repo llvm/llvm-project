@@ -1,5 +1,4 @@
 // clang-format off
-// UNSUPPORTED: system-aix
 // XFAIL for arm, or running on Windows.
 // XFAIL: target=arm-{{.*}}, target=armv{{.*}}, system-windows, system-cygwin
 // RUN: cat %s | clang-repl | FileCheck %s

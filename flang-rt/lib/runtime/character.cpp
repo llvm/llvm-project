@@ -428,7 +428,8 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
   if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
-    terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
+    terminator.Crash(
+        "INDEX/SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
@@ -616,8 +617,8 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(to, p, oldBytes);
-    std::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
+    runtime::memcpy(to, p, oldBytes);
+    runtime::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }
   FreeMemory(old);
 }
@@ -698,7 +699,7 @@ void RTDEF(CharacterCompare)(
 std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
     std::size_t offset, const char *rhs, std::size_t rhsBytes) {
   if (auto n{std::min(lhsBytes - offset, rhsBytes)}) {
-    std::memcpy(lhs + offset, rhs, n);
+    runtime::memcpy(lhs + offset, rhs, n);
     offset += n;
   }
   return offset;
@@ -706,7 +707,7 @@ std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
 
 void RTDEF(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
   if (bytes > offset) {
-    std::memset(lhs + offset, ' ', bytes - offset);
+    runtime::memset(lhs + offset, ' ', bytes - offset);
   }
 }
 
@@ -789,7 +790,7 @@ void RTDEF(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
 
 std::size_t RTDEF(Scan1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Scan>(x, xLen, set, setLen, back);
+  return ScanVerify<false>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Scan2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
@@ -838,7 +839,7 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
   }
   const char *from{string.OffsetElement()};
   for (char *to{result.OffsetElement()}; ncopies-- > 0; to += origBytes) {
-    std::memcpy(to, from, origBytes);
+    runtime::memcpy(to, from, origBytes);
   }
 }
 
@@ -873,7 +874,7 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
 
 std::size_t RTDEF(Verify1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Verify>(x, xLen, set, setLen, back);
+  return ScanVerify<true>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Verify2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {

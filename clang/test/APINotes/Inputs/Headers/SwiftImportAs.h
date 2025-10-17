@@ -31,3 +31,19 @@ inline void ORCRetain(struct OpaqueRefCountedType *x);
 inline void ORCRelease(struct OpaqueRefCountedType *x);
 
 typedef unsigned WrappedOptions;
+
+struct NoncopyableWithDestroyType {
+};
+
+void NCDDestroy(NoncopyableWithDestroyType instance);
+
+void ImportAsUnsafe();
+struct ImportAsUnsafeStruct {
+};
+struct StructWithUnsafeMethod {
+    void ImportAsUnsafeMethod();
+    void ImportAsUnsafeMethodActuallySafe();
+};
+
+void ImportAsUnsafeAlreadyAnnotated() __attribute__((swift_attr("unsafe")));
+void ImportAsUnsafeVersioned();

@@ -212,6 +212,14 @@ public:
     return Address(getPointer(), elementType, getAlignment());
   }
 
+  void setAddress(Address address) {
+    assert(isSimple());
+    v = address.getPointer();
+    elementType = address.getElementType();
+    alignment = address.getAlignment().getQuantity();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
+  }
+
   const clang::Qualifiers &getQuals() const { return quals; }
   clang::Qualifiers &getQuals() { return quals; }
 
@@ -300,7 +308,7 @@ class AggValueSlot {
   /// destructor for the slot.  Otherwise the code which constructs it should
   /// push the appropriate cleanup.
   LLVM_PREFERRED_TYPE(bool)
-  LLVM_ATTRIBUTE_UNUSED unsigned destructedFlag : 1;
+  [[maybe_unused]] unsigned destructedFlag : 1;
 
   /// This is set to true if the memory in the slot is known to be zero before
   /// the assignment into it.  This means that zero fields don't need to be set.
@@ -319,7 +327,7 @@ class AggValueSlot {
   /// object, it's important that this flag never be set when
   /// evaluating an expression which constructs such an object.
   LLVM_PREFERRED_TYPE(bool)
-  LLVM_ATTRIBUTE_UNUSED unsigned aliasedFlag : 1;
+  [[maybe_unused]] unsigned aliasedFlag : 1;
 
   /// This is set to true if the tail padding of this slot might overlap
   /// another object that may have already been initialized (and whose
@@ -327,7 +335,7 @@ class AggValueSlot {
   /// store up to the dsize of the type. Otherwise we can widen stores to
   /// the size of the type.
   LLVM_PREFERRED_TYPE(bool)
-  LLVM_ATTRIBUTE_UNUSED unsigned overlapFlag : 1;
+  [[maybe_unused]] unsigned overlapFlag : 1;
 
 public:
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
@@ -363,6 +371,13 @@ public:
                    mayOverlap, isZeroed);
   }
 
+  IsDestructed_t isExternallyDestructed() const {
+    return IsDestructed_t(destructedFlag);
+  }
+  void setExternallyDestructed(bool destructed = true) {
+    destructedFlag = destructed;
+  }
+
   clang::Qualifiers getQualifiers() const { return quals; }
 
   Address getAddress() const { return addr; }
@@ -370,6 +385,8 @@ public:
   bool isIgnored() const { return !addr.isValid(); }
 
   mlir::Value getPointer() const { return addr.getPointer(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 

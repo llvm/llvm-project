@@ -598,6 +598,7 @@ struct InstructionInfo {
   std::string HexBytes;
 };
 
+#ifndef NDEBUG
 // Helper function to print generated assembly snippets
 void printInstructions(const std::vector<InstructionInfo> &Instructions,
                        int InitialLinesCount, int LastLinesCount) {
@@ -622,6 +623,7 @@ void printInstructions(const std::vector<InstructionInfo> &Instructions,
            << Instructions[i].HexBytes << Instructions[i].Text << '\n';
   dbgs() << "```\n";
 }
+#endif // NDEBUG
 
 // Function to extract and print assembly from snippet
 Error printAssembledSnippet(const LLVMState &State,

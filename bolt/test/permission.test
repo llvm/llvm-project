@@ -1,13 +1,28 @@
 # Ensure that the permissions of the optimized binary file comply with the
 # system's umask.
 
-# This test performs a logical AND operation on the results of the `stat -c %a
-# %t.bolt` and `umask` commands (both results are displayed in octal), and
-# checks whether the result is equal to 0.
-REQUIRES: shell, system-linux
+# This test uses umask, which is Linux specific.
+REQUIRES: system-linux
 
-RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
-RUN: llvm-bolt %t -o %t.bolt
-RUN: echo $(( 8#$(stat -c %a %t.bolt) & 8#$(umask) )) | FileCheck %s
+# RUN: rm -f %t
+# RUN: touch %t
+# RUN: chmod 0755 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0755
+# RUN: chmod 0600 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0600
+# RUN: chmod 0655 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0655
 
-CHECK: 0
+RUN: %clang %cflags %p/Inputs/hello.c -o %t.exe -Wl,-q
+
+RUN: umask 0022
+RUN: llvm-bolt %t.exe -o %t1
+RUN: ls -l %t1 | cut -f 1 -d ' ' | cmp - %t.0755
+
+RUN: umask 0177
+RUN: llvm-bolt %t.exe -o %t2
+RUN: ls -l %t2 | cut -f 1 -d ' ' | cmp - %t.0600
+
+RUN: umask 0122
+RUN: llvm-bolt %t.exe -o %t3
+RUN: ls -l %t3 | cut -f 1 -d ' ' | cmp - %t.0655

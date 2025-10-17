@@ -186,7 +186,7 @@ int main(int, char**) {
   test_construction_with_repeated_types();
   test_vector_bool();
 
-  { // Check that the constraints are evaluated lazily (see https://github.com/llvm/llvm-project/issues/151328)
+  { // Check that the constraints are evaluated lazily (see llvm.org/PR151328)
     struct Matcher {
       Matcher() {}
       Matcher(std::variant<ConvertibleFromAny>) {}
