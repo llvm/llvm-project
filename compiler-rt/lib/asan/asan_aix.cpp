@@ -29,10 +29,10 @@ void AsanCheckDynamicRTPrereqs() {}
 
 void InitializePlatformExceptionHandlers() {}
 
-void *AsanDoesNotSupportStaticLinkage() { return 0; }
+void* AsanDoesNotSupportStaticLinkage() { return 0; }
 
 void InitializePlatformInterceptors() {}
-void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {}
+void AsanApplyToGlobals(globals_op_fptr op, const void* needle) {}
 
 uptr FindDynamicShadowStart() {
   UNREACHABLE("AIX does not use dynamic shadow offset!");
