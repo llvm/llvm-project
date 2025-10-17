@@ -174,12 +174,10 @@ static auto isPointerComparisonOperatorCall(std::string operator_name) {
       hasOperatorName(operator_name),
       hasLHS(
           anyOf(hasType(hasCanonicalType(pointerType(pointee(statusOrType())))),
-                hasType(hasCanonicalType(
-                    pointerType(pointee(possiblyAliasedStatusType())))))),
-      hasRHS(
-          anyOf(hasType(hasCanonicalType(pointerType(pointee(statusOrType())))),
-                hasType(hasCanonicalType(
-                    pointerType(pointee(possiblyAliasedStatusType())))))));
+                hasType(hasCanonicalType(pointerType(pointee(statusType())))))),
+      hasRHS(anyOf(
+          hasType(hasCanonicalType(pointerType(pointee(statusOrType())))),
+          hasType(hasCanonicalType(pointerType(pointee(statusType())))))));
 }
 
 static auto
