@@ -21,7 +21,7 @@ define amdgpu_kernel void @s_abs_i32(ptr addrspace(1) %out, i32 %val) nounwind {
 ; SIVI: v_sub_{{i|u}}32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
 ; GFX9: v_sub_u32_e32 [[NEG:v[0-9]+]], 0, [[SRC:v[0-9]+]]
 
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG]], [[SRC]]
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[SRC]], [[NEG]]
 
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2
@@ -42,7 +42,7 @@ define amdgpu_kernel void @v_abs_i32(ptr addrspace(1) %out, ptr addrspace(1) %sr
 ; GCN-LABEL: {{^}}v_abs_i32_repeat_user:
 ; SIVI: v_sub_{{i|u}}32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
 ; GFX9: v_sub_u32_e32 [[NEG:v[0-9]+]], 0, [[SRC:v[0-9]+]]
-; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[NEG]], [[SRC]]
+; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[SRC]], [[NEG]]
 ; GCN: v_mul_lo_u32 v{{[0-9]+}}, [[MAX]], [[MAX]]
 define amdgpu_kernel void @v_abs_i32_repeat_user(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -84,8 +84,8 @@ define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) no
 ; GFX9-DAG: v_sub_u32_e32 [[NEG0:v[0-9]+]], 0, [[SRC0:v[0-9]+]]
 ; GFX9-DAG: v_sub_u32_e32 [[NEG1:v[0-9]+]], 0, [[SRC1:v[0-9]+]]
 
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC0]], [[NEG0]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC1]], [[NEG1]]
 
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
@@ -156,10 +156,10 @@ define amdgpu_kernel void @s_abs_v4i32(ptr addrspace(1) %out, <4 x i32> %val) no
 ; GFX9-DAG: v_sub_u32_e32 [[NEG2:v[0-9]+]], 0, [[SRC2:v[0-9]+]]
 ; GFX9-DAG: v_sub_u32_e32 [[NEG3:v[0-9]+]], 0, [[SRC3:v[0-9]+]]
 
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG2]], [[SRC2]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG3]], [[SRC3]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC0]], [[NEG0]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC1]], [[NEG1]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC2]], [[NEG2]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC3]], [[NEG3]]
 
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc,
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc,

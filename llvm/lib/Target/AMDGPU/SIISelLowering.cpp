@@ -14945,13 +14945,6 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     }
   }
 
-  // max(x, neg(x)) -> abs(x)
-  if (Opc == ISD::SMAX && VT == MVT::i32) {
-    SDValue Value;
-    if (sd_match(N, m_SMax(m_Value(Value), m_Neg(m_Deferred(Value)))))
-      return DAG.getNode(ISD::ABS, SDLoc(N), VT, Value);
-  }
-
   // min(max(x, K0), K1), K0 < K1 -> med3(x, K0, K1)
   // max(min(x, K0), K1), K1 < K0 -> med3(x, K1, K0)
   if (Opc == ISD::SMIN && Op0.getOpcode() == ISD::SMAX && Op0.hasOneUse()) {
