@@ -31,15 +31,22 @@ template <class T, size_t N> struct array {
   LIBC_INLINE constexpr T *data() { return Data; }
   LIBC_INLINE constexpr const T *data() const { return Data; }
 
-  LIBC_INLINE constexpr T &front() { return Data[0]; }
-  LIBC_INLINE constexpr const T &front() const { return Data[0]; }
+  LIBC_INLINE constexpr T &front() LIBC_LIFETIME_BOUND { return Data[0]; }
+  LIBC_INLINE constexpr const T &front() const LIBC_LIFETIME_BOUND {
+    return Data[0];
+  }
 
-  LIBC_INLINE constexpr T &back() { return Data[N - 1]; }
-  LIBC_INLINE constexpr const T &back() const { return Data[N - 1]; }
+  LIBC_INLINE constexpr T &back() LIBC_LIFETIME_BOUND { return Data[N - 1]; }
+  LIBC_INLINE constexpr const T &back() const LIBC_LIFETIME_BOUND {
+    return Data[N - 1];
+  }
 
-  LIBC_INLINE constexpr T &operator[](size_t Index) { return Data[Index]; }
+  LIBC_INLINE constexpr T &operator[](size_t Index) LIBC_LIFETIME_BOUND {
+    return Data[Index];
+  }
 
-  LIBC_INLINE constexpr const T &operator[](size_t Index) const {
+  LIBC_INLINE constexpr const T &
+  operator[](size_t Index) const LIBC_LIFETIME_BOUND {
     return Data[Index];
   }
 
