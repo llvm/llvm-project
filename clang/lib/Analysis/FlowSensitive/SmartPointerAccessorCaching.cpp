@@ -129,6 +129,12 @@ AST_MATCHER(clang::CXXRecordDecl, pointerClass) {
 
 namespace clang::dataflow {
 
+ast_matchers::StatementMatcher isSmartPointerLikeConstructor() {
+  using namespace ast_matchers;
+  return cxxConstructExpr(hasType(hasCanonicalType(qualType(
+      hasDeclaration(cxxRecordDecl(smartPointerClassWithGetOrValue()))))));
+}
+
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
@@ -143,6 +149,12 @@ ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
       callee(cxxMethodDecl(parameterCountIs(0),
                            returns(hasCanonicalType(pointerType())),
                            ofClass(smartPointerClassWithGetOrValue()))));
+}
+
+ast_matchers::StatementMatcher isPointerLikeConstructor() {
+  using namespace ast_matchers;
+  return cxxConstructExpr(hasType(hasCanonicalType(
+      qualType(hasDeclaration(cxxRecordDecl(pointerClass()))))));
 }
 
 ast_matchers::StatementMatcher isPointerLikeOperatorStar() {
@@ -177,15 +189,8 @@ isSmartPointerLikeGetMethodCall(clang::StringRef MethodName) {
 }
 
 const FunctionDecl *
-getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE) {
+getCanonicalSmartPointerLikeOperatorCalleeForType(const CXXRecordDecl *RD) {
   const FunctionDecl *CanonicalCallee = nullptr;
-  const CXXMethodDecl *Callee =
-      cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
-  if (Callee == nullptr)
-    return nullptr;
-  const CXXRecordDecl *RD = Callee->getParent();
-  if (RD == nullptr)
-    return nullptr;
   for (const auto *MD : RD->methods()) {
     if (MD->getOverloadedOperator() == OO_Star && MD->isConst() &&
         MD->getNumParams() == 0 && MD->getReturnType()->isReferenceType()) {
@@ -194,6 +199,18 @@ getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE) {
     }
   }
   return CanonicalCallee;
+}
+
+const FunctionDecl *
+getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE) {
+  const CXXMethodDecl *Callee =
+      cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+  if (Callee == nullptr)
+    return nullptr;
+  const CXXRecordDecl *RD = Callee->getParent();
+  if (RD == nullptr)
+    return nullptr;
+  return getCanonicalSmartPointerLikeOperatorCalleeForType(RD);
 }
 
 } // namespace clang::dataflow
