@@ -1,0 +1,78 @@
+; REQUIRES: x86-registered-target
+
+; Test case 1 - General options.
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Print basic details.
+; The following command prints basic details for all the logical elements
+; sorted by the debug information internal offset; it includes its lexical
+; level and debug info format.
+
+; RUN: llvm-as %p/Inputs/test-clang.ll -o %t.test-clang.bc
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %t.test-clang.bc 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=elements \
+; RUN:                         %t.test-clang.bc 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} '{{.*}}test-clang.bc' -> Bitcode IR
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: [003]                 {Block}
+; ONE-NEXT: [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
+; ONE-NEXT: [004]     5             {Line}
+; ONE-NEXT: [004]                   {Code} 'store i32 7, ptr %CONSTANT, align 4, !dbg !32'
+; ONE-NEXT: [004]     6             {Line}
+; ONE-NEXT: [004]                   {Code} 'store i32 7, ptr %retval, align 4, !dbg !33'
+; ONE-NEXT: [004]     6             {Line}
+; ONE-NEXT: [004]                   {Code} 'br label %return, !dbg !33'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamBool' -> 'bool'
+; ONE-NEXT: [003]     4           {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} '%retval = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} '%ParamPtr.addr = alloca ptr, align 8'
+; ONE-NEXT: [003]                 {Code} '%ParamUnsigned.addr = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} '%ParamBool.addr = alloca i8, align 1'
+; ONE-NEXT: [003]                 {Code} '%CONSTANT = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} 'store ptr %ParamPtr, ptr %ParamPtr.addr, align 8'
+; ONE-NEXT: [003]                 {Code} 'store i32 %ParamUnsigned, ptr %ParamUnsigned.addr, align 4'
+; ONE-NEXT: [003]                 {Code} '%storedv = zext i1 %ParamBool to i8'
+; ONE-NEXT: [003]                 {Code} 'store i8 %storedv, ptr %ParamBool.addr, align 1'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} '%1 = load i32, ptr %ParamUnsigned.addr, align 4, !dbg !34'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'store i32 %1, ptr %retval, align 4, !dbg !35'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'br label %return, !dbg !35'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} '%2 = load i32, ptr %retval, align 4, !dbg !36'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret i32 %2, !dbg !36'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} '%0 = load i8, ptr %ParamBool.addr, align 1, !dbg !26'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} '%loadedv = trunc i8 %0 to i1, !dbg !26'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'br i1 %loadedv, label %if.then, label %if.end, !dbg !26'
+; ONE-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
