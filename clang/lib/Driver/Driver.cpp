@@ -698,8 +698,10 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     }
   }
 
-  // Currently the only architecture supported by *-uefi triples are x86_64.
-  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
+  // Currently the only architectures supported by *-uefi triples are x86_64
+  // and aarch64.
+  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64 &&
+      Target.getArch() != llvm::Triple::aarch64)
     D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
