@@ -31,10 +31,10 @@ ManagedEventThread::~ManagedEventThread() {
 }
 
 DAPSessionManager &DAPSessionManager::GetInstance() {
-  // NOTE: intentional leak to avoid issues with C++ destructor chain
-  // Use std::call_once for thread-safe initialization.
   static std::once_flag initialized;
-  static DAPSessionManager *instance = nullptr;
+  static DAPSessionManager *instance =
+      nullptr; // NOTE: intentional leak to avoid issues with C++ destructor
+               // chain
 
   std::call_once(initialized, []() { instance = new DAPSessionManager(); });
 
@@ -104,7 +104,7 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   // Try to use shared event thread, if it exists.
   if (auto it = m_debugger_event_threads.find(debugger_id);
       it != m_debugger_event_threads.end()) {
-    if (auto thread_sp = it->second.lock())
+    if (std::shared_ptr<ManagedEventThread> thread_sp = it->second.lock())
       return thread_sp;
     // Our weak pointer has expired.
     m_debugger_event_threads.erase(it);
@@ -118,21 +118,21 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   return new_thread_sp;
 }
 
-void DAPSessionManager::SetSharedDebugger(uint32_t target_id,
-                                          lldb::SBDebugger debugger) {
+void DAPSessionManager::StoreTargetById(uint32_t target_id,
+                                        lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
-  m_target_to_debugger_map[target_id] = debugger;
+  m_target_map[target_id] = target;
 }
 
-std::optional<lldb::SBDebugger>
-DAPSessionManager::GetSharedDebugger(uint32_t target_id) {
+std::optional<lldb::SBTarget>
+DAPSessionManager::TakeTargetById(uint32_t target_id) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
-  auto pos = m_target_to_debugger_map.find(target_id);
-  if (pos == m_target_to_debugger_map.end())
+  auto pos = m_target_map.find(target_id);
+  if (pos == m_target_map.end())
     return std::nullopt;
-  lldb::SBDebugger debugger = pos->second;
-  m_target_to_debugger_map.erase(pos);
-  return debugger;
+  lldb::SBTarget target = pos->second;
+  m_target_map.erase(pos);
+  return target;
 }
 
 DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
@@ -146,9 +146,10 @@ DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
 }
 
 void DAPSessionManager::CleanupSharedResources() {
-  // SBDebugger destructors will handle cleanup when the map entries are
+  // Note: Caller must hold m_sessions_mutex.
+  // SBTarget destructors will handle cleanup when the map entries are
   // destroyed.
-  m_target_to_debugger_map.clear();
+  m_target_map.clear();
 }
 
 void DAPSessionManager::ReleaseExpiredEventThreads() {
