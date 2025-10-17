@@ -765,10 +765,18 @@ static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
 
 static void instantiateDependentHLSLParamModifierAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const HLSLParamModifierAttr *Attr, Decl *New) {
-  ParmVarDecl *P = cast<ParmVarDecl>(New);
-  P->addAttr(Attr->clone(S.getASTContext()));
-  P->setType(S.HLSL().getInoutParameterType(P->getType()));
+    const HLSLParamModifierAttr *Attr, const Decl *Old, Decl *New) {
+  ParmVarDecl *NewParm = cast<ParmVarDecl>(New);
+  NewParm->addAttr(Attr->clone(S.getASTContext()));
+
+  const Type *OldParmTy = cast<ParmVarDecl>(Old)->getType().getTypePtr();
+  if (OldParmTy->isDependentType() && Attr->isAnyOut())
+    NewParm->setType(S.HLSL().getInoutParameterType(NewParm->getType()));
+
+  assert(
+      (!Attr->isAnyOut() || (NewParm->getType().isRestrictQualified() &&
+                             NewParm->getType()->isReferenceType())) &&
+      "out or inout parameter type must be a reference and restrict qualified");
 }
 
 void Sema::InstantiateAttrsForDecl(
@@ -923,7 +931,7 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
       instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
-                                                New);
+                                                Tmpl, New);
       continue;
     }
 
@@ -1522,9 +1530,9 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // If the old typedef was the name for linkage purposes of an anonymous
   // tag decl, re-establish that relationship for the new typedef.
   if (const TagType *oldTagType = D->getUnderlyingType()->getAs<TagType>()) {
-    TagDecl *oldTag = oldTagType->getOriginalDecl();
+    TagDecl *oldTag = oldTagType->getDecl();
     if (oldTag->getTypedefNameForAnonDecl() == D && !Invalid) {
-      TagDecl *newTag = DI->getType()->castAs<TagType>()->getOriginalDecl();
+      TagDecl *newTag = DI->getType()->castAs<TagType>()->getDecl();
       assert(!newTag->hasNameForLinkage());
       newTag->setTypedefNameForAnonDecl(Typedef);
     }
@@ -5727,7 +5735,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setDeclarationNameLoc(NameLocPointsToPattern());
 
   EnterExpressionEvaluationContextForFunction EvalContext(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Function);
 
   Qualifiers ThisTypeQuals;
   CXXRecordDecl *ThisContext = nullptr;
@@ -5791,7 +5799,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       QualType TransformRecordType(TypeLocBuilder &TLB, RecordTypeLoc TL) {
         const RecordType *T = TL.getTypePtr();
         RecordDecl *Record = cast_or_null<RecordDecl>(
-            getDerived().TransformDecl(TL.getNameLoc(), T->getOriginalDecl()));
+            getDerived().TransformDecl(TL.getNameLoc(), T->getDecl()));
         if (Record != OldDecl)
           return Base::TransformRecordType(TLB, TL);
 

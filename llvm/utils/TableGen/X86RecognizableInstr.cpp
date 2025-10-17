@@ -365,6 +365,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_XD;
     else if (OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS;
+    else if (HasREX_W && ExplicitREX2Prefix)
+      insnContext = IC_64BIT_REX2_REXW;
     else if (ExplicitREX2Prefix)
       insnContext = IC_64BIT_REX2;
     else if (HasREX_W)

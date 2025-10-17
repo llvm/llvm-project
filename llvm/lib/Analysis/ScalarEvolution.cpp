@@ -4623,17 +4623,11 @@ const SCEV *ScalarEvolution::getNegativeSCEV(const SCEV *V,
 
 /// If Expr computes ~A, return A else return nullptr
 static const SCEV *MatchNotExpr(const SCEV *Expr) {
-  const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Expr);
-  if (!Add || Add->getNumOperands() != 2 ||
-      !Add->getOperand(0)->isAllOnesValue())
-    return nullptr;
-
-  const SCEVMulExpr *AddRHS = dyn_cast<SCEVMulExpr>(Add->getOperand(1));
-  if (!AddRHS || AddRHS->getNumOperands() != 2 ||
-      !AddRHS->getOperand(0)->isAllOnesValue())
-    return nullptr;
-
-  return AddRHS->getOperand(1);
+  const SCEV *MulOp;
+  if (match(Expr, m_scev_Add(m_scev_AllOnes(),
+                             m_scev_Mul(m_scev_AllOnes(), m_SCEV(MulOp)))))
+    return MulOp;
+  return nullptr;
 }
 
 /// Return a SCEV corresponding to ~V = -1-V
@@ -6417,8 +6411,18 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
   case scSequentialUMinExpr:
     return GetGCDMultiple(cast<SCEVNAryExpr>(S));
   case scUnknown: {
-    // ask ValueTracking for known bits
+    // Ask ValueTracking for known bits. SCEVUnknown only become available at
+    // the point their underlying IR instruction has been defined. If CtxI was
+    // not provided, use:
+    // * the first instruction in the entry block if it is an argument
+    // * the instruction itself otherwise.
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
+    if (!CtxI) {
+      if (isa<Argument>(U->getValue()))
+        CtxI = &*F.getEntryBlock().begin();
+      else if (auto *I = dyn_cast<Instruction>(U->getValue()))
+        CtxI = I;
+    }
     unsigned Known =
         computeKnownBits(U->getValue(), getDataLayout(), &AC, CtxI, &DT)
             .countMinTrailingZeros();
@@ -12210,12 +12214,11 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
     // Try to match a common constant multiply.
     auto MatchConstMul =
         [](const SCEV *S) -> std::optional<std::pair<const SCEV *, APInt>> {
-      auto *M = dyn_cast<SCEVMulExpr>(S);
-      if (!M || M->getNumOperands() != 2 ||
-          !isa<SCEVConstant>(M->getOperand(0)))
-        return std::nullopt;
-      return {
-          {M->getOperand(1), cast<SCEVConstant>(M->getOperand(0))->getAPInt()}};
+      const APInt *C;
+      const SCEV *Op;
+      if (match(S, m_scev_Mul(m_scev_APInt(C), m_SCEV(Op))))
+        return {{Op, *C}};
+      return std::nullopt;
     };
     if (auto MatchedMore = MatchConstMul(More)) {
       if (auto MatchedLess = MatchConstMul(Less)) {
@@ -15761,6 +15764,21 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           const SCEV *OneAlignedUp =
               GetNextSCEVDividesByDivisor(One, DividesBy);
           To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);
+        } else {
+          if (LHS->getType()->isPointerTy()) {
+            LHS = SE.getLosslessPtrToIntExpr(LHS);
+            RHS = SE.getLosslessPtrToIntExpr(RHS);
+            if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
+              break;
+          }
+          auto AddSubRewrite = [&](const SCEV *A, const SCEV *B) {
+            const SCEV *Sub = SE.getMinusSCEV(A, B);
+            AddRewrite(Sub, Sub,
+                       SE.getUMaxExpr(Sub, SE.getOne(From->getType())));
+          };
+          AddSubRewrite(LHS, RHS);
+          AddSubRewrite(RHS, LHS);
+          continue;
         }
         break;
       default:
