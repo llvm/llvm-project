@@ -2787,9 +2787,7 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
                        OpenACC_PointerLikeType:$v,
-                       TypeAttr:$element_type,
-                       Optional<I1>:$ifCond
-                       );
+                       TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
