@@ -1311,12 +1311,12 @@ interp__builtin_ptrauth_string_discriminator(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
                                               const InterpFrame *Frame,
                                               const CallExpr *Call) {
-  const ASTContext &Ctx = S.getASTContext();
-  const uint64_t BitWidth = Ctx.getTypeSize(Ctx.getSizeType());
-  const auto Mode =
-      Ctx.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
-  const uint64_t MaxTokens =
-      Ctx.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+  const ASTContext &ASTCtx = S.getASTContext();
+  uint64_t BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
+  auto Mode =
+      ASTCtx.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  uint64_t MaxTokens =
+      ASTCtx.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
 
   // We do not read any of the arguments; discard them.
   for (int I = Call->getNumArgs() - 1; I >= 0; --I)
@@ -1324,25 +1324,26 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
 
   // Note: Type inference from a surrounding cast is not supported in
   // constexpr evaluation.
-  QualType AllocType = infer_alloc::inferPossibleType(Call, Ctx, nullptr);
+  QualType AllocType = infer_alloc::inferPossibleType(Call, ASTCtx, nullptr);
   if (AllocType.isNull()) {
-    S.CCEDiag(Call) << "could not infer allocation type";
+    S.CCEDiag(Call,
+              diag::note_constexpr_infer_alloc_token_type_inference_failed);
     return false;
   }
 
-  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, Ctx);
+  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, ASTCtx);
   if (!ATMD) {
-    S.CCEDiag(Call) << "could not get token metadata for type";
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_no_metadata);
     return false;
   }
 
-  auto MaybeToken = llvm::getAllocTokenHash(Mode, *ATMD, MaxTokens);
+  auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
   if (!MaybeToken) {
-    S.CCEDiag(Call) << "stateful alloc token mode not supported in constexpr";
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_stateful_mode);
     return false;
   }
 
-  pushInteger(S, llvm::APInt(BitWidth, *MaybeToken), Ctx.getSizeType());
+  pushInteger(S, llvm::APInt(BitWidth, *MaybeToken), ASTCtx.getSizeType());
   return true;
 }
 
