@@ -52,16 +52,19 @@ def IntrInaccessibleMemOnly : IntrinsicProperty;
 
 
 class IntrinsicMemoryLocation;
-// These are used to represent Generic Memory Location. 
+// Tablegen representation of IRMemLocation.
+// TODO: Populate with all IRMemLocation enum values and update
+// getValueAsIRMemLocation accordingly.
+def InaccessibleMem : IntrinsicMemoryLocation;
 def TargetMem0 : IntrinsicMemoryLocation;
 def TargetMem1 : IntrinsicMemoryLocation;
-// IntrInaccessible{Read|Write}MemOnly needs to set Location
+// The list of IRMemoryLocations that are read from.
 class IntrRead<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
-   list<IntrinsicMemoryLocation>  Loc=idx;
+   list<IntrinsicMemoryLocation>  MemLoc=idx;
 }
-
+//  The list of IRMemoryLocations that are write from.
 class IntrWrite<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
-   list<IntrinsicMemoryLocation> Loc=idx;
+   list<IntrinsicMemoryLocation> MemLoc=idx;
 }
 
 

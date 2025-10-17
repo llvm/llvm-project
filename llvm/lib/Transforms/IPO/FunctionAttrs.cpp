@@ -285,15 +285,7 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
         checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
     ME |= FnME;
     RecursiveArgME |= FnRecursiveArgME;
-    // If no Target Memory location is specified, default to ModRef.
-    // This preserves the same behavior as before Target Memory was introduced,
-    // since Target Memory is never set at this point.
-    MemoryEffects METarget = ME;
-    if (ME.getModRef(IRMemLocation::TargetMem0) == ModRefInfo::NoModRef and
-        ME.getModRef(IRMemLocation::TargetMem1) == ModRefInfo::NoModRef)
-      METarget |= ME.setTargetMemLocationModRef(ModRefInfo::ModRef);
-    // Reached bottom of the lattice, we will not be able to improve the result.
-    if (ME == MemoryEffects::unknown() or METarget == MemoryEffects::unknown())
+    if (ME == MemoryEffects::unknown())
       return;
   }
 
