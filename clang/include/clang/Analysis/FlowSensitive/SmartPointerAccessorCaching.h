@@ -91,7 +91,18 @@ template <typename LatticeT>
 void transferSmartPointerLikeCachedDeref(
     const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc);
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc);
+template <typename LatticeT>
+void transferSmartPointerLikeCachedDeref(
+    const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
+    TransferState<LatticeT> &State,
+    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+  transferSmartPointerLikeCachedDeref<LatticeT>(
+      DerefExpr, SmartPointerLoc, State,
+      [InitializeLoc](QualType T, StorageLocation &Loc) {
+        InitializeLoc(Loc);
+      });
+}
 
 /// A transfer function for `operator->` (and `get`) calls that can be cached.
 /// Runs the `InitializeLoc` callback to initialize any new StorageLocations.
@@ -103,13 +114,24 @@ template <typename LatticeT>
 void transferSmartPointerLikeCachedGet(
     const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc);
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc);
+template <typename LatticeT>
+void transferSmartPointerLikeCachedGet(
+    const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
+    TransferState<LatticeT> &State,
+    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+  transferSmartPointerLikeCachedGet<LatticeT>(
+      GetExpr, SmartPointerLoc, State,
+      [InitializeLoc](QualType T, StorageLocation &Loc) {
+        InitializeLoc(Loc);
+      });
+}
 
 template <typename LatticeT>
 void transferSmartPointerLikeCachedDeref(
     const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc) {
   if (State.Env.getStorageLocation(*DerefExpr) != nullptr)
     return;
   if (SmartPointerLoc == nullptr)
@@ -145,7 +167,7 @@ template <typename LatticeT>
 void transferSmartPointerLikeCachedGet(
     const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
-    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+    llvm::function_ref<void(QualType, StorageLocation &)> InitializeLoc) {
   if (SmartPointerLoc == nullptr)
     return;
 
