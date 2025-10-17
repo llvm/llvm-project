@@ -211,7 +211,7 @@ public:
 
   // Find COMMON block in current and surrounding scopes, follow USE
   // associations
-  Symbol *FindCommonBlockInSurroundingScopes(const SourceName &) const;
+  Symbol *FindCommonBlockInVisibleScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>

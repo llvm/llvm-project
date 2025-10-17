@@ -1732,7 +1732,7 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
   if (!name) {
     return nullptr;
   }
-  if (auto *cb{GetContext().scope.FindCommonBlockInSurroundingScopes(
+  if (auto *cb{GetContext().scope.FindCommonBlockInVisibleScopes(
           name->source)}) {
     name->symbol = cb;
     return cb;
