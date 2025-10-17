@@ -47,10 +47,10 @@ jobs:
 
       - name: Build container
         run: |
-          podman build --target ci-container-code-format \
+          podman build --format docker --target ci-container-code-format \
           -f .github/workflows/containers/github-action-ci-tooling/Dockerfile \
           -t ${{ steps.vars.outputs.container-name-format-tag }} .
-          podman build --target ci-container-code-lint \
+          podman build --format docker --target ci-container-code-lint \
           -f .github/workflows/containers/github-action-ci-tooling/Dockerfile \
           -t ${{ steps.vars.outputs.container-name-lint-tag }} .
 
