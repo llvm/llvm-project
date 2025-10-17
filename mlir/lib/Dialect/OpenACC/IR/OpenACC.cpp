@@ -3858,7 +3858,8 @@ LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
   }
 
   if (Value writeVal = op.getWriteOpVal()) {
-    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal);
+    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal,
+                                               op.getIfCond());
     return success();
   }
 
