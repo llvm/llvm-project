@@ -2401,8 +2401,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
 
     MachineInstr *AllocMI = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_ALLOC_VGPR))
                                 .add(I.getOperand(2));
-    MachineInstr *CopyMI = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), ResReg)
-                               .addReg(AMDGPU::SCC);
+    (void)BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), ResReg)
+        .addReg(AMDGPU::SCC);
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*AllocMI, TII, TRI, RBI) &&
            RBI.constrainGenericRegister(ResReg, AMDGPU::SReg_32RegClass, *MRI);
