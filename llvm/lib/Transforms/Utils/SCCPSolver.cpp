@@ -638,14 +638,6 @@ private:
                     ValueLatticeElement::MergeOptions Opts = {
                         /*MayIncludeUndef=*/false, /*CheckWiden=*/false});
 
-  bool mergeInValue(Value *V, const ValueLatticeElement &MergeWithV,
-                    ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}) {
-    assert(!V->getType()->isStructTy() &&
-           "non-structs should use markConstant");
-    return mergeInValue(ValueState[V], V, MergeWithV, Opts);
-  }
-
   /// getValueState - Return the ValueLatticeElement object that corresponds to
   /// the value.  This function handles the case when the value hasn't been seen
   /// yet by properly seeding constants etc.
@@ -987,7 +979,7 @@ public:
   void trackValueOfArgument(Argument *A) {
     if (A->getType()->isStructTy())
       return (void)markOverdefined(A);
-    mergeInValue(A, getArgAttributeVL(A));
+    mergeInValue(ValueState[A], A, getArgAttributeVL(A));
   }
 
   bool isStructLatticeConstant(Function *F, StructType *STy);
@@ -1419,10 +1411,10 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
   // extensions to match the number of active incoming values. This helps to
   // limit multiple extensions caused by the same incoming value, if other
   // incoming values are equal.
-  mergeInValue(&PN, PhiState,
+  ValueLatticeElement &PhiStateRef = ValueState[&PN];
+  mergeInValue(PhiStateRef, &PN, PhiState,
                ValueLatticeElement::MergeOptions().setMaxWidenSteps(
                    NumActiveIncoming + 1));
-  ValueLatticeElement &PhiStateRef = getValueState(&PN);
   PhiStateRef.setNumRangeExtensions(
       std::max(NumActiveIncoming, PhiStateRef.getNumRangeExtensions()));
 }
@@ -1532,7 +1524,7 @@ void SCCPInstVisitor::handleExtractOfWithOverflow(ExtractValueInst &EVI,
   ConstantRange RR = R.asConstantRange(Ty, /*UndefAllowed=*/false);
   if (Idx == 0) {
     ConstantRange Res = LR.binaryOp(WO->getBinaryOp(), RR);
-    mergeInValue(&EVI, ValueLatticeElement::getRange(Res));
+    mergeInValue(ValueState[&EVI], &EVI, ValueLatticeElement::getRange(Res));
   } else {
     assert(Idx == 1 && "Index can only be 0 or 1");
     ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
@@ -1564,7 +1556,7 @@ void SCCPInstVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (auto *WO = dyn_cast<WithOverflowInst>(AggVal))
       return handleExtractOfWithOverflow(EVI, WO, i);
     ValueLatticeElement EltVal = getStructValueState(AggVal, i);
-    mergeInValue(getValueState(&EVI), &EVI, EltVal);
+    mergeInValue(ValueState[&EVI], &EVI, EltVal);
   } else {
     // Otherwise, must be extracting from an array.
     return (void)markOverdefined(&EVI);
@@ -1627,7 +1619,10 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
   if (ConstantInt *CondCB =
           getConstantInt(CondValue, I.getCondition()->getType())) {
     Value *OpVal = CondCB->isZero() ? I.getFalseValue() : I.getTrueValue();
-    mergeInValue(&I, getValueState(OpVal));
+    const ValueLatticeElement &OpValState = getValueState(OpVal);
+    // Safety: ValueState[&I] doesn't invalidate OpValState since it is already
+    // in the map.
+    mergeInValue(ValueState[&I], &I, OpValState);
     return;
   }
 
@@ -1725,7 +1720,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
       // being a special floating value.
       ValueLatticeElement NewV;
       NewV.markConstant(C, /*MayIncludeUndef=*/true);
-      return (void)mergeInValue(&I, NewV);
+      return (void)mergeInValue(ValueState[&I], &I, NewV);
     }
   }
 
@@ -1745,7 +1740,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
   else
     R = A.binaryOp(BO->getOpcode(), B);
-  mergeInValue(&I, ValueLatticeElement::getRange(R));
+  mergeInValue(ValueState[&I], &I, ValueLatticeElement::getRange(R));
 
   // TODO: Currently we do not exploit special values that produce something
   // better than overdefined with an overdefined operand for vector or floating
@@ -1771,7 +1766,7 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
   if (C) {
     ValueLatticeElement CV;
     CV.markConstant(C);
-    mergeInValue(&I, CV);
+    mergeInValue(ValueState[&I], &I, CV);
     return;
   }
 
@@ -1919,7 +1914,7 @@ void SCCPInstVisitor::visitLoadInst(LoadInst &I) {
   }
 
   // Fall back to metadata.
-  mergeInValue(&I, getValueFromMetadata(&I));
+  mergeInValue(ValueState[&I], &I, getValueFromMetadata(&I));
 }
 
 void SCCPInstVisitor::visitCallBase(CallBase &CB) {
@@ -1967,7 +1962,7 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
   }
 
   // Fall back to metadata.
-  mergeInValue(&CB, getValueFromMetadata(&CB));
+  mergeInValue(ValueState[&CB], &CB, getValueFromMetadata(&CB));
 }
 
 void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
@@ -1996,7 +1991,7 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
                        getMaxWidenStepsOpts());
         }
       } else
-        mergeInValue(&*AI,
+        mergeInValue(ValueState[&*AI], &*AI,
                      getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
                      getMaxWidenStepsOpts());
     }
@@ -2079,7 +2074,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
     if (II->getIntrinsicID() == Intrinsic::vscale) {
       unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
-      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
     }
 
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
@@ -2097,7 +2093,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
       ConstantRange Result =
           ConstantRange::intrinsic(II->getIntrinsicID(), OpRanges);
-      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
     }
   }
 
@@ -2124,7 +2121,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       return handleCallOverdefined(CB); // Not tracking this callee.
 
     // If so, propagate the return value of the callee into this call result.
-    mergeInValue(&CB, TFRVI->second, getMaxWidenStepsOpts());
+    mergeInValue(ValueState[&CB], &CB, TFRVI->second, getMaxWidenStepsOpts());
   }
 }
 
