@@ -2374,6 +2374,38 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
 __attribute__((convergent)) uint WaveActiveCountBits(bool Val);
 
+/// \brief Returns the sum of all the specified boolean variables set to true across
+/// all active lanes with indices smaller than the current lane.
+///
+/// \param Val The input boolean value.
+/// \return The sum of all the specified Boolean variables set to true across all active
+/// lanes with indices smaller than the current lane.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
+__attribute__((convergent)) uint WavePrefixCountBits(bool Val);
+
+/// \brief Returns the sum of all the specified boolean variables set to true across
+/// all active lanes defined by a mask with indices smaller than the current lane.
+///
+/// \param Val The input boolean value.
+/// \return The sum of all the specified Boolean variables set to true across all active
+/// lanes with indices smaller than the current lane.
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
+__attribute__((convergent)) uint WaveMultiPrefixCountBits(bool Val, uint4 Mask);
+
+/// \brief Returns a uint4 containing a bitmask of the evaluation of the Boolean
+/// expression for all active lanes in the current wave.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return A uint4 containing a bitmask of the evaluation of the Boolean expression
+/// for all active lanes in the current wave. The least-significant bit corresponds to
+/// the lane with index zero. The bits corresponding to inactive lanes will be zero.
+/// The bits that are greater than or equal to WaveGetLaneCount will be zero.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
+__attribute__((convergent)) uint4 WaveActiveBallot(bool Val);
+
 /// \brief Returns the index of the current lane within the current wave.
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
@@ -2394,109 +2426,1067 @@ __attribute__((convergent)) uint WaveGetLaneCount();
 // \brief Returns the value of the expression for the given lane index within
 // the specified wave.
 
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool WaveReadLaneAt(bool, uint32_t);
+__attribute__((convergent)) T WaveReadLaneAt(T, uint32_t);
+
+// \brief Returns the value of the expression for the active lane of the current wave with the smallest index.
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool2 WaveReadLaneAt(bool2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool3 WaveReadLaneAt(bool3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool4 WaveReadLaneAt(bool4, uint32_t);
+__attribute__((convergent)) T WaveReadLaneFirst(T);
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half WaveActiveAllEqual(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half2 WaveActiveAllEqual(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half3 WaveActiveAllEqual(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half4 WaveActiveAllEqual(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t WaveReadLaneAt(int16_t, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t WaveActiveAllEqual(int16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t2 WaveReadLaneAt(int16_t2, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t2 WaveActiveAllEqual(int16_t2);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t3 WaveReadLaneAt(int16_t3, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t3 WaveActiveAllEqual(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t4 WaveReadLaneAt(int16_t4, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t4 WaveActiveAllEqual(int16_t4);
 
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint16_t WaveReadLaneAt(uint16_t, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t WaveActiveAllEqual(uint16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint16_t2 WaveReadLaneAt(uint16_t2, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t2 WaveActiveAllEqual(uint16_t2);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint16_t3 WaveReadLaneAt(uint16_t3, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t3 WaveActiveAllEqual(uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint16_t4 WaveReadLaneAt(uint16_t4, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t4 WaveActiveAllEqual(uint16_t4);
 #endif
 
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int WaveActiveAllEqual(int);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int2 WaveActiveAllEqual(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int3 WaveActiveAllEqual(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int4 WaveActiveAllEqual(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint WaveActiveAllEqual(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint2 WaveActiveAllEqual(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint3 WaveActiveAllEqual(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint4 WaveActiveAllEqual(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t WaveActiveAllEqual(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t2 WaveActiveAllEqual(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t3 WaveActiveAllEqual(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t4 WaveActiveAllEqual(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t WaveActiveAllEqual(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t2 WaveActiveAllEqual(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t3 WaveActiveAllEqual(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t4 WaveActiveAllEqual(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float WaveActiveAllEqual(float);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float2 WaveActiveAllEqual(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float3 WaveActiveAllEqual(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float4 WaveActiveAllEqual(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double WaveActiveAllEqual(double);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double2 WaveActiveAllEqual(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double3 WaveActiveAllEqual(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double4 WaveActiveAllEqual(double4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t1x1 WaveActiveAllEqual(int16_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t1x2 WaveActiveAllEqual(int16_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t1x3 WaveActiveAllEqual(int16_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t1x4 WaveActiveAllEqual(int16_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t2x1 WaveActiveAllEqual(int16_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t2x2 WaveActiveAllEqual(int16_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t2x3 WaveActiveAllEqual(int16_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t2x4 WaveActiveAllEqual(int16_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t3x1 WaveActiveAllEqual(int16_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t3x2 WaveActiveAllEqual(int16_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t3x3 WaveActiveAllEqual(int16_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t3x4 WaveActiveAllEqual(int16_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t4x1 WaveActiveAllEqual(int16_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t4x2 WaveActiveAllEqual(int16_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t4x3 WaveActiveAllEqual(int16_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int16_t4x4 WaveActiveAllEqual(int16_t4x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t1x1 WaveActiveAllEqual(uint16_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t1x2 WaveActiveAllEqual(uint16_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t1x3 WaveActiveAllEqual(uint16_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t1x4 WaveActiveAllEqual(uint16_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t2x1 WaveActiveAllEqual(uint16_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t2x2 WaveActiveAllEqual(uint16_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t2x3 WaveActiveAllEqual(uint16_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t2x4 WaveActiveAllEqual(uint16_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t3x1 WaveActiveAllEqual(uint16_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t3x2 WaveActiveAllEqual(uint16_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t3x3 WaveActiveAllEqual(uint16_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t3x4 WaveActiveAllEqual(uint16_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t4x1 WaveActiveAllEqual(uint16_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t4x2 WaveActiveAllEqual(uint16_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t4x3 WaveActiveAllEqual(uint16_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint16_t4x4 WaveActiveAllEqual(uint16_t4x4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int1x1 WaveActiveAllEqual(int1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int1x2 WaveActiveAllEqual(int1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int1x3 WaveActiveAllEqual(int1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int1x4 WaveActiveAllEqual(int1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int2x1 WaveActiveAllEqual(int2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int2x2 WaveActiveAllEqual(int2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int2x3 WaveActiveAllEqual(int2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int2x4 WaveActiveAllEqual(int2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int3x1 WaveActiveAllEqual(int3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int3x2 WaveActiveAllEqual(int3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int3x3 WaveActiveAllEqual(int3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int3x4 WaveActiveAllEqual(int3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int4x1 WaveActiveAllEqual(int4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int4x2 WaveActiveAllEqual(int4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int4x3 WaveActiveAllEqual(int4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int4x4 WaveActiveAllEqual(int4x4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint1x1 WaveActiveAllEqual(uint1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint1x2 WaveActiveAllEqual(uint1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint1x3 WaveActiveAllEqual(uint1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint1x4 WaveActiveAllEqual(uint1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint2x1 WaveActiveAllEqual(uint2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint2x2 WaveActiveAllEqual(uint2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint2x3 WaveActiveAllEqual(uint2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint2x4 WaveActiveAllEqual(uint2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint3x1 WaveActiveAllEqual(uint3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint3x2 WaveActiveAllEqual(uint3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint3x3 WaveActiveAllEqual(uint3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint3x4 WaveActiveAllEqual(uint3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint4x1 WaveActiveAllEqual(uint4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint4x2 WaveActiveAllEqual(uint4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint4x3 WaveActiveAllEqual(uint4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint4x4 WaveActiveAllEqual(uint4x4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t1x1 WaveActiveAllEqual(int32_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t1x2 WaveActiveAllEqual(int32_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t1x3 WaveActiveAllEqual(int32_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t1x4 WaveActiveAllEqual(int32_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t2x1 WaveActiveAllEqual(int32_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t2x2 WaveActiveAllEqual(int32_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t2x3 WaveActiveAllEqual(int32_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t2x4 WaveActiveAllEqual(int32_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t3x1 WaveActiveAllEqual(int32_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t3x2 WaveActiveAllEqual(int32_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t3x3 WaveActiveAllEqual(int32_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t3x4 WaveActiveAllEqual(int32_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t4x1 WaveActiveAllEqual(int32_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t4x2 WaveActiveAllEqual(int32_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t4x3 WaveActiveAllEqual(int32_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int32_t4x4 WaveActiveAllEqual(int32_t4x4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t1x1 WaveActiveAllEqual(uint32_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t1x2 WaveActiveAllEqual(uint32_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t1x3 WaveActiveAllEqual(uint32_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t1x4 WaveActiveAllEqual(uint32_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t2x1 WaveActiveAllEqual(uint32_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t2x2 WaveActiveAllEqual(uint32_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t2x3 WaveActiveAllEqual(uint32_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t2x4 WaveActiveAllEqual(uint32_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t3x1 WaveActiveAllEqual(uint32_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t3x2 WaveActiveAllEqual(uint32_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t3x3 WaveActiveAllEqual(uint32_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t3x4 WaveActiveAllEqual(uint32_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t4x1 WaveActiveAllEqual(uint32_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t4x2 WaveActiveAllEqual(uint32_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t4x3 WaveActiveAllEqual(uint32_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint32_t4x4 WaveActiveAllEqual(uint32_t4x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t1x1 WaveActiveAllEqual(int64_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t1x2 WaveActiveAllEqual(int64_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t1x3 WaveActiveAllEqual(int64_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t1x4 WaveActiveAllEqual(int64_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t2x1 WaveActiveAllEqual(int64_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t2x2 WaveActiveAllEqual(int64_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t2x3 WaveActiveAllEqual(int64_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t2x4 WaveActiveAllEqual(int64_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t3x1 WaveActiveAllEqual(int64_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t3x2 WaveActiveAllEqual(int64_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t3x3 WaveActiveAllEqual(int64_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t3x4 WaveActiveAllEqual(int64_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t4x1 WaveActiveAllEqual(int64_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t4x2 WaveActiveAllEqual(int64_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t4x3 WaveActiveAllEqual(int64_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) int64_t4x4 WaveActiveAllEqual(int64_t4x4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t1x1 WaveActiveAllEqual(uint64_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t1x2 WaveActiveAllEqual(uint64_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t1x3 WaveActiveAllEqual(uint64_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t1x4 WaveActiveAllEqual(uint64_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t2x1 WaveActiveAllEqual(uint64_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t2x2 WaveActiveAllEqual(uint64_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t2x3 WaveActiveAllEqual(uint64_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t2x4 WaveActiveAllEqual(uint64_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t3x1 WaveActiveAllEqual(uint64_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t3x2 WaveActiveAllEqual(uint64_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t3x3 WaveActiveAllEqual(uint64_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t3x4 WaveActiveAllEqual(uint64_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t4x1 WaveActiveAllEqual(uint64_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t4x2 WaveActiveAllEqual(uint64_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t4x3 WaveActiveAllEqual(uint64_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) uint64_t4x4 WaveActiveAllEqual(uint64_t4x4);
+
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half WaveReadLaneAt(half, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half1x1 WaveActiveAllEqual(half1x1);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half2 WaveReadLaneAt(half2, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half1x2 WaveActiveAllEqual(half1x2);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half3 WaveReadLaneAt(half3, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half1x3 WaveActiveAllEqual(half1x3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half4 WaveReadLaneAt(half4, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half1x4 WaveActiveAllEqual(half1x4);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half2x1 WaveActiveAllEqual(half2x1);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half2x2 WaveActiveAllEqual(half2x2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half2x3 WaveActiveAllEqual(half2x3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half2x4 WaveActiveAllEqual(half2x4);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half3x1 WaveActiveAllEqual(half3x1);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half3x2 WaveActiveAllEqual(half3x2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half3x3 WaveActiveAllEqual(half3x3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half3x4 WaveActiveAllEqual(half3x4);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half4x1 WaveActiveAllEqual(half4x1);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half4x2 WaveActiveAllEqual(half4x2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half4x3 WaveActiveAllEqual(half4x3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) half4x4 WaveActiveAllEqual(half4x4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int WaveReadLaneAt(int, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int2 WaveReadLaneAt(int2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int3 WaveReadLaneAt(int3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int4 WaveReadLaneAt(int4, uint32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float1x1 WaveActiveAllEqual(float1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float1x2 WaveActiveAllEqual(float1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float1x3 WaveActiveAllEqual(float1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float1x4 WaveActiveAllEqual(float1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float2x1 WaveActiveAllEqual(float2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float2x2 WaveActiveAllEqual(float2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float2x3 WaveActiveAllEqual(float2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float2x4 WaveActiveAllEqual(float2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float3x1 WaveActiveAllEqual(float3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float3x2 WaveActiveAllEqual(float3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float3x3 WaveActiveAllEqual(float3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float3x4 WaveActiveAllEqual(float3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float4x1 WaveActiveAllEqual(float4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float4x2 WaveActiveAllEqual(float4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float4x3 WaveActiveAllEqual(float4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float4x4 WaveActiveAllEqual(float4x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double1x1 WaveActiveAllEqual(double1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double1x2 WaveActiveAllEqual(double1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double1x3 WaveActiveAllEqual(double1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double1x4 WaveActiveAllEqual(double1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double2x1 WaveActiveAllEqual(double2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double2x2 WaveActiveAllEqual(double2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double2x3 WaveActiveAllEqual(double2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double2x4 WaveActiveAllEqual(double2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double3x1 WaveActiveAllEqual(double3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double3x2 WaveActiveAllEqual(double3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double3x3 WaveActiveAllEqual(double3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double3x4 WaveActiveAllEqual(double3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double4x1 WaveActiveAllEqual(double4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double4x2 WaveActiveAllEqual(double4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double4x3 WaveActiveAllEqual(double4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) double4x4 WaveActiveAllEqual(double4x4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint WaveReadLaneAt(uint, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint2 WaveReadLaneAt(uint2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint3 WaveReadLaneAt(uint3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint4 WaveReadLaneAt(uint4, uint32_t);
+#if __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t1x1 WaveActiveAllEqual(float16_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t1x2 WaveActiveAllEqual(float16_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t1x3 WaveActiveAllEqual(float16_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t1x4 WaveActiveAllEqual(float16_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t2x1 WaveActiveAllEqual(float16_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t2x2 WaveActiveAllEqual(float16_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t2x3 WaveActiveAllEqual(float16_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t2x4 WaveActiveAllEqual(float16_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t3x1 WaveActiveAllEqual(float16_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t3x2 WaveActiveAllEqual(float16_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t3x3 WaveActiveAllEqual(float16_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t3x4 WaveActiveAllEqual(float16_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t4x1 WaveActiveAllEqual(float16_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t4x2 WaveActiveAllEqual(float16_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t4x3 WaveActiveAllEqual(float16_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float16_t4x4 WaveActiveAllEqual(float16_t4x4);
+#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float WaveReadLaneAt(float, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float2 WaveReadLaneAt(float2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float3 WaveReadLaneAt(float3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float4 WaveReadLaneAt(float4, uint32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t1x1 WaveActiveAllEqual(float32_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t1x2 WaveActiveAllEqual(float32_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t1x3 WaveActiveAllEqual(float32_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t1x4 WaveActiveAllEqual(float32_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t2x1 WaveActiveAllEqual(float32_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t2x2 WaveActiveAllEqual(float32_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t2x3 WaveActiveAllEqual(float32_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t2x4 WaveActiveAllEqual(float32_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t3x1 WaveActiveAllEqual(float32_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t3x2 WaveActiveAllEqual(float32_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t3x3 WaveActiveAllEqual(float32_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t3x4 WaveActiveAllEqual(float32_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t4x1 WaveActiveAllEqual(float32_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t4x2 WaveActiveAllEqual(float32_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t4x3 WaveActiveAllEqual(float32_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float32_t4x4 WaveActiveAllEqual(float32_t4x4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t WaveReadLaneAt(int64_t, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t2 WaveReadLaneAt(int64_t2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t3 WaveReadLaneAt(int64_t3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t4 WaveReadLaneAt(int64_t4, uint32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t1x1 WaveActiveAllEqual(float64_t1x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t1x2 WaveActiveAllEqual(float64_t1x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t1x3 WaveActiveAllEqual(float64_t1x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t1x4 WaveActiveAllEqual(float64_t1x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t2x1 WaveActiveAllEqual(float64_t2x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t2x2 WaveActiveAllEqual(float64_t2x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t2x3 WaveActiveAllEqual(float64_t2x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t2x4 WaveActiveAllEqual(float64_t2x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t3x1 WaveActiveAllEqual(float64_t3x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t3x2 WaveActiveAllEqual(float64_t3x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t3x3 WaveActiveAllEqual(float64_t3x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t3x4 WaveActiveAllEqual(float64_t3x4);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t4x1 WaveActiveAllEqual(float64_t4x1);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t4x2 WaveActiveAllEqual(float64_t4x2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t4x3 WaveActiveAllEqual(float64_t4x3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) float64_t4x4 WaveActiveAllEqual(float64_t4x4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint64_t WaveReadLaneAt(uint64_t, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint64_t2 WaveReadLaneAt(uint64_t2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint64_t3 WaveReadLaneAt(uint64_t3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) uint64_t4 WaveReadLaneAt(uint64_t4, uint32_t);
+//===----------------------------------------------------------------------===//
+// WaveActiveBitAnd builtins
+//===----------------------------------------------------------------------===//
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double WaveReadLaneAt(double, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double2 WaveReadLaneAt(double2, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double3 WaveReadLaneAt(double3, uint32_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double4 WaveReadLaneAt(double4, uint32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) half WaveActiveBitAnd(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) half2 WaveActiveBitAnd(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) half3 WaveActiveBitAnd(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) half4 WaveActiveBitAnd(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int16_t WaveActiveBitAnd(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int16_t2 WaveActiveBitAnd(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int16_t3 WaveActiveBitAnd(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int16_t4 WaveActiveBitAnd(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint16_t WaveActiveBitAnd(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint16_t2 WaveActiveBitAnd(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint16_t3 WaveActiveBitAnd(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint16_t4 WaveActiveBitAnd(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int WaveActiveBitAnd(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int2 WaveActiveBitAnd(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int3 WaveActiveBitAnd(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int4 WaveActiveBitAnd(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint WaveActiveBitAnd(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint2 WaveActiveBitAnd(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint3 WaveActiveBitAnd(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint4 WaveActiveBitAnd(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int64_t WaveActiveBitAnd(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int64_t2 WaveActiveBitAnd(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int64_t3 WaveActiveBitAnd(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) int64_t4 WaveActiveBitAnd(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint64_t WaveActiveBitAnd(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint64_t2 WaveActiveBitAnd(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint64_t3 WaveActiveBitAnd(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_and)
+__attribute__((convergent)) uint64_t4 WaveActiveBitAnd(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveBitOr builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) half WaveActiveBitOr(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) half2 WaveActiveBitOr(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) half3 WaveActiveBitOr(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) half4 WaveActiveBitOr(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int16_t WaveActiveBitOr(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int16_t2 WaveActiveBitOr(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int16_t3 WaveActiveBitOr(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int16_t4 WaveActiveBitOr(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint16_t WaveActiveBitOr(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint16_t2 WaveActiveBitOr(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint16_t3 WaveActiveBitOr(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint16_t4 WaveActiveBitOr(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int WaveActiveBitOr(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int2 WaveActiveBitOr(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int3 WaveActiveBitOr(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int4 WaveActiveBitOr(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint WaveActiveBitOr(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint2 WaveActiveBitOr(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint3 WaveActiveBitOr(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint4 WaveActiveBitOr(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int64_t WaveActiveBitOr(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int64_t2 WaveActiveBitOr(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int64_t3 WaveActiveBitOr(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) int64_t4 WaveActiveBitOr(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint64_t WaveActiveBitOr(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint64_t2 WaveActiveBitOr(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint64_t3 WaveActiveBitOr(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
+__attribute__((convergent)) uint64_t4 WaveActiveBitOr(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveBitXor builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) half WaveActiveBitXor(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) half2 WaveActiveBitXor(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) half3 WaveActiveBitXor(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) half4 WaveActiveBitXor(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int16_t WaveActiveBitXor(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int16_t2 WaveActiveBitXor(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int16_t3 WaveActiveBitXor(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int16_t4 WaveActiveBitXor(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint16_t WaveActiveBitXor(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint16_t2 WaveActiveBitXor(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint16_t3 WaveActiveBitXor(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint16_t4 WaveActiveBitXor(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int WaveActiveBitXor(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int2 WaveActiveBitXor(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int3 WaveActiveBitXor(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int4 WaveActiveBitXor(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint WaveActiveBitXor(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint2 WaveActiveBitXor(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint3 WaveActiveBitXor(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint4 WaveActiveBitXor(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int64_t WaveActiveBitXor(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int64_t2 WaveActiveBitXor(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int64_t3 WaveActiveBitXor(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) int64_t4 WaveActiveBitXor(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t WaveActiveBitXor(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t2 WaveActiveBitXor(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t3 WaveActiveBitXor(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t4 WaveActiveBitXor(uint64_t4);
 
 //===----------------------------------------------------------------------===//
 // WaveActiveMax builtins
@@ -2598,6 +3588,403 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) double4 WaveActiveMax(double4);
 
 //===----------------------------------------------------------------------===//
+// WaveActiveMin builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half WaveActiveMin(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half2 WaveActiveMin(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half3 WaveActiveMin(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half4 WaveActiveMin(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t WaveActiveMin(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t2 WaveActiveMin(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t3 WaveActiveMin(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t4 WaveActiveMin(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t WaveActiveMin(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t2 WaveActiveMin(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t3 WaveActiveMin(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t4 WaveActiveMin(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int WaveActiveMin(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int2 WaveActiveMin(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int3 WaveActiveMin(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int4 WaveActiveMin(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint WaveActiveMin(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint2 WaveActiveMin(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint3 WaveActiveMin(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint4 WaveActiveMin(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t WaveActiveMin(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t2 WaveActiveMin(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t3 WaveActiveMin(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t4 WaveActiveMin(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t WaveActiveMin(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t2 WaveActiveMin(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t3 WaveActiveMin(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t4 WaveActiveMin(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float WaveActiveMin(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float2 WaveActiveMin(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float3 WaveActiveMin(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float4 WaveActiveMin(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double WaveActiveMin(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double2 WaveActiveMin(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double3 WaveActiveMin(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double4 WaveActiveMin(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveProduct builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) half WaveActiveProduct(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) half2 WaveActiveProduct(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) half3 WaveActiveProduct(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) half4 WaveActiveProduct(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int16_t WaveActiveProduct(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int16_t2 WaveActiveProduct(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int16_t3 WaveActiveProduct(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int16_t4 WaveActiveProduct(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint16_t WaveActiveProduct(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint16_t2 WaveActiveProduct(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint16_t3 WaveActiveProduct(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint16_t4 WaveActiveProduct(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int WaveActiveProduct(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int2 WaveActiveProduct(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int3 WaveActiveProduct(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int4 WaveActiveProduct(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint WaveActiveProduct(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint2 WaveActiveProduct(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint3 WaveActiveProduct(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint4 WaveActiveProduct(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int64_t WaveActiveProduct(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int64_t2 WaveActiveProduct(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int64_t3 WaveActiveProduct(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) int64_t4 WaveActiveProduct(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint64_t WaveActiveProduct(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint64_t2 WaveActiveProduct(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint64_t3 WaveActiveProduct(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) uint64_t4 WaveActiveProduct(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) float WaveActiveProduct(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) float2 WaveActiveProduct(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) float3 WaveActiveProduct(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) float4 WaveActiveProduct(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) double WaveActiveProduct(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) double2 WaveActiveProduct(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) double3 WaveActiveProduct(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
+__attribute__((convergent)) double4 WaveActiveProduct(double4);
+
+
+//===----------------------------------------------------------------------===//
+// WavePrefixProduct builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half WavePrefixProduct(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half2 WavePrefixProduct(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half3 WavePrefixProduct(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half4 WavePrefixProduct(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t WavePrefixProduct(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t2 WavePrefixProduct(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t3 WavePrefixProduct(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t4 WavePrefixProduct(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t WavePrefixProduct(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t2 WavePrefixProduct(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t3 WavePrefixProduct(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t4 WavePrefixProduct(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int WavePrefixProduct(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int2 WavePrefixProduct(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int3 WavePrefixProduct(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int4 WavePrefixProduct(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint WavePrefixProduct(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint2 WavePrefixProduct(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint3 WavePrefixProduct(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint4 WavePrefixProduct(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t WavePrefixProduct(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t2 WavePrefixProduct(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t3 WavePrefixProduct(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t4 WavePrefixProduct(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t WavePrefixProduct(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t2 WavePrefixProduct(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t3 WavePrefixProduct(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t4 WavePrefixProduct(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float WavePrefixProduct(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float2 WavePrefixProduct(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float3 WavePrefixProduct(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float4 WavePrefixProduct(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double WavePrefixProduct(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double2 WavePrefixProduct(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double3 WavePrefixProduct(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double4 WavePrefixProduct(double4);
+
+//===----------------------------------------------------------------------===//
+// WavePrefixSum builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half WavePrefixSum(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half2 WavePrefixSum(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half3 WavePrefixSum(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half4 WavePrefixSum(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t WavePrefixSum(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t2 WavePrefixSum(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t3 WavePrefixSum(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t4 WavePrefixSum(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t WavePrefixSum(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t2 WavePrefixSum(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t3 WavePrefixSum(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t4 WavePrefixSum(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int WavePrefixSum(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int2 WavePrefixSum(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int3 WavePrefixSum(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int4 WavePrefixSum(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint WavePrefixSum(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint2 WavePrefixSum(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint3 WavePrefixSum(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint4 WavePrefixSum(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t WavePrefixSum(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t2 WavePrefixSum(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t3 WavePrefixSum(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t4 WavePrefixSum(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t WavePrefixSum(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t2 WavePrefixSum(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t3 WavePrefixSum(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t4 WavePrefixSum(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float WavePrefixSum(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float2 WavePrefixSum(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float3 WavePrefixSum(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float4 WavePrefixSum(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double WavePrefixSum(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double2 WavePrefixSum(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double3 WavePrefixSum(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double4 WavePrefixSum(double4);
+
+//===----------------------------------------------------------------------===//
 // WaveActiveSum builtins
 //===----------------------------------------------------------------------===//
 
@@ -2695,6 +4082,668 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) double3 WaveActiveSum(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) double4 WaveActiveSum(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveMatch builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(float);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(double);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_match)
+__attribute__((convergent)) uint4 WaveMatch(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveMultiPrefixSum builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) half WaveMultiPrefixSum(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) half2 WaveMultiPrefixSum(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) half3 WaveMultiPrefixSum(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) half4 WaveMultiPrefixSum(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int16_t WaveMultiPrefixSum(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int16_t2 WaveMultiPrefixSum(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int16_t3 WaveMultiPrefixSum(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int16_t4 WaveMultiPrefixSum(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint16_t WaveMultiPrefixSum(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint16_t2 WaveMultiPrefixSum(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint16_t3 WaveMultiPrefixSum(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint16_t4 WaveMultiPrefixSum(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int WaveMultiPrefixSum(int);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int2 WaveMultiPrefixSum(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int3 WaveMultiPrefixSum(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int4 WaveMultiPrefixSum(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint WaveMultiPrefixSum(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint2 WaveMultiPrefixSum(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint3 WaveMultiPrefixSum(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint4 WaveMultiPrefixSum(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int64_t WaveMultiPrefixSum(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int64_t2 WaveMultiPrefixSum(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int64_t3 WaveMultiPrefixSum(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) int64_t4 WaveMultiPrefixSum(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint64_t WaveMultiPrefixSum(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint64_t2 WaveMultiPrefixSum(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint64_t3 WaveMultiPrefixSum(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) uint64_t4 WaveMultiPrefixSum(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) float WaveMultiPrefixSum(float);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) float2 WaveMultiPrefixSum(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) float3 WaveMultiPrefixSum(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) float4 WaveMultiPrefixSum(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) double WaveMultiPrefixSum(double);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) double2 WaveMultiPrefixSum(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) double3 WaveMultiPrefixSum(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_sum)
+__attribute__((convergent)) double4 WaveMultiPrefixSum(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveMultiPrefixProduct builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) half WaveMultiPrefixProduct(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) half2 WaveMultiPrefixProduct(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) half3 WaveMultiPrefixProduct(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) half4 WaveMultiPrefixProduct(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int16_t WaveMultiPrefixProduct(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int16_t2 WaveMultiPrefixProduct(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int16_t3 WaveMultiPrefixProduct(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int16_t4 WaveMultiPrefixProduct(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint16_t WaveMultiPrefixProduct(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint16_t2 WaveMultiPrefixProduct(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint16_t3 WaveMultiPrefixProduct(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint16_t4 WaveMultiPrefixProduct(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int WaveMultiPrefixProduct(int);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int2 WaveMultiPrefixProduct(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int3 WaveMultiPrefixProduct(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int4 WaveMultiPrefixProduct(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint WaveMultiPrefixProduct(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint2 WaveMultiPrefixProduct(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint3 WaveMultiPrefixProduct(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint4 WaveMultiPrefixProduct(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int64_t WaveMultiPrefixProduct(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int64_t2 WaveMultiPrefixProduct(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int64_t3 WaveMultiPrefixProduct(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) int64_t4 WaveMultiPrefixProduct(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint64_t WaveMultiPrefixProduct(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint64_t2 WaveMultiPrefixProduct(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint64_t3 WaveMultiPrefixProduct(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) uint64_t4 WaveMultiPrefixProduct(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) float WaveMultiPrefixProduct(float);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) float2 WaveMultiPrefixProduct(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) float3 WaveMultiPrefixProduct(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) float4 WaveMultiPrefixProduct(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) double WaveMultiPrefixProduct(double);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) double2 WaveMultiPrefixProduct(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) double3 WaveMultiPrefixProduct(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_product)
+__attribute__((convergent)) double4 WaveMultiPrefixProduct(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveMultiPrefixBitAnd builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) half WaveMultiPrefixBitAnd(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) half2 WaveMultiPrefixBitAnd(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) half3 WaveMultiPrefixBitAnd(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) half4 WaveMultiPrefixBitAnd(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int16_t WaveMultiPrefixBitAnd(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int16_t2 WaveMultiPrefixBitAnd(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int16_t3 WaveMultiPrefixBitAnd(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int16_t4 WaveMultiPrefixBitAnd(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint16_t WaveMultiPrefixBitAnd(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint16_t2 WaveMultiPrefixBitAnd(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint16_t3 WaveMultiPrefixBitAnd(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint16_t4 WaveMultiPrefixBitAnd(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int WaveMultiPrefixBitAnd(int);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int2 WaveMultiPrefixBitAnd(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int3 WaveMultiPrefixBitAnd(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int4 WaveMultiPrefixBitAnd(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint WaveMultiPrefixBitAnd(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint2 WaveMultiPrefixBitAnd(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint3 WaveMultiPrefixBitAnd(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint4 WaveMultiPrefixBitAnd(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int64_t WaveMultiPrefixBitAnd(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int64_t2 WaveMultiPrefixBitAnd(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int64_t3 WaveMultiPrefixBitAnd(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) int64_t4 WaveMultiPrefixBitAnd(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint64_t WaveMultiPrefixBitAnd(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint64_t2 WaveMultiPrefixBitAnd(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint64_t3 WaveMultiPrefixBitAnd(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_and)
+__attribute__((convergent)) uint64_t4 WaveMultiPrefixBitAnd(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// WaveMultiPrefixBitOr builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) half WaveMultiPrefixBitOr(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) half2 WaveMultiPrefixBitOr(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) half3 WaveMultiPrefixBitOr(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) half4 WaveMultiPrefixBitOr(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int16_t WaveMultiPrefixBitOr(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int16_t2 WaveMultiPrefixBitOr(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int16_t3 WaveMultiPrefixBitOr(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int16_t4 WaveMultiPrefixBitOr(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint16_t WaveMultiPrefixBitOr(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint16_t2 WaveMultiPrefixBitOr(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint16_t3 WaveMultiPrefixBitOr(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint16_t4 WaveMultiPrefixBitOr(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int WaveMultiPrefixBitOr(int);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int2 WaveMultiPrefixBitOr(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int3 WaveMultiPrefixBitOr(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int4 WaveMultiPrefixBitOr(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint WaveMultiPrefixBitOr(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint2 WaveMultiPrefixBitOr(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint3 WaveMultiPrefixBitOr(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint4 WaveMultiPrefixBitOr(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int64_t WaveMultiPrefixBitOr(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int64_t2 WaveMultiPrefixBitOr(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int64_t3 WaveMultiPrefixBitOr(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) int64_t4 WaveMultiPrefixBitOr(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint64_t WaveMultiPrefixBitOr(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint64_t2 WaveMultiPrefixBitOr(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint64_t3 WaveMultiPrefixBitOr(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_or)
+__attribute__((convergent)) uint64_t4 WaveMultiPrefixBitOr(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// WaveMultiPrefixBitXor builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) half WaveMultiPrefixBitXor(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) half2 WaveMultiPrefixBitXor(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) half3 WaveMultiPrefixBitXor(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) half4 WaveMultiPrefixBitXor(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int16_t WaveMultiPrefixBitXor(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int16_t2 WaveMultiPrefixBitXor(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int16_t3 WaveMultiPrefixBitXor(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int16_t4 WaveMultiPrefixBitXor(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint16_t WaveMultiPrefixBitXor(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint16_t2 WaveMultiPrefixBitXor(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint16_t3 WaveMultiPrefixBitXor(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint16_t4 WaveMultiPrefixBitXor(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int WaveMultiPrefixBitXor(int);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int2 WaveMultiPrefixBitXor(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int3 WaveMultiPrefixBitXor(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int4 WaveMultiPrefixBitXor(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint WaveMultiPrefixBitXor(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint2 WaveMultiPrefixBitXor(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint3 WaveMultiPrefixBitXor(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint4 WaveMultiPrefixBitXor(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int64_t WaveMultiPrefixBitXor(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int64_t2 WaveMultiPrefixBitXor(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int64_t3 WaveMultiPrefixBitXor(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) int64_t4 WaveMultiPrefixBitXor(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint64_t WaveMultiPrefixBitXor(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint64_t2 WaveMultiPrefixBitXor(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint64_t3 WaveMultiPrefixBitXor(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_multi_prefix_bit_xor)
+__attribute__((convergent)) uint64_t4 WaveMultiPrefixBitXor(uint64_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.5)
+
 
 //===----------------------------------------------------------------------===//
 // sign builtins
@@ -2829,7 +4878,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
 
 //===----------------------------------------------------------------------===//
-// GroupMemoryBarrierWithGroupSync builtins
+// MemoryBarrier builtins
 //===----------------------------------------------------------------------===//
 
 /// \fn void GroupMemoryBarrierWithGroupSync(void)
@@ -2837,8 +4886,23 @@ float4 radians(float4);
 /// accesses have been completed and all threads in the group have reached this
 /// call.
 
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier)
+__attribute__((convergent)) void GroupMemoryBarrier(void);
+
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
 __attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_device_memory_barrier)
+__attribute__((convergent)) void DeviceMemoryBarrier(void);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cevice_memory_barrier_with_group_sync)
+__attribute__((convergent)) void DeviceMemoryBarrierWithGroupSync(void);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all_memory_barrier)
+__attribute__((convergent)) void AllMemoryBarrier(void);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all_memory_barrier_with_group_sync)
+__attribute__((convergent)) void AllMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_
