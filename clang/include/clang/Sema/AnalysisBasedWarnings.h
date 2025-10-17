@@ -67,8 +67,6 @@ private:
   Policy PolicyOverrides;
   void clearOverrides();
 
-  void FlushDiagnostics(SmallVector<clang::sema::PossiblyUnreachableDiag, 4>);
-
   /// \name Statistics
   /// @{
 

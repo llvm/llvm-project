@@ -5223,32 +5223,7 @@ private:
   ///         assignment-expression
   ///         '{' ...
   /// \endverbatim
-  ExprResult ParseInitializer(Decl *DeclForInitializer = nullptr) {
-    // Set DeclForInitializer for file-scope variables.
-    // For constexpr references, set it to suppress runtime warnings.
-    // For non-constexpr references, don't set it to avoid evaluation issues
-    // with self-referencing initializers. Local variables (including local
-    // constexpr) should emit runtime warnings.
-    if (DeclForInitializer && !Actions.ExprEvalContexts.empty()) {
-      if (auto *VD = dyn_cast<VarDecl>(DeclForInitializer)) {
-        if (VD->isFileVarDecl()) {
-          if (!VD->getType()->isReferenceType() || VD->isConstexpr()) {
-            Actions.ExprEvalContexts.back().DeclForInitializer =
-                DeclForInitializer;
-          }
-        }
-      }
-    }
-
-    ExprResult init;
-    if (Tok.isNot(tok::l_brace)) {
-      init = ParseAssignmentExpression();
-    } else {
-      init = ParseBraceInitializer();
-    }
-
-    return init;
-  }
+  ExprResult ParseInitializer(Decl *DeclForInitializer = nullptr);
 
   /// MayBeDesignationStart - Return true if the current token might be the
   /// start of a designator.  If we can tell it is impossible that it is a

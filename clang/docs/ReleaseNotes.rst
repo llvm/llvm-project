@@ -286,6 +286,10 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now suppresses runtime behavior warnings for unreachable code in file-scope
+  variable initializers, matching the behavior for functions. This prevents false
+  positives for operations in unreachable branches of constant expressions.
+
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
   diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.

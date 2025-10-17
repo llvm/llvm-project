@@ -28,3 +28,10 @@ void f(void) {
   unsigned long long e3 = 1 ? 0 : 1ULL << 64;
   unsigned long long e4 = 0 ? 0 : 1ULL << 64; // expected-warning {{shift count >= width of type}}
 }
+
+void statics(void) {
+  static u8 f1 = (0 ? 0xffff : 0xff);
+  static u8 f2 = (1 ? 0xffff : 0xff); // expected-warning {{implicit conversion from 'int' to 'u8' (aka 'unsigned char') changes value from 65535 to 255}}
+  static u8 f3 = (1 ? 0xff : 0xffff);
+  static u8 f4 = (0 ? 0xff : 0xffff); // expected-warning {{implicit conversion from 'int' to 'u8' (aka 'unsigned char') changes value from 65535 to 255}}
+}
