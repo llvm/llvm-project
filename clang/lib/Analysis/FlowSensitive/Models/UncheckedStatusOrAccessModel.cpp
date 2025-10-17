@@ -177,10 +177,8 @@ static auto isStatusOrValueConstructor() {
       hasArgument(0,
                   anyOf(hasType(hasCanonicalType(type(equalsBoundNode("T")))),
                         nullPointerConstant(),
-                        hasType(namedDecl(hasName("absl::in_place_t"))),
-                        hasType(namedDecl(hasName("std::in_place_t")))
-
-                            )));
+                        hasType(namedDecl(hasAnyName("absl::in_place_t",
+                                                     "std::in_place_t"))))));
 }
 
 static auto
