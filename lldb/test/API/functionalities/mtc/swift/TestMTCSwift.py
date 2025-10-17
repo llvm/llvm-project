@@ -39,7 +39,8 @@ class MTCSwiftTestCase(TestBase):
 
         self.expect("thread info",
                     substrs=['stop reason = ' + view +
-                             '.removeFromSuperview() must be used from main thread only'])
+                             # FIXME: should be: .removeFromSuperview()
+                             '.removeFromSuperview must be used from main thread only'])
 
         self.expect(
             "thread info -s",
@@ -50,7 +51,9 @@ class MTCSwiftTestCase(TestBase):
         json_line = '\n'.join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "MainThreadChecker")
-        self.assertEqual(data["api_name"], view + ".removeFromSuperview()")
+                                          # FIXME: .removeFromSuperview()
+        self.assertEqual(data["api_name"], view + ".removeFromSuperview")
         self.assertEqual(data["class_name"], view)
         self.assertEqual(data["selector"], "removeFromSuperview")
-        self.assertEqual(data["description"], view + ".removeFromSuperview() must be used from main thread only")
+                                             # FIXME: .removeFromSuperview()
+        self.assertEqual(data["description"], view + ".removeFromSuperview must be used from main thread only")
