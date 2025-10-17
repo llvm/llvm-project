@@ -13,6 +13,7 @@
 #include "flang/Semantics/openmp-utils.h"
 
 #include "flang/Common/Fortran-consts.h"
+#include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
@@ -57,6 +58,26 @@ const Scope &GetScopingUnit(const Scope &scope) {
     }
   }
   return *iter;
+}
+
+const Scope &GetProgramUnit(const Scope &scope) {
+  const Scope *unit{nullptr};
+  for (const Scope *iter{&scope}; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockData:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+      return *iter;
+    case Scope::Kind::Subprogram:
+      // Ignore subprograms that are nested.
+      unit = iter;
+      break;
+    default:
+      break;
+    }
+  }
+  assert(unit && "Scope not in a program unit");
+  return *unit;
 }
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
@@ -202,7 +223,7 @@ std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
   //    `- std::optional<Expr>      ^->v
-  return typedExpr.get()->v;
+  return DEREF(typedExpr.get()).v;
 }
 
 std::optional<evaluate::DynamicType> GetDynamicType(
