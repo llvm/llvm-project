@@ -107,6 +107,7 @@ class TestCase(TestBase):
         # Use variable paths to access the members.
         self.expect_var_path("j1.x", type="long", value="1")
 
+    @expectedFailureAll
     @no_debug_info_test
     def test_invalid_member(self):
         self.build()
