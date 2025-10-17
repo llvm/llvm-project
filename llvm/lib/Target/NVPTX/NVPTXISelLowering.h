@@ -94,6 +94,7 @@ enum NodeType : unsigned {
   LoadV2,
   LoadV4,
   LoadV8,
+  MLoadV1,
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
@@ -319,6 +320,7 @@ private:
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
 

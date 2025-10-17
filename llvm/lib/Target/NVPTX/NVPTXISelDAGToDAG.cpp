@@ -96,6 +96,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::MLoadV1:
     if (tryLoad(N))
       return;
     break;
@@ -1118,6 +1119,19 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
           ? NVPTX::PTXLdStInstCode::Signed
           : NVPTX::PTXLdStInstCode::Untyped;
 
+  uint32_t UsedBytesMask;
+  switch (N->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::ATOMIC_LOAD:
+    UsedBytesMask = UINT32_MAX;
+    break;
+  case NVPTXISD::MLoadV1:
+    UsedBytesMask = N->getConstantOperandVal(N->getNumOperands() - 2);
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
          FromTypeWidth <= 128 && "Invalid width for load");
 
@@ -1128,6 +1142,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
                    Chain};
@@ -1190,6 +1205,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
   const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
+  const uint32_t UsedBytesMask =
+      N->getConstantOperandVal(N->getNumOperands() - 2);
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
@@ -1199,6 +1216,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
                    Chain};
@@ -1236,10 +1254,13 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   SDLoc DL(LD);
 
   unsigned ExtensionType;
+  uint32_t UsedBytesMask;
   if (const auto *Load = dyn_cast<LoadSDNode>(LD)) {
     ExtensionType = Load->getExtensionType();
+    UsedBytesMask = UINT32_MAX;
   } else {
     ExtensionType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
+    UsedBytesMask = LD->getConstantOperandVal(LD->getNumOperands() - 2);
   }
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
@@ -1251,8 +1272,12 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
            ExtensionType != ISD::NON_EXTLOAD));
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
-  SDValue Ops[] = {getI32Imm(FromType, DL), getI32Imm(FromTypeWidth, DL), Base,
-                   Offset, LD->getChain()};
+  SDValue Ops[] = {getI32Imm(FromType, DL),
+                   getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
+                   Base,
+                   Offset,
+                   LD->getChain()};
 
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
   std::optional<unsigned> Opcode;
@@ -1262,6 +1287,10 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   case ISD::LOAD:
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_i16,
                              NVPTX::LD_GLOBAL_NC_i32, NVPTX::LD_GLOBAL_NC_i64);
+    break;
+  case NVPTXISD::MLoadV1:
+    Opcode = pickOpcodeForVT(TargetVT, std::nullopt, NVPTX::LD_GLOBAL_NC_i32,
+                             NVPTX::LD_GLOBAL_NC_i64);
     break;
   case NVPTXISD::LoadV2:
     Opcode =
