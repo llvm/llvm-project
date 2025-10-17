@@ -36,7 +36,7 @@ int strftime_main(printf_core::Writer<write_mode> *writer,
       return result;
   }
 
-  // TODO: return result struct like printf, so that size_t can be returned
+  // TODO: Use ErrorOr<size_t>
   return static_cast<int>(writer->get_chars_written());
 }
 

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/vprintf.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
@@ -42,13 +44,13 @@ LLVM_LIBC_FUNCTION(int, vprintf,
 
   auto retval = printf_core::printf_main(&writer, format, args);
   if (!retval.has_value()) {
-    libc_errno = retval.error(); // TODO map
+    libc_errno = printf_core::internal_error_to_errno(retval.error());
     return -1;
   }
 
   int flushval = wb.overflow_write("");
   if (flushval != printf_core::WRITE_OK) {
-    libc_errno = -flushval; // TODO map
+    libc_errno = printf_core::internal_error_to_errno(-flushval);
     return -1;
   }
 

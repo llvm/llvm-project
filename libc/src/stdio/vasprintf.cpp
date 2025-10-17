@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/vasprintf.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/vasprintf_internal.h"
 
