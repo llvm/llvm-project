@@ -183,24 +183,17 @@ def testGPULaunchFuncOp():
 
     with InsertionPoint(host.add_entry_block()):
         c1 = arith.constant(T.index(), 1)
-        grid_sizes = [c1] * 3
-        block_sizes = [c1] * 3
-        sym_ref = SymbolRefAttr.get([gpu_module.sym_name.value, gpu_func.name.value])
-        token_type = Type.parse("!gpu.async.token")
-        token = gpu.wait(async_token=token_type, async_dependencies=[])
+        grid_sizes = (1, 1, 1)
+        block_sizes = (1, 1, 1)
+        token = gpu.wait()
         token = gpu.launch_func(
-            async_token=token_type,
             async_dependencies=[token],
-            kernel=sym_ref,
-            grid_size_x=grid_sizes[0],
-            grid_size_y=grid_sizes[1],
-            grid_size_z=grid_sizes[2],
-            block_size_x=block_sizes[0],
-            block_size_y=block_sizes[1],
-            block_size_z=block_sizes[2],
+            kernel=[gpu_module.sym_name.value, gpu_func.name.value],
+            grid_size=grid_sizes,
+            block_size=block_sizes,
             kernel_operands=[],
         )
-        gpu.wait(async_token=None, async_dependencies=[token])
+        gpu.wait(async_dependencies=[token])
         func.ReturnOp([])
 
     print(module)
@@ -214,8 +207,14 @@ def testGPULaunchFuncOp():
     # CHECK-LABEL:   func.func @host() {
     # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
     # CHECK:           %[[WAIT_0:.*]] = gpu.wait async
-    # CHECK:           %[[LAUNCH_FUNC_0:.*]] = gpu.launch_func async {{\[}}%[[WAIT_0]]] @gpu_module::@kernel blocks in (%[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]]) threads in (%[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]])
-    # CHECK:           gpu.wait {{\[}}%[[LAUNCH_FUNC_0]]]
+    # CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_5:.*]] = arith.constant 1 : index
+    # CHECK:           %[[CONSTANT_6:.*]] = arith.constant 1 : index
+    # CHECK:           %[[LAUNCH_FUNC_0:.*]] = gpu.launch_func async {{\[}}%[[WAIT_0]]] @gpu_module::@kernel blocks in (%[[CONSTANT_1]], %[[CONSTANT_2]], %[[CONSTANT_3]]) threads in (%[[CONSTANT_4]], %[[CONSTANT_5]], %[[CONSTANT_6]])
+    # CHECK:           %[[WAIT_1:.*]] = gpu.wait async {{\[}}%[[LAUNCH_FUNC_0]]]
     # CHECK:           return
     # CHECK:         }
 
@@ -231,15 +230,12 @@ def testGPULaunchOp():
     entry_block = host.add_entry_block()
     with InsertionPoint(entry_block):
         c1 = arith.constant(T.index(), 1)
+        grid_sizes = (c1, c1, c1)
+        block_sizes = (c1, c1, c1)
 
-        launch = gpu.launch(None, [], c1, c1, c1, c1, c1, c1)
-        launch_block = launch.regions[0].blocks.append()
-        for _ in range(12):
-            launch_block.add_argument(T.index(), Location.unknown())
+        launch = gpu.launch(grid_sizes, block_sizes)
 
-    with InsertionPoint(launch_block):
-        gpu.printf("%f", [entry_block.arguments[0]])
-        gpu.terminator()
+    op = launch(lambda *args: gpu.printf("%f", args[0]))
 
     with InsertionPoint(entry_block):
         func.ReturnOp([])
@@ -250,7 +246,7 @@ def testGPULaunchOp():
     # CHECK-SAME:      %[[ARG0:.*]]: f32) {
     # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
     # CHECK:           gpu.launch blocks(%[[VAL_0:.*]], %[[VAL_1:.*]], %[[VAL_2:.*]]) in (%[[VAL_3:.*]] = %[[CONSTANT_0]], %[[VAL_4:.*]] = %[[CONSTANT_0]], %[[VAL_5:.*]] = %[[CONSTANT_0]]) threads(%[[VAL_6:.*]], %[[VAL_7:.*]], %[[VAL_8:.*]]) in (%[[VAL_9:.*]] = %[[CONSTANT_0]], %[[VAL_10:.*]] = %[[CONSTANT_0]], %[[VAL_11:.*]] = %[[CONSTANT_0]]) {
-    # CHECK:             gpu.printf "%[[VAL_12:.*]]", %[[ARG0]] : f32
+    # CHECK:             gpu.printf "%[[VAL_12:.*]]", %[[VAL_0]] : index
     # CHECK:             gpu.terminator
     # CHECK:           }
     # CHECK:           return
