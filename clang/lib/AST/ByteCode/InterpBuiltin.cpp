@@ -3173,7 +3173,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call, [](const APSInt &Val) {
+        S, OpPC, Call, [](const APSInt &Val) -> APInt {
           return APInt(Val.getBitWidth(),
                        Val.isZero() ? 0u : Val.countTrailingZeros() + 1u);
         });
