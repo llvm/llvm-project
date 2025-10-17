@@ -47,10 +47,6 @@ public:
   GetReturnValueObjectImpl(lldb_private::Thread &thread,
                            lldb_private::CompilerType &type) const override;
 
-  // Specialized to work with llvm IR types.
-  lldb::ValueObjectSP GetReturnValueObjectImpl(lldb_private::Thread &thread,
-                                               llvm::Type &type) const override;
-
   lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() override;
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
