@@ -58,6 +58,7 @@ namespace clang::dataflow {
 /// for `std::optional`, we assume the (Matcher, TransferFunction) case
 /// with custom handling is ordered early so that these generic cases
 /// do not trigger.
+ast_matchers::StatementMatcher isSmartPointerLikeContructor();
 ast_matchers::StatementMatcher isPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isPointerLikeOperatorArrow();
@@ -80,6 +81,8 @@ isSmartPointerLikeGetMethodCall(clang::StringRef MethodName = "get");
 const FunctionDecl *
 getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE);
 
+const FunctionDecl *
+getCanonicalSmartPointerLikeOperatorCallee2(const CXXRecordDecl *RD);
 /// A transfer function for `operator*` (and `value`) calls that can be
 /// cached. Runs the `InitializeLoc` callback to initialize any new
 /// StorageLocations.
@@ -139,6 +142,19 @@ void transferSmartPointerLikeCachedDeref(
       State.Lattice.getOrCreateConstMethodReturnStorageLocation(
           *SmartPointerLoc, CanonicalCallee, State.Env, InitializeLoc);
   State.Env.setStorageLocation(*DerefExpr, LocForValue);
+}
+
+template <typename LatticeT>
+void transferSmartPointerLikeConstructor(
+    const CXXConstructExpr *ConstructOperator,
+    RecordStorageLocation *SmartPointerLoc, TransferState<LatticeT> &State,
+    llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
+  abort();
+  const FunctionDecl *CanonicalCallee =
+      getCanonicalSmartPointerLikeOperatorCallee2(
+          ConstructOperator->getType()->getAsCXXRecordDecl());
+  State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+      *SmartPointerLoc, CanonicalCallee, State.Env, InitializeLoc);
 }
 
 template <typename LatticeT>
