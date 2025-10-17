@@ -113,8 +113,7 @@ static Match tensorMatch(TensorId tid) { return Match(tid); }
 static Match synZeroMatch() { return Match(); }
 
 #define IMPL_BINOP_PATTERN(OP, KIND)                                           \
-  LLVM_ATTRIBUTE_UNUSED static Match OP##Match(const Match &e0,                \
-                                               const Match &e1) {              \
+  [[maybe_unused]] static Match OP##Match(const Match &e0, const Match &e1) {  \
     return Match(KIND, e0, e1);                                                \
   }
 FOREVERY_BINOP(IMPL_BINOP_PATTERN)

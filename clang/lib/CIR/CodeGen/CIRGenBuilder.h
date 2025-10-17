@@ -380,6 +380,16 @@ public:
                                       /*relative_layout=*/false);
   }
 
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
+                                  bool vtableUseRelativeLayout) {
+    // TODO(cir): consider address space here.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType destTy = getVoidPtrTy();
+    return cir::DynamicCastOp::create(
+        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
+        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
+  }
+
   Address createBaseClassAddr(mlir::Location loc, Address addr,
                               mlir::Type destType, unsigned offset,
                               bool assumeNotNull) {
