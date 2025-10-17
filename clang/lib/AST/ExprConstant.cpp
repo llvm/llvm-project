@@ -11746,6 +11746,23 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvalSelectScalar = [&](unsigned Len) -> std::optional<APValue> {
+    APSInt Mask;
+    APValue AVal, WVal;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(1), AVal) ||
+        !EvaluateAsRValue(Info, E->getArg(2), WVal))
+      return std::nullopt;
+
+    const bool TakeA0 = (Mask.getZExtValue() & 1u) != 0;
+    SmallVector<APValue, 4> Res;
+    Res.reserve(Len);
+    Res.push_back(TakeA0 ? AVal.getVectorElt(0) : WVal.getVectorElt(0));
+    for (unsigned i = 1; i < Len; ++i)
+      Res.push_back(WVal.getVectorElt(i));
+    return APValue(Res.data(), Res.size());
+  };
+
   switch (E->getBuiltinCallee()) {
   default:
     return false;
@@ -11974,6 +11991,16 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return APInt((Src).trunc(DstBits));
       return APInt::getAllOnes(DstBits);
     });
+  case clang::X86::BI__builtin_ia32_selectss_128: {
+    if (auto V = EvalSelectScalar(4))
+      return Success(*V, E);
+    return false;
+  }
+  case clang::X86::BI__builtin_ia32_selectsd_128: {
+    if (auto V = EvalSelectScalar(2))
+      return Success(*V, E);
+    return false;
+  }
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:

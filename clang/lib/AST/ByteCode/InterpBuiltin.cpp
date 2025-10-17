@@ -3767,6 +3767,27 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
       return APInt::getAllOnes(DstBits);
     });
 
+  case clang::X86::BI__builtin_ia32_selectss_128:
+  case clang::X86::BI__builtin_ia32_selectsd_128: {
+    const unsigned N =
+        Call->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+
+    const Pointer &W = S.Stk.pop<Pointer>();
+    const Pointer &A = S.Stk.pop<Pointer>();
+    APSInt U = popToAPSInt(S, Call->getArg(0));
+    const Pointer &Dst = S.Stk.peek<Pointer>();
+
+    const bool TakeA0 = U.getZExtValue() & 1ULL;
+
+    for (unsigned i = 0; i < N; ++i)
+      Dst.elem<Floating>(i) = W.elem<Floating>(i);
+    if (TakeA0)
+      Dst.elem<Floating>(0) = A.elem<Floating>(0);
+
+    Dst.initializeAllElements();
+    return true;
+  }
+
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
   case clang::X86::BI__builtin_ia32_vprotqi:
