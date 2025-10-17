@@ -773,8 +773,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
   // Perform the extra MF scans only for supported archs
   if (ST.hasGFX950Insts() || ST.hasGFX940Insts()) {
     for (MachineBasicBlock &MBB : MF) {
-      // Unpack packed instructions overlapped by MFMAs. This allows the compiler
-      // to co-issue unpacked instructions with MFMA
+      // Unpack packed instructions overlapped by MFMAs. This allows the
+      // compiler to co-issue unpacked instructions with MFMA
       auto SchedModel = TII->getSchedModel();
       SetVector<MachineInstr *> InstrsToUnpack;
       for (auto &MI : make_early_inc_range(MBB.instrs())) {
