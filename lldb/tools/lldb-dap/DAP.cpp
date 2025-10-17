@@ -1578,8 +1578,7 @@ void DAP::HandleNewTargetEvent(const lldb::SBEvent &event) {
   // process name.
   attach_config.try_emplace("type", "lldb");
   attach_config.try_emplace("targetId", target_id);
-  const char *session_name =
-      lldb::SBTarget::GetSessionNameFromEvent(event);
+  const char *session_name = target.GetTargetSessionName();
   attach_config.try_emplace("name", session_name);
 
   // 2. Construct the main 'startDebugging' request arguments.

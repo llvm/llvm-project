@@ -145,14 +145,6 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
   return SBModule(module_list.GetModuleAtIndex(idx));
 }
 
-const char *SBTarget::GetSessionNameFromEvent(const SBEvent &event) {
-  LLDB_INSTRUMENT_VA(event);
-
-  return ConstString(
-             Target::TargetEventData::GetSessionNameFromEvent(event.get()))
-      .AsCString();
-}
-
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
@@ -1647,6 +1639,14 @@ lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
   if (TargetSP target_sp = GetSP())
     return target_sp->GetGloballyUniqueID();
   return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
+}
+
+const char *SBTarget::GetTargetSessionName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return ConstString(target_sp->GetTargetSessionName().data()).AsCString();
+  return nullptr;
 }
 
 SBError SBTarget::SetLabel(const char *label) {

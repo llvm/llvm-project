@@ -557,11 +557,6 @@ public:
     TargetEventData(const lldb::TargetSP &target_sp,
                     const ModuleList &module_list);
 
-    TargetEventData(const lldb::TargetSP &target_sp, std::string session_name);
-
-    TargetEventData(const lldb::TargetSP &target_sp,
-                    const ModuleList &module_list, std::string session_name);
-
     ~TargetEventData() override;
 
     static llvm::StringRef GetFlavorString();
@@ -569,8 +564,6 @@ public:
     llvm::StringRef GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
-
-    static llvm::StringRef GetSessionNameFromEvent(const Event *event_ptr);
 
     void Dump(Stream *s) const override;
 
@@ -587,7 +580,6 @@ public:
   private:
     lldb::TargetSP m_target_sp;
     ModuleList m_module_list;
-    std::string m_session_name;
 
     TargetEventData(const TargetEventData &) = delete;
     const TargetEventData &operator=(const TargetEventData &) = delete;
@@ -630,6 +622,30 @@ public:
   ///     The label for this target or an error if the label didn't match the
   ///     requirements.
   llvm::Error SetLabel(llvm::StringRef label);
+
+  /// Get the target session name for this target.
+  ///
+  /// Provides a meaningful name for IDEs or tools to display for dynamically
+  /// created targets. Defaults to "Session {ID}" based on the globally unique
+  /// ID.
+  ///
+  /// \return
+  ///     The target session name for this target.
+  const std::string &GetTargetSessionName() { return m_target_session_name; }
+
+  /// Set the target session name for this target.
+  ///
+  /// This should typically be set along with the event
+  /// eBroadcastBitNewTargetCreated. Useful for scripts or triggers that
+  /// automatically create targets and want to provide meaningful names that
+  /// IDEs or other tools can display to help users identify the origin and
+  /// purpose of each target.
+  ///
+  /// \param[in] target_session_name
+  ///     The target session name to set for this target.
+  void SetTargetSessionName(llvm::StringRef target_session_name) {
+    m_target_session_name = target_session_name.str();
+  }
 
   /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
@@ -1728,8 +1744,11 @@ protected:
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
-      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; /// The globally unique ID
+      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID
                                               /// assigned to this target
+  std::string m_target_session_name; ///< The target session name for this
+                                     /// target, used to name debugging
+                                     /// sessions in DAP.
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.
   lldb::TraceSP m_trace_sp;
