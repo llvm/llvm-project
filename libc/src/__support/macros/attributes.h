@@ -116,17 +116,17 @@ LIBC_THREAD_MODE_EXTERNAL.
 // reference to the annotated parameter. Warns if temporaries are passed.
 //
 // Example usage:
-//   void add_to_set(std::string_view a LIBC_LIFETIME_CAPTURE_BY(s),
-//                   std::set<std::string_view>& s) {
+//   void add_to_set(cpp::string_view a LIBC_LIFETIME_CAPTURE_BY(s),
+//                   cpp::set<cpp::string_view>& s) {
 //     s.insert(a); // 's' now holds a reference to 'a'
 //   }
-//   // Warns: add_to_set(std::string(), s); // temporary captured by 's'
+//   // Warns: add_to_set(cpp::string(), s); // temporary captured by 's'
 //
 // X can be: another parameter name, 'this', 'global', or 'unknown'
 // Multiple capturing entities: LIBC_LIFETIME_CAPTURE_BY(s1, s2)
 //
 // For member functions capturing 'this', apply after function signature:
-//   void capture_self(std::set<S*>& s) LIBC_LIFETIME_CAPTURE_BY(s);
+//   void capture_self(cpp::set<S*>& s) LIBC_LIFETIME_CAPTURE_BY(s);
 #if __has_cpp_attribute(clang::lifetime_capture_by)
 #define LIBC_LIFETIME_CAPTURE_BY(X) [[clang::lifetime_capture_by(X)]]
 #else
