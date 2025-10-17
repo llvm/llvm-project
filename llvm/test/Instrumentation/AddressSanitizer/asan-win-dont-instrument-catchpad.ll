@@ -1,3 +1,7 @@
+; RUN: opt < %s -passes=asan -S | FileCheck %s
+; CHECK: %ex = alloca i32, align 4
+; CHECK: catchpad within %{{.*}} [ptr @"??_R0H@8", i32 0, ptr %ex]
+
 ; This test ensures that catch parameters are not instrumented on Windows.
 
 ; This file was generated using the following source
@@ -27,10 +31,6 @@
 ; and finally manually trimming the resulting `.ll` file to remove
 ; unnecessary metadata, and manually adding the `sanitize_address` annotation;
 ; needed for the ASan pass to run.
-
-; RUN: opt < %s -passes=asan -S | FileCheck %s
-; CHECK: %ex = alloca i32, align 4
-; CHECK: catchpad within %{{.*}} [ptr @"??_R0H@8", i32 0, ptr %ex]
 
 target triple = "x86_64-pc-windows-msvc"
 
