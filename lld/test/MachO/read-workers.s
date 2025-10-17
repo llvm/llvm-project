@@ -1,4 +1,7 @@
 # REQUIRES: x86 && thread_support
+## Sometimes fails, particularly in an ASAN build, do not run until
+## https://github.com/llvm/llvm-project/pull/157917 addresses the cause.
+# UNSUPPORTED: target={{.*}}
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 
 ## A non-negative integer is allowed.
