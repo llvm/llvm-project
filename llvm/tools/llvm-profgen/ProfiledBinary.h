@@ -357,7 +357,7 @@ class ProfiledBinary {
   void populateSymbolAddressList(const object::ObjectFile *O);
 
   // Load functions from its symbol table (when DWARF info is missing).
-  void populateSymbolsFromElf(const object::ObjectFile *O);
+  void populateSymbolsFromBinary(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the

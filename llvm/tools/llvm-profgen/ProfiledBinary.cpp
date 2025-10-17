@@ -257,7 +257,7 @@ void ProfiledBinary::load() {
   if (ShowDisassemblyOnly)
     decodePseudoProbe(Obj);
 
-  populateSymbolsFromElf(Obj);
+  populateSymbolsFromBinary(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -822,10 +822,10 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
   }
 }
 
-void ProfiledBinary::populateSymbolsFromElf(const ObjectFile *Obj) {
-  // Load binary functions from ELF symbol table when DWARF info is incomplete
+void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
+  // Load binary functions from symbol table when Debug info is incomplete
   StringRef FileName = Obj->getFileName();
-  for (const ELFSymbolRef Symbol : Obj->symbols()) {
+  for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
     const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
