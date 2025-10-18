@@ -3129,7 +3129,6 @@ Error DWARFLinker::link() {
     // Emit everything that's global.
     if (TheDwarfEmitter != nullptr) {
       TheDwarfEmitter->emitAbbrevs(Abbreviations, Options.TargetDWARFVersion);
-      TheDwarfEmitter->emitStrings(DebugStrPool);
       TheDwarfEmitter->emitStringOffsets(StringOffsetPool.getValues(),
                                          Options.TargetDWARFVersion);
       TheDwarfEmitter->emitLineStrings(DebugLineStrPool);
@@ -3150,6 +3149,7 @@ Error DWARFLinker::link() {
           break;
         }
       }
+      TheDwarfEmitter->emitStrings(DebugStrPool);
     }
   };
 
