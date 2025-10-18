@@ -15,8 +15,8 @@
 ; CHECK: remark: test/ScopInfo/remarks.c:22:16: SCoP ends here but was dismissed.
 ;
 ;    #include <stdio.h>
-;
-;    void valid(int *A, int *B, int N, int M, int C[100][100], int Debug) {
+;    int C[100][100];
+;    void valid(int *A, int *B, int N, int M, int Debug) {
 ;      if (N + M == -1)
 ;        C[0][0] = 0;
 ;
@@ -37,17 +37,17 @@
 ;            A[0] = 0;
 ;    }
 ;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @.str = private unnamed_addr constant [8 x i8] c"Printf!\00", align 1
+@C = local_unnamed_addr global [100 x [100 x i32]] zeroinitializer
 
-define void @valid(ptr %A, ptr %B, i32 %N, i32 %M, ptr %C, i32 %Debug) #0 !dbg !4 {
+define void @valid(ptr %A, ptr %B, i32 %N, i32 %M, i32 %Debug) #0 !dbg !4 {
 entry:
   call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !23, metadata !24), !dbg !25
   call void @llvm.dbg.value(metadata ptr %B, i64 0, metadata !26, metadata !24), !dbg !27
   call void @llvm.dbg.value(metadata i32 %N, i64 0, metadata !28, metadata !24), !dbg !29
   call void @llvm.dbg.value(metadata i32 %M, i64 0, metadata !30, metadata !24), !dbg !31
-  call void @llvm.dbg.value(metadata ptr %C, i64 0, metadata !32, metadata !24), !dbg !33
+  call void @llvm.dbg.value(metadata ptr @C, i64 0, metadata !32, metadata !24), !dbg !33
   call void @llvm.dbg.value(metadata i32 %Debug, i64 0, metadata !34, metadata !24), !dbg !35
   br label %entry.split
 
@@ -57,7 +57,7 @@ entry.split:
   br i1 %cmp, label %if.then, label %if.end, !dbg !39
 
 if.then:                                          ; preds = %entry
-  store i32 0, ptr %C, align 4, !dbg !41
+  store i32 0, ptr @C, align 4, !dbg !41
   br label %if.end, !dbg !40
 
 if.end:                                           ; preds = %if.then, %entry
@@ -89,7 +89,7 @@ for.body.5:                                       ; preds = %for.cond.3
   %arrayidx10 = getelementptr inbounds i32, ptr %B, i64 %tmp11, !dbg !64
   %tmp12 = load i32, ptr %arrayidx10, align 4, !dbg !64
   %add11 = add i32 %tmp10, %tmp12, !dbg !65
-  %arrayidx15 = getelementptr inbounds [100 x i32], ptr %C, i64 %indvars.iv3, i64 %indvars.iv, !dbg !66
+  %arrayidx15 = getelementptr inbounds [100 x i32], ptr @C, i64 %indvars.iv3, i64 %indvars.iv, !dbg !66
   %tmp13 = load i32, ptr %arrayidx15, align 4, !dbg !67
   %add16 = add i32 %tmp13, %add11, !dbg !67
   store i32 %add16, ptr %arrayidx15, align 4, !dbg !67
