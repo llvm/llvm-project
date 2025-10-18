@@ -132,6 +132,14 @@ void LVOptions::resolveDependencies() {
     setPrintWarnings();
   }
 
+  if (getReportDebugger()) {
+    // Must include at least the lines, otherwise there's nothing to print
+    setPrintLines();
+    // Printing symbols in debugger report requires the symbol ranges
+    if (getPrintSymbols())
+      setAttributeRange();
+  }
+
   // '--warning=all' settings.
   if (getWarningAll()) {
     setWarningCoverages();
@@ -186,6 +194,7 @@ void LVOptions::resolveDependencies() {
   // '--reports=all' settings.
   if (getReportAll()) {
     setReportChildren();
+    setReportDebugger();
     setReportList();
     setReportParents();
     setReportView();
@@ -202,7 +211,7 @@ void LVOptions::resolveDependencies() {
     setReportAnyView();
 
   // The report will include: List or Parents or Children.
-  if (getReportList() || getReportAnyView())
+  if (getReportList() || getReportAnyView() || getReportDebugger())
     setReportExecute();
 
   // If a view or element comparison has been requested, the following options
