@@ -45,7 +45,6 @@ define void @global_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
   ret void
 }
 
-; Masked stores are only supported for 32 byte element types,
 ; Masked stores are only supported for 32-bit element types,
 ; while masked loads are supported for all element types.
 define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
