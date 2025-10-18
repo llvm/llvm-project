@@ -2403,6 +2403,8 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
       CmdArgs.push_back("-lunwind");
     }
     break;
+  default:
+    break;
   }
 
   if (AsNeeded)
@@ -2450,6 +2452,8 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
       }
     } else
       AddLibgcc(TC, D, CmdArgs, Args);
+    break;
+  default:
     break;
   }
 
