@@ -3206,6 +3206,11 @@ public:
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }
 
+  /// Return true if the target can interleave data with shuffles.
+  virtual bool isProfitableToInterleaveWithGatherScatter() const {
+    return false;
+  }
+
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
