@@ -2015,8 +2015,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
-  auto u8Ty = cgf.getBuilder().getUIntNTy(8);
-  auto u8PtrTy = cgf.getBuilder().getPointerTo(u8Ty);
+  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy()
   mlir::Value baseBytePtr =
       cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
 
