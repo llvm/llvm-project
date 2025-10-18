@@ -234,8 +234,10 @@ let RecomputePerFunction = 1 in {
                             "shouldOptForSize(MF)">;
   def NoSSE41_Or_OptForSize : Predicate<"shouldOptForSize(MF) || "
                                         "!Subtarget->hasSSE41()">;
-  def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
-  def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+  def ImportCallOptimizationEnabledAndCFGuardDisabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\") &&"
+                                                                 "!MF->getFunction().getParent()->getModuleFlag(\"cfguard\")">;
+  def ImportCallOptimizationDisabledOrCFGuardEnabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\") ||"
+                                                                 "MF->getFunction().getParent()->getModuleFlag(\"cfguard\")">;
 
   def IsWin64CCFunc : Predicate<"Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
   def IsNotWin64CCFunc : Predicate<"!Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;

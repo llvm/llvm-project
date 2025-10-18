@@ -2343,7 +2343,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::TAILJMPr64_REX: {
     if (EnableImportCallOptimization) {
-      assert(MI->getOperand(0).getReg() == X86::RAX &&
+      assert((MI->getOperand(0).getReg() == X86::RAX ||
+              MF->getFunction().getParent()->getModuleFlag("cfguard")) &&
              "Indirect tail calls with impcall enabled must go through RAX (as "
              "enforced by TCRETURNImpCallri64)");
       emitLabelAndRecordForImportCallOptimization(
@@ -2544,28 +2545,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
 
-    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
-      emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_IMPORT_CALL);
-
-      MCInst TmpInst;
-      MCInstLowering.Lower(MI, TmpInst);
-
-      // For Import Call Optimization to work, we need a the call instruction
-      // with a rex prefix, and a 5-byte nop after the call instruction.
-      EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
-      emitCallInstruction(TmpInst);
-      emitNop(*OutStreamer, 5, Subtarget);
-      maybeEmitNopAfterCallForWindowsEH(MI);
-      return;
-    }
+    assert(!EnableImportCallOptimization ||
+           !isImportedFunction(MI->getOperand(0)) &&
+               "Calls to imported functions with import call optimization "
+               "should be lowered to CALL64m via CALL64_ImpCall");
 
     break;
 
   case X86::CALL64r:
     if (EnableImportCallOptimization) {
       assert(MI->getOperand(0).getReg() == X86::RAX &&
-             "Indirect calls with impcall enabled must go through RAX (as "
+             "Indirect calls with import call optimization enabled must go "
+             "through RAX (as "
              "enforced by CALL64r_ImpCall)");
 
       emitLabelAndRecordForImportCallOptimization(
@@ -2583,9 +2574,25 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case X86::CALL64m:
-    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
-      emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_CFG_CALL);
+    if (EnableImportCallOptimization) {
+      if (isCallToCFGuardFunction(MI)) {
+        emitLabelAndRecordForImportCallOptimization(
+            IMAGE_RETPOLINE_AMD64_CFG_CALL);
+      } else if (isImportedFunction(MI->getOperand(3))) {
+        emitLabelAndRecordForImportCallOptimization(
+            IMAGE_RETPOLINE_AMD64_IMPORT_CALL);
+
+        MCInst TmpInst;
+        MCInstLowering.Lower(MI, TmpInst);
+
+        // For Import Call Optimization to work, we need a the call instruction
+        // with a rex prefix, and a 5-byte nop after the call instruction.
+        EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
+        emitCallInstruction(TmpInst);
+        emitNop(*OutStreamer, 5, Subtarget);
+        maybeEmitNopAfterCallForWindowsEH(MI);
+        return;
+      }
     }
     break;
 
