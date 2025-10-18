@@ -1944,6 +1944,7 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
+
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   // We have to do some pointer authentication fixups after this copy,
   // and as part of that we need to load the source pc without
@@ -1962,9 +1963,7 @@ inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
 
 inline Registers_arm64 &
 Registers_arm64::operator=(const Registers_arm64 &other) {
-  memmove(&_registers, &other._registers, sizeof(_registers));
-  memmove(_vectorHalfRegisters, &other._vectorHalfRegisters,
-          sizeof(_vectorHalfRegisters));
+  memmove(this, &other, sizeof(Registers_arm64));
   // We perform this step to ensure that we correctly authenticate and re-sign
   // the pc after the bitwise copy.
   setIP(other.getIP());
