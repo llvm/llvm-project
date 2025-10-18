@@ -113,14 +113,12 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ueq_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB7_3
-; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB7_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r4, r3
-; SPE-NEXT:  .LBB7_3:
+; SPE-NEXT:    bc 12, gt, .LBB7_2
+; SPE-NEXT:  # %bb.1:
+; SPE-NEXT:    efscmplt cr0, r5, r6
+; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:  .LBB7_2:
 ; SPE-NEXT:    mr r3, r4
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ueq", metadata !"fpexcept.strict") #0
@@ -355,14 +353,12 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB21_3
-; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB21_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r4, r3
-; SPE-NEXT:  .LBB21_3:
+; SPE-NEXT:    bc 12, gt, .LBB21_2
+; SPE-NEXT:  # %bb.1:
+; SPE-NEXT:    efdcmplt cr0, r5, r7
+; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:  .LBB21_2:
 ; SPE-NEXT:    mr r3, r4
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ueq", metadata !"fpexcept.strict") #0
