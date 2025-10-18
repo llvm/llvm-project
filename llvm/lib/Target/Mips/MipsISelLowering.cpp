@@ -3408,7 +3408,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // For non-musttail calls, restrict to functions that won't require $gp
   // restoration. In PIC mode, calling external functions via tail call can
   // cause issues with $gp register handling (see D24763).
-  bool InternalLinkage = false;
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
@@ -3416,7 +3415,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // For non-musttail calls, restrict to local or non-interposable functions
     if (IsTailCall && !IsMustTail) {
       if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-        InternalLinkage = G->getGlobal()->hasInternalLinkage();
         IsTailCall &= (G->getGlobal()->hasLocalLinkage() ||
                        G->getGlobal()->hasHiddenVisibility() ||
                        G->getGlobal()->hasProtectedVisibility());
@@ -3600,6 +3598,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
+  bool InternalLinkage = false;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     if (Subtarget.isTargetCOFF() &&
         G->getGlobal()->hasDLLImportStorageClass()) {

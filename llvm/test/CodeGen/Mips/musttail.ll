@@ -95,3 +95,20 @@ define float @test_musttail_mixed_args(i32 %a, float %b, i32 %c, float %d, i32 %
   %ret = musttail call float @mixed_args_callee(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f)
   ret float %ret
 }
+
+; Test musttail with indirect call
+define i32 @test_musttail_fptr(ptr %fptr, i32 %x) {
+; MIPS32-LABEL: test_musttail_fptr:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    move $25, $4
+; MIPS32-NEXT:    jr $25
+; MIPS32-NEXT:    nop
+;
+; MIPS64-LABEL: test_musttail_fptr:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    move $25, $4
+; MIPS64-NEXT:    jr $25
+; MIPS64-NEXT:    nop
+  %ret = musttail call i32 %fptr(ptr %fptr, i32 %x)
+  ret i32 %ret
+}
