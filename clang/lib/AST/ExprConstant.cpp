@@ -15476,8 +15476,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case clang::X86::BI__builtin_ia32_ucmpq512_mask: {
     assert(E->getNumArgs() == 4);
 
-    bool IsUnsigned = (BuiltinOp >= clang::X86::BI__builtin_ia32_ucmpb128_mask &&
-                      BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpq512_mask);
+    bool IsUnsigned =
+        (BuiltinOp >= clang::X86::BI__builtin_ia32_ucmpb128_mask &&
+         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpq512_mask);
 
     APValue LHS, RHS;
     APSInt Mask, Opcode;
@@ -15487,41 +15488,44 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(3), Mask, Info))
       return false;
 
-      assert(LHS.getVectorLength() == RHS.getVectorLength());
+    assert(LHS.getVectorLength() == RHS.getVectorLength());
 
-    APSInt RetMask = APSInt::getUnsigned(0);
     unsigned VectorLen = LHS.getVectorLength();
+    unsigned RetWidth = VectorLen ? VectorLen : 1;
+    if (Mask.getBitWidth() > RetWidth)
+      RetWidth = Mask.getBitWidth();
 
+    APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
     for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
       APSInt A = LHS.getVectorElt(ElemNum).getInt();
       APSInt B = RHS.getVectorElt(ElemNum).getInt();
       bool result = false;
 
       switch (Opcode.getExtValue() & 0x7) {
-        case 0: // _MM_CMPINT_EQ
-          result = (A == B);
-          break;
-        case 1: // _MM_CMPINT_LT
-          result = IsUnsigned ? A.ult(B) : A.slt(B);
-          break;
-        case 2: // _MM_CMPINT_LE
-          result = IsUnsigned ? A.ule(B) : A.sle(B);
-          break;
-        case 3: // _MM_CMPINT_FALSE
-          result = false;
-          break;
-        case 4: // _MM_CMPINT_NE
-          result = (A != B);
-          break;
-        case 5: // _MM_CMPINT_NLT (>=)
-          result = IsUnsigned ? A.uge(B) : A.sge(B);
-          break;
-        case 6: // _MM_CMPINT_NLE (>)
-          result = IsUnsigned ? A.ugt(B) : A.sgt(B);
-          break;
-        case 7: // _MM_CMPINT_TRUE
-          result = true;
-          break;
+      case 0: // _MM_CMPINT_EQ
+        result = (A == B);
+        break;
+      case 1: // _MM_CMPINT_LT
+        result = IsUnsigned ? A.ult(B) : A.slt(B);
+        break;
+      case 2: // _MM_CMPINT_LE
+        result = IsUnsigned ? A.ule(B) : A.sle(B);
+        break;
+      case 3: // _MM_CMPINT_FALSE
+        result = false;
+        break;
+      case 4: // _MM_CMPINT_NE
+        result = (A != B);
+        break;
+      case 5: // _MM_CMPINT_NLT (>=)
+        result = IsUnsigned ? A.uge(B) : A.sge(B);
+        break;
+      case 6: // _MM_CMPINT_NLE (>)
+        result = IsUnsigned ? A.ugt(B) : A.sgt(B);
+        break;
+      case 7: // _MM_CMPINT_TRUE
+        result = true;
+        break;
       }
 
       RetMask.setBitVal(ElemNum, Mask[ElemNum] && result);
