@@ -378,27 +378,23 @@ entry:
 define <4 x i32> @test14(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlnor vs0, v2, v2
-; CHECK-NEXT:    xxlandc v2, vs0, v3
+; CHECK-NEXT:    xxlnor v2, v2, v3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test14:
 ; CHECK-REG:       # %bb.0: # %entry
-; CHECK-REG-NEXT:    xxlnor vs0, v2, v2
-; CHECK-REG-NEXT:    xxlandc v2, vs0, v3
+; CHECK-REG-NEXT:    xxlnor v2, v2, v3
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test14:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xxlor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlnor vs0, v2, v2
-; CHECK-FISL-NEXT:    xxlandc v2, vs0, v3
+; CHECK-FISL-NEXT:    xxlnor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test14:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    xxlnor vs0, v2, v2
-; CHECK-LE-NEXT:    xxlandc v2, vs0, v3
+; CHECK-LE-NEXT:    xxlnor v2, v2, v3
 ; CHECK-LE-NEXT:    blr
 entry:
   %v = or <4 x i32> %a, %b
@@ -412,27 +408,23 @@ entry:
 define <8 x i16> @test15(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test15:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlnor vs0, v2, v2
-; CHECK-NEXT:    xxlandc v2, vs0, v3
+; CHECK-NEXT:    xxlnor v2, v2, v3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test15:
 ; CHECK-REG:       # %bb.0: # %entry
-; CHECK-REG-NEXT:    xxlnor vs0, v2, v2
-; CHECK-REG-NEXT:    xxlandc v2, vs0, v3
+; CHECK-REG-NEXT:    xxlnor v2, v2, v3
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test15:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xxlor v4, v2, v3
-; CHECK-FISL-NEXT:    xxlnor vs0, v2, v2
-; CHECK-FISL-NEXT:    xxlandc v2, vs0, v3
+; CHECK-FISL-NEXT:    xxlnor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test15:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    xxlnor vs0, v2, v2
-; CHECK-LE-NEXT:    xxlandc v2, vs0, v3
+; CHECK-LE-NEXT:    xxlnor v2, v2, v3
 ; CHECK-LE-NEXT:    blr
 entry:
   %v = or <8 x i16> %a, %b
@@ -446,27 +438,23 @@ entry:
 define <16 x i8> @test16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlnor vs0, v2, v2
-; CHECK-NEXT:    xxlandc v2, vs0, v3
+; CHECK-NEXT:    xxlnor v2, v2, v3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test16:
 ; CHECK-REG:       # %bb.0: # %entry
-; CHECK-REG-NEXT:    xxlnor vs0, v2, v2
-; CHECK-REG-NEXT:    xxlandc v2, vs0, v3
+; CHECK-REG-NEXT:    xxlnor v2, v2, v3
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test16:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xxlor v4, v2, v3
-; CHECK-FISL-NEXT:    xxlnor vs0, v2, v2
-; CHECK-FISL-NEXT:    xxlandc v2, vs0, v3
+; CHECK-FISL-NEXT:    xxlnor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test16:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    xxlnor vs0, v2, v2
-; CHECK-LE-NEXT:    xxlandc v2, vs0, v3
+; CHECK-LE-NEXT:    xxlnor v2, v2, v3
 ; CHECK-LE-NEXT:    blr
 entry:
   %v = or <16 x i8> %a, %b
@@ -636,38 +624,34 @@ entry:
 define <4 x float> @test22(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d) {
 ; CHECK-LABEL: test22:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvcmpgtsp vs1, v4, v5
 ; CHECK-NEXT:    xvcmpgtsp vs0, v5, v4
-; CHECK-NEXT:    xxlnor vs1, vs1, vs1
-; CHECK-NEXT:    xxlandc vs0, vs1, vs0
-; CHECK-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-NEXT:    xvcmpgtsp vs1, v4, v5
+; CHECK-NEXT:    xxlor vs0, vs1, vs0
+; CHECK-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test22:
 ; CHECK-REG:       # %bb.0: # %entry
-; CHECK-REG-NEXT:    xvcmpgtsp vs1, v4, v5
 ; CHECK-REG-NEXT:    xvcmpgtsp vs0, v5, v4
-; CHECK-REG-NEXT:    xxlnor vs1, vs1, vs1
-; CHECK-REG-NEXT:    xxlandc vs0, vs1, vs0
-; CHECK-REG-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-REG-NEXT:    xvcmpgtsp vs1, v4, v5
+; CHECK-REG-NEXT:    xxlor vs0, vs1, vs0
+; CHECK-REG-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test22:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xvcmpgtsp vs1, v5, v4
 ; CHECK-FISL-NEXT:    xvcmpgtsp vs0, v4, v5
-; CHECK-FISL-NEXT:    xxlnor vs0, vs0, vs0
-; CHECK-FISL-NEXT:    xxlandc vs0, vs0, vs1
-; CHECK-FISL-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-FISL-NEXT:    xxlor vs0, vs0, vs1
+; CHECK-FISL-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test22:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    xvcmpgtsp vs1, v4, v5
 ; CHECK-LE-NEXT:    xvcmpgtsp vs0, v5, v4
-; CHECK-LE-NEXT:    xxlnor vs1, vs1, vs1
-; CHECK-LE-NEXT:    xxlandc vs0, vs1, vs0
-; CHECK-LE-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-LE-NEXT:    xvcmpgtsp vs1, v4, v5
+; CHECK-LE-NEXT:    xxlor vs0, vs1, vs0
+; CHECK-LE-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-LE-NEXT:    blr
 entry:
   %m = fcmp ueq <4 x float> %c, %d
