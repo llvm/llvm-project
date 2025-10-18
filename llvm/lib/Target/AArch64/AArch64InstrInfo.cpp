@@ -2276,6 +2276,15 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addMemOperand(*MI.memoperands_begin());
     }
   }
+  // To match MSVC
+  if (Subtarget.getTargetTriple().isOSMSVCRT() &&
+      !Subtarget.getTargetLowering()
+           ->getTargetMachine()
+           .Options.EnableGlobalISel) {
+    BuildMI(MBB, MI, DL, get(AArch64::EORWrr), Reg)
+        .addReg(Reg, RegState::Kill)
+        .addReg(AArch64::SP);
+  }
 
   MBB.erase(MI);
 
