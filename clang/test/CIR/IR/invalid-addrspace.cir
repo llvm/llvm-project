@@ -24,4 +24,3 @@ cir.func @address_space2(%p : !cir.ptr<!u64i, target_address_space>) {
 cir.func @address_space3(%p : !cir.ptr<!u64i, target_address_space()>) {
   cir.return
 }
-
