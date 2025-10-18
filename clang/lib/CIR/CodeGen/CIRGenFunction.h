@@ -1380,6 +1380,9 @@ public:
 
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
+  mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
+                              llvm::ArrayRef<mlir::Value> args = {});
+
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
