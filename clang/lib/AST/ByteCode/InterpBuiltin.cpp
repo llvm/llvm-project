@@ -3101,6 +3101,62 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
+                                     const CallExpr *Call, unsigned ID,
+                                     bool IsUnsigned) {
+  assert(Call->getNumArgs() == 4);
+
+  APSInt Mask = popToAPSInt(S, Call->getArg(3));
+  APSInt Opcode = popToAPSInt(S, Call->getArg(2));
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+
+  assert(LHS.getNumElems() == RHS.getNumElems());
+
+  APInt RetMask = APInt::getZero(LHS.getNumElems());
+  unsigned VectorLen = LHS.getNumElems();
+  PrimType ElemT = LHS.getFieldDesc()->getPrimType();
+
+  for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      const APSInt &A = LHS.elem<T>(ElemNum).toAPSInt();
+      const APSInt &B = RHS.elem<T>(ElemNum).toAPSInt();
+      bool Result = false;
+      switch (Opcode.getExtValue() & 0x7) {
+      case 0x00: // _MM_CMPINT_EQ
+        Result = (A == B);
+        break;
+      case 0x01: // _MM_CMPINT_LT
+        Result = IsUnsigned ? A.ult(B) : A.slt(B);
+        break;
+      case 0x02: // _MM_CMPINT_LE
+        Result = IsUnsigned ? A.ule(B) : A.sle(B);
+        break;
+      case 0x03: // _MM_CMPINT_FALSE
+        Result = false;
+        break;
+      case 0x04: // _MM_CMPINT_NE
+        Result = (A != B);
+        break;
+      case 0x05: // _MM_CMPINT_NLT (>=)
+        Result = IsUnsigned ? A.uge(B) : A.sge(B);
+        break;
+      case 0x06: // _MM_CMPINT_NLE (>)
+        Result = IsUnsigned ? A.ugt(B) : A.sgt(B);
+        break;
+      case 0x07: // _MM_CMPINT_TRUE
+        Result = true;
+        break;
+      }
+
+      RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
+    });
+  }
+
+  pushInteger(S, RetMask, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
                                             const CallExpr *Call) {
   assert(Call->getNumArgs() == 1);
@@ -4148,6 +4204,36 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpb128_mask:
+  case X86::BI__builtin_ia32_cmpw128_mask:
+  case X86::BI__builtin_ia32_cmpd128_mask:
+  case X86::BI__builtin_ia32_cmpq128_mask:
+  case X86::BI__builtin_ia32_cmpb256_mask:
+  case X86::BI__builtin_ia32_cmpw256_mask:
+  case X86::BI__builtin_ia32_cmpd256_mask:
+  case X86::BI__builtin_ia32_cmpq256_mask:
+  case X86::BI__builtin_ia32_cmpb512_mask:
+  case X86::BI__builtin_ia32_cmpw512_mask:
+  case X86::BI__builtin_ia32_cmpd512_mask:
+  case X86::BI__builtin_ia32_cmpq512_mask:
+    return interp__builtin_cmp_mask(S, OpPC, Call, BuiltinID,
+                                    /*IsUnsigned=*/false);
+
+  case X86::BI__builtin_ia32_ucmpb128_mask:
+  case X86::BI__builtin_ia32_ucmpw128_mask:
+  case X86::BI__builtin_ia32_ucmpd128_mask:
+  case X86::BI__builtin_ia32_ucmpq128_mask:
+  case X86::BI__builtin_ia32_ucmpb256_mask:
+  case X86::BI__builtin_ia32_ucmpw256_mask:
+  case X86::BI__builtin_ia32_ucmpd256_mask:
+  case X86::BI__builtin_ia32_ucmpq256_mask:
+  case X86::BI__builtin_ia32_ucmpb512_mask:
+  case X86::BI__builtin_ia32_ucmpw512_mask:
+  case X86::BI__builtin_ia32_ucmpd512_mask:
+  case X86::BI__builtin_ia32_ucmpq512_mask:
+    return interp__builtin_cmp_mask(S, OpPC, Call, BuiltinID,
+                                    /*IsUnsigned=*/true);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
