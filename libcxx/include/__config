@@ -1027,6 +1027,8 @@ typedef __char32_t char32_t;
 #    else
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #    endif
+#  elif defined(__clang__)
+#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #  else
 #    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #  endif
