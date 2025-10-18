@@ -89,4 +89,16 @@ if(LIBOMPTARGET_AMDGPU_ARCH)
   endif()
 endif()
 
+################################################################################
+# Looking for Level0
+################################################################################
+find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR NAMES level_zero/ze_api.h)
+
+if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND FALSE)
+else()
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND TRUE)
+  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
+endif()
+
 set(OPENMP_PTHREAD_LIB ${LLVM_PTHREAD_LIB})
