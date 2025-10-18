@@ -1650,9 +1650,8 @@ _mm256_mul_epi32(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the rounded products.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mulhrs_epi16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mulhrs_epi16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_pmulhrsw256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1670,8 +1669,7 @@ _mm256_mulhrs_epi16(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_mulhi_epu16(__m256i __a, __m256i __b)
-{
+_mm256_mulhi_epu16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_pmulhuw256((__v16hu)__a, (__v16hu)__b);
 }
 
