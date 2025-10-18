@@ -2619,13 +2619,13 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
-  // When given, specific bits overrule the more general ALU type.
-  bool HasConcreteClassSpecified =
+  // When given specific bits overrule the more general ALU type.
+  bool HasConcreteALUClassSpecified =
       (Mask & (SchedGroupMask::SALU | SchedGroupMask::VALU |
                SchedGroupMask::MFMA)) != SchedGroupMask::NONE;
 
   // ALU implies VALU, SALU, MFMA, TRANS.
-  if (!HasConcreteClassSpecified &&
+  if (!HasConcreteALUClassSpecified &&
       (InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
                     ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS;
@@ -2636,8 +2636,15 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
            (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::ALU;
 
+  // When given specific bits overrule the more general MEM type.
+  bool HasConcreteMemClassSpecified = (Mask & (SchedGroupMask::VMEM_READ |
+                                           SchedGroupMask::VMEM_WRITE |
+                                           SchedGroupMask::DS_READ |
+                                           SchedGroupMask::DS_WRITE)) !=
+                                     SchedGroupMask::NONE;
+
   // VMEM implies VMEM_READ, VMEM_WRITE.
-  if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
+  if (!HasConcreteMemClassSpecified && (InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE;
   // VMEM_READ, VMEM_WRITE implies VMEM.
   else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
