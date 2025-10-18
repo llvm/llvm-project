@@ -1200,6 +1200,23 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     return;
   }
 
+  bool IsNonUniform =
+      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
+
+  auto FirstIndexReg = Instr.getOperand(3).getReg();
+  bool FirstIndexIsConstant =
+      Subtarget.getInstrInfo()->isConstantInstr(*MRI.getVRegDef(FirstIndexReg));
+
+  if (StorageClass == SPIRV::StorageClass::StorageClass::StorageBuffer) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageBufferArrayNonUniformIndexingEXT);
+    else if (!FirstIndexIsConstant)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageBufferArrayDynamicIndexing);
+    return;
+  }
+
   Register PointeeTypeReg = ResTypeInst->getOperand(2).getReg();
   MachineInstr *PointeeType = MRI.getUniqueVRegDef(PointeeTypeReg);
   if (PointeeType->getOpcode() != SPIRV::OpTypeImage &&
@@ -1208,27 +1225,25 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     return;
   }
 
-  bool IsNonUniform =
-      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
   if (isUniformTexelBuffer(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::UniformTexelBufferArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::UniformTexelBufferArrayDynamicIndexingEXT);
   } else if (isInputAttachment(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::InputAttachmentArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::InputAttachmentArrayDynamicIndexingEXT);
   } else if (isStorageTexelBuffer(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::StorageTexelBufferArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::StorageTexelBufferArrayDynamicIndexingEXT);
   } else if (isSampledImage(PointeeType) ||
@@ -1237,14 +1252,14 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::SampledImageArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::SampledImageArrayDynamicIndexing);
   } else if (isStorageImage(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayDynamicIndexing);
   }
