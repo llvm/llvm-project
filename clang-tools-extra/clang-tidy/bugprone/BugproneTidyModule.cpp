@@ -29,6 +29,7 @@
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
 #include "ExceptionEscapeCheck.h"
+#include "ExceptionTypeNotNothrowCopyConstructibleCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
@@ -148,6 +149,8 @@ public:
     CheckFactories.registerCheck<EmptyCatchCheck>("bugprone-empty-catch");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
+    CheckFactories.registerCheck<ExceptionTypeNotNothrowCopyConstructibleCheck>(
+        "bugprone-exception-type-not-nothrow-copy-constructible");
     CheckFactories.registerCheck<FoldInitTypeCheck>("bugprone-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "bugprone-forward-declaration-namespace");
