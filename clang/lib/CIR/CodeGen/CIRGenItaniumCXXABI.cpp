@@ -2038,10 +2038,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       cookiePtr.withElementType(cgf.getBuilder(), cgf.SizeTy);
   cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
 
-  if (cgf.sanOpts.has(SanitizerKind::Address)) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "initializeArrayCookie: AddressSanitizer");
-  }
+  assert(!cir::MissingFeatures::sanitizers());
 
   // Finally, compute a pointer to the actual data buffer by skipping
   // over the cookie completely.
