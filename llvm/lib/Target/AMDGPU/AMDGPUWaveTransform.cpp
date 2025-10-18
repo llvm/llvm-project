@@ -87,6 +87,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
 
@@ -2184,10 +2185,12 @@ bool AMDGPUWaveTransform::runOnMachineFunction(MachineFunction &MF) {
 
   // Step 2: Create basic blocks for flow nodes and adjust MachineBasicBlock
   // successor and predecessor lists.
+  SmallVector<MachineBasicBlock *> FlowBlocks;
   MachineFunction::iterator insertIt = MF.end();
   for (auto *WN : llvm::reverse(ReconvergeHelper.nodes())) {
     if (!WN->Block) {
       WN->Block = MF.CreateMachineBasicBlock();
+      FlowBlocks.push_back(WN->Block);
       MF.insert(insertIt, WN->Block);
       ReconvergeHelper.setNodeForBlock(WN->Block, WN);
     }
@@ -2234,6 +2237,18 @@ bool AMDGPUWaveTransform::runOnMachineFunction(MachineFunction &MF) {
   // UI.clear();
   // ConvergenceInfo.clear();
   DomTree = nullptr;
+
+  // Update the LiveIns of flow blocks.
+  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
+  for (MachineBasicBlock *MBB : reverse(RPOT)) {
+    if (is_contained(FlowBlocks, MBB)){
+      for (const MachineBasicBlock *Succ : MBB->successors()) {
+        for (const auto &LI : Succ->liveins())
+          MBB->addLiveIn(LI);
+      }
+      MBB->sortUniqueLiveIns();
+    }
+  }
 
   // In some MIR tests, the MIR parser will set the NoPHIs property for the
   // test cases. We need to clear it here to avoid verifier errors.
