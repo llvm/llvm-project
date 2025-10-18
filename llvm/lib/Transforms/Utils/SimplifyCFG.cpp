@@ -7540,6 +7540,62 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+/// Tries to transform the switch when the condition is umin and a constant.
+/// In that case, the default branch can be replaced by the constant's branch.
+/// For example:
+/// switch(umin(a, 3)) {
+/// case 0:
+/// case 1:
+/// case 2:
+/// case 3:
+///   // ...
+/// default:
+///   unreachable
+/// }
+///
+/// Transforms into:
+///
+/// switch(umin(a, 3)) {
+/// case 0:
+/// case 1:
+/// case 2:
+/// default:
+///   // This is case 3
+/// }
+static bool simplifySwitchWhenUMin(SwitchInst *SI, IRBuilder<> &Builder) {
+  auto *Call = dyn_cast<IntrinsicInst>(SI->getCondition());
+
+  if (!Call)
+    return false;
+
+  if (Call->getIntrinsicID() != Intrinsic::umin)
+    return false;
+
+  if (!SI->defaultDestUnreachable())
+    return false;
+
+  // Extract the constant operand from the intrinsic.
+  auto *Constant = dyn_cast<ConstantInt>(Call->getArgOperand(1));
+
+  if (!Constant) {
+    return false;
+  }
+
+  for (auto Case = SI->case_begin(), e = SI->case_end(); Case != e; Case++) {
+    uint64_t CaseValue = Case->getCaseValue()->getValue().getZExtValue();
+
+    // We found the case which is equal to the case's umin argument.
+    // We can make the case the default case.
+    if (Constant->equalsInt(CaseValue)) {
+      SI->setDefaultDest(Case->getCaseSuccessor());
+      SI->removeCase(Case);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// Tries to transform switch of powers of two to reduce switch range.
 /// For example, switch like:
 /// switch (C) { case 1: case 2: case 64: case 128: }
@@ -7964,6 +8020,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (simplifyDuplicateSwitchArms(SI, DTU))
+    return requestResimplify();
+
+  if (simplifySwitchWhenUMin(SI, Builder))
     return requestResimplify();
 
   return false;
