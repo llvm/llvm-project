@@ -64,15 +64,17 @@ static unsigned getLength(const Expr *E,
   if (!E)
     return 0;
 
-  Expr::EvalResult Length;
   E = E->IgnoreImpCasts();
 
   if (const auto *LengthDRE = dyn_cast<DeclRefExpr>(E))
     if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl()))
       if (!isa<ParmVarDecl>(LengthVD))
-        if (const Expr *LengthInit = LengthVD->getInit())
+        if (const Expr *LengthInit = LengthVD->getInit();
+            LengthInit && !LengthInit->isValueDependent()) {
+          Expr::EvalResult Length;
           if (LengthInit->EvaluateAsInt(Length, *Result.Context))
             return Length.Val.getInt().getZExtValue();
+        }
 
   if (const auto *LengthIL = dyn_cast<IntegerLiteral>(E))
     return LengthIL->getValue().getZExtValue();

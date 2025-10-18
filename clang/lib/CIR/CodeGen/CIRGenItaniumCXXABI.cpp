@@ -95,7 +95,10 @@ public:
                                          clang::GlobalDecl gd, Address thisAddr,
                                          mlir::Type ty,
                                          SourceLocation loc) override;
-
+  mlir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
+                                        const CXXDestructorDecl *dtor,
+                                        CXXDtorType dtorType, Address thisAddr,
+                                        DeleteOrMemberCallExpr e) override;
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
@@ -471,6 +474,29 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   }
 }
 
+mlir::Value CIRGenItaniumCXXABI::emitVirtualDestructorCall(
+    CIRGenFunction &cgf, const CXXDestructorDecl *dtor, CXXDtorType dtorType,
+    Address thisAddr, DeleteOrMemberCallExpr expr) {
+  auto *callExpr = dyn_cast<const CXXMemberCallExpr *>(expr);
+  auto *delExpr = dyn_cast<const CXXDeleteExpr *>(expr);
+  assert((callExpr != nullptr) ^ (delExpr != nullptr));
+  assert(callExpr == nullptr || callExpr->arg_begin() == callExpr->arg_end());
+  assert(dtorType == Dtor_Deleting || dtorType == Dtor_Complete);
+
+  GlobalDecl globalDecl(dtor, dtorType);
+  const CIRGenFunctionInfo *fnInfo =
+      &cgm.getTypes().arrangeCXXStructorDeclaration(globalDecl);
+  const cir::FuncType &fnTy = cgm.getTypes().getFunctionType(*fnInfo);
+  auto callee = CIRGenCallee::forVirtual(callExpr, globalDecl, thisAddr, fnTy);
+
+  QualType thisTy =
+      callExpr ? callExpr->getObjectType() : delExpr->getDestroyedType();
+
+  cgf.emitCXXDestructorCall(globalDecl, callee, thisAddr.emitRawPointer(),
+                            thisTy, nullptr, QualType(), nullptr);
+  return nullptr;
+}
+
 void CIRGenItaniumCXXABI::emitVirtualInheritanceTables(
     const CXXRecordDecl *rd) {
   CIRGenVTables &vtables = cgm.getVTables();
@@ -724,8 +750,8 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
     return false;
 
   if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
-    const CXXRecordDecl *rd =
-        cast<CXXRecordDecl>(recordTy->getOriginalDecl())->getDefinitionOrSelf();
+    const auto *rd =
+        cast<CXXRecordDecl>(recordTy->getDecl())->getDefinitionOrSelf();
     if (!rd->hasDefinition())
       return false;
 
@@ -839,9 +865,7 @@ static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
 
 /// IsIncompleteClassType - Returns whether the given record type is incomplete.
 static bool isIncompleteClassType(const RecordType *recordTy) {
-  return !recordTy->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->isCompleteDefinition();
+  return !recordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
 }
 
 /// Returns whether the given type contains an
@@ -919,8 +943,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Atomic:
   // FIXME: GCC treats block pointers as fundamental types?!
   case Type::BlockPointer:
-    cgm.errorNYI("VTableClassNameForType: __fundamental_type_info");
-    break;
+    return "_ZTVN10__cxxabiv123__fundamental_type_infoE";
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
@@ -933,13 +956,11 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
     break;
 
   case Type::Enum:
-    cgm.errorNYI("VTableClassNameForType: Enum");
-    break;
+    return "_ZTVN10__cxxabiv116__enum_type_infoE";
 
   case Type::Record: {
-    const CXXRecordDecl *rd =
-        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())
+                         ->getDefinitionOrSelf();
 
     if (!rd->hasDefinition() || !rd->getNumBases()) {
       return classTypeInfo;
@@ -1011,8 +1032,8 @@ static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
       return cir::GlobalLinkageKind::LinkOnceODRLinkage;
 
     if (const RecordType *record = dyn_cast<RecordType>(ty)) {
-      const CXXRecordDecl *rd =
-          cast<CXXRecordDecl>(record->getOriginalDecl())->getDefinitionOrSelf();
+      const auto *rd =
+          cast<CXXRecordDecl>(record->getDecl())->getDefinitionOrSelf();
       if (rd->hasAttr<WeakAttr>())
         return cir::GlobalLinkageKind::WeakODRLinkage;
 
@@ -1362,9 +1383,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::Record: {
-    const auto *rd =
-        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())
+                         ->getDefinitionOrSelf();
     if (!rd->hasDefinition() || !rd->getNumBases()) {
       // We don't need to emit any fields.
       break;
@@ -1631,8 +1651,7 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // Lowering pass to skip passing the trivial function.
   //
   if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
-    CXXRecordDecl *rec =
-        cast<CXXRecordDecl>(recordTy->getOriginalDecl()->getDefinition());
+    auto *rec = cast<CXXRecordDecl>(recordTy->getDecl()->getDefinition());
     assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
     if (!rec->hasTrivialDestructor()) {
       cgm.errorNYI("emitThrow: non-trivial destructor");
@@ -1931,6 +1950,15 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   return cgf.cgm.createRuntimeFunction(FTy, "__dynamic_cast");
 }
 
+static Address emitDynamicCastToVoid(CIRGenFunction &cgf, mlir::Location loc,
+                                     QualType srcRecordTy, Address src) {
+  bool vtableUsesRelativeLayout =
+      cgf.cgm.getItaniumVTableContext().isRelativeLayout();
+  mlir::Value ptr = cgf.getBuilder().createDynCastToVoid(
+      loc, src.getPointer(), vtableUsesRelativeLayout);
+  return Address{ptr, src.getAlignment()};
+}
+
 static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     mlir::Location loc,
                                                     QualType srcRecordTy,
@@ -1965,10 +1993,8 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
   bool isCastToVoid = destRecordTy.isNull();
   assert((!isCastToVoid || !isRefCast) && "cannot cast to void reference");
 
-  if (isCastToVoid) {
-    cgm.errorNYI(loc, "emitDynamicCastToVoid");
-    return {};
-  }
+  if (isCastToVoid)
+    return emitDynamicCastToVoid(cgf, loc, srcRecordTy, src).getPointer();
 
   // If the destination is effectively final, the cast succeeds if and only
   // if the dynamic type of the pointer is exactly the destination type.
@@ -2015,7 +2041,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
-  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy()
+  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
       cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
 
@@ -2038,12 +2064,11 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       cookiePtr.withElementType(cgf.getBuilder(), cgf.SizeTy);
   cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
 
-  assert(!cir::MissingFeatures::sanitizers());
-
   // Finally, compute a pointer to the actual data buffer by skipping
   // over the cookie completely.
-  mlir::Value dataOffset = cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
-                                                  /*width=*/32);
+  mlir::Value dataOffset =
+      cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
+                                    /*width=*/32);
   mlir::Value dataPtr =
       cgf.getBuilder().createPtrStride(loc, baseBytePtr, dataOffset);
   mlir::Value finalPtr =

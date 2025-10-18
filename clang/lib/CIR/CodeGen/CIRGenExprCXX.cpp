@@ -130,13 +130,11 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   const CXXMethodDecl *calleeDecl =
       devirtualizedMethod ? devirtualizedMethod : md;
   const CIRGenFunctionInfo *fInfo = nullptr;
-  if (isa<CXXDestructorDecl>(calleeDecl)) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
-    return RValue::get(nullptr);
-  }
-
-  fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl))
+    fInfo = &cgm.getTypes().arrangeCXXStructorDeclaration(
+        GlobalDecl(dtor, Dtor_Complete));
+  else
+    fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
 
   cir::FuncType ty = cgm.getTypes().getFunctionType(*fInfo);
 
@@ -151,9 +149,34 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   // because then we know what the type is.
   bool useVirtualCall = canUseVirtualCall && !devirtualizedMethod;
 
-  if (isa<CXXDestructorDecl>(calleeDecl)) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl)) {
+    assert(ce->arg_begin() == ce->arg_end() &&
+           "Destructor shouldn't have explicit parameters");
+    assert(returnValue.isNull() && "Destructor shouldn't have return value");
+    if (useVirtualCall) {
+      cgm.getCXXABI().emitVirtualDestructorCall(*this, dtor, Dtor_Complete,
+                                                thisPtr.getAddress(),
+                                                cast<CXXMemberCallExpr>(ce));
+    } else {
+      GlobalDecl globalDecl(dtor, Dtor_Complete);
+      CIRGenCallee callee;
+      assert(!cir::MissingFeatures::appleKext());
+      if (!devirtualizedMethod) {
+        callee = CIRGenCallee::forDirect(
+            cgm.getAddrOfCXXStructor(globalDecl, fInfo, ty), globalDecl);
+      } else {
+        cgm.errorNYI(ce->getSourceRange(), "devirtualized destructor call");
+        return RValue::get(nullptr);
+      }
+
+      QualType thisTy =
+          isArrow ? base->getType()->getPointeeType() : base->getType();
+      // CIRGen does not pass CallOrInvoke here (different from OG LLVM codegen)
+      // because in practice it always null even in OG.
+      emitCXXDestructorCall(globalDecl, callee, thisPtr.getPointer(), thisTy,
+                            /*implicitParam=*/nullptr,
+                            /*implicitParamTy=*/QualType(), ce);
+    }
     return RValue::get(nullptr);
   }
 

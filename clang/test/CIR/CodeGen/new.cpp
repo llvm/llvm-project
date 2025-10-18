@@ -321,12 +321,14 @@ void t_align16_nontrivial() {
 // LLVM:   %[[ALLOCATED_PTR:.*]] = getelementptr ptr, ptr %[[RAW_PTR]], i64 16
 // LLVM:   store ptr %[[ALLOCATED_PTR]], ptr %[[ALLOCA]], align 8
 
-// OGCG: @_Z27t_constant_size_nontrivial2v()
+// OGCG: define{{.*}} void @_Z20t_align16_nontrivialv
 // OGCG:   %[[ALLOCA:.*]] = alloca ptr, align 8
-// OGCG:   %[[COOKIE_PTR:.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 20)
-// OGCG:   store i64 3, ptr %[[COOKIE_PTR]], align 8
-// OGCG:   %[[ALLOCATED_PTR:.*]] = getelementptr inbounds i8, ptr %[[COOKIE_PTR]], i64 8
+// OGCG:   %[[RAW_PTR:.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 48)
+// OGCG:   %[[COOKIE_PTR:.*]] = getelementptr inbounds i8, ptr %[[RAW_PTR]], i64 8
+// OGCG:   store i64 2, ptr %[[COOKIE_PTR]], align 8
+// OGCG:   %[[ALLOCATED_PTR:.*]] = getelementptr inbounds i8, ptr %[[RAW_PTR]], i64 16
 // OGCG:   store ptr %[[ALLOCATED_PTR]], ptr %[[ALLOCA]], align 8
+// OGCG:   ret void
 
 void t_new_multidim_constant_size() {
   auto p = new double[2][3][4];
