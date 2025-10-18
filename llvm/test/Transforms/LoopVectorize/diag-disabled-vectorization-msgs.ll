@@ -1,3 +1,4 @@
+; TEST 1
 ; This test checks that we emit only the correct debug messages and
 ; optimization remark when the loop vectorizer is disabled by loop metadata.
 
@@ -5,18 +6,42 @@
 ; RUN: opt -passes=loop-vectorize -pass-remarks=loop-vectorize \
 ; RUN:     -pass-remarks-missed=loop-vectorize \
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug -disable-output \
-; RUN:     < %s 2>&1 | FileCheck %s
-; CHECK-NOT: LV: We can vectorize this loop
-; CHECK-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
-; CHECK-NOT: LV: [BUG] Not vectorizing: loop vect disabled for an unknown reason
-; CHECK-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
-; CHECK-NOT: LV: Not vectorizing: Disabled/already vectorized
-; CHECK-NOT: LV: Not vectorizing: Cannot prove legality
-; CHECK: LV: Loop hints: force=disabled
-; CHECK: LV: Not vectorizing: #pragma vectorize disable.
-; CHECK: remark:
-; CHECK-SAME: loop not vectorized: vectorization is explicitly disabled
-; CHECK: LV: Loop hints prevent vectorization
+; RUN:     < %s 2>&1 | FileCheck --check-prefix=METADATA %s
+; METADATA-NOT: LV: We can vectorize this loop
+; METADATA-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
+; METADATA-NOT: LV: [BUG] Not vectorizing: loop vect disabled for an unknown reason
+; METADATA-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
+; METADATA-NOT: LV: Not vectorizing: Disabled/already vectorized
+; METADATA-NOT: LV: Not vectorizing: Cannot prove legality
+; METADATA: LV: Loop hints: force=disabled
+; METADATA: LV: Not vectorizing: #pragma vectorize disable.
+; METADATA: remark:
+; METADATA-SAME: loop not vectorized: vectorization is explicitly disabled
+; METADATA: LV: Loop hints prevent vectorization
+
+; TEST 2
+; This test checks that we emit only the correct debug messages and
+; optimization remark when the loop is not vectorized due to the 
+; vectorize-forced-only pass option being set.
+
+; Strip metadata for FORCEDONLY run, keep it for METADATA run
+; RUN: sed 's/,[[:space:]]*!llvm\.loop[[:space:]]*!0//' %s | \
+; RUN: opt -passes='loop-vectorize<vectorize-forced-only>' \
+; RUN:   -pass-remarks=loop-vectorize \
+; RUN:   -pass-remarks-missed=loop-vectorize \
+; RUN:   -pass-remarks-analysis=loop-vectorize -debug -disable-output \
+; RUN:   2>&1 | FileCheck --check-prefix=FORCEDONLY %s
+; FORCEDONLY-NOT: LV: We can vectorize this loop
+; FORCEDONLY-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
+; FORCEDONLY-NOT: LV: [BUG] Not vectorizing: loop vect disabled for an unknown reason
+; FORCEDONLY-NOT: LV: Not vectorizing: #pragma vectorize disable
+; FORCEDONLY-NOT: LV: Not vectorizing: Disabled/already vectorized
+; FORCEDONLY-NOT: LV: Not vectorizing: Cannot prove legality
+; FORCEDONLY: LV: Loop hints: force=?
+; FORCEDONLY: LV: Not vectorizing: VectorizeOnlyWhenForced is set, and no #pragma vectorize enable
+; FORCEDONLY: remark:
+; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
+; FORCEDONLY: LV: Loop hints prevent vectorization
 
 define double @CompareDistmats(ptr %distmat1, ptr %distmat2){
 entry:
