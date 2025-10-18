@@ -2485,9 +2485,8 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
     std::swap(N0, N1);
 
   SDValue Cond, TVal, FVal;
-  if (!sd_match(N1,
-                m_SelectLike(m_Value(Cond), m_Value(TVal), m_Value(FVal))) ||
-      !N1->hasOneUse()) {
+  if (!sd_match(N1, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(TVal),
+                                          m_Value(FVal))))) {
     return SDValue();
   }
 
@@ -13858,9 +13857,8 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
          "Expected EXTEND dag node in input!");
 
   SDValue Cond, Op1, Op2;
-  if (!sd_match(N0,
-                m_SelectLike(m_Value(Cond), m_Value(Op1), m_Value(Op2))) ||
-      !N0->hasOneUse()) {
+  if (!sd_match(N0, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(Op1),
+                                          m_Value(Op2))))) {
     return SDValue();
   }
 
@@ -13885,7 +13883,7 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
 
   SDValue Ext1 = DAG.getNode(Opcode, DL, VT, Op1);
   SDValue Ext2 = DAG.getNode(Opcode, DL, VT, Op2);
-  return DAG.getSelect(DL, VT, N0->getOperand(0), Ext1, Ext2);
+  return DAG.getSelect(DL, VT, Cond, Ext1, Ext2);
 }
 
 /// Try to fold a sext/zext/aext dag node into a ConstantSDNode or
@@ -29620,13 +29618,13 @@ static SDValue takeInexpensiveLog2(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
 
   // c ? X : Y -> c ? Log2(X) : Log2(Y)
   SDValue Cond, TVal, FVal;
-  if (sd_match(Op, m_SelectLike(m_Value(Cond), m_Value(TVal), m_Value(FVal))) &&
-      Op->hasOneUse()) {
+  if (sd_match(Op, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(TVal),
+                                         m_Value(FVal))))) {
     if (SDValue LogX =
             takeInexpensiveLog2(DAG, DL, VT, TVal, Depth + 1, AssumeNonZero))
       if (SDValue LogY =
               takeInexpensiveLog2(DAG, DL, VT, FVal, Depth + 1, AssumeNonZero))
-        return DAG.getSelect(DL, VT, Op.getOperand(0), LogX, LogY);
+        return DAG.getSelect(DL, VT, Cond, LogX, LogY);
   }
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
