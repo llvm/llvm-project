@@ -121,6 +121,45 @@ jobs:
         release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+        enable_pgo=1
+
+        case "${{ inputs.runs-on }}" in
+          ubuntu-22.04*)
+            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            test_runs_on=$build_runs_on
+            ;;
+          macos-13)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+              enable_pgo=0
+              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+            else
+              build_runs_on="macos-13-large"
+            fi
+            test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          macos-14)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+              enable_pgo=0
+              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+            else
+              build_runs_on="depot-macos-14"
+            fi
+            test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          *)
+            test_runs_on="${{ inputs.runs-on }}"
+            build_runs_on=$test_runs_on
+            ;;
+        esac
+
+        if [ "$enable_pgo" -eq 1 ]; then
+          bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
+        else
+          bootstrap_prefix="BOOTSTRAP"
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PGO=OFF"
+        fi
 
         target="$RUNNER_OS-$RUNNER_ARCH"
         # The hendrikmuhs/ccache-action action does not support installing sccache
@@ -135,7 +174,7 @@ jobs:
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
         if [ "$RUNNER_OS" = "macOS" ]; then
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
+          target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
           else
@@ -146,7 +185,7 @@ jobs:
             # so we need to disable flang there.
             target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
+          target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_DARWIN_osx_ARCHS=$arches -D${bootstrap_prefix}_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
         build_flang="true"
@@ -155,35 +194,9 @@ jobs:
           # The build times out on Windows, so we need to disable LTO.
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
+        
+        target_cmake_flags=$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename
 
-        case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
-            test_runs_on=$build_runs_on
-            ;;
-          macos-13)
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
-              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
-            else
-              build_runs_on="macos-13-large"
-            fi
-            test_runs_on="${{ inputs.runs-on }}"
-            ;;
-          macos-14)
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
-              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
-            else
-              build_runs_on="depot-macos-14"
-            fi
-            test_runs_on="${{ inputs.runs-on }}"
-            ;;
-          *)
-            test_runs_on="${{ inputs.runs-on }}"
-            build_runs_on=$test_runs_on
-            ;;
-        esac
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
@@ -231,8 +244,7 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake \
-            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+            -C clang/cmake/caches/Release.cmake
 
     - name: Build
       shell: bash
