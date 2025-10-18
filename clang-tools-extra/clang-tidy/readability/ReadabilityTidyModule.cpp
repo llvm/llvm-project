@@ -52,6 +52,7 @@
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
+#include "RedundantTypenameCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "SimplifySubscriptExprCheck.h"
@@ -143,6 +144,8 @@ public:
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantTypenameCheck>(
+        "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
         "readability-reference-to-constructed-temporary");
     CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
