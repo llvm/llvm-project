@@ -1168,7 +1168,11 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         if (LocalFound)
           return false;
         LocalFound = true;
-      }
+      } else
+        // Don't expect to find a mix of locals and non-locals (due to path
+        // prefix for locals one should never have the same GUID as a
+        // non-local).
+        assert(!LocalFound);
       auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
       if (!CurVS->vTableFuncs().empty() ||
           // Previously clang did not attach the necessary type metadata to
@@ -1184,6 +1188,10 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
+        // Unless VS is a local, we don't need to keep looking through the rest
+        // of the summaries.
+        if (!LocalFound)
+          break;
       }
     }
     // There will be no VS if all copies are available_externally having no
