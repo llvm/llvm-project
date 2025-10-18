@@ -519,9 +519,7 @@ define <3 x i2> @scmp_unary_shuffle_ops(<3 x i8> %x, <3 x i8> %y) {
 define i32 @scmp_sgt_slt(i32 %a) {
 ; CHECK-LABEL: define i32 @scmp_sgt_slt(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i32 [[A]], 31
-; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt i32 [[A]], 1
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP_INV]], i32 [[A_LOBIT]], i32 1
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %cmp = icmp sgt i32 %a, 0
@@ -751,9 +749,7 @@ define i8 @scmp_from_select_eq_and_gt_neg3(i32 %x, i32 %y) {
 define i32 @scmp_ashr(i32 %a) {
 ; CHECK-LABEL: define i32 @scmp_ashr(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i32 [[A]], 31
-; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt i32 [[A]], 1
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP_INV]], i32 [[A_LOBIT]], i32 1
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %a.lobit = ashr i32 %a, 31
@@ -766,9 +762,7 @@ define i32 @scmp_ashr(i32 %a) {
 define i8 @scmp_ashr_sgt_pattern(i8 %a) {
 ; CHECK-LABEL: define i8 @scmp_ashr_sgt_pattern(
 ; CHECK-SAME: i8 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i8 [[A]], 7
-; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt i8 [[A]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP_INV]], i8 [[A_LOBIT]], i8 1
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[A]], i8 0)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a.lobit = ashr i8 %a, 7
@@ -781,9 +775,7 @@ define i8 @scmp_ashr_sgt_pattern(i8 %a) {
 define i8 @scmp_ashr_slt_pattern(i8 %a) {
 ; CHECK-LABEL: define i8 @scmp_ashr_slt_pattern(
 ; CHECK-SAME: i8 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i8 [[A]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 [[A_LOBIT]], i8 1
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[A]], i8 0)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a.lobit = ashr i8 %a, 7
