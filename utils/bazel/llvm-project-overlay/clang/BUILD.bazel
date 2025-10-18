@@ -1995,6 +1995,7 @@ cc_library(
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
     deps = [
+        ":basic",
         ":codegen",
         ":config",
         ":driver",
