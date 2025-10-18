@@ -767,6 +767,136 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
   ret void
 }
 
+define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
+; DAGISEL-LABEL: realign_stack:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-NEXT:    s_mov_b32 s1, s33
+; DAGISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
+; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
+; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; DAGISEL-NEXT:    s_mov_b32 s2, s34
+; DAGISEL-NEXT:    s_mov_b32 s34, s32
+; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x800
+; DAGISEL-NEXT:    s_wait_storecnt 0x0
+; DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
+; DAGISEL-NEXT:    s_wait_storecnt 0x0
+; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_mov_b32 s32, s34
+; DAGISEL-NEXT:    s_mov_b32 s34, s2
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL-NEXT:    s_mov_b32 s33, s1
+; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: realign_stack:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b32 s1, s33
+; GISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
+; GISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GISEL-NEXT:    s_mov_b32 s2, s34
+; GISEL-NEXT:    s_mov_b32 s34, s32
+; GISEL-NEXT:    s_addk_co_i32 s32, 0x800
+; GISEL-NEXT:    s_wait_storecnt 0x0
+; GISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
+; GISEL-NEXT:    s_wait_storecnt 0x0
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_mov_b32 s32, s34
+; GISEL-NEXT:    s_mov_b32 s34, s2
+; GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-NEXT:    s_mov_b32 s33, s1
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; DAGISEL64-LABEL: realign_stack:
+; DAGISEL64:       ; %bb.0:
+; DAGISEL64-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL64-NEXT:    s_wait_expcnt 0x0
+; DAGISEL64-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL64-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL64-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL64-NEXT:    s_mov_b32 s2, s33
+; DAGISEL64-NEXT:    s_add_co_i32 s33, s32, 0x3ff
+; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_and_b32 s33, s33, 0xfffffc00
+; DAGISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; DAGISEL64-NEXT:    s_mov_b32 s3, s34
+; DAGISEL64-NEXT:    s_mov_b32 s34, s32
+; DAGISEL64-NEXT:    s_addk_co_i32 s32, 0x800
+; DAGISEL64-NEXT:    s_wait_storecnt 0x0
+; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
+; DAGISEL64-NEXT:    s_wait_storecnt 0x0
+; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_mov_b32 s32, s34
+; DAGISEL64-NEXT:    s_mov_b32 s34, s3
+; DAGISEL64-NEXT:    s_mov_b64 exec, s[0:1]
+; DAGISEL64-NEXT:    s_mov_b32 s33, s2
+; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL64-LABEL: realign_stack:
+; GISEL64:       ; %bb.0:
+; GISEL64-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL64-NEXT:    s_wait_expcnt 0x0
+; GISEL64-NEXT:    s_wait_samplecnt 0x0
+; GISEL64-NEXT:    s_wait_bvhcnt 0x0
+; GISEL64-NEXT:    s_wait_kmcnt 0x0
+; GISEL64-NEXT:    s_mov_b32 s2, s33
+; GISEL64-NEXT:    s_add_co_i32 s33, s32, 0x3ff
+; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_and_b32 s33, s33, 0xfffffc00
+; GISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GISEL64-NEXT:    s_mov_b32 s3, s34
+; GISEL64-NEXT:    s_mov_b32 s34, s32
+; GISEL64-NEXT:    s_addk_co_i32 s32, 0x800
+; GISEL64-NEXT:    s_wait_storecnt 0x0
+; GISEL64-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
+; GISEL64-NEXT:    s_wait_storecnt 0x0
+; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_mov_b32 s32, s34
+; GISEL64-NEXT:    s_mov_b32 s34, s3
+; GISEL64-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL64-NEXT:    s_mov_b32 s33, s2
+; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-DAGISEL-LABEL: realign_stack:
+; GFX1250-DAGISEL:       ; %bb.0:
+; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 s1, s33
+; GFX1250-DAGISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
+; GFX1250-DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-DAGISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
+; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 s2, s34
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 s34, s32
+; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0x800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
+; GFX1250-DAGISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 s32, s34
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 s34, s2
+; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 s33, s1
+; GFX1250-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %fussy = alloca i32, align 1024, addrspace(5)
+  store volatile i32 %x, ptr addrspace(5) %fussy, align 1024
+  ret void
+}
+
 define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: multiple_blocks:
 ; DAGISEL:       ; %bb.0:
