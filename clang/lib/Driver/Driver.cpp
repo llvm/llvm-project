@@ -3672,29 +3672,45 @@ class OffloadingActionBuilder final {
             // compiler phases, including backend and assemble phases.
             ActionList AL;
             Action *BackendAction = nullptr;
+            bool AssembleAndLink = true;
             if (ToolChains.front()->getTriple().isSPIRV() ||
                 (ToolChains.front()->getTriple().isAMDGCN() &&
                  GpuArchList[I] == StringRef("amdgcnspirv"))) {
-              // Emit LLVM bitcode for SPIR-V targets. SPIR-V device tool chain
-              // (HIPSPVToolChain or HIPAMDToolChain) runs post-link LLVM IR
-              // passes.
-              types::ID Output = Args.hasArg(options::OPT_S)
+
+              bool UseSPIRVBackend =
+                  Args.hasFlag(options::OPT_use_experimental_spirv_backend,
+                               options::OPT_no_use_experimental_spirv_backend,
+                               /*Default=*/false);
+
+              types::ID Output = UseSPIRVBackend ? types::TY_SPV
+                                 : Args.hasArg(options::OPT_S)
                                      ? types::TY_LLVM_IR
                                      : types::TY_LLVM_BC;
+
               BackendAction =
                   C.MakeAction<BackendJobAction>(CudaDeviceActions[I], Output);
+
+              if (UseSPIRVBackend) {
+                AssembleAndLink = false;
+              }
+
             } else
               BackendAction = C.getDriver().ConstructPhaseAction(
                   C, Args, phases::Backend, CudaDeviceActions[I],
                   AssociatedOffloadKind);
-            auto AssembleAction = C.getDriver().ConstructPhaseAction(
-                C, Args, phases::Assemble, BackendAction,
-                AssociatedOffloadKind);
-            AL.push_back(AssembleAction);
-            // Create a link action to link device IR with device library
-            // and generate ISA.
-            CudaDeviceActions[I] =
-                C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+
+            if (AssembleAndLink) {
+              auto AssembleAction = C.getDriver().ConstructPhaseAction(
+                  C, Args, phases::Assemble, BackendAction,
+                  AssociatedOffloadKind);
+              AL.push_back(AssembleAction);
+              // Create a link action to link device IR with device library
+              // and generate ISA.
+              CudaDeviceActions[I] =
+                  C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+            } else {
+              CudaDeviceActions[I] = BackendAction;
+            }
           }
 
           // OffloadingActionBuilder propagates device arch until an offload
