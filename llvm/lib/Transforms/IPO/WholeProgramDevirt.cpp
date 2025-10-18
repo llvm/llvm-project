@@ -1142,11 +1142,12 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         if (LocalFound)
           return false;
         LocalFound = true;
-      } else
+      } else {
         // Don't expect to find a mix of locals and non-locals (due to path
         // prefix for locals one should never have the same GUID as a
         // non-local).
         assert(!LocalFound);
+      }
       auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
       if (!CurVS->vTableFuncs().empty() ||
           // Previously clang did not attach the necessary type metadata to
