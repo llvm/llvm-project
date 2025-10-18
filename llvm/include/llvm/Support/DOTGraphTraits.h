@@ -164,7 +164,7 @@ public:
 ///
 template <typename Ty>
 struct DOTGraphTraits : public DefaultDOTGraphTraits {
-  DOTGraphTraits (bool simple=false) : DefaultDOTGraphTraits (simple) {}
+  using DefaultDOTGraphTraits::DefaultDOTGraphTraits;
 };
 
 } // End llvm namespace
