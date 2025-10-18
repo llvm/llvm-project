@@ -144,9 +144,8 @@ void Scope::add_crayPointer(const SourceName &name, Symbol &pointer) {
 }
 
 Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
-  const auto it{commonBlocks_.find(name)};
-  if (it != commonBlocks_.end()) {
-    return *it->second;
+  if (auto *cb{FindCommonBlock(name)}) {
+    return *cb;
   } else {
     Symbol &symbol{MakeSymbol(
         name, Attrs{}, CommonBlockDetails{name.empty() ? location : name})};
@@ -154,9 +153,25 @@ Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
     return symbol;
   }
 }
-Symbol *Scope::FindCommonBlock(const SourceName &name) const {
-  const auto it{commonBlocks_.find(name)};
-  return it != commonBlocks_.end() ? &*it->second : nullptr;
+
+Symbol *Scope::FindCommonBlockInVisibleScopes(const SourceName &name) const {
+  if (Symbol * cb{FindCommonBlock(name)}) {
+    return cb;
+  } else if (Symbol * cb{FindCommonBlockUse(name)}) {
+    return &cb->GetUltimate();
+  } else if (IsSubmodule()) {
+    if (const Scope *parent{
+            symbol_ ? symbol_->get<ModuleDetails>().parent() : nullptr}) {
+      if (auto *cb{parent->FindCommonBlockInVisibleScopes(name)}) {
+        return cb;
+      }
+    }
+  } else if (!IsTopLevel() && parent_) {
+    if (auto *cb{parent_->FindCommonBlockInVisibleScopes(name)}) {
+      return cb;
+    }
+  }
+  return nullptr;
 }
 
 Scope *Scope::FindSubmodule(const SourceName &name) const {
@@ -167,6 +182,11 @@ Scope *Scope::FindSubmodule(const SourceName &name) const {
     return &*it->second;
   }
 }
+
+bool Scope::AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol) {
+  return commonBlockUses_.emplace(name, cbSymbol).second;
+}
+
 bool Scope::AddSubmodule(const SourceName &name, Scope &submodule) {
   return submodules_.emplace(name, submodule).second;
 }

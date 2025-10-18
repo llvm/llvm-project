@@ -1729,17 +1729,13 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
 
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     const parser::Name *name) {
-  if (auto *prev{name
-              ? GetContext().scope.parent().FindCommonBlock(name->source)
-              : nullptr}) {
-    name->symbol = prev;
-    return prev;
+  if (!name) {
+    return nullptr;
   }
-  // Check if the Common Block is declared in the current scope
-  if (auto *commonBlockSymbol{
-          name ? GetContext().scope.FindCommonBlock(name->source) : nullptr}) {
-    name->symbol = commonBlockSymbol;
-    return commonBlockSymbol;
+  if (auto *cb{
+          GetContext().scope.FindCommonBlockInVisibleScopes(name->source)}) {
+    name->symbol = cb;
+    return cb;
   }
   return nullptr;
 }
@@ -1789,8 +1785,8 @@ void AccAttributeVisitor::ResolveAccObject(
               }
             } else {
               context_.Say(name.source,
-                  "COMMON block must be declared in the same scoping unit "
-                  "in which the OpenACC directive or clause appears"_err_en_US);
+                  "Could not find COMMON block '%s' used in OpenACC directive"_err_en_US,
+                  name.ToString());
             }
           },
       },
