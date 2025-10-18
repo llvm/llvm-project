@@ -1622,6 +1622,7 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
     const ValueLatticeElement &OpValState = getValueState(OpVal);
     // Safety: ValueState[&I] doesn't invalidate OpValState since it is already
     // in the map.
+    assert(ValueState.contains(&I) && "&I is not in ValueState map.");
     mergeInValue(ValueState[&I], &I, OpValState);
     return;
   }
@@ -1990,10 +1991,11 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
           mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg,
                        getMaxWidenStepsOpts());
         }
-      } else
-        mergeInValue(ValueState[&*AI], &*AI,
-                     getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
-                     getMaxWidenStepsOpts());
+      } else {
+        ValueLatticeElement CallArg =
+            getValueState(*CAI).intersect(getArgAttributeVL(&*AI));
+        mergeInValue(ValueState[&*AI], &*AI, CallArg, getMaxWidenStepsOpts());
+      }
     }
   }
 }
