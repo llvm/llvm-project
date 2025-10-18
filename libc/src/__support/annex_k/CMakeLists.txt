@@ -10,3 +10,12 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.abort
 )
+
+add_header_library(
+  libc_constraint_handler
+  HDRS
+    libc_constraint_handler.h
+  DEPENDS
+    .abort_handler_s
+    libc.hdr.types.constraint_handler_t
+)
