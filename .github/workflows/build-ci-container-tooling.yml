@@ -45,12 +45,34 @@ jobs:
           echo "container-format-filename=$(echo $container_name-format:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
           echo "container-lint-filename=$(echo $container_name-lint:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
 
+      - name: Print Build Tool Versions
+        run: |
+          echo "=== Podman Version ==="
+          podman version || true
+          echo ""
+          echo "=== Podman Info (includes Buildah version) ==="
+          podman info || true
+          echo ""
+          echo "=== Buildah Version ==="
+          buildah version || true
+          echo ""
+          echo "=== Docker Version (if available) ==="
+          docker version || true
+          echo ""
+          echo "=== BuildKit Version (if available) ==="
+          buildctl --version || true
+          docker buildx version || true
+          echo ""
+          echo "=== OS Information ==="
+          cat /etc/os-release || true
+          uname -a || true
+
       - name: Build container
         run: |
-          podman build --target ci-container-code-format \
+          podman build --format docker --target ci-container-code-format \
           -f .github/workflows/containers/github-action-ci-tooling/Dockerfile \
           -t ${{ steps.vars.outputs.container-name-format-tag }} .
-          podman build --target ci-container-code-lint \
+          podman build --format docker --target ci-container-code-lint \
           -f .github/workflows/containers/github-action-ci-tooling/Dockerfile \
           -t ${{ steps.vars.outputs.container-name-lint-tag }} .
 
