@@ -809,12 +809,11 @@ private:
 
   /// Look up the file with the specified name and determine its owning
   /// module.
-  OptionalFileEntryRef
-  getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
-                          const DirectoryEntry *Dir, bool IsSystemHeaderDir,
-                          Module *RequestingModule,
-                          ModuleMap::KnownHeader *SuggestedModule,
-                          bool OpenFile = true, bool CacheFailures = true);
+  OptionalFileEntryRef getFileAndSuggestModule(
+      StringRef FileName, SourceLocation IncludeLoc, const DirectoryEntry *Dir,
+      bool IsSystemHeaderDir, Module *RequestingModule,
+      ModuleMap::KnownHeader *SuggestedModule, bool NeedSuggest,
+      bool OpenFile = true, bool CacheFailures = true);
 
   /// Cache the result of a successful lookup at the given include location
   /// using the search path at \c HitIt.
