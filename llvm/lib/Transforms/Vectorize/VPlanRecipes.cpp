@@ -520,8 +520,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractLastLanePerPart:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
@@ -890,8 +890,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractLastLanePerPart:
-  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement: {
     unsigned Offset =
         getOpcode() == VPInstruction::ExtractPenultimateElement ? 2 : 1;
@@ -1159,7 +1158,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
-  case VPInstruction::ExtractLastElement: {
+  case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
@@ -1179,8 +1178,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 }
 
 bool VPInstruction::isVectorToScalar() const {
-  return getOpcode() == VPInstruction::ExtractLastElement ||
-         getOpcode() == VPInstruction::ExtractLastLanePerPart ||
+  return getOpcode() == VPInstruction::ExtractLastLane ||
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
@@ -1243,8 +1241,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLane:
-  case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractLastLanePerPart:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::FirstActiveLane:
@@ -1391,11 +1389,11 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ExtractLane:
     O << "extract-lane";
     break;
-  case VPInstruction::ExtractLastElement:
-    O << "extract-last-element";
+  case VPInstruction::ExtractLastLane:
+    O << "extract-last-lane";
     break;
-  case VPInstruction::ExtractLastLanePerPart:
-    O << "extract-last-lane-per-part";
+  case VPInstruction::ExtractLastPart:
+    O << "extract-last-part";
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
@@ -1558,7 +1556,8 @@ void VPIRInstruction::extractLastLaneOfFirstOperand(VPBuilder &Builder) {
   if (Exiting->isLiveIn())
     return;
 
-  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastElement, {Exiting});
+  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastPart, Exiting);
+  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastLane, Exiting);
   setOperand(0, Exiting);
 }
 
