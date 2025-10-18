@@ -1285,30 +1285,30 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
 void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned long ul, unsigned long long ull,
                        unsigned __int128 ui128, _BitInt(8) bi8,
-											 _BitInt(16) bi16, _BitInt(32) bi32, 
-											 _BitInt(64) bi64, _BitInt(128) bi128) {
-	uc = __builtin_bswapg(uc);
-	// CHECK: %1 = load i8, ptr %uc.addr
-	// CHECK: store i8 %1, ptr %uc.addr
-	us = __builtin_bswapg(us);
-	// CHECK: call i16 @llvm.bswap.i16
-	ui = __builtin_bswapg(ui);
-	// CHECK: call i32 @llvm.bswap.i32
-	ul = __builtin_bswapg(ul);
-	// CHECK: call i64 @llvm.bswap.i64
-	ull = __builtin_bswapg(ull);
-	// CHECK: call i64 @llvm.bswap.i64
-	ui128 = __builtin_bswapg(ui128);
-	// CHECK: call i128 @llvm.bswap.i128
-	bi8 = __builtin_bswapg(bi8);
-	// CHECK: %17 = load i8, ptr %bi8.addr, align 1
+                       _BitInt(16) bi16, _BitInt(32) bi32, 
+                       _BitInt(64) bi64, _BitInt(128) bi128) {
+  uc = __builtin_bswapg(uc);
+  // CHECK: %1 = load i8, ptr %uc.addr
+  // CHECK: store i8 %1, ptr %uc.addr
+  us = __builtin_bswapg(us);
+  // CHECK: call i16 @llvm.bswap.i16
+  ui = __builtin_bswapg(ui);
+  // CHECK: call i32 @llvm.bswap.i32
+  ul = __builtin_bswapg(ul);
+  // CHECK: call i64 @llvm.bswap.i64
+  ull = __builtin_bswapg(ull);
+  // CHECK: call i64 @llvm.bswap.i64
+  ui128 = __builtin_bswapg(ui128);
+  // CHECK: call i128 @llvm.bswap.i128
+  bi8 = __builtin_bswapg(bi8);
+  // CHECK: %17 = load i8, ptr %bi8.addr, align 1
   // CHECK: store i8 %17, ptr %bi8.addr
-	bi16 = __builtin_bswapg(bi16);
-	// CHECK: call i16 @llvm.bswap.i16
-	bi32 = __builtin_bswapg(bi32);
-	// CHECK: call i32 @llvm.bswap.i32
-	bi64 = __builtin_bswapg(bi64);
-	// CHECK: call i64 @llvm.bswap.i64
-	bi128 = __builtin_bswapg(bi128);
-	// CHECK: call i128 @llvm.bswap.i128
+  bi16 = __builtin_bswapg(bi16);
+  // CHECK: call i16 @llvm.bswap.i16
+  bi32 = __builtin_bswapg(bi32);
+  // CHECK: call i32 @llvm.bswap.i32
+  bi64 = __builtin_bswapg(bi64);
+  // CHECK: call i64 @llvm.bswap.i64
+  bi128 = __builtin_bswapg(bi128);
+  // CHECK: call i128 @llvm.bswap.i128
 }

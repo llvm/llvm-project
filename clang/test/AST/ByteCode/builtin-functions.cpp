@@ -831,12 +831,12 @@ namespace bswap {
 #ifndef __AVR__
   int h10 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
   int h11 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
-	int h12 = __builtin_bswapg((_BitInt(32))0x00001234) == (_BitInt(32))0x34120000 ? 1 : f();
-	int h13 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x3412000000000000 ? 1 : f();
-	int h14 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
-	int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
-	// expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
-	// ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  int h12 = __builtin_bswapg((_BitInt(32))0x00001234) == (_BitInt(32))0x34120000 ? 1 : f();
+  int h13 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x3412000000000000 ? 1 : f();
+  int h14 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
+  int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
+  // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  // ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
 #endif
 
   constexpr const int const_expr = 0x1234;
