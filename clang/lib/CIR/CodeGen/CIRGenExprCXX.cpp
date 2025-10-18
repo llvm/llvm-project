@@ -390,7 +390,7 @@ void CIRGenFunction::emitNewArrayInitializer(
 
   // If all elements have already been initialized, skip any further
   // initialization.
-  auto constOp = dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
+  auto constOp = mlir::dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
   if (constOp) {
     auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constOp.getValue());
     // Just skip out if the constant count is zero.
