@@ -6083,11 +6083,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
   }
 
-  if (Style.BreakAfterAttributes == FormatStyle::ABS_Leave &&
-      Left.is(TT_AttributeRSquare) && Right.NewlinesBefore > 0) {
-    return true;
-  }
-
   return false;
 }
 
