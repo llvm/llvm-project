@@ -6536,6 +6536,15 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
 def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
 
 //===----------------------------------------------------------------------===//
+// KCFI check pseudo-instruction.
+//===----------------------------------------------------------------------===//
+let isPseudo = 1 in {
+  def KCFI_CHECK
+      : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+        Sched<[]>;
+}
+
+//===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.
 //===----------------------------------------------------------------------===//
 let isPseudo = 1 in {
