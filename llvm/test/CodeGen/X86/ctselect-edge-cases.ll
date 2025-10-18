@@ -21,6 +21,8 @@ define i128 @test_ctselect_i128(i1 %cond, i128 %a, i128 %b) {
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    .cfi_offset %esi, -12
 ; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -31,12 +33,14 @@ define i128 @test_ctselect_i128(i1 %cond, i128 %a, i128 %b) {
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, 12(%eax)
-; X32-NEXT:    movl %ecx, 8(%eax)
+; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 12(%eax)
+; X32-NEXT:    movl %edx, 8(%eax)
 ; X32-NEXT:    movl %edi, 4(%eax)
 ; X32-NEXT:    movl %esi, (%eax)
+; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 12
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    popl %edi
