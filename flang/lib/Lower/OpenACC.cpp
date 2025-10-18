@@ -34,6 +34,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
