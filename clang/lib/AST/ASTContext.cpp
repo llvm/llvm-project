@@ -12608,6 +12608,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'm':
     Type = Context.MFloat8Ty;
     break;
+  case 'r':
+    Type = Context.HLSLResourceTy;
+    break;
   }
 
   // If there are modifiers and if we're allowed to parse them, go for it.
