@@ -212,6 +212,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
 
+  if (isPunningDereference(SubExpr))
+    return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true,
+                                 CE);
+
   if (DiscardResult)
     return this->delegate(SubExpr);
 
@@ -5509,6 +5513,46 @@ bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
         return false;
   }
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::isPunningDereference(const Expr *E)
+{
+  E = E->IgnoreParenImpCasts();
+
+  const auto *UO = dyn_cast<UnaryOperator>(E);
+  if (!UO || UO->getOpcode() != UO_Deref)
+    return false;
+
+  const Expr *Base = UO->getSubExpr()->IgnoreParenImpCasts();
+  const auto *Cast = dyn_cast<CastExpr>(Base);
+  if (!Cast)
+    return false;
+
+  // Only consider reinterpret-ish casts
+  switch (Cast->getCastKind()) {
+    case CK_BitCast:
+    case CK_PointerToIntegral:
+    case CK_IntegralToPointer:
+    case CK_AddressSpaceConversion:
+      break;
+    default:
+      return false; // CK_NoOp etc. are fine
+  }
+
+  QualType DestPtrTy = Cast->getType();
+  QualType SrcPtrTy  = Cast->getSubExpr()->getType();
+  if (!DestPtrTy->isPointerType() || !SrcPtrTy->isPointerType())
+    return true; // super fishy, treat it as a pun
+
+  QualType DestPointee = DestPtrTy->getPointeeType();
+  QualType SrcPointee  = SrcPtrTy->getPointeeType();
+
+  // If pointee types differ (ignoring qualifiers), its a pun
+  if (!Ctx.getASTContext().hasSameUnqualifiedType(DestPointee, SrcPointee))
+    return true;
+
+  return false;
 }
 
 static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
