@@ -2023,7 +2023,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   CharUnits cookieOffset = cookieSize - sizeSize;
   mlir::Value cookiePtrValue = baseBytePtr;
   if (!cookieOffset.isZero()) {
-    auto offsetOp = cgf.getBuilder().getSignedInt(
+    mlir::Value offsetOp = cgf.getBuilder().getSignedInt(
         loc, cookieOffset.getQuantity(), /*width=*/32);
     cookiePtrValue =
         cgf.getBuilder().createPtrStride(loc, cookiePtrValue, offsetOp);
