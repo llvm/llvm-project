@@ -276,18 +276,23 @@ define <2 x i64> @v2i64(<2 x i64> %d) {
 ; CHECK-SD-LABEL: v2i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #1
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #2
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #4
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #8
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #16
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #32
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v2.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-SD-NEXT:    ushr v3.2d, v2.2d, #2
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v2.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    ushr v4.2d, v2.2d, #4
+; CHECK-SD-NEXT:    orr v2.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v4.16b
+; CHECK-SD-NEXT:    ushr v1.2d, v2.2d, #8
+; CHECK-SD-NEXT:    orr v2.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ushr v3.2d, v2.2d, #16
+; CHECK-SD-NEXT:    orr v1.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    ushr v1.2d, v1.2d, #32
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-SD-NEXT:    uaddlp v0.4s, v0.8h
@@ -314,34 +319,44 @@ define <3 x i64> @v3i64(<3 x i64> %d) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    ushr v4.2d, v2.2d, #1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    orr v6.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-SD-NEXT:    ushr v1.2d, v0.2d, #1
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ushr v1.2d, v2.2d, #1
-; CHECK-SD-NEXT:    ushr v3.2d, v0.2d, #2
-; CHECK-SD-NEXT:    orr v1.16b, v2.16b, v1.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v1.2d, #2
-; CHECK-SD-NEXT:    ushr v3.2d, v0.2d, #4
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v1.2d, #4
-; CHECK-SD-NEXT:    ushr v3.2d, v0.2d, #8
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v1.2d, #8
-; CHECK-SD-NEXT:    ushr v3.2d, v0.2d, #16
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v1.2d, #16
-; CHECK-SD-NEXT:    ushr v3.2d, v0.2d, #32
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v1.2d, #32
+; CHECK-SD-NEXT:    ushr v7.2d, v6.2d, #2
+; CHECK-SD-NEXT:    bic v2.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    orr v3.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    orr v6.16b, v6.16b, v7.16b
+; CHECK-SD-NEXT:    bic v2.16b, v2.16b, v7.16b
+; CHECK-SD-NEXT:    ushr v5.2d, v3.2d, #2
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ushr v17.2d, v6.2d, #4
+; CHECK-SD-NEXT:    orr v3.16b, v3.16b, v5.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v5.16b
+; CHECK-SD-NEXT:    orr v6.16b, v6.16b, v17.16b
+; CHECK-SD-NEXT:    bic v2.16b, v2.16b, v17.16b
+; CHECK-SD-NEXT:    ushr v16.2d, v3.2d, #4
+; CHECK-SD-NEXT:    ushr v4.2d, v6.2d, #8
+; CHECK-SD-NEXT:    orr v3.16b, v3.16b, v16.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v16.16b
+; CHECK-SD-NEXT:    orr v6.16b, v6.16b, v4.16b
+; CHECK-SD-NEXT:    bic v2.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    ushr v1.2d, v3.2d, #8
+; CHECK-SD-NEXT:    orr v3.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ushr v5.2d, v3.2d, #16
+; CHECK-SD-NEXT:    orr v1.16b, v3.16b, v5.16b
+; CHECK-SD-NEXT:    ushr v3.2d, v6.2d, #16
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v5.16b
+; CHECK-SD-NEXT:    ushr v1.2d, v1.2d, #32
+; CHECK-SD-NEXT:    orr v4.16b, v6.16b, v3.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    bic v1.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ushr v2.2d, v4.2d, #32
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
-; CHECK-SD-NEXT:    mvn v1.16b, v1.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-SD-NEXT:    uaddlp v0.4s, v0.8h
@@ -377,30 +392,40 @@ define <4 x i64> @v4i64(<4 x i64> %d) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ushr v2.2d, v0.2d, #1
 ; CHECK-SD-NEXT:    ushr v3.2d, v1.2d, #1
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v0.2d, #2
-; CHECK-SD-NEXT:    ushr v3.2d, v1.2d, #2
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v0.2d, #4
-; CHECK-SD-NEXT:    ushr v3.2d, v1.2d, #4
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v0.2d, #8
-; CHECK-SD-NEXT:    ushr v3.2d, v1.2d, #8
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v0.2d, #16
-; CHECK-SD-NEXT:    ushr v3.2d, v1.2d, #16
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    ushr v2.2d, v0.2d, #32
-; CHECK-SD-NEXT:    ushr v3.2d, v1.2d, #32
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    orr v4.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    orr v5.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-SD-NEXT:    mvn v1.16b, v1.16b
+; CHECK-SD-NEXT:    ushr v6.2d, v4.2d, #2
+; CHECK-SD-NEXT:    ushr v7.2d, v5.2d, #2
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    orr v4.16b, v4.16b, v6.16b
+; CHECK-SD-NEXT:    orr v5.16b, v5.16b, v7.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v6.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v7.16b
+; CHECK-SD-NEXT:    ushr v16.2d, v4.2d, #4
+; CHECK-SD-NEXT:    ushr v17.2d, v5.2d, #4
+; CHECK-SD-NEXT:    orr v4.16b, v4.16b, v16.16b
+; CHECK-SD-NEXT:    orr v5.16b, v5.16b, v17.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v16.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v17.16b
+; CHECK-SD-NEXT:    ushr v2.2d, v4.2d, #8
+; CHECK-SD-NEXT:    ushr v3.2d, v5.2d, #8
+; CHECK-SD-NEXT:    orr v4.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    orr v5.16b, v5.16b, v3.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    ushr v6.2d, v4.2d, #16
+; CHECK-SD-NEXT:    ushr v7.2d, v5.2d, #16
+; CHECK-SD-NEXT:    orr v2.16b, v4.16b, v6.16b
+; CHECK-SD-NEXT:    orr v3.16b, v5.16b, v7.16b
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v6.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v7.16b
+; CHECK-SD-NEXT:    ushr v2.2d, v2.2d, #32
+; CHECK-SD-NEXT:    ushr v3.2d, v3.2d, #32
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    bic v1.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    uaddlp v0.8h, v0.16b

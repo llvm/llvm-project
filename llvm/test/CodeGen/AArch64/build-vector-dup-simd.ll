@@ -117,10 +117,10 @@ entry:
 define <1 x float> @dup_v1i32_ueq(float %a, float %b) {
 ; CHECK-NOFULLFP16-LABEL: dup_v1i32_ueq:
 ; CHECK-NOFULLFP16:       // %bb.0: // %entry
-; CHECK-NOFULLFP16-NEXT:    fcmgt s2, s0, s1
-; CHECK-NOFULLFP16-NEXT:    fcmgt s0, s1, s0
-; CHECK-NOFULLFP16-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-NOFULLFP16-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NOFULLFP16-NEXT:    fcmgt s2, s1, s0
+; CHECK-NOFULLFP16-NEXT:    fcmgt s0, s0, s1
+; CHECK-NOFULLFP16-NEXT:    mvn v1.8b, v2.8b
+; CHECK-NOFULLFP16-NEXT:    bic v0.8b, v1.8b, v0.8b
 ; CHECK-NOFULLFP16-NEXT:    ret
 ;
 ; CHECK-NONANS-LABEL: dup_v1i32_ueq:
@@ -130,10 +130,10 @@ define <1 x float> @dup_v1i32_ueq(float %a, float %b) {
 ;
 ; CHECK-FULLFP16-LABEL: dup_v1i32_ueq:
 ; CHECK-FULLFP16:       // %bb.0: // %entry
-; CHECK-FULLFP16-NEXT:    fcmgt s2, s0, s1
-; CHECK-FULLFP16-NEXT:    fcmgt s0, s1, s0
-; CHECK-FULLFP16-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-FULLFP16-NEXT:    mvn v0.8b, v0.8b
+; CHECK-FULLFP16-NEXT:    fcmgt s2, s1, s0
+; CHECK-FULLFP16-NEXT:    fcmgt s0, s0, s1
+; CHECK-FULLFP16-NEXT:    mvn v1.8b, v2.8b
+; CHECK-FULLFP16-NEXT:    bic v0.8b, v1.8b, v0.8b
 ; CHECK-FULLFP16-NEXT:    ret
 entry:
   %0 = fcmp ueq float %a, %b
@@ -260,10 +260,10 @@ entry:
 define <1 x float> @dup_v1i32_uno(float %a, float %b) {
 ; CHECK-LABEL: dup_v1i32_uno:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcmge s2, s0, s1
-; CHECK-NEXT:    fcmgt s0, s1, s0
-; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    fcmgt s2, s1, s0
+; CHECK-NEXT:    fcmge s0, s0, s1
+; CHECK-NEXT:    mvn v1.8b, v2.8b
+; CHECK-NEXT:    bic v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:
   %0 = fcmp uno float %a, %b

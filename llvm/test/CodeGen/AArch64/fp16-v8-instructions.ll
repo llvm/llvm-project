@@ -990,14 +990,14 @@ define <8 x i1> @test_fcmp_ueq(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: test_fcmp_ueq:
-; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fcmgt v2.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
-; CHECK-FP16-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-FP16-NEXT:    mvn v0.16b, v0.16b
-; CHECK-FP16-NEXT:    xtn v0.8b, v0.8h
-; CHECK-FP16-NEXT:    ret
+; CHECK-FP16-SD-LABEL: test_fcmp_ueq:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    fcmgt v2.8h, v1.8h, v0.8h
+; CHECK-FP16-SD-NEXT:    fcmgt v0.8h, v0.8h, v1.8h
+; CHECK-FP16-SD-NEXT:    mvn v1.16b, v2.16b
+; CHECK-FP16-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-FP16-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_ueq:
 ; CHECK-CVT-GI:       // %bb.0:
@@ -1016,6 +1016,15 @@ define <8 x i1> @test_fcmp_ueq(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-CVT-GI-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: test_fcmp_ueq:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    fcmgt v2.8h, v0.8h, v1.8h
+; CHECK-FP16-GI-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
+; CHECK-FP16-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-FP16-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-FP16-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-FP16-GI-NEXT:    ret
   %1 = fcmp ueq <8 x half> %a, %b
   ret <8 x i1> %1
 }
@@ -1190,14 +1199,14 @@ define <8 x i1> @test_fcmp_uno(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: test_fcmp_uno:
-; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fcmge v2.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
-; CHECK-FP16-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-FP16-NEXT:    mvn v0.16b, v0.16b
-; CHECK-FP16-NEXT:    xtn v0.8b, v0.8h
-; CHECK-FP16-NEXT:    ret
+; CHECK-FP16-SD-LABEL: test_fcmp_uno:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    fcmgt v2.8h, v1.8h, v0.8h
+; CHECK-FP16-SD-NEXT:    fcmge v0.8h, v0.8h, v1.8h
+; CHECK-FP16-SD-NEXT:    mvn v1.16b, v2.16b
+; CHECK-FP16-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-FP16-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_uno:
 ; CHECK-CVT-GI:       // %bb.0:
@@ -1216,6 +1225,15 @@ define <8 x i1> @test_fcmp_uno(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-CVT-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-CVT-GI-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: test_fcmp_uno:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    fcmge v2.8h, v0.8h, v1.8h
+; CHECK-FP16-GI-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
+; CHECK-FP16-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-FP16-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-FP16-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-FP16-GI-NEXT:    ret
   %1 = fcmp uno <8 x half> %a, %b
   ret <8 x i1> %1
 }
