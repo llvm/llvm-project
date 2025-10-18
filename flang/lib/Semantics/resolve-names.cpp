@@ -1140,7 +1140,7 @@ protected:
   std::optional<SourceName> BeginCheckOnIndexUseInOwnBounds(
       const parser::DoVariable &name) {
     std::optional<SourceName> result{checkIndexUseInOwnBounds_};
-    checkIndexUseInOwnBounds_ = name.thing.thing.source;
+    checkIndexUseInOwnBounds_ = parser::UnwrapRef<parser::Name>(name).source;
     return result;
   }
   void EndCheckOnIndexUseInOwnBounds(const std::optional<SourceName> &restore) {
@@ -2130,7 +2130,7 @@ public:
   void Post(const parser::SubstringInquiry &);
   template <typename A, typename B>
   void Post(const parser::LoopBounds<A, B> &x) {
-    ResolveName(*parser::Unwrap<parser::Name>(x.name));
+    ResolveName(parser::UnwrapRef<parser::Name>(x.name));
   }
   void Post(const parser::ProcComponentRef &);
   bool Pre(const parser::FunctionReference &);
@@ -2560,7 +2560,7 @@ KindExpr DeclTypeSpecVisitor::GetKindParamExpr(
         CHECK(!state_.originalKindParameter);
         // Save a pointer to the KIND= expression in the parse tree
         // in case we need to reanalyze it during PDT instantiation.
-        state_.originalKindParameter = &expr->thing.thing.thing.value();
+        state_.originalKindParameter = parser::Unwrap<parser::Expr>(expr);
       }
     }
     // Inhibit some errors now that will be caught later during instantiations.
@@ -5649,6 +5649,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
     Say(name, "Named constant '%s' already has a value"_err_en_US);
   }
+  parser::CharBlock at{parser::UnwrapRef<parser::Expr>(expr).source};
   if (inOldStyleParameterStmt_) {
     // non-standard extension PARAMETER statement (no parentheses)
     Walk(expr);
@@ -5657,7 +5658,6 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
       SayWithDecl(name, symbol,
           "Alternative style PARAMETER '%s' must not already have an explicit type"_err_en_US);
     } else if (folded) {
-      auto at{expr.thing.value().source};
       if (evaluate::IsActuallyConstant(*folded)) {
         if (const auto *type{currScope().GetType(*folded)}) {
           if (type->IsPolymorphic()) {
@@ -5682,8 +5682,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     // standard-conforming PARAMETER statement (with parentheses)
     ApplyImplicitRules(symbol);
     Walk(expr);
-    if (auto converted{EvaluateNonPointerInitializer(
-            symbol, expr, expr.thing.value().source)}) {
+    if (auto converted{EvaluateNonPointerInitializer(symbol, expr, at)}) {
       details->set_init(std::move(*converted));
     }
   }
@@ -6149,7 +6148,7 @@ bool DeclarationVisitor::Pre(const parser::KindParam &x) {
   if (const auto *kind{std::get_if<
           parser::Scalar<parser::Integer<parser::Constant<parser::Name>>>>(
           &x.u)}) {
-    const parser::Name &name{kind->thing.thing.thing};
+    const auto &name{parser::UnwrapRef<parser::Name>(kind)};
     if (!FindSymbol(name)) {
       Say(name, "Parameter '%s' not found"_err_en_US);
     }
@@ -7460,7 +7459,7 @@ void DeclarationVisitor::DeclareLocalEntity(
 Symbol *DeclarationVisitor::DeclareStatementEntity(
     const parser::DoVariable &doVar,
     const std::optional<parser::IntegerTypeSpec> &type) {
-  const parser::Name &name{doVar.thing.thing};
+  const auto &name{parser::UnwrapRef<parser::Name>(doVar)};
   const DeclTypeSpec *declTypeSpec{nullptr};
   if (auto *prev{FindSymbol(name)}) {
     if (prev->owner() == currScope()) {
@@ -7893,13 +7892,14 @@ bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
   common::visit(
       common::visitors{
           [&](const parser::Scalar<Indirection<parser::Designator>> &y) {
-            Walk(y.thing.value());
-            const parser::Name &first{parser::GetFirstName(y.thing.value())};
+            const auto &designator{parser::UnwrapRef<parser::Designator>(y)};
+            Walk(designator);
+            const parser::Name &first{parser::GetFirstName(designator)};
             if (first.symbol) {
               first.symbol->set(Symbol::Flag::InDataStmt);
             }
           },
-          [&](const Indirection<parser::DataImpliedDo> &y) { Walk(y.value()); },
+          [&](const Indirection<parser::DataImpliedDo> &y) { Walk(y); },
       },
       x.u);
   return false;
@@ -8582,8 +8582,7 @@ public:
   void Post(const parser::WriteStmt &) { inAsyncIO_ = false; }
   void Post(const parser::IoControlSpec::Size &size) {
     if (const auto *designator{
-            std::get_if<common::Indirection<parser::Designator>>(
-                &size.v.thing.thing.u)}) {
+            parser::Unwrap<common::Indirection<parser::Designator>>(size)}) {
       NoteAsyncIODesignator(designator->value());
     }
   }
@@ -9175,16 +9174,17 @@ bool DeclarationVisitor::CheckNonPointerInitialization(
 }
 
 void DeclarationVisitor::NonPointerInitialization(
-    const parser::Name &name, const parser::ConstantExpr &expr) {
+    const parser::Name &name, const parser::ConstantExpr &constExpr) {
   if (CheckNonPointerInitialization(
           name, /*inLegacyDataInitialization=*/false)) {
     Symbol &ultimate{name.symbol->GetUltimate()};
     auto &details{ultimate.get<ObjectEntityDetails>()};
+    const auto &expr{parser::UnwrapRef<parser::Expr>(constExpr)};
     if (ultimate.owner().IsParameterizedDerivedType()) {
       // Save the expression for per-instantiation analysis.
-      details.set_unanalyzedPDTComponentInit(&expr.thing.value());
+      details.set_unanalyzedPDTComponentInit(&expr);
     } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
-                   ultimate, expr, expr.thing.value().source)}) {
+                   ultimate, constExpr, expr.source)}) {
       details.set_init(std::move(*folded));
       ultimate.set(Symbol::Flag::InDataStmt, false);
     }
