@@ -30,6 +30,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
@@ -296,7 +297,7 @@ getSymbolFromAccObject(const Fortran::parser::AccObject &accObject) {
   if (const auto *designator =
           std::get_if<Fortran::parser::Designator>(&accObject.u)) {
     if (const auto *name =
-            Fortran::semantics::getDesignatorNameIfDataRef(*designator))
+            Fortran::parser::GetDesignatorNameIfDataRef(*designator))
       return *name->symbol;
     if (const auto *arrayElement =
             Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
@@ -2900,7 +2901,7 @@ static Op createComputeOp(
             if (const auto *designator =
                     std::get_if<Fortran::parser::Designator>(&accObject.u)) {
               if (const auto *name =
-                      Fortran::semantics::getDesignatorNameIfDataRef(
+                      Fortran::parser::GetDesignatorNameIfDataRef(
                           *designator)) {
                 auto cond = converter.getSymbolAddress(*name->symbol);
                 selfCond = builder.createConvert(clauseLocation,
@@ -4261,8 +4262,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
         Fortran::common::visitors{
             [&](const Fortran::parser::Designator &designator) {
               if (const auto *name =
-                      Fortran::semantics::getDesignatorNameIfDataRef(
-                          designator)) {
+                      Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
                 genCtors(operandLocation, *name->symbol);
               }
             },
