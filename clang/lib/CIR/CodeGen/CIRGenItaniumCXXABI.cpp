@@ -2042,7 +2042,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // Finally, compute a pointer to the actual data buffer by skipping
   // over the cookie completely.
-  auto dataOffset = cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
+  mlir::Value dataOffset = cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
                                                   /*width=*/32);
   mlir::Value dataPtr =
       cgf.getBuilder().createPtrStride(loc, baseBytePtr, dataOffset);
