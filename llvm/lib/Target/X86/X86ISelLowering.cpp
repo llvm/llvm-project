@@ -55615,10 +55615,12 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
 
   // Folds for better commutativity:
   if (N1->hasOneUse()) {
+    /*
     // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
     if (SDValue Not = IsNOT(N1, DAG))
       return DAG.getNOT(
           DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
+          */
 
     // ANDNP(x,PSHUFB(y,z)) -> PSHUFB(y,OR(z,x))
     // Zero out elements by setting the PSHUFB mask value to 0xFF.
