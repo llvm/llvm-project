@@ -11909,6 +11909,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
       return LHS.shl(RHS.getZExtValue());
     });
+
   case clang::X86::BI__builtin_ia32_psrav4si:
   case clang::X86::BI__builtin_ia32_psrav8di:
   case clang::X86::BI__builtin_ia32_psrav8hi:
