@@ -747,3 +747,47 @@ define i8 @scmp_from_select_eq_and_gt_neg3(i32 %x, i32 %y) {
   %r = select i1 %eq, i8 0, i8 %sel1
   ret i8 %r
 }
+
+define i32 @scmp_ashr(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_ashr(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i32 [[A]], 31
+; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt i32 [[A]], 1
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP_INV]], i32 [[A_LOBIT]], i32 1
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %a.lobit = ashr i32 %a, 31
+  %cmp.inv = icmp slt i32 %a, 1
+  %retval.0 = select i1 %cmp.inv, i32 %a.lobit, i32 1
+  ret i32 %retval.0
+}
+
+; Test the new SGT pattern: select (icmp sgt X, 0), 1, ashr X, bitwidth-1 -> scmp(X, 0)
+define i8 @scmp_ashr_sgt_pattern(i8 %a) {
+; CHECK-LABEL: define i8 @scmp_ashr_sgt_pattern(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i8 [[A]], 7
+; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt i8 [[A]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP_INV]], i8 [[A_LOBIT]], i8 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a.lobit = ashr i8 %a, 7
+  %cmp = icmp sgt i8 %a, 0
+  %retval = select i1 %cmp, i8 1, i8 %a.lobit
+  ret i8 %retval
+}
+
+; Test the SLT pattern: select (icmp slt X, 1), ashr X, bitwidth-1, 1 -> scmp(X, 0)
+define i8 @scmp_ashr_slt_pattern(i8 %a) {
+; CHECK-LABEL: define i8 @scmp_ashr_slt_pattern(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr i8 [[A]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 [[A_LOBIT]], i8 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a.lobit = ashr i8 %a, 7
+  %cmp = icmp slt i8 %a, 1
+  %retval = select i1 %cmp, i8 %a.lobit, i8 1
+  ret i8 %retval
+}
