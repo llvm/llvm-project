@@ -3,358 +3,379 @@
 ; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 | %ptxas-verify %}
 target triple = "nvptx64-nvidia-cuda"
 
-; COM: Save the vector to the stack once.
-define ptx_kernel void @lower_once(ptr addrspace(3) %shared.mem, <8 x double> %vector, i32 %idx0, i32 %idx1, i32 %idx2, i32 %idx3) local_unnamed_addr {
-; CHECK-LABEL: lower_once(
+; Test dynamic insertelt at the beginning of a chain
+define <4 x i32> @dynamic_at_beginning(i32 %idx) {
+; CHECK-LABEL: dynamic_at_beginning(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 8 .b8 __local_depot0[64];
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot0[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b64 %rd<39>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot0;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [lower_once_param_0];
-; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [lower_once_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd6, %rd7}, [lower_once_param_1+16];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd8, %rd9}, [lower_once_param_1+32];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd10, %rd11}, [lower_once_param_1+48];
-; CHECK-NEXT:    ld.shared.b64 %rd12, [%rd1+16];
-; CHECK-NEXT:    ld.shared.b64 %rd13, [%rd1+24];
-; CHECK-NEXT:    ld.param.b32 %rd14, [lower_once_param_2];
-; CHECK-NEXT:    and.b64 %rd15, %rd14, 7;
-; CHECK-NEXT:    shl.b64 %rd16, %rd15, 3;
-; CHECK-NEXT:    add.u64 %rd17, %SP, 0;
-; CHECK-NEXT:    add.s64 %rd18, %rd17, %rd16;
-; CHECK-NEXT:    ld.param.b32 %rd19, [lower_once_param_3];
-; CHECK-NEXT:    and.b64 %rd20, %rd19, 7;
-; CHECK-NEXT:    shl.b64 %rd21, %rd20, 3;
-; CHECK-NEXT:    add.s64 %rd22, %rd17, %rd21;
-; CHECK-NEXT:    ld.param.b32 %rd23, [lower_once_param_4];
-; CHECK-NEXT:    and.b64 %rd24, %rd23, 7;
-; CHECK-NEXT:    shl.b64 %rd25, %rd24, 3;
-; CHECK-NEXT:    add.s64 %rd26, %rd17, %rd25;
-; CHECK-NEXT:    st.b64 [%SP+56], %rd11;
-; CHECK-NEXT:    st.b64 [%SP+48], %rd10;
-; CHECK-NEXT:    st.b64 [%SP+40], %rd9;
-; CHECK-NEXT:    st.b64 [%SP+32], %rd8;
-; CHECK-NEXT:    st.b64 [%SP+24], %rd7;
-; CHECK-NEXT:    st.b64 [%SP+16], %rd6;
-; CHECK-NEXT:    st.b64 [%SP+8], %rd5;
-; CHECK-NEXT:    st.b64 [%SP], %rd4;
-; CHECK-NEXT:    st.b64 [%rd18], %rd2;
-; CHECK-NEXT:    st.b64 [%rd22], %rd3;
-; CHECK-NEXT:    st.b64 [%rd26], %rd12;
-; CHECK-NEXT:    ld.param.b32 %rd27, [lower_once_param_5];
-; CHECK-NEXT:    and.b64 %rd28, %rd27, 7;
-; CHECK-NEXT:    shl.b64 %rd29, %rd28, 3;
-; CHECK-NEXT:    add.s64 %rd30, %rd17, %rd29;
-; CHECK-NEXT:    st.b64 [%rd30], %rd13;
-; CHECK-NEXT:    ld.b64 %rd31, [%SP+8];
-; CHECK-NEXT:    ld.b64 %rd32, [%SP];
-; CHECK-NEXT:    ld.b64 %rd33, [%SP+24];
-; CHECK-NEXT:    ld.b64 %rd34, [%SP+16];
-; CHECK-NEXT:    ld.b64 %rd35, [%SP+40];
-; CHECK-NEXT:    ld.b64 %rd36, [%SP+32];
-; CHECK-NEXT:    ld.b64 %rd37, [%SP+56];
-; CHECK-NEXT:    ld.b64 %rd38, [%SP+48];
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1072], {%rd38, %rd37};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1056], {%rd36, %rd35};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1040], {%rd34, %rd33};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1024], {%rd32, %rd31};
+; CHECK-NEXT:    ld.param.b32 %rd1, [dynamic_at_beginning_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%rd5], 10;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r2, 20, 30, %r1};
 ; CHECK-NEXT:    ret;
-entry:
-  %offset.0 = getelementptr double, ptr addrspace(3) %shared.mem, i32 0
-  %element.0 = load double, ptr addrspace(3) %offset.0, align 64
-  %offset.1 = getelementptr double, ptr addrspace(3) %shared.mem, i32 1
-  %element.1 = load double, ptr addrspace(3) %offset.1, align 8
-  %offset.2 = getelementptr double, ptr addrspace(3) %shared.mem, i32 2
-  %element.2 = load double, ptr addrspace(3) %offset.2, align 8
-  %offset.3 = getelementptr double, ptr addrspace(3) %shared.mem, i32 3
-  %element.3 = load double, ptr addrspace(3) %offset.3, align 8
-  %vector.build0 = insertelement <8 x double> %vector, double %element.0, i32 %idx0
-  %vector.build1 = insertelement <8 x double> %vector.build0, double %element.1, i32 %idx1
-  %vector.build2 = insertelement <8 x double> %vector.build1, double %element.2, i32 %idx2
-  %vector.build3 = insertelement <8 x double> %vector.build2, double %element.3, i32 %idx3
-  %location = getelementptr i8, ptr addrspace(3) %shared.mem, i32 1024
-  store <8 x double> %vector.build3, ptr addrspace(3) %location, align 64
-  ret void
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
+  %v2 = insertelement <4 x i32> %v1, i32 30, i32 2
+  ret <4 x i32> %v2
 }
 
-; COM: Save the vector to the stack twice. Because these are in two different
-; slots, the resulting sequences may be non-overlapping even though the
-; insertelt sequences overlap.
-define ptx_kernel void @lower_twice(ptr addrspace(3) %shared.mem, <8 x double> %vector, i32 %idx0, i32 %idx1, i32 %idx2, i32 %idx3) local_unnamed_addr {
-; CHECK-LABEL: lower_twice(
+; Test dynamic insertelt at the end of a chain
+define <4 x i32> @dynamic_at_end(i32 %idx) {
+; CHECK-LABEL: dynamic_at_end(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 8 .b8 __local_depot1[128];
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot1[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b64 %rd<51>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [lower_twice_param_0];
-; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [lower_twice_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd6, %rd7}, [lower_twice_param_1+16];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd8, %rd9}, [lower_twice_param_1+32];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd10, %rd11}, [lower_twice_param_1+48];
-; CHECK-NEXT:    ld.shared.b64 %rd12, [%rd1+16];
-; CHECK-NEXT:    ld.shared.b64 %rd13, [%rd1+24];
-; CHECK-NEXT:    ld.param.b32 %rd14, [lower_twice_param_2];
-; CHECK-NEXT:    and.b64 %rd15, %rd14, 7;
-; CHECK-NEXT:    shl.b64 %rd16, %rd15, 3;
-; CHECK-NEXT:    add.u64 %rd17, %SP, 0;
-; CHECK-NEXT:    add.s64 %rd18, %rd17, %rd16;
-; CHECK-NEXT:    add.u64 %rd19, %SP, 64;
-; CHECK-NEXT:    add.s64 %rd20, %rd19, %rd16;
-; CHECK-NEXT:    ld.param.b32 %rd21, [lower_twice_param_3];
-; CHECK-NEXT:    and.b64 %rd22, %rd21, 7;
-; CHECK-NEXT:    shl.b64 %rd23, %rd22, 3;
-; CHECK-NEXT:    add.s64 %rd24, %rd17, %rd23;
-; CHECK-NEXT:    add.s64 %rd25, %rd19, %rd23;
-; CHECK-NEXT:    st.b64 [%SP+120], %rd11;
-; CHECK-NEXT:    st.b64 [%SP+112], %rd10;
-; CHECK-NEXT:    st.b64 [%SP+104], %rd9;
-; CHECK-NEXT:    st.b64 [%SP+96], %rd8;
-; CHECK-NEXT:    st.b64 [%SP+88], %rd7;
-; CHECK-NEXT:    st.b64 [%SP+80], %rd6;
-; CHECK-NEXT:    st.b64 [%SP+72], %rd5;
-; CHECK-NEXT:    st.b64 [%SP+64], %rd4;
-; CHECK-NEXT:    st.b64 [%rd20], %rd2;
-; CHECK-NEXT:    st.b64 [%rd25], %rd3;
-; CHECK-NEXT:    ld.param.b32 %rd26, [lower_twice_param_4];
-; CHECK-NEXT:    and.b64 %rd27, %rd26, 7;
-; CHECK-NEXT:    shl.b64 %rd28, %rd27, 3;
-; CHECK-NEXT:    add.s64 %rd29, %rd19, %rd28;
-; CHECK-NEXT:    st.b64 [%rd29], %rd12;
-; CHECK-NEXT:    add.s64 %rd30, %rd17, %rd28;
-; CHECK-NEXT:    ld.b64 %rd31, [%SP+72];
-; CHECK-NEXT:    ld.b64 %rd32, [%SP+64];
-; CHECK-NEXT:    ld.b64 %rd33, [%SP+88];
-; CHECK-NEXT:    ld.b64 %rd34, [%SP+80];
-; CHECK-NEXT:    ld.b64 %rd35, [%SP+104];
-; CHECK-NEXT:    ld.b64 %rd36, [%SP+96];
-; CHECK-NEXT:    ld.b64 %rd37, [%SP+120];
-; CHECK-NEXT:    ld.b64 %rd38, [%SP+112];
-; CHECK-NEXT:    st.b64 [%SP+56], %rd11;
-; CHECK-NEXT:    st.b64 [%SP+48], %rd10;
-; CHECK-NEXT:    st.b64 [%SP+40], %rd9;
-; CHECK-NEXT:    st.b64 [%SP+32], %rd8;
-; CHECK-NEXT:    st.b64 [%SP+24], %rd7;
-; CHECK-NEXT:    st.b64 [%SP+16], %rd6;
-; CHECK-NEXT:    st.b64 [%SP+8], %rd5;
-; CHECK-NEXT:    st.b64 [%SP], %rd4;
-; CHECK-NEXT:    st.b64 [%rd18], %rd2;
-; CHECK-NEXT:    st.b64 [%rd24], %rd3;
-; CHECK-NEXT:    st.b64 [%rd30], %rd12;
-; CHECK-NEXT:    ld.param.b32 %rd39, [lower_twice_param_5];
-; CHECK-NEXT:    and.b64 %rd40, %rd39, 7;
-; CHECK-NEXT:    shl.b64 %rd41, %rd40, 3;
-; CHECK-NEXT:    add.s64 %rd42, %rd17, %rd41;
-; CHECK-NEXT:    st.b64 [%rd42], %rd13;
-; CHECK-NEXT:    ld.b64 %rd43, [%SP+8];
-; CHECK-NEXT:    ld.b64 %rd44, [%SP];
-; CHECK-NEXT:    ld.b64 %rd45, [%SP+24];
-; CHECK-NEXT:    ld.b64 %rd46, [%SP+16];
-; CHECK-NEXT:    ld.b64 %rd47, [%SP+40];
-; CHECK-NEXT:    ld.b64 %rd48, [%SP+32];
-; CHECK-NEXT:    ld.b64 %rd49, [%SP+56];
-; CHECK-NEXT:    ld.b64 %rd50, [%SP+48];
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1072], {%rd50, %rd49};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1056], {%rd48, %rd47};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1040], {%rd46, %rd45};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1024], {%rd44, %rd43};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1144], {%rd38, %rd37};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1128], {%rd36, %rd35};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1112], {%rd34, %rd33};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1096], {%rd32, %rd31};
+; CHECK-NEXT:    ld.param.b32 %rd1, [dynamic_at_end_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%SP+4], 20;
+; CHECK-NEXT:    st.b32 [%SP], 10;
+; CHECK-NEXT:    st.b32 [%rd5], 30;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
 ; CHECK-NEXT:    ret;
-entry:
-  %offset.0 = getelementptr double, ptr addrspace(3) %shared.mem, i32 0
-  %element.0 = load double, ptr addrspace(3) %offset.0, align 64
-  %offset.1 = getelementptr double, ptr addrspace(3) %shared.mem, i32 1
-  %element.1 = load double, ptr addrspace(3) %offset.1, align 8
-  %offset.2 = getelementptr double, ptr addrspace(3) %shared.mem, i32 2
-  %element.2 = load double, ptr addrspace(3) %offset.2, align 8
-  %offset.3 = getelementptr double, ptr addrspace(3) %shared.mem, i32 3
-  %element.3 = load double, ptr addrspace(3) %offset.3, align 8
-
-; COM: begin chain 1
-  %vector.build0 = insertelement <8 x double> %vector, double %element.0, i32 %idx0
-  %vector.build1 = insertelement <8 x double> %vector.build0, double %element.1, i32 %idx1
-
-; COM: interleave a second chain of insertelements
-  %vector.build1-2 = insertelement <8 x double> %vector.build1, double %element.2, i32 %idx2
-
-; COM: continue chain 1
-  %vector.build2 = insertelement <8 x double> %vector.build1, double %element.2, i32 %idx2
-  %vector.build3 = insertelement <8 x double> %vector.build2, double %element.3, i32 %idx3
-
-; COM: save chain 1
-  %location = getelementptr i8, ptr addrspace(3) %shared.mem, i32 1024
-  store <8 x double> %vector.build3, ptr addrspace(3) %location, align 64
-
-; COM: save chain 2
-  %location-2 = getelementptr i8, ptr addrspace(3) %shared.mem, i32 1096
-  store <8 x double> %vector.build1-2, ptr addrspace(3) %location-2, align 64
-  ret void
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
+  %v2 = insertelement <4 x i32> %v1, i32 30, i32 %idx
+  ret <4 x i32> %v2
 }
 
-; COM: a chain of insertelts may include dynamic and constant indices. We only
-; reduce the total number of memory operations if there is a high ratio of
-; dynamic to constant insertelts.
-
-; COM: lower all insertelts to stores. This avoids lowering the two dynamic
-; insertelts individually and saves memory.
-define ptx_kernel void @mix_lower_all(ptr addrspace(3) %shared.mem, <8 x double> %vector, i32 %idx0, i32 %idx2) local_unnamed_addr {
-; CHECK-LABEL: mix_lower_all(
+; Test dynamic insertelt in the middle of a chain
+define <4 x i32> @dynamic_in_middle(i32 %idx) {
+; CHECK-LABEL: dynamic_in_middle(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 8 .b8 __local_depot2[64];
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot2[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b64 %rd<31>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot2;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [mix_lower_all_param_0];
-; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [mix_lower_all_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd6, %rd7}, [mix_lower_all_param_1+16];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd8, %rd9}, [mix_lower_all_param_1+32];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd10, %rd11}, [mix_lower_all_param_1+48];
-; CHECK-NEXT:    ld.shared.b64 %rd12, [%rd1+16];
-; CHECK-NEXT:    ld.shared.b64 %rd13, [%rd1+24];
-; CHECK-NEXT:    ld.param.b32 %rd14, [mix_lower_all_param_2];
-; CHECK-NEXT:    and.b64 %rd15, %rd14, 7;
-; CHECK-NEXT:    shl.b64 %rd16, %rd15, 3;
-; CHECK-NEXT:    add.u64 %rd17, %SP, 0;
-; CHECK-NEXT:    add.s64 %rd18, %rd17, %rd16;
-; CHECK-NEXT:    st.b64 [%SP+56], %rd11;
-; CHECK-NEXT:    st.b64 [%SP+48], %rd10;
-; CHECK-NEXT:    st.b64 [%SP+40], %rd9;
-; CHECK-NEXT:    st.b64 [%SP+32], %rd8;
-; CHECK-NEXT:    st.b64 [%SP+24], %rd7;
-; CHECK-NEXT:    st.b64 [%SP+16], %rd6;
-; CHECK-NEXT:    st.b64 [%SP+8], %rd5;
-; CHECK-NEXT:    st.b64 [%SP], %rd4;
-; CHECK-NEXT:    st.b64 [%rd18], %rd2;
-; CHECK-NEXT:    st.b64 [%SP+16], %rd12;
-; CHECK-NEXT:    st.b64 [%SP+8], %rd3;
-; CHECK-NEXT:    ld.param.b32 %rd19, [mix_lower_all_param_3];
-; CHECK-NEXT:    and.b64 %rd20, %rd19, 7;
-; CHECK-NEXT:    shl.b64 %rd21, %rd20, 3;
-; CHECK-NEXT:    add.s64 %rd22, %rd17, %rd21;
-; CHECK-NEXT:    st.b64 [%rd22], %rd13;
-; CHECK-NEXT:    ld.b64 %rd23, [%SP+8];
-; CHECK-NEXT:    ld.b64 %rd24, [%SP];
-; CHECK-NEXT:    ld.b64 %rd25, [%SP+24];
-; CHECK-NEXT:    ld.b64 %rd26, [%SP+16];
-; CHECK-NEXT:    ld.b64 %rd27, [%SP+40];
-; CHECK-NEXT:    ld.b64 %rd28, [%SP+32];
-; CHECK-NEXT:    ld.b64 %rd29, [%SP+56];
-; CHECK-NEXT:    ld.b64 %rd30, [%SP+48];
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1072], {%rd30, %rd29};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1056], {%rd28, %rd27};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1040], {%rd26, %rd25};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1024], {%rd24, %rd23};
+; CHECK-NEXT:    ld.param.b32 %rd1, [dynamic_in_middle_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%SP], 10;
+; CHECK-NEXT:    st.b32 [%rd5], 20;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r3, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r3, %r2, 30, %r1};
 ; CHECK-NEXT:    ret;
-entry:
-  %offset.0 = getelementptr double, ptr addrspace(3) %shared.mem, i32 0
-  %element.0 = load double, ptr addrspace(3) %offset.0, align 64
-  %offset.1 = getelementptr double, ptr addrspace(3) %shared.mem, i32 1
-  %element.1 = load double, ptr addrspace(3) %offset.1, align 8
-  %offset.2 = getelementptr double, ptr addrspace(3) %shared.mem, i32 2
-  %element.2 = load double, ptr addrspace(3) %offset.2, align 8
-  %offset.3 = getelementptr double, ptr addrspace(3) %shared.mem, i32 3
-  %element.3 = load double, ptr addrspace(3) %offset.3, align 8
-  %vector.build0 = insertelement <8 x double> %vector, double %element.0, i32 %idx0
-  %vector.build1 = insertelement <8 x double> %vector.build0, double %element.1, i32 1
-  %vector.build2 = insertelement <8 x double> %vector.build1, double %element.2, i32 2
-  %vector.build3 = insertelement <8 x double> %vector.build2, double %element.3, i32 %idx2
-  %location = getelementptr i8, ptr addrspace(3) %shared.mem, i32 1024
-  store <8 x double> %vector.build3, ptr addrspace(3) %location, align 64
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx
+  %v2 = insertelement <4 x i32> %v1, i32 30, i32 2
+  ret <4 x i32> %v2
+}
+
+; Test repeated dynamic insertelt with the same index
+define <4 x i32> @repeated_same_index(i32 %idx) {
+; CHECK-LABEL: repeated_same_index(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot3[16];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot3;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [repeated_same_index_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%rd5], 20;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
+; CHECK-NEXT:    ret;
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx
+  ret <4 x i32> %v1
+}
+
+; Test multiple dynamic insertelts
+define <4 x i32> @multiple_dynamic(i32 %idx0, i32 %idx1) {
+; CHECK-LABEL: multiple_dynamic(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot4[16];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<10>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot4;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [multiple_dynamic_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%rd5], 10;
+; CHECK-NEXT:    ld.param.b32 %rd6, [multiple_dynamic_param_1];
+; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
+; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
+; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
+; CHECK-NEXT:    st.b32 [%rd9], 20;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
+; CHECK-NEXT:    ret;
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx1
+  ret <4 x i32> %v1
+}
+
+; Test chain with all dynamic insertelts
+define <4 x i32> @all_dynamic(i32 %idx0, i32 %idx1, i32 %idx2, i32 %idx3) {
+; CHECK-LABEL: all_dynamic(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot5[16];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot5;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [all_dynamic_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    ld.param.b32 %rd6, [all_dynamic_param_1];
+; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
+; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
+; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
+; CHECK-NEXT:    ld.param.b32 %rd10, [all_dynamic_param_2];
+; CHECK-NEXT:    and.b64 %rd11, %rd10, 3;
+; CHECK-NEXT:    shl.b64 %rd12, %rd11, 2;
+; CHECK-NEXT:    add.s64 %rd13, %rd4, %rd12;
+; CHECK-NEXT:    st.b32 [%rd5], 10;
+; CHECK-NEXT:    st.b32 [%rd9], 20;
+; CHECK-NEXT:    st.b32 [%rd13], 30;
+; CHECK-NEXT:    ld.param.b32 %rd14, [all_dynamic_param_3];
+; CHECK-NEXT:    and.b64 %rd15, %rd14, 3;
+; CHECK-NEXT:    shl.b64 %rd16, %rd15, 2;
+; CHECK-NEXT:    add.s64 %rd17, %rd4, %rd16;
+; CHECK-NEXT:    st.b32 [%rd17], 40;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
+; CHECK-NEXT:    ret;
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx1
+  %v2 = insertelement <4 x i32> %v1, i32 30, i32 %idx2
+  %v3 = insertelement <4 x i32> %v2, i32 40, i32 %idx3
+  ret <4 x i32> %v3
+}
+
+; Test mixed constant and dynamic insertelts with high ratio of dynamic ones.
+; Should lower all insertelts to stores.
+define <4 x i32> @mix_high_dynamic_ratio(i32 %idx0, i32 %idx1) {
+; CHECK-LABEL: mix_high_dynamic_ratio(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot6[16];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<10>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot6;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [mix_high_dynamic_ratio_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%rd5], 10;
+; CHECK-NEXT:    ld.param.b32 %rd6, [mix_high_dynamic_ratio_param_1];
+; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
+; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
+; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
+; CHECK-NEXT:    st.b32 [%SP+4], 20;
+; CHECK-NEXT:    st.b32 [%rd9], 30;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
+; CHECK-NEXT:    ret;
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
+  %v2 = insertelement <4 x i32> %v1, i32 30, i32 %idx1
+  ret <4 x i32> %v2
+}
+
+; Test mixed constant and dynamic insertelts with low ratio of dynamic ones.
+; Should handle dynamic insertelt individually.
+define <4 x i32> @mix_low_dynamic_ratio(i32 %idx) {
+; CHECK-LABEL: mix_low_dynamic_ratio(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot7[16];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot7;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [mix_low_dynamic_ratio_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%SP], 10;
+; CHECK-NEXT:    st.b32 [%rd5], 20;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r2, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r2, %r1, 30, 40};
+; CHECK-NEXT:    ret;
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx
+  %v2 = insertelement <4 x i32> %v1, i32 30, i32 2
+  %v3 = insertelement <4 x i32> %v2, i32 40, i32 3
+  ret <4 x i32> %v3
+}
+
+; Test two separate chains that don't interfere
+define void @two_separate_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
+; CHECK-LABEL: two_separate_chains(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot8[32];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot8;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [two_separate_chains_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 16;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%rd5], 10;
+; CHECK-NEXT:    ld.param.b32 %rd6, [two_separate_chains_param_1];
+; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
+; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
+; CHECK-NEXT:    add.u64 %rd9, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd10, %rd9, %rd8;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+28];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+24];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+16];
+; CHECK-NEXT:    ld.param.b64 %rd11, [two_separate_chains_param_2];
+; CHECK-NEXT:    st.b32 [%rd10], 30;
+; CHECK-NEXT:    ld.param.b64 %rd12, [two_separate_chains_param_3];
+; CHECK-NEXT:    ld.b32 %r4, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r5, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r6, [%SP];
+; CHECK-NEXT:    st.v4.b32 [%rd11], {%r3, 20, %r2, %r1};
+; CHECK-NEXT:    st.v4.b32 [%rd12], {%r6, %r5, 40, %r4};
+; CHECK-NEXT:    ret;
+  ; Chain 1
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
+
+  ; Chain 2
+  %w0 = insertelement <4 x i32> poison, i32 30, i32 %idx1
+  %w1 = insertelement <4 x i32> %w0, i32 40, i32 2
+
+  store <4 x i32> %v1, ptr %out0
+  store <4 x i32> %w1, ptr %out1
   ret void
 }
 
-; COM: lower only the single dynamic insertelt. Lowering the constant
-; insertelts to stores would not reduce the total amount of loads and stores.
-define ptx_kernel void @mix_lower_some(ptr addrspace(3) %shared.mem, <8 x double> %vector, i32 %idx0) local_unnamed_addr {
-; CHECK-LABEL: mix_lower_some(
+; Test overlapping chains (chain 2 starts from middle of chain 1)
+define void @overlapping_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
+; CHECK-LABEL: overlapping_chains(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 8 .b8 __local_depot3[64];
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot9[32];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b64 %rd<25>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov.b64 %SPL, __local_depot3;
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot9;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [mix_lower_some_param_0];
-; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [mix_lower_some_param_1+16];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd6, %rd7}, [mix_lower_some_param_1+32];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd8, %rd9}, [mix_lower_some_param_1+48];
-; CHECK-NEXT:    ld.param.b32 %rd10, [mix_lower_some_param_2];
-; CHECK-NEXT:    and.b64 %rd11, %rd10, 7;
-; CHECK-NEXT:    shl.b64 %rd12, %rd11, 3;
-; CHECK-NEXT:    add.u64 %rd13, %SP, 0;
-; CHECK-NEXT:    add.s64 %rd14, %rd13, %rd12;
-; CHECK-NEXT:    ld.shared.b64 %rd15, [%rd1+16];
-; CHECK-NEXT:    ld.shared.b64 %rd16, [%rd1+24];
-; CHECK-NEXT:    ld.shared.b64 %rd17, [%rd1+32];
-; CHECK-NEXT:    ld.shared.b64 %rd18, [%rd1+40];
-; CHECK-NEXT:    ld.shared.b64 %rd19, [%rd1+48];
-; CHECK-NEXT:    ld.shared.b64 %rd20, [%rd1+56];
-; CHECK-NEXT:    st.b64 [%SP+56], %rd9;
-; CHECK-NEXT:    st.b64 [%SP+48], %rd8;
-; CHECK-NEXT:    st.b64 [%SP+40], %rd7;
-; CHECK-NEXT:    st.b64 [%SP+32], %rd6;
-; CHECK-NEXT:    st.b64 [%SP+24], %rd5;
-; CHECK-NEXT:    st.b64 [%SP+16], %rd15;
-; CHECK-NEXT:    st.b64 [%SP+8], %rd3;
-; CHECK-NEXT:    st.b64 [%SP], %rd2;
-; CHECK-NEXT:    st.b64 [%rd14], %rd16;
-; CHECK-NEXT:    ld.b64 %rd21, [%SP+8];
-; CHECK-NEXT:    ld.b64 %rd22, [%SP];
-; CHECK-NEXT:    ld.b64 %rd23, [%SP+24];
-; CHECK-NEXT:    ld.b64 %rd24, [%SP+16];
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1072], {%rd19, %rd20};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1056], {%rd17, %rd18};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1040], {%rd24, %rd23};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd1+1024], {%rd22, %rd21};
+; CHECK-NEXT:    ld.param.b32 %rd1, [overlapping_chains_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 16;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    st.b32 [%rd5], 10;
+; CHECK-NEXT:    add.u64 %rd6, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd7, %rd6, %rd3;
+; CHECK-NEXT:    ld.b32 %r1, [%SP+28];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+16];
+; CHECK-NEXT:    ld.param.b64 %rd8, [overlapping_chains_param_2];
+; CHECK-NEXT:    st.b32 [%rd7], 10;
+; CHECK-NEXT:    ld.param.b32 %rd9, [overlapping_chains_param_1];
+; CHECK-NEXT:    and.b64 %rd10, %rd9, 3;
+; CHECK-NEXT:    shl.b64 %rd11, %rd10, 2;
+; CHECK-NEXT:    add.s64 %rd12, %rd6, %rd11;
+; CHECK-NEXT:    st.b32 [%SP+4], 20;
+; CHECK-NEXT:    st.b32 [%rd12], 30;
+; CHECK-NEXT:    ld.param.b64 %rd13, [overlapping_chains_param_3];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r4, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r5, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r6, [%SP];
+; CHECK-NEXT:    st.v4.b32 [%rd8], {%r2, 20, 40, %r1};
+; CHECK-NEXT:    st.v4.b32 [%rd13], {%r6, %r5, %r4, %r3};
 ; CHECK-NEXT:    ret;
-entry:
-  %offset.0 = getelementptr double, ptr addrspace(3) %shared.mem, i32 0
-  %element.0 = load double, ptr addrspace(3) %offset.0, align 64
-  %offset.1 = getelementptr double, ptr addrspace(3) %shared.mem, i32 1
-  %element.1 = load double, ptr addrspace(3) %offset.1, align 8
-  %offset.2 = getelementptr double, ptr addrspace(3) %shared.mem, i32 2
-  %element.2 = load double, ptr addrspace(3) %offset.2, align 8
-  %offset.3 = getelementptr double, ptr addrspace(3) %shared.mem, i32 3
-  %element.3 = load double, ptr addrspace(3) %offset.3, align 8
-  %offset.4 = getelementptr double, ptr addrspace(3) %shared.mem, i32 4
-  %element.4 = load double, ptr addrspace(3) %offset.4, align 8
-  %offset.5 = getelementptr double, ptr addrspace(3) %shared.mem, i32 5
-  %element.5 = load double, ptr addrspace(3) %offset.5, align 8
-  %offset.6 = getelementptr double, ptr addrspace(3) %shared.mem, i32 6
-  %element.6 = load double, ptr addrspace(3) %offset.6, align 8
-  %offset.7 = getelementptr double, ptr addrspace(3) %shared.mem, i32 7
-  %element.7 = load double, ptr addrspace(3) %offset.7, align 8
-  %vector.build0 = insertelement <8 x double> %vector, double %element.0, i32 0
-  %vector.build1 = insertelement <8 x double> %vector.build0, double %element.1, i32 1
-  %vector.build2 = insertelement <8 x double> %vector.build1, double %element.2, i32 2
-  %vector.build3 = insertelement <8 x double> %vector.build2, double %element.3, i32 %idx0
-  %vector.build4 = insertelement <8 x double> %vector.build3, double %element.4, i32 4
-  %vector.build5 = insertelement <8 x double> %vector.build4, double %element.5, i32 5
-  %vector.build6 = insertelement <8 x double> %vector.build5, double %element.6, i32 6
-  %vector.build7 = insertelement <8 x double> %vector.build6, double %element.7, i32 7
-  %location = getelementptr i8, ptr addrspace(3) %shared.mem, i32 1024
-  store <8 x double> %vector.build7, ptr addrspace(3) %location, align 64
+  %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
+  %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
+
+  ; Chain 2 starts from v1
+  %w0 = insertelement <4 x i32> %v1, i32 30, i32 %idx1
+
+  ; Continue chain 1
+  %v2 = insertelement <4 x i32> %v1, i32 40, i32 2
+
+  store <4 x i32> %v2, ptr %out0
+  store <4 x i32> %w0, ptr %out1
   ret void
 }
