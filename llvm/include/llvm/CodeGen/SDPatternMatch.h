@@ -559,9 +559,8 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
-inline TernaryOpc_match<T0_P, T1_P, T2_P>
-m_SelectLike(const T0_P &Cond, const T1_P &T, const T2_P &F) {
-  return m_Select(Cond, T, F) || m_VSelect(Cond, T, F);
+inline auto m_SelectLike(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return m_AnyOf(m_Select(Cond, T, F), m_VSelect(Cond, T, F));
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>

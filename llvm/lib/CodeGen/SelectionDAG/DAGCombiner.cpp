@@ -2476,28 +2476,29 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
 /// masked vector operation if the target supports it.
 static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
                                               bool ShouldCommuteOperands) {
-  // Match a select as operand 1. The identity constant that we are looking for
-  // is only valid as operand 1 of a non-commutative binop.
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Match a select as operand 1. The identity constant that we are looking for
+  // is only valid as operand 1 of a non-commutative binop.
   if (ShouldCommuteOperands)
     std::swap(N0, N1);
 
-  unsigned SelOpcode = N1.getOpcode();
-  if ((SelOpcode != ISD::VSELECT && SelOpcode != ISD::SELECT) ||
-      !N1.hasOneUse())
+  SDValue Cond, TVal, FVal;
+  if (!sd_match(N1,
+                m_SelectLike(m_Value(Cond), m_Value(TVal), m_Value(FVal))) ||
+      !N1->hasOneUse()) {
     return SDValue();
+  }
 
   // We can't hoist all instructions because of immediate UB (not speculatable).
   // For example div/rem by zero.
   if (!DAG.isSafeToSpeculativelyExecuteNode(N))
     return SDValue();
 
+  unsigned SelOpcode = N1.getOpcode();
   unsigned Opcode = N->getOpcode();
   EVT VT = N->getValueType(0);
-  SDValue Cond = N1.getOperand(0);
-  SDValue TVal = N1.getOperand(1);
-  SDValue FVal = N1.getOperand(2);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // This transform increases uses of N0, so freeze it to be safe.
