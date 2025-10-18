@@ -22,9 +22,9 @@ entry:
 }
 
 ; CHECK-LABEL: @cast_to_cast
-; CHECK: load <1 x i64>
-; CHECK: extractelement <1 x i64>
-; CHECK: extractelement <1 x i64>
+; CHECK: load i64
+; CHECK-NEXT: inttoptr i64
+; CHECK-NEXT: inttoptr i64
 define void @cast_to_cast() {
 entry:
   %a.ascast = addrspacecast ptr addrspace(5) undef to ptr
