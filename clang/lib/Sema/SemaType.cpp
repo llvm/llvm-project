@@ -1837,11 +1837,10 @@ QualType Sema::BuildPointerType(QualType T,
   if (getLangOpts().OpenCL)
     T = deduceOpenCLPointeeAddrSpace(*this, T);
 
-  // In WebAssembly, pointers to reference types and pointers to tables are
-  // illegal.
   if (getASTContext().getTargetInfo().getTriple().isWasm()) {
-    if (T.isWebAssemblyReferenceType()) {
-      Diag(Loc, diag::err_wasm_reference_pr) << 0;
+    // In WebAssembly, pointers to tables are illegal.
+    if (T->isWebAssemblyTableType()) {
+      Diag(Loc, diag::err_wasm_table_pr) << 0;
       return QualType();
     }
 

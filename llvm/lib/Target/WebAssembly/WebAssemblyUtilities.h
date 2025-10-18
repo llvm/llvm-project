@@ -56,6 +56,10 @@ MCSymbolWasm *
 getOrCreateFuncrefCallTableSymbol(MCContext &Ctx,
                                   const WebAssemblySubtarget *Subtarget);
 
+MCSymbolWasm *
+getOrCreateExternrefTableSymbol(MCContext &Ctx,
+                                const WebAssemblySubtarget *Subtarget);
+
 /// Find a catch instruction from an EH pad. Returns null if no catch
 /// instruction found or the catch is in an invalid location.
 MachineInstr *findCatch(MachineBasicBlock *EHPad);

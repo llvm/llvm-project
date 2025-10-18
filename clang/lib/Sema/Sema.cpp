@@ -832,6 +832,13 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
         }
       }
     }
+    // WebAssembly tables are not first class values and cannot decay to
+    // pointers. If they are used anywhere they would decay, it is an error.
+    if (ExprTy->isWebAssemblyTableType()) {
+      Diag(E->getExprLoc(), diag::err_wasm_cast_table)
+          << 1 << E->getSourceRange();
+      return ExprError();
+    }
   }
 
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
