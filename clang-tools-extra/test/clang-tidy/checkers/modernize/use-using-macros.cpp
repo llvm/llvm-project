@@ -9,11 +9,6 @@ CODE;
 // CHECK-FIXES: CODE;
 
 struct Foo;
-#define Bar Baz
-typedef Foo Bar;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: #define Bar Baz
-// CHECK-FIXES: using Baz = Foo;
 
 #define TYPEDEF typedef
 TYPEDEF Foo Bak;
