@@ -123,6 +123,16 @@ CompilerType TypeSystem::GetTypeForFormatters(void *type) {
   return CompilerType(weak_from_this(), type);
 }
 
+bool TypeSystem::IsPromotableIntegerType(lldb::opaque_compiler_type_t type) {
+  return false;
+}
+
+llvm::Expected<CompilerType>
+TypeSystem::DoIntegralPromotion(CompilerType from,
+                                ExecutionContextScope *exe_scope) {
+  return CompilerType();
+}
+
 bool TypeSystem::IsTemplateType(lldb::opaque_compiler_type_t type) {
   return false;
 }
