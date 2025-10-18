@@ -186,12 +186,11 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE4:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_UDIV_CONTINUE4]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[PRED_UDIV_CONTINUE4]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 777)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 777
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i32 [[TMP4]], [[X]]
@@ -201,7 +200,8 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_UDIV_IF]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4]]
 ; CHECK:       pred.udiv.if3:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP7]], 777
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = udiv i32 [[TMP12]], [[X]]
@@ -212,7 +212,6 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP16]], <2 x i32> [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[TMP18]] = add <2 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:

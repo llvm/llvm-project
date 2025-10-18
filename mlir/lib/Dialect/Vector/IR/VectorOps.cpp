@@ -1665,10 +1665,10 @@ static bool hasZeroDimVectors(Operation *op) {
          llvm::any_of(op->getResultTypes(), hasZeroDimVectorType);
 }
 
-/// All BroadcastOps and SplatOps, as well as ShapeCastOps that only prepend
-/// 1s, are considered to be 'broadcastlike'.
+/// All BroadcastOps, as well as ShapeCastOps that only prepend 1s, are
+/// considered to be 'broadcastlike'.
 static bool isBroadcastLike(Operation *op) {
-  if (isa<BroadcastOp, SplatOp>(op))
+  if (isa<BroadcastOp>(op))
     return true;
 
   auto shapeCast = dyn_cast<ShapeCastOp>(op);
@@ -2496,8 +2496,7 @@ struct ToElementsOfBroadcast final : OpRewritePattern<ToElementsOp> {
     auto srcElems = vector::ToElementsOp::create(
         rewriter, toElementsOp.getLoc(), bcastOp.getSource());
 
-    int64_t dstCount = std::accumulate(dstShape.begin(), dstShape.end(), 1,
-                                       std::multiplies<int64_t>());
+    int64_t dstCount = llvm::product_of(dstShape);
 
     SmallVector<Value> replacements;
     replacements.reserve(dstCount);
@@ -3249,22 +3248,17 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
 };
 
 /// Consider the defining operation `defOp` of `value`. If `defOp` is a
-/// vector.splat or a vector.broadcast with a scalar operand, return the scalar
-/// value that is splatted. Otherwise return null.
+/// vector.broadcast with a scalar operand, return the scalar value that is
+/// splatted. Otherwise return null.
 ///
-/// Examples:
+/// Example:
 ///
-/// scalar_source --> vector.splat --> value     - return scalar_source
 /// scalar_source --> vector.broadcast --> value - return scalar_source
 static Value getScalarSplatSource(Value value) {
   // Block argument:
   Operation *defOp = value.getDefiningOp();
   if (!defOp)
     return {};
-
-  // Splat:
-  if (auto splat = dyn_cast<vector::SplatOp>(defOp))
-    return splat.getInput();
 
   auto broadcast = dyn_cast<vector::BroadcastOp>(defOp);
 
@@ -7511,41 +7505,6 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
           patterns.getContext(), benefit);
 }
 
-//===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
-  auto constOperand = adaptor.getInput();
-  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
-    return {};
-
-  // SplatElementsAttr::get treats single value for second arg as being a splat.
-  return SplatElementsAttr::get(getType(), {constOperand});
-}
-
-// Canonicalizer for vector.splat. It always gets canonicalized to a
-// vector.broadcast.
-class SplatToBroadcastPattern final : public OpRewritePattern<SplatOp> {
-public:
-  using Base::Base;
-  LogicalResult matchAndRewrite(SplatOp splatOp,
-                                PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splatOp, splatOp.getType(),
-                                                     splatOp.getOperand());
-    return success();
-  }
-};
-void SplatOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                          MLIRContext *context) {
-  results.add<SplatToBroadcastPattern>(context);
-}
-
-void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges.front());
-}
-
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
                                        CombiningKind kind, Value v1, Value acc,
                                        arith::FastMathFlagsAttr fastmath,
@@ -7640,6 +7599,111 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   APInt high(bitwidth, resultType.getDimSize(0) - 1);
   ConstantIntRanges result = {zero, high, zero, high};
   setResultRanges(getResult(), result);
+}
+
+namespace {
+
+/// Fold `vector.step -> arith.cmpi` when the step value is compared to a
+/// constant large enough such that the result is the same at all indices.
+///
+/// For example, rewrite the 'greater than' comparison below,
+///
+/// ```mlir
+/// %cst = arith.constant dense<7> : vector<3xindex>
+/// %stp = vector.step : vector<3xindex>
+/// %out = arith.cmpi ugt, %stp, %cst : vector<3xindex>
+/// ```
+///
+/// as,
+///
+/// ```mlir
+/// %out = arith.constant dense<false> : vector<3xi1>.
+/// ```
+///
+/// Above `[0, 1, 2] > [7, 7, 7]` => `[false, false, false]`. Because the result
+/// is false at ALL indices we fold. If the constant was 1, then
+/// `[0, 1, 2] > [1, 1, 1]` => `[false, false, true]` and we do fold,
+/// conservatively preferring the 'compact' vector.step representation.
+///
+/// Note: this folder only works for the case where the constant (`%cst` above)
+/// is the second operand of the comparison. The arith.cmpi canonicalizer will
+/// ensure that constants are always second (on the right).
+struct StepCompareFolder : public OpRewritePattern<StepOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(StepOp stepOp,
+                                PatternRewriter &rewriter) const override {
+    const int64_t stepSize = stepOp.getResult().getType().getNumElements();
+
+    for (OpOperand &use : stepOp.getResult().getUses()) {
+      auto cmpiOp = dyn_cast<arith::CmpIOp>(use.getOwner());
+      if (!cmpiOp)
+        continue;
+
+      // arith.cmpi canonicalizer makes constants final operands.
+      const unsigned stepOperandNumber = use.getOperandNumber();
+      if (stepOperandNumber != 0)
+        continue;
+
+      // Check that operand 1 is a constant.
+      unsigned constOperandNumber = 1;
+      Value otherOperand = cmpiOp.getOperand(constOperandNumber);
+      std::optional<int64_t> maybeConstValue =
+          getConstantIntValue(otherOperand);
+      if (!maybeConstValue.has_value())
+        continue;
+
+      int64_t constValue = maybeConstValue.value();
+      arith::CmpIPredicate pred = cmpiOp.getPredicate();
+
+      auto maybeSplat = [&]() -> std::optional<bool> {
+        // Handle ult (unsigned less than) and uge (unsigned greater equal).
+        if ((pred == arith::CmpIPredicate::ult ||
+             pred == arith::CmpIPredicate::uge) &&
+            stepSize <= constValue)
+          return pred == arith::CmpIPredicate::ult;
+
+        // Handle ule and ugt.
+        if ((pred == arith::CmpIPredicate::ule ||
+             pred == arith::CmpIPredicate::ugt) &&
+            stepSize - 1 <= constValue) {
+          return pred == arith::CmpIPredicate::ule;
+        }
+
+        // Handle eq and ne.
+        if ((pred == arith::CmpIPredicate::eq ||
+             pred == arith::CmpIPredicate::ne) &&
+            stepSize <= constValue)
+          return pred == arith::CmpIPredicate::ne;
+
+        return std::nullopt;
+      }();
+
+      if (!maybeSplat.has_value())
+        continue;
+
+      rewriter.setInsertionPointAfter(cmpiOp);
+
+      auto type = dyn_cast<VectorType>(cmpiOp.getResult().getType());
+      if (!type)
+        continue;
+
+      auto boolAttr = DenseElementsAttr::get(type, maybeSplat.value());
+      Value splat = mlir::arith::ConstantOp::create(rewriter, cmpiOp.getLoc(),
+                                                    type, boolAttr);
+
+      rewriter.replaceOp(cmpiOp, splat);
+      return success();
+    }
+
+    return failure();
+  }
+};
+} // namespace
+
+void StepOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<StepCompareFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

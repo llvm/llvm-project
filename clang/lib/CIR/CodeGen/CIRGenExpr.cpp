@@ -1185,10 +1185,16 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_BuiltinFnToFnPtr:
     llvm_unreachable("builtin functions are handled elsewhere");
 
+  case CK_Dynamic: {
+    LValue lv = emitLValue(e->getSubExpr());
+    Address v = lv.getAddress();
+    const auto *dce = cast<CXXDynamicCastExpr>(e);
+    return makeNaturalAlignAddrLValue(emitDynamicCast(v, dce), e->getType());
+  }
+
   // These are never l-values; just use the aggregate emission code.
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
-  case CK_Dynamic:
   case CK_ToUnion:
   case CK_BaseToDerived:
   case CK_AddressSpaceConversion:
@@ -2062,7 +2068,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(ip);
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr);
+                                /*var type*/ ty, name, alignIntAttr, arraySize);
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;

@@ -5017,6 +5017,14 @@ public:
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
+  /// Add a cluster_dims attribute to a particular declaration.
+  CUDAClusterDimsAttr *createClusterDimsAttr(const AttributeCommonInfo &CI,
+                                             Expr *X, Expr *Y, Expr *Z);
+  void addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
+                          Expr *Y, Expr *Z);
+  /// Add a no_cluster attribute to a particular declaration.
+  void addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI);
+
   enum class RetainOwnershipKind { NS, CF, OS };
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -10215,15 +10223,12 @@ public:
                                  bool CStyle, bool &ObjCLifetimeConversion);
 
   /// Determine whether the conversion from FromType to ToType is a valid
-  /// conversion that strips "noexcept" or "noreturn" or "cfi_unchecked_callee"
-  /// off the nested function type. This also checks if "cfi_unchecked_callee"
-  /// was added to the function type. If "cfi_unchecked_callee" is added and
-  /// `AddingCFIUncheckedCallee` is provided, it will be set to true. The same
-  /// thing applies for `DiscardingCFIUncheckedCallee` if the attribute is
-  /// discarded.
-  bool IsFunctionConversion(QualType FromType, QualType ToType,
-                            bool *DiscardingCFIUncheckedCallee = nullptr,
-                            bool *AddingCFIUncheckedCallee = nullptr) const;
+  /// conversion of ExtInfo/ExtProtoInfo on the nested function type.
+  /// More precisely, this method checks whether FromType can be transformed
+  /// into an exact match for ToType, by transforming its extended function
+  /// type information in legal manner (e.g. by strictly stripping "noreturn"
+  /// or "noexcept", or by stripping "noescape" for arguments).
+  bool IsFunctionConversion(QualType FromType, QualType ToType) const;
 
   /// Same as `IsFunctionConversion`, but if this would return true, it sets
   /// `ResultTy` to `ToType`.
@@ -13394,6 +13399,13 @@ public:
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
                          TemplateArgumentListInfo &Outputs);
+
+  /// Substitute concept template arguments in the constraint expression
+  /// of a concept-id. This is used to implement [temp.constr.normal].
+  ExprResult
+  SubstConceptTemplateArguments(const ConceptSpecializationExpr *CSE,
+                                const Expr *ConstraintExpr,
+                                const MultiLevelTemplateArgumentList &MLTAL);
 
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
