@@ -11618,6 +11618,61 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
+static bool evalShufpspdBuiltin(EvalInfo &Info, const CallExpr *Call,
+                                APValue &Out) {
+  APValue A, B;
+  APSInt ShuffleMask;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+      !EvaluateAsRValue(Info, Call->getArg(1), B) ||
+      !EvaluateInteger(Call->getArg(2), ShuffleMask, Info))
+    return false;
+
+  const auto *VT = Call->getType()->getAs<VectorType>();
+  if (!VT)
+    return false;
+
+  QualType ElemT = VT->getElementType();
+  unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
+  unsigned NumElts = VT->getNumElements();
+
+  constexpr unsigned LaneBits = 128u;
+  unsigned NumElemPerLane = LaneBits / ElemBits;
+  if (!NumElemPerLane || (NumElts % NumElemPerLane) != 0)
+    return false;
+
+  unsigned NumLanes = NumElts / NumElemPerLane;
+  uint8_t Ctl = static_cast<uint8_t>(ShuffleMask.getZExtValue());
+
+  unsigned SelectableElts = NumElemPerLane / 2;
+  unsigned BitsPerSel = SelectableElts == 1 ? 1 : 2;
+  unsigned SelMask = (1u << BitsPerSel) - 1;
+  unsigned MaskBits = 8;
+
+  SmallVector<APValue, 16> ResultElements;
+  ResultElements.reserve(NumElts);
+
+  unsigned BitIdx = 0;
+
+  for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+    unsigned LaneBase = Lane * NumElemPerLane;
+
+    for (unsigned i = 0; i < SelectableElts; ++i) {
+      unsigned SelIdx = (Ctl >> BitIdx) & SelMask;
+      ResultElements.push_back(A.getVectorElt(LaneBase + SelIdx));
+      BitIdx = (BitIdx + BitsPerSel) % MaskBits;
+    }
+
+    for (unsigned i = 0; i < SelectableElts; ++i) {
+      unsigned SelIdx = (Ctl >> BitIdx) & SelMask;
+      ResultElements.push_back(B.getVectorElt(LaneBase + SelIdx));
+      BitIdx = (BitIdx + BitsPerSel) % MaskBits;
+    }
+  }
+
+  Out = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
                               APValue &Out) {
   APValue SrcVec, ControlVec;
@@ -12316,7 +12371,17 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512:
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512: {
+    APValue R;
+    if (!evalShufpspdBuiltin(Info, E, R))
+      return false;
+    return Success(R, E);
+  }
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512: {

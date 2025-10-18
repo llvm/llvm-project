@@ -3128,6 +3128,52 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_shuf(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+
+  unsigned ShuffleMask = popToAPSInt(S, Call->getArg(2)).getZExtValue();
+  QualType Arg0Type = Call->getArg(0)->getType();
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+  unsigned LaneWidth = S.getContext().getBitWidth(VecT->getElementType());
+  unsigned NumLanes = LaneWidth * NumElems / 128;
+  unsigned NumElemPerLane = 128 / LaneWidth;
+
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumSelectableElems = NumElemPerLane / 2;
+  unsigned BitsPerElem = NumSelectableElems == 1 ? 1 : 2;
+  unsigned IndexMask = BitsPerElem == 2 ? 0x3 : 0x1;
+  unsigned MaskBits = 8;
+
+  TYPE_SWITCH(ElemT, {
+    unsigned BitIndex = 0;
+    unsigned DstIdx = 0;
+
+    for (unsigned LaneId = 0; LaneId != NumLanes; ++LaneId) {
+      unsigned LaneOffset = LaneId * NumElemPerLane;
+
+      for (unsigned i = 0; i < NumSelectableElems; ++i) {
+        unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+        Dst.elem<T>(DstIdx++) = A.elem<T>(LaneOffset + Index);
+        BitIndex = (BitIndex + BitsPerElem) % MaskBits;
+      }
+
+      for (unsigned i = 0; i < NumSelectableElems; ++i) {
+        unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+        Dst.elem<T>(DstIdx++) = B.elem<T>(LaneOffset + Index);
+        BitIndex = (BitIndex + BitsPerElem) % MaskBits;
+      }
+    }
+  });
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4011,6 +4057,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512:
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512:
+    return interp__builtin_ia32_shuf(S, OpPC, Call);
 
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
