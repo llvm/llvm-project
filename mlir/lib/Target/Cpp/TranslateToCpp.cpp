@@ -1841,40 +1841,15 @@ LogicalResult CppEmitter::emitVariableDeclaration(Location loc, Type type,
 }
 
 LogicalResult CppEmitter::emitType(Location loc, Type type) {
-  if (auto iType = dyn_cast<IntegerType>(type)) {
-    switch (iType.getWidth()) {
-    case 1:
-      return (os << "bool"), success();
-    case 8:
-    case 16:
-    case 32:
-    case 64:
-      if (shouldMapToUnsigned(iType.getSignedness()))
-        return (os << "uint" << iType.getWidth() << "_t"), success();
-      else
-        return (os << "int" << iType.getWidth() << "_t"), success();
-    default:
-      return emitError(loc, "cannot emit integer type ") << type;
-    }
-  }
-  if (auto fType = dyn_cast<FloatType>(type)) {
-    switch (fType.getWidth()) {
-    case 16: {
-      if (llvm::isa<Float16Type>(type))
-        return (os << "_Float16"), success();
-      if (llvm::isa<BFloat16Type>(type))
-        return (os << "__bf16"), success();
-      else
-        return emitError(loc, "cannot emit float type ") << type;
-    }
-    case 32:
-      return (os << "float"), success();
-    case 64:
-      return (os << "double"), success();
-    default:
-      return emitError(loc, "cannot emit float type ") << type;
-    }
-  }
+  std::string cTypeString = emitc::getCTypeString(type);
+  if (!cTypeString.empty())
+    return (os << cTypeString), success();
+
+  // Handle integer and float cases that failed above
+  if (isa<IntegerType>(type))
+    return emitError(loc, "cannot emit integer type ") << type;
+  if (isa<FloatType>(type))
+    return emitError(loc, "cannot emit float type ") << type;
   if (auto iType = dyn_cast<IndexType>(type))
     return (os << "size_t"), success();
   if (auto sType = dyn_cast<emitc::SizeTType>(type))
@@ -1903,10 +1878,6 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
   }
   if (auto tType = dyn_cast<TupleType>(type))
     return emitTupleType(loc, tType.getTypes());
-  if (auto oType = dyn_cast<emitc::OpaqueType>(type)) {
-    os << oType.getValue();
-    return success();
-  }
   if (auto aType = dyn_cast<emitc::ArrayType>(type)) {
     if (failed(emitType(loc, aType.getElementType())))
       return failure();
