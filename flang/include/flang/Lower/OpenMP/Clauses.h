@@ -214,6 +214,7 @@ using Depend = tomp::clause::DependT<TypeTy, IdTy, ExprTy>;
 using Destroy = tomp::clause::DestroyT<TypeTy, IdTy, ExprTy>;
 using Detach = tomp::clause::DetachT<TypeTy, IdTy, ExprTy>;
 using Device = tomp::clause::DeviceT<TypeTy, IdTy, ExprTy>;
+using DeviceSafesync = tomp::clause::DeviceSafesyncT<TypeTy, IdTy, ExprTy>;
 using DeviceType = tomp::clause::DeviceTypeT<TypeTy, IdTy, ExprTy>;
 using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdTy, ExprTy>;
 using Doacross = tomp::clause::DoacrossT<TypeTy, IdTy, ExprTy>;
