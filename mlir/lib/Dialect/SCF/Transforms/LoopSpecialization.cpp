@@ -241,9 +241,10 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
 
   // Peel the first iteration.
   IRMapping map;
-  map.map(forOp.getUpperBound(), splitBound);
   firstIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
-
+  b.modifyOpInPlace(firstIteration, [&]() {
+    firstIteration.getUpperBoundMutable().assign(splitBound);
+  });
   // Update main loop with new lower bound.
   b.modifyOpInPlace(forOp, [&]() {
     forOp.getInitArgsMutable().assign(firstIteration->getResults());
