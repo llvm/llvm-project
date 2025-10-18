@@ -13,6 +13,7 @@
 #include "MachODump.h"
 
 #include "ObjdumpOptID.h"
+#include "SourcePrinter.h"
 #include "llvm-objdump.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -7415,17 +7416,23 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<DIContext> diContext;
   std::unique_ptr<Binary> DSYMBinary;
   std::unique_ptr<MemoryBuffer> DSYMBuf;
-  if (UseDbg) {
-    // If separate DSym file path was specified, parse it as a macho file,
-    // get the sections and supply it to the section name parsing machinery.
-    if (const ObjectFile *DbgObj =
-            getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf)) {
+  const ObjectFile *DbgObj = MachOOF;
+  if (UseDbg || PrintSource || PrintLines) {
+    // Look for debug info in external dSYM file or embedded in the object.
+    // getMachODSymObject returns MachOOF by default if no external dSYM found.
+    const ObjectFile *DSym =
+        getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf);
+    if (!DSym)
+      return;
+    DbgObj = DSym;
+    if (UseDbg) {
       // Setup the DIContext
       diContext = DWARFContext::create(*DbgObj);
-    } else {
-      return;
     }
   }
+
+  SourcePrinter SP(DbgObj, TheTarget->getName());
+  LiveElementPrinter LEP(*MRI, *STI);
 
   if (FilterSections.empty())
     outs() << "(" << DisSegName << "," << DisSectName << ") section\n";
@@ -7605,6 +7612,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           outs() << SymName << ":\n";
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP.printSourceLine(FOS, {PC, SectIdx}, Filename, LEP);
+        }
+
         if (LeadingAddr) {
           if (FullLeadingAddr) {
             if (MachOOF->is64Bit())
@@ -7695,6 +7708,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         MCInst Inst;
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP.printSourceLine(FOS, {PC, SectIdx}, Filename, LEP);
+        }
 
         if (DumpAndSkipDataInCode(PC, Bytes.data() + Index, Dices, InstSize))
           continue;
