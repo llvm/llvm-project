@@ -75,6 +75,9 @@ Improvements and New Features
   resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
   ``std::join_view<std::vector<std::vector<int>>>`` iterators.
 
+- ``std::exception_ptr`` was optimized, allowing the compiler to generate better code especially for empty
+  ``std::exception_ptr`` values.
+
 Deprecations and Removals
 -------------------------
 

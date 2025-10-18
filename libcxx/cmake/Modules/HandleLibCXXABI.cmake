@@ -119,7 +119,6 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libsupc++")
 elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
   add_library(libcxx-abi-headers INTERFACE)
   target_link_libraries(libcxx-abi-headers INTERFACE cxxabi-headers)
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")
 
   if (TARGET cxxabi_shared)
     add_library(libcxx-abi-shared INTERFACE)
@@ -156,7 +155,6 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "system-libcxxabi")
 
   add_library(libcxx-abi-headers INTERFACE)
   import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}" "cxxabi.h;__cxxabi_config.h")
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")
 
   import_shared_library(libcxx-abi-shared c++abi)
   target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
@@ -173,7 +171,6 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxrt")
   add_library(libcxx-abi-headers INTERFACE)
   import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
     "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h")
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXXRT")
 
   import_shared_library(libcxx-abi-shared cxxrt)
   target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
@@ -191,7 +188,6 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "vcruntime")
 # Don't link against any ABI library
 elseif ("${LIBCXX_CXX_ABI}" STREQUAL "none")
   add_library(libcxx-abi-headers INTERFACE)
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-D_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY")
 
   add_library(libcxx-abi-shared INTERFACE)
   target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
