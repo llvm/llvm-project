@@ -14,6 +14,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -51,6 +52,8 @@ using namespace llvm;
 /// \returns The process ID of the process that owns this lock file
 std::optional<LockFileManager::OwnedByAnother>
 LockFileManager::readLockFile(StringRef LockFileName) {
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Read the owning host and PID out of the lock file. If it appears that the
   // owning process is dead, the lock file is invalid.
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
@@ -164,6 +167,8 @@ Expected<bool> LockFileManager::tryLock() {
   assert(std::holds_alternative<OwnerUnknown>(Owner) &&
          "lock has already been attempted");
 
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<128> AbsoluteFileName(FileName);
   if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName))
     return createStringError(EC, "failed to obtain absolute path for " +
@@ -246,6 +251,8 @@ Expected<bool> LockFileManager::tryLock() {
 }
 
 LockFileManager::~LockFileManager() {
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (!std::holds_alternative<OwnedByUs>(Owner))
     return;
 
@@ -259,6 +266,8 @@ LockFileManager::~LockFileManager() {
 
 WaitForUnlockResult
 LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
   assert(LockFileOwner &&
          "waiting for lock to be unlocked without knowing the owner");
@@ -288,5 +297,7 @@ LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
 }
 
 std::error_code LockFileManager::unsafeMaybeUnlock() {
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
+
   return sys::fs::remove(LockFileName);
 }
