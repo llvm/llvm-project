@@ -494,6 +494,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_CaptureGlueInput,\n";
     return 1;
 
+  case Matcher::RecordOptionalChain:
+    OS << "OPC_RecordOptionalChain,\n";
+    return 1;
+
   case Matcher::MoveChild: {
     const auto *MCM = cast<MoveChildMatcher>(N);
 
@@ -749,6 +753,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
       if (Pattern.hasProperty(SDNPHasChain))
         OS << " + chain result";
+      if (Pattern.hasProperty(SDNPOptChain))
+        OS << " + optional chain result";
     }
     OS << '\n';
     return PatternNo < 8 ? 2 : 3;
@@ -964,21 +970,23 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     if (CompressVTs) {
       OS << EN->getNumVTs();
       if (!EN->hasChain() && !EN->hasInGlue() && !EN->hasOutGlue() &&
-          !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1) {
+          !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1 &&
+          !EN->mayHaveChain()) {
         CompressNodeInfo = true;
         OS << "None";
       } else if (EN->hasChain() && !EN->hasInGlue() && !EN->hasOutGlue() &&
-                 !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1) {
+                 !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1 &&
+                 !EN->mayHaveChain()) {
         CompressNodeInfo = true;
         OS << "Chain";
       } else if (!IsEmitNode && !EN->hasChain() && EN->hasInGlue() &&
                  !EN->hasOutGlue() && !EN->hasMemRefs() &&
-                 EN->getNumFixedArityOperands() == -1) {
+                 EN->getNumFixedArityOperands() == -1 && !EN->mayHaveChain()) {
         CompressNodeInfo = true;
         OS << "GlueInput";
       } else if (!IsEmitNode && !EN->hasChain() && !EN->hasInGlue() &&
                  EN->hasOutGlue() && !EN->hasMemRefs() &&
-                 EN->getNumFixedArityOperands() == -1) {
+                 EN->getNumFixedArityOperands() == -1 && !EN->mayHaveChain()) {
         CompressNodeInfo = true;
         OS << "GlueOutput";
       }
@@ -1333,6 +1341,8 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
     return "OPC_EmitNodeXForm";
   case Matcher::CompleteMatch:
     return "OPC_CompleteMatch";
+  case Matcher::RecordOptionalChain:
+    return "OPC_RecordOptionalChain";
   }
 
   llvm_unreachable("Unhandled opcode?");

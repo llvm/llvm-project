@@ -137,6 +137,11 @@ void CaptureGlueInputMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CaptureGlueInput\n";
 }
 
+void RecordOptionalChainMatcher::printImpl(raw_ostream &OS,
+                                           indent Indent) const {
+  OS << Indent << "RecordOptionalChain\n";
+}
+
 void MoveChildMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "MoveChild " << ChildNo << '\n';
 }
