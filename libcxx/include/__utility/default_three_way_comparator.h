@@ -31,7 +31,7 @@ template <class _LHS, class _RHS>
 struct __default_three_way_comparator<_LHS,
                                       _RHS,
                                       __enable_if_t<is_arithmetic<_LHS>::value && is_arithmetic<_RHS>::value> > {
-  _LIBCPP_HIDE_FROM_ABI static int operator()(_LHS __lhs, _RHS __rhs) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static int operator()(_LHS __lhs, _RHS __rhs) {
     if (__lhs < __rhs)
       return -1;
     if (__lhs > __rhs)

@@ -33,7 +33,7 @@ template <class _Comparator>
 using __make_transparent_t _LIBCPP_NODEBUG = typename __make_transparent<_Comparator>::type;
 
 template <class _Comparator, __enable_if_t<is_same<_Comparator, __make_transparent_t<_Comparator> >::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Comparator& __as_transparent(_Comparator& __comp) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Comparator& __as_transparent(_Comparator& __comp) {
   return __comp;
 }
 
