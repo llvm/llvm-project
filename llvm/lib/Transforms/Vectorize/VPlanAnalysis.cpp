@@ -116,6 +116,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
@@ -376,7 +377,7 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
 
 #ifndef NDEBUG
   auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-    auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+    VPRegionBlock *Region = R->getRegion();
     if (Region && Region->isReplicator()) {
       assert(Region->getNumSuccessors() == 1 &&
              Region->getNumPredecessors() == 1 && "Expected SESE region!");

@@ -41,8 +41,7 @@ static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
 
 bool FormatToken::isQtProperty() const {
   assert(llvm::is_sorted(QtPropertyKeywords));
-  return std::binary_search(QtPropertyKeywords.begin(),
-                            QtPropertyKeywords.end(), TokenText);
+  return llvm::binary_search(QtPropertyKeywords, TokenText);
 }
 
 // Sorted common C++ non-keyword types.
@@ -66,12 +65,13 @@ bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   assert(is(tok::r_brace));
+  assert(MatchingParen);
+  assert(MatchingParen->is(tok::l_brace));
   if (!Style.Cpp11BracedListStyle ||
       Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent) {
     return false;
   }
   const auto *LBrace = MatchingParen;
-  assert(LBrace && LBrace->is(tok::l_brace));
   if (LBrace->is(BK_BracedInit))
     return true;
   if (LBrace->Previous && LBrace->Previous->is(tok::equal))

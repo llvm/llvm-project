@@ -509,6 +509,8 @@ bool initializeScanCompilerInstance(
   ScanInstance.getFrontendOpts().DisableFree = false;
   ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
   ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
+  ScanInstance.getFrontendOpts().GenReducedBMI = false;
+  ScanInstance.getFrontendOpts().ModuleOutputPath.clear();
   // This will prevent us compiling individual modules asynchronously since
   // FileManager is not thread-safe, but it does improve performance for now.
   ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
