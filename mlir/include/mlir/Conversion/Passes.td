@@ -976,6 +976,17 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Normalize
+//===----------------------------------------------------------------------===//
+def Normalize : Pass<"normalize", "ModuleOp"> {
+  let summary = "convert MLIR input to its normalized form";
+  let description = [{
+    This pass produces reordered MLIR input with determinstic variable
+    names to reduce the diff between two semantically similar programs
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVMToLLVM
 //===----------------------------------------------------------------------===//
 
