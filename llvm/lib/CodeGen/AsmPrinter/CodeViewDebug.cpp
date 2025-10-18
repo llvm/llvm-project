@@ -625,10 +625,13 @@ void CodeViewDebug::beginModule(Module *M) {
   if (Asm->hasDebugInfo()) {
     Node = *M->debug_compile_units_begin();
   } else {
+    auto DebugCompileUnits = MMI->getModule()->debug_compile_units();
+    if (DebugCompileUnits.empty())
+      return;
+
     // When emitting only compiler information, we may have only NoDebug CUs,
     // which would be skipped by debug_compile_units_begin.
-    NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-    Node = *CUs->operands().begin();
+    Node = *DebugCompileUnits.begin();
   }
   const auto *CU = cast<DICompileUnit>(Node);
   DISourceLanguageName Lang = CU->getSourceLanguage();
@@ -900,8 +903,11 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
 
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  const MDNode *Node = *CUs->operands().begin();
+  auto CUs = MMI->getModule()->debug_compile_units();
+  if (CUs.empty())
+    return;
+
+  const MDNode *Node = *CUs.begin();
   const auto *CU = cast<DICompileUnit>(Node);
 
   StringRef CompilerVersion = CU->getProducer();
@@ -948,8 +954,11 @@ void CodeViewDebug::emitBuildInfo() {
   // not clear if the compiler path should refer to the executable for the
   // frontend or the backend. Leave it blank for now.
   TypeIndex BuildInfoArgs[BuildInfoRecord::MaxArgs] = {};
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  const MDNode *Node = *CUs->operands().begin(); // FIXME: Multiple CUs.
+  auto CUs = MMI->getModule()->debug_compile_units();
+  if (CUs.empty())
+    return;
+
+  const MDNode *Node = *CUs.begin(); // FIXME: Multiple CUs.
   const auto *CU = cast<DICompileUnit>(Node);
   const DIFile *MainSourceFile = CU->getFile();
   BuildInfoArgs[BuildInfoRecord::CurrentDirectory] =
