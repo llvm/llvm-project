@@ -223,13 +223,6 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
           CB->setCannotDuplicate();
         HasCoroSuspend = true;
         break;
-      case Intrinsic::coro_end_async:
-      case Intrinsic::coro_end:
-        // Make sure that fallthrough coro.end is not duplicated as CoroSplit
-        // pass expects that there is at most one fallthrough coro.end.
-        if (cast<AnyCoroEndInst>(&I)->isFallthrough())
-          CB->setCannotDuplicate();
-        break;
       case Intrinsic::coro_noop:
         lowerCoroNoop(cast<IntrinsicInst>(&I));
         break;
@@ -287,11 +280,11 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
   // coro_suspend omitted as it is overloaded.
   return coro::declaresIntrinsics(
-      M, {Intrinsic::coro_id, Intrinsic::coro_id_retcon,
-          Intrinsic::coro_id_retcon_once, Intrinsic::coro_id_async,
-          Intrinsic::coro_destroy, Intrinsic::coro_done, Intrinsic::coro_end,
-          Intrinsic::coro_end_async, Intrinsic::coro_noop, Intrinsic::coro_free,
-          Intrinsic::coro_promise, Intrinsic::coro_resume});
+      M,
+      {Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+       Intrinsic::coro_id_retcon_once, Intrinsic::coro_id_async,
+       Intrinsic::coro_destroy, Intrinsic::coro_done, Intrinsic::coro_noop,
+       Intrinsic::coro_free, Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 
 PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
