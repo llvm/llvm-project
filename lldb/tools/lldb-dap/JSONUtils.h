@@ -156,11 +156,15 @@ DecodeMemoryReference(llvm::StringRef memoryReference);
 ///    Indicates if the key is required to be present, otherwise report an error
 ///    if the key is missing.
 ///
+/// \param[in] allow_empty
+///    Interpret empty string as a valid value, don't report an error (see
+///    VS Code issue https://github.com/microsoft/vscode/issues/270593).
+///
 /// \return
 ///    Returns \b true if the address was decoded successfully.
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required);
+                           bool required, bool allow_empty = false);
 
 /// Extract an array of strings for the specified key from an object.
 ///
