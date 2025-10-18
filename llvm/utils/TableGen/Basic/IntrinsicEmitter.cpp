@@ -60,8 +60,12 @@ public:
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
+  void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
+                                       raw_ostream &OS);
   void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitPrettyPrintArguments(const CodeGenIntrinsicTable &Ints,
+                                raw_ostream &OS);
   void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints,
                                  bool IsClang, raw_ostream &OS);
 };
@@ -108,6 +112,12 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic parameter attributes.
     EmitAttributes(Ints, OS);
+
+    // Emit the intrinsic ID -> pretty print table.
+    EmitIntrinsicToPrettyPrintTable(Ints, OS);
+
+    // Emit Pretty Print attribute.
+    EmitPrettyPrintArguments(Ints, OS);
 
     // Emit code to translate Clang builtins into LLVM intrinsics.
     EmitIntrinsicToBuiltinMap(Ints, true, OS);
@@ -803,6 +813,71 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
 )",
                 UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID,
                 NoFunctionAttrsID);
+}
+
+void IntrinsicEmitter::EmitIntrinsicToPrettyPrintTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  OS << R"(// Intrinsic ID to pretty print bitset.
+)"
+        R"(#ifdef GET_INTRINSIC_PRETTY_PRINT_TABLE
+static constexpr uint8_t PPTable[] = {
+  0
+  )";
+  int CountPerLine = 0;
+  for (auto [I, Int] : enumerate(Ints)) {
+    size_t Idx = I + 1;
+
+    if (Idx % 8 == 0) {
+      OS << ",  0";
+      CountPerLine++;
+      if (CountPerLine == 8) {
+        OS << "\n  ";
+        CountPerLine = 0;
+      }
+    }
+    if (!Int.PrettyPrintFunctions.empty())
+      OS << " | (1<<" << Idx % 8 << ')';
+  }
+  OS << "\n};\n\n";
+  OS << "return (PPTable[id/8] & (1 << (id%8))) != 0;\n";
+  OS << "#endif // GET_INTRINSIC_PRETTY_PRINT_TABLE\n\n";
+}
+
+void IntrinsicEmitter::EmitPrettyPrintArguments(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  OS << R"(
+#ifdef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+
+void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Constant *ImmArgVal) {
+  using namespace Intrinsic;
+  switch (IID) {
+)";
+
+  for (const auto &Int : Ints) {
+    if (Int.PrettyPrintFunctions.empty())
+      continue;
+
+    OS << "  case " << Int.EnumName << ":\n";
+    OS << "    switch (ArgIdx) {\n";
+    for (const auto &Info : Int.PrettyPrintFunctions) {
+      OS << "    case " << Info.ArgIdx << ":\n";
+      OS << "      OS << \"" << Info.ArgName << "=\";\n";
+      if (!Info.FuncName.empty()) {
+        OS << "      ";
+        if (!Int.TargetPrefix.empty())
+          OS << Int.TargetPrefix << "::";
+        OS << Info.FuncName << "(OS, ImmArgVal);\n";
+      }
+      OS << "      return;\n";
+    }
+    OS << "    }\n";
+    OS << "    break;\n";
+  }
+  OS << R"(
+  }
+}
+#endif // GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+)";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
