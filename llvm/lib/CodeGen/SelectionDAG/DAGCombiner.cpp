@@ -10197,20 +10197,26 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
-  // fold (not (or A, B)) -> and(not(A), not(B))
+  // fold (not (or A, or(B, C))) -> and(not(A), and(not(B), not(C))
   if (TLI.hasAndNot(SDValue(N, 0))) {
     // If we have AndNot then it is profitable to apply demorgan to make use
     // of the machine instruction.
     SDValue A;
     SDValue B;
+    SDValue C;
     APInt Cst;
-    if (sd_match(N, m_Xor(m_Or(m_Value(A), m_Value(B)), m_ConstInt(Cst))) &&
+    if (sd_match(N, m_Xor(m_Or(m_Value(A), m_Or(m_Value(B), m_Value(C))), m_ConstInt(Cst))) &&
         Cst.isAllOnes()) {
       auto Ty = N->getValueType(0);
+
+      auto NegA = DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(Cst, DL, Ty));
+      auto NegB = DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(Cst, DL, Ty));
+      auto NegC = DAG.getNode(ISD::XOR, DL, VT, C, DAG.getConstant(Cst, DL, Ty));
+
       return DAG.getNode(
           ISD::AND, DL, VT,
-          DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(Cst, DL, Ty)),
-          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(Cst, DL, Ty)));
+          NegA,
+          DAG.getNode(ISD::AND, DL, VT, NegB, NegC));
     }
   }
 
