@@ -42,7 +42,9 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[ACC]]>, ir<[[REDUCE]]>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT_PART:%.+]]> = compute-reduction-result ir<[[ACC]]>, ir<[[REDUCE]]>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT_PART2:%.+]]> = extract-last-part vp<[[RED_RESULT_PART]]>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = extract-last-lane vp<[[RED_RESULT_PART2]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -53,7 +55,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[RED_RESULT]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[RED_RESULT_PART]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
