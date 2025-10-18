@@ -44813,10 +44813,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    // iff we only need the sign bit then we can use R directly.
-    if (OriginalDemandedBits.isSignMask() &&
-        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
-      return TLO.CombineTo(Op, Op.getOperand(1));
+    if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode())) {
+      // iff we only need the signbit then we can use R directly.
+      if (OriginalDemandedBits.isSignMask())
+        return TLO.CombineTo(Op, Op.getOperand(1));
+      // otherwise we just need R's signbit for the comparison.
+      APInt SignMask = APInt::getSignMask(BitWidth);
+      if (SimplifyDemandedBits(Op.getOperand(1), SignMask, OriginalDemandedElts,
+                               Known, TLO, Depth + 1))
+        return true;
+    }
     break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
@@ -47725,6 +47731,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = combineLogicBlendIntoConditionalNegate(VT, Cond, RHS, LHS,
                                                            DL, DAG, Subtarget))
       return V;
+
+  // If the sign bit is known then BLENDV can be folded away.
+  if (N->getOpcode() == X86ISD::BLENDV) {
+    KnownBits KnownCond = DAG.computeKnownBits(Cond);
+    if (KnownCond.isNegative())
+      return LHS;
+    if (KnownCond.isNonNegative())
+      return RHS;
+  }
 
   if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> CondMask;
