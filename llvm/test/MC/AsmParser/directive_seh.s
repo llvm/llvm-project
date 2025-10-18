@@ -42,13 +42,11 @@ func:
 # CHECK: .seh_handlerdata
     .long 0
     .text
-    .seh_startchained
     .seh_endprologue
-    .seh_endchained
+    .seh_splitchained
 # CHECK: .text
-# CHECK: .seh_startchained
 # CHECK: .seh_endprologue
-# CHECK: .seh_endchained
+# CHECK: .seh_splitchained
     .seh_startepilogue
 # CHECK: .seh_startepilogue
     lea (%rbx), %rsp
