@@ -31,6 +31,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -131,7 +132,7 @@ cl::opt<uint64_t> ClFallbackToken(
 
 //===--- Statistics -------------------------------------------------------===//
 
-STATISTIC(NumFunctionsInstrumented, "Functions instrumented");
+STATISTIC(NumFunctionsModified, "Functions modified");
 STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 
 //===----------------------------------------------------------------------===//
@@ -140,9 +141,19 @@ STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 ///
 /// Expected format is: !{<type-name>, <contains-pointer>}
 MDNode *getAllocTokenMetadata(const CallBase &CB) {
-  MDNode *Ret = CB.getMetadata(LLVMContext::MD_alloc_token);
-  if (!Ret)
-    return nullptr;
+  MDNode *Ret = nullptr;
+  if (auto *II = dyn_cast<IntrinsicInst>(&CB);
+      II && II->getIntrinsicID() == Intrinsic::alloc_token_id) {
+    auto *MDV = cast<MetadataAsValue>(II->getArgOperand(0));
+    Ret = cast<MDNode>(MDV->getMetadata());
+    // If the intrinsic has an empty MDNode, type inference failed.
+    if (Ret->getNumOperands() == 0)
+      return nullptr;
+  } else {
+    Ret = CB.getMetadata(LLVMContext::MD_alloc_token);
+    if (!Ret)
+      return nullptr;
+  }
   assert(Ret->getNumOperands() == 2 && "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
   assert(isa<ConstantAsMetadata>(Ret->getOperand(1)));
@@ -315,6 +326,9 @@ private:
   FunctionCallee getTokenAllocFunction(const CallBase &CB, uint64_t TokenID,
                                        LibFunc OriginalFunc);
 
+  /// Lower alloc_token_* intrinsics.
+  void replaceIntrinsicInst(IntrinsicInst *II, OptimizationRemarkEmitter &ORE);
+
   /// Return the token ID from metadata in the call.
   uint64_t getToken(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
     return std::visit([&](auto &&Mode) { return Mode(CB, ORE); }, Mode);
@@ -336,21 +350,32 @@ bool AllocToken::instrumentFunction(Function &F) {
   // Do not apply any instrumentation for naked functions.
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
-    return false;
   // Don't touch available_externally functions, their actual body is elsewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
-    return false;
-  // Only instrument functions that have the sanitize_alloc_token attribute.
-  if (!F.hasFnAttribute(Attribute::SanitizeAllocToken))
     return false;
 
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   SmallVector<std::pair<CallBase *, LibFunc>, 4> AllocCalls;
+  SmallVector<IntrinsicInst *, 4> IntrinsicInsts;
+
+  // Only instrument functions that have the sanitize_alloc_token attribute.
+  const bool InstrumentFunction =
+      F.hasFnAttribute(Attribute::SanitizeAllocToken) &&
+      !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation);
 
   // Collect all allocation calls to avoid iterator invalidation.
   for (Instruction &I : instructions(F)) {
+    // Collect all alloc_token_* intrinsics.
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::alloc_token_id) {
+      IntrinsicInsts.emplace_back(II);
+      continue;
+    }
+
+    if (!InstrumentFunction)
+      continue;
+
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
       continue;
@@ -359,11 +384,21 @@ bool AllocToken::instrumentFunction(Function &F) {
   }
 
   bool Modified = false;
-  for (auto &[CB, Func] : AllocCalls)
-    Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
 
-  if (Modified)
-    NumFunctionsInstrumented++;
+  if (!AllocCalls.empty()) {
+    for (auto &[CB, Func] : AllocCalls)
+      Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
+    if (Modified)
+      NumFunctionsModified++;
+  }
+
+  if (!IntrinsicInsts.empty()) {
+    for (auto *II : IntrinsicInsts)
+      replaceIntrinsicInst(II, ORE);
+    Modified = true;
+    NumFunctionsModified++;
+  }
+
   return Modified;
 }
 
@@ -381,7 +416,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   if (TLI.getLibFunc(*Callee, Func)) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
-  } else if (Options.Extended && getAllocTokenMetadata(CB)) {
+  } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
     return NotLibFunc;
   }
 
@@ -526,6 +561,16 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
   if (Key.has_value())
     TokenAllocFunctions[*Key] = TokenAlloc;
   return TokenAlloc;
+}
+
+void AllocToken::replaceIntrinsicInst(IntrinsicInst *II,
+                                      OptimizationRemarkEmitter &ORE) {
+  assert(II->getIntrinsicID() == Intrinsic::alloc_token_id);
+
+  uint64_t TokenID = getToken(*II, ORE);
+  Value *V = ConstantInt::get(IntPtrTy, TokenID);
+  II->replaceAllUsesWith(V);
+  II->eraseFromParent();
 }
 
 } // namespace
