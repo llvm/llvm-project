@@ -236,8 +236,7 @@ public:
       : Bytes(B), FirstByteOffset(O), IndentLevel(IL), NumPerLine(NPL),
         ByteGroupSize(BGS), Upper(U), ASCII(A) {
 
-    if (ByteGroupSize > NumPerLine)
-      ByteGroupSize = NumPerLine;
+    ByteGroupSize = std::min<uint32_t>(ByteGroupSize, NumPerLine);
   }
 };
 
