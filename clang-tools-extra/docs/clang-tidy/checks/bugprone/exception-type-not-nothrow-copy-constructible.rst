@@ -1,7 +1,7 @@
 .. title:: clang-tidy - bugprone-exception-type-not-nothrow-copy-constructible
 
 bugprone-exception-type-not-nothrow-copy-constructible
-=======================================================
+======================================================
 
 Checks whether a thrown object is nothrow copy constructible.
 
