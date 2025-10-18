@@ -43,7 +43,7 @@ way of mixing at call sites the most.
 These options are expected to make the check report for more functions, and
 report longer mixable ranges.
 
-.. option:: QualifiersMix
+.. option:: QualifiersMix (added in 15.0.0)
 
     Whether to consider parameters of some *cvr-qualified* ``T`` and a
     differently *cvr-qualified* ``T`` (i.e. ``T`` and ``const T``, ``const T``
@@ -59,7 +59,7 @@ report longer mixable ranges.
 
         void *memcpy(const void *Destination, void *Source, std::size_t N) { /* ... */ }
 
-.. option:: ModelImplicitConversions
+.. option:: ModelImplicitConversions (added in 15.0.0)
 
     Whether to consider parameters of type ``T`` and ``U`` mixable if there
     exists an implicit conversion from ``T`` to ``U`` and ``U`` to ``T``.
@@ -99,7 +99,7 @@ Filtering options can be used to lessen the size of the diagnostics emitted by
 the checker, whether the aim is to ignore certain constructs or dampen the
 noisiness.
 
-.. option:: MinimumLength
+.. option:: MinimumLength (added in 15.0.0)
 
     The minimum length required from an adjacent parameter sequence to be
     diagnosed.
@@ -109,7 +109,7 @@ noisiness.
 
     For example, if `3` is specified, the examples above will not be matched.
 
-.. option:: IgnoredParameterNames
+.. option:: IgnoredParameterNames (added in 15.0.0)
 
     The list of parameter **names** that should never be considered part of a
     swappable adjacent parameter sequence.
@@ -123,7 +123,7 @@ noisiness.
     `""` (unnamed parameters), `iterator`, `begin`, `end`, `first`, `last`,
     `lhs`, `rhs`.
 
-.. option:: IgnoredParameterTypeSuffixes
+.. option:: IgnoredParameterTypeSuffixes (added in 15.0.0)
 
     The list of parameter **type name suffixes** that should never be
     considered part of a swappable adjacent parameter sequence.
@@ -140,7 +140,7 @@ noisiness.
     `ConstIterator`, `const_reverse_iterator`, `ConstReverseIterator`.
     In addition, `_Bool` (but not `_bool`) is also part of the default value.
 
-.. option:: SuppressParametersUsedTogether
+.. option:: SuppressParametersUsedTogether (added in 15.0.0)
 
     Suppresses diagnostics about parameters that are used together or in a
     similar fashion inside the function's body.

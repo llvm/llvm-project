@@ -30,7 +30,7 @@ defaulted functions as trivial.
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If set to `true`, the check will not give warnings inside macros and will
    ignore special members with bodies contain macros or preprocessor directives.

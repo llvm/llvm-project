@@ -30,12 +30,12 @@ becomes
 Options
 -------
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 20.1.0)
 
   A string specifying which include-style is used, `llvm` or `google`.
   Default is `llvm`.
 
-.. option:: EnableQtSupport
+.. option:: EnableQtSupport (added in 20.1.0)
 
   Makes C++17 ``q20::cmp_*`` alternative available for Qt-based
   applications. Default is `false`.

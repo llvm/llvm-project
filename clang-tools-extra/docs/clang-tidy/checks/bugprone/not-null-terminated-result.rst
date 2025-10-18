@@ -125,7 +125,7 @@ The given length is incremented by one.
 Options
 -------
 
-.. option::  WantToUseSafeFunctions
+.. option::  WantToUseSafeFunctions (added in 15.0.0)
 
    The value `true` specifies that the target environment is considered to
    implement '_s' suffixed memory and string handler functions which are safer

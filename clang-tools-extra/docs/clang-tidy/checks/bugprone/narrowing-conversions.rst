@@ -62,33 +62,33 @@ This check diagnoses more instances of narrowing than the compiler warning
 Options
 -------
 
-.. option:: WarnOnIntegerNarrowingConversion
+.. option:: WarnOnIntegerNarrowingConversion (added in 20.1.0)
 
     When `true`, the check will warn on narrowing integer conversion
     (e.g. ``int`` to ``size_t``). `true` by default.
 
-.. option:: WarnOnIntegerToFloatingPointNarrowingConversion
+.. option:: WarnOnIntegerToFloatingPointNarrowingConversion (added in 20.1.0)
 
     When `true`, the check will warn on narrowing integer to floating-point
     conversion (e.g. ``size_t`` to ``double``). `true` by default.
 
-.. option:: WarnOnFloatingPointNarrowingConversion
+.. option:: WarnOnFloatingPointNarrowingConversion (added in 20.1.0)
 
     When `true`, the check will warn on narrowing floating point conversion
     (e.g. ``double`` to ``float``). `true` by default.
 
-.. option:: WarnWithinTemplateInstantiation
+.. option:: WarnWithinTemplateInstantiation (added in 20.1.0)
 
     When `true`, the check will warn on narrowing conversions within template
     instantiations. `false` by default.
 
-.. option:: WarnOnEquivalentBitWidth
+.. option:: WarnOnEquivalentBitWidth (added in 20.1.0)
 
     When `true`, the check will warn on narrowing conversions that arise from
     casting between types of equivalent bit width. (e.g.
     `int n = uint(0);` or `long long n = double(0);`) `true` by default.
 
-.. option:: IgnoreConversionFromTypes
+.. option:: IgnoreConversionFromTypes (added in 20.1.0)
 
    Narrowing conversions from any type in this semicolon-separated list will be
    ignored. This may be useful to weed out commonly occurring, but less commonly
@@ -97,7 +97,7 @@ Options
    suggested list for a legacy codebase would be
    `size_t;ptrdiff_t;size_type;difference_type`.
 
-.. option:: PedanticMode
+.. option:: PedanticMode (added in 20.1.0)
 
     When `true`, the check will warn on assigning a floating point constant
     to an integer value even if the floating point value is exactly

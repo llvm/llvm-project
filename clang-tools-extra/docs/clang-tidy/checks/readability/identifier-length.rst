@@ -18,7 +18,7 @@ The following options are described below:
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
  - :option:`MinimumExceptionNameLength`, :option:`IgnoredExceptionVariableNames`
 
-.. option:: MinimumVariableNameLength
+.. option:: MinimumVariableNameLength (added in 15.0.0)
 
     All variables (other than loop counter, exception names and function
     parameters) are expected to have at least a length of
@@ -33,12 +33,12 @@ The following options are described below:
     This check does not have any fix suggestions in the general case since
     variable names have semantic value.
 
-.. option:: IgnoredVariableNames
+.. option:: IgnoredVariableNames (added in 15.0.0)
 
     Specifies a regular expression for variable names that are
     to be ignored. The default value is empty, thus no names are ignored.
 
-.. option:: MinimumParameterNameLength
+.. option:: MinimumParameterNameLength (added in 15.0.0)
 
     All function parameter names are expected to have a length of at least
     `MinimumParameterNameLength` (default is `3`). Setting it to `0` or `1`
@@ -55,12 +55,12 @@ The following options are described below:
     This check does not have any fix suggestions in the general case since
     variable names have semantic value.
 
-.. option:: IgnoredParameterNames
+.. option:: IgnoredParameterNames (added in 15.0.0)
 
     Specifies a regular expression for parameters that are to be ignored.
     The default value is `^[n]$` for historical reasons.
 
-.. option:: MinimumLoopCounterNameLength
+.. option:: MinimumLoopCounterNameLength (added in 15.0.0)
 
     Loop counter variables are expected to have a length of at least
     `MinimumLoopCounterNameLength` characters (default is `2`). Setting it to
@@ -74,7 +74,7 @@ The following options are described below:
          // ...
       }
 
-.. option:: IgnoredLoopCounterNames
+.. option:: IgnoredLoopCounterNames (added in 15.0.0)
 
     Specifies a regular expression for counter names that are to be ignored.
     The default value is `^[ijk_]$`; the first three symbols for historical
@@ -89,7 +89,7 @@ The following options are described below:
           // ...
       }
 
-.. option:: MinimumExceptionNameLength
+.. option:: MinimumExceptionNameLength (added in 15.0.0)
 
     Exception clause variables are expected to have a length of at least
     `MinimumExceptionNameLength` (default is `2`). Setting it to `0` or `1`
@@ -106,7 +106,7 @@ The following options are described below:
           // ...
       }
 
-.. option:: IgnoredExceptionVariableNames
+.. option:: IgnoredExceptionVariableNames (added in 15.0.0)
 
     Specifies a regular expression for exception variable names that are to
     be ignored. The default value is `^[e]$` mainly for historical reasons.

@@ -15,13 +15,13 @@ classes or class consumers.
 Options
 -------
 
-.. option:: IgnoreClassesWithAllMemberVariablesBeingPublic
+.. option:: IgnoreClassesWithAllMemberVariablesBeingPublic (added in 15.0.0)
 
    When `true`, allows to completely ignore classes if **all** the member
    variables in that class declared with a ``public`` access specifier.
    Default is `false`.
 
-.. option:: IgnorePublicMemberVariables
+.. option:: IgnorePublicMemberVariables (added in 15.0.0)
 
    When `true`, allows to ignore (not diagnose) **all** the member variables
    declared with a ``public`` access specifier. Default is `false`.

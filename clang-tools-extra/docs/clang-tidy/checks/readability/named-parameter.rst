@@ -27,7 +27,7 @@ Corresponding cpplint.py check name: `readability/function`.
 Options
 -------
 
-.. option:: InsertPlainNamesInForwardDecls
+.. option:: InsertPlainNamesInForwardDecls (added in 21.1.0)
 
    If set to `true`, the check will insert parameter names without comments for
    forward declarations only. Otherwise, the check will insert parameter names

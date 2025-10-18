@@ -28,7 +28,7 @@ All valid combinations of suffixes are supported.
 Options
 -------
 
-.. option:: NewSuffixes
+.. option:: NewSuffixes (added in 15.0.0)
 
   Optionally, a list of the destination suffixes can be provided. When the
   suffix is found, a case-insensitive lookup in that list is made, and if a
@@ -50,7 +50,7 @@ Given a list `L;uL`:
 * ``ull`` will be kept as is, since it is not in the list
 * and so on.
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If this option is set to `true` (default is `true`), the check will not warn
    about literal suffixes inside macros.

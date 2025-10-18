@@ -35,7 +35,7 @@ inspect compile-time constant loop boundaries to avoid overlaps with the warning
 Options
 -------
 
-.. option:: MagnitudeBitsUpperLimit
+.. option:: MagnitudeBitsUpperLimit (added in 15.0.0)
 
   Upper limit for the magnitude bits of the loop variable. If it's set the check
   filters out those catches in which the loop variable's type has more magnitude

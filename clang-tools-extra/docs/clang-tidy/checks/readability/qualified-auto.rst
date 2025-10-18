@@ -53,7 +53,7 @@ Would be transformed into:
 Options
 -------
 
-.. option:: AddConstToQualified
+.. option:: AddConstToQualified (added in 15.0.0)
 
    When set to `true` the check will add const qualifiers variables defined as
    ``auto *`` or ``auto &`` when applicable.
@@ -83,7 +83,7 @@ Otherwise it will be transformed into:
 
 Note in the LLVM alias, the default value is `false`.
 
-.. option:: AllowedTypes
+.. option:: AllowedTypes (added in 21.1.0)
 
   A semicolon-separated list of names of types to ignore when ``auto`` is
   deduced to that type or a pointer to that type. Note that this distinguishes

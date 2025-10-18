@@ -45,12 +45,12 @@ language modes.
 Options
 -------
 
-.. option::  IgnoreMacros
+.. option::  IgnoreMacros (added in 19.1.0)
 
   The value `false` specifies that components of initializer lists expanded from
   macros are not checked. The default value is `true`.
 
-.. option:: IgnoreSingleElementAggregates
+.. option:: IgnoreSingleElementAggregates (added in 19.1.0)
 
     The value `false` specifies that even initializers for aggregate types with
     only a single element should be checked. The default value is `true`.
@@ -58,18 +58,18 @@ Options
     standard library abstraction and not intended to be initialized with
     designated initializers.
 
-.. option:: RestrictToPODTypes
+.. option:: RestrictToPODTypes (added in 19.1.0)
 
     The value `true` specifies that only Plain Old Data (POD) types shall be
     checked. This makes the check applicable to even older C++ standards. The
     default value is `false`.
 
-.. option:: StrictCStandardCompliance
+.. option:: StrictCStandardCompliance (added in 19.1.0)
 
    When set to `false`, the check will not restrict itself to C99 and above.
    The default value is `true`.
 
-.. option:: StrictCppStandardCompliance
+.. option:: StrictCppStandardCompliance (added in 19.1.0)
 
    When set to `false`, the check will not restrict itself to C++20 and above.
    The default value is `true`.

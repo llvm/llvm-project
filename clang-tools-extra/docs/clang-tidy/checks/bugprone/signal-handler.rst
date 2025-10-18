@@ -40,7 +40,7 @@ It has the alias names ``cert-sig30-c`` and ``cert-msc54-cpp``.
 Options
 -------
 
-.. option:: AsyncSafeFunctionSet
+.. option:: AsyncSafeFunctionSet (added in 15.0.0)
 
   Selects which set of functions is considered as asynchronous-safe
   (and therefore allowed in signal handlers). It can be set to the following values:

@@ -22,7 +22,7 @@ from the C++ Core Guidelines.
 Options
 -------
 
-.. option:: AllowSoleDefaultDtor
+.. option:: AllowSoleDefaultDtor (added in 15.0.0)
 
    When set to `true` (default is `false`), this check will only trigger on
    destructors if they are defined and not defaulted.
@@ -43,7 +43,7 @@ Options
        ~C();
      };
 
-.. option:: AllowMissingMoveFunctions
+.. option:: AllowMissingMoveFunctions (added in 15.0.0)
 
    When set to `true` (default is `false`), this check doesn't flag classes
    which define no move operations at all. It still flags classes which define
@@ -58,7 +58,7 @@ Options
        ~A();
      };
 
-.. option:: AllowMissingMoveFunctionsWhenCopyIsDeleted
+.. option:: AllowMissingMoveFunctionsWhenCopyIsDeleted (added in 15.0.0)
 
    When set to `true` (default is `false`), this check doesn't flag classes
    which define deleted copy operations but don't define move operations. This
@@ -74,7 +74,7 @@ Options
        ~A();
      };
 
-.. option:: AllowImplicitlyDeletedCopyOrMove
+.. option:: AllowImplicitlyDeletedCopyOrMove (added in 19.1.0)
 
    When set to `true` (default is `false`), this check doesn't flag classes
    which implicitly delete copy or move operations.
@@ -86,7 +86,7 @@ Options
         ~A() { std::cout << "dtor\n"; }
       };
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 21.1.0)
 
    If set to `true`, the check will not give warnings for classes defined
    inside macros. Default is `true`.

@@ -26,7 +26,7 @@ defined entirely inside a class/struct/union definition are implicitly inlined.
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 18.1.0)
 
    If set to `true`, the check will also flag functions and variables that
    already have internal linkage as redundant. Default is `false`.

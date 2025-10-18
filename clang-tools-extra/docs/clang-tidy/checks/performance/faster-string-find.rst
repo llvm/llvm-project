@@ -20,7 +20,7 @@ Examples:
 Options
 -------
 
-.. option:: StringLikeClasses
+.. option:: StringLikeClasses (added in 15.0.0)
 
    Semicolon-separated list of names of string-like classes. By default only
    ``::std::basic_string`` and ``::std::basic_string_view`` are considered.

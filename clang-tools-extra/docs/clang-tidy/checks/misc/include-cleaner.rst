@@ -27,24 +27,24 @@ Example:
 Options
 -------
 
-.. option:: IgnoreHeaders
+.. option:: IgnoreHeaders (added in 17.0.1)
 
    A semicolon-separated list of regexes to disable insertion/removal of header
    files that match this regex as a suffix.  E.g., `foo/.*` disables
    insertion/removal for all headers under the directory `foo`. Default is an
    empty string, no headers will be ignored.
 
-.. option:: DeduplicateFindings
+.. option:: DeduplicateFindings (added in 18.1.0)
 
    A boolean that controls whether the check should deduplicate findings for the
    same symbol. Defaults to `true`.
 
-.. option:: UnusedIncludes
+.. option:: UnusedIncludes (added in 21.1.0)
 
    A boolean that controls whether the check should report unused includes
    (includes that are not used directly). Defaults to `true`.
 
-.. option:: MissingIncludes
+.. option:: MissingIncludes (added in 21.1.0)
 
    A boolean that controls whether the check should report missing includes
    (header files from which symbols are used but which are not directly included).

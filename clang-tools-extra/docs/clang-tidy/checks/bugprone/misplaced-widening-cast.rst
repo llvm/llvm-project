@@ -60,6 +60,6 @@ written for this code:
 Options
 -------
 
-.. option:: CheckImplicitCasts
+.. option:: CheckImplicitCasts (added in 15.0.0)
 
    If `true`, enables detection of implicit casts. Default is `false`.

@@ -72,7 +72,7 @@ Examples:
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 15.0.0)
 
    Default value: 0.
    When non-null the suspicious bitmask usage will be investigated additionally

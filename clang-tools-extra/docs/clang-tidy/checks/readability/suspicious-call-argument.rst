@@ -144,7 +144,7 @@ This heuristic is case-insensitive.
 Options
 -------
 
-.. option:: MinimumIdentifierNameLength
+.. option:: MinimumIdentifierNameLength (added in 15.0.0)
 
     Sets the minimum required length the argument and parameter names
     need to have. Names shorter than this length will be ignored.
@@ -152,7 +152,7 @@ Options
 
 .. _opt_Abbreviations:
 
-.. option:: Abbreviations
+.. option:: Abbreviations (added in 15.0.0)
 
     For the **Abbreviation** heuristic
     (:ref:`see here<abbreviation_heuristic>`), this option configures the
@@ -198,7 +198,7 @@ constructed dynamically.
 In the following, `<HeuristicName>` refers to one of the keys from the
 heuristics implemented.
 
-.. option:: <HeuristicName>
+.. option:: <HeuristicName> (added in 15.0.0)
 
     `True` or `False`, whether a particular heuristic, such as `Equality` or
     `Levenshtein` is enabled.
@@ -207,7 +207,7 @@ heuristics implemented.
 
 .. _opt_Bounds:
 
-.. option:: <HeuristicName>DissimilarBelow, <HeuristicName>SimilarAbove
+.. option:: <HeuristicName>DissimilarBelow, <HeuristicName>SimilarAbove (added in 15.0.0)
 
     A value between `0` and `100`, expressing a percentage.
     The bounds set what percentage of similarity the heuristic must deduce

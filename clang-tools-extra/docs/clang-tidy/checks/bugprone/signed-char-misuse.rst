@@ -115,7 +115,7 @@ Options
   ``sal_Int8`` or ``int8_t``. In this case, human misinterpretation is not
   an issue. Default is an empty string.
 
-.. option:: DiagnoseSignedUnsignedCharComparisons
+.. option:: DiagnoseSignedUnsignedCharComparisons (added in 15.0.0)
 
   When `true`, the check will warn on ``signed char``/``unsigned char`` comparisons,
   otherwise these comparisons are ignored. By default, this option is set to `true`.

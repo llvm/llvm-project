@@ -27,7 +27,7 @@ Would be converted into:
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 17.0.1)
 
   If `true` don't diagnose traits defined in macros.
 

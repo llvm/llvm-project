@@ -30,7 +30,7 @@ rule from the C++ Core Guidelines.
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 18.1.0)
 
   When this setting is set to `true`, it means that any usage of ``const_cast``
   is not allowed. On the other hand, when it's set to `false`, it permits

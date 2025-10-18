@@ -46,14 +46,14 @@ compilation error, albeit introducing potential hazards as discussed.
 Options
 -------
 
-.. option:: StringViewTypes
+.. option:: StringViewTypes (added in 19.1.0)
 
   Option allows users to specify custom string view-like types for analysis. It
   accepts a semicolon-separated list of type names or regular expressions
   matching these types. Default value is:
   `::std::basic_string_view;::llvm::StringRef`.
 
-.. option:: AllowedCallees
+.. option:: AllowedCallees (added in 19.1.0)
 
   Specifies methods, functions, or classes where the result of ``.data()`` is
   passed to. Allows to exclude such calls from the analysis. Accepts a

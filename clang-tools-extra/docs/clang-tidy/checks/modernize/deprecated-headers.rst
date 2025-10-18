@@ -73,7 +73,7 @@ since a library might want to expose some API for C and C++ libraries.
 Options
 -------
 
-.. option:: CheckHeaderFile
+.. option:: CheckHeaderFile (added in 15.0.0)
 
    `clang-tidy` cannot know if the header file included by the currently
    analyzed C++ source file is not included by any other C source files.

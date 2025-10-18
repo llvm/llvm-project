@@ -38,12 +38,12 @@ is enabled.
 Options
 -------
 
-.. option::  IgnoreMacros
+.. option::  IgnoreMacros (added in 18.1.0)
 
   The value `false` specifies that return statements expanded
   from macros are not checked. The default value is `true`.
 
-.. option::  StrictMode
+.. option::  StrictMode (added in 18.1.0)
 
   The value `false` specifies that a direct return statement shall
   be excluded from the analysis if it is the only statement not
