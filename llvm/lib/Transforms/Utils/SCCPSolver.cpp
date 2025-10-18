@@ -634,17 +634,9 @@ private:
   /// Merge \p MergeWithV into \p IV and push \p V to the worklist, if \p IV
   /// changes.
   bool mergeInValue(ValueLatticeElement &IV, Value *V,
-                    ValueLatticeElement MergeWithV,
+                    const ValueLatticeElement &MergeWithV,
                     ValueLatticeElement::MergeOptions Opts = {
                         /*MayIncludeUndef=*/false, /*CheckWiden=*/false});
-
-  bool mergeInValue(Value *V, ValueLatticeElement MergeWithV,
-                    ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}) {
-    assert(!V->getType()->isStructTy() &&
-           "non-structs should use markConstant");
-    return mergeInValue(ValueState[V], V, MergeWithV, Opts);
-  }
 
   /// getValueState - Return the ValueLatticeElement object that corresponds to
   /// the value.  This function handles the case when the value hasn't been seen
@@ -987,7 +979,7 @@ public:
   void trackValueOfArgument(Argument *A) {
     if (A->getType()->isStructTy())
       return (void)markOverdefined(A);
-    mergeInValue(A, getArgAttributeVL(A));
+    mergeInValue(ValueState[A], A, getArgAttributeVL(A));
   }
 
   bool isStructLatticeConstant(Function *F, StructType *STy);
@@ -1128,8 +1120,7 @@ bool SCCPInstVisitor::isStructLatticeConstant(Function *F, StructType *STy) {
   for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
     const auto &It = TrackedMultipleRetVals.find(std::make_pair(F, i));
     assert(It != TrackedMultipleRetVals.end());
-    ValueLatticeElement LV = It->second;
-    if (!SCCPSolver::isConstant(LV))
+    if (!SCCPSolver::isConstant(It->second))
       return false;
   }
   return true;
@@ -1160,7 +1151,7 @@ Constant *SCCPInstVisitor::getConstantOrNull(Value *V) const {
     std::vector<Constant *> ConstVals;
     auto *ST = cast<StructType>(V->getType());
     for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
-      ValueLatticeElement LV = LVs[I];
+      const ValueLatticeElement &LV = LVs[I];
       ConstVals.push_back(SCCPSolver::isConstant(LV)
                               ? getConstant(LV, ST->getElementType(I))
                               : UndefValue::get(ST->getElementType(I)));
@@ -1225,7 +1216,7 @@ void SCCPInstVisitor::visitInstruction(Instruction &I) {
 }
 
 bool SCCPInstVisitor::mergeInValue(ValueLatticeElement &IV, Value *V,
-                                   ValueLatticeElement MergeWithV,
+                                   const ValueLatticeElement &MergeWithV,
                                    ValueLatticeElement::MergeOptions Opts) {
   if (IV.mergeIn(MergeWithV, Opts)) {
     pushUsersToWorkList(V);
@@ -1264,7 +1255,7 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
       return;
     }
 
-    ValueLatticeElement BCValue = getValueState(BI->getCondition());
+    const ValueLatticeElement &BCValue = getValueState(BI->getCondition());
     ConstantInt *CI = getConstantInt(BCValue, BI->getCondition()->getType());
     if (!CI) {
       // Overdefined condition variables, and branches on unfoldable constant
@@ -1326,7 +1317,7 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
   // the target as executable.
   if (auto *IBR = dyn_cast<IndirectBrInst>(&TI)) {
     // Casts are folded by visitCastInst.
-    ValueLatticeElement IBRValue = getValueState(IBR->getAddress());
+    const ValueLatticeElement &IBRValue = getValueState(IBR->getAddress());
     BlockAddress *Addr = dyn_cast_or_null<BlockAddress>(
         getConstant(IBRValue, IBR->getAddress()->getType()));
     if (!Addr) { // Overdefined or unknown condition?
@@ -1408,7 +1399,7 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
     if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
       continue;
 
-    ValueLatticeElement IV = getValueState(PN.getIncomingValue(i));
+    const ValueLatticeElement &IV = getValueState(PN.getIncomingValue(i));
     PhiState.mergeIn(IV);
     NumActiveIncoming++;
     if (PhiState.isOverdefined())
@@ -1420,10 +1411,10 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
   // extensions to match the number of active incoming values. This helps to
   // limit multiple extensions caused by the same incoming value, if other
   // incoming values are equal.
-  mergeInValue(&PN, PhiState,
+  ValueLatticeElement &PhiStateRef = ValueState[&PN];
+  mergeInValue(PhiStateRef, &PN, PhiState,
                ValueLatticeElement::MergeOptions().setMaxWidenSteps(
                    NumActiveIncoming + 1));
-  ValueLatticeElement &PhiStateRef = getValueState(&PN);
   PhiStateRef.setNumRangeExtensions(
       std::max(NumActiveIncoming, PhiStateRef.getNumRangeExtensions()));
 }
@@ -1481,7 +1472,7 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
     }
   }
 
-  ValueLatticeElement OpSt = getValueState(I.getOperand(0));
+  const ValueLatticeElement &OpSt = getValueState(I.getOperand(0));
   if (OpSt.isUnknownOrUndef())
     return;
 
@@ -1496,9 +1487,9 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   if (I.getDestTy()->isIntOrIntVectorTy() &&
       I.getSrcTy()->isIntOrIntVectorTy() &&
       I.getOpcode() != Instruction::BitCast) {
-    auto &LV = getValueState(&I);
     ConstantRange OpRange =
         OpSt.asConstantRange(I.getSrcTy(), /*UndefAllowed=*/false);
+    auto &LV = getValueState(&I);
 
     Type *DestTy = I.getDestTy();
     ConstantRange Res = ConstantRange::getEmpty(DestTy->getScalarSizeInBits());
@@ -1516,19 +1507,24 @@ void SCCPInstVisitor::handleExtractOfWithOverflow(ExtractValueInst &EVI,
                                                   const WithOverflowInst *WO,
                                                   unsigned Idx) {
   Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
-  ValueLatticeElement L = getValueState(LHS);
-  ValueLatticeElement R = getValueState(RHS);
+  Type *Ty = LHS->getType();
+
   addAdditionalUser(LHS, &EVI);
   addAdditionalUser(RHS, &EVI);
-  if (L.isUnknownOrUndef() || R.isUnknownOrUndef())
+
+  const ValueLatticeElement &L = getValueState(LHS);
+  if (L.isUnknownOrUndef())
+    return; // Wait to resolve.
+  ConstantRange LR = L.asConstantRange(Ty, /*UndefAllowed=*/false);
+
+  const ValueLatticeElement &R = getValueState(RHS);
+  if (R.isUnknownOrUndef())
     return; // Wait to resolve.
 
-  Type *Ty = LHS->getType();
-  ConstantRange LR = L.asConstantRange(Ty, /*UndefAllowed=*/false);
   ConstantRange RR = R.asConstantRange(Ty, /*UndefAllowed=*/false);
   if (Idx == 0) {
     ConstantRange Res = LR.binaryOp(WO->getBinaryOp(), RR);
-    mergeInValue(&EVI, ValueLatticeElement::getRange(Res));
+    mergeInValue(ValueState[&EVI], &EVI, ValueLatticeElement::getRange(Res));
   } else {
     assert(Idx == 1 && "Index can only be 0 or 1");
     ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
@@ -1560,7 +1556,7 @@ void SCCPInstVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (auto *WO = dyn_cast<WithOverflowInst>(AggVal))
       return handleExtractOfWithOverflow(EVI, WO, i);
     ValueLatticeElement EltVal = getStructValueState(AggVal, i);
-    mergeInValue(getValueState(&EVI), &EVI, EltVal);
+    mergeInValue(ValueState[&EVI], &EVI, EltVal);
   } else {
     // Otherwise, must be extracting from an array.
     return (void)markOverdefined(&EVI);
@@ -1616,14 +1612,18 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
   if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
-  ValueLatticeElement CondValue = getValueState(I.getCondition());
+  const ValueLatticeElement &CondValue = getValueState(I.getCondition());
   if (CondValue.isUnknownOrUndef())
     return;
 
   if (ConstantInt *CondCB =
           getConstantInt(CondValue, I.getCondition()->getType())) {
     Value *OpVal = CondCB->isZero() ? I.getFalseValue() : I.getTrueValue();
-    mergeInValue(&I, getValueState(OpVal));
+    const ValueLatticeElement &OpValState = getValueState(OpVal);
+    // Safety: ValueState[&I] doesn't invalidate OpValState since it is already
+    // in the map.
+    assert(ValueState.contains(&I) && "&I is not in ValueState map.");
+    mergeInValue(ValueState[&I], &I, OpValState);
     return;
   }
 
@@ -1721,7 +1721,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
       // being a special floating value.
       ValueLatticeElement NewV;
       NewV.markConstant(C, /*MayIncludeUndef=*/true);
-      return (void)mergeInValue(&I, NewV);
+      return (void)mergeInValue(ValueState[&I], &I, NewV);
     }
   }
 
@@ -1741,7 +1741,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
   else
     R = A.binaryOp(BO->getOpcode(), B);
-  mergeInValue(&I, ValueLatticeElement::getRange(R));
+  mergeInValue(ValueState[&I], &I, ValueLatticeElement::getRange(R));
 
   // TODO: Currently we do not exploit special values that produce something
   // better than overdefined with an overdefined operand for vector or floating
@@ -1767,7 +1767,7 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
   if (C) {
     ValueLatticeElement CV;
     CV.markConstant(C);
-    mergeInValue(&I, CV);
+    mergeInValue(ValueState[&I], &I, CV);
     return;
   }
 
@@ -1802,7 +1802,7 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
   Operands.reserve(I.getNumOperands());
 
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
-    ValueLatticeElement State = getValueState(I.getOperand(i));
+    const ValueLatticeElement &State = getValueState(I.getOperand(i));
     if (State.isUnknownOrUndef())
       return; // Operands are not resolved yet.
 
@@ -1881,14 +1881,13 @@ void SCCPInstVisitor::visitLoadInst(LoadInst &I) {
   if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
-  ValueLatticeElement PtrVal = getValueState(I.getOperand(0));
+  const ValueLatticeElement &PtrVal = getValueState(I.getOperand(0));
   if (PtrVal.isUnknownOrUndef())
     return; // The pointer is not resolved yet!
 
-  ValueLatticeElement &IV = ValueState[&I];
-
   if (SCCPSolver::isConstant(PtrVal)) {
     Constant *Ptr = getConstant(PtrVal, I.getOperand(0)->getType());
+    ValueLatticeElement &IV = ValueState[&I];
 
     // load null is undefined.
     if (isa<ConstantPointerNull>(Ptr)) {
@@ -1916,7 +1915,7 @@ void SCCPInstVisitor::visitLoadInst(LoadInst &I) {
   }
 
   // Fall back to metadata.
-  mergeInValue(&I, getValueFromMetadata(&I));
+  mergeInValue(ValueState[&I], &I, getValueFromMetadata(&I));
 }
 
 void SCCPInstVisitor::visitCallBase(CallBase &CB) {
@@ -1944,7 +1943,7 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
         return markOverdefined(&CB); // Can't handle struct args.
       if (A.get()->getType()->isMetadataTy())
         continue;                    // Carried in CB, not allowed in Operands.
-      ValueLatticeElement State = getValueState(A);
+      const ValueLatticeElement &State = getValueState(A);
 
       if (State.isUnknownOrUndef())
         return; // Operands are not resolved yet.
@@ -1964,7 +1963,7 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
   }
 
   // Fall back to metadata.
-  mergeInValue(&CB, getValueFromMetadata(&CB));
+  mergeInValue(ValueState[&CB], &CB, getValueFromMetadata(&CB));
 }
 
 void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
@@ -1992,10 +1991,11 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
           mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg,
                        getMaxWidenStepsOpts());
         }
-      } else
-        mergeInValue(&*AI,
-                     getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
-                     getMaxWidenStepsOpts());
+      } else {
+        ValueLatticeElement CallArg =
+            getValueState(*CAI).intersect(getArgAttributeVL(&*AI));
+        mergeInValue(ValueState[&*AI], &*AI, CallArg, getMaxWidenStepsOpts());
+      }
     }
   }
 }
@@ -2076,7 +2076,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
     if (II->getIntrinsicID() == Intrinsic::vscale) {
       unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
-      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
     }
 
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
@@ -2094,7 +2095,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
       ConstantRange Result =
           ConstantRange::intrinsic(II->getIntrinsicID(), OpRanges);
-      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
     }
   }
 
@@ -2121,7 +2123,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       return handleCallOverdefined(CB); // Not tracking this callee.
 
     // If so, propagate the return value of the callee into this call result.
-    mergeInValue(&CB, TFRVI->second, getMaxWidenStepsOpts());
+    mergeInValue(ValueState[&CB], &CB, TFRVI->second, getMaxWidenStepsOpts());
   }
 }
 
