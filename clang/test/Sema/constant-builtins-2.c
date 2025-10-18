@@ -494,6 +494,13 @@ enum BasicEnum {
   ENUM_VALUE1 = 0x1234,
 };
 int h17 = __builtin_bswapg(ENUM_VALUE1) == 0x34120000 ? 1 : f();
+int h18 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
+int h19 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
+int h20 = __builtin_bswapg((_BitInt(32))0x00001234) == (_BitInt(32))0x34120000 ? 1 : f();
+int h21 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x3412000000000000 ? 1 : f();
+int h22 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
+int h23 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
+// expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
 extern long int bi0;
 extern __typeof__(__builtin_expect(0, 0)) bi0;
 

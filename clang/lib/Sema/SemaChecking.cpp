@@ -2222,6 +2222,14 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
         << ArgTy;
     return true;
   }
+  const auto *bitIntType = dyn_cast<BitIntType>(ArgTy);
+  if (bitIntType != nullptr) {
+    if (bitIntType->getNumBits() % 16 != 0 && bitIntType->getNumBits() != 8) {
+      S.Diag(Arg->getBeginLoc(), diag::err_bswapg_bitint_not_16bit_aligned)
+          << ArgTy << bitIntType->getNumBits();
+      return true;
+    }
+  }
   TheCall->setType(ArgTy);
   return false;
 }
