@@ -432,7 +432,7 @@ private:
   // XXX: It is SLOW! Use it very carefully.
   std::optional<MultiLevelTemplateArgumentList> SubstitutionInTemplateArguments(
       const NormalizedConstraintWithParamMapping &Constraint,
-      MultiLevelTemplateArgumentList MLTAL,
+      const MultiLevelTemplateArgumentList &MLTAL,
       llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost);
 
   ExprResult EvaluateSlow(const AtomicConstraint &Constraint,
@@ -564,11 +564,16 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
 std::optional<MultiLevelTemplateArgumentList>
 ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const NormalizedConstraintWithParamMapping &Constraint,
-    MultiLevelTemplateArgumentList MLTAL,
-    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
+    const MultiLevelTemplateArgumentList &MLTAL,
+    llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
 
   if (!Constraint.hasParameterMapping())
     return std::move(MLTAL);
+
+  // The mapping is empty, meaning no template arguments are needed for
+  // evaluation.
+  if (Constraint.getParameterMapping().empty())
+    return MultiLevelTemplateArgumentList();
 
   TemplateDeductionInfo Info(Constraint.getBeginLoc());
   Sema::InstantiatingTemplate Inst(
@@ -607,7 +612,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   // The empty MLTAL situation should only occur when evaluating non-dependent
   // constraints.
   if (MLTAL.getNumSubstitutedLevels())
-    SubstitutedOuterMost =
+    SubstitutedOutermost =
         llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
@@ -615,19 +620,19 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     if (Used[I])
       Arg = S.Context.getCanonicalTemplateArgument(
           CTAI.SugaredConverted[MappedIndex++]);
-    if (I < SubstitutedOuterMost.size()) {
-      SubstitutedOuterMost[I] = Arg;
+    if (I < SubstitutedOutermost.size()) {
+      SubstitutedOutermost[I] = Arg;
       Offset = I + 1;
     } else {
-      SubstitutedOuterMost.push_back(Arg);
-      Offset = SubstitutedOuterMost.size();
+      SubstitutedOutermost.push_back(Arg);
+      Offset = SubstitutedOutermost.size();
     }
   }
-  if (Offset < SubstitutedOuterMost.size())
-    SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
+  if (Offset < SubstitutedOutermost.size())
+    SubstitutedOutermost.erase(SubstitutedOutermost.begin() + Offset);
 
   MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
-  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOuterMost,
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOutermost,
                                                     /*Final=*/false);
   return std::move(SubstitutedTemplateArgs);
 }
@@ -636,9 +641,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
@@ -786,13 +791,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                      FoldExpandedConstraint::FoldOperatorKind::And;
   unsigned EffectiveDetailEndIndex = Satisfaction.Details.size();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   // FIXME: Is PackSubstitutionIndex correct?
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
           static_cast<const NormalizedConstraintWithParamMapping &>(Constraint),
-          MLTAL, SubstitutedOuterMost);
+          MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprError();
@@ -880,9 +885,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const MultiLevelTemplateArgumentList &MLTAL, unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
@@ -2017,8 +2022,13 @@ void SubstituteParameterMappings::buildParameterMapping(
       SemaRef.MarkUsedTemplateParameters(Args->arguments(),
                                          /*Depth=*/0, OccurringIndices);
   }
+  unsigned Size = OccurringIndices.count();
+  // It's OK when Size is 0. We build an empty parameter mapping when the atomic
+  // constraint is independent of any template parameters, so we can distinguish
+  // it from cases where no mapping exists at all, e.g. when there are only
+  // atomic constraints.
   TemplateArgumentLoc *TempArgs =
-      new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];
+      new (SemaRef.Context) TemplateArgumentLoc[Size];
   llvm::SmallVector<NamedDecl *> UsedParams;
   for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I) {
     SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
@@ -2039,7 +2049,6 @@ void SubstituteParameterMappings::buildParameterMapping(
       TemplateParams->getLAngleLoc(), UsedParams,
       /*RAngleLoc=*/SourceLocation(),
       /*RequiresClause=*/nullptr);
-  unsigned Size = OccurringIndices.count();
   N.updateParameterMapping(
       std::move(OccurringIndices), std::move(OccurringIndicesForSubsumption),
       MutableArrayRef<TemplateArgumentLoc>{TempArgs, Size}, UsedList);
@@ -2049,6 +2058,11 @@ bool SubstituteParameterMappings::substitute(
     NormalizedConstraintWithParamMapping &N) {
   if (!N.hasParameterMapping())
     buildParameterMapping(N);
+
+  // Don't bother into substituting if we have determined the mapping maps to
+  // nothing.
+  if (N.getParameterMapping().empty())
+    return false;
 
   SourceLocation InstLocBegin, InstLocEnd;
   llvm::ArrayRef Arguments = ArgsAsWritten->arguments();
