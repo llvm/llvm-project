@@ -83,21 +83,21 @@ static Value createTileFromElements(PatternRewriter &rewriter, Location loc,
                                     ArrayRef<int64_t> tileOffsets,
                                     ArrayRef<int64_t> tileShape,
                                     VectorType tileType) {
-
   // Initialize tile with zeros.
   Value tile = rewriter.create<arith::ConstantOp>(
       loc, tileType, rewriter.getZeroAttr(tileType));
 
-  // Calculate strides for both source and result shapes.
+  // Calculate strides for source, result, and tile shapes.
   SmallVector<int64_t> sourceStrides = computeStrides(sourceShape);
   SmallVector<int64_t> resultStrides = computeStrides(resultShape);
+  SmallVector<int64_t> tileStrides = computeStrides(tileShape);
+  int64_t numElementsInTile = computeProduct(tileShape);
 
   // Iterate over all positions in the tile using linear indexing.
-  for (int64_t linearTileIdx = 0; linearTileIdx < computeProduct(tileShape);
+  for (int64_t linearTileIdx = 0; linearTileIdx < numElementsInTile;
        ++linearTileIdx) {
     // Convert linear tile index to multi-dimensional tile position.
-    SmallVector<int64_t> tilePosition =
-        delinearize(linearTileIdx, computeStrides(tileShape));
+    SmallVector<int64_t> tilePosition = delinearize(linearTileIdx, tileStrides);
 
     // Calculate the global position in the result.
     SmallVector<int64_t> globalResultPos;
@@ -108,18 +108,13 @@ static Value createTileFromElements(PatternRewriter &rewriter, Location loc,
 
     // Convert result position to linear index.
     int64_t linearIndex = linearize(globalResultPos, resultStrides);
-
     // Convert linear index to source position.
-    SmallVector<int64_t> sourcePos =
-        delinearize(linearIndex, computeStrides(sourceShape));
-
+    SmallVector<int64_t> sourcePos = delinearize(linearIndex, sourceStrides);
     // Extract element from source.
     Value element = vector::ExtractOp::create(rewriter, loc, source, sourcePos);
-
     // Insert element into tile.
     tile = vector::InsertOp::create(rewriter, loc, element, tile, tilePosition);
   }
-
   return tile;
 }
 
